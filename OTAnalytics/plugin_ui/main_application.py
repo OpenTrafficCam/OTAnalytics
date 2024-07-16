@@ -719,7 +719,7 @@ class ApplicationStarter:
             )
 
         else:
-            stream_track_parser = self._create_stream_track_parser()
+            stream_track_parser = self._create_stream_track_parser(run_config)
             cli = OTAnalyticsStreamCli(
                 run_config,
                 event_repository,
@@ -804,7 +804,9 @@ class ApplicationStarter:
         # )
         return OttrkParser(detection_parser)
 
-    def _create_stream_track_parser(self) -> StreamTrackParser:
+    def _create_stream_track_parser(
+        self, run_config: RunConfiguration
+    ) -> StreamTrackParser:
         return StreamOttrkParser(
             detection_parser=PythonStreamDetectionParser(
                 track_classification_calculator=ByMaxConfidence(),
@@ -812,6 +814,12 @@ class ApplicationStarter:
             ),
             format_fixer=OttrkFormatFixer(),
             progressbar=TqdmBuilder(),
+            track_dataset_factory=lambda tracks: PandasTrackDataset.from_list(
+                tracks,
+                PygeosTrackGeometryDataset.from_track_dataset,
+                PandasByMaxConfidence(),
+            ),
+            chunk_size=run_config.cli_chunk_size,
         )
 
     def _create_section_repository(self) -> SectionRepository:

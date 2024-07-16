@@ -37,6 +37,13 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--cli-chunk-size",
+            type=int,
+            help="Specify the chunk size for streaming OTAnalytics CLI.",
+            default=10,
+            required=False,
+        )
+        self._parser.add_argument(
             "--show-svz",
             action="store_true",
             help="Show SVZ-Tab in OTAnalytics GUI. If omitted the tab will be hidden.",
@@ -155,6 +162,7 @@ class ArgparseCliParser(CliParser):
         return CliArguments(
             start_cli=args.cli,
             cli_mode=args.cli_mode,
+            cli_chunk_size=args.cli_chunk_size,
             debug=args.debug,
             logfile_overwrite=args.logfile_overwrite,
             show_svz=args.show_svz,

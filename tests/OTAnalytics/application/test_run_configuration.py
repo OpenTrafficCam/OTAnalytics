@@ -23,6 +23,7 @@ def cli_args_otconfig() -> CliArguments:
     return CliArguments(
         start_cli=True,
         cli_mode=CliMode.BULK,
+        cli_chunk_size=5,
         config_file="my_config.otconfig",
         debug=True,
         track_files=cli_track_files,

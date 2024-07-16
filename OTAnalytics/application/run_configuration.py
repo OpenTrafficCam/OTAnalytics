@@ -58,6 +58,10 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         return self.start_cli and self._cli_args.cli_mode == CliMode.STREAM
 
     @property
+    def cli_chunk_size(self) -> int:
+        return self._cli_args.cli_chunk_size
+
+    @property
     def debug(self) -> bool:
         return self._cli_args.debug
 

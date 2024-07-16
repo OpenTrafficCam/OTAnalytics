@@ -1,10 +1,10 @@
 import bz2
-import glob
 from abc import ABC, abstractmethod
 from bisect import bisect
 from datetime import datetime
+from itertools import islice
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Optional, Sequence
+from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 
 import ijson
 from pygeos import (
@@ -34,9 +34,7 @@ from OTAnalytics.domain.track_dataset import (
     TrackDoesNotExistError,
     TrackSegmentDataset,
 )
-from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import (
-    ByMaxConfidence,
     PythonTrackDataset,
     PythonTrackSegmentDataset,
     create_segment_for,
@@ -57,7 +55,6 @@ from OTAnalytics.plugin_datastore.track_store import (
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from OTAnalytics.plugin_parser.json_parser import parse_json_bz2
 from OTAnalytics.plugin_parser.otvision_parser import (
-    DEFAULT_TRACK_LENGTH_LIMIT,
     OttrkFormatFixer,
     OttrkParser,
     TrackIdGenerator,
@@ -65,7 +62,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     create_python_track,
     parse_python_detection,
 )
-from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 
 RawDetectionData = list[dict]
@@ -127,7 +123,7 @@ class StreamDetectionParser(ABC):
         detections: list[dict],
         metadata_video: dict,
         id_generator: TrackIdGenerator = TrackId,
-    ) -> Iterator[TrackDataset]:
+    ) -> Iterator[Track]:
         """Parse the given detections into a stream of TrackDatasets.
 
         When Detections with the "finished" flag are parsed,
@@ -145,7 +141,7 @@ class StreamDetectionParser(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_remaining_tracks(self) -> Iterator[TrackDataset]:
+    def get_remaining_tracks(self) -> Iterator[Track]:
         """Get yet unparsed tracks,
         that did not show a detection with the "finished" flag."""
         raise NotImplementedError
@@ -172,7 +168,7 @@ class PythonStreamDetectionParser(StreamDetectionParser):
         detections: list[dict],
         metadata_video: dict,
         id_generator: TrackIdGenerator = TrackId,
-    ) -> Iterator[TrackDataset]:
+    ) -> Iterator[Track]:
         for det_dict in detections:
             det = parse_python_detection(
                 metadata_video, id_generator, det_dict, input_file
@@ -196,11 +192,11 @@ class PythonStreamDetectionParser(StreamDetectionParser):
                     self._track_length_limit,
                 )  # yield finished track
                 if track is not None:
-                    yield SingletonTrackDataset(track)
+                    yield track
 
     # after all files have been processed,
     # yield all remaining tracks without finished flag
-    def get_remaining_tracks(self) -> Iterator[TrackDataset]:
+    def get_remaining_tracks(self) -> Iterator[Track]:
         for (
             track_id,
             detections,
@@ -212,7 +208,7 @@ class PythonStreamDetectionParser(StreamDetectionParser):
                 self._track_length_limit,
             )  # yield remaining track
             if track is not None:
-                yield SingletonTrackDataset(track)
+                yield track
 
 
 class StreamTrackParser(ABC):
@@ -235,6 +231,17 @@ class StreamTrackParser(ABC):
         raise NotImplementedError
 
 
+TrackDatasetFactory = Callable[[list[Track]], TrackDataset]
+
+
+def default_track_dataset_factory(tracks: list[Track]) -> TrackDataset:
+    return PandasTrackDataset.from_list(
+        tracks=tracks,
+        track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset,
+        calculator=PandasByMaxConfidence(),
+    )
+
+
 class StreamOttrkParser(StreamTrackParser):
     """
     Parse multiple ottrk files (sorted by 'recorder_start_date' in video metadata).
@@ -255,6 +262,13 @@ class StreamOttrkParser(StreamTrackParser):
         progressbar (ProgressbarBuilder, optional):
             a progressbar builder to show progress of processed files.
             Defaults to TqdmBuilder().
+        track_dataset_factory (TrackDataSetFactory, optional):
+            a factory to create a new track dataset from a list of Tracks.
+            Defaults to PandasTrackDataset.from_list(tracks,
+            PygeosTrackGeometryDataset.from_track_dataset, PandasByMaxConfidence()).
+        chunk_size (int, optional): defines the number of tracks to be collected,
+            before yielding a TrackDataset containing at most that many Tracks.
+            Defaults to 1.
     """
 
     def __init__(
@@ -264,6 +278,8 @@ class StreamOttrkParser(StreamTrackParser):
         registered_tracks_metadata: list[TracksMetadata] = [],
         registered_videos_metadata: list[VideosMetadata] = [],
         progressbar: ProgressbarBuilder = TqdmBuilder(),
+        track_dataset_factory: TrackDatasetFactory = default_track_dataset_factory,
+        chunk_size: int = 5,
     ) -> None:
         self._detection_parser = detection_parser
         self._tracks_dict: dict[TrackId, list[Detection]] = {}
@@ -275,6 +291,8 @@ class StreamOttrkParser(StreamTrackParser):
             registered_videos_metadata
         )
         self._progressbar = progressbar
+        self._track_dataset_factory = track_dataset_factory
+        self._chunk_size = chunk_size
 
     def register_tracks_metadata(self, tracks_metadata: TracksMetadata) -> None:
         """Register TracksMetadata to be updated when a new ottrk file is parsed."""
@@ -298,6 +316,14 @@ class StreamOttrkParser(StreamTrackParser):
             videos_metadata.update(new_video_metadata)
 
     def parse(self, files: set[Path]) -> Iterator[TrackDataset]:
+        iterator = iter(self._parse_tracks(files))
+        while True:
+            chunk = list(islice(iterator, self._chunk_size))
+            if not chunk:
+                break
+            yield self._track_dataset_factory(chunk)
+
+    def _parse_tracks(self, files: set[Path]) -> Iterator[Track]:
         sorted_files = self._sort_files(files)
         progressbar: Iterable[Path] = self._progressbar(
             sorted_files, unit="files", description="Processed ottrk files: "
@@ -584,69 +610,3 @@ class SingletonTrackDataset(TrackDataset):
 
     def _empty_dataset(self) -> TrackDataset:
         return PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
-
-
-# TESTING
-
-
-def parse_old(dir: Path) -> None:
-    files = list(
-        filter(lambda p: p.is_file(), sorted(dir.glob("*.ottrk"), key=lambda p: p.name))
-    )
-
-    track_repository = TrackRepository(
-        PandasTrackDataset.from_list([], PygeosTrackGeometryDataset.from_track_dataset)
-    )
-
-    tracks_metadata = TracksMetadata(track_repository)
-    videos_metadata = VideosMetadata()
-
-    calculator = PandasByMaxConfidence()
-    detection_parser = PandasDetectionParser(
-        calculator,
-        PygeosTrackGeometryDataset.from_track_dataset,
-        track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
-    )
-    parser = OttrkParser(detection_parser)
-
-    for file in files:
-        print(file)
-        parse_result = parser.parse(file)
-        tracks_metadata.update_detection_classes(
-            parse_result.detection_metadata.detection_classes
-        )
-        videos_metadata.update(parse_result.video_metadata)
-
-    c = 0
-    for t in track_repository.get_all():
-        print(c, t.id)
-        c += 1
-
-
-def parse_stream(files: list[Path]) -> None:
-    track_repository = TrackRepository(
-        PythonTrackDataset(
-            track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset
-        )
-    )
-
-    tracks_metadata = TracksMetadata(track_repository)
-    videos_metadata = VideosMetadata()
-
-    calculator = ByMaxConfidence()
-    detection_parser = PythonStreamDetectionParser(
-        calculator,
-        track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
-    )
-
-    parser = StreamOttrkParser(detection_parser)
-    parser.register_tracks_metadata(tracks_metadata)
-    parser.register_videos_metadata(videos_metadata)
-
-    res = parser.parse(set(files))
-    [t for t in res]
-
-
-if __name__ == "__main__":
-    paths = [Path(f) for f in glob.glob(r"D:\ptm\data\load_multi_files\*.ottrk")]
-    parse_stream(paths)
