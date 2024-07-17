@@ -48,6 +48,10 @@ class Video(ABC):
     def get_path(self) -> Path:
         pass
 
+    @property
+    def name(self) -> str:
+        return self.get_path().name
+
     @abstractmethod
     def get_frame(self, index: int) -> TrackImage:
         pass

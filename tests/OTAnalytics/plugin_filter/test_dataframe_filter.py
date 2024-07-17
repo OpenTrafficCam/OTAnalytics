@@ -2,12 +2,15 @@ from datetime import datetime, timezone
 from typing import Iterable
 from unittest.mock import Mock
 
+import pandas
 import pytest
 from pandas import DataFrame
 
 from OTAnalytics.application.plotting import GetCurrentFrame
+from OTAnalytics.application.use_cases.video_repository import GetVideos
 from OTAnalytics.domain import track
 from OTAnalytics.domain.track import CLASSIFICATION, OCCURRENCE, Detection, Track
+from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_filter.dataframe_filter import (
     DataFrameEndsBeforeOrAtDate,
     DataFrameEndsBeforeOrAtFrame,
@@ -19,7 +22,15 @@ from OTAnalytics.plugin_filter.dataframe_filter import (
     DataFrameStartsAtOrAfterFrame,
     NoOpDataFrameFilter,
 )
+from tests.utils.builders.constants import DEFAULT_VIDEO_NAME
 from tests.utils.builders.track_builder import TrackBuilder
+
+SECOND_HOSTNAME = "secondhostname"
+SECOND_VIDEO_NAME = f"{SECOND_HOSTNAME}_file.mp4"
+THIRD_HOSTNAME = "thirdhostname"
+THIRD_VIDEO_NAME = f"{THIRD_HOSTNAME}_file.mp4"
+FORTH_HOSTNAME = "forthhostname"
+FORTH_VIDEO_NAME = f"{FORTH_HOSTNAME}_file.mp4"
 
 
 def convert_tracks_to_dataframe(tracks: Iterable[Track]) -> DataFrame:
@@ -44,10 +55,18 @@ def convert_tracks_to_dataframe(tracks: Iterable[Track]) -> DataFrame:
 def simple_track(track_builder: TrackBuilder) -> Track:
     track_builder.add_occurrence(2000, 1, 2, 0, 0, 0, 0)
     track_builder.append_detection()
+    track_builder.next_frame()
     track_builder.append_detection()
+    track_builder.next_frame()
+    track_builder.set_video_name(SECOND_VIDEO_NAME)
     track_builder.append_detection()
+    track_builder.next_frame()
+    track_builder.set_video_name(THIRD_VIDEO_NAME)
     track_builder.append_detection()
+    track_builder.next_frame()
+    track_builder.set_video_name(FORTH_VIDEO_NAME)
     track_builder.append_detection()
+    track_builder.next_frame()
     return track_builder.build_track()
 
 
@@ -105,6 +124,63 @@ class TestDataFramePredicates:
                 [True, True, True, True, True],
             ),
             (
+                DataFrameStartsAtOrAfterFrame(
+                    OCCURRENCE,
+                    3,
+                    DEFAULT_VIDEO_NAME,
+                    [SECOND_VIDEO_NAME, THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
+                ),
+                [False, False, True, True, True],
+            ),
+            (
+                DataFrameStartsAtOrAfterFrame(
+                    OCCURRENCE,
+                    3,
+                    SECOND_VIDEO_NAME,
+                    [THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
+                ),
+                [False, False, True, True, True],
+            ),
+            (
+                DataFrameStartsAtOrAfterFrame(
+                    OCCURRENCE,
+                    4,
+                    SECOND_VIDEO_NAME,
+                    [THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
+                ),
+                [False, False, False, True, True],
+            ),
+            (
+                DataFrameStartsAtOrAfterFrame(
+                    OCCURRENCE,
+                    -1,
+                    DEFAULT_VIDEO_NAME,
+                    [SECOND_VIDEO_NAME, THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
+                ),
+                [True, True, True, True, True],
+            ),
+            (
+                DataFrameEndsBeforeOrAtFrame(
+                    OCCURRENCE,
+                    10,
+                    FORTH_VIDEO_NAME,
+                    [DEFAULT_VIDEO_NAME, SECOND_VIDEO_NAME, THIRD_VIDEO_NAME],
+                ),
+                [True, True, True, True, True],
+            ),
+            (
+                DataFrameEndsBeforeOrAtFrame(
+                    OCCURRENCE, 3, SECOND_VIDEO_NAME, [DEFAULT_VIDEO_NAME]
+                ),
+                [True, True, True, False, False],
+            ),
+            (
+                DataFrameEndsBeforeOrAtFrame(
+                    OCCURRENCE, 4, SECOND_VIDEO_NAME, [DEFAULT_VIDEO_NAME]
+                ),
+                [True, True, True, False, False],
+            ),
+            (
                 DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
                 [True, True, True, True, True],
             ),
@@ -139,7 +215,7 @@ class TestDataFramePredicates:
         result = predicate.test(track_dataframe)
         expected_result = track_dataframe[expected_mask]
 
-        assert result.equals(expected_result)
+        pandas.testing.assert_frame_equal(result, expected_result)
 
 
 class TestDataFrameFilter:
@@ -178,10 +254,21 @@ class TestDataFrameFilterBuilder:
         current_frame.get_frame_number_for.return_value = frame
         return current_frame
 
-    def test_add_starts_at_or_after_date_predicate(self, current_frame: Mock) -> None:
+    @pytest.fixture
+    def get_videos(self) -> Mock:
+        get_videos = Mock(spec=GetVideos)
+        video: Video = Mock(spec=Video)
+        get_videos.get.return_value = video
+        get_videos.get_before.return_value = [video]
+        get_videos.get_after.return_value = [video]
+        return get_videos
+
+    def test_add_starts_at_or_after_date_predicate(
+        self, current_frame: Mock, get_videos: Mock
+    ) -> None:
         start_date = datetime(2000, 1, 1)
 
-        builder = DataFrameFilterBuilder(current_frame)
+        builder = DataFrameFilterBuilder(current_frame, get_videos)
         builder.set_occurrence_column(OCCURRENCE)
         builder.add_starts_at_or_after_date_predicate(start_date)
         builder.build()
@@ -191,10 +278,12 @@ class TestDataFrameFilterBuilder:
         assert dataframe_filter._predicate._frame == DEFAULT_FRAME
         current_frame.get_frame_number_for.assert_called_once_with(start_date)
 
-    def test_add_ends_before_or_at_date_predicate(self, current_frame: Mock) -> None:
+    def test_add_ends_before_or_at_date_predicate(
+        self, current_frame: Mock, get_videos: Mock
+    ) -> None:
         end_date = datetime(2000, 1, 3)
 
-        builder = DataFrameFilterBuilder(current_frame)
+        builder = DataFrameFilterBuilder(current_frame, get_videos)
         builder.set_occurrence_column(OCCURRENCE)
         builder.add_ends_before_or_at_date_predicate(end_date)
         builder.build()
@@ -205,10 +294,12 @@ class TestDataFrameFilterBuilder:
         assert dataframe_filter._predicate._frame == DEFAULT_FRAME
         current_frame.get_frame_number_for.assert_called_once_with(end_date)
 
-    def test_add_has_classifications_predicate(self, current_frame: Mock) -> None:
+    def test_add_has_classifications_predicate(
+        self, current_frame: Mock, get_videos: Mock
+    ) -> None:
         classifications = {"car", "truck"}
 
-        builder = DataFrameFilterBuilder(current_frame)
+        builder = DataFrameFilterBuilder(current_frame, get_videos)
         builder.set_classification_column(CLASSIFICATION)
         builder.add_has_classifications_predicate(classifications)
 
@@ -220,40 +311,42 @@ class TestDataFrameFilterBuilder:
         assert dataframe_filter._predicate._classifications == classifications
 
     def test_add_has_classifications_predicate_column_not_set(
-        self, current_frame: Mock
+        self, current_frame: Mock, get_videos: Mock
     ) -> None:
         classifications = {"car", "truck"}
-        builder = DataFrameFilterBuilder(current_frame)
+        builder = DataFrameFilterBuilder(current_frame, get_videos)
         builder.add_has_classifications_predicate(classifications)
         builder.build()
         dataframe_filter = builder.get_result()
         assert isinstance(dataframe_filter, NoOpDataFrameFilter)
 
     def test_add_starts_at_or_after_date_predicate_raise_error(
-        self, current_frame: Mock
+        self, current_frame: Mock, get_videos: Mock
     ) -> None:
         start_date = datetime(2000, 1, 1)
-        builder = DataFrameFilterBuilder(current_frame)
+        builder = DataFrameFilterBuilder(current_frame, get_videos)
         builder.add_starts_at_or_after_date_predicate(start_date)
         builder.build()
         dataframe_filter = builder.get_result()
         assert isinstance(dataframe_filter, NoOpDataFrameFilter)
 
     def test_add_ends_before_or_date_predicate_raise_error(
-        self, current_frame: Mock
+        self, current_frame: Mock, get_videos: Mock
     ) -> None:
         end_date = datetime(2000, 1, 1)
-        builder = DataFrameFilterBuilder(current_frame)
+        builder = DataFrameFilterBuilder(current_frame, get_videos)
         builder.add_ends_before_or_at_date_predicate(end_date)
         builder.build()
         dataframe_filter = builder.get_result()
         assert isinstance(dataframe_filter, NoOpDataFrameFilter)
 
-    def test_add_multiple_predicates(self, current_frame: Mock) -> None:
+    def test_add_multiple_predicates(
+        self, current_frame: Mock, get_videos: Mock
+    ) -> None:
         end_date = datetime(2000, 1, 3)
         classifications = {"car", "truck"}
 
-        builder = DataFrameFilterBuilder(current_frame)
+        builder = DataFrameFilterBuilder(current_frame, get_videos)
         builder.set_occurrence_column(OCCURRENCE)
         builder.add_ends_before_or_at_date_predicate(end_date)
 
@@ -276,18 +369,18 @@ class TestDataFrameFilterBuilder:
         assert dataframe_filter._predicate._first_predicate._frame == DEFAULT_FRAME
 
     def test_create_noop_filter_if_no_predicate_added(
-        self, current_frame: Mock
+        self, current_frame: Mock, get_videos: Mock
     ) -> None:
-        builder = DataFrameFilterBuilder(current_frame)
+        builder = DataFrameFilterBuilder(current_frame, get_videos)
         builder.build()
         track_filter = builder.get_result()
 
         assert type(track_filter) is NoOpDataFrameFilter
 
-    def test_reset(self, current_frame: Mock) -> None:
+    def test_reset(self, current_frame: Mock, get_videos: Mock) -> None:
         classifications = {"car", "truck"}
 
-        builder = DataFrameFilterBuilder(current_frame)
+        builder = DataFrameFilterBuilder(current_frame, get_videos)
         builder.set_classification_column(CLASSIFICATION)
         builder.set_occurrence_column(OCCURRENCE)
         builder.add_has_classifications_predicate(classifications)

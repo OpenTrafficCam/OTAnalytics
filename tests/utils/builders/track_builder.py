@@ -57,8 +57,14 @@ class TrackBuilder:
     def set_ottrk_version(self, ottrk_version: str) -> None:
         self.ottrk_version = ottrk_version
 
+    def set_video_name(self, video_name: str) -> None:
+        self.video_name = video_name
+
     def append_detection(self) -> None:
         self._detections.append(self.create_detection())
+
+    def next_frame(self) -> None:
+        self.frame += 1
 
     def create_detection(self) -> Detection:
         return PythonDetection(

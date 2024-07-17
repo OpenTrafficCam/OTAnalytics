@@ -1,4 +1,5 @@
-from typing import Iterable
+from datetime import datetime
+from typing import Iterable, Optional
 
 from OTAnalytics.domain.video import Video, VideoRepository
 
@@ -33,3 +34,35 @@ class GetAllVideos:
 
     def get(self) -> list[Video]:
         return self._video_repository.get_all()
+
+
+class GetVideos:
+    def __init__(self, video_repository: VideoRepository) -> None:
+        self._video_repository = video_repository
+
+    def get(self, date: datetime) -> Optional[Video]:
+        videos = self._video_repository.get_by_date(date)
+        if videos:
+            return videos[0]
+        return None
+
+    def get_after(self, date: datetime) -> list[Video]:
+        if current_video := self.get(date):
+            sorted_videos = self._get_all_videos_sorted()
+            index = sorted_videos.index(current_video)
+            return sorted_videos[index + 1 :]
+        return []
+
+    def _get_all_videos_sorted(self) -> list[Video]:
+        all_videos = self._video_repository.get_all()
+        return sorted(
+            all_videos,
+            key=lambda video: video.start_date if video.start_date else datetime.min,
+        )
+
+    def get_before(self, date: datetime) -> list[Video]:
+        if current_video := self.get(date):
+            sorted_videos = self._get_all_videos_sorted()
+            index = sorted_videos.index(current_video)
+            return sorted_videos[:index]
+        return []
