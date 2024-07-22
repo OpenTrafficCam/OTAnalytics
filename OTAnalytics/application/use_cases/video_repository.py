@@ -87,6 +87,8 @@ class GetVideos:
         Sorts and returns a list of all videos in a sorted order based on their start
         dates.
 
+        datetime.min will be assumed, if a video has no start date.
+
         Returns:
             All videos sorted by their start dates.
         """
