@@ -72,7 +72,7 @@ class TestGetVideos:
         actual_video = get.get(current)
 
         assert actual_video == first_video
-        repository.get_by_date.assert_called_once()
+        repository.get_by_date.assert_called_once_with(current)
 
     def test_get_not_found(self) -> None:
         current = self.first_video_date()
@@ -83,7 +83,7 @@ class TestGetVideos:
         actual_video = get.get(current)
 
         assert actual_video is None
-        repository.get_by_date.assert_called_once()
+        repository.get_by_date.assert_called_once_with(current)
 
     def test_get_after(self, first_video: Mock, second_video: Mock) -> None:
         current = self.first_video_date()
@@ -95,7 +95,7 @@ class TestGetVideos:
         actual_videos = get.get_after(current)
 
         assert actual_videos == [second_video]
-        repository.get_by_date.assert_called_once()
+        repository.get_by_date.assert_called_once_with(current)
         repository.get_all.assert_called_once()
 
     def test_get_before(self, first_video: Mock, second_video: Mock) -> None:
@@ -108,5 +108,5 @@ class TestGetVideos:
         actual_videos = get.get_before(current)
 
         assert actual_videos == [first_video]
-        repository.get_by_date.assert_called_once()
+        repository.get_by_date.assert_called_once_with(current)
         repository.get_all.assert_called_once()
