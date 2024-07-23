@@ -85,6 +85,14 @@ class Video(ABC):
         """
         pass
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Video):
+            return NotImplemented
+        return self.get_path() == other.get_path()
+
+    def __hash__(self) -> int:
+        return hash(self.get_path())
+
 
 @dataclass(frozen=True)
 class VideoMetadata:
