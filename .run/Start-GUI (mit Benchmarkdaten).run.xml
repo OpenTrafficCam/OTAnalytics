@@ -14,7 +14,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/OTAnalytics/__main__.py" />
-    <option name="PARAMETERS" value="--otflow &quot;tests/data/OTCamera19_FR20_2023-05-24.otconfig&quot; --ottrks &quot;tests/data/OTCamera19_FR20_2023-05-24_08-00-00.ottrk&quot; --logfile_overwrite" />
+    <option name="PARAMETERS" value="--show-svz --otflow &quot;tests/data/OTCamera19_FR20_2023-05-24.otconfig&quot; --ottrks &quot;tests/data/OTCamera19_FR20_2023-05-24_08-00-00.ottrk&quot; --logfile_overwrite" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

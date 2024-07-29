@@ -36,6 +36,11 @@ class MissingCoordinate(Exception):
 
 
 class ViewModel(ABC):
+
+    @abstractmethod
+    def show_svz(self) -> bool:
+        raise NotImplementedError
+
     @abstractmethod
     def set_window(self, window: AbstractMainWindow) -> None:
         pass
