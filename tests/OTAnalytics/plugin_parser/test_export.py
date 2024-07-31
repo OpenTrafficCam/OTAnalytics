@@ -26,6 +26,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportSpecificationDto,
     FlowNameDto,
 )
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.plugin_parser.export import (
     END_DATE,
     END_TIME,
@@ -43,7 +44,7 @@ class TestCsvExport:
         counts = Mock(spec=Count)
         counts.to_dict.return_value = {}
         export = CsvExport(output_file=str(output_file))
-        export.export(counts)
+        export.export(counts, OVERWRITE)
 
         assert not output_file.exists()
 
@@ -73,7 +74,7 @@ class TestCsvExport:
             "count": {0: 1},
         }
         export = CsvExport(output_file=str(output_file))
-        export.export(counts)
+        export.export(counts, OVERWRITE)
 
         actual: DataFrame = pandas.read_csv(output_file)
         assert actual.to_dict() == expected
@@ -96,6 +97,7 @@ def execute_explode(
         modes=modes,
         output_format=output_format,
         output_file=output_file,
+        export_mode=OVERWRITE,
     )
     specification = ExportSpecificationDto(
         counting_specification=counting_specification,
@@ -197,6 +199,6 @@ class TestFillZerosExporter:
         tag_exploder.explode.return_value = tags
         exporter = FillZerosExporter(other, tag_exploder)
 
-        exporter.export(counts)
+        exporter.export(counts, OVERWRITE)
 
-        other.export.assert_called_with(FillEmptyCount(counts, tags))
+        other.export.assert_called_once_with(FillEmptyCount(counts, tags), OVERWRITE)

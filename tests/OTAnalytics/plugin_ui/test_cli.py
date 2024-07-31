@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from pathlib import Path
 from shutil import copy2, rmtree
@@ -27,6 +26,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import TrackParser, VideoParser
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.parser.cli_parser import (
     CliArguments,
@@ -116,6 +116,7 @@ from OTAnalytics.plugin_ui.cli import (
     InvalidSectionFileType,
     OTAnalyticsBulkCli,
     OTAnalyticsCli,
+    OTAnalyticsStreamCli,
     SectionsFileDoesNotExist,
 )
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
@@ -166,7 +167,7 @@ def temp_otconfig(
     test_data_tmp_dir: Path, otconfig_file: Path, ottrk_path: Path, cyclist_video: Path
 ) -> YieldFixture[Path]:
     temp_dir = test_data_tmp_dir / "temp_otconfig"
-    temp_dir.mkdir(parents=True)
+    temp_dir.mkdir(parents=True, exist_ok=True)
     temp_otconfig = temp_dir / otconfig_file.name
     temp_ottrk = temp_dir / ottrk_path.name
     temp_video = temp_dir / cyclist_video.name
@@ -397,7 +398,7 @@ class TestOTAnalyticsCli:
             self.CLEAR_ALL_TRACKS: clear_all_tracks,
             self.TRACKS_METADATA: tracks_metadata,
             self.VIDEOS_METADATA: videos_metadata,
-            self.PROGRESSBAR: NoProgressbarBuilder(),
+            # self.PROGRESSBAR: NoProgressbarBuilder(),
             self.EXPORT_ROAD_USER_ASSIGNMENT: export_road_user_assignments,
         }
 
@@ -588,7 +589,7 @@ class TestOTAnalyticsCli:
         run_config = Mock()
         run_config.count_intervals = {interval}
         cli = OTAnalyticsBulkCli(run_config, **mock_cli_dependencies)
-        cli._do_export_counts(test_data_tmp_dir / filename)
+        cli._do_export_counts(test_data_tmp_dir / filename, OVERWRITE)
 
         export_counts = mock_cli_dependencies[self.EXPORT_COUNTS]
 
@@ -599,6 +600,7 @@ class TestOTAnalyticsCli:
             modes=list(classifications),
             output_format="CSV",
             output_file=str(expected_output_file),
+            export_mode=OVERWRITE,
         )
         export_counts.export.assert_called_with(specification=expected_specification)
 
@@ -611,7 +613,7 @@ class TestOTAnalyticsCli:
     ) -> None:
         cli_args = CliArguments(
             start_cli=True,
-            cli_mode=CliMode.BULK,
+            cli_mode=CliMode.STREAM,
             cli_chunk_size=2,
             debug=False,
             logfile_overwrite=False,
@@ -620,16 +622,12 @@ class TestOTAnalyticsCli:
         )
         otconfig = config_parser.parse(temp_otconfig)
         run_config = RunConfiguration(flow_parser, cli_args, otconfig)
-        cli = OTAnalyticsBulkCli(run_config, **cli_dependencies)
+        cli = OTAnalyticsStreamCli(run_config, **cli_dependencies)
 
         cli.start()
         for event_format in run_config.event_formats:
             expected_events_file = temp_otconfig.with_name(
                 f"my_name_my_suffix.events.{event_format}"
-            )
-
-            print(
-                "Files:", os.listdir("d:/ptm/OTAnalytics/tests/data_tmp/temp_otconfig")
             )
             assert expected_events_file.is_file()
 
@@ -688,7 +686,7 @@ class TestOTAnalyticsCli:
         cli = OTAnalyticsBulkCli(run_config, **mock_cli_dependencies)
         cli._prepare_analysis(sections, flows)
         cli._run_analysis({second_track_file, first_track_file})
-        cli._export_analysis(sections)
+        cli._export_analysis(sections, OVERWRITE)
 
         mock_cli_dependencies[self.CLEAR_ALL_TRACKS].assert_called_once()
         mock_cli_dependencies[self.EVENT_REPOSITORY].clear.assert_called_once()

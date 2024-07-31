@@ -40,6 +40,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
     FlowNameDto,
 )
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository
@@ -740,6 +741,7 @@ class TestTrafficCounting:
             modes=modes,
             output_format="csv",
             output_file="counts.csv",
+            export_mode=OVERWRITE,
         )
         export_specification = create_export_specification(
             flows, counting_specification, get_sections_by_ids

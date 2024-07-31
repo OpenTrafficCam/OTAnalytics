@@ -481,7 +481,7 @@ class PythonDetectionParser(DetectionParser):
 
         for track_id, detections in tracks_dict.items():
             existing_detections = self._get_existing_detections(track_id)
-            all_detections = existing_detections + detections
+            all_detections = detections + existing_detections
             current_track = create_python_track(
                 track_id,
                 all_detections,

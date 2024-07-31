@@ -11,6 +11,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportSpecificationDto,
     FlowNameDto,
 )
+from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository
@@ -826,12 +827,15 @@ class Exporter(ABC):
     """
 
     @abstractmethod
-    def export(self, counts: Count) -> None:
+    def export(self, counts: Count, export_mode: ExportMode) -> None:
         """
         Export the given counts.
 
         Args:
             counts (Count): counts to export
+            export_mode (ExportMode): export mode specifies whether result data
+                should overwrite file, be appended (or flushed to file in case
+                of stateful exporter).
         """
         raise NotImplementedError
 
@@ -923,7 +927,7 @@ class ExportTrafficCounting(ExportCounts):
             flows, specification, self._get_sections_by_id
         )
         exporter = self._exporter_factory.create_exporter(export_specification)
-        exporter.export(counts)
+        exporter.export(counts, specification.export_mode)
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """

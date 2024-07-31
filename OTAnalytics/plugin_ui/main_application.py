@@ -176,6 +176,7 @@ from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
 from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 from OTAnalytics.plugin_parser.export import (
     AddSectionInformationExporterFactory,
+    CachedExporterFactory,
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
@@ -945,8 +946,10 @@ class ApplicationStarter:
             create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleTaggerFactory(),
-            FillZerosExporterFactory(
-                AddSectionInformationExporterFactory(SimpleExporterFactory())
+            CachedExporterFactory(
+                FillZerosExporterFactory(
+                    AddSectionInformationExporterFactory(SimpleExporterFactory())
+                ),
             ),
         )
 
