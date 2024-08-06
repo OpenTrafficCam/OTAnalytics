@@ -2,7 +2,7 @@
 name: Release Version to PYPI
 
 on:
-  # Create release if tag is pushed to main.
+  # Create pypi release if tag is pushed to main.
   # Needs: secrets.PLATOMO_BUILDER_ACCESS
   push:
     tags:
