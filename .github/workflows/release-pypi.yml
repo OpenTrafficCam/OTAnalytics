@@ -8,6 +8,11 @@ on:
     tags:
       - "v*.*.*.*"
 
+permissions:
+  id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+  contents: read  # Adjust other permissions as necessary
+  actions: read
+
 jobs:
   test:
     if: endsWith(github.event.base_ref, 'main')
