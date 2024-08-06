@@ -16,10 +16,6 @@ jobs:
     if: endsWith(github.event.base_ref, 'main')
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
-  update-version:
-    if: endsWith(github.event.base_ref, 'main')
-    uses: './.github/workflows/update-version.yml'
-    secrets: inherit
   create_pypi_release:
     needs:
       - test
@@ -27,8 +23,14 @@ jobs:
     uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-pypi-release.yml@main"
     secrets:
       PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        py: ["3.11"]
     with:
       package-version: ${{ github.ref_name }}
+      package-path: OTAnalytics
       os: ${{ matrix.os }}
       py-version: ${{ matrix.py }}
-      release_url: https://test.pypi.org/p/OTAnalytics-EXAMPLE-TEST-DISTRIBUTION
+      release-url: https://test.pypi.org/p/OTAnalytics-EXAMPLE-TEST-DISTRIBUTION
