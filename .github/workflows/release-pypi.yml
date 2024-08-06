@@ -1,5 +1,5 @@
 ---
-name: Build Release Version
+name: Release Version to PYPI
 
 on:
   # Create release if tag is pushed to main.
@@ -16,16 +16,21 @@ jobs:
     if: endsWith(github.event.base_ref, 'main')
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
-  create_release:
+  create_pypi_release:
     needs:
       - test
       - regression-test
-    uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml@main"
+    uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-pypi-release.yml@main"
     secrets:
       PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        py: ["3.11"]
     with:
       package-version: ${{ github.ref_name }}
       package-path: OTAnalytics
-      draft-release: false
-      pre-release: false
-      delete-existing: false
+      os: ${{ matrix.os }}
+      py-version: ${{ matrix.py }}
+      release-url: https://test.pypi.org/p/OTAnalytics-EXAMPLE-TEST-DISTRIBUTION
