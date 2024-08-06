@@ -23,6 +23,7 @@ jobs:
       PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
     with:
       package-version: nightly
+      package-path: OTAnalytics
       draft-release: false
       pre-release: true
       delete-existing: true
