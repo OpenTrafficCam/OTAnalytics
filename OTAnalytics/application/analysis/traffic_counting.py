@@ -184,7 +184,11 @@ def create_mode_tag(tag: str) -> Tag:
     return SingleTag(level=LEVEL_CLASSIFICATION, id=tag)
 
 
-def create_timeslot_tag(start_of_time_slot: datetime, interval: timedelta) -> Tag:
+def create_timeslot_tag(start: datetime, interval: timedelta) -> Tag:
+    interval_seconds = interval.total_seconds()
+    original_time = int(start.timestamp())
+    result = int(original_time / interval_seconds) * interval_seconds
+    start_of_time_slot = datetime.fromtimestamp(result, tz=timezone.utc)
     end_of_time_slot = start_of_time_slot + interval
     serialized_start = start_of_time_slot.strftime(r"%Y-%m-%d %H:%M:%S")
     serialized_end = end_of_time_slot.strftime(r"%Y-%m-%d %H:%M:%S")
@@ -375,11 +379,7 @@ class TimeslotTagger(Tagger):
         self._interval = interval
 
     def create_tag(self, assignment: RoadUserAssignment) -> Tag:
-        original_time = int(assignment.events.start.occurrence.timestamp())
-        interval_seconds = self._interval.total_seconds()
-        result = int(original_time / interval_seconds) * interval_seconds
-        start_of_time_slot = datetime.fromtimestamp(result, timezone.utc)
-        return create_timeslot_tag(start_of_time_slot, self._interval)
+        return create_timeslot_tag(assignment.events.start.occurrence, self._interval)
 
 
 class CountableAssignments:
@@ -918,7 +918,10 @@ class ExportTrafficCounting(ExportCounts):
         """
         if self._event_repository.is_empty():
             self._create_events()
-        events = self._event_repository.get_all()
+        events = self._event_repository.get(
+            start_date=specification.start,
+            end_date=specification.end,
+        )
         flows = self._flow_repository.get_all()
         assigned_flows = self._assigner.assign(events, flows)
         tagger = self._tagger_factory.create_tagger(specification)
