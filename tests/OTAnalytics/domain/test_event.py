@@ -574,19 +574,47 @@ class TestEventRepository:
         assert actual_event == expected_event
 
     @pytest.mark.parametrize(
-        "sections,event_type,expected_events",
+        "start_date,end_date,sections,event_type,expected_events",
         [
-            ([], [], all_events()),
-            ([SECTION_ID_1], [], [event_1_section_1(), event_2_section_1()]),
-            ([SECTION_ID_2], [], [event_1_section_2(), event_2_section_2()]),
-            ([SECTION_ID_1, SECTION_ID_2], [], all_events()),
-            ([SECTION_ID_1, SECTION_ID_2], DEFAULT_EVENT_TYPES, all_events()),
             (
+                None,
+                None,
+                [],
+                [],
+                all_events(),
+            ),
+            (
+                None,
+                None,
+                [SECTION_ID_1],
+                [],
+                [event_1_section_1(), event_2_section_1()],
+            ),
+            (
+                None,
+                None,
+                [SECTION_ID_2],
+                [],
+                [event_1_section_2(), event_2_section_2()],
+            ),
+            (None, None, [SECTION_ID_1, SECTION_ID_2], [], all_events()),
+            (
+                None,
+                None,
+                [SECTION_ID_1, SECTION_ID_2],
+                DEFAULT_EVENT_TYPES,
+                all_events(),
+            ),
+            (
+                None,
+                None,
                 [SECTION_ID_1],
                 [EventType.SECTION_ENTER],
                 [event_1_section_1()],
             ),
             (
+                None,
+                None,
                 [SECTION_ID_1],
                 [EventType.SECTION_LEAVE],
                 [event_2_section_1()],
@@ -595,6 +623,8 @@ class TestEventRepository:
     )
     def test_get(
         self,
+        start_date: datetime,
+        end_date: datetime,
         sections: list[SectionId],
         event_type: list[EventType],
         expected_events: list[Event],
@@ -602,6 +632,11 @@ class TestEventRepository:
         repository = EventRepository()
         repository.add_all(all_events())
 
-        actual_events = repository.get(sections=sections, event_types=event_type)
+        actual_events = repository.get(
+            start_date=start_date,
+            end_date=end_date,
+            sections=sections,
+            event_types=event_type,
+        )
 
         assert actual_events == expected_events
