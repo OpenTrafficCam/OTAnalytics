@@ -758,7 +758,7 @@ class TestTrafficCounting:
 
         use_case.export(counting_specification)
 
-        event_repository.get_all.assert_called_once()
+        event_repository.get.assert_called_once_with(start_date=start, end_date=end)
         flow_repository.get_all.assert_called_once()
         create_events.assert_called_once()
         road_user_assigner.assign.assert_called_once()
