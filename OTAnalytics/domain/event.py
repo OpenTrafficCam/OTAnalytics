@@ -517,9 +517,12 @@ class EventRepository:
         if sections is None:
             sections = []
         type_filter = self.__create_type_filter(event_types)
+        start_filter = self.__create_start_filter(start_date)
         end_filter = self.__create_end_filter(end_date)
         events = self.__create_event_list(sections)
-        return list(filter(end_filter, filter(type_filter, events)))
+        return list(
+            filter(start_filter, filter(end_filter, filter(type_filter, events)))
+        )
 
     def __create_event_list(self, sections: Sequence[SectionId]) -> Iterable[Event]:
         if sections:
@@ -536,10 +539,20 @@ class EventRepository:
         return lambda event: True
 
     @staticmethod
+    def __create_start_filter(start_date: datetime | None) -> Callable[[Event], bool]:
+        if start_date:
+            return after_filter(start_date)
+        return lambda event: True
+
+    @staticmethod
     def __create_end_filter(end_date: datetime | None) -> Callable[[Event], bool]:
         if end_date:
             return before_filter(end_date)
         return lambda event: True
+
+
+def after_filter(date: datetime) -> Callable[[Event], bool]:
+    return lambda actual: actual.occurrence >= date
 
 
 def before_filter(date: datetime) -> Callable[[Event], bool]:

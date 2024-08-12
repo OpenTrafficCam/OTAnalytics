@@ -584,11 +584,18 @@ class TestEventRepository:
                 all_events(),
             ),
             (
+                event_2_section_2().occurrence,
                 None,
-                event_1_section_1().occurrence,
                 [],
                 [],
-                [event_1_section_1()],
+                [event_2_section_2()],
+            ),
+            (
+                event_2_section_1().occurrence,
+                None,
+                [],
+                [],
+                [event_2_section_1(), event_2_section_2()],
             ),
             (
                 None,
