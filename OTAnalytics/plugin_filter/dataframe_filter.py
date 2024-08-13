@@ -7,6 +7,7 @@ from OTAnalytics.application.plotting import GetCurrentFrame
 from OTAnalytics.application.use_cases.video_repository import GetVideos
 from OTAnalytics.domain import track
 from OTAnalytics.domain.filter import Conjunction, Filter, FilterBuilder, Predicate
+from OTAnalytics.domain.video import Video
 
 
 class DataFrameConjunction(Conjunction[DataFrame, DataFrame]):
@@ -226,7 +227,9 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
         current_frame = self._current_frame.get_frame_number_for(start_date)
         videos_after = [video.name for video in self._get_videos.get_after(start_date)]
         current_video = self._get_videos.get(start_date)
-        current_video_name = current_video.name if current_video else videos_after[0]
+        current_video_name = self.__get_current_video_name(
+            current_video, videos_after, 0
+        )
         self._extend_complex_predicate(
             DataFrameStartsAtOrAfterFrame(
                 column_name=track.FRAME,
@@ -237,6 +240,17 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
             # DataFrameStartsAtOrAfterDate(self._occurrence_column, start_date)
         )
 
+    @staticmethod
+    def __get_current_video_name(
+        current_video: Video | None, videos: list[str], index: int
+    ) -> str:
+        if current_video:
+            return current_video.name
+        if videos:
+            return videos[index]
+        else:
+            return ""
+
     def add_ends_before_or_at_date_predicate(self, end_date: datetime) -> None:
         if self._occurrence_column is None:
             return
@@ -244,7 +258,9 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
         current_frame = self._current_frame.get_frame_number_for(end_date)
         videos_before = [video.name for video in self._get_videos.get_before(end_date)]
         current_video = self._get_videos.get(end_date)
-        current_video_name = current_video.name if current_video else videos_before[-1]
+        current_video_name = self.__get_current_video_name(
+            current_video, videos_before, -1
+        )
         self._extend_complex_predicate(
             DataFrameEndsBeforeOrAtFrame(
                 column_name=track.FRAME,
