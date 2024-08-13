@@ -48,6 +48,10 @@ class Video(ABC):
     def get_path(self) -> Path:
         pass
 
+    @property
+    def name(self) -> str:
+        return self.get_path().name
+
     @abstractmethod
     def get_frame(self, index: int) -> TrackImage:
         pass
@@ -80,6 +84,14 @@ class Video(ABC):
 
         """
         pass
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Video):
+            return NotImplemented
+        return self.get_path() == other.get_path()
+
+    def __hash__(self) -> int:
+        return hash(self.get_path())
 
 
 @dataclass(frozen=True)
