@@ -409,8 +409,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
         new_batches = []
         for batch_ids in batched(self.get_track_ids_as_string(), batch_size):
-            batch_dataset = self._dataset.loc[list(batch_ids), :]
-            batch_geometries = self._get_geometries_for(batch_ids)
+            batch_ids_as_list = list(batch_ids)
+            batch_dataset = self._dataset.loc[batch_ids_as_list, :]
+            batch_geometries = self._get_geometries_for(batch_ids_as_list)
             new_batches.append(
                 PandasTrackDataset.from_dataframe(
                     batch_dataset,
@@ -421,10 +422,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             )
         return new_batches
 
-    def get_track_ids_as_string(self) -> Sequence[str]:
+    def get_track_ids_as_string(self) -> list[str]:
         if self._dataset.empty:
             return []
-        return self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique()
+        return self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique().to_list()
 
     def _get_geometries_for(
         self, track_ids: list[str]
@@ -673,7 +674,7 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
         tracks_to_keep = filtered_df.index.get_level_values(LEVEL_TRACK_ID).unique()
         tracks_to_remove = tracks_to_keep.symmetric_difference(
             self._other.get_track_ids_as_string()
-        )
+        ).to_list()
         updated_geometry_datasets = self._other._remove_from_geometry_dataset(
             tracks_to_remove
         )
