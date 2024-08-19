@@ -78,7 +78,7 @@ class PandasDetection(Detection):
 
     @property
     def occurrence(self) -> datetime:
-        return self._occurrence
+        return self._occurrence[1]
 
     @property
     def interpolated_detection(self) -> bool:
@@ -397,7 +397,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return [self.__create_track_flyweight(current) for current in track_ids]
 
     def __create_track_flyweight(self, track_id: str) -> Track:
-        track_frame = self._dataset.loc[track_id, :]
+        track_frame = self._dataset.loc[[track_id], :]
         return PandasTrack(track_id, track_frame)
 
     def get_data(self) -> DataFrame:
@@ -427,7 +427,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique()
 
     def _get_geometries_for(
-        self, track_ids: Iterable[str]
+        self, track_ids: list[str]
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
         geometry_datasets = {}
         for offset, geometry_dataset in self._geometry_datasets.items():

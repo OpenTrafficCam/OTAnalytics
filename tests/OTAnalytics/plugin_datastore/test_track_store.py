@@ -60,7 +60,7 @@ class TestPandasDetection:
         python_detection = builder.build_detections()[0]
         data = Series(
             python_detection.to_dict(),
-            name=python_detection.occurrence,
+            name=(python_detection.track_id.id, python_detection.occurrence),
         )
         pandas_detection = PandasDetection(python_detection.track_id.id, data)
 
@@ -77,9 +77,12 @@ class TestPandasTrack:
         builder.append_detection()
         python_track = builder.build_track()
         detections = [detection.to_dict() for detection in python_track.detections]
-        data = DataFrame(detections).set_index([track.OCCURRENCE]).sort_index()
+        data = (
+            DataFrame(detections)
+            .set_index([track.TRACK_ID, track.OCCURRENCE])
+            .sort_index()
+        )
         data[track.TRACK_CLASSIFICATION] = data[track.CLASSIFICATION]
-        data = data.drop([track.TRACK_ID], axis=1)
         pandas_track = PandasTrack(python_track.id.id, data)
 
         assert_equal_track_properties(pandas_track, python_track)
@@ -439,12 +442,12 @@ class TestPandasTrackDataset:
             PandasTrackDataset.from_list([pedestrian_track], track_geometry_factory),
         )
         assert geometry_dataset_no_offset.get_for.call_args_list == [
-            call((car_track.id.id,)),
-            call((pedestrian_track.id.id,)),
+            call([car_track.id.id]),
+            call([pedestrian_track.id.id]),
         ]
         assert geometry_dataset_with_offset.get_for.call_args_list == [
-            call((car_track.id.id,)),
-            call((pedestrian_track.id.id,)),
+            call([car_track.id.id]),
+            call([pedestrian_track.id.id]),
         ]
 
     def test_filter_by_minimum_detection_length(
