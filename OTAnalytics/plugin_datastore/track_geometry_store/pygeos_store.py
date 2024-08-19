@@ -3,7 +3,7 @@ from collections import defaultdict
 from itertools import chain
 from typing import Any, Iterable, Literal, Sequence
 
-from pandas import DataFrame, concat
+from pandas import DataFrame, Series, concat
 from pygeos import (
     Geometry,
     contains,
@@ -194,9 +194,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             new_y = filtered_tracks[track.Y] + offset.y * filtered_tracks[track.H]
         tracks = concat([new_x, new_y], keys=[track.X, track.Y], axis=1)
         tracks_by_id = tracks.groupby(level=LEVEL_TRACK_ID, group_keys=True)
-        geometries = tracks_by_id.apply(
-            lambda coords: linestrings(coords[track.X], coords[track.Y])
-        )
+        geometries = tracks_by_id.apply(convert_to_linestrings)
         projections = calculate_all_projections(tracks)
 
         result = concat([geometries, projections], keys=COLUMNS, axis=1)
@@ -339,7 +337,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         )
 
 
-def calculate_all_projections(tracks: DataFrame) -> DataFrame:
+def calculate_all_projections(tracks: DataFrame) -> Series:
     tracks_by_id = tracks.groupby(level=0, group_keys=True)
     tracks["last_x"] = tracks_by_id[track.X].shift(1)
     tracks["last_y"] = tracks_by_id[track.Y].shift(1)
@@ -354,3 +352,7 @@ def calculate_all_projections(tracks: DataFrame) -> DataFrame:
         "distance"
     ].cumsum()
     return tracks.groupby(level=0, group_keys=True)["cum-distance"].agg(list)
+
+
+def convert_to_linestrings(coords: DataFrame) -> Geometry:
+    return linestrings(coords[track.X], coords[track.Y])

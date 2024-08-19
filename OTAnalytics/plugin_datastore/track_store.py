@@ -144,7 +144,7 @@ class PandasTrackClassificationCalculator(ABC):
     """
 
     @abstractmethod
-    def calculate(self, detections: DataFrame) -> Series:
+    def calculate(self, detections: DataFrame) -> DataFrame:
         """Determine a track's classification.
 
         Args:
@@ -441,7 +441,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return len(self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique())
 
     def filter_by_min_detection_length(self, length: int) -> "PandasTrackDataset":
-        detection_counts_per_track = self._dataset.groupby(level=LEVEL_TRACK_ID).size()
+        # groupby.size always returns a series
+        detection_counts_per_track: Series[int] = self._dataset.groupby(  # type: ignore
+            level=LEVEL_TRACK_ID
+        ).size()
         filtered_ids = detection_counts_per_track[
             detection_counts_per_track >= length
         ].index
@@ -585,9 +588,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             intersection_points.keys()
         )
 
-    def _create_cut_track_id(
-        self, row: DataFrame, cut_info: dict[str, list[int]]
-    ) -> str:
+    def _create_cut_track_id(self, row: Series, cut_info: dict[str, list[int]]) -> str:
         if (track_id := row[track.TRACK_ID]) in cut_info.keys():
             cut_segment_index = bisect(cut_info[track_id], row["cumcount"])
             return f"{track_id}_{cut_segment_index}"
