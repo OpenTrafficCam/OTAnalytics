@@ -14,6 +14,15 @@ repos:
       - id: requirements-txt-fixer
       - id: check-executables-have-shebangs
       - id: detect-private-key
+  - repo: local
+    hooks:
+      - id: update-type-stubs
+        name: Check for Type Stubs and Update Config
+        entry: ./update_precommit.py
+        language: system
+        files: ^requirements.*\.txt$
+        stages:
+          - commit
   - repo: https://github.com/PyCQA/flake8
     rev: 7.1.1
     hooks:
@@ -55,12 +64,3 @@ repos:
     rev: v0.10.0
     hooks:
       - id: shellcheck
-  - repo: local
-    hooks:
-      - id: update-type-stubs
-        name: Check for Type Stubs and Update Config
-        entry: ./update_precommit.py
-        language: system
-        files: ^requirements.*\.txt$
-        stages:
-          - commit
