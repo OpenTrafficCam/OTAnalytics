@@ -1,4 +1,7 @@
+#!/usr/bin/env python3
+
 import re
+from copy import deepcopy
 from pathlib import Path
 from typing import Iterable
 
@@ -65,9 +68,7 @@ def retrieve_type_stubs(packages: Iterable[str]) -> list[str]:
     for package in packages:
         if check_type_stub_exists(package):
             type_stubs.append(f"types-{package}")
-        else:
-            print(f"No type stub found for package: {package}")
-    return type_stubs
+    return sorted(type_stubs)
 
 
 def read_precommit_file(precommit_file: Path) -> dict:
@@ -77,7 +78,7 @@ def read_precommit_file(precommit_file: Path) -> dict:
 
 
 def update_precommit_config(config: dict, type_stubs: list[str]) -> dict:
-    updated_config = config.copy()
+    updated_config = deepcopy(config)
     for repo in updated_config[REPOSITORIES]:
         if repo[REPOSITORY] == MYPY_REPOSITORY:
             repo[HOOKS][0][ADDITIONAL_DEPENDENCIES] = type_stubs
@@ -106,26 +107,19 @@ def display_available_type_stubs(type_stubs: list[str]) -> None:
         print("\n No type stubs to be added to your pre-commit configuration.")
 
 
+def type_stubs_have_changed(actual: dict, to_compare: dict) -> bool:
+    return actual != to_compare
+
+
 def main() -> None:
     requirements_file = Path("requirements.txt")
     requirements_dev_file = Path("requirements-dev.txt")
     precommit_file = Path(".pre-commit-config.yaml")
 
-    print("Parsing requirements.txt and requirements-dev.txt...")
     packages = parse_multiple_requirements([requirements_file, requirements_dev_file])
-
-    print("Checking for type stubs...")
     type_stubs = retrieve_type_stubs(packages)
-
-    display_available_type_stubs(type_stubs)
-
-    print("Read pre-commit config...")
     precommit_config = read_precommit_file(precommit_file)
-
-    print("Update pre-commit config...")
     updated_precommit_config = update_precommit_config(precommit_config, type_stubs)
-
-    print("Save updated pre-commit config...")
     save_precommit_config(updated_precommit_config, precommit_file)
 
 
