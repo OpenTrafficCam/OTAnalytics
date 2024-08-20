@@ -14,7 +14,7 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
     def __init__(
         self,
         show: Literal["tree", "headings", "tree headings", ""] = "tree",
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         super().__init__(selectmode="none", show=show, **kwargs)
         self.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)
