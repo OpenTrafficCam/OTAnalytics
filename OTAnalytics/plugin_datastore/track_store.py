@@ -387,13 +387,14 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return updated_dataset
 
     def as_list(self) -> list[Track]:
-        if (track_ids := self.get_index()) is None:
-            return []
-        logger().warning(
-            "Creating track flyweight objects which is really slow in "
-            f"'{PandasTrackDataset.as_list.__name__}'."
-        )
-        return [self._create_track_flyweight(current) for current in track_ids]
+        if (track_ids := self.get_index()) is not None:
+            logger().warning(
+                "Creating track flyweight objects which is really slow in "
+                f"'{PandasTrackDataset.as_list.__name__}'."
+            )
+            return [self._create_track_flyweight(current) for current in track_ids]
+
+        return []
 
     def _create_track_flyweight(self, track_id: str) -> Track:
         track_frame = self._dataset.loc[track_id, :]
@@ -410,24 +411,23 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         dataset_size = len(self)
         batch_size = ceil(dataset_size / batches)
 
-        new_batches = []
-
-        if (track_ids := self.get_index()) is None:
-            return [self]
-
-        for batch_ids in batched(track_ids, batch_size):
-            batch_ids_as_list = list(batch_ids)
-            batch_dataset = self._dataset.loc[batch_ids_as_list, :]
-            batch_geometries = self._get_geometries_for(batch_ids_as_list)
-            new_batches.append(
-                PandasTrackDataset.from_dataframe(
-                    batch_dataset,
-                    self.track_geometry_factory,
-                    batch_geometries,
-                    calculator=self.calculator,
+        if (track_ids := self.get_index()) is not None:
+            new_batches = []
+            for batch_ids in batched(track_ids, batch_size):
+                batch_ids_as_list = list(batch_ids)
+                batch_dataset = self._dataset.loc[batch_ids_as_list, :]
+                batch_geometries = self._get_geometries_for(batch_ids_as_list)
+                new_batches.append(
+                    PandasTrackDataset.from_dataframe(
+                        batch_dataset,
+                        self.track_geometry_factory,
+                        batch_geometries,
+                        calculator=self.calculator,
+                    )
                 )
-            )
-        return new_batches
+            return new_batches
+
+        return [self]
 
     def get_index(self) -> Index | None:
         if self._dataset.empty:
