@@ -78,7 +78,7 @@ class PandasDetection(Detection):
 
     @property
     def occurrence(self) -> datetime:
-        return self._occurrence[1]
+        return self._occurrence
 
     @property
     def interpolated_detection(self) -> bool:
@@ -282,7 +282,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             yield from []
         else:
             for current in track_ids.array:
-                yield self.__create_track_flyweight(current)
+                yield self._create_track_flyweight(current)
 
     @staticmethod
     def from_list(
@@ -354,7 +354,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         if self._dataset.empty:
             return None
         try:
-            return self.__create_track_flyweight(id.id)
+            return self._create_track_flyweight(id.id)
         except KeyError:
             return None
 
@@ -393,11 +393,15 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             "Creating track flyweight objects which is really slow in "
             f"'{PandasTrackDataset.as_list.__name__}'."
         )
-        return [self.__create_track_flyweight(current) for current in track_ids]
+        return [self._create_track_flyweight(current) for current in track_ids]
 
-    def __create_track_flyweight(self, track_id: str) -> Track:
-        track_frame = self._dataset.loc[[track_id], :]
-        return PandasTrack(track_id, track_frame)
+    def _create_track_flyweight(self, track_id: str) -> Track:
+        track_frame = self._dataset.loc[track_id, :]
+        if isinstance(track_frame, DataFrame):
+            return PandasTrack(track_id, track_frame)
+        if isinstance(track_frame, Series):
+            return PandasTrack(track_id, track_frame.to_frame(track_id))
+        raise NotImplementedError(f"Not implemented for {type(track_frame)}")
 
     def get_data(self) -> DataFrame:
         return self._dataset
@@ -444,10 +448,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return len(self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique())
 
     def filter_by_min_detection_length(self, length: int) -> "PandasTrackDataset":
-        # groupby.size always returns a series
-        detection_counts_per_track: Series[int] = self._dataset.groupby(  # type: ignore
+        detection_counts_per_track: Series[int] = self._dataset.groupby(
             level=LEVEL_TRACK_ID
-        ).size()
+        )[track.FRAME].size()
         filtered_ids = detection_counts_per_track[
             detection_counts_per_track >= length
         ].index

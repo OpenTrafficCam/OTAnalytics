@@ -60,7 +60,7 @@ class TestPandasDetection:
         python_detection = builder.build_detections()[0]
         data = Series(
             python_detection.to_dict(),
-            name=(python_detection.track_id.id, python_detection.occurrence),
+            name=python_detection.occurrence,
         )
         pandas_detection = PandasDetection(python_detection.track_id.id, data)
 
@@ -77,12 +77,9 @@ class TestPandasTrack:
         builder.append_detection()
         python_track = builder.build_track()
         detections = [detection.to_dict() for detection in python_track.detections]
-        data = (
-            DataFrame(detections)
-            .set_index([track.TRACK_ID, track.OCCURRENCE])
-            .sort_index()
-        )
+        data = DataFrame(detections).set_index([track.OCCURRENCE]).sort_index()
         data[track.TRACK_CLASSIFICATION] = data[track.CLASSIFICATION]
+        data = data.drop([track.TRACK_ID], axis=1)
         pandas_track = PandasTrack(python_track.id.id, data)
 
         assert_equal_track_properties(pandas_track, python_track)
@@ -628,3 +625,15 @@ class TestPandasTrackDataset:
 
         result = filled_dataset.get_max_confidences_for([car_id, pedestrian_id])
         assert result == {car_id: 0.8, pedestrian_id: 0.9}
+
+    def test_create_test_flyweight_with_single_detection(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        track_builder = TrackBuilder()
+        track_builder.append_detection()
+        single_detection_track = track_builder.build_track()
+        dataset = PandasTrackDataset.from_list(
+            [single_detection_track], track_geometry_factory
+        )
+        result = dataset._create_track_flyweight(single_detection_track.id.id)
+        assert_equal_track_properties(result, single_detection_track)
