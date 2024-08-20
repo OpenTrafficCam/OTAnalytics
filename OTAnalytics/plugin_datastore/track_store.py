@@ -8,7 +8,7 @@ from typing import Any, Callable, Generator, Iterable, Iterator, Optional, Seque
 import numpy
 import pandas
 from more_itertools import batched
-from pandas import DataFrame, MultiIndex, Series
+from pandas import DataFrame, Index, MultiIndex, Series
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
@@ -278,11 +278,11 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         yield from self.as_generator()
 
     def as_generator(self) -> Generator[Track, None, None]:
-        if self._dataset.empty:
+        if (track_ids := self.get_index()) is None:
             yield from []
-        track_ids = self.get_track_ids_as_string()
-        for current in track_ids:
-            yield self.__create_track_flyweight(current)
+        else:
+            for current in track_ids.array:
+                yield self.__create_track_flyweight(current)
 
     @staticmethod
     def from_list(
@@ -387,9 +387,8 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return updated_dataset
 
     def as_list(self) -> list[Track]:
-        if self._dataset.empty:
+        if (track_ids := self.get_index()) is None:
             return []
-        track_ids = self.get_track_ids_as_string()
         logger().warning(
             "Creating track flyweight objects which is really slow in "
             f"'{PandasTrackDataset.as_list.__name__}'."
@@ -408,7 +407,11 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         batch_size = ceil(dataset_size / batches)
 
         new_batches = []
-        for batch_ids in batched(self.get_track_ids_as_string(), batch_size):
+
+        if (track_ids := self.get_index()) is None:
+            return [self]
+
+        for batch_ids in batched(track_ids, batch_size):
             batch_ids_as_list = list(batch_ids)
             batch_dataset = self._dataset.loc[batch_ids_as_list, :]
             batch_geometries = self._get_geometries_for(batch_ids_as_list)
@@ -422,10 +425,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             )
         return new_batches
 
-    def get_track_ids_as_string(self) -> list[str]:
+    def get_index(self) -> Index | None:
         if self._dataset.empty:
-            return []
-        return self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique().to_list()
+            return None
+        return self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique()
 
     def _get_geometries_for(
         self, track_ids: list[str]
@@ -672,18 +675,11 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
         dataset = self._other.get_data()
         mask = dataset[track.TRACK_CLASSIFICATION].isin(classes)
         filtered_df = dataset[mask]
-        tracks_to_keep = filtered_df.index.get_level_values(LEVEL_TRACK_ID).unique()
-        tracks_to_remove = tracks_to_keep.symmetric_difference(
-            self._other.get_track_ids_as_string()
-        ).to_list()
-        updated_geometry_datasets = self._other._remove_from_geometry_dataset(
-            tracks_to_remove
-        )
         return PandasTrackDataset(
-            self._other.track_geometry_factory,
-            filtered_df,
-            updated_geometry_datasets,
-            self._other.calculator,
+            track_geometry_factory=self._other.track_geometry_factory,
+            dataset=filtered_df,
+            geometry_datasets=None,
+            calculator=self._other.calculator,
         )
 
     def add_all(self, other: Iterable[Track]) -> TrackDataset:
