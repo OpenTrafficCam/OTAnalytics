@@ -1,3 +1,4 @@
+---
 name: Benchmark Test With Pytest
 on:
   schedule:
@@ -20,7 +21,10 @@ jobs:
         with:
           python-version: 3.11
       - name: Download test data
-        run: gh release download --pattern '*.zip' -R platomo/OpenTrafficCam-testdata -D tests/data
+        run: gh release download \
+          --pattern 'OTCamera19_FR20_2023-05-24_06-00-00_11-45-00.zip' \
+          --pattern 'OTCamera19_FR20_2023-05-24_00-00-00.zip' \
+          -R platomo/OpenTrafficCam-testdata -D tests/data
         env:
           GH_TOKEN: ${{ secrets.PLATOMO_OTC_TESTDATA_ACCESS }}
       - name: Unzip test data
