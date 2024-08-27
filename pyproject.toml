@@ -3,31 +3,31 @@ requires = ["hatchling", "hatch-requirements-txt"]
 build-backend = "hatchling.build"
 
 [project]
-name = "OTAnalytics-EXAMPLE-TEST-DISTRIBUTION"
+name = "OTAnalytics"
 dynamic = ["dependencies", "version"]
 authors = [
-  { name="Martin Bärwolff", email="martin.baerwolff@platomo.com" },
-  { name="Lars Briem", email="lars.briem@platomo.com" },
-  { name="Sebastian Buck", email="sebastian.buck@platomo.com" },
-  { name="Michael Heilig", email="michael.heilig@platomo.com" },
-  { name="Randy Seng", email="randy.seng@platomo.com" },
-  { name="Steven Schlechte", email="steven.schlechte@platomo.com" },
+  { name="OpenTrafficCam contributors", email="team@opentrafficcam.org" },
+  { name="platomo GmbH", email="info@platomo.de" },
 ]
 description = "OTAnalytics is a core module of the OpenTrafficCam framework to perform traffic analysis on trajectories of road users."
+
 readme = "README.md"
 requires-python = ">=3.11"
+license-files = { paths = ["LICENSE"] }
 classifiers = [
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
 ]
-keywords = ["OpenTrafficCam", "Traffic Analysis", "Traffic Counting"]
+keywords = ["OpenTrafficCam", "Traffic Analysis", "Traffic Counting", "Trajectories"]
 
 [project.urls]
 Homepage = "https://opentrafficcam.org/"
 Documentation = "https://opentrafficcam.org/overview/"
 Repository = "https://github.com/OpenTrafficCam/OTAnalytics"
 Issues = "https://github.com/OpenTrafficCam/OTAnalytics/issues"
+Changelog = "https://github.com/OpenTrafficCam/OTAnalytics/releases"
 
 [tool.hatch.metadata.hooks.requirements_txt]
 files = ["requirements.txt"]
