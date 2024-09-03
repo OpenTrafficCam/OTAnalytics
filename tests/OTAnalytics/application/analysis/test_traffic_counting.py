@@ -766,4 +766,4 @@ class TestTrafficCounting:
         assignments.tag.assert_called_once_with(tagger)
         tagged_assignments.count.assert_called_once_with(flows)
         exporter_factory.create_exporter.assert_called_once_with(export_specification)
-        exporter.export.assert_called_once_with(counts)
+        exporter.export.assert_called_once_with(counts, OVERWRITE)

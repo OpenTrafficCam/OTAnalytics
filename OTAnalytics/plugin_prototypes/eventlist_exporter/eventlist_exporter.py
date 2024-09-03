@@ -172,11 +172,8 @@ class EventListCSVExporter(EventListExporter):
         sections: Iterable[Section],
         export_specification: EventExportSpecification,
     ) -> None:
-        if events:
-            df_events = EventListDataFrameBuilder(
-                events=events, sections=sections
-            ).build()
-            self._write_to_csv(df_events, export_specification)
+        df_events = EventListDataFrameBuilder(events=events, sections=sections).build()
+        self._write_to_csv(df_events, export_specification)
 
     def _write_to_csv(
         self, df_events: pd.DataFrame, export_specification: EventExportSpecification
@@ -210,7 +207,7 @@ class EventListOteventsExporter(EventListExporter):
     def __init__(self, event_list_parser: EventListParser) -> None:
         self._event_list_parser = event_list_parser
         self._events_collect: list[Event] = list()
-        self._sections_collect: set[Section] = set()
+        self._sections_collect: list[Section] = list()
 
     def export(
         self,
@@ -228,7 +225,9 @@ class EventListOteventsExporter(EventListExporter):
             )
 
         self._events_collect += events
-        self._sections_collect = self._sections_collect.union(sections)
+        self._sections_collect += [
+            section for section in sections if section not in self._sections_collect
+        ]
 
         if export_mode.is_final_write():
             self._event_list_parser.serialize(

@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import defaultdict
 from datetime import timedelta
 from pathlib import Path
 from typing import Iterable
@@ -50,12 +50,13 @@ class CsvExport(Exporter):
 
     def __init__(self, output_file: str) -> None:
         self._output_file = output_file
-        self._counts: Counter = Counter(dict())
+        self._counts: dict[Tag, int] = defaultdict(int)
 
     def export(self, counts: Count, export_mode: ExportMode) -> None:
         logger().info(f"Exporting counts to {self._output_file}")
 
-        self._counts += Counter(counts.to_dict())
+        for tag, value in counts.to_dict().items():
+            self._counts[tag] += value
 
         if export_mode.is_final_write():
             dataframe = self.__create_data_frame(self._counts)

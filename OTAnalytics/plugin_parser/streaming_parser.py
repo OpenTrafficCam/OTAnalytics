@@ -284,10 +284,10 @@ class StreamOttrkParser(StreamTrackParser):
         self._detection_parser = detection_parser
         self._tracks_dict: dict[TrackId, list[Detection]] = {}
         self._format_fixer = format_fixer
-        self._registered_tracks_metadata: list[TracksMetadata] = list(
+        self._registered_tracks_metadata: set[TracksMetadata] = set(
             registered_tracks_metadata
         )
-        self._registered_videos_metadata: list[VideosMetadata] = list(
+        self._registered_videos_metadata: set[VideosMetadata] = set(
             registered_videos_metadata
         )
         self._progressbar = progressbar
@@ -296,17 +296,18 @@ class StreamOttrkParser(StreamTrackParser):
 
     def register_tracks_metadata(self, tracks_metadata: TracksMetadata) -> None:
         """Register TracksMetadata to be updated when a new ottrk file is parsed."""
-        self._registered_tracks_metadata.append(tracks_metadata)
+        self._registered_tracks_metadata.add(tracks_metadata)
 
     def register_videos_metadata(self, videos_metadata: VideosMetadata) -> None:
         """Register VideosMetadata to be updated when a new ottrk file is parsed."""
-        self._registered_videos_metadata.append(videos_metadata)
+        self._registered_videos_metadata.add(videos_metadata)
 
     def _update_registered_metadata_collections(
         self,
         new_detection_metadata: DetectionMetadata,
         new_video_metadata: VideoMetadata,
     ) -> None:
+
         for tracks_metadata in self._registered_tracks_metadata:
             tracks_metadata.update_detection_classes(
                 new_detection_metadata.detection_classes

@@ -419,13 +419,13 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
             export_tracks,
             export_road_user_assignments,
         )
-        self._stream_track_parser = track_parser
+        self._track_parser = track_parser
 
     def _parse_track_stream(self, track_files: set[Path]) -> Iterable[TrackDataset]:
-        self._stream_track_parser.register_tracks_metadata(self._tracks_metadata)
-        self._stream_track_parser.register_videos_metadata(self._videos_metadata)
+        self._track_parser.register_tracks_metadata(self._tracks_metadata)
+        self._track_parser.register_videos_metadata(self._videos_metadata)
 
-        return self._stream_track_parser.parse(track_files)
+        return self._track_parser.parse(track_files)
 
     def _run_analysis(self, ottrk_files: set[Path]) -> None:
         """Run analysis."""
