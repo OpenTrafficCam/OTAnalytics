@@ -35,6 +35,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     TaggerFactory,
     TimeslotTagger,
     create_export_specification,
+    create_timeslot_tag,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -61,6 +62,39 @@ def track(track_builder: TrackBuilder) -> Track:
     track_builder.append_detection()
     track_builder.append_detection()
     return track_builder.build_track()
+
+
+@pytest.mark.parametrize(
+    "start_time,expected_start_time,expected_end_time",
+    [
+        ("00:00:00", "00:00:00", "00:15:00"),
+        ("00:03:00", "00:00:00", "00:15:00"),
+    ],
+)
+def test_create_timeslot_tag(
+    start_time: str,
+    expected_start_time: str,
+    expected_end_time: str,
+) -> None:
+    start_date = f"2024-01-01 {start_time}"
+    expected_start_date = f"2024-01-01 {expected_start_time}"
+    expected_end_date = f"2024-01-01 {expected_end_time}"
+    current = datetime.strptime(start_date, "%Y-%m-%d %H:%M:%S").replace(
+        tzinfo=timezone.utc
+    )
+    interval = timedelta(minutes=15)
+    tag = create_timeslot_tag(current, interval)
+
+    expected_tag = MultiTag(
+        frozenset(
+            [
+                SingleTag(level=LEVEL_START_TIME, id=expected_start_date),
+                SingleTag(level=LEVEL_END_TIME, id=expected_end_date),
+            ]
+        )
+    )
+
+    assert tag == expected_tag
 
 
 class TestCountByFlow:
@@ -758,7 +792,7 @@ class TestTrafficCounting:
 
         use_case.export(counting_specification)
 
-        event_repository.get_all.assert_called_once()
+        event_repository.get.assert_called_once_with(start_date=start, end_date=end)
         flow_repository.get_all.assert_called_once()
         create_events.assert_called_once()
         road_user_assigner.assign.assert_called_once()
