@@ -65,7 +65,7 @@ def assert_two_files_equal_sorted(
 ) -> None:
 
     with open(actual_counts_file, mode="r") as actual:
-        act_lines = sorted([line.split(",", 1)[1] for line in actual.readlines()])
+        act_lines = sorted(actual.readlines())
         with open(expected_counts_file, mode="r") as expected:
             exp_lines = sorted(expected.readlines())
 
