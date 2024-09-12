@@ -678,6 +678,14 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
         dataset = self._other.get_data()
         mask = dataset[track.TRACK_CLASSIFICATION].isin(classes)
         filtered_df = dataset[mask]
+        # The pandas Index does not implement the Sequence interface, which causes
+        # compatibility issues with the PandasTrackDataset._remove_from_geometry method
+        # when trying to remove geometries for tracks that have been deleted.
+        # To address this, we invalidate the entire geometry cache rather than
+        # attempting selective removal.
+        # This approach is acceptable because track removal only occurs when
+        # cutting tracks, which is a rare use case.
+
         return PandasTrackDataset(
             track_geometry_factory=self._other.track_geometry_factory,
             dataset=filtered_df,
