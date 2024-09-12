@@ -48,6 +48,7 @@ class CsvTrackExport(ExportTracks):
             track_classification = _track.classification
             for detection in _track.detections:
                 current = detection.to_dict()
+                # Add missing track classification to detection dict
                 current[track.TRACK_CLASSIFICATION] = track_classification
                 detections.append(current)
         return DataFrame(detections)
