@@ -73,7 +73,9 @@ class PandasDetectionParser(DetectionParser):
             inplace=True,
         )
         data[track.TRACK_ID] = (
-            data[track.TRACK_ID].astype(str).apply(id_generator).astype(str)
+            data[track.TRACK_ID]
+            .astype(str)
+            .apply(lambda track_id: str(id_generator(track_id)))
         )
         data[track.VIDEO_NAME] = video_name
         data[track.INPUT_FILE] = input_file

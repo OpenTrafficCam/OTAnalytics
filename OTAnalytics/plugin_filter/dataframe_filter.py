@@ -1,7 +1,8 @@
+from abc import ABC
 from datetime import datetime
 from typing import Iterable, Optional
 
-from pandas import DataFrame, Series
+from pandas import DataFrame
 
 from OTAnalytics.application.plotting import GetCurrentFrame
 from OTAnalytics.application.use_cases.video_repository import GetVideos
@@ -35,7 +36,7 @@ class DataFrameConjunction(Conjunction[DataFrame, DataFrame]):
         return DataFrameConjunction(self, other)
 
 
-class DataFramePredicate(Predicate[DataFrame, DataFrame]):
+class DataFramePredicate(Predicate[DataFrame, DataFrame], ABC):
     """Checks DataFrame entries against predicate.
 
     Entries that do not fulfill predicate are filtered out.
@@ -274,7 +275,7 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
         self._result = None
 
     def _extend_complex_predicate(
-        self, predicate: Predicate[DataFrame, Series]
+        self, predicate: Predicate[DataFrame, DataFrame]
     ) -> None:
         if self._complex_predicate:
             self._complex_predicate = self._complex_predicate.conjunct_with(predicate)
