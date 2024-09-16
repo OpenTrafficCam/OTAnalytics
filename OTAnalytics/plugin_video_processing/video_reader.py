@@ -37,11 +37,17 @@ class OpenCvVideoReader(VideoReader):
         cap = self.__get_clip(video_path)
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         frame_to_load = min(index, (total_frames - 1))
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_to_load)
-        is_read, bgr_frame = cap.read()
-        cap.release()
-        rgb_frame = bgr_frame[:, :, ::-1]
-        return PilImage(Image.fromarray(rgb_frame).convert(GRAYSCALE))
+        try:
+            while frame_to_load >= 0:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_to_load)
+                is_read, bgr_frame = cap.read()
+                if is_read:
+                    rgb_frame = bgr_frame[:, :, ::-1]
+                    return PilImage(Image.fromarray(rgb_frame).convert(GRAYSCALE))
+                frame_to_load = frame_to_load - 1
+            raise FrameDoesNotExistError
+        finally:
+            cap.release()
 
     @staticmethod
     def __get_clip(video_path: Path) -> VideoCapture:
