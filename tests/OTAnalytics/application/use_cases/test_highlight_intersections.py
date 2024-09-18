@@ -474,17 +474,21 @@ class TestTracksOverlapOccurrenceWindow:
         end_time = datetime(2020, 1, 1, 13, 30)
         end_detection.occurrence = end_time
 
-        with patch.object(
-            TracksOverlapOccurrenceWindow, "_has_overlap", return_value=True
-        ) as mock_has_overlap, patch(
-            "OTAnalytics.application.use_cases.highlight_intersections.Track.start",
-            new_callable=PropertyMock,
-            return_value=start_time,
-        ) as mock_start, patch(
-            "OTAnalytics.application.use_cases.highlight_intersections.Track.end",
-            new_callable=PropertyMock,
-            return_value=end_time,
-        ) as mock_end:
+        with (
+            patch.object(
+                TracksOverlapOccurrenceWindow, "_has_overlap", return_value=True
+            ) as mock_has_overlap,
+            patch(
+                "OTAnalytics.application.use_cases.highlight_intersections.Track.start",
+                new_callable=PropertyMock,
+                return_value=start_time,
+            ) as mock_start,
+            patch(
+                "OTAnalytics.application.use_cases.highlight_intersections.Track.end",
+                new_callable=PropertyMock,
+                return_value=end_time,
+            ) as mock_end,
+        ):
             track_id = TrackId("1")
             track = Mock(spec=Track)
             track.id = track_id
