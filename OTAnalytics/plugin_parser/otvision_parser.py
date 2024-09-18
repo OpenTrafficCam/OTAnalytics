@@ -238,7 +238,6 @@ class Ottrk_Version_1_0_To_1_2(MetadataFixer):
         Fix datetime of recorded start date in video metadata
         from date string to timestamp.
         """
-        # TODO Review: Not sure in which version this changed ?
         if current_version < self.to_version():
             recorded_start_date = metadata[ottrk_format.VIDEO][
                 ottrk_format.RECORDED_START_DATE
@@ -251,8 +250,8 @@ class Ottrk_Version_1_0_To_1_2(MetadataFixer):
                     date.timestamp()
                 )
             except (ValueError, TypeError):
-                # TODO just for safety in case there are both
-                # TODO file with timestamp and date string in prior versions
+                # just for safety in case there are both
+                # file with timestamp and date string in prior versions
                 metadata[ottrk_format.VIDEO][ottrk_format.RECORDED_START_DATE] = float(
                     recorded_start_date
                 )
@@ -304,16 +303,12 @@ class OttrkFormatFixer:
         version = content[ottrk_format.METADATA][ottrk_format.OTDET_VERSION]
         return Version.from_str(version)
 
-    # TODO find better name instead of name duplication?
     def __fix_metadata(self, content: dict) -> dict:
         content[ottrk_format.METADATA] = self.fix_metadata(
             metadata=content[ottrk_format.METADATA]
         )
         return content
 
-    # TODO Review: fixing metadata alone can be reused in streaming_parser,
-    # TODO hence I made it public. This might also apply to fixing
-    # TODO single detection data, when they are parsed lazy (but currently not used).
     def fix_metadata(self, metadata: dict) -> dict:
         """
         Fix formate changes from older ottrk metadata
@@ -391,8 +386,6 @@ DEFAULT_TRACK_LENGTH_LIMIT = TrackLengthLimit(
 )
 
 
-# TODO Review: these methods for creating PythonDetections and PythonTracks are static
-# TODO and could live outside a class for reusability in streaming_parser
 def parse_python_detection(
     metadata_video: dict,
     id_generator: TrackIdGenerator,
