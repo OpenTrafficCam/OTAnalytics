@@ -443,10 +443,9 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
                 self._get_all_sections(), preserve_cutting_sections=True
             )
 
-            # logger().info("Create event list ...")
-            # TODO too much logging in loop?
+            logger().info("Create event list ...")
             self._create_events()
-            # logger().info("Event list created.")
+            logger().info("Event list created.")
 
             export_mode = ExportMode.create(is_first, flush=is_last)
 
