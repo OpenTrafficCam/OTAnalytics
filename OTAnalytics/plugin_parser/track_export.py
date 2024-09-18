@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pandas import DataFrame
 
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
@@ -49,8 +51,8 @@ class CsvTrackExport(ExportTracks):
         dataframe = set_column_order(dataframe)
         path = specification.save_path
         output_path = path.with_suffix(".tracks.csv")
-        write_mode = "a" if append else "w"
-        dataframe.to_csv(output_path, index=False, header=not append, mode=write_mode)
+        write_mode: Literal["w", "a"] = "a" if append else "w"
+        dataframe.to_csv(output_path, index=False, header=(not append), mode=write_mode)
 
         if specification.export_mode.is_final_write():
             tracks_metadata_path = path.with_suffix(".tracks_metadata.json")

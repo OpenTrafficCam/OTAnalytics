@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Literal
 
 from pandas import DataFrame
 
@@ -30,7 +30,7 @@ class RoadUserAssignmentCsvExporter(RoadUserAssignmentExporter):
 
     def _serialize(self, dtos: list[dict], export_mode: ExportMode) -> None:
         append = export_mode.is_subsequent_write()
-        write_mode = "a" if append else "w"
+        write_mode: Literal["w", "a"] = "a" if append else "w"
         DataFrame(dtos, columns=ROAD_USER_ASSIGNMENT_DICT_KEYS).to_csv(
             self._outputfile, index=False, header=not append, mode=write_mode
         )

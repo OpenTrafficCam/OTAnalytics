@@ -111,12 +111,12 @@ class UseCaseProvider:
         PygeosTrackGeometryDataset.from_track_dataset
     )
 
-    @property  # TODO method with cli mode, doch weglassen
+    @property
     def run_config(self) -> RunConfiguration:
         return create_run_config(
             flow_parser=self._flow_parser,
             start_cli=True,
-            cli_mode=CliMode.STREAM,  # TODO reset to BULK?
+            cli_mode=CliMode.BULK,
             debug=False,
             logfile_overwrite=True,
             track_export=False,

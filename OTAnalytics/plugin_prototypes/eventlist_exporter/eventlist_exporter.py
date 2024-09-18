@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Literal
 
 import pandas as pd
 
@@ -181,7 +181,7 @@ class EventListCSVExporter(EventListExporter):
         file = export_specification.file
         append = export_specification.export_mode.is_subsequent_write()
         header = not append
-        write_mode = "a" if append else "w"
+        write_mode: Literal["w", "a"] = "a" if append else "w"
         df_events.to_csv(file, index=False, mode=write_mode, header=header)
 
     def get_extension(self) -> str:
