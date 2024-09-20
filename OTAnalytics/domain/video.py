@@ -12,6 +12,14 @@ VIDEOS: str = "videos"
 PATH: str = "path"
 
 
+class InvalidVideoError(Exception):
+    pass
+
+
+class FrameDoesNotExistError(Exception):
+    pass
+
+
 class VideoReader(ABC):
     @abstractmethod
     def get_fps(self, video: Path) -> float:

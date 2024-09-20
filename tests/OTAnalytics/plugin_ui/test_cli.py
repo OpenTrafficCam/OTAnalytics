@@ -112,7 +112,7 @@ from OTAnalytics.plugin_ui.cli import (
     OTAnalyticsCli,
     SectionsFileDoesNotExist,
 )
-from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
+from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 from tests.conftest import YieldFixture
 
 CONFIG_FILE = "path/to/config.otconfig"
@@ -189,7 +189,7 @@ def mock_flow_parser() -> Mock:
 
 @pytest.fixture
 def video_parser() -> VideoParser:
-    return CachedVideoParser(SimpleVideoParser(OpenCvVideoReader()))
+    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader()))
 
 
 @pytest.fixture
