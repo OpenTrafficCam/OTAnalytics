@@ -99,6 +99,7 @@ class TestGetVideos:
     @pytest.mark.parametrize(
         "query_date, get_by_date, expected_videos",
         [
+            (second_video_date(), [], []),
             (first_video_date(), [lf("first_video")], [lf("second_video")]),
             (
                 first_video_date() - video_duration(),
@@ -129,6 +130,7 @@ class TestGetVideos:
     @pytest.mark.parametrize(
         "query_date, get_by_date, expected_videos",
         [
+            (first_video_date(), [], []),
             (second_video_date(), [lf("second_video")], [lf("first_video")]),
             (
                 second_video_date() + 2 * video_duration(),
