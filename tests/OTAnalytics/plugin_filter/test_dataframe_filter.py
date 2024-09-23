@@ -125,7 +125,6 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterFrame(
-                    OCCURRENCE,
                     3,
                     DEFAULT_VIDEO_NAME,
                     [SECOND_VIDEO_NAME, THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
@@ -134,7 +133,6 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterFrame(
-                    OCCURRENCE,
                     3,
                     SECOND_VIDEO_NAME,
                     [THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
@@ -143,7 +141,6 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterFrame(
-                    OCCURRENCE,
                     4,
                     SECOND_VIDEO_NAME,
                     [THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
@@ -152,7 +149,6 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterFrame(
-                    OCCURRENCE,
                     -1,
                     DEFAULT_VIDEO_NAME,
                     [SECOND_VIDEO_NAME, THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
@@ -161,7 +157,6 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameEndsBeforeOrAtFrame(
-                    OCCURRENCE,
                     10,
                     FORTH_VIDEO_NAME,
                     [DEFAULT_VIDEO_NAME, SECOND_VIDEO_NAME, THIRD_VIDEO_NAME],
@@ -170,13 +165,13 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameEndsBeforeOrAtFrame(
-                    OCCURRENCE, 3, SECOND_VIDEO_NAME, [DEFAULT_VIDEO_NAME]
+                    3, SECOND_VIDEO_NAME, [DEFAULT_VIDEO_NAME]
                 ),
                 [True, True, True, False, False],
             ),
             (
                 DataFrameEndsBeforeOrAtFrame(
-                    OCCURRENCE, 4, SECOND_VIDEO_NAME, [DEFAULT_VIDEO_NAME]
+                    4, SECOND_VIDEO_NAME, [DEFAULT_VIDEO_NAME]
                 ),
                 [True, True, True, False, False],
             ),
@@ -246,6 +241,12 @@ class TestNoOpDataFrameFilter:
 DEFAULT_FRAME = 1
 
 
+def create_video_mock(video_name: str) -> Mock:
+    video = Mock(spec=Video)
+    type(video).name = PropertyMock(return_value=video_name)
+    return video
+
+
 class TestDataFrameFilterBuilder:
     @pytest.fixture
     def current_frame(self) -> Mock:
@@ -266,12 +267,10 @@ class TestDataFrameFilterBuilder:
     def test_add_starts_at_or_after_date_predicate(
         self, current_frame: Mock, get_videos: Mock
     ) -> None:
-        video = Mock(spec=Video)
-        video_after = Mock(spec=Video)
         video_name = "video_name"
+        video = create_video_mock(video_name)
         video_name_after = f"{video_name}_after"
-        type(video).name = PropertyMock(return_value=video_name)
-        type(video_after).name = PropertyMock(return_value=video_name_after)
+        video_after = create_video_mock(video_name_after)
         get_videos.get.return_value = video
         get_videos.get_after.return_value = [video_after]
         start_date = datetime(2000, 1, 1)
@@ -294,10 +293,8 @@ class TestDataFrameFilterBuilder:
     ) -> None:
         video_name = "video_name"
         video_name_before = f"{video_name}_before"
-        video = Mock(spec=Video)
-        video_before = Mock(spec=Video)
-        type(video).name = PropertyMock(return_value=video_name)
-        type(video_before).name = PropertyMock(return_value=video_name_before)
+        video = create_video_mock(video_name)
+        video_before = create_video_mock(video_name_before)
         get_videos.get.return_value = video
         get_videos.get_before.return_value = [video_before]
         end_date = datetime(2000, 1, 3)
