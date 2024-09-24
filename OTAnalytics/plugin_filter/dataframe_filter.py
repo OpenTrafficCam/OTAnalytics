@@ -1,8 +1,8 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Iterable, Optional
 
-from pandas import DataFrame
+from pandas import DataFrame, Series
 
 from OTAnalytics.application.plotting import GetCurrentFrame
 from OTAnalytics.application.use_cases.video_repository import GetVideos
@@ -97,7 +97,42 @@ class DataFrameStartsAtOrAfterDate(DataFramePredicate):
         ]
 
 
-class DataFrameStartsAtOrAfterFrame(DataFramePredicate):
+class DataFrameFramePredicate(DataFramePredicate):
+    """Checks if the DataFrame rows contains a frame for a video or is in other videos.
+
+    Args:
+        frame (int): the frame number to evaluate against (inclusive)
+        video_with_frame (str): the video where the frame should be in
+        other_videos (list[str]): all other video names where rows should be in
+    """
+
+    def __init__(
+        self,
+        frame: int,
+        video_with_frame: str | None,
+        other_videos: list[str],
+    ) -> None:
+        self._frame = frame
+        self._video_with_frame = video_with_frame
+        self._other_videos = other_videos
+
+    @abstractmethod
+    def create_frame_filter(self, to_test: DataFrame, frame: int) -> Series:
+        pass
+
+    def test(self, to_test: DataFrame) -> DataFrame:
+        video_frame_filter = self.create_frame_filter(to_test, self._frame)
+        video_with_frame_filter = (
+            to_test[track.VIDEO_NAME] == self._video_with_frame
+            if self._video_with_frame
+            else to_test[track.VIDEO_NAME].isnull()
+        )
+        other_videos_filter = to_test[track.VIDEO_NAME].isin(self._other_videos)
+        date_filter = video_frame_filter & video_with_frame_filter | other_videos_filter
+        return to_test[date_filter]
+
+
+class DataFrameStartsAtOrAfterFrame(DataFrameFramePredicate):
     """Checks if the DataFrame rows start at or after frame.
 
     Args:
@@ -113,22 +148,14 @@ class DataFrameStartsAtOrAfterFrame(DataFramePredicate):
         video_of_start_date: str | None,
         videos_after: list[str],
     ) -> None:
-        self._frame = frame
-        self._video_of_start_date = video_of_start_date
-        self._videos_after = videos_after
+        super().__init__(
+            frame=frame,
+            video_with_frame=video_of_start_date,
+            other_videos=videos_after,
+        )
 
-    def test(self, to_test: DataFrame) -> DataFrame:
-        video_frame_filter = to_test[track.FRAME] >= self._frame
-        video_start_date_filter = (
-            to_test[track.VIDEO_NAME] == self._video_of_start_date
-            if self._video_of_start_date
-            else to_test[track.VIDEO_NAME].isnull()
-        )
-        videos_after_date_filter = to_test[track.VIDEO_NAME].isin(self._videos_after)
-        date_filter = (
-            video_frame_filter & video_start_date_filter | videos_after_date_filter
-        )
-        return to_test[date_filter]
+    def create_frame_filter(self, to_test: DataFrame, frame: int) -> Series:
+        return to_test[track.FRAME] >= self._frame
 
 
 class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
@@ -158,7 +185,7 @@ class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
         ]
 
 
-class DataFrameEndsBeforeOrAtFrame(DataFramePredicate):
+class DataFrameEndsBeforeOrAtFrame(DataFrameFramePredicate):
     """Checks if the DataFrame rows ends before or at frame.
 
     Args:
@@ -174,22 +201,14 @@ class DataFrameEndsBeforeOrAtFrame(DataFramePredicate):
         video_of_end_date: str | None,
         videos_before: list[str],
     ) -> None:
-        self._frame = frame
-        self._video_of_end_date = video_of_end_date
-        self._videos_before = videos_before
+        super().__init__(
+            frame=frame,
+            video_with_frame=video_of_end_date,
+            other_videos=videos_before,
+        )
 
-    def test(self, to_test: DataFrame) -> DataFrame:
-        video_frame_filter = to_test[track.FRAME] <= self._frame
-        video_end_date_filter = (
-            to_test[track.VIDEO_NAME] == self._video_of_end_date
-            if self._video_of_end_date
-            else to_test[track.VIDEO_NAME].isnull()
-        )
-        videos_before_date_filter = to_test[track.VIDEO_NAME].isin(self._videos_before)
-        date_filter = (
-            video_frame_filter & video_end_date_filter | videos_before_date_filter
-        )
-        return to_test[date_filter]
+    def create_frame_filter(self, to_test: DataFrame, frame: int) -> Series:
+        return to_test[track.FRAME] <= self._frame
 
 
 class DataFrameHasClassifications(DataFramePredicate):

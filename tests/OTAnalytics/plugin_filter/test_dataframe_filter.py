@@ -299,8 +299,8 @@ class TestDataFrameFilterBuilder:
         assert hasattr(dataframe_filter, "_predicate")
         assert type(dataframe_filter._predicate) is DataFrameStartsAtOrAfterFrame
         assert dataframe_filter._predicate._frame == DEFAULT_FRAME
-        assert dataframe_filter._predicate._video_of_start_date == video_name
-        assert dataframe_filter._predicate._videos_after == [video_name_after]
+        assert dataframe_filter._predicate._video_with_frame == video_name
+        assert dataframe_filter._predicate._other_videos == [video_name_after]
         current_frame.get_frame_number_for.assert_called_once_with(start_date)
         get_videos.get_after.assert_called_once_with(start_date)
 
@@ -347,8 +347,8 @@ class TestDataFrameFilterBuilder:
         assert hasattr(dataframe_filter, "_predicate")
         assert type(dataframe_filter._predicate) is DataFrameEndsBeforeOrAtFrame
         assert dataframe_filter._predicate._frame == DEFAULT_FRAME
-        assert dataframe_filter._predicate._video_of_end_date == video_name
-        assert dataframe_filter._predicate._videos_before == [video_name_before]
+        assert dataframe_filter._predicate._video_with_frame == video_name
+        assert dataframe_filter._predicate._other_videos == [video_name_before]
         current_frame.get_frame_number_for.assert_called_once_with(end_date)
         get_videos.get.assert_called_once_with(end_date)
         get_videos.get_before.assert_called_once_with(end_date)
