@@ -156,6 +156,14 @@ class TestDataFramePredicates:
                 [True, True, True, True, True],
             ),
             (
+                DataFrameStartsAtOrAfterFrame(
+                    0,
+                    None,
+                    [],
+                ),
+                [False, False, False, False, False],
+            ),
+            (
                 DataFrameEndsBeforeOrAtFrame(
                     10,
                     FORTH_VIDEO_NAME,
@@ -174,6 +182,14 @@ class TestDataFramePredicates:
                     4, SECOND_VIDEO_NAME, [DEFAULT_VIDEO_NAME]
                 ),
                 [True, True, True, False, False],
+            ),
+            (
+                DataFrameEndsBeforeOrAtFrame(
+                    0,
+                    None,
+                    [],
+                ),
+                [False, False, False, False, False],
             ),
             (
                 DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
@@ -287,6 +303,29 @@ class TestDataFrameFilterBuilder:
         assert dataframe_filter._predicate._videos_after == [video_name_after]
         current_frame.get_frame_number_for.assert_called_once_with(start_date)
         get_videos.get_after.assert_called_once_with(start_date)
+
+    @pytest.mark.parametrize(
+        "current_video, videos, index, expected_video_name",
+        [
+            (create_video_mock("video"), [], 0, "video"),
+            (None, ["other"], 0, "other"),
+            (None, [], 0, None),
+        ],
+    )
+    def test_get_current_video_name(
+        self,
+        current_frame: Mock,
+        get_videos: Mock,
+        current_video: Video | None,
+        videos: list[str],
+        index: int,
+        expected_video_name: str,
+    ) -> None:
+        builder = DataFrameFilterBuilder(current_frame, get_videos)
+
+        video_name = builder._get_current_video_name(current_video, videos, index)
+
+        assert video_name == expected_video_name
 
     def test_add_ends_before_or_at_date_predicate(
         self, current_frame: Mock, get_videos: Mock

@@ -110,7 +110,7 @@ class DataFrameStartsAtOrAfterFrame(DataFramePredicate):
     def __init__(
         self,
         frame: int,
-        video_of_start_date: str,
+        video_of_start_date: str | None,
         videos_after: list[str],
     ) -> None:
         self._frame = frame
@@ -118,11 +118,16 @@ class DataFrameStartsAtOrAfterFrame(DataFramePredicate):
         self._videos_after = videos_after
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        video_start_date_filter = (to_test[track.FRAME] >= self._frame) & (
+        video_frame_filter = to_test[track.FRAME] >= self._frame
+        video_start_date_filter = (
             to_test[track.VIDEO_NAME] == self._video_of_start_date
+            if self._video_of_start_date
+            else to_test[track.VIDEO_NAME].isnull()
         )
         videos_after_date_filter = to_test[track.VIDEO_NAME].isin(self._videos_after)
-        date_filter = video_start_date_filter | videos_after_date_filter
+        date_filter = (
+            video_frame_filter & video_start_date_filter | videos_after_date_filter
+        )
         return to_test[date_filter]
 
 
@@ -166,7 +171,7 @@ class DataFrameEndsBeforeOrAtFrame(DataFramePredicate):
     def __init__(
         self,
         frame: int,
-        video_of_end_date: str,
+        video_of_end_date: str | None,
         videos_before: list[str],
     ) -> None:
         self._frame = frame
@@ -174,11 +179,16 @@ class DataFrameEndsBeforeOrAtFrame(DataFramePredicate):
         self._videos_before = videos_before
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        video_end_date_filter = (to_test[track.FRAME] <= self._frame) & (
+        video_frame_filter = to_test[track.FRAME] <= self._frame
+        video_end_date_filter = (
             to_test[track.VIDEO_NAME] == self._video_of_end_date
+            if self._video_of_end_date
+            else to_test[track.VIDEO_NAME].isnull()
         )
         videos_before_date_filter = to_test[track.VIDEO_NAME].isin(self._videos_before)
-        date_filter = video_end_date_filter | videos_before_date_filter
+        date_filter = (
+            video_frame_filter & video_end_date_filter | videos_before_date_filter
+        )
         return to_test[date_filter]
 
 
@@ -242,8 +252,12 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
 
     def _get_current_video_name(
         self, current_video: Video | None, videos_after: list[str], index: int
-    ) -> str:
-        return current_video.name if current_video else videos_after[index]
+    ) -> str | None:
+        if current_video:
+            return current_video.name
+        if videos_after:
+            return videos_after[index]
+        return None
 
     def add_ends_before_or_at_date_predicate(self, end_date: datetime) -> None:
         if self._occurrence_column is None:
