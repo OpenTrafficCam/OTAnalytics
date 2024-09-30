@@ -3,8 +3,8 @@ from math import floor
 from pathlib import Path
 
 import av
+from av import VideoFrame
 from av.container import InputContainer
-from av.frame import Frame
 from domain.video import InvalidVideoError
 
 from OTAnalytics.domain.track import PilImage, TrackImage
@@ -15,7 +15,7 @@ OFFSET = 2
 GRAYSCALE = "L"
 
 
-def av_to_image(frame: Frame) -> PilImage:
+def av_to_image(frame: VideoFrame) -> PilImage:
     return PilImage(frame.to_image().convert(GRAYSCALE))
 
 
@@ -42,7 +42,7 @@ class PyAvVideoReader(VideoReader):
         frame = self._read_frame(frame_number, video_path)
         return av_to_image(frame)
 
-    def _read_frame(self, frame_to_read: int, video_path: Path) -> Frame:
+    def _read_frame(self, frame_to_read: int, video_path: Path) -> VideoFrame:
         with self.__get_clip(video_path) as container:
             if len(container.streams.video) <= 0:
                 raise InvalidVideoError(f"{str(video_path)} is not a video")
