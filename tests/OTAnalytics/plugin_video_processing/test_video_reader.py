@@ -4,11 +4,13 @@ from pathlib import Path
 import av
 import pytest
 from PIL import Image, ImageChops
-from plugin_video_processing.video_reader import av_to_image
 
 from OTAnalytics.domain.track import PilImage
 from OTAnalytics.domain.video import VideoReader
-from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
+from OTAnalytics.plugin_video_processing.video_reader import (
+    PyAvVideoReader,
+    av_to_image,
+)
 
 
 class TestPyAVVideoReader:
