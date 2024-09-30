@@ -1,4 +1,5 @@
 from datetime import timedelta
+from fractions import Fraction
 from math import floor
 from pathlib import Path
 
@@ -22,13 +23,15 @@ def av_to_image(frame: VideoFrame) -> PilImage:
 class PyAvVideoReader(VideoReader):
     def get_fps(self, video_path: Path) -> float:
         with self.__get_clip(video_path) as container:
-            return self.__get_fps(container, video_path)
+            rate = self.__get_fps(container, video_path)
+            return rate.numerator / rate.denominator
+        raise ValueError(f"Could not read frames per second from {str(video_path)}")
 
-    def __get_fps(self, container: InputContainer, video_path: Path) -> float:
+    def __get_fps(self, container: InputContainer, video_path: Path) -> Fraction:
         average_rate = container.streams.video[0].average_rate
         if average_rate is None:
             raise ValueError(f"Could not read frames per second from {str(video_path)}")
-        return average_rate.numerator / average_rate.denominator
+        return average_rate
 
     def get_frame(self, video_path: Path, frame_number: int) -> TrackImage:
         """Get image of video at position `frame_number`.
@@ -56,11 +59,13 @@ class PyAvVideoReader(VideoReader):
             max_frames = video.frames
             frame_to_read = min(frame_to_read, max_frames - OFFSET)
             framerate = self.__get_fps(container, video_path)
-            time_base = video.time_base if video.time_base else av.time_base
+            time_base = (
+                video.time_base if video.time_base else Fraction(av.time_base, 1)
+            )
             time_in_video = int(frame_to_read / framerate)
             container.seek(time_in_video * av.time_base, backward=True)
             frame = next(container.decode(video=0))
-            sec_frame = int(frame.pts * time_base * framerate)
+            sec_frame = int(framerate * frame.pts * time_base)
             for _ in range(sec_frame, frame_to_read):
                 frame = next(container.decode(video=0))
         return frame
