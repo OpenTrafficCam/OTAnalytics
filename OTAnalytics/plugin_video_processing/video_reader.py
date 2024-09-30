@@ -6,10 +6,9 @@ from pathlib import Path
 import av
 from av import VideoFrame
 from av.container import InputContainer
-from domain.video import InvalidVideoError
 
 from OTAnalytics.domain.track import PilImage, TrackImage
-from OTAnalytics.domain.video import VideoReader
+from OTAnalytics.domain.video import InvalidVideoError, VideoReader
 
 OFFSET = 2
 
