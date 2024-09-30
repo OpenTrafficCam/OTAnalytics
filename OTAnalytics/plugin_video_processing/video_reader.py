@@ -25,7 +25,7 @@ class PyAvVideoReader(VideoReader):
             return container.streams.video[0].average_rate
 
     def get_frame(self, video_path: Path, frame_number: int) -> TrackImage:
-        """Get image of video at `frame`.
+        """Get image of video at position `frame_number`.
 
         It uses PyAV to seek the closest keyframe. Afterwards, it iterates forward
         through the video to find the correct frame. Given this implementation,
