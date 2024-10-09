@@ -43,11 +43,15 @@ class CsvTrackExport(ExportTracks):
         dataset = self._track_repository.get_all()
         if isinstance(dataset, PandasDataFrameProvider):
             return dataset.get_data().reset_index()
-        detections = [
-            [detection.to_dict() for detection in track.detections]
-            for track in dataset.as_list()
-        ]
-        return DataFrame.from_dict(detections)
+        detections = []
+        for _track in dataset.as_list():
+            track_classification = _track.classification
+            for detection in _track.detections:
+                current = detection.to_dict()
+                # Add missing track classification to detection dict
+                current[track.TRACK_CLASSIFICATION] = track_classification
+                detections.append(current)
+        return DataFrame(detections)
 
 
 def set_column_order(dataframe: DataFrame) -> DataFrame:
