@@ -208,6 +208,7 @@ from OTAnalytics.plugin_ui.cli import OTAnalyticsCli
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
+from OTAnalytics.application.use_cases.track_statistic import CalculateTrackStatistics
 
 
 class ApplicationStarter:
@@ -499,6 +500,7 @@ class ApplicationStarter:
         save_path_suggester = SavePathSuggester(
             file_state, get_all_track_files, get_all_videos, get_current_project
         )
+        calculate_track_statistics = self._create_calculate_track_statistics(get_sections)
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -533,6 +535,7 @@ class ApplicationStarter:
             config_has_changed,
             export_road_user_assignments,
             save_path_suggester,
+            calculate_track_statistics,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -596,6 +599,7 @@ class ApplicationStarter:
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         event_repository.register_observer(image_updater.notify_events)
+        event_repository.register_observer(dummy_viewmodel.update_track_statistics)
         load_otflow.register(file_state.last_saved_config.set)
         load_otconfig.register(file_state.last_saved_config.set)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
@@ -1074,3 +1078,7 @@ class ApplicationStarter:
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleRoadUserAssignmentExporterFactory(section_repository, get_all_tracks),
         )
+
+    def _create_calculate_track_statistics(self, get_all_sections: GetAllSections) -> CalculateTrackStatistics:
+        return CalculateTrackStatistics(get_all_sections)
+    

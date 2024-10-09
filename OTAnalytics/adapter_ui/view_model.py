@@ -25,6 +25,7 @@ from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
+from OTAnalytics.adapter_ui.abstract_frame_track_statistics import AbstractFrameTrackStatistics
 
 DISTANCES: str = "distances"
 
@@ -83,6 +84,9 @@ class ViewModel(ABC):
 
     @abstractmethod
     def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
+        pass
+    @abstractmethod
+    def set_frame_track_statistics(self, frame: AbstractFrameTrackStatistics) -> None:
         pass
 
     @abstractmethod

@@ -169,6 +169,9 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     ToplevelFlows,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
+from OTAnalytics.application.use_cases.track_statistic import TrackStatistics
+from OTAnalytics.adapter_ui.abstract_frame_track_statistics import AbstractFrameTrackStatistics
+from OTAnalytics.domain.event import EventRepositoryEvent
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
@@ -1841,3 +1844,10 @@ class DummyViewModel(
 
     def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
         return self._application.suggest_save_path(file_type, context_file_type)
+
+    def set_frame_track_statistics(self, frame: AbstractFrameTrackStatistics) -> None:
+        self._frame_track_statistics = frame
+        
+    def update_track_statistics(self, _: EventRepositoryEvent) -> None:
+        statistics = self._application.calculate_track_statistics()
+        self._frame_track_statistics.update_track_statistics(statistics)

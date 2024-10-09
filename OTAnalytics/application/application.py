@@ -73,6 +73,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.application.use_cases.track_statistic import CalculateTrackStatistics, TrackStatistics
 
 
 class CancelAddSection(Exception):
@@ -131,6 +132,7 @@ class OTAnalyticsApplication:
         config_has_changed: ConfigHasChanged,
         export_road_user_assignments: ExportRoadUserAssignments,
         file_name_suggester: SavePathSuggester,
+        calculate_track_statistics: CalculateTrackStatistics,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -171,6 +173,7 @@ class OTAnalyticsApplication:
         self._config_has_changed = config_has_changed
         self._export_road_user_assignments = export_road_user_assignments
         self._file_name_suggester = file_name_suggester
+        self._calculate_track_statistics = calculate_track_statistics
 
     def connect_observers(self) -> None:
         """
@@ -667,6 +670,8 @@ class OTAnalyticsApplication:
         """
         return self._file_name_suggester.suggest(file_type, context_file_type)
 
+    def calculate_track_statistics(self) -> TrackStatistics:
+        return self._calculate_track_statistics.get_statistics()
 
 class MissingTracksError(Exception):
     pass
