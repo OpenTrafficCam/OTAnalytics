@@ -5,7 +5,10 @@ from typing import Iterable, Optional
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.state import FlowState, SectionState, TrackViewState
-from OTAnalytics.application.use_cases.section_repository import GetSectionsById, GetAllSections
+from OTAnalytics.application.use_cases.section_repository import (
+    GetAllSections,
+    GetSectionsById,
+)
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowId, FlowRepository
 from OTAnalytics.domain.section import SectionId
@@ -83,10 +86,12 @@ class TracksIntersectingAllSections(TrackIdProvider):
 
     def get_ids(self) -> set[TrackId]:
         return TracksIntersectingGivenSections(
-            self._get_all_sections(), 
-            self._tracks_intersecting_sections, 
-            self._get_section_by_id, 
-            self._intersection_repository).get_ids()
+            {section.id for section in self._get_all_sections()},
+            self._tracks_intersecting_sections,
+            self._get_section_by_id,
+            self._intersection_repository,
+        ).get_ids()
+
 
 class TracksIntersectingGivenSections(TrackIdProvider):
     """Returns track ids intersecting given sections.
