@@ -102,6 +102,7 @@ from OTAnalytics.application.use_cases.generate_flows import (
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
+    TracksAssignedToAllFlows,
     TracksIntersectingAllSections,
 )
 from OTAnalytics.application.use_cases.intersection_repository import (
@@ -509,6 +510,9 @@ class ApplicationStarter:
             tracks_intersecting_sections,
             get_sections_by_id,
             intersection_repository,
+            road_user_assigner,
+            event_repository,
+            flow_repository,
         )
         application = OTAnalyticsApplication(
             datastore,
@@ -1094,6 +1098,9 @@ class ApplicationStarter:
         tracks_intersecting_sections: TracksIntersectingSections,
         get_section_by_id: GetSectionsById,
         intersection_repository: IntersectionRepository,
+        road_user_assigner: RoadUserAssigner,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
     ) -> CalculateTrackStatistics:
         tracksIntersectingAllSections = TracksIntersectingAllSections(
             get_all_sections,
@@ -1101,4 +1108,9 @@ class ApplicationStarter:
             get_section_by_id,
             intersection_repository,
         )
-        return CalculateTrackStatistics(tracksIntersectingAllSections)
+        tracksAssignedToAllFlows = TracksAssignedToAllFlows(
+            road_user_assigner, event_repository, flow_repository
+        )
+        return CalculateTrackStatistics(
+            tracksIntersectingAllSections, tracksAssignedToAllFlows
+        )

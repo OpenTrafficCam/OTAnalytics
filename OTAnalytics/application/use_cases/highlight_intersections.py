@@ -192,6 +192,32 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
         return ids
 
 
+class TracksAssignedToAllFlows(TrackIdProvider):
+    """Returns track ids that are assigned to all flows.
+
+    Args:
+        assigner (RoadUserAssigner): to assign tracks to flows.
+        event_repository (EventRepository): the event repository.
+        flow_repository (FlowRepository): the track repository.
+    """
+
+    def __init__(
+        self,
+        assigner: RoadUserAssigner,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
+    ) -> None:
+        self._assigner = assigner
+        self._event_repository = event_repository
+        self._flow_repository = flow_repository
+
+    def get_ids(self) -> Iterable[TrackId]:
+        all_flow_ids = [flow.id for flow in self._flow_repository.get_all()]
+        return TracksAssignedToGivenFlows(
+            self._assigner, self._event_repository, self._flow_repository, all_flow_ids
+        ).get_ids()
+
+
 class TracksAssignedToGivenFlows(TrackIdProvider):
     """Returns track ids that are assigned to the given flows.
 
@@ -199,7 +225,7 @@ class TracksAssignedToGivenFlows(TrackIdProvider):
         assigner (RoadUserAssigner): to assign tracks to flows.
         event_repository (EventRepository): the event repository.
         flow_repository (FlowRepository): the track repository.
-        flow_ids (list[FlowId]): the flows fo identify assigned tracks for.
+        flow_ids (list[FlowId]): the flows to identify assigned tracks for.
     """
 
     def __init__(
