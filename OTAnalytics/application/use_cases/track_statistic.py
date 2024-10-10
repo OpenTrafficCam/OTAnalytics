@@ -8,7 +8,13 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
 
 @dataclass
 class TrackStatistics:
-    not_intersection_tracks: int
+    number_of_tracks: int
+    track_count_outside: int
+    track_count_inside: int
+    track_count_inside_not_intersecting: int
+    track_count_inside_intersecting_but_unassigned: int
+    track_count_inside_assigned: int
+    percentage_inside_assigned: float
 
 
 class CalculateTrackStatistics:
@@ -21,4 +27,4 @@ class CalculateTrackStatistics:
         self._assigned_to_all_flows = assigned_to_all_flows
 
     def get_statistics(self) -> TrackStatistics:
-        return TrackStatistics(42)
+        return TrackStatistics(0, 8, 15, 1, 2, 3, 3.14)
