@@ -2,12 +2,11 @@ from dataclasses import dataclass
 
 from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksAssignedToAllFlows,
+    TracksInsideCuttingSections,
     TracksIntersectingAllSections,
-    TracksIntersectingGivenSections,
-    TracksNotIntersectingGivenSections,
+    TracksOnlyOutsideCuttingSections,
 )
-from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.application.use_cases.track_repository import GetAllTrackIds
 
 START_OF_CUTTING_SECTION_NAME: str = "#clicut"
 
@@ -40,26 +39,28 @@ class CalculateTrackStatistics:
         self,
         intersection_all_sections: TracksIntersectingAllSections,
         assigned_to_all_flows: TracksAssignedToAllFlows,
-        track_repository: TrackRepository,
+        get_all_track_ids: GetAllTrackIds,
+        inside_cutting_sections: TracksInsideCuttingSections,
+        outside_cutting_sections: TracksOnlyOutsideCuttingSections,
     ) -> None:
         self._intersection_all_section = intersection_all_sections
         self._assigned_to_all_flows = assigned_to_all_flows
-        self._track_repository = track_repository
+        self._get_all_track_ids = get_all_track_ids
+        self._inside_cutting_sections = inside_cutting_sections
+        self._outside_cutting_sections = outside_cutting_sections
 
     def get_statistics(self) -> TrackStatistics:
-        self.update_track_count_inside()
-        self.update_track_count_outside()
-        track_count_inside = len(self._inside_cutting_section.get_ids())
-        track_count_outside = len(self._outside_cutting_section.get_ids())
-        track_count = len(self._track_repository.get_all())
+        track_count_inside = len(self._inside_cutting_sections.get_ids())
+        track_count_outside = len(self._outside_cutting_sections.get_ids())
+        track_count = len(set(self._get_all_track_ids()))
 
         track_count_inside_not_intersecting = len(
-            self._inside_cutting_section.get_ids().difference(
+            self._inside_cutting_sections.get_ids().difference(
                 self._intersection_all_section.get_ids()
             )
         )
         track_count_inside_assigned = len(
-            self._inside_cutting_section.get_ids().intersection(
+            self._inside_cutting_sections.get_ids().intersection(
                 self._assigned_to_all_flows.get_ids()
             )
         )
@@ -82,29 +83,4 @@ class CalculateTrackStatistics:
             track_count_inside_intersecting_but_unassigned,
             track_count_inside_assigned,
             percentage_inside_assigned,
-        )
-
-    def get_cutting_section_id_set(self) -> set[SectionId]:
-        cutting_section_id_set = set()
-        for section in self._intersection_all_section._get_all_sections():
-            if section.name.startswith(START_OF_CUTTING_SECTION_NAME):
-                cutting_section_id_set.add(section.id)
-                break
-        return cutting_section_id_set
-
-    def update_track_count_inside(self) -> None:
-        self._inside_cutting_section = TracksIntersectingGivenSections(
-            self.get_cutting_section_id_set(),
-            self._intersection_all_section._tracks_intersecting_sections,
-            self._intersection_all_section._get_section_by_id,
-            self._intersection_all_section._intersection_repository,
-        )
-
-    def update_track_count_outside(self) -> None:
-        self._outside_cutting_section = TracksNotIntersectingGivenSections(
-            self.get_cutting_section_id_set(),
-            self._intersection_all_section._tracks_intersecting_sections,
-            self._intersection_all_section._get_section_by_id,
-            self._intersection_all_section._intersection_repository,
-            self._track_repository,
         )

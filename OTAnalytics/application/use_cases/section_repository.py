@@ -35,13 +35,16 @@ class GetCuttingSections:
     def __init__(self, section_repository: SectionRepository) -> None:
         self._section_repository = section_repository
 
-    def __call__(self) -> set[Section]:
-        cutting_sections = {
-            section
-            for section in self._section_repository.get_all()
-            if section.get_type() == SectionType.CUTTING
-            or section.name.startswith(CLI_CUTTING_SECTION_MARKER)
-        }
+    def __call__(self) -> list[Section]:
+        cutting_sections = sorted(
+            [
+                section
+                for section in self._section_repository.get_all()
+                if section.get_type() == SectionType.CUTTING
+                or section.name.startswith(CLI_CUTTING_SECTION_MARKER)
+            ],
+            key=lambda section: section.id.id,
+        )
         return cutting_sections
 
 

@@ -103,7 +103,9 @@ from OTAnalytics.application.use_cases.get_current_project import GetCurrentProj
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToAllFlows,
+    TracksInsideCuttingSections,
     TracksIntersectingAllSections,
+    TracksOnlyOutsideCuttingSections,
 )
 from OTAnalytics.application.use_cases.intersection_repository import (
     ClearAllIntersections,
@@ -125,6 +127,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     ClearAllSections,
     GetAllSections,
+    GetCuttingSections,
     GetSectionsById,
     RemoveSection,
 )
@@ -514,6 +517,7 @@ class ApplicationStarter:
             event_repository,
             flow_repository,
             track_repository,
+            section_repository,
         )
         application = OTAnalyticsApplication(
             datastore,
@@ -1103,6 +1107,7 @@ class ApplicationStarter:
         event_repository: EventRepository,
         flow_repository: FlowRepository,
         track_repository: TrackRepository,
+        section_repository: SectionRepository,
     ) -> CalculateTrackStatistics:
         tracksIntersectingAllSections = TracksIntersectingAllSections(
             get_all_sections,
@@ -1113,6 +1118,25 @@ class ApplicationStarter:
         tracksAssignedToAllFlows = TracksAssignedToAllFlows(
             road_user_assigner, event_repository, flow_repository
         )
+        get_cutting_sections = GetCuttingSections(section_repository)
+        tracksInsideCuttingSections = TracksInsideCuttingSections(
+            get_cutting_sections,
+            tracks_intersecting_sections,
+            get_section_by_id,
+            intersection_repository,
+        )
+        tracksOnlyOutsideCuttingSections = TracksOnlyOutsideCuttingSections(
+            get_cutting_sections,
+            tracks_intersecting_sections,
+            get_section_by_id,
+            intersection_repository,
+            track_repository,
+        )
+        get_all_track_ids = GetAllTrackIds(track_repository)
         return CalculateTrackStatistics(
-            tracksIntersectingAllSections, tracksAssignedToAllFlows, track_repository
+            tracksIntersectingAllSections,
+            tracksAssignedToAllFlows,
+            get_all_track_ids,
+            tracksInsideCuttingSections,
+            tracksOnlyOutsideCuttingSections,
         )

@@ -7,6 +7,7 @@ from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.state import FlowState, SectionState, TrackViewState
 from OTAnalytics.application.use_cases.section_repository import (
     GetAllSections,
+    GetCuttingSections,
     GetSectionsById,
 )
 from OTAnalytics.domain.event import EventRepository
@@ -90,6 +91,71 @@ class TracksIntersectingAllSections(TrackIdProvider):
             self._tracks_intersecting_sections,
             self._get_section_by_id,
             self._intersection_repository,
+        ).get_ids()
+
+
+class TracksInsideCuttingSections(TrackIdProvider):
+    """Returns track ids intersecting cutting sections.
+
+    Args:
+        get_cutting_sections (GetCuttingSections): get cutting sections.
+        tracks_intersecting_sections (TracksIntersectingSections): get track ids
+            intersecting sections.
+        get_section_by_id (GetSectionsById): use case to get sections by id.
+    """
+
+    def __init__(
+        self,
+        get_cutting_sections: GetCuttingSections,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        get_section_by_id: GetSectionsById,
+        intersection_repository: IntersectionRepository,
+    ) -> None:
+        self._get_cutting_sectionss = get_cutting_sections
+        self._tracks_intersecting_sections = tracks_intersecting_sections
+        self._get_section_by_id = get_section_by_id
+        self._intersection_repository = intersection_repository
+
+    def get_ids(self) -> set[TrackId]:
+        return TracksIntersectingGivenSections(
+            {section.id for section in self._get_cutting_sectionss()},
+            self._tracks_intersecting_sections,
+            self._get_section_by_id,
+            self._intersection_repository,
+        ).get_ids()
+
+
+class TracksOnlyOutsideCuttingSections(TrackIdProvider):
+    """Returns track ids only outside cutting sections.
+
+    Args:
+        get_cutting_sections (GetCuttingSections): get cutting sections.
+        tracks_intersecting_sections (TracksIntersectingSections): get track ids
+            intersecting sections.
+        get_section_by_id (GetSectionsById): use case to get sections by id.
+    """
+
+    def __init__(
+        self,
+        get_cutting_sections: GetCuttingSections,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        get_section_by_id: GetSectionsById,
+        intersection_repository: IntersectionRepository,
+        track_repository: TrackRepository,
+    ) -> None:
+        self._get_cutting_sectionss = get_cutting_sections
+        self._tracks_intersecting_sections = tracks_intersecting_sections
+        self._get_section_by_id = get_section_by_id
+        self._intersection_repository = intersection_repository
+        self._track_repository = track_repository
+
+    def get_ids(self) -> set[TrackId]:
+        return TracksNotIntersectingGivenSections(
+            {section.id for section in self._get_cutting_sectionss()},
+            self._tracks_intersecting_sections,
+            self._get_section_by_id,
+            self._intersection_repository,
+            self._track_repository,
         ).get_ids()
 
 
