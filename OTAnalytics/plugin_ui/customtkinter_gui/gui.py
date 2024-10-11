@@ -29,6 +29,9 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_project import TabviewProject
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_plotting import (
     FrameTrackPlotting,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_statistics import (
+    FrameTrackStatistics,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_video_control import (
     FrameVideoControl,
@@ -36,7 +39,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_video_control import (
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_videos import FrameVideos
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_statistics import FrameTrackStatistics
 
 CANVAS: str = "Canvas"
 FILES: str = "Files"
