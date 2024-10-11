@@ -93,6 +93,43 @@ class TracksIntersectingAllSections(TrackIdProvider):
         ).get_ids()
 
 
+class TracksNotIntersectingGivenSections(TrackIdProvider):
+    """Returns track ids not intersecting given sections.
+
+    Args:
+        section_ids (list[SectionId]): the sections to identify intersection tracks.
+        tracks_intersecting_sections (TracksIntersectingSections): get track ids
+            intersecting sections.
+        get_section_by_id (GetSectionsById): use case to get sections by id.
+    """
+
+    def __init__(
+        self,
+        section_ids: set[SectionId],
+        tracks_intersecting_sections: TracksIntersectingSections,
+        get_section_by_id: GetSectionsById,
+        intersection_repository: IntersectionRepository,
+        track_repository: TrackRepository,
+    ) -> None:
+        self._section_ids = section_ids
+        self._tracks_intersecting_sections = tracks_intersecting_sections
+        self._get_section_by_id = get_section_by_id
+        self._intersection_repository = intersection_repository
+        self._track_repository = track_repository
+
+    def get_ids(self) -> set[TrackId]:
+        all_track_ids = {track.id for track in self._track_repository.get_all()}
+
+        track_ids_of_given_sections = TracksIntersectingGivenSections(
+            self._section_ids,
+            self._tracks_intersecting_sections,
+            self._get_section_by_id,
+            self._intersection_repository,
+        ).get_ids()
+
+        return all_track_ids - track_ids_of_given_sections
+
+
 class TracksIntersectingGivenSections(TrackIdProvider):
     """Returns track ids intersecting given sections.
 

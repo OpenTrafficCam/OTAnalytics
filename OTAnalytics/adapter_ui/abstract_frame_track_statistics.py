@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from OTAnalytics.application.use_cases.track_statistic import TrackStatistics
+from OTAnalytics.application.use_cases.track_statistics import TrackStatistics
 
 
 class AbstractFrameTrackStatistics(ABC):

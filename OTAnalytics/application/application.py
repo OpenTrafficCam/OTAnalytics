@@ -59,6 +59,10 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackFiles,
     TrackRepositorySize,
 )
+from OTAnalytics.application.use_cases.track_statistics import (
+    CalculateTrackStatistics,
+    TrackStatistics,
+)
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
@@ -73,7 +77,6 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.application.use_cases.track_statistic import CalculateTrackStatistics, TrackStatistics
 
 
 class CancelAddSection(Exception):
@@ -672,6 +675,7 @@ class OTAnalyticsApplication:
 
     def calculate_track_statistics(self) -> TrackStatistics:
         return self._calculate_track_statistics.get_statistics()
+
 
 class MissingTracksError(Exception):
     pass

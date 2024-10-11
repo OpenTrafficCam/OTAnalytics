@@ -140,7 +140,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
     TrackRepositorySize,
 )
-from OTAnalytics.application.use_cases.track_statistic import CalculateTrackStatistics
+from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
 )
@@ -513,6 +513,7 @@ class ApplicationStarter:
             road_user_assigner,
             event_repository,
             flow_repository,
+            track_repository,
         )
         application = OTAnalyticsApplication(
             datastore,
@@ -1101,6 +1102,7 @@ class ApplicationStarter:
         road_user_assigner: RoadUserAssigner,
         event_repository: EventRepository,
         flow_repository: FlowRepository,
+        track_repository: TrackRepository,
     ) -> CalculateTrackStatistics:
         tracksIntersectingAllSections = TracksIntersectingAllSections(
             get_all_sections,
@@ -1112,5 +1114,5 @@ class ApplicationStarter:
             road_user_assigner, event_repository, flow_repository
         )
         return CalculateTrackStatistics(
-            tracksIntersectingAllSections, tracksAssignedToAllFlows
+            tracksIntersectingAllSections, tracksAssignedToAllFlows, track_repository
         )
