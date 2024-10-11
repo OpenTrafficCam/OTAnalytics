@@ -104,7 +104,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToAllFlows,
     TracksInsideCuttingSections,
-    TracksIntersectingAllSections,
+    TracksIntersectingAllNonCuttingSections,
     TracksOnlyOutsideCuttingSections,
 )
 from OTAnalytics.application.use_cases.intersection_repository import (
@@ -1109,7 +1109,9 @@ class ApplicationStarter:
         track_repository: TrackRepository,
         section_repository: SectionRepository,
     ) -> CalculateTrackStatistics:
-        tracksIntersectingAllSections = TracksIntersectingAllSections(
+        get_cutting_sections = GetCuttingSections(section_repository)
+        tracksIntersectingAllSections = TracksIntersectingAllNonCuttingSections(
+            get_cutting_sections,
             get_all_sections,
             tracks_intersecting_sections,
             get_section_by_id,
@@ -1118,7 +1120,6 @@ class ApplicationStarter:
         tracksAssignedToAllFlows = TracksAssignedToAllFlows(
             road_user_assigner, event_repository, flow_repository
         )
-        get_cutting_sections = GetCuttingSections(section_repository)
         tracksInsideCuttingSections = TracksInsideCuttingSections(
             get_cutting_sections,
             tracks_intersecting_sections,

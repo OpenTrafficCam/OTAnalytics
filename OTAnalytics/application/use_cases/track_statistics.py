@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksAssignedToAllFlows,
     TracksInsideCuttingSections,
-    TracksIntersectingAllSections,
+    TracksIntersectingAllNonCuttingSections,
     TracksOnlyOutsideCuttingSections,
 )
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackIds
@@ -30,20 +30,22 @@ class TrackStatistics:
             f"({int(self.percentage_inside_assigned * 100)}%) "
             f"of these are assigned to flows, "
             f"{self.track_count_inside_not_intersecting} "
-            f"do not intersect any section."
+            f"tracks inside the cutting section do not intersect any other section."
         )
 
 
 class CalculateTrackStatistics:
     def __init__(
         self,
-        intersection_all_sections: TracksIntersectingAllSections,
+        intersection_all_non_cutting_sections: TracksIntersectingAllNonCuttingSections,
         assigned_to_all_flows: TracksAssignedToAllFlows,
         get_all_track_ids: GetAllTrackIds,
         inside_cutting_sections: TracksInsideCuttingSections,
         outside_cutting_sections: TracksOnlyOutsideCuttingSections,
     ) -> None:
-        self._intersection_all_section = intersection_all_sections
+        self._intersection_all_non_cutting_sections = (
+            intersection_all_non_cutting_sections
+        )
         self._assigned_to_all_flows = assigned_to_all_flows
         self._get_all_track_ids = get_all_track_ids
         self._inside_cutting_sections = inside_cutting_sections
@@ -56,7 +58,7 @@ class CalculateTrackStatistics:
 
         track_count_inside_not_intersecting = len(
             self._inside_cutting_sections.get_ids().difference(
-                self._intersection_all_section.get_ids()
+                self._intersection_all_non_cutting_sections.get_ids()
             )
         )
         track_count_inside_assigned = len(

@@ -5,7 +5,7 @@ import pytest
 from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksAssignedToAllFlows,
     TracksInsideCuttingSections,
-    TracksIntersectingAllSections,
+    TracksIntersectingAllNonCuttingSections,
     TracksOnlyOutsideCuttingSections,
 )
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackIds
@@ -16,8 +16,8 @@ CUTTING_SECTION_NAME: str = "#clicut 0815"
 
 
 @pytest.fixture
-def intersection_all_sections() -> Mock:
-    return Mock(spec=TracksIntersectingAllSections)
+def intersection_all_non_cutting_sections() -> Mock:
+    return Mock(spec=TracksIntersectingAllNonCuttingSections)
 
 
 @pytest.fixture
@@ -47,15 +47,15 @@ def create_trackids_set_with_list_of_ids(ids: list[str]) -> set[TrackId]:
 class TestCalculateTrackStatistics:
     def test_get_statistics(
         self,
-        intersection_all_sections: Mock,
+        intersection_all_non_cutting_sections: Mock,
         assigned_to_all_flows: Mock,
         get_all_track_ids: Mock,
         inside_cutting_sections: Mock,
         outside_cutting_sections: Mock,
     ) -> None:
-        intersection_all_sections.get_ids.return_value = (
+        intersection_all_non_cutting_sections.get_ids.return_value = (
             create_trackids_set_with_list_of_ids(
-                ["1", "2", "3", "4", "5", "6", "7", "8"]
+                ["1", "2", "3", "4", "5", "6", "7", "8", "10"]
             )
         )
         assigned_to_all_flows.get_ids.return_value = (
@@ -73,7 +73,7 @@ class TestCalculateTrackStatistics:
             create_trackids_set_with_list_of_ids(["10"])
         )
         calculator = CalculateTrackStatistics(
-            intersection_all_sections,
+            intersection_all_non_cutting_sections,
             assigned_to_all_flows,
             get_all_track_ids,
             inside_cutting_sections,
