@@ -51,7 +51,8 @@ class CalculateTrackStatistics:
         self.update_track_count_outside()
         track_count_inside = len(self._inside_cutting_section.get_ids())
         track_count_outside = len(self._outside_cutting_section.get_ids())
-        track_count = track_count_inside + track_count_outside
+        track_count = len(self._track_repository.get_all())
+
         track_count_inside_not_intersecting = len(
             self._inside_cutting_section.get_ids().difference(
                 self._intersection_all_section.get_ids()
