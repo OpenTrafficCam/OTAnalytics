@@ -337,14 +337,18 @@ class TestRunConfiguration:
     def test_log_file(self, cli_args: Mock, otconfig: Mock) -> None:
         cli_log_file = "path/to/cli_log_file.log"
         cli_args.log_file = cli_log_file
+        cli_args.config_file = "abspath/to/my_config.otconfig"
 
         analysis = Mock()
-        cfg_log_file = Path("path/to/cfg_log_file.log")
+        cfg_log_file = Path("relpath/to/cfg_log_file.log")
         analysis.logfile = cfg_log_file
         otconfig.analysis = analysis
         assert build_config(cli_args, otconfig).log_file == Path(cli_log_file)
         cli_args.log_file = None
-        assert build_config(cli_args, otconfig).log_file == cfg_log_file
+        assert (
+            build_config(cli_args, otconfig).log_file
+            == Path(cli_args.config_file).parent / cfg_log_file
+        )
         assert build_config(cli_args, None).log_file == DEFAULT_LOG_FILE
 
     def test_log_file_overwrite(self, cli_args: Mock, otconfig: Mock) -> None:

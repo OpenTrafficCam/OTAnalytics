@@ -507,6 +507,8 @@ class EventRepository:
 
     def get(
         self,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
         sections: Sequence[SectionId] | None = None,
         event_types: Sequence[EventType] | None = None,
     ) -> Iterable[Event]:
@@ -514,9 +516,13 @@ class EventRepository:
             event_types = []
         if sections is None:
             sections = []
-        filter_function = self.__create_filter(event_types)
+        type_filter = self.__create_type_filter(event_types)
+        start_filter = self.__create_start_filter(start_date)
+        end_filter = self.__create_end_filter(end_date)
         events = self.__create_event_list(sections)
-        return list(filter(filter_function, events))
+        return list(
+            filter(start_filter, filter(end_filter, filter(type_filter, events)))
+        )
 
     def __create_event_list(self, sections: Sequence[SectionId]) -> Iterable[Event]:
         if sections:
@@ -525,7 +531,29 @@ class EventRepository:
         return self.get_all()
 
     @staticmethod
-    def __create_filter(event_types: Sequence[EventType]) -> Callable[[Event], bool]:
+    def __create_type_filter(
+        event_types: Sequence[EventType],
+    ) -> Callable[[Event], bool]:
         if event_types:
             return lambda actual: actual.event_type in event_types
         return lambda event: True
+
+    @staticmethod
+    def __create_start_filter(start_date: datetime | None) -> Callable[[Event], bool]:
+        if start_date:
+            return after_filter(start_date)
+        return lambda event: True
+
+    @staticmethod
+    def __create_end_filter(end_date: datetime | None) -> Callable[[Event], bool]:
+        if end_date:
+            return before_filter(end_date)
+        return lambda event: True
+
+
+def after_filter(date: datetime) -> Callable[[Event], bool]:
+    return lambda actual: actual.occurrence >= date
+
+
+def before_filter(date: datetime) -> Callable[[Event], bool]:
+    return lambda actual: actual.occurrence <= date

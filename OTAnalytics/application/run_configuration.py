@@ -144,8 +144,9 @@ class RunConfiguration(OtConfigDefaultValueProvider):
     def log_file(self) -> Path:
         if self._cli_args.log_file:
             return Path(self._cli_args.log_file)
-        if self._otconfig:
-            return self._otconfig.analysis.logfile
+        if self._otconfig and self._cli_args.config_file:
+            base_dir = Path(self._cli_args.config_file).parent
+            return base_dir / self._otconfig.analysis.logfile
         return DEFAULT_LOG_FILE
 
     @property
@@ -199,6 +200,10 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         if self._cli_args.exclude_classes is not None:
             return frozenset(self._cli_args.exclude_classes)
         return frozenset()
+
+    @property
+    def show_svz(self) -> bool:
+        return self._cli_args.show_svz
 
 
 RunConfigurationBuilder = Callable[[CliArguments, OtConfig | None], RunConfiguration]

@@ -1,9 +1,11 @@
+from abc import ABC
 from datetime import datetime
 from typing import Iterable, Optional
 
-from pandas import DataFrame, Series
+from pandas import DataFrame
 
 from OTAnalytics.application.plotting import GetCurrentFrame
+from OTAnalytics.application.use_cases.video_repository import GetVideos
 from OTAnalytics.domain import track
 from OTAnalytics.domain.filter import Conjunction, Filter, FilterBuilder, Predicate
 
@@ -34,7 +36,7 @@ class DataFrameConjunction(Conjunction[DataFrame, DataFrame]):
         return DataFrameConjunction(self, other)
 
 
-class DataFramePredicate(Predicate[DataFrame, DataFrame]):
+class DataFramePredicate(Predicate[DataFrame, DataFrame], ABC):
     """Checks DataFrame entries against predicate.
 
     Entries that do not fulfill predicate are filtered out.
@@ -106,12 +108,21 @@ class DataFrameStartsAtOrAfterFrame(DataFramePredicate):
         self,
         column_name: str,
         frame: int,
+        video_of_start_date: str,
+        videos_after: list[str],
     ) -> None:
         self.column_name: str = column_name
         self._frame = frame
+        self._video_of_start_date = video_of_start_date
+        self._videos_after = videos_after
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        return to_test[to_test[track.FRAME] >= self._frame]
+        video_start_date_filter = (to_test[track.FRAME] >= self._frame) & (
+            to_test[track.VIDEO_NAME] == self._video_of_start_date
+        )
+        videos_after_date_filter = to_test[track.VIDEO_NAME].isin(self._videos_after)
+        date_filter = video_start_date_filter | videos_after_date_filter
+        return to_test[date_filter]
 
 
 class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
@@ -153,12 +164,21 @@ class DataFrameEndsBeforeOrAtFrame(DataFramePredicate):
         self,
         column_name: str,
         frame: int,
+        video_of_end_date: str,
+        videos_before: list[str],
     ) -> None:
         self.column_name: str = column_name
         self._frame = frame
+        self._video_of_end_date = video_of_end_date
+        self._videos_before = videos_before
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        return to_test[to_test[track.FRAME] <= self._frame]
+        video_end_date_filter = (to_test[track.FRAME] <= self._frame) & (
+            to_test[track.VIDEO_NAME] == self._video_of_end_date
+        )
+        videos_before_date_filter = to_test[track.VIDEO_NAME].isin(self._videos_before)
+        date_filter = video_end_date_filter | videos_before_date_filter
+        return to_test[date_filter]
 
 
 class DataFrameHasClassifications(DataFramePredicate):
@@ -184,9 +204,10 @@ class DataFrameHasClassifications(DataFramePredicate):
 class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
     """A builder used to build a `DataFrameFilter`."""
 
-    def __init__(self, current_frame: GetCurrentFrame) -> None:
+    def __init__(self, current_frame: GetCurrentFrame, get_videos: GetVideos) -> None:
         super().__init__()
         self._current_frame = current_frame
+        self._get_videos = get_videos
         self._complex_predicate: Optional[Predicate[DataFrame, DataFrame]] = None
         self._classification_column: Optional[str] = None
         self._occurrence_column: Optional[str] = None
@@ -203,9 +224,16 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
         if self._occurrence_column is None:
             return
 
+        current_frame = self._current_frame.get_frame_number_for(start_date)
+        videos_after = [video.name for video in self._get_videos.get_after(start_date)]
+        current_video = self._get_videos.get(start_date)
+        current_video_name = current_video.name if current_video else videos_after[0]
         self._extend_complex_predicate(
             DataFrameStartsAtOrAfterFrame(
-                track.FRAME, self._current_frame.get_frame_number_for(start_date)
+                column_name=track.FRAME,
+                frame=current_frame,
+                video_of_start_date=current_video_name,
+                videos_after=videos_after,
             )
         )
 
@@ -213,9 +241,16 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
         if self._occurrence_column is None:
             return
 
+        current_frame = self._current_frame.get_frame_number_for(end_date)
+        videos_before = [video.name for video in self._get_videos.get_before(end_date)]
+        current_video = self._get_videos.get(end_date)
+        current_video_name = current_video.name if current_video else videos_before[-1]
         self._extend_complex_predicate(
             DataFrameEndsBeforeOrAtFrame(
-                track.FRAME, self._current_frame.get_frame_number_for(end_date)
+                column_name=track.FRAME,
+                frame=current_frame,
+                video_of_end_date=current_video_name,
+                videos_before=videos_before,
             )
         )
 
@@ -238,7 +273,7 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
         self._result = None
 
     def _extend_complex_predicate(
-        self, predicate: Predicate[DataFrame, Series]
+        self, predicate: Predicate[DataFrame, DataFrame]
     ) -> None:
         if self._complex_predicate:
             self._complex_predicate = self._complex_predicate.conjunct_with(predicate)

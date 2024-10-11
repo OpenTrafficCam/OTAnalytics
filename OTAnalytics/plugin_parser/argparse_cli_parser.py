@@ -28,6 +28,12 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--show-svz",
+            action="store_true",
+            help="Show SVZ-Tab in OTAnalytics GUI. If omitted the tab will be hidden.",
+            required=False,
+        )
+        self._parser.add_argument(
             "--config",
             type=str,
             help="Path to otconfig file.",
@@ -88,9 +94,9 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
-            "--track-export",
+            "--no-track-export",
             action="store_true",
-            help="Export tracks as csv",
+            help="Do not export tracks as csv",
             required=False,
         )
         self._parser.add_argument(
@@ -141,6 +147,7 @@ class ArgparseCliParser(CliParser):
             start_cli=args.cli,
             debug=args.debug,
             logfile_overwrite=args.logfile_overwrite,
+            show_svz=args.show_svz,
             config_file=args.config,
             track_files=args.ottrks,
             otflow_file=args.otflow,
@@ -149,7 +156,7 @@ class ArgparseCliParser(CliParser):
             save_suffix=args.save_suffix,
             event_formats=args.event_formats,
             count_intervals=args.count_intervals,
-            track_export=args.track_export,
+            track_export=not args.no_track_export,
             num_processes=args.num_processes,
             log_file=args.logfile,
             include_classes=args.include_classes,

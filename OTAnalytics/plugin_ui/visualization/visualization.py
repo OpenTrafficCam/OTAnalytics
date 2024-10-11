@@ -33,6 +33,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
 )
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
+from OTAnalytics.application.use_cases.video_repository import GetVideos
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowId, FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
@@ -172,6 +173,7 @@ class VisualizationBuilder:
         self._get_current_video = GetCurrentVideoPath(
             self._visualization_time_provider, videos_metadata
         )
+        self._get_videos = GetVideos(video_repository=self._datastore._video_repository)
         self._pandas_data_provider: Optional[PandasDataFrameProvider] = None
         self._pandas_event_data_provider: Optional[PandasDataFrameProvider] = None
         self._pandas_data_provider_with_offset: Optional[PandasDataFrameProvider] = None
@@ -776,7 +778,9 @@ class VisualizationBuilder:
         )
 
     def _create_dataframe_filter_builder(self) -> DataFrameFilterBuilder:
-        return DataFrameFilterBuilder(current_frame=self._get_current_frame)
+        return DataFrameFilterBuilder(
+            current_frame=self._get_current_frame, get_videos=self._get_videos
+        )
 
     # TODO duplicate to main_application.py
     def _create_tracks_intersecting_sections(self) -> TracksIntersectingSections:

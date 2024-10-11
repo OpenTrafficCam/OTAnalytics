@@ -1,3 +1,4 @@
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
@@ -5,6 +6,15 @@ from unittest.mock import Mock, PropertyMock, call, patch
 
 import pytest
 
+from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+    DEFAULT_DO_COUNTING,
+    DEFAULT_DO_EVENTS,
+    DEFAULT_EVENT_FORMATS,
+    DEFAULT_LOG_FILE,
+    DEFAULT_SAVE_NAME,
+    DEFAULT_SAVE_SUFFIX,
+)
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.parser.config_parser import (
@@ -30,6 +40,7 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     EXPORT,
     LOGFILE,
     NUM_PROCESSES,
+    PATH,
     PROJECT,
     SAVE_NAME,
     SAVE_SUFFIX,
@@ -39,18 +50,31 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     OtConfigFormatFixer,
     OtConfigParser,
 )
-from tests.conftest import do_nothing
+from tests.conftest import YieldFixture, do_nothing
 
 
 @pytest.fixture
 def mock_otconfig() -> OtConfig:
     project = Mock()
+    track_files = Mock()
     analysis = Mock()
+    analysis.tracks = track_files
+
     videos = Mock()
     sections = Mock()
     flows = Mock()
 
     return OtConfig(project, analysis, videos, sections, flows)
+
+
+@pytest.fixture
+def base_dir(test_data_tmp_dir: Path) -> YieldFixture[Path]:
+    base_folder = test_data_tmp_dir / "my_base_folder"
+    if base_folder.exists():
+        shutil.rmtree(base_folder)
+    base_folder.mkdir(exist_ok=False)
+    yield base_folder
+    shutil.rmtree(base_folder)
 
 
 class TestOtConfigParser:
@@ -66,17 +90,34 @@ class TestOtConfigParser:
         )
         project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
         videos: list[Video] = []
+        track_files: list[Path] = []
         sections: list[Section] = []
         flows: list[Flow] = []
         output = test_data_tmp_dir / "config.otconfig"
         serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
         serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
+        serialized_analysis: dict = {
+            ANALYSIS: {
+                DO_EVENTS: DEFAULT_DO_EVENTS,
+                DO_COUNTING: DEFAULT_DO_COUNTING,
+                TRACKS: [],
+                EXPORT: {
+                    SAVE_NAME: DEFAULT_SAVE_NAME,
+                    SAVE_SUFFIX: DEFAULT_SAVE_SUFFIX,
+                    EVENT_FORMATS: list(DEFAULT_EVENT_FORMATS),
+                    COUNT_INTERVALS: [DEFAULT_COUNTING_INTERVAL_IN_MINUTES],
+                },
+                NUM_PROCESSES: 1,
+                LOGFILE: str(DEFAULT_LOG_FILE),
+            }
+        }
         video_parser.convert.return_value = serialized_videos
         flow_parser.convert.return_value = serialized_sections
 
         config_parser.serialize(
             project=project,
             video_files=videos,
+            track_files=track_files,
             sections=sections,
             flows=flows,
             file=output,
@@ -85,6 +126,7 @@ class TestOtConfigParser:
         serialized_content = parse_json(output)
         expected_content: dict[str, Any] = {PROJECT: project.to_dict()}
         expected_content |= serialized_videos
+        expected_content |= serialized_analysis
         expected_content |= serialized_sections
 
         assert serialized_content == expected_content
@@ -105,6 +147,7 @@ class TestOtConfigParser:
         mock_serialize.assert_called_once_with(
             mock_otconfig.project,
             mock_otconfig.videos,
+            mock_otconfig.analysis.track_files,
             mock_otconfig.sections,
             mock_otconfig.flows,
             save_path,
@@ -201,6 +244,33 @@ class TestOtConfigParser:
         project = Project("My Name", None)
         with pytest.raises(StartDateMissing):
             OtConfigParser._validate_data(project)
+
+    def test_parse_videos_alternative_files(self, base_dir: Path) -> None:
+        expected_in_config_first_video = Path("relpath/to/video/first.mp4")
+        expected_in_config_second_video = Path("relpath/to/video/second.mp4")
+
+        actual_first_video = base_dir / expected_in_config_first_video.name
+        actual_second_video = base_dir / expected_in_config_second_video.name
+        actual_first_video.touch()
+        actual_second_video.touch()
+
+        video_entries = [
+            {PATH: expected_in_config_first_video},
+            {PATH: expected_in_config_second_video},
+        ]
+        video_parser = Mock()
+        parser = OtConfigParser(Mock(), video_parser, Mock())
+        parser._parse_videos(video_entries, base_dir)
+
+        video_parser.parse_list.assert_called_once_with(
+            [
+                {PATH: expected_in_config_first_video.name},
+                {PATH: expected_in_config_second_video.name},
+            ],
+            base_dir,
+        )
+        actual_first_video.unlink()
+        actual_second_video.unlink()
 
 
 class TestMultiFixer:

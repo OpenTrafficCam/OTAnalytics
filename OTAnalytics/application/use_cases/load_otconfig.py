@@ -8,6 +8,7 @@ from OTAnalytics.application.use_cases.flow_repository import (
     AddAllFlows,
     FlowAlreadyExists,
 )
+from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.section_repository import (
     AddAllSections,
     SectionAlreadyExists,
@@ -26,6 +27,7 @@ class LoadOtconfig:
         add_videos: AddAllVideos,
         add_sections: AddAllSections,
         add_flows: AddAllFlows,
+        load_track_files: LoadTrackFiles,
         deserialize: Deserializer,
     ) -> None:
 
@@ -35,6 +37,7 @@ class LoadOtconfig:
         self._add_videos = add_videos
         self._add_sections = add_sections
         self._add_flows = add_flows
+        self._load_track_files = load_track_files
         self._deserialize = deserialize
         self._subject = Subject[ConfigurationFile]()
 
@@ -48,6 +51,7 @@ class LoadOtconfig:
             self._add_videos.add(config.videos)
             self._add_sections.add(config.sections)
             self._add_flows.add(config.flows)
+            self._load_track_files(list(config.analysis.track_files))
             self._subject.notify(
                 ConfigurationFile(
                     file,

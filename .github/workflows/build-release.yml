@@ -17,7 +17,7 @@ jobs:
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
   create_release:
-    needs: 
+    needs:
       - test
       - regression-test
     uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml@main"
@@ -25,6 +25,7 @@ jobs:
       PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
     with:
       package-version: ${{ github.ref_name }}
+      package-path: OTAnalytics
       draft-release: false
       pre-release: false
       delete-existing: false

@@ -61,6 +61,8 @@ from OTAnalytics.application.application import (
 from OTAnalytics.application.config import (
     CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+    OTCONFIG_FILE_TYPE,
+    OTFLOW_FILE_TYPE,
 )
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
@@ -106,6 +108,7 @@ from OTAnalytics.domain.date import (
     validate_minute,
     validate_second,
 )
+from OTAnalytics.domain.files import DifferentDrivesException
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import (
@@ -124,7 +127,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.domain.video import DifferentDrivesException, Video, VideoListObserver
+from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
@@ -173,14 +176,12 @@ TAG_SELECTED_SECTION: str = "selected_section"
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
-OTFLOW = "otflow"
 MISSING_TRACK_FRAME_MESSAGE = "tracks frame"
 MISSING_VIDEO_FRAME_MESSAGE = "videos frame"
 MISSING_VIDEO_CONTROL_FRAME_MESSAGE = "video control frame"
 MISSING_SECTION_FRAME_MESSAGE = "sections frame"
 MISSING_FLOW_FRAME_MESSAGE = "flows frame"
 MISSING_ANALYSIS_FRAME_MESSAGE = "analysis frame"
-OTCONFIG = "otconfig"
 
 
 class MissingInjectedInstanceError(Exception):
@@ -224,11 +225,13 @@ class DummyViewModel(
         flow_parser: FlowParser,
         name_generator: FlowNameGenerator,
         event_list_export_formats: dict,
+        show_svz: bool,
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
+        self._show_svz = show_svz
         self._window: Optional[AbstractMainWindow] = None
         self._frame_project: Optional[AbstractFrameProject] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
@@ -246,6 +249,9 @@ class DummyViewModel(
         self._treeview_flows: Optional[AbstractTreeviewInterface]
         self._button_quick_save_config: AbstractButtonQuickSaveConfig | None = None
         self._new_section: dict = {}
+
+    def show_svz(self) -> bool:
+        return self._show_svz
 
     def notify_videos(self, videos: list[Video]) -> None:
         if self._treeview_videos is None:
@@ -505,25 +511,26 @@ class DummyViewModel(
 
     def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
         self._frame_project = project_frame
-        self._show_current_project()
+        self.show_current_project()
 
-    def _show_current_project(self) -> None:
+    def show_current_project(self, _: Any = None) -> None:
         if self._frame_project is None:
             raise MissingInjectedInstanceError(type(self._frame_project).__name__)
         project = self._application._datastore.project
         self._frame_project.update(name=project.name, start_date=project.start_date)
 
     def save_otconfig(self) -> None:
-        title = "Save configuration as"
-        file_types = [(f"{OTCONFIG} file", f"*.{OTCONFIG}")]
-        defaultextension = f".{OTCONFIG}"
-        initialfile = f"config.{OTCONFIG}"
-        otconfig_file: Path = ask_for_save_file_path(
-            title, file_types, defaultextension, initialfile=initialfile
+        suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
+        configuration_file = ask_for_save_file_path(
+            title="Save configuration as",
+            filetypes=[(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")],
+            defaultextension=f".{OTCONFIG_FILE_TYPE}",
+            initialfile=suggested_save_path.name,
+            initialdir=suggested_save_path.parent,
         )
-        if not otconfig_file:
+        if not configuration_file:
             return
-        self._save_otconfig(otconfig_file)
+        self._save_otconfig(configuration_file)
 
     def _save_otconfig(self, otconfig_file: Path) -> None:
         logger().info(f"Config file to save: {otconfig_file}")
@@ -573,10 +580,10 @@ class DummyViewModel(
             askopenfilename(
                 title="Load configuration file",
                 filetypes=[
-                    (f"{OTFLOW} file", f"*.{OTFLOW}"),
-                    (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
+                    (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
+                    (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
                 ],
-                defaultextension=f".{OTFLOW}",
+                defaultextension=f".{OTFLOW_FILE_TYPE}",
             )
         )
         if not otconfig_file:
@@ -595,10 +602,10 @@ class DummyViewModel(
         )
         if proceed.canceled:
             return
-        logger().info(f"{OTCONFIG} file to load: {otconfig_file}")
+        logger().info(f"{OTCONFIG_FILE_TYPE} file to load: {otconfig_file}")
         self._application.load_otconfig(file=Path(otconfig_file))
-        self._show_current_project()
-        self._show_current_svz_metadata()
+        self.show_current_project()
+        self.update_svz_metadata_view()
 
     def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
         self._frame_tracks = tracks_frame
@@ -726,17 +733,17 @@ class DummyViewModel(
             askopenfilename(
                 title="Load sections file",
                 filetypes=[
-                    (f"{OTFLOW} file", f"*.{OTFLOW}"),
-                    (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
+                    (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
+                    (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
                 ],
-                defaultextension=f".{OTFLOW}",
+                defaultextension=f".{OTFLOW_FILE_TYPE}",
             )
         )
         if not configuration_file.stem:
             return
-        elif configuration_file.suffix == f".{OTFLOW}":
+        elif configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
             self._load_otflow(configuration_file)
-        elif configuration_file.suffix == f".{OTCONFIG}":
+        elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
             self._load_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to load has unknown file extension")
@@ -763,25 +770,22 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     def save_configuration(self) -> None:
-        initial_dir = Path.cwd()
-        if config_file := self._application.file_state.last_saved_config.get():
-            initial_dir = config_file.file.parent
-
+        suggested_save_path = self._application.suggest_save_path(OTFLOW_FILE_TYPE)
         configuration_file = ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
-                (f"{OTFLOW} file", f"*.{OTFLOW}"),
-                (f"{OTCONFIG} file", f"*.{OTCONFIG}"),
+                (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
+                (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
             ],
-            defaultextension=f".{OTFLOW}",
-            initialfile=f"flows.{OTFLOW}",
-            initialdir=initial_dir,
+            defaultextension=f".{OTFLOW_FILE_TYPE}",
+            initialfile=suggested_save_path.name,
+            initialdir=suggested_save_path.parent,
         )
         if not configuration_file.stem:
             return
-        elif configuration_file.suffix == f".{OTFLOW}":
+        elif configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
             self._save_otflow(configuration_file)
-        elif configuration_file.suffix == f".{OTCONFIG}":
+        elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
             self._save_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to save has unknown file extension")
@@ -1397,6 +1401,7 @@ class DummyViewModel(
             initial_position=(50, 50),
             input_values=default_values,
             export_format_extensions=export_format_extensions,
+            viewmodel=self,
         ).get_data()
         file = input_values[toplevel_export_events.EXPORT_FILE]
         export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
@@ -1662,8 +1667,8 @@ class DummyViewModel(
         if proceed.canceled:
             return
         self._application.start_new_project()
-        self._show_current_project()
-        self._show_current_svz_metadata()
+        self.show_current_project()
+        self.update_svz_metadata_view()
         logger().info("Start new project.")
 
     def update_project_name(self, name: str) -> None:
@@ -1759,6 +1764,7 @@ class DummyViewModel(
                 input_values=default_values,
                 export_format_extensions=export_formats,
                 initial_file_stem="road_user_assignments",
+                viewmodel=self,
             ).get_data()
             logger().debug(export_values)
             save_path = export_values[toplevel_export_events.EXPORT_FILE]
@@ -1822,9 +1828,9 @@ class DummyViewModel(
 
     def set_svz_metadata_frame(self, frame: AbstractFrameSvzMetadata) -> None:
         self._frame_svz_metadata = frame
-        self._show_current_svz_metadata()
+        self.update_svz_metadata_view()
 
-    def _show_current_svz_metadata(self) -> None:
+    def update_svz_metadata_view(self, _: Any = None) -> None:
         if self._frame_svz_metadata is None:
             raise MissingInjectedInstanceError(type(self._frame_svz_metadata).__name__)
         project = self._application._datastore.project
@@ -1832,3 +1838,6 @@ class DummyViewModel(
             self._frame_svz_metadata.update(metadata=metadata.to_dict())
         else:
             self._frame_svz_metadata.update({})
+
+    def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
+        return self._application.suggest_save_path(file_type, context_file_type)

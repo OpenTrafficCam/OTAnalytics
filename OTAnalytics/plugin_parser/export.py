@@ -93,7 +93,7 @@ class CsvExport(Exporter):
             result_dict: dict = key.as_dict()
             result_dict["count"] = value
             indexed.append(result_dict)
-        return DataFrame.from_dict(indexed)
+        return DataFrame(indexed)
 
     def __create_path(self) -> Path:
         fixed_file_ending = (

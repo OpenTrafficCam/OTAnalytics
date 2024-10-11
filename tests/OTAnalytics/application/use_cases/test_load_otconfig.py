@@ -19,11 +19,15 @@ class TestLoadOtconfig:
         project.name = "my project"
         project.start_date = datetime(2021, 1, 1)
 
+        analysis = Mock()
+        analysis.track_files = {"path/to/first.ottrk", "path/to/second.ottrk"}
+
         otconfig = Mock()
         otconfig.project = project
         otconfig.videos = Mock()
         otconfig.sections = Mock()
         otconfig.flows = Mock()
+        otconfig.analysis = analysis
         return otconfig
 
     def test_load(self, otconfig: OtConfig) -> None:
@@ -35,6 +39,7 @@ class TestLoadOtconfig:
         add_videos = Mock()
         add_sections = Mock()
         add_flows = Mock()
+        load_track_files = Mock()
         deserialization_result = Mock()
         deserializer = Mock()
         deserializer.return_value = deserialization_result
@@ -46,6 +51,7 @@ class TestLoadOtconfig:
             add_videos,
             add_sections,
             add_flows,
+            load_track_files,
             deserializer,
         )
         observer = Mock()
@@ -62,6 +68,7 @@ class TestLoadOtconfig:
         add_videos.add.assert_called_once_with(otconfig.videos)
         add_sections.add.assert_called_once_with(otconfig.sections)
         add_flows.add.assert_called_once_with(otconfig.flows)
+        load_track_files.assert_called_once_with(list(otconfig.analysis.track_files))
         observer.assert_called_once_with(
             ConfigurationFile(file, deserialization_result)
         )
@@ -81,6 +88,7 @@ class TestLoadOtconfig:
             Mock(),
             Mock(),
             add_sections,
+            Mock(),
             Mock(),
             Mock(),
         )
