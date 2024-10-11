@@ -51,7 +51,7 @@ jobs:
       - name: Display version info
         run: cat OTAnalytics/version.py
       - name: Patch version
-        run: echo __version__ = \"0.0.0.0.13.a1\" > OTAnalytics/version.py
+        run: echo __version__ = \"0.0.0.0.14.a1\" > OTAnalytics/version.py
       - name: Remove File
         uses: JesseTG/rm@v1.0.3
         with:
