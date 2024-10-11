@@ -1,13 +1,12 @@
 from dataclasses import dataclass
 
-from domain.section import Section
-
 from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksAssignedToAllFlows,
     TracksIntersectingAllSections,
     TracksIntersectingGivenSections,
     TracksNotIntersectingGivenSections,
 )
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track_repository import TrackRepository
 
 START_OF_CUTTING_SECTION_NAME: str = "#clicut"
@@ -84,7 +83,7 @@ class CalculateTrackStatistics:
             percentage_inside_assigned,
         )
 
-    def get_cutting_section_id_set(self) -> set[Section]:
+    def get_cutting_section_id_set(self) -> set[SectionId]:
         cutting_section_id_set = set()
         for section in self._intersection_all_section._get_all_sections():
             if section.name.startswith(START_OF_CUTTING_SECTION_NAME):
