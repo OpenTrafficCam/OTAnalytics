@@ -445,7 +445,7 @@ class EventRepository:
         """
         Clear the repository and notify observers only if repository was filled.
         """
-        if self._events:
+        if self._events or self._non_section_events:  # also clear non section events
             removed = list(self.get_all())
             self._events = defaultdict(list)
             self._non_section_events = list[Event]()

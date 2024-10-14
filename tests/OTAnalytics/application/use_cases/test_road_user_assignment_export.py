@@ -3,6 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.application.analysis.traffic_counting import RoadUserAssignment
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportRoadUserAssignments,
     RoadUserAssignmentBuilder,
@@ -106,6 +107,7 @@ class TestExportRoadUserAssignments:
         specification = Mock()
         specification.save_path = Mock()
         specification.format = "csv"
+        specification.mode = OVERWRITE
 
         export_road_user_assignments.export(specification)
 
@@ -114,4 +116,4 @@ class TestExportRoadUserAssignments:
         flow_repository.get_all.assert_called_once()
         road_user_assigner.assign.assert_called_once_with(events, flows)
         exporter_factory.create.assert_called_once_with(specification)
-        exporter.export.assert_called_once_with(assignments)
+        exporter.export.assert_called_once_with(assignments, OVERWRITE)

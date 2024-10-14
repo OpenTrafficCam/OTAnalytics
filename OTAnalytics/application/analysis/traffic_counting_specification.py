@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable
 
+from OTAnalytics.application.export_formats.export_mode import ExportMode
+
 
 @dataclass(frozen=True)
 class ExportFormat:
@@ -22,6 +24,7 @@ class CountingSpecificationDto:
     modes: list[str]
     output_format: str
     output_file: str
+    export_mode: ExportMode
 
 
 @dataclass(frozen=True)

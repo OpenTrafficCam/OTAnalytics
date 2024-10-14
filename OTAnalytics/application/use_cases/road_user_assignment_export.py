@@ -10,6 +10,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportFormat
 from OTAnalytics.application.export_formats import road_user_assignments as ras
+from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import EventRepository
@@ -93,6 +94,37 @@ class RoadUserAssignmentBuilder:
         self._max_confidence = None
 
 
+ROAD_USER_ASSIGNMENT_DICT_KEYS = [
+    ras.FLOW_ID,
+    ras.FLOW_NAME,
+    ras.ROAD_USER_ID,
+    ras.MAX_CONFIDENCE,
+    ras.START_OCCURRENCE,
+    ras.START_OCCURRENCE_DATE,
+    ras.START_OCCURRENCE_TIME,
+    ras.END_OCCURRENCE,
+    ras.END_OCCURRENCE_DATE,
+    ras.END_OCCURRENCE_TIME,
+    ras.START_FRAME,
+    ras.END_FRAME,
+    ras.START_VIDEO_NAME,
+    ras.END_VIDEO_NAME,
+    ras.START_SECTION_ID,
+    ras.END_SECTION_ID,
+    ras.START_SECTION_NAME,
+    ras.END_SECTION_NAME,
+    ras.START_EVENT_COORDINATE_X,
+    ras.START_EVENT_COORDINATE_Y,
+    ras.END_EVENT_COORDINATE_X,
+    ras.END_EVENT_COORDINATE_Y,
+    ras.START_DIRECTION_VECTOR_X,
+    ras.START_DIRECTION_VECTOR_Y,
+    ras.END_DIRECTION_VECTOR_X,
+    ras.END_DIRECTION_VECTOR_Y,
+    ras.HOSTNAME,
+]
+
+
 class RoadUserAssignmentExportError(Exception):
     pass
 
@@ -115,16 +147,18 @@ class RoadUserAssignmentExporter(ABC):
         self._builder = builder
         self._outputfile = output_file
 
-    def export(self, assignments: RoadUserAssignments) -> None:
+    def export(self, assignments: RoadUserAssignments, export_mode: ExportMode) -> None:
         dtos = self._convert(assignments)
-        self._serialize(dtos)
+        self._serialize(dtos, export_mode)
 
     @abstractmethod
-    def _serialize(self, dtos: list[dict]) -> None:
+    def _serialize(self, dtos: list[dict], export_mode: ExportMode) -> None:
         """Hook for implementations to serialize in their respective save format.
 
         Args:
             dtos (list[dict]): the vehicle flow assignments as dtos.
+            export_mode (ExportMode): whether the serialized data should be appended
+                to the file. Otherwise the file is overwritten.
         """
         raise NotImplementedError
 
@@ -163,6 +197,7 @@ class RoadUserAssignmentExporter(ABC):
 class ExportSpecification:
     save_path: Path
     format: str
+    mode: ExportMode
 
 
 class RoadUserAssignmentExporterFactory(Protocol):
@@ -212,7 +247,7 @@ class ExportRoadUserAssignments:
         flows = self._flow_repository.get_all()
         road_user_assignments = self._assigner.assign(events, flows)
         exporter = self._exporter_factory.create(specification)
-        exporter.export(road_user_assignments)
+        exporter.export(road_user_assignments, specification.mode)
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """

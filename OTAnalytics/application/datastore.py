@@ -3,8 +3,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple
 
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.project import Project
-from OTAnalytics.application.use_cases.export_events import EventListExporter
+from OTAnalytics.application.use_cases.export_events import (
+    EventExportSpecification,
+    EventListExporter,
+)
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import (
     Flow,
@@ -317,7 +321,11 @@ class Datastore:
         event_list_exporter.export(
             events=self._event_repository.get_all(),
             sections=self._section_repository.get_all(),
-            file=file,
+            export_specification=EventExportSpecification(
+                file=file,
+                format=event_list_exporter.get_extension(),
+                export_mode=OVERWRITE,
+            ),
         )
 
     def is_flow_using_section(self, section: SectionId) -> bool:

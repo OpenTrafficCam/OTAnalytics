@@ -295,6 +295,17 @@ class VideosMetadata:
             for key, metadata in self._metadata.items()
         }
 
+    def merge_into_dict(self, other: dict) -> dict:
+        values: dict
+        if len(other) == 0:
+            values = self.to_dict()
+        else:
+            values = {**self.to_dict(), **other}
+
+        other.update(values)
+
+        return other
+
 
 class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
     def __init__(
@@ -617,6 +628,42 @@ class TracksMetadata(TrackListObserver):
             CLASSIFICATIONS: list(self._classifications.get()),
             DETECTION_CLASSIFICATIONS: list(self._detection_classifications.get()),
         }
+
+    def merge_into_dict(self, other: dict) -> dict:
+        this = self.to_dict()
+        this_first_occurrence = this[FIRST_DETECTION_OCCURRENCE]
+        other_first_occurrence = other[FIRST_DETECTION_OCCURRENCE]
+        if this_first_occurrence is None:
+            first_occurrence = other_first_occurrence
+        elif other_first_occurrence is None:
+            first_occurrence = this_first_occurrence
+        else:
+            first_occurrence = min(this_first_occurrence, other_first_occurrence)
+
+        other[FIRST_DETECTION_OCCURRENCE] = first_occurrence
+
+        this_last_occurrence = this[LAST_DETECTION_OCCURRENCE]
+        other_last_occurrence = other[LAST_DETECTION_OCCURRENCE]
+        if this_last_occurrence is None:
+            last_occurrence = other_last_occurrence
+        elif other_last_occurrence is None:
+            last_occurrence = this_last_occurrence
+        else:
+            last_occurrence = max(this_last_occurrence, other_last_occurrence)
+
+        other[LAST_DETECTION_OCCURRENCE] = last_occurrence
+
+        other[CLASSIFICATIONS] = list(
+            set(this[CLASSIFICATIONS]).union(set(other[CLASSIFICATIONS]))
+        )
+
+        other[DETECTION_CLASSIFICATIONS] = list(
+            set(this[DETECTION_CLASSIFICATIONS]).union(
+                set(other[DETECTION_CLASSIFICATIONS])
+            )
+        )
+
+        return other
 
 
 class ActionState:
