@@ -66,20 +66,28 @@ class GetVideos:
         Retrieves all videos after the video present at the specified date.
 
         Args:
-            date: A date specifying the date for the current video
+            date (datetime): A date specifying the date for the current video
 
         Returns:
-            A videos that start after the current video determined by date.
+            Videos that start after the current video determined by date.
 
         Note:
             If the provided date matches a video, the returned list will include
             videos starting after that video. The returned list is sorted in ascending
             order by start date.
+            If no video is present at the specified date, the returned list will be
+            empty.
         """
+        sorted_videos = self._get_all_videos_sorted()
         if current_video := self.get(date):
-            sorted_videos = self._get_all_videos_sorted()
             index = sorted_videos.index(current_video)
             return sorted_videos[index + 1 :]
+        if (
+            sorted_videos
+            and sorted_videos[0].start_date
+            and sorted_videos[0].start_date > date
+        ):
+            return sorted_videos
         return []
 
     def _get_all_videos_sorted(self) -> list[Video]:
@@ -112,9 +120,17 @@ class GetVideos:
             If the provided date matches a video, the returned list will include
             videos starting before that video. The returned list is sorted in ascending
             order by start date.
+            If no video is present at the specified date, the returned list will be
+            empty.
         """
+        sorted_videos = self._get_all_videos_sorted()
         if current_video := self.get(date):
-            sorted_videos = self._get_all_videos_sorted()
             index = sorted_videos.index(current_video)
             return sorted_videos[:index]
+        if (
+            sorted_videos
+            and sorted_videos[-1].end_date
+            and sorted_videos[-1].end_date < date
+        ):
+            return sorted_videos
         return []
