@@ -858,6 +858,10 @@ class CachedVideo(Video):
         return self.other.start_date
 
     @property
+    def end_date(self) -> Optional[datetime]:
+        return self.other.end_date
+
+    @property
     def fps(self) -> float:
         return self.other.fps
 

@@ -41,6 +41,11 @@ class Video(ABC):
 
     @property
     @abstractmethod
+    def end_date(self) -> Optional[datetime]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def fps(self) -> float:
         raise NotImplementedError
 
@@ -161,6 +166,12 @@ class SimpleVideo(Video):
     def start_date(self) -> Optional[datetime]:
         if self.metadata:
             return self.metadata.recorded_start_date
+        return None
+
+    @property
+    def end_date(self) -> Optional[datetime]:
+        if self.metadata:
+            return self.metadata.end
         return None
 
     @property
