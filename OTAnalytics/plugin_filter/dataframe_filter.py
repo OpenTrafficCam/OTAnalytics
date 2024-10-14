@@ -266,7 +266,6 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
                 video_of_start_date=current_video_name,
                 videos_after=videos_after,
             )
-            # DataFrameStartsAtOrAfterDate(self._occurrence_column, start_date)
         )
 
     def _get_current_video_name(
@@ -294,7 +293,6 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
                 video_of_end_date=current_video_name,
                 videos_before=videos_before,
             )
-            # DataFrameEndsBeforeOrAtDate(self._occurrence_column, end_date)
         )
 
     def set_classification_column(self, classification_name: str) -> None:
