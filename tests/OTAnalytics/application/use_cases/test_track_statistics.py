@@ -4,9 +4,10 @@ import pytest
 
 from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksAssignedToAllFlows,
-    TracksInsideCuttingSections,
     TracksIntersectingAllNonCuttingSections,
-    TracksOnlyOutsideCuttingSections,
+)
+from OTAnalytics.application.use_cases.inside_cutting_section import (
+    TrackIdsInsideCuttingSections,
 )
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackIds
 from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
@@ -31,13 +32,8 @@ def get_all_track_ids() -> Mock:
 
 
 @pytest.fixture
-def inside_cutting_sections() -> Mock:
-    return Mock(spec=TracksInsideCuttingSections)
-
-
-@pytest.fixture
-def outside_cutting_sections() -> Mock:
-    return Mock(spec=TracksOnlyOutsideCuttingSections)
+def track_ids_inside_cutting_sections() -> Mock:
+    return Mock(spec=TrackIdsInsideCuttingSections)
 
 
 def create_trackids_set_with_list_of_ids(ids: list[str]) -> set[TrackId]:
@@ -50,8 +46,7 @@ class TestCalculateTrackStatistics:
         intersection_all_non_cutting_sections: Mock,
         assigned_to_all_flows: Mock,
         get_all_track_ids: Mock,
-        inside_cutting_sections: Mock,
-        outside_cutting_sections: Mock,
+        track_ids_inside_cutting_sections: Mock,
     ) -> None:
         intersection_all_non_cutting_sections.get_ids.return_value = (
             create_trackids_set_with_list_of_ids(
@@ -64,20 +59,16 @@ class TestCalculateTrackStatistics:
         get_all_track_ids.return_value = create_trackids_set_with_list_of_ids(
             ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
         )
-        inside_cutting_sections.get_ids.return_value = (
+        track_ids_inside_cutting_sections.return_value = (
             create_trackids_set_with_list_of_ids(
                 ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
             )
-        )
-        outside_cutting_sections.get_ids.return_value = (
-            create_trackids_set_with_list_of_ids(["10"])
         )
         calculator = CalculateTrackStatistics(
             intersection_all_non_cutting_sections,
             assigned_to_all_flows,
             get_all_track_ids,
-            inside_cutting_sections,
-            outside_cutting_sections,
+            track_ids_inside_cutting_sections,
         )
 
         trackStatistics = calculator.get_statistics()

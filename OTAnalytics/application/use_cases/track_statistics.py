@@ -2,9 +2,10 @@ from dataclasses import dataclass
 
 from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksAssignedToAllFlows,
-    TracksInsideCuttingSections,
     TracksIntersectingAllNonCuttingSections,
-    TracksOnlyOutsideCuttingSections,
+)
+from OTAnalytics.application.use_cases.inside_cutting_section import (
+    TrackIdsInsideCuttingSections,
 )
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackIds
 
@@ -40,24 +41,23 @@ class CalculateTrackStatistics:
         intersection_all_non_cutting_sections: TracksIntersectingAllNonCuttingSections,
         assigned_to_all_flows: TracksAssignedToAllFlows,
         get_all_track_ids: GetAllTrackIds,
-        inside_cutting_sections: TracksInsideCuttingSections,
-        outside_cutting_sections: TracksOnlyOutsideCuttingSections,
+        track_ids_inside_cutting_sections: TrackIdsInsideCuttingSections,
     ) -> None:
         self._intersection_all_non_cutting_sections = (
             intersection_all_non_cutting_sections
         )
         self._assigned_to_all_flows = assigned_to_all_flows
         self._get_all_track_ids = get_all_track_ids
-        self._inside_cutting_sections = inside_cutting_sections
-        self._outside_cutting_sections = outside_cutting_sections
+        self._track_ids_inside_cutting_sections = track_ids_inside_cutting_sections
 
     def get_statistics(self) -> TrackStatistics:
         ids_all = set(self._get_all_track_ids())
-        ids_inside_cutting_sections = self._inside_cutting_sections.get_ids()
+        ids_inside_cutting_sections = self._track_ids_inside_cutting_sections()
 
         track_count_inside = len(ids_inside_cutting_sections)
-        track_count_outside = len(self._outside_cutting_sections.get_ids())
         track_count = len(ids_all)
+
+        track_count_outside = track_count - track_count_inside
 
         track_count_inside_not_intersecting = len(
             ids_inside_cutting_sections.difference(
