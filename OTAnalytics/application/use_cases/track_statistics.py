@@ -52,17 +52,20 @@ class CalculateTrackStatistics:
         self._outside_cutting_sections = outside_cutting_sections
 
     def get_statistics(self) -> TrackStatistics:
-        track_count_inside = len(self._inside_cutting_sections.get_ids())
+        ids_all = set(self._get_all_track_ids())
+        ids_inside_cutting_sections = self._inside_cutting_sections.get_ids()
+
+        track_count_inside = len(ids_inside_cutting_sections)
         track_count_outside = len(self._outside_cutting_sections.get_ids())
-        track_count = len(set(self._get_all_track_ids()))
+        track_count = len(ids_all)
 
         track_count_inside_not_intersecting = len(
-            self._inside_cutting_sections.get_ids().difference(
+            ids_inside_cutting_sections.difference(
                 self._intersection_all_non_cutting_sections.get_ids()
             )
         )
         track_count_inside_assigned = len(
-            self._inside_cutting_sections.get_ids().intersection(
+            ids_inside_cutting_sections.intersection(
                 self._assigned_to_all_flows.get_ids()
             )
         )
