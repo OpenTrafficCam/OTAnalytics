@@ -1850,5 +1850,9 @@ class DummyViewModel(
         self._frame_track_statistics = frame
 
     def update_track_statistics(self, _: EventRepositoryEvent) -> None:
+        if self._frame_track_statistics is None:
+            raise MissingInjectedInstanceError(
+                type(self._frame_track_statistics).__name__
+            )
         statistics = self._application.calculate_track_statistics()
         self._frame_track_statistics.update_track_statistics(statistics)
