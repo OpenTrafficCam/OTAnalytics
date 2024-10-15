@@ -88,12 +88,13 @@ class TracksIntersectingAllNonCuttingSections(TrackIdProvider):
         self._intersection_repository = intersection_repository
 
     def get_ids(self) -> set[TrackId]:
+        ids_non_cutting_sections = {
+            section.id
+            for section in self._get_all_sections()
+            if section not in self._get_cutting_sections()
+        }
         return TracksIntersectingGivenSections(
-            {
-                section.id
-                for section in self._get_all_sections()
-                if section not in self._get_cutting_sections()
-            },
+            ids_non_cutting_sections,
             self._tracks_intersecting_sections,
             self._get_section_by_id,
             self._intersection_repository,
@@ -123,8 +124,9 @@ class TracksIntersectingAllSections(TrackIdProvider):
         self._intersection_repository = intersection_repository
 
     def get_ids(self) -> set[TrackId]:
+        ids_all_sections = {section.id for section in self._get_all_sections()}
         return TracksIntersectingGivenSections(
-            {section.id for section in self._get_all_sections()},
+            ids_all_sections,
             self._tracks_intersecting_sections,
             self._get_section_by_id,
             self._intersection_repository,
@@ -154,8 +156,9 @@ class TracksInsideCuttingSections(TrackIdProvider):
         self._intersection_repository = intersection_repository
 
     def get_ids(self) -> set[TrackId]:
+        ids_cutting_sections = {section.id for section in self._get_cutting_sectionss()}
         return TracksIntersectingGivenSections(
-            {section.id for section in self._get_cutting_sectionss()},
+            ids_cutting_sections,
             self._tracks_intersecting_sections,
             self._get_section_by_id,
             self._intersection_repository,
@@ -187,8 +190,9 @@ class TracksOnlyOutsideCuttingSections(TrackIdProvider):
         self._track_repository = track_repository
 
     def get_ids(self) -> set[TrackId]:
+        ids_cutting_sections = {section.id for section in self._get_cutting_sectionss()}
         return TracksNotIntersectingGivenSections(
-            {section.id for section in self._get_cutting_sectionss()},
+            ids_cutting_sections,
             self._tracks_intersecting_sections,
             self._get_section_by_id,
             self._intersection_repository,
