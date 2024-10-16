@@ -125,7 +125,6 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterFrame(
-                    OCCURRENCE,
                     3,
                     DEFAULT_VIDEO_NAME,
                     [SECOND_VIDEO_NAME, THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
@@ -134,7 +133,6 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterFrame(
-                    OCCURRENCE,
                     3,
                     SECOND_VIDEO_NAME,
                     [THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
@@ -143,7 +141,6 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterFrame(
-                    OCCURRENCE,
                     4,
                     SECOND_VIDEO_NAME,
                     [THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
@@ -152,7 +149,6 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameStartsAtOrAfterFrame(
-                    OCCURRENCE,
                     -1,
                     DEFAULT_VIDEO_NAME,
                     [SECOND_VIDEO_NAME, THIRD_VIDEO_NAME, FORTH_VIDEO_NAME],
@@ -160,8 +156,15 @@ class TestDataFramePredicates:
                 [True, True, True, True, True],
             ),
             (
+                DataFrameStartsAtOrAfterFrame(
+                    0,
+                    None,
+                    [],
+                ),
+                [False, False, False, False, False],
+            ),
+            (
                 DataFrameEndsBeforeOrAtFrame(
-                    OCCURRENCE,
                     10,
                     FORTH_VIDEO_NAME,
                     [DEFAULT_VIDEO_NAME, SECOND_VIDEO_NAME, THIRD_VIDEO_NAME],
@@ -170,15 +173,23 @@ class TestDataFramePredicates:
             ),
             (
                 DataFrameEndsBeforeOrAtFrame(
-                    OCCURRENCE, 3, SECOND_VIDEO_NAME, [DEFAULT_VIDEO_NAME]
+                    3, SECOND_VIDEO_NAME, [DEFAULT_VIDEO_NAME]
                 ),
                 [True, True, True, False, False],
             ),
             (
                 DataFrameEndsBeforeOrAtFrame(
-                    OCCURRENCE, 4, SECOND_VIDEO_NAME, [DEFAULT_VIDEO_NAME]
+                    4, SECOND_VIDEO_NAME, [DEFAULT_VIDEO_NAME]
                 ),
                 [True, True, True, False, False],
+            ),
+            (
+                DataFrameEndsBeforeOrAtFrame(
+                    0,
+                    None,
+                    [],
+                ),
+                [False, False, False, False, False],
             ),
             (
                 DataFrameHasClassifications(CLASSIFICATION, {"car", "truck"}),
@@ -246,6 +257,12 @@ class TestNoOpDataFrameFilter:
 DEFAULT_FRAME = 1
 
 
+def create_video_mock(video_name: str) -> Mock:
+    video = Mock(spec=Video)
+    type(video).name = PropertyMock(return_value=video_name)
+    return video
+
+
 class TestDataFrameFilterBuilder:
     @pytest.fixture
     def current_frame(self) -> Mock:
@@ -266,12 +283,10 @@ class TestDataFrameFilterBuilder:
     def test_add_starts_at_or_after_date_predicate(
         self, current_frame: Mock, get_videos: Mock
     ) -> None:
-        video = Mock(spec=Video)
-        video_after = Mock(spec=Video)
         video_name = "video_name"
+        video = create_video_mock(video_name)
         video_name_after = f"{video_name}_after"
-        type(video).name = PropertyMock(return_value=video_name)
-        type(video_after).name = PropertyMock(return_value=video_name_after)
+        video_after = create_video_mock(video_name_after)
         get_videos.get.return_value = video
         get_videos.get_after.return_value = [video_after]
         start_date = datetime(2000, 1, 1)
@@ -284,20 +299,41 @@ class TestDataFrameFilterBuilder:
         assert hasattr(dataframe_filter, "_predicate")
         assert type(dataframe_filter._predicate) is DataFrameStartsAtOrAfterFrame
         assert dataframe_filter._predicate._frame == DEFAULT_FRAME
-        assert dataframe_filter._predicate._video_of_start_date == video_name
-        assert dataframe_filter._predicate._videos_after == [video_name_after]
+        assert dataframe_filter._predicate._video_with_frame == video_name
+        assert dataframe_filter._predicate._other_videos == [video_name_after]
         current_frame.get_frame_number_for.assert_called_once_with(start_date)
         get_videos.get_after.assert_called_once_with(start_date)
+
+    @pytest.mark.parametrize(
+        "current_video, videos, index, expected_video_name",
+        [
+            (create_video_mock("video"), [], 0, "video"),
+            (None, ["other"], 0, "other"),
+            (None, [], 0, None),
+        ],
+    )
+    def test_get_current_video_name(
+        self,
+        current_frame: Mock,
+        get_videos: Mock,
+        current_video: Video | None,
+        videos: list[str],
+        index: int,
+        expected_video_name: str,
+    ) -> None:
+        builder = DataFrameFilterBuilder(current_frame, get_videos)
+
+        video_name = builder._get_current_video_name(current_video, videos, index)
+
+        assert video_name == expected_video_name
 
     def test_add_ends_before_or_at_date_predicate(
         self, current_frame: Mock, get_videos: Mock
     ) -> None:
         video_name = "video_name"
         video_name_before = f"{video_name}_before"
-        video = Mock(spec=Video)
-        video_before = Mock(spec=Video)
-        type(video).name = PropertyMock(return_value=video_name)
-        type(video_before).name = PropertyMock(return_value=video_name_before)
+        video = create_video_mock(video_name)
+        video_before = create_video_mock(video_name_before)
         get_videos.get.return_value = video
         get_videos.get_before.return_value = [video_before]
         end_date = datetime(2000, 1, 3)
@@ -311,8 +347,8 @@ class TestDataFrameFilterBuilder:
         assert hasattr(dataframe_filter, "_predicate")
         assert type(dataframe_filter._predicate) is DataFrameEndsBeforeOrAtFrame
         assert dataframe_filter._predicate._frame == DEFAULT_FRAME
-        assert dataframe_filter._predicate._video_of_end_date == video_name
-        assert dataframe_filter._predicate._videos_before == [video_name_before]
+        assert dataframe_filter._predicate._video_with_frame == video_name
+        assert dataframe_filter._predicate._other_videos == [video_name_before]
         current_frame.get_frame_number_for.assert_called_once_with(end_date)
         get_videos.get.assert_called_once_with(end_date)
         get_videos.get_before.assert_called_once_with(end_date)
