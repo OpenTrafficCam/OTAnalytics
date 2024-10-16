@@ -15,7 +15,7 @@ class TrackIdsInsideCuttingSections:
     def __call__(self) -> set[TrackId]:
         track_dataset = self._get_tracks.as_dataset()
         cutting_sections = self._get_cutting_sections()
-        if cutting_sections is None:
+        if not cutting_sections:
             return set()
         else:
             offset = cutting_sections[0].get_offset(EventType.SECTION_ENTER)
