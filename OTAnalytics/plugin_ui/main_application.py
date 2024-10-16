@@ -102,6 +102,11 @@ from OTAnalytics.application.use_cases.generate_flows import (
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
+    TracksAssignedToAllFlows,
+    TracksIntersectingAllNonCuttingSections,
+)
+from OTAnalytics.application.use_cases.inside_cutting_section import (
+    TrackIdsInsideCuttingSections,
 )
 from OTAnalytics.application.use_cases.intersection_repository import (
     ClearAllIntersections,
@@ -123,6 +128,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     ClearAllSections,
     GetAllSections,
+    GetCuttingSections,
     GetSectionsById,
     RemoveSection,
 )
@@ -138,6 +144,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
     TrackRepositorySize,
 )
+from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
 )
@@ -354,7 +361,7 @@ class ApplicationStarter:
         remove_tracks = RemoveTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
 
-        get_sections_bv_id = GetSectionsById(section_repository)
+        get_sections_by_id = GetSectionsById(section_repository)
         add_section = AddSection(section_repository)
         remove_section = RemoveSection(section_repository)
         clear_all_sections = ClearAllSections(section_repository)
@@ -395,7 +402,7 @@ class ApplicationStarter:
             event_repository,
             flow_repository,
             track_repository,
-            get_sections_bv_id,
+            get_sections_by_id,
             create_events,
         )
         load_otflow = self._create_use_case_load_otflow(
@@ -431,7 +438,7 @@ class ApplicationStarter:
             clear_repositories, reset_project_config, track_view_state, file_state
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
-            get_sections_bv_id,
+            get_sections_by_id,
             get_all_tracks,
             add_all_tracks,
             remove_tracks,
@@ -499,6 +506,21 @@ class ApplicationStarter:
         save_path_suggester = SavePathSuggester(
             file_state, get_all_track_files, get_all_videos, get_current_project
         )
+        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
+            get_all_tracks
+        )
+        calculate_track_statistics = self._create_calculate_track_statistics(
+            get_sections,
+            tracks_intersecting_sections,
+            get_sections_by_id,
+            intersection_repository,
+            road_user_assigner,
+            event_repository,
+            flow_repository,
+            track_repository,
+            section_repository,
+            get_all_tracks,
+        )
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -533,6 +555,7 @@ class ApplicationStarter:
             config_has_changed,
             export_road_user_assignments,
             save_path_suggester,
+            calculate_track_statistics,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -596,6 +619,7 @@ class ApplicationStarter:
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         event_repository.register_observer(image_updater.notify_events)
+        event_repository.register_observer(dummy_viewmodel.update_track_statistics)
         load_otflow.register(file_state.last_saved_config.set)
         load_otconfig.register(file_state.last_saved_config.set)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
@@ -1073,4 +1097,39 @@ class ApplicationStarter:
             create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleRoadUserAssignmentExporterFactory(section_repository, get_all_tracks),
+        )
+
+    def _create_calculate_track_statistics(
+        self,
+        get_all_sections: GetAllSections,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        get_section_by_id: GetSectionsById,
+        intersection_repository: IntersectionRepository,
+        road_user_assigner: RoadUserAssigner,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
+        track_repository: TrackRepository,
+        section_repository: SectionRepository,
+        get_all_tracks: GetAllTracks,
+    ) -> CalculateTrackStatistics:
+        get_cutting_sections = GetCuttingSections(section_repository)
+        tracksIntersectingAllSections = TracksIntersectingAllNonCuttingSections(
+            get_cutting_sections,
+            get_all_sections,
+            tracks_intersecting_sections,
+            get_section_by_id,
+            intersection_repository,
+        )
+        tracksAssignedToAllFlows = TracksAssignedToAllFlows(
+            road_user_assigner, event_repository, flow_repository
+        )
+        track_ids_inside_cutting_sections = TrackIdsInsideCuttingSections(
+            get_all_tracks, get_cutting_sections
+        )
+        get_all_track_ids = GetAllTrackIds(track_repository)
+        return CalculateTrackStatistics(
+            tracksIntersectingAllSections,
+            tracksAssignedToAllFlows,
+            get_all_track_ids,
+            track_ids_inside_cutting_sections,
         )
