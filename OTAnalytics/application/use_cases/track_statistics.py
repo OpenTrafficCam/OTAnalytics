@@ -21,18 +21,8 @@ class TrackStatistics:
     track_count_inside_intersecting_but_unassigned: int
     track_count_inside_assigned: int
     percentage_inside_assigned: float
-
-    def __str__(self) -> str:
-        # TODO round percentage
-        return (
-            f"{self.track_count_inside} of the "
-            f"{self.track_count} tracks are inside the cutting section."
-            f"{self.track_count_inside_assigned} "
-            f"({int(self.percentage_inside_assigned * 100)}%) "
-            f"of these are assigned to flows, "
-            f"{self.track_count_inside_not_intersecting} "
-            f"tracks inside the cutting section do not intersect any other section."
-        )
+    percentage_inside_not_intersection: float
+    percentage_inside_intersecting_but_unassigned: float
 
 
 class CalculateTrackStatistics:
@@ -74,12 +64,15 @@ class CalculateTrackStatistics:
             - track_count_inside_not_intersecting
             - track_count_inside_assigned
         )
-        if track_count_inside == 0:
-            percentage_inside_assigned = 1.0
-        else:
-            percentage_inside_assigned = (
-                track_count_inside_assigned / track_count_inside
-            )
+        percentage_inside_assigned = self.__percentage(
+            track_count_inside_assigned, track_count_inside
+        )
+        percentage_inside_not_intersection = self.__percentage(
+            track_count_inside_not_intersecting, track_count_inside
+        )
+        percentage_inside_intersecting_but_unassigned = self.__percentage(
+            track_count_inside_intersecting_but_unassigned, track_count_inside
+        )
         return TrackStatistics(
             track_count,
             track_count_outside,
@@ -88,4 +81,11 @@ class CalculateTrackStatistics:
             track_count_inside_intersecting_but_unassigned,
             track_count_inside_assigned,
             percentage_inside_assigned,
+            percentage_inside_not_intersection,
+            percentage_inside_intersecting_but_unassigned,
         )
+
+    def __percentage(self, track_count: int, all_tracks: int) -> float:
+        if all_tracks == 0:
+            return 1.0
+        return track_count / all_tracks
