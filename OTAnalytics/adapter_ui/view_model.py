@@ -17,6 +17,9 @@ from OTAnalytics.adapter_ui.abstract_frame_project import (
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
+from OTAnalytics.adapter_ui.abstract_frame_track_statistics import (
+    AbstractFrameTrackStatistics,
+)
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -83,6 +86,10 @@ class ViewModel(ABC):
 
     @abstractmethod
     def set_frame_project(self, project_frame: AbstractFrameProject) -> None:
+        pass
+
+    @abstractmethod
+    def set_frame_track_statistics(self, frame: AbstractFrameTrackStatistics) -> None:
         pass
 
     @abstractmethod

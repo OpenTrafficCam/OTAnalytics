@@ -20,6 +20,9 @@ from OTAnalytics.adapter_ui.abstract_frame_project import (
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
+from OTAnalytics.adapter_ui.abstract_frame_track_statistics import (
+    AbstractFrameTrackStatistics,
+)
 from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -108,6 +111,7 @@ from OTAnalytics.domain.date import (
     validate_minute,
     validate_second,
 )
+from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.files import DifferentDrivesException
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
@@ -1841,3 +1845,14 @@ class DummyViewModel(
 
     def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
         return self._application.suggest_save_path(file_type, context_file_type)
+
+    def set_frame_track_statistics(self, frame: AbstractFrameTrackStatistics) -> None:
+        self._frame_track_statistics = frame
+
+    def update_track_statistics(self, _: EventRepositoryEvent) -> None:
+        if self._frame_track_statistics is None:
+            raise MissingInjectedInstanceError(
+                type(self._frame_track_statistics).__name__
+            )
+        statistics = self._application.calculate_track_statistics()
+        self._frame_track_statistics.update_track_statistics(statistics)

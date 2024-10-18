@@ -1,7 +1,13 @@
 from typing import Iterable
 
+from OTAnalytics.application.config import CLI_CUTTING_SECTION_MARKER
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Section, SectionId, SectionRepository
+from OTAnalytics.domain.section import (
+    Section,
+    SectionId,
+    SectionRepository,
+    SectionType,
+)
 from OTAnalytics.domain.types import EventType
 
 
@@ -21,6 +27,25 @@ class GetAllSections:
 
     def __call__(self) -> list[Section]:
         return self._section_repository.get_all()
+
+
+class GetCuttingSections:
+    """Get all cutting sections from the repository."""
+
+    def __init__(self, section_repository: SectionRepository) -> None:
+        self._section_repository = section_repository
+
+    def __call__(self) -> list[Section]:
+        cutting_sections = sorted(
+            [
+                section
+                for section in self._section_repository.get_all()
+                if section.get_type() == SectionType.CUTTING
+                or section.name.startswith(CLI_CUTTING_SECTION_MARKER)
+            ],
+            key=lambda section: section.id.id,
+        )
+        return cutting_sections
 
 
 class GetSectionsById:
