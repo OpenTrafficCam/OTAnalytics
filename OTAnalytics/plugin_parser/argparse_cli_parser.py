@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from OTAnalytics.application.parser.cli_parser import CliArguments, CliParser
+from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode, CliParser
 
 
 class ArgparseCliParser(CliParser):
@@ -25,6 +25,22 @@ class ArgparseCliParser(CliParser):
             "--cli",
             action="store_true",
             help="Start OTAnalytics CLI. If omitted OTAnalytics GUI will be started.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--cli-mode",
+            type=CliMode,
+            choices=list(CliMode),
+            help="Specify the execution mode of OTAnalytics CLI. "
+            + f"Choose from: {list(CliMode)}",
+            default=CliMode.BULK,
+            required=False,
+        )
+        self._parser.add_argument(
+            "--cli-chunk-size",
+            type=int,
+            help="Specify the chunk size for streaming OTAnalytics CLI.",
+            default=10,
             required=False,
         )
         self._parser.add_argument(
@@ -145,6 +161,8 @@ class ArgparseCliParser(CliParser):
         args = self._parser.parse_args()
         return CliArguments(
             start_cli=args.cli,
+            cli_mode=args.cli_mode,
+            cli_chunk_size=args.cli_chunk_size,
             debug=args.debug,
             logfile_overwrite=args.logfile_overwrite,
             show_svz=args.show_svz,

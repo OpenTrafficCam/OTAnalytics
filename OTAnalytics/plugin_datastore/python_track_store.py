@@ -4,7 +4,6 @@ from math import ceil
 from typing import Callable, Iterable, Optional, Sequence
 
 from more_itertools import batched
-from shapely import LineString
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.common import DataclassValidation
@@ -320,6 +319,53 @@ class PythonTrackSegmentDataset(TrackSegmentDataset):
             consumer(segment.as_dict())
 
 
+def cut_track_with_section(
+    track_to_cut: Track,
+    section: Section,
+    offset: RelativeOffsetCoordinate,
+    shapely_mapper: ShapelyMapper = ShapelyMapper(),
+) -> list[Track]:
+    section_geometry = shapely_mapper.map_coordinates_to_line_string(
+        section.get_coordinates()
+    )
+    cut_track_segments: list[Track] = []
+    track_builder = SimpleCutTrackSegmentBuilder()
+    for current_detection, next_detection in zip(
+        track_to_cut.detections[0:-1], track_to_cut.detections[1:]
+    ):
+        current_coordinate = current_detection.get_coordinate(offset)
+        next_coordinate = next_detection.get_coordinate(offset)
+        track_segment_geometry = shapely_mapper.map_domain_coordinates_to_line_string(
+            [current_coordinate, next_coordinate]
+        )
+        if track_segment_geometry.intersects(section_geometry):
+            new_track_segment = build_track(
+                track_builder,
+                f"{track_to_cut.id.id}_{len(cut_track_segments)}",
+                current_detection,
+            )
+            cut_track_segments.append(new_track_segment)
+        else:
+            track_builder.add_detection(current_detection)
+
+    new_track_segment = build_track(
+        track_builder,
+        f"{track_to_cut.id.id}_{len(cut_track_segments)}",
+        track_to_cut.last_detection,
+    )
+    cut_track_segments.append(new_track_segment)
+
+    return cut_track_segments
+
+
+def build_track(
+    track_builder: TrackBuilder, track_id: str, detection: Detection
+) -> Track:
+    track_builder.add_id(track_id)
+    track_builder.add_detection(detection)
+    return track_builder.build()
+
+
 class PythonTrackDataset(TrackDataset):
     """Pure Python implementation of a TrackDataset."""
 
@@ -585,67 +631,19 @@ class PythonTrackDataset(TrackDataset):
             return self, set()
         shapely_mapper = ShapelyMapper()
 
-        section_geometry = shapely_mapper.map_coordinates_to_line_string(
-            section.get_coordinates()
-        )
         intersecting_track_ids = self.intersecting_tracks([section], offset)
 
         cut_tracks = []
         for track_id in intersecting_track_ids:
             cut_tracks.extend(
-                self.__cut_with_section(
-                    self._tracks[track_id], section_geometry, offset, shapely_mapper
+                cut_track_with_section(
+                    self._tracks[track_id], section, offset, shapely_mapper
                 )
             )
         return (
             PythonTrackDataset.from_list(cut_tracks, self.track_geometry_factory),
             intersecting_track_ids,
         )
-
-    def __cut_with_section(
-        self,
-        track_to_cut: Track,
-        section_geometry: LineString,
-        offset: RelativeOffsetCoordinate,
-        shapely_mapper: ShapelyMapper,
-    ) -> list[Track]:
-        cut_track_segments: list[Track] = []
-        track_builder = SimpleCutTrackSegmentBuilder()
-        for current_detection, next_detection in zip(
-            track_to_cut.detections[0:-1], track_to_cut.detections[1:]
-        ):
-            current_coordinate = current_detection.get_coordinate(offset)
-            next_coordinate = next_detection.get_coordinate(offset)
-            track_segment_geometry = (
-                shapely_mapper.map_domain_coordinates_to_line_string(
-                    [current_coordinate, next_coordinate]
-                )
-            )
-            if track_segment_geometry.intersects(section_geometry):
-                new_track_segment = self._build_track(
-                    track_builder,
-                    f"{track_to_cut.id.id}_{len(cut_track_segments)}",
-                    current_detection,
-                )
-                cut_track_segments.append(new_track_segment)
-            else:
-                track_builder.add_detection(current_detection)
-
-        new_track_segment = self._build_track(
-            track_builder,
-            f"{track_to_cut.id.id}_{len(cut_track_segments)}",
-            track_to_cut.last_detection,
-        )
-        cut_track_segments.append(new_track_segment)
-
-        return cut_track_segments
-
-    def _build_track(
-        self, track_builder: TrackBuilder, track_id: str, detection: Detection
-    ) -> Track:
-        track_builder.add_id(track_id)
-        track_builder.add_detection(detection)
-        return track_builder.build()
 
     def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
         result: dict[str, float] = {}

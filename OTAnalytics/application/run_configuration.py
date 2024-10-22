@@ -8,7 +8,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
-from OTAnalytics.application.parser.cli_parser import CliArguments
+from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode
 from OTAnalytics.application.parser.config_parser import OtConfig
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
@@ -48,6 +48,18 @@ class RunConfiguration(OtConfigDefaultValueProvider):
     @property
     def start_cli(self) -> bool:
         return self._cli_args.start_cli
+
+    @property
+    def cli_bulk_mode(self) -> bool:
+        return self.start_cli and self._cli_args.cli_mode == CliMode.BULK
+
+    @property
+    def cli_stream_mode(self) -> bool:
+        return self.start_cli and self._cli_args.cli_mode == CliMode.STREAM
+
+    @property
+    def cli_chunk_size(self) -> int:
+        return self._cli_args.cli_chunk_size
 
     @property
     def debug(self) -> bool:

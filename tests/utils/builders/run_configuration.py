@@ -1,4 +1,4 @@
-from OTAnalytics.application.parser.cli_parser import CliArguments
+from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 
@@ -12,6 +12,8 @@ def create_run_config(
     event_formats: list[str],
     flow_parser: FlowParser,
     start_cli: bool = True,
+    cli_mode: CliMode = CliMode.BULK,
+    cli_chunk_size: int = 5,
     debug: bool = False,
     logfile_overwrite: bool = True,
     track_export: bool = False,
@@ -26,6 +28,8 @@ def create_run_config(
 ) -> RunConfiguration:
     cli_args = CliArguments(
         start_cli=start_cli,
+        cli_mode=cli_mode,
+        cli_chunk_size=cli_chunk_size,
         debug=debug,
         logfile_overwrite=logfile_overwrite,
         track_export=track_export,

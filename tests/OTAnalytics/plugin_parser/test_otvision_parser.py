@@ -286,14 +286,14 @@ class TestPythonDetectionParser:
             ottrk_dataformat.VIDEO
         ]
 
-        result_sorted_input = parser._parse_detections(
+        result_sorted_input = parser._parse_track_detections(
             detections,
             metadata_video,
             input_file,
             TrackId,
         )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = parser._parse_detections(
+        result_unsorted_input = parser._parse_track_detections(
             unsorted_detections,
             metadata_video,
             input_file,
