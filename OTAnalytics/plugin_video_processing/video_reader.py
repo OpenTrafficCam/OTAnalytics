@@ -10,7 +10,7 @@ from av.container import InputContainer
 from OTAnalytics.domain.track import PilImage, TrackImage
 from OTAnalytics.domain.video import InvalidVideoError, VideoReader
 
-OFFSET = 2
+OFFSET = 1
 
 GRAYSCALE = "L"
 
@@ -63,10 +63,11 @@ class PyAvVideoReader(VideoReader):
             )
             time_in_video = int(frame_to_read / framerate)
             container.seek(time_in_video * av.time_base, backward=True)
-            frame = next(container.decode(video=0))
+            decode = container.decode(video=0)
+            frame = next(decode)
             sec_frame = int(framerate * frame.pts * time_base)
             for _ in range(sec_frame, frame_to_read):
-                frame = next(container.decode(video=0))
+                frame = next(decode)
         return frame
 
     @staticmethod
