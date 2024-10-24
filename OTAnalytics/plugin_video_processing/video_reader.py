@@ -61,14 +61,53 @@ class PyAvVideoReader(VideoReader):
             time_base = (
                 video.time_base if video.time_base else Fraction(av.time_base, 1)
             )
-            time_in_video = int(frame_to_read / framerate)
-            container.seek(time_in_video * av.time_base, backward=True)
-            decode = container.decode(video=0)
-            frame = next(decode)
-            sec_frame = int(framerate * frame.pts * time_base)
-            for _ in range(sec_frame, frame_to_read):
-                frame = next(decode)
+            self._seek_to_nearest_frame(container, frame_to_read, framerate)
+            frame = self._decode_frame(container, frame_to_read, framerate, time_base)
         return frame
+
+    def _decode_frame(
+        self,
+        container: InputContainer,
+        frame_to_read: int,
+        framerate: Fraction,
+        time_base: Fraction,
+    ) -> VideoFrame:
+        """
+        Args:
+            container (InputContainer): Container from which video frames will be
+                decoded.
+            frame_to_read (int): The specific frame number to read from the video.
+            framerate (Fraction): The framerate of the video.
+            time_base (Fraction): The time base used for converting frame presentation
+                timestamp to seconds.
+
+        Returns:
+            The requested video frame as a VideoFrame object.
+        """
+        decode = container.decode(video=0)
+        frame = next(decode)
+        sec_frame = int(framerate * frame.pts * time_base)
+        for _ in range(sec_frame, frame_to_read):
+            frame = next(decode)
+        return frame
+
+    def _seek_to_nearest_frame(
+        self, container: InputContainer, frame_to_read: int, framerate: Fraction
+    ) -> None:
+        """
+        Seek to the closest (key)frame of the video, according to InputContainer#seek.
+        The offset to seek to is based on the `time_base` of the av module, because we
+        seek on the container not on the video stream inside the container. Using the
+        `time_base` of the video stream results in a wrong offset.
+
+        Args:
+            container (InputContainer): Container from which frames are being read.
+            frame_to_read (int): The specific frame number to be read.
+            framerate (Fraction): The video's frame rate.
+        """
+        time_in_video = int(frame_to_read / framerate)
+        offset = time_in_video * av.time_base
+        container.seek(offset, backward=True)
 
     @staticmethod
     def __get_clip(video_path: Path) -> InputContainer:
