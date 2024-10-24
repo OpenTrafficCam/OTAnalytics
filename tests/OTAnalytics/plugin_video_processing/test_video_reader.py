@@ -31,10 +31,11 @@ class TestPyAVVideoReader:
         image = video_reader.get_frame(cyclist_video, 1)
         assert isinstance(image, PilImage)
 
+    @pytest.mark.parametrize("frame_num", (-1, 60, 61))
     def test_get_frame_out_of_bounds(
-        self, cyclist_video: Path, video_reader: VideoReader
+        self, cyclist_video: Path, video_reader: VideoReader, frame_num: int
     ) -> None:
-        image = video_reader.get_frame(cyclist_video, 100)
+        image = video_reader.get_frame(cyclist_video, frame_num)
         assert isinstance(image, PilImage)
 
     def test_get_frame_number_for(
@@ -46,7 +47,7 @@ class TestPyAVVideoReader:
 
         assert frame_number == 20
 
-    @pytest.mark.parametrize("frame_num", (1, 5))
+    @pytest.mark.parametrize("frame_num", (0, 1, 5, 58, 59))
     def test_get_specific_frame(
         self, cyclist_video: Path, video_reader: VideoReader, frame_num: int
     ) -> None:
