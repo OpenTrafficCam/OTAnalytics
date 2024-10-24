@@ -18,7 +18,7 @@ class TestPyAVVideoReader:
         expected_frames = []
         with av.open(str(video_path.absolute())) as container:
             for frame in container.decode(video=0):
-                expected_frames.append(av_to_image(frame).as_image())
+                expected_frames.append(av_to_image(frame, {}).as_image())
         return expected_frames
 
     @pytest.fixture
