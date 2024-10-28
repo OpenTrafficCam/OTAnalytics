@@ -114,7 +114,7 @@ class PyAvVideoReader(VideoReader):
         """
         decode = container.decode(video=0)
         frame = next(decode)
-        sec_frame = int(framerate * frame.pts * time_base)
+        sec_frame = round(framerate * frame.pts * time_base)
         for _ in range(sec_frame, frame_to_read):
             frame = next(decode)
         return frame
