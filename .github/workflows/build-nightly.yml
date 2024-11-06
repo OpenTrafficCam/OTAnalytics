@@ -14,7 +14,7 @@ jobs:
   regression-test:
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
-  create_nighty:
+  create-nightly:
     needs:
       - test
       - regression-test

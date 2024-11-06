@@ -16,7 +16,10 @@ jobs:
     if: endsWith(github.event.base_ref, 'main')
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
-  create_night:
+  create-release:
+    needs:
+      - test
+      - regression-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
