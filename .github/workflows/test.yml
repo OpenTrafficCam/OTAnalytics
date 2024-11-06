@@ -11,7 +11,11 @@ permissions: read-all
 
 jobs:
   test:
-    runs-on: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: True
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     permissions:
       id-token: write
     steps:
