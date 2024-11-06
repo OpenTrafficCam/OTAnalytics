@@ -14,16 +14,30 @@ jobs:
   regression-test:
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
-  create_nightly:
+  create_nighty:
     needs:
       - test
       - regression-test
-    uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml@main"
-    secrets:
-      PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
-    with:
-      package-version: nightly
-      package-path: OTAnalytics
-      draft-release: false
-      pre-release: true
-      delete-existing: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Update Version
+        uses: platomo/update-version-py-action@main
+        with:
+          version: nightly
+          file-path: OTAnalytics
+      - name: Create Release
+        uses: platomo/build-release-asset-action@main
+        with:
+          platomo-token: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
+          package-version: nightly
+          save-artifacts: true
+      - name: Publish Release
+        uses: platomo/publish-release-action@main
+        with:
+          package-version: nightly
+          delete-existing: true
+          pre-release: true
+          py-version: "3.11"
+          draft-release: false
