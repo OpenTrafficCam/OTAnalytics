@@ -26,3 +26,4 @@ jobs:
         with:
           py-version: 3.11
           test_path: OTAnalytics
+          ffmpeg-required: false
