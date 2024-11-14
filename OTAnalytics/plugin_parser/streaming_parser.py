@@ -45,8 +45,8 @@ def parse_json_bz2_events(path: Path) -> Iterable[tuple[str, str, str]]:
     Provide lazy data stream reading the bzip2 compressed file
     at the given path and interpreting it as json objects.
     """
-    stream = bz2.BZ2File(path)
-    return ijson.parse(stream)
+    with bz2.BZ2File(path) as stream:
+        yield from ijson.parse(stream)
 
 
 def metadata_from_json_events(parse_events: Iterable[tuple[str, str, str]]) -> dict:
