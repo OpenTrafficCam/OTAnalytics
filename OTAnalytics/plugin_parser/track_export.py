@@ -52,7 +52,7 @@ class CsvTrackExport(ExportTracks):
         path = specification.save_path
         output_path = path.with_suffix(".tracks.csv")
         write_mode: Literal["w", "a"] = "a" if append else "w"
-        dataframe.to_csv(output_path, index=False, header=(not append), mode=write_mode)
+        dataframe.to_csv(output_path, index=False, header=not append, mode=write_mode)
 
         if specification.export_mode.is_final_write():
             tracks_metadata_path = path.with_suffix(".tracks_metadata.json")
