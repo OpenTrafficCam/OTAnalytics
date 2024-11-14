@@ -306,7 +306,6 @@ class TestOTAnalyticsCli:
     @pytest.fixture
     def mock_cli_dependencies(self) -> dict[str, Any]:
         return {
-            # self.TRACK_PARSER: Mock(spec=TrackParser),
             self.EVENT_REPOSITORY: Mock(spec=EventRepository),
             self.ADD_SECTION: Mock(spec=AddSection),
             self.GET_ALL_SECTIONS: Mock(spec=GetAllSections),
@@ -322,7 +321,6 @@ class TestOTAnalyticsCli:
             self.TRACKS_METADATA: Mock(spec=TracksMetadata),
             self.VIDEOS_METADATA: Mock(spec=VideosMetadata),
             self.EXPORT_ROAD_USER_ASSIGNMENT: Mock(spec=ExportRoadUserAssignments),
-            # self.PROGRESSBAR: Mock(spec=ProgressbarBuilder),
         }
 
     @pytest.fixture
@@ -648,7 +646,7 @@ class TestOTAnalyticsCli:
             == expected_dependencies[self.EXPORT_ROAD_USER_ASSIGNMENT]
         )
 
-        if isinstance(cli, OTAnalyticsBulkCli):  # run_config.cli_bulk_mode:
+        if isinstance(cli, OTAnalyticsBulkCli):
             assert cli._progressbar == expected_dependencies[self.PROGRESSBAR]
 
     @pytest.mark.parametrize(
