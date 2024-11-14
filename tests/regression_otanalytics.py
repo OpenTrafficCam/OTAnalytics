@@ -88,16 +88,11 @@ class TestRegressionCompleteApplication:
             )
 
     @pytest.mark.skip
-    @pytest.mark.parametrize(
-        "cli_mode",
-        [CliMode.STREAM, CliMode.BULK],
-    )
     def test_2_h_single_recreate_test_data(
         self,
         otflow_file: str,
         all_track_files_test_dataset: list[Path],
         otflow_parser: FlowParser,
-        cli_mode: CliMode,
         cli_chunk_size: int,
     ) -> None:
         batches = list(chunked(sorted(all_track_files_test_dataset), n=8))
@@ -113,21 +108,16 @@ class TestRegressionCompleteApplication:
                 test_interval=test_interval,
                 otflow_parser=otflow_parser,
                 event_formats=("csv", "otevents"),
-                cli_mode=cli_mode,
+                cli_mode=CliMode.BULK,
                 cli_chunk_size=cli_chunk_size,
             )
 
     @pytest.mark.skip
-    @pytest.mark.parametrize(
-        "cli_mode",
-        [CliMode.STREAM, CliMode.BULK],
-    )
     def test_2_h_recreate_test_data(
         self,
         otflow_file: str,
         all_track_files_test_dataset: list[Path],
         otflow_parser: FlowParser,
-        cli_mode: CliMode,
         cli_chunk_size: int,
     ) -> None:
         batches = list(chunked(sorted(all_track_files_test_dataset), n=8))
@@ -143,21 +133,16 @@ class TestRegressionCompleteApplication:
                 test_interval=test_interval,
                 otflow_parser=otflow_parser,
                 event_formats=("csv", "otevents"),
-                cli_mode=cli_mode,
+                cli_mode=CliMode.BULK,
                 cli_chunk_size=cli_chunk_size,
             )
 
     @pytest.mark.skip
-    @pytest.mark.parametrize(
-        "cli_mode",
-        [CliMode.STREAM, CliMode.BULK],
-    )
     def test_whole_day_recreate_test_data(
         self,
         otflow_file: str,
         all_track_files_test_dataset: list[Path],
         otflow_parser: FlowParser,
-        cli_mode: CliMode,
         cli_chunk_size: int,
     ) -> None:
         test_data = all_track_files_test_dataset
@@ -171,7 +156,7 @@ class TestRegressionCompleteApplication:
             test_interval=test_interval,
             otflow_parser=otflow_parser,
             event_formats=("csv", "otevents"),
-            cli_mode=cli_mode,
+            cli_mode=CliMode.BULK,
             cli_chunk_size=cli_chunk_size,
         )
 
