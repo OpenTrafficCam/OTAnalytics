@@ -289,6 +289,20 @@ class TestOTAnalyticsCli:
     PROGRESSBAR: str = "progressbar"
     EXPORT_ROAD_USER_ASSIGNMENT: str = "export_road_user_assignments"
 
+    def init_cli_with(
+        self,
+        mode: CliMode,
+        cli_bulk_dependencies: dict[str, Any],
+        cli_stream_dependencies: dict[str, Any],
+        run_config: RunConfiguration,
+    ) -> OTAnalyticsCli:
+        cli: OTAnalyticsCli
+        if mode == CliMode.STREAM:
+            cli = OTAnalyticsStreamCli(run_config, **cli_stream_dependencies)
+        else:
+            cli = OTAnalyticsBulkCli(run_config, **cli_bulk_dependencies)
+        return cli
+
     @pytest.fixture
     def mock_cli_dependencies(self) -> dict[str, Any]:
         return {
@@ -407,14 +421,6 @@ class TestOTAnalyticsCli:
                     DEFAULT_TRACK_LENGTH_LIMIT,
                 ),
             ),
-            # self.TRACK_PARSER: StreamOttrkParser(
-            #    PythonStreamDetectionParser(
-            #        ByMaxConfidence(), DEFAULT_TRACK_LENGTH_LIMIT
-            #    ),
-            #    registered_tracks_metadata=[tracks_metadata],
-            #    registered_videos_metadata=[videos_metadata],
-            #    chunk_size=2,
-            # ),
             self.EVENT_REPOSITORY: event_repository,
             self.ADD_SECTION: AddSection(section_repository),
             self.GET_ALL_SECTIONS: GetAllSections(section_repository),
@@ -612,17 +618,15 @@ class TestOTAnalyticsCli:
     ) -> None:
         run_config = create_run_config(mock_flow_parser, cli_mode=mode)
 
+        # cant use self.init_cli_with since setting  _track_parser
+        # requires knowing more specific type of cli object
         cli: OTAnalyticsCli
         if mode == CliMode.STREAM:
-            cli = OTAnalyticsStreamCli(
-                run_config=run_config, **mock_cli_stream_dependencies
-            )
+            cli = OTAnalyticsStreamCli(run_config, **mock_cli_stream_dependencies)
             expected_dependencies = mock_cli_stream_dependencies
             assert cli._track_parser == expected_dependencies[self.TRACK_PARSER]
         else:
-            cli = OTAnalyticsBulkCli(
-                run_config=run_config, **mock_cli_bulk_dependencies
-            )
+            cli = OTAnalyticsBulkCli(run_config, **mock_cli_bulk_dependencies)
             expected_dependencies = mock_cli_bulk_dependencies
             assert cli._track_parser == expected_dependencies[self.TRACK_PARSER]
 
@@ -660,12 +664,13 @@ class TestOTAnalyticsCli:
     ) -> None:
         run_config = create_run_config(mock_flow_parser, track_files=[], cli_mode=mode)
 
-        if mode == CliMode.STREAM:
-            with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
-                OTAnalyticsStreamCli(run_config, **mock_cli_stream_dependencies)
-        else:
-            with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
-                OTAnalyticsBulkCli(run_config, **mock_cli_bulk_dependencies)
+        with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
+            self.init_cli_with(
+                mode,
+                mock_cli_bulk_dependencies,
+                mock_cli_stream_dependencies,
+                run_config,
+            )
 
     @pytest.mark.parametrize(
         "mode",
@@ -683,12 +688,13 @@ class TestOTAnalyticsCli:
         )
         expected_error_msg = "No otflow or otconfig file passed.*"
 
-        if mode == CliMode.STREAM:
-            with pytest.raises(CliParseError, match=expected_error_msg):
-                OTAnalyticsStreamCli(run_config, **mock_cli_stream_dependencies)
-        else:
-            with pytest.raises(CliParseError, match=expected_error_msg):
-                OTAnalyticsBulkCli(run_config, **mock_cli_bulk_dependencies)
+        with pytest.raises(CliParseError, match=expected_error_msg):
+            self.init_cli_with(
+                mode,
+                mock_cli_bulk_dependencies,
+                mock_cli_stream_dependencies,
+                run_config,
+            )
 
     @pytest.mark.parametrize(
         "mode",
@@ -806,11 +812,9 @@ class TestOTAnalyticsCli:
             cli_mode=mode,
         )
 
-        cli: OTAnalyticsCli
-        if mode == CliMode.STREAM:
-            cli = OTAnalyticsStreamCli(run_config, **cli_stream_dependencies)
-        else:
-            cli = OTAnalyticsBulkCli(run_config, **cli_bulk_dependencies)
+        cli = self.init_cli_with(
+            mode, cli_bulk_dependencies, cli_stream_dependencies, run_config
+        )
 
         cli.start()
         expected_event_list_file = save_name.with_name(
@@ -871,11 +875,12 @@ class TestOTAnalyticsCli:
         run_config = Mock()
         run_config.count_intervals = {interval}
 
-        cli: OTAnalyticsCli
-        if mode == CliMode.STREAM:
-            cli = OTAnalyticsStreamCli(run_config, **dependencies)
-        else:
-            cli = OTAnalyticsBulkCli(run_config, **dependencies)
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode,
+            dependencies,
+            dependencies,
+            run_config,
+        )
 
         cli._do_export_counts(test_data_tmp_dir / filename, OVERWRITE)
         export_counts = dependencies[self.EXPORT_COUNTS]
@@ -916,11 +921,12 @@ class TestOTAnalyticsCli:
         otconfig = config_parser.parse(temp_otconfig)
         run_config = RunConfiguration(flow_parser, cli_args, otconfig)
 
-        cli: OTAnalyticsCli
-        if mode == CliMode.STREAM:
-            cli = OTAnalyticsStreamCli(run_config, **cli_stream_dependencies)
-        else:
-            cli = OTAnalyticsBulkCli(run_config, **cli_bulk_dependencies)
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode,
+            cli_bulk_dependencies,
+            cli_stream_dependencies,
+            run_config,
+        )
 
         cli.start()
         for event_format in run_config.event_formats:
@@ -955,11 +961,12 @@ class TestOTAnalyticsCli:
         logger = Mock()
         get_logger.return_value = logger
 
-        cli: OTAnalyticsCli
-        if mode == CliMode.STREAM:
-            cli = OTAnalyticsStreamCli(Mock(), **mock_cli_stream_dependencies)
-        else:
-            cli = OTAnalyticsBulkCli(Mock(), **mock_cli_bulk_dependencies)
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode,
+            mock_cli_bulk_dependencies,
+            mock_cli_stream_dependencies,
+            Mock(),
+        )
 
         cli.start()
         logger.exception.assert_called_once_with(exception, exc_info=True)
@@ -1002,15 +1009,19 @@ class TestOTAnalyticsCli:
 
         type(run_config).sections = PropertyMock(return_value=sections)
 
-        cli: OTAnalyticsCli
         if mode == CliMode.STREAM:
             dependencies = mock_cli_stream_dependencies
             dependencies[self.GET_ALL_SECTIONS].return_value = sections
-            cli = OTAnalyticsStreamCli(run_config, **dependencies)
         else:
             dependencies = mock_cli_bulk_dependencies
             dependencies[self.GET_ALL_SECTIONS].return_value = sections
-            cli = OTAnalyticsBulkCli(run_config, **dependencies)
+
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode,
+            dependencies,
+            dependencies,
+            run_config,
+        )
 
         cli._prepare_analysis(sections, flows)
         cli._run_analysis({second_track_file, first_track_file})
