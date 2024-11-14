@@ -214,7 +214,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
 from OTAnalytics.plugin_ui.cli import OTAnalyticsCli
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
-from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
+from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
 
 class ApplicationStarter:
@@ -1041,7 +1041,7 @@ class ApplicationStarter:
         )
 
     def _create_video_parser(self) -> VideoParser:
-        return CachedVideoParser(SimpleVideoParser(OpenCvVideoReader()))
+        return CachedVideoParser(SimpleVideoParser(PyAvVideoReader()))
 
     def _create_video_repository(self) -> VideoRepository:
         return VideoRepository()
