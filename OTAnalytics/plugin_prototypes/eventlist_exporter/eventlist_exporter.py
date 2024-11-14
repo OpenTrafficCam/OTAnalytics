@@ -219,7 +219,7 @@ class EventListOteventsExporter(EventListExporter):
         export_mode = export_specification.export_mode
 
         if export_mode == INITIAL_MERGE:
-            print(
+            logger().info(
                 "WARNING: Using EventListOteventsExporter in incremental mode "
                 + "might consume a lot of memory."
             )
