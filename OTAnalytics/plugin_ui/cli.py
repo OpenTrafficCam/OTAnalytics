@@ -249,7 +249,6 @@ class OTAnalyticsCli(ABC):
             )
 
             event_export_specification = EventExportSpecification(
-                format=event_format,
                 file=actual_save_path,
                 export_mode=export_mode,
             )

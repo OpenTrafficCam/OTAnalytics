@@ -14,7 +14,6 @@ class ExporterNotFoundError(Exception):
 
 @dataclass(frozen=True)
 class EventExportSpecification:
-    format: str
     file: Path
     export_mode: ExportMode
 

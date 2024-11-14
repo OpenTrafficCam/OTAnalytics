@@ -323,7 +323,6 @@ class Datastore:
             sections=self._section_repository.get_all(),
             export_specification=EventExportSpecification(
                 file=file,
-                format=event_list_exporter.get_extension(),
                 export_mode=OVERWRITE,
             ),
         )
