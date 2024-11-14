@@ -108,6 +108,23 @@ VERSION_1_1: Version = Version(1, 1)
 VERSION_1_2: Version = Version(1, 2)
 
 
+@dataclass(frozen=True)
+class FormatVersions:
+    ottrk: Version
+    otdet: Version
+
+
+VERSION_OF_FORMAT = Callable[[FormatVersions], Version]
+
+
+def version_of_ottrk(versions: FormatVersions) -> Version:
+    return versions.ottrk
+
+
+def version_of_otdet(versions: FormatVersions) -> Version:
+    return versions.otdet
+
+
 class DetectionFixer(ABC):
     def __init__(
         self,
@@ -131,20 +148,29 @@ class DetectionFixer(ABC):
 class MetadataFixer(ABC):
     def __init__(
         self,
-        from_ottrk_version: Version,
-        to_ottrk_version: Version,
+        from_version: Version,
+        to_version: Version,
+        version_of_format: VERSION_OF_FORMAT,
     ) -> None:
-        self._from_ottrk_version: Version = from_ottrk_version
-        self._to_ottrk_version: Version = to_ottrk_version
+        self._from_version: Version = from_version
+        self._to_version: Version = to_version
+        self._version_extractor = version_of_format
 
     def from_version(self) -> Version:
-        return self._from_ottrk_version
+        return self._from_version
 
     def to_version(self) -> Version:
-        return self._to_ottrk_version
+        return self._to_version
+
+    def fix(self, metadata: dict, versions: FormatVersions) -> dict:
+        return self._fix(metadata, current_version=self._version_extractor(versions))
 
     @abstractmethod
-    def fix(self, metadata: dict, current_version: Version) -> dict:
+    def _fix(
+        self,
+        metadata: dict,
+        current_version: Version,
+    ) -> dict:
         pass
 
 
@@ -212,9 +238,9 @@ class Otdet_Version_1_0_To_1_2(DetectionFixer):
 
 class Ottrk_Version_1_0_To_1_1(MetadataFixer):
     def __init__(self) -> None:
-        super().__init__(VERSION_1_0, VERSION_1_1)
+        super().__init__(VERSION_1_0, VERSION_1_1, version_of_ottrk)
 
-    def fix(self, metadata: dict, current_version: Version) -> dict:
+    def _fix(self, metadata: dict, current_version: Version) -> dict:
         return self.__fix_tracking_run_ids(metadata, current_version)
 
     def __fix_tracking_run_ids(self, metadata: dict, current_version: Version) -> dict:
@@ -224,11 +250,11 @@ class Ottrk_Version_1_0_To_1_1(MetadataFixer):
         return metadata
 
 
-class Ottrk_Version_1_0_To_1_2(MetadataFixer):
+class Otdet_Version_1_1_To_1_2(MetadataFixer):
     def __init__(self) -> None:
-        super().__init__(VERSION_1_0, VERSION_1_2)
+        super().__init__(VERSION_1_1, VERSION_1_2, version_of_otdet)
 
-    def fix(self, metadata: dict, current_version: Version) -> dict:
+    def _fix(self, metadata: dict, current_version: Version) -> dict:
         return self.__fix_recorded_start_date(metadata, current_version)
 
     def __fix_recorded_start_date(
@@ -264,7 +290,7 @@ ALL_DETECTION_FIXES: list[DetectionFixer] = [
 ]
 ALL_METADATA_FIXES: list[MetadataFixer] = [
     Ottrk_Version_1_0_To_1_1(),
-    Ottrk_Version_1_0_To_1_2(),
+    Otdet_Version_1_1_To_1_2(),
 ]
 
 
@@ -314,9 +340,12 @@ class OttrkFormatFixer:
         Fix formate changes from older ottrk metadata
         format versions to the current version.
         """
-        current_version = Version.from_str(metadata[ottrk_format.OTTRK_VERSION])
+        current_ottrk_version = Version.from_str(metadata[ottrk_format.OTTRK_VERSION])
+        current_otdet_version = Version.from_str(metadata[ottrk_format.OTDET_VERSION])
+        formatVersions = FormatVersions(current_ottrk_version, current_otdet_version)
+
         for fixer in self._metadata_fixes:
-            metadata = fixer.fix(metadata, current_version)
+            metadata = fixer.fix(metadata, formatVersions)
         return metadata
 
     def __fix_detections(self, content: dict, current_otdet_version: Version) -> dict:
