@@ -6,8 +6,6 @@ from time import sleep
 from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Any, Iterable, Optional
 
-from application.export_formats.export_mode import OVERWRITE
-
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
 )
@@ -66,6 +64,7 @@ from OTAnalytics.application.config import (
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
