@@ -2,7 +2,13 @@ import tkinter
 from functools import partial
 from typing import Any, Sequence
 
-from customtkinter import CTk, CTkFrame, set_appearance_mode, set_default_color_theme
+from customtkinter import (
+    CTk,
+    CTkFrame,
+    CTkScrollableFrame,
+    set_appearance_mode,
+    set_default_color_theme,
+)
 
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -127,37 +133,58 @@ class FrameContent(CTkFrame):
             viewmodel=viewmodel,
             layers=layers,
         )
-        self._frame_filter = SingleFrameTabview(
-            master=self,
-            title="Visualization Filters",
-            frame_factory=partial(FrameFilter, viewmodel=viewmodel),
-        )
         self._frame_canvas = FrameCanvas(
             master=self,
             viewmodel=self._viewmodel,
         )
-        self._frame_video_control = SingleFrameTabview(
-            master=self,
-            title="Video Control",
-            frame_factory=partial(FrameVideoControl, viewmodel=viewmodel),
-        )
-        self._frame_track_statistics = SingleFrameTabview(
-            master=self,
-            title="Track Statistics",
-            frame_factory=partial(FrameTrackStatistics, viewmodel=viewmodel),
+        self._frame_canvas_controls = FrameCanvasControls(
+            master=self, viewmodel=self._viewmodel
         )
         self.grid_rowconfigure(0, weight=0)
-        self.grid_rowconfigure(1, weight=0)
-        self.grid_rowconfigure(2, weight=0)
-        self.grid_rowconfigure(3, weight=0)
-        self.grid_rowconfigure(4, weight=1)
+        self.grid_rowconfigure(1, weight=10)
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
         self._frame_canvas.grid(row=0, column=0, pady=PADY, sticky=STICKY)
         self._frame_track_plotting.grid(row=0, column=1, pady=PADY, sticky=STICKY)
-        self._frame_track_statistics.grid(row=1, column=0, pady=PADY, sticky=STICKY)
-        self._frame_filter.grid(row=2, column=0, pady=PADY, sticky=STICKY)
-        self._frame_video_control.grid(row=3, column=0, pady=PADY, sticky=STICKY)
+        self._frame_canvas_controls.grid(row=1, column=0, pady=PADY, sticky=STICKY)
+
+
+class FrameCanvasControls(CTkScrollableFrame):
+    def __init__(
+        self,
+        master: Any,
+        viewmodel: ViewModel,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(master=master, bg_color="transparent", **kwargs)
+        self._viewmodel = viewmodel
+        self._get_widgets()
+        self._place_widgets()
+
+    def _get_widgets(self) -> None:
+        self._frame_track_statistics = SingleFrameTabview(
+            master=self,
+            title="Track Statistics",
+            frame_factory=partial(FrameTrackStatistics, viewmodel=self._viewmodel),
+        )
+        self._frame_filter = SingleFrameTabview(
+            master=self,
+            title="Visualization Filters",
+            frame_factory=partial(FrameFilter, viewmodel=self._viewmodel),
+        )
+        self._frame_video_control = SingleFrameTabview(
+            master=self,
+            title="Video Control",
+            frame_factory=partial(FrameVideoControl, viewmodel=self._viewmodel),
+        )
+
+    def _place_widgets(self) -> None:
+        self.grid_rowconfigure(0, weight=0)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_rowconfigure(2, weight=0)
+        self._frame_track_statistics.grid(row=0, column=0, pady=PADY, sticky=STICKY)
+        self._frame_filter.grid(row=1, column=0, pady=PADY, sticky=STICKY)
+        self._frame_video_control.grid(row=2, column=0, pady=PADY, sticky=STICKY)
 
 
 class FrameNavigation(EmbeddedCTkScrollableFrame):
