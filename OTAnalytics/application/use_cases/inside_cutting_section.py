@@ -17,20 +17,24 @@ class TrackIdsInsideCuttingSections:
         cutting_sections = self._get_cutting_sections()
         if not cutting_sections:
             return set()
-        else:
-            offset = cutting_sections[0].get_offset(EventType.SECTION_ENTER)
+
+        results: set[TrackId] = set()
+        for cutting_section in cutting_sections:
+            offset = cutting_section.get_offset(EventType.SECTION_ENTER)
             # set of all tracks where at least one coordinate is contained
             # by at least one cutting section
-            result = set(
-                track_id
-                for track_id, section_data in (
-                    track_dataset.contained_by_sections(
-                        cutting_sections, offset
-                    ).items()
+            results.update(
+                set(
+                    track_id
+                    for track_id, section_data in (
+                        track_dataset.contained_by_sections(
+                            [cutting_section], offset
+                        ).items()
+                    )
+                    if contains_true(section_data)
                 )
-                if contains_true(section_data)
             )
-            return result
+        return results
 
 
 def contains_true(section_data: list[tuple[SectionId, list[bool]]]) -> bool:
