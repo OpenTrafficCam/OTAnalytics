@@ -1210,7 +1210,7 @@ class DummyViewModel(
         return section
 
     def _to_coordinate_tuple(self, coordinate: dict) -> tuple[int, int]:
-        return (coordinate[geometry.X], coordinate[geometry.Y])
+        return coordinate[geometry.X], coordinate[geometry.Y]
 
     def get_all_sections(self) -> Iterable[Section]:
         return self._application.get_all_sections()
