@@ -1383,9 +1383,13 @@ class DummyViewModel(
             initial_position=self.window.get_position(),
         )
         self._application.create_events()
+        self.notify_flows(self.get_all_flow_ids())
         start_msg_popup.update_message(message="Creating events completed")
         sleep(1)
         start_msg_popup.close()
+
+    def get_all_flow_ids(self) -> list[FlowId]:
+        return [flow.id for flow in self.get_all_flows()]
 
     def save_events(self, file: str) -> None:
         self._application.save_events(Path(file))
@@ -1819,3 +1823,6 @@ class DummyViewModel(
     def update_track_statistics(self, _: EventRepositoryEvent) -> None:
         statistics = self._application.calculate_track_statistics()
         self.frame_track_statistics.update_track_statistics(statistics)
+
+    def get_tracks_assigned_to_each_flow(self) -> dict[FlowId, int]:
+        return self._application.number_of_tracks_assigned_to_each_flow()
