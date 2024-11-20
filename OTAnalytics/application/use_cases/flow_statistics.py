@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from OTAnalytics.application.use_cases.get_road_user_assignments import (
     GetRoadUserAssignments,
 )
@@ -19,7 +21,7 @@ class NumberOfTracksAssignedToEachFlow:
         return result
 
     def _initialize_flow_track_counts(self) -> dict[FlowId, int]:
-        flows = {}
+        flows = defaultdict(lambda: 0)
         for flow in self._flow_repository.get_all():
             flows[flow.id] = 0
         return flows
