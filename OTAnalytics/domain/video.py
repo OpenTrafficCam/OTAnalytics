@@ -12,6 +12,14 @@ VIDEOS: str = "videos"
 PATH: str = "path"
 
 
+class InvalidVideoError(Exception):
+    pass
+
+
+class FrameDoesNotExistError(Exception):
+    pass
+
+
 class VideoReader(ABC):
     @abstractmethod
     def get_fps(self, video: Path) -> float:
@@ -37,6 +45,11 @@ class Video(ABC):
     @property
     @abstractmethod
     def start_date(self) -> Optional[datetime]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def end_date(self) -> Optional[datetime]:
         raise NotImplementedError
 
     @property
@@ -161,6 +174,12 @@ class SimpleVideo(Video):
     def start_date(self) -> Optional[datetime]:
         if self.metadata:
             return self.metadata.recorded_start_date
+        return None
+
+    @property
+    def end_date(self) -> Optional[datetime]:
+        if self.metadata:
+            return self.metadata.end
         return None
 
     @property

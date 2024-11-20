@@ -439,12 +439,12 @@ class TestPandasTrackDataset:
             PandasTrackDataset.from_list([pedestrian_track], track_geometry_factory),
         )
         assert geometry_dataset_no_offset.get_for.call_args_list == [
-            call((car_track.id.id,)),
-            call((pedestrian_track.id.id,)),
+            call([car_track.id.id]),
+            call([pedestrian_track.id.id]),
         ]
         assert geometry_dataset_with_offset.get_for.call_args_list == [
-            call((car_track.id.id,)),
-            call((pedestrian_track.id.id,)),
+            call([car_track.id.id]),
+            call([pedestrian_track.id.id]),
         ]
 
     def test_filter_by_minimum_detection_length(
@@ -625,3 +625,15 @@ class TestPandasTrackDataset:
 
         result = filled_dataset.get_max_confidences_for([car_id, pedestrian_id])
         assert result == {car_id: 0.8, pedestrian_id: 0.9}
+
+    def test_create_test_flyweight_with_single_detection(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        track_builder = TrackBuilder()
+        track_builder.append_detection()
+        single_detection_track = track_builder.build_track()
+        dataset = PandasTrackDataset.from_list(
+            [single_detection_track], track_geometry_factory
+        )
+        result = dataset._create_track_flyweight(single_detection_track.id.id)
+        assert_equal_track_properties(result, single_detection_track)

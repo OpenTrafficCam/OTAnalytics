@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Iterable, Optional
 
@@ -7,6 +8,7 @@ from OTAnalytics.application.plotting import GetCurrentFrame
 from OTAnalytics.application.use_cases.video_repository import GetVideos
 from OTAnalytics.domain import track
 from OTAnalytics.domain.filter import Conjunction, Filter, FilterBuilder, Predicate
+from OTAnalytics.domain.video import Video
 
 
 class DataFrameConjunction(Conjunction[DataFrame, DataFrame]):
@@ -35,7 +37,7 @@ class DataFrameConjunction(Conjunction[DataFrame, DataFrame]):
         return DataFrameConjunction(self, other)
 
 
-class DataFramePredicate(Predicate[DataFrame, DataFrame]):
+class DataFramePredicate(Predicate[DataFrame, DataFrame], ABC):
     """Checks DataFrame entries against predicate.
 
     Entries that do not fulfill predicate are filtered out.
@@ -95,33 +97,65 @@ class DataFrameStartsAtOrAfterDate(DataFramePredicate):
         ]
 
 
-class DataFrameStartsAtOrAfterFrame(DataFramePredicate):
-    """Checks if the DataFrame rows start at or after frame.
+class DataFrameFramePredicate(DataFramePredicate):
+    """Checks if the DataFrame rows contains a frame for a video or is in other videos.
 
     Args:
-        column_name (str): the DataFrame column name to apply the predicate to
         frame (int): the frame number to evaluate against (inclusive)
+        video_with_frame (str): the video where the frame should be in
+        other_videos (list[str]): all other video names where rows should be in
     """
 
     def __init__(
         self,
-        column_name: str,
         frame: int,
-        video_of_start_date: str,
-        videos_after: list[str],
+        video_with_frame: str | None,
+        other_videos: list[str],
     ) -> None:
-        self.column_name: str = column_name
         self._frame = frame
-        self._video_of_start_date = video_of_start_date
-        self._videos_after = videos_after
+        self._video_with_frame = video_with_frame
+        self._other_videos = other_videos
+
+    @abstractmethod
+    def create_frame_filter(self, to_test: DataFrame, frame: int) -> Series:
+        pass
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        video_start_date_filter = (to_test[track.FRAME] >= self._frame) & (
-            to_test[track.VIDEO_NAME] == self._video_of_start_date
+        video_frame_filter = self.create_frame_filter(to_test, self._frame)
+        video_with_frame_filter = (
+            to_test[track.VIDEO_NAME] == self._video_with_frame
+            if self._video_with_frame
+            else to_test[track.VIDEO_NAME].isnull()
         )
-        videos_after_date_filter = to_test[track.VIDEO_NAME].isin(self._videos_after)
-        date_filter = video_start_date_filter | videos_after_date_filter
+        other_videos_filter = to_test[track.VIDEO_NAME].isin(self._other_videos)
+        date_filter = video_frame_filter & video_with_frame_filter | other_videos_filter
         return to_test[date_filter]
+
+
+class DataFrameStartsAtOrAfterFrame(DataFrameFramePredicate):
+    """Checks if the DataFrame rows start at or after frame.
+
+    Args:
+        frame (int): the frame number to evaluate against (inclusive)
+        video_of_start_date (str): the video where the start date is in
+        videos_after (list[str]): all video names after the video where the start date
+            is in
+    """
+
+    def __init__(
+        self,
+        frame: int,
+        video_of_start_date: str | None,
+        videos_after: list[str],
+    ) -> None:
+        super().__init__(
+            frame=frame,
+            video_with_frame=video_of_start_date,
+            other_videos=videos_after,
+        )
+
+    def create_frame_filter(self, to_test: DataFrame, frame: int) -> Series:
+        return to_test[track.FRAME] >= self._frame
 
 
 class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
@@ -151,33 +185,30 @@ class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
         ]
 
 
-class DataFrameEndsBeforeOrAtFrame(DataFramePredicate):
+class DataFrameEndsBeforeOrAtFrame(DataFrameFramePredicate):
     """Checks if the DataFrame rows ends before or at frame.
 
     Args:
-        column_name (str): the DataFrame column name to apply the predicate to
         frame (int): the frame number to evaluate against (inclusive)
+        video_of_end_date (str): the video where the end date is in
+        videos_before (list[str]): all video names before the video where the end date
+            is in
     """
 
     def __init__(
         self,
-        column_name: str,
         frame: int,
-        video_of_end_date: str,
+        video_of_end_date: str | None,
         videos_before: list[str],
     ) -> None:
-        self.column_name: str = column_name
-        self._frame = frame
-        self._video_of_end_date = video_of_end_date
-        self._videos_before = videos_before
-
-    def test(self, to_test: DataFrame) -> DataFrame:
-        video_end_date_filter = (to_test[track.FRAME] <= self._frame) & (
-            to_test[track.VIDEO_NAME] == self._video_of_end_date
+        super().__init__(
+            frame=frame,
+            video_with_frame=video_of_end_date,
+            other_videos=videos_before,
         )
-        videos_before_date_filter = to_test[track.VIDEO_NAME].isin(self._videos_before)
-        date_filter = video_end_date_filter | videos_before_date_filter
-        return to_test[date_filter]
+
+    def create_frame_filter(self, to_test: DataFrame, frame: int) -> Series:
+        return to_test[track.FRAME] <= self._frame
 
 
 class DataFrameHasClassifications(DataFramePredicate):
@@ -226,16 +257,26 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
         current_frame = self._current_frame.get_frame_number_for(start_date)
         videos_after = [video.name for video in self._get_videos.get_after(start_date)]
         current_video = self._get_videos.get(start_date)
-        current_video_name = current_video.name if current_video else videos_after[0]
+        current_video_name = self._get_current_video_name(
+            current_video, videos_after, 0
+        )
         self._extend_complex_predicate(
             DataFrameStartsAtOrAfterFrame(
-                column_name=track.FRAME,
                 frame=current_frame,
                 video_of_start_date=current_video_name,
                 videos_after=videos_after,
             )
             # DataFrameStartsAtOrAfterDate(self._occurrence_column, start_date)
         )
+
+    def _get_current_video_name(
+        self, current_video: Video | None, videos_after: list[str], index: int
+    ) -> str | None:
+        if current_video:
+            return current_video.name
+        if videos_after:
+            return videos_after[index]
+        return None
 
     def add_ends_before_or_at_date_predicate(self, end_date: datetime) -> None:
         if self._occurrence_column is None:
@@ -244,10 +285,11 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
         current_frame = self._current_frame.get_frame_number_for(end_date)
         videos_before = [video.name for video in self._get_videos.get_before(end_date)]
         current_video = self._get_videos.get(end_date)
-        current_video_name = current_video.name if current_video else videos_before[-1]
+        current_video_name = self._get_current_video_name(
+            current_video, videos_before, -1
+        )
         self._extend_complex_predicate(
             DataFrameEndsBeforeOrAtFrame(
-                column_name=track.FRAME,
                 frame=current_frame,
                 video_of_end_date=current_video_name,
                 videos_before=videos_before,
@@ -274,7 +316,7 @@ class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):
         self._result = None
 
     def _extend_complex_predicate(
-        self, predicate: Predicate[DataFrame, Series]
+        self, predicate: Predicate[DataFrame, DataFrame]
     ) -> None:
         if self._complex_predicate:
             self._complex_predicate = self._complex_predicate.conjunct_with(predicate)

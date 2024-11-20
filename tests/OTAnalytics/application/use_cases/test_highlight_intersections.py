@@ -19,12 +19,16 @@ from OTAnalytics.application.state import (
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToSelectedFlows,
+    TracksIntersectingAllSections,
     TracksIntersectingGivenSections,
     TracksIntersectingSelectedSections,
     TracksNotIntersectingSelection,
     TracksOverlapOccurrenceWindow,
 )
-from OTAnalytics.application.use_cases.section_repository import GetSectionsById
+from OTAnalytics.application.use_cases.section_repository import (
+    GetAllSections,
+    GetSectionsById,
+)
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.filter import FilterElement
@@ -101,6 +105,11 @@ def intersection_repository() -> Mock:
     return Mock(spec=IntersectionRepository)
 
 
+@pytest.fixture
+def get_all_sections() -> Mock:
+    return Mock(spec=GetAllSections)
+
+
 class TestTracksIntersectingSelectedSections:
     def test_get_ids(
         self,
@@ -131,6 +140,41 @@ class TestTracksIntersectingSelectedSections:
         section_state.selected_sections.get.assert_called_once()
         get_section_by_id.assert_called_once_with({section_2.id})
         tracks_intersecting_sections.assert_called_once_with([section_2])
+
+
+class TestTracksIntersectingAllSections:
+    def test_get_ids(
+        self,
+        track_id_1: TrackId,
+        track_id_2: TrackId,
+        section_1: Mock,
+        section_2: Mock,
+        get_all_sections: Mock,
+        tracks_intersecting_sections: Mock,
+        get_section_by_id: Mock,
+        intersection_repository: Mock,
+    ) -> None:
+        sections = [section_1, section_2]
+        section_1_tracks = {track_id_1}
+        section_2_tracks = {track_id_2}
+        original_track_ids = {
+            section_1.id: section_1_tracks,
+            section_2.id: section_2_tracks,
+        }
+        get_all_sections.return_value = sections
+        tracks_intersecting_sections.return_value = original_track_ids
+        get_section_by_id.return_value = sections
+        intersection_repository.get.return_value = {}
+        provider = TracksIntersectingAllSections(
+            get_all_sections,
+            tracks_intersecting_sections,
+            get_section_by_id,
+            intersection_repository,
+        )
+
+        track_ids = provider.get_ids()
+
+        assert track_ids == {track_id_1, track_id_2}
 
 
 class TestTracksIntersectingGivenSections:
@@ -470,17 +514,21 @@ class TestTracksOverlapOccurrenceWindow:
         end_time = datetime(2020, 1, 1, 13, 30)
         end_detection.occurrence = end_time
 
-        with patch.object(
-            TracksOverlapOccurrenceWindow, "_has_overlap", return_value=True
-        ) as mock_has_overlap, patch(
-            "OTAnalytics.application.use_cases.highlight_intersections.Track.start",
-            new_callable=PropertyMock,
-            return_value=start_time,
-        ) as mock_start, patch(
-            "OTAnalytics.application.use_cases.highlight_intersections.Track.end",
-            new_callable=PropertyMock,
-            return_value=end_time,
-        ) as mock_end:
+        with (
+            patch.object(
+                TracksOverlapOccurrenceWindow, "_has_overlap", return_value=True
+            ) as mock_has_overlap,
+            patch(
+                "OTAnalytics.application.use_cases.highlight_intersections.Track.start",
+                new_callable=PropertyMock,
+                return_value=start_time,
+            ) as mock_start,
+            patch(
+                "OTAnalytics.application.use_cases.highlight_intersections.Track.end",
+                new_callable=PropertyMock,
+                return_value=end_time,
+            ) as mock_end,
+        ):
             track_id = TrackId("1")
             track = Mock(spec=Track)
             track.id = track_id
