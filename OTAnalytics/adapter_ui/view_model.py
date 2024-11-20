@@ -25,7 +25,7 @@ from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.domain.date import DateRange
-from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
 
@@ -432,4 +432,8 @@ class ViewModel(ABC):
 
     @abstractmethod
     def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_tracks_assigned_to_each_flow(self) -> dict[FlowId, int]:
         raise NotImplementedError
