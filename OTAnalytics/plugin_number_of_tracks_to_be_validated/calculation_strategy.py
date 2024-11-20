@@ -39,7 +39,7 @@ class DetectionRateByPercentile(DetectionRateCalculationStrategy):
         )
         percentile = local_data.groupby([TRACK_ID, CLASSIFICATION])[
             CONFIDENCE
-        ].quantile(self._percentile_value)
+        ].quantile(q=self._percentile_value, interpolation="higher")
         percentile.name = PERCENTILE
         classification_length = local_data.groupby([TRACK_ID, CLASSIFICATION])[
             CONFIDENCE
