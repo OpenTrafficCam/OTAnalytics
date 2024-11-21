@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 from pandas import DataFrame
 
-from OTAnalytics.domain.track import TRACK_CLASSIFICATION, TRACK_ID, Track
+from OTAnalytics.domain.track import OCCURRENCE, TRACK_CLASSIFICATION, TRACK_ID, Track
 from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.calculation_strategy import (
@@ -65,7 +65,7 @@ def track_pedestrian() -> Track:
 
 
 @pytest.fixture
-def track_provider(
+def given_track_provider(
     track_perfect: Track,
     track_one_false_detection_class: Track,
     track_with_no_assignment: Track,
@@ -84,7 +84,7 @@ def track_provider(
 
 
 @pytest.fixture
-def tracks_assigned_to_all_flows(
+def given_tracks_assigned_to_all_flows(
     track_perfect: Track,
     track_one_false_detection_class: Track,
     track_pedestrian: Track,
@@ -99,7 +99,7 @@ def tracks_assigned_to_all_flows(
 
 
 @pytest.fixture
-def detection_rate_strategy(
+def given_detection_rate_strategy(
     track_perfect: Track,
     track_one_false_detection_class: Track,
     track_pedestrian: Track,
@@ -124,25 +124,55 @@ def detection_rate_strategy(
 
 
 @pytest.fixture
-def rates_builder() -> MetricRatesBuilder:
+def given_rates_builder() -> MetricRatesBuilder:
     return MetricRatesBuilder(SVZ_CLASSIFICATION)
+
+
+@pytest.fixture
+def expected_tracks_assigned_to_flows_dataframe(
+    given_track_provider: PandasTrackDataset,
+    track_perfect: Track,
+    track_one_false_detection_class: Track,
+) -> DataFrame:
+    data = given_track_provider.get_data()
+    return (
+        (data.loc[[track_perfect.id.id, track_one_false_detection_class.id.id]])
+        .reset_index()
+        .set_index([TRACK_ID, OCCURRENCE])
+    )
 
 
 class TestSvzNumberOfTracksToBeValidated:
     def test_calculate(
         self,
-        track_provider: PandasTrackDataset,
-        tracks_assigned_to_all_flows: Mock,
-        detection_rate_strategy: Mock,
-        rates_builder: MetricRatesBuilder,
+        given_track_provider: PandasTrackDataset,
+        given_tracks_assigned_to_all_flows: Mock,
+        given_detection_rate_strategy: Mock,
+        given_rates_builder: MetricRatesBuilder,
+        track_perfect: Track,
+        track_one_false_detection_class: Track,
+        expected_tracks_assigned_to_flows_dataframe: DataFrame,
     ) -> None:
+        """
+        #Requirement https://openproject.platomo.de/projects/001-opentrafficcam-live/work_packages/6491/activity #noqa
+        """  # noqa
         target = SvzNumberOfTracksToBeValidated(
-            track_provider=track_provider,
-            tracks_assigned_to_all_flows=tracks_assigned_to_all_flows,
-            detection_rate_strategy=detection_rate_strategy,
-            metric_rates_builder=rates_builder,
+            track_provider=given_track_provider,
+            tracks_assigned_to_all_flows=given_tracks_assigned_to_all_flows,
+            detection_rate_strategy=given_detection_rate_strategy,
+            metric_rates_builder=given_rates_builder,
         )
+
         actual = target.calculate()
         assert actual == 1
-        tracks_assigned_to_all_flows.get_ids.assert_called_once()
-        detection_rate_strategy.calculate.assert_called_once()
+        given_tracks_assigned_to_all_flows.get_ids.assert_called_once()
+        given_detection_rate_strategy.calculate.assert_called_once()
+        self.assert_strategy_called_with_tracks_assigned_to_flows(
+            given_detection_rate_strategy, expected_tracks_assigned_to_flows_dataframe
+        )
+
+    def assert_strategy_called_with_tracks_assigned_to_flows(
+        self, detection_rate_strategy: Mock, expected: DataFrame
+    ) -> None:
+        actual = detection_rate_strategy.calculate.call_args[0][0]
+        assert actual.equals(expected)
