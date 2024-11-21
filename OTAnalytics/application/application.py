@@ -36,6 +36,9 @@ from OTAnalytics.application.use_cases.filter_visualization import (
     EnableFilterTrackByDate,
 )
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
+from OTAnalytics.application.use_cases.flow_statistics import (
+    NumberOfTracksAssignedToEachFlow,
+)
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
 from OTAnalytics.application.use_cases.load_otconfig import LoadOtconfig
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
@@ -136,6 +139,7 @@ class OTAnalyticsApplication:
         export_road_user_assignments: ExportRoadUserAssignments,
         file_name_suggester: SavePathSuggester,
         calculate_track_statistics: CalculateTrackStatistics,
+        number_of_tracks_assigned_to_each_flow: NumberOfTracksAssignedToEachFlow,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -177,6 +181,9 @@ class OTAnalyticsApplication:
         self._export_road_user_assignments = export_road_user_assignments
         self._file_name_suggester = file_name_suggester
         self._calculate_track_statistics = calculate_track_statistics
+        self._number_of_tracks_assigned_to_each_flow = (
+            number_of_tracks_assigned_to_each_flow
+        )
 
     def connect_observers(self) -> None:
         """
@@ -675,6 +682,9 @@ class OTAnalyticsApplication:
 
     def calculate_track_statistics(self) -> TrackStatistics:
         return self._calculate_track_statistics.get_statistics()
+
+    def number_of_tracks_assigned_to_each_flow(self) -> dict[FlowId, int]:
+        return self._number_of_tracks_assigned_to_each_flow.get()
 
 
 class MissingTracksError(Exception):

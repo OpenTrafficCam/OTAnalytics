@@ -90,6 +90,9 @@ from OTAnalytics.application.use_cases.flow_repository import (
     ClearAllFlows,
     GetAllFlows,
 )
+from OTAnalytics.application.use_cases.flow_statistics import (
+    NumberOfTracksAssignedToEachFlow,
+)
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
     CrossProductFlowGenerator,
@@ -100,6 +103,9 @@ from OTAnalytics.application.use_cases.generate_flows import (
     RepositoryFlowIdGenerator,
 )
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
+from OTAnalytics.application.use_cases.get_road_user_assignments import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToAllFlows,
@@ -537,6 +543,12 @@ class ApplicationStarter:
             section_repository,
             get_all_tracks,
         )
+        get_road_user_assignments = GetRoadUserAssignments(
+            flow_repository, event_repository, road_user_assigner
+        )
+        number_of_tracks_assigned_to_each_flow = NumberOfTracksAssignedToEachFlow(
+            get_road_user_assignments, flow_repository
+        )
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -572,6 +584,7 @@ class ApplicationStarter:
             export_road_user_assignments,
             save_path_suggester,
             calculate_track_statistics,
+            number_of_tracks_assigned_to_each_flow,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
