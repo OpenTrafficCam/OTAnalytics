@@ -291,9 +291,10 @@ class StreamOttrkParser(StreamTrackParser):
         iterator = iter(self._parse_tracks(files))
         while True:
             chunk = list(islice(iterator, self._chunk_size))
-            if not chunk:
-                break
-            yield self._track_dataset_factory(chunk)
+            if chunk:
+                yield self._track_dataset_factory(chunk)
+            else:
+                return  # explicitly end generator, raises StopIteration exception
 
     def _parse_tracks(self, files: set[Path]) -> Iterator[Track]:
         sorted_files = self._sort_files(files)
