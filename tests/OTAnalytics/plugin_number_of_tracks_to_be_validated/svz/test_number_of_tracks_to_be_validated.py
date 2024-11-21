@@ -65,7 +65,7 @@ def track_pedestrian() -> Track:
 
 
 @pytest.fixture
-def given_track_provider(
+def given_track_dataset(
     track_perfect: Track,
     track_one_false_detection_class: Track,
     track_with_no_assignment: Track,
@@ -81,6 +81,13 @@ def given_track_provider(
         ],
         track_geometry_factory,
     )
+
+
+@pytest.fixture
+def given_tracks_provider(given_track_dataset: PandasTrackDataset) -> Mock:
+    given = Mock()
+    given.provide.return_value = given_track_dataset.get_data()
+    return given
 
 
 @pytest.fixture
@@ -130,11 +137,11 @@ def given_rates_builder() -> MetricRatesBuilder:
 
 @pytest.fixture
 def expected_tracks_assigned_to_flows_dataframe(
-    given_track_provider: PandasTrackDataset,
+    given_track_dataset: PandasTrackDataset,
     track_perfect: Track,
     track_one_false_detection_class: Track,
 ) -> DataFrame:
-    data = given_track_provider.get_data()
+    data = given_track_dataset.get_data()
     return (
         (data.loc[[track_perfect.id.id, track_one_false_detection_class.id.id]])
         .reset_index()
@@ -145,7 +152,7 @@ def expected_tracks_assigned_to_flows_dataframe(
 class TestSvzNumberOfTracksToBeValidated:
     def test_calculate(
         self,
-        given_track_provider: PandasTrackDataset,
+        given_tracks_provider: Mock,
         given_tracks_assigned_to_all_flows: Mock,
         given_detection_rate_strategy: Mock,
         given_rates_builder: MetricRatesBuilder,
@@ -157,7 +164,7 @@ class TestSvzNumberOfTracksToBeValidated:
         #Requirement https://openproject.platomo.de/projects/001-opentrafficcam-live/work_packages/6491/activity #noqa
         """  # noqa
         target = SvzNumberOfTracksToBeValidated(
-            track_provider=given_track_provider,
+            tracks_provider=given_tracks_provider,
             tracks_assigned_to_all_flows=given_tracks_assigned_to_all_flows,
             detection_rate_strategy=given_detection_rate_strategy,
             metric_rates_builder=given_rates_builder,
