@@ -10,13 +10,12 @@ from OTAnalytics.application.use_cases.number_of_tracks_to_be_validated import (
 from OTAnalytics.domain.track import OCCURRENCE, TRACK_CLASSIFICATION, TRACK_ID
 from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.calculation_strategy import (
+    DETECTION_RATE,
     DetectionRateCalculationStrategy,
 )
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.metric_rates_builder import (
     MetricRatesBuilder,
 )
-
-DETECTION_RATE = "detection_rate"
 
 
 class SvzNumberOfTracksToBeValidated(NumberOfTracksToBeValidated):
@@ -33,15 +32,14 @@ class SvzNumberOfTracksToBeValidated(NumberOfTracksToBeValidated):
         self._rates_builder = metric_rates_builder
 
     def calculate(self) -> int:
-        rate_column = DETECTION_RATE
         data = self._get_tracks_assigned_to_flow()
         rate = self._detection_rate_strategy.calculate(data).reset_index()
         metric_rates = self._rates_builder.build_as_dataframe()
         merged = rate.merge(metric_rates, how="left", on=TRACK_CLASSIFICATION)
-        merged[rate_column] = merged[rate_column].round(2)
+        merged[DETECTION_RATE] = merged[DETECTION_RATE].round(2)
         number_of_tracks = len(merged)
         filter_column = "manual_classification"
-        merged[filter_column] = merged[rate_column] < merged["Gruppe A3"]
+        merged[filter_column] = merged[DETECTION_RATE] < merged["Gruppe A3"]
         filtered = merged.loc[merged[filter_column], :]
         logger().info(
             f"To classify manually: {len(filtered)} of {number_of_tracks} tracks."
@@ -52,7 +50,7 @@ class SvzNumberOfTracksToBeValidated(NumberOfTracksToBeValidated):
         road_user_assignments = [
             track_id.id for track_id in self._tracks_assigned_to_all_flows.get_ids()
         ]
-        data = self._track_provider.get_data()
+        data = self._track_provider.get_data().reset_index()
         assigned_tracks = data.loc[data[TRACK_ID].isin(road_user_assignments)]
         assigned_tracks = assigned_tracks.loc[
             data[TRACK_CLASSIFICATION] != "pedestrian", :
