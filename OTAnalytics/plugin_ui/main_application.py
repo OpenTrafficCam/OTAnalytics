@@ -237,6 +237,8 @@ from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepo
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
+DETECTION_RATE_PERCENTILE_VALUE = 0.9
+
 
 class ApplicationStarter:
     @log_processing_time(description="overall")
@@ -1160,7 +1162,9 @@ class ApplicationStarter:
             get_all_tracks=get_all_tracks,
             track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset,
         )
-        detection_rate_strategy = DetectionRateByPercentile(percentile_value=0.9)
+        detection_rate_strategy = DetectionRateByPercentile(
+            percentile_value=DETECTION_RATE_PERCENTILE_VALUE
+        )
         metric_rates_builder = MetricRatesBuilder(SVZ_CLASSIFICATION)
         number_of_tracks_to_be_validated = SvzNumberOfTracksToBeValidated(
             tracks_provider=tracks_as_dataframe_provider,
