@@ -15,6 +15,9 @@ from OTAnalytics.plugin_number_of_tracks_to_be_validated.calculation_strategy im
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.metric_rates_builder import (
     MetricRatesBuilder,
 )
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.metric_rates import (
+    SVZ_RATE,
+)
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.tracks_as_dataframe_provider import (  # noqa
     TracksAsDataFrameProvider,
 )
@@ -46,7 +49,7 @@ class SvzNumberOfTracksToBeValidated(NumberOfTracksToBeValidated):
         merged[DETECTION_RATE] = merged[DETECTION_RATE].round(2)
         number_of_tracks = len(merged)
         filter_column = MANUAL_CLASSIFICATION
-        merged[filter_column] = merged[DETECTION_RATE] < merged["Gruppe A3"]
+        merged[filter_column] = merged[DETECTION_RATE] < merged[SVZ_RATE]
         filtered = merged.loc[merged[filter_column], :]
         logger().info(
             f"To classify manually: {len(filtered)} of {number_of_tracks} tracks."
