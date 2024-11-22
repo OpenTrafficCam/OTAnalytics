@@ -185,6 +185,21 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
 )
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.calculation_strategy import (
+    DetectionRateByPercentile,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.metric_rates_builder import (
+    MetricRatesBuilder,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.metric_rates import (
+    SVZ_CLASSIFICATION,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.number_of_tracks_to_be_validated import (  # noqa
+    SvzNumberOfTracksToBeValidated,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.tracks_as_dataframe_provider import (  # noqa
+    TracksAsDataFrameProvider,
+)
 from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 from OTAnalytics.plugin_parser.export import (
     AddSectionInformationExporterFactory,
@@ -221,6 +236,8 @@ from OTAnalytics.plugin_ui.cli import OTAnalyticsCli
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
+
+DETECTION_RATE_PERCENTILE_VALUE = 0.9
 
 
 class ApplicationStarter:
@@ -515,6 +532,7 @@ class ApplicationStarter:
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
             get_all_tracks
         )
+
         calculate_track_statistics = self._create_calculate_track_statistics(
             get_sections,
             tracks_intersecting_sections,
@@ -1126,23 +1144,38 @@ class ApplicationStarter:
         get_all_tracks: GetAllTracks,
     ) -> CalculateTrackStatistics:
         get_cutting_sections = GetCuttingSections(section_repository)
-        tracksIntersectingAllSections = TracksIntersectingAllNonCuttingSections(
+        tracks_intersecting_all_sections = TracksIntersectingAllNonCuttingSections(
             get_cutting_sections,
             get_all_sections,
             tracks_intersecting_sections,
             get_section_by_id,
             intersection_repository,
         )
-        tracksAssignedToAllFlows = TracksAssignedToAllFlows(
+        tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
             road_user_assigner, event_repository, flow_repository
         )
         track_ids_inside_cutting_sections = TrackIdsInsideCuttingSections(
             get_all_tracks, get_cutting_sections
         )
         get_all_track_ids = GetAllTrackIds(track_repository)
+        tracks_as_dataframe_provider = TracksAsDataFrameProvider(
+            get_all_tracks=get_all_tracks,
+            track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset,
+        )
+        detection_rate_strategy = DetectionRateByPercentile(
+            percentile_value=DETECTION_RATE_PERCENTILE_VALUE
+        )
+        metric_rates_builder = MetricRatesBuilder(SVZ_CLASSIFICATION)
+        number_of_tracks_to_be_validated = SvzNumberOfTracksToBeValidated(
+            tracks_provider=tracks_as_dataframe_provider,
+            tracks_assigned_to_all_flows=tracks_assigned_to_all_flows,
+            detection_rate_strategy=detection_rate_strategy,
+            metric_rates_builder=metric_rates_builder,
+        )
         return CalculateTrackStatistics(
-            tracksIntersectingAllSections,
-            tracksAssignedToAllFlows,
+            tracks_intersecting_all_sections,
+            tracks_assigned_to_all_flows,
             get_all_track_ids,
             track_ids_inside_cutting_sections,
+            number_of_tracks_to_be_validated,
         )
