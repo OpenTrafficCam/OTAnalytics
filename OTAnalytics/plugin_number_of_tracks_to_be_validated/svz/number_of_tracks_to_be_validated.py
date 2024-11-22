@@ -19,6 +19,8 @@ from OTAnalytics.plugin_number_of_tracks_to_be_validated.tracks_as_dataframe_pro
     TracksAsDataFrameProvider,
 )
 
+MANUAL_CLASSIFICATION = "manual_classification"
+
 
 class SvzNumberOfTracksToBeValidated(NumberOfTracksToBeValidated):
     def __init__(
@@ -43,7 +45,7 @@ class SvzNumberOfTracksToBeValidated(NumberOfTracksToBeValidated):
         merged = rate.merge(metric_rates, how="left", on=TRACK_CLASSIFICATION)
         merged[DETECTION_RATE] = merged[DETECTION_RATE].round(2)
         number_of_tracks = len(merged)
-        filter_column = "manual_classification"
+        filter_column = MANUAL_CLASSIFICATION
         merged[filter_column] = merged[DETECTION_RATE] < merged["Gruppe A3"]
         filtered = merged.loc[merged[filter_column], :]
         logger().info(
