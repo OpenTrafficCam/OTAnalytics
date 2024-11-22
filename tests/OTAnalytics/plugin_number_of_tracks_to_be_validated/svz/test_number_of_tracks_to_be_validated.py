@@ -177,6 +177,7 @@ class TestSvzNumberOfTracksToBeValidated:
         self.assert_strategy_called_with_tracks_assigned_to_flows(
             given_detection_rate_strategy, expected_tracks_assigned_to_flows_dataframe
         )
+        given_tracks_provider.provide.assert_called_once()
 
     def assert_strategy_called_with_tracks_assigned_to_flows(
         self, detection_rate_strategy: Mock, expected: DataFrame
