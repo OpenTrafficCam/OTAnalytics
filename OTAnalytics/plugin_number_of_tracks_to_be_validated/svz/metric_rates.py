@@ -6,7 +6,7 @@ SVZ_CLASSIFICATION = {
     OtcClasses.MOTORCYCLIST: {"Gruppe A3": 0.80},
     OtcClasses.PRIVATE_VAN: {"Gruppe A3": 0.90},
     OtcClasses.BUS: {"Gruppe A3": 0.80},
-    # OtcClasses.TRAIN: { "Gruppe A3": 0.0},
+    OtcClasses.TRAIN: {"Gruppe A3": 0.0},
     OtcClasses.TRUCK: {"Gruppe A3": 0.80},
     OtcClasses.SCOOTER_DRIVER: {"Gruppe A3": 0.0},
     OtcClasses.CARGO_BIKE_DRIVER: {"Gruppe A3": 0.80},
