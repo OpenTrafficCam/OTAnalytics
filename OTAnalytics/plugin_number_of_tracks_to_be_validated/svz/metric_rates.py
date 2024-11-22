@@ -3,7 +3,7 @@ from OTAnalytics.plugin_number_of_tracks_to_be_validated.otc_classes import OtcC
 SVZ_RATE = "svz-rate"
 
 SVZ_CLASSIFICATION = {
-    OtcClasses.BICYCLIST: {("%s" % SVZ_RATE): 0.80},
+    OtcClasses.BICYCLIST: {SVZ_RATE: 0.80},
     OtcClasses.CAR: {SVZ_RATE: 0.90},
     OtcClasses.MOTORCYCLIST: {SVZ_RATE: 0.80},
     OtcClasses.PRIVATE_VAN: {SVZ_RATE: 0.90},
