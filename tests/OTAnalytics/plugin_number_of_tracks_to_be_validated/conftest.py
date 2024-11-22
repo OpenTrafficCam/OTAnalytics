@@ -36,7 +36,7 @@ def track_perfect() -> Track:
 
 
 @pytest.fixture
-def track_one_false_detection_class() -> Track:
+def track_two_false_detection_classes() -> Track:
     """
     confs_car  = [0.8, 0.88, 0.9]
     confs_truck = [0.4, 0.5]

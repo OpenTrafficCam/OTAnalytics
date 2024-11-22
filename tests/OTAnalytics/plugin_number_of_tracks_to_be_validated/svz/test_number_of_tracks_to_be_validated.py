@@ -67,7 +67,7 @@ def track_pedestrian() -> Track:
 @pytest.fixture
 def given_track_dataset(
     track_perfect: Track,
-    track_one_false_detection_class: Track,
+    track_two_false_detection_classes: Track,
     track_with_no_assignment: Track,
     track_pedestrian: Track,
     track_geometry_factory: TRACK_GEOMETRY_FACTORY,
@@ -75,7 +75,7 @@ def given_track_dataset(
     return PandasTrackDataset.from_list(
         [
             track_perfect,
-            track_one_false_detection_class,
+            track_two_false_detection_classes,
             track_with_no_assignment,
             track_pedestrian,
         ],
@@ -93,13 +93,13 @@ def given_tracks_provider(given_track_dataset: PandasTrackDataset) -> Mock:
 @pytest.fixture
 def given_tracks_assigned_to_all_flows(
     track_perfect: Track,
-    track_one_false_detection_class: Track,
+    track_two_false_detection_classes: Track,
     track_pedestrian: Track,
 ) -> Mock:
     use_case = Mock()
     use_case.get_ids.return_value = [
         track_perfect.id,
-        track_one_false_detection_class.id,
+        track_two_false_detection_classes.id,
         track_pedestrian.id,
     ]
     return use_case
@@ -108,7 +108,7 @@ def given_tracks_assigned_to_all_flows(
 @pytest.fixture
 def given_detection_rate_strategy(
     track_perfect: Track,
-    track_one_false_detection_class: Track,
+    track_two_false_detection_classes: Track,
     track_pedestrian: Track,
 ) -> Mock:
     strategy = Mock()
@@ -120,8 +120,8 @@ def given_detection_rate_strategy(
                 DETECTION_RATE: 0.95,
             },
             {
-                TRACK_ID: track_one_false_detection_class.id.id,
-                TRACK_CLASSIFICATION: track_one_false_detection_class.classification,
+                TRACK_ID: track_two_false_detection_classes.id.id,
+                TRACK_CLASSIFICATION: track_two_false_detection_classes.classification,
                 DETECTION_RATE: 0.79,
             },
         ]
@@ -139,11 +139,11 @@ def given_rates_builder() -> MetricRatesBuilder:
 def expected_tracks_assigned_to_flows_dataframe(
     given_track_dataset: PandasTrackDataset,
     track_perfect: Track,
-    track_one_false_detection_class: Track,
+    track_two_false_detection_classes: Track,
 ) -> DataFrame:
     data = given_track_dataset.get_data()
     return (
-        (data.loc[[track_perfect.id.id, track_one_false_detection_class.id.id]])
+        (data.loc[[track_perfect.id.id, track_two_false_detection_classes.id.id]])
         .reset_index()
         .set_index([TRACK_ID, OCCURRENCE])
     )
@@ -157,7 +157,7 @@ class TestSvzNumberOfTracksToBeValidated:
         given_detection_rate_strategy: Mock,
         given_rates_builder: MetricRatesBuilder,
         track_perfect: Track,
-        track_one_false_detection_class: Track,
+        track_two_false_detection_classes: Track,
         expected_tracks_assigned_to_flows_dataframe: DataFrame,
     ) -> None:
         """

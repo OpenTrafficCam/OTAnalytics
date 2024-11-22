@@ -20,11 +20,11 @@ from tests.OTAnalytics.plugin_number_of_tracks_to_be_validated.conftest import (
 @pytest.fixture
 def track_dataset(
     track_perfect: Track,
-    track_one_false_detection_class: Track,
+    track_two_false_detection_classes: Track,
     track_geometry_factory: TRACK_GEOMETRY_FACTORY,
 ) -> PandasTrackDataset:
     return PandasTrackDataset.from_list(
-        [track_perfect, track_one_false_detection_class], track_geometry_factory
+        [track_perfect, track_two_false_detection_classes], track_geometry_factory
     )
 
 
