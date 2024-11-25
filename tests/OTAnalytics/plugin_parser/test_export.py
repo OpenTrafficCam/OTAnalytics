@@ -71,7 +71,7 @@ class TestCsvExport:
     def test_increment_no_export(
         self, test_data_tmp_dir: Path, export_mode: ExportMode
     ) -> None:
-        output_file = test_data_tmp_dir / "counts.csv"
+        output_file = test_data_tmp_dir / "no_counts.csv"
         counts = self._mock_counts_with_single_tag()
 
         export = CsvExport(output_file=str(output_file))
