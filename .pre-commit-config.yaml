@@ -18,11 +18,8 @@ repos:
     hooks:
       - id: update-type-stubs
         name: Check for Type Stubs and Update Config
-        entry: python ./update_precommit.py
-        language: python
-        additional_dependencies:
-          - requests
-          - pyyaml
+        entry: ./update_precommit.py
+        language: system
         files: ^requirements.*\.txt$
         stages:
           - commit
