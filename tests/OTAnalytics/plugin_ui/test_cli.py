@@ -124,7 +124,7 @@ from OTAnalytics.plugin_ui.cli import (
     OTAnalyticsStreamCli,
     SectionsFileDoesNotExist,
 )
-from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
+from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 from tests.conftest import YieldFixture
 
 CONFIG_FILE = "path/to/config.otconfig"
@@ -201,7 +201,7 @@ def mock_flow_parser() -> Mock:
 
 @pytest.fixture
 def video_parser() -> VideoParser:
-    return CachedVideoParser(SimpleVideoParser(OpenCvVideoReader()))
+    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader()))
 
 
 @pytest.fixture
@@ -565,7 +565,7 @@ class TestOTAnalyticsCli:
     def init_bulk_cli(
         self, cli_bulk_dependencies: dict[str, Any], run_config: RunConfiguration
     ) -> tuple[OTAnalyticsBulkCli, dict[str, Any]]:
-        dependencies = self.cli_bulk_dependencies()
+        dependencies = cli_bulk_dependencies  # self.cli_bulk_dependencies()
         return (
             OTAnalyticsBulkCli(run_config, **dependencies),
             dependencies,

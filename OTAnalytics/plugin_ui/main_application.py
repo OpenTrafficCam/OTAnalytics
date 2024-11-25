@@ -90,6 +90,9 @@ from OTAnalytics.application.use_cases.flow_repository import (
     ClearAllFlows,
     GetAllFlows,
 )
+from OTAnalytics.application.use_cases.flow_statistics import (
+    NumberOfTracksAssignedToEachFlow,
+)
 from OTAnalytics.application.use_cases.generate_flows import (
     ArrowFlowNameGenerator,
     CrossProductFlowGenerator,
@@ -100,8 +103,16 @@ from OTAnalytics.application.use_cases.generate_flows import (
     RepositoryFlowIdGenerator,
 )
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
+from OTAnalytics.application.use_cases.get_road_user_assignments import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
+    TracksAssignedToAllFlows,
+    TracksIntersectingAllNonCuttingSections,
+)
+from OTAnalytics.application.use_cases.inside_cutting_section import (
+    TrackIdsInsideCuttingSections,
 )
 from OTAnalytics.application.use_cases.intersection_repository import (
     ClearAllIntersections,
@@ -123,6 +134,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     ClearAllSections,
     GetAllSections,
+    GetCuttingSections,
     GetSectionsById,
     RemoveSection,
 )
@@ -138,6 +150,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
     TrackRepositorySize,
 )
+from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
 )
@@ -172,6 +185,21 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
 )
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.calculation_strategy import (
+    DetectionRateByPercentile,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.metric_rates_builder import (
+    MetricRatesBuilder,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.metric_rates import (
+    SVZ_CLASSIFICATION,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.number_of_tracks_to_be_validated import (  # noqa
+    SvzNumberOfTracksToBeValidated,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.tracks_as_dataframe_provider import (  # noqa
+    TracksAsDataFrameProvider,
 )
 from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 from OTAnalytics.plugin_parser.export import (
@@ -219,7 +247,9 @@ from OTAnalytics.plugin_ui.cli import (
 )
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
-from OTAnalytics.plugin_video_processing.video_reader import OpenCvVideoReader
+from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
+
+DETECTION_RATE_PERCENTILE_VALUE = 0.9
 
 
 class ApplicationStarter:
@@ -372,7 +402,7 @@ class ApplicationStarter:
         remove_tracks = RemoveTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
 
-        get_sections_bv_id = GetSectionsById(section_repository)
+        get_sections_by_id = GetSectionsById(section_repository)
         add_section = AddSection(section_repository)
         remove_section = RemoveSection(section_repository)
         clear_all_sections = ClearAllSections(section_repository)
@@ -412,7 +442,8 @@ class ApplicationStarter:
         export_counts = self._create_export_counts(
             event_repository,
             flow_repository,
-            get_sections_bv_id,
+            # track_repository,
+            get_sections_by_id,
             create_events,
         )
         load_otflow = self._create_use_case_load_otflow(
@@ -448,7 +479,7 @@ class ApplicationStarter:
             clear_repositories, reset_project_config, track_view_state, file_state
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
-            get_sections_bv_id,
+            get_sections_by_id,
             get_all_tracks,
             add_all_tracks,
             remove_tracks,
@@ -516,6 +547,28 @@ class ApplicationStarter:
         save_path_suggester = SavePathSuggester(
             file_state, get_all_track_files, get_all_videos, get_current_project
         )
+        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
+            get_all_tracks
+        )
+
+        calculate_track_statistics = self._create_calculate_track_statistics(
+            get_sections,
+            tracks_intersecting_sections,
+            get_sections_by_id,
+            intersection_repository,
+            road_user_assigner,
+            event_repository,
+            flow_repository,
+            track_repository,
+            section_repository,
+            get_all_tracks,
+        )
+        get_road_user_assignments = GetRoadUserAssignments(
+            flow_repository, event_repository, road_user_assigner
+        )
+        number_of_tracks_assigned_to_each_flow = NumberOfTracksAssignedToEachFlow(
+            get_road_user_assignments, flow_repository
+        )
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -550,6 +603,8 @@ class ApplicationStarter:
             config_has_changed,
             export_road_user_assignments,
             save_path_suggester,
+            calculate_track_statistics,
+            number_of_tracks_assigned_to_each_flow,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -613,6 +668,7 @@ class ApplicationStarter:
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         event_repository.register_observer(image_updater.notify_events)
+        event_repository.register_observer(dummy_viewmodel.update_track_statistics)
         load_otflow.register(file_state.last_saved_config.set)
         load_otconfig.register(file_state.last_saved_config.set)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
@@ -1085,7 +1141,7 @@ class ApplicationStarter:
         )
 
     def _create_video_parser(self) -> VideoParser:
-        return CachedVideoParser(SimpleVideoParser(OpenCvVideoReader()))
+        return CachedVideoParser(SimpleVideoParser(PyAvVideoReader()))
 
     def _create_video_repository(self) -> VideoRepository:
         return VideoRepository()
@@ -1141,4 +1197,54 @@ class ApplicationStarter:
             create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleRoadUserAssignmentExporterFactory(section_repository, get_all_tracks),
+        )
+
+    def _create_calculate_track_statistics(
+        self,
+        get_all_sections: GetAllSections,
+        tracks_intersecting_sections: TracksIntersectingSections,
+        get_section_by_id: GetSectionsById,
+        intersection_repository: IntersectionRepository,
+        road_user_assigner: RoadUserAssigner,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
+        track_repository: TrackRepository,
+        section_repository: SectionRepository,
+        get_all_tracks: GetAllTracks,
+    ) -> CalculateTrackStatistics:
+        get_cutting_sections = GetCuttingSections(section_repository)
+        tracks_intersecting_all_sections = TracksIntersectingAllNonCuttingSections(
+            get_cutting_sections,
+            get_all_sections,
+            tracks_intersecting_sections,
+            get_section_by_id,
+            intersection_repository,
+        )
+        tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
+            road_user_assigner, event_repository, flow_repository
+        )
+        track_ids_inside_cutting_sections = TrackIdsInsideCuttingSections(
+            get_all_tracks, get_cutting_sections
+        )
+        get_all_track_ids = GetAllTrackIds(track_repository)
+        tracks_as_dataframe_provider = TracksAsDataFrameProvider(
+            get_all_tracks=get_all_tracks,
+            track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset,
+        )
+        detection_rate_strategy = DetectionRateByPercentile(
+            percentile_value=DETECTION_RATE_PERCENTILE_VALUE
+        )
+        metric_rates_builder = MetricRatesBuilder(SVZ_CLASSIFICATION)
+        number_of_tracks_to_be_validated = SvzNumberOfTracksToBeValidated(
+            tracks_provider=tracks_as_dataframe_provider,
+            tracks_assigned_to_all_flows=tracks_assigned_to_all_flows,
+            detection_rate_strategy=detection_rate_strategy,
+            metric_rates_builder=metric_rates_builder,
+        )
+        return CalculateTrackStatistics(
+            tracks_intersecting_all_sections,
+            tracks_assigned_to_all_flows,
+            get_all_track_ids,
+            track_ids_inside_cutting_sections,
+            number_of_tracks_to_be_validated,
         )
