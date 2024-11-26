@@ -8,6 +8,8 @@ on:
       - review_requested
   workflow_call:
 
+permissions: read-all
+
 jobs:
   regression-test:
     name: Run pytest regression test
