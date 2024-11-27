@@ -30,7 +30,7 @@ jobs:
       - name: Unzip test data
         run: |
           cd tests/data
-          unzip ./*.zip
+          unzip ./\*.zip
           rm ./*.zip
           cd ..
       - name: Install requirements
