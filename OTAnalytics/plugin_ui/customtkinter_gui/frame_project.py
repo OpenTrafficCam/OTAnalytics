@@ -175,7 +175,7 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
     def set_enabled_general_buttons(self, enabled: bool) -> None:
         new_state = STATE_NORMAL if enabled else STATE_DISABLED
         for button in [
-            self._button_new,
+            # self._button_new,
             self.button_save_as,
             self.button_open,
             self.button_quick_save,
