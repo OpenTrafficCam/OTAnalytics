@@ -426,3 +426,7 @@ class ViewModel(ABC):
     @abstractmethod
     def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
         raise NotImplementedError
+
+    @abstractmethod
+    def export_track_statistics(self) -> None:
+        raise NotImplementedError

@@ -1841,3 +1841,44 @@ class DummyViewModel(
 
     def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
         return self._application.suggest_save_path(file_type, context_file_type)
+
+    def export_track_statistics(self) -> None:
+        if len(self._application.get_all_flows()) == 0:
+            InfoBox(
+                message=(
+                    "Counting needs at least one flow.\n"
+                    "There is no flow configured.\n"
+                    "Please create a flow."
+                ),
+                initial_position=(
+                    self._window.get_position() if self._window else (0, 0)
+                ),
+            )
+            return
+        export_formats: dict = {
+            export_format.name: export_format.file_extension
+            for export_format in self._application.get_road_user_export_formats()
+        }
+        default_format = next(iter(export_formats.keys()))
+        default_values: dict = {
+            EXPORT_FORMAT: default_format,
+        }
+
+        try:
+            export_values = ToplevelExportEvents(
+                title="Export road user assignments",
+                initial_position=(50, 50),
+                input_values=default_values,
+                export_format_extensions=export_formats,
+                initial_file_stem="road_user_assignments",
+                viewmodel=self,
+            ).get_data()
+            logger().debug(export_values)
+            save_path = export_values[toplevel_export_events.EXPORT_FILE]
+            export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
+
+            export_specification = ExportSpecification(save_path, export_format)
+            self._application.export_road_user_assignments(export_specification)
+            logger().info(f"Exporting road user assignments to {save_path}")
+        except CancelExportEvents:
+            logger().info("User canceled configuration of export")
