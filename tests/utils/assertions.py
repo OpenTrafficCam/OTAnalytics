@@ -93,8 +93,8 @@ def assert_two_files_equal_sorted(
                 f"First difference of {actual_counts_file.name} ({len(act_lines)}) "
                 f"to expected {expected_counts_file.name} ({len(exp_lines)}):\n"
                 f"exp: "
-                f"{([ e for e, a in zip(exp_lines, act_lines) if e != a]+[None])[0]}\n"
+                f"{([e for e, a in zip(exp_lines, act_lines) if e != a] + [None])[0]}\n"
                 f"act: "
-                f"{([ a for e, a in zip(exp_lines, act_lines) if e != a]+[None])[0]}\n"
+                f"{([a for e, a in zip(exp_lines, act_lines) if e != a] + [None])[0]}\n"
                 f"\n"
             )
