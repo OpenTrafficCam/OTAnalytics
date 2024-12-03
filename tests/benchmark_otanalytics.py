@@ -261,7 +261,7 @@ class UseCaseProvider:
             end=datetime(2023, 5, 24, 8, 15, 0),
             interval_in_minutes=15,
             modes=list(self._detection_metadata.detection_classes),
-            output_file=f"{save_dir/ self._otflow_file.with_suffix('.csv').name}",
+            output_file=f"{save_dir / self._otflow_file.with_suffix('.csv').name}",
             output_format="CSV",
             export_mode=OVERWRITE,
         )
