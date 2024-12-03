@@ -67,6 +67,7 @@ from OTAnalytics.application.config import (
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
@@ -1641,6 +1642,7 @@ class DummyViewModel(
                 modes=modes,
                 output_format=export_values[EXPORT_FORMAT],
                 output_file=export_values[EXPORT_FILE],
+                export_mode=OVERWRITE,
             )
             self._application.export_counts(export_specification)
         except CancelExportCounts:
@@ -1747,7 +1749,9 @@ class DummyViewModel(
             save_path = export_values[toplevel_export_events.EXPORT_FILE]
             export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
 
-            export_specification = ExportSpecification(save_path, export_format)
+            export_specification = ExportSpecification(
+                save_path, export_format, OVERWRITE
+            )
             self._application.export_road_user_assignments(export_specification)
             logger().info(f"Exporting road user assignments to {save_path}")
         except CancelExportEvents:
