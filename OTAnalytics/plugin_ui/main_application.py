@@ -79,7 +79,11 @@ from OTAnalytics.application.use_cases.create_intersection_events import (
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
-from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.event_repository import (
+    AddEvents,
+    ClearAllEvents,
+    GetAllEnterSectionEvents,
+)
 from OTAnalytics.application.use_cases.filter_visualization import (
     CreateDefaultFilterRange,
     EnableFilterTrackByDate,
@@ -151,6 +155,9 @@ from OTAnalytics.application.use_cases.track_repository import (
     TrackRepositorySize,
 )
 from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
+from OTAnalytics.application.use_cases.track_statistics_export import (
+    ExportTrackStatistics,
+)
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
 )
@@ -235,6 +242,9 @@ from OTAnalytics.plugin_parser.streaming_parser import (
     StreamTrackParser,
 )
 from OTAnalytics.plugin_parser.track_export import CsvTrackExport
+from OTAnalytics.plugin_parser.track_statistics_export import (
+    SimpleTrackStatisticsExporterFactory,
+)
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
@@ -569,6 +579,10 @@ class ApplicationStarter:
         number_of_tracks_assigned_to_each_flow = NumberOfTracksAssignedToEachFlow(
             get_road_user_assignments, flow_repository
         )
+        track_statistics_export_factory = SimpleTrackStatisticsExporterFactory()
+        export_track_statistics = ExportTrackStatistics(
+            calculate_track_statistics, track_statistics_export_factory
+        )
         application = OTAnalyticsApplication(
             datastore,
             track_state,
@@ -605,6 +619,7 @@ class ApplicationStarter:
             save_path_suggester,
             calculate_track_statistics,
             number_of_tracks_assigned_to_each_flow,
+            export_track_statistics,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -1241,10 +1256,12 @@ class ApplicationStarter:
             detection_rate_strategy=detection_rate_strategy,
             metric_rates_builder=metric_rates_builder,
         )
+        get_events = GetAllEnterSectionEvents(event_repository=event_repository)
         return CalculateTrackStatistics(
             tracks_intersecting_all_sections,
             tracks_assigned_to_all_flows,
             get_all_track_ids,
             track_ids_inside_cutting_sections,
             number_of_tracks_to_be_validated,
+            get_events,
         )
