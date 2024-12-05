@@ -32,6 +32,7 @@ class TrackStatisticsBuilder:
                 ts.PERCENTAGE_INSIDE_NOT_INTERSECTING: track_statistics.percentage_inside_not_intersection,  # noqa
                 ts.PERCENTAGE_INSIDE_INTERSECTING_BUT_UNASSIGNED: track_statistics.percentage_inside_intersecting_but_unassigned,  # noqa
                 ts.NUMBER_OF_TRACKS_TO_BE_VALIDATED: track_statistics.number_of_tracks_to_be_validated,  # noqa
+                ts.NUMBER_OF_TRACKS_WITH_SIMULTANEOUS_ENTER_SECTION_EVENTS: track_statistics.number_of_tracks_with_simultaneous_section_events,  # noqa
             }
         ]
 
