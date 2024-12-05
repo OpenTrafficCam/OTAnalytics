@@ -1,13 +1,14 @@
-from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Literal
 
 import pandas as pd
 
 from OTAnalytics.application.config import DEFAULT_EVENTLIST_FILE_TYPE
 from OTAnalytics.application.datastore import EventListParser
 from OTAnalytics.application.export_formats import event_list
+from OTAnalytics.application.export_formats.export_mode import INITIAL_MERGE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.export_events import (
+    EventExportSpecification,
     EventListExporter,
     ExporterNotFoundError,
 )
@@ -96,19 +97,58 @@ class SectionsDataFrameBuilder:
 
 
 class EventListExcelExporter(EventListExporter):
+    """
+    A EventListExporter exporting to .excel format.
+    Allows to either overwrite or append data to the excel file.
+    Export modes OVERWRITE and INITIAL_MERGE will write the column header.
+    Other export modes will only append data.
+    """
+
     def export(
-        self, events: Iterable[Event], sections: Iterable[Section], file: Path
+        self,
+        events: Iterable[Event],
+        sections: Iterable[Section],
+        export_specification: EventExportSpecification,
     ) -> None:
         df_events = EventListDataFrameBuilder(events=events, sections=sections).build()
         df_sections = SectionsDataFrameBuilder(sections=sections).build()
-        self._write_to_excel(file, df_events, df_sections)
+        self._write_to_excel(df_events, df_sections, export_specification)
 
     def _write_to_excel(
-        self, file: Path, df_events: pd.DataFrame, df_sections: pd.DataFrame
+        self,
+        df_events: pd.DataFrame,
+        df_sections: pd.DataFrame,
+        export_specification: EventExportSpecification,
     ) -> None:
-        writer = pd.ExcelWriter(file, engine="openpyxl")
-        df_events.to_excel(writer, index=False, sheet_name="Events")
-        df_sections.to_excel(writer, index=False, sheet_name="Sections")
+        file = export_specification.file
+        append = export_specification.export_mode.is_subsequent_write()
+
+        if append:
+            writer = pd.ExcelWriter(
+                file, engine="openpyxl", mode="a", if_sheet_exists="overlay"
+            )
+        else:
+            writer = pd.ExcelWriter(file, engine="openpyxl")
+
+        header = not append
+
+        startrow_events = writer.sheets["Events"].max_row if append else 0
+        startrow_sections = writer.sheets["Sections"].max_row if append else 0
+
+        df_events.to_excel(
+            writer,
+            index=False,
+            sheet_name="Events",
+            startrow=startrow_events,
+            header=header,
+        )
+        df_sections.to_excel(
+            writer,
+            index=False,
+            sheet_name="Sections",
+            startrow=startrow_sections,
+            header=header,
+        )
         writer.close()
 
     def get_extension(self) -> str:
@@ -119,14 +159,30 @@ class EventListExcelExporter(EventListExporter):
 
 
 class EventListCSVExporter(EventListExporter):
+    """
+    A EventListExporter exporting to .csv format.
+    Allows to either overwrite or append data to the csv file.
+    Export modes OVERWRITE and INITIAL_MERGE will write the column header.
+    Other export modes will only append data.
+    """
+
     def export(
-        self, events: Iterable[Event], sections: Iterable[Section], file: Path
+        self,
+        events: Iterable[Event],
+        sections: Iterable[Section],
+        export_specification: EventExportSpecification,
     ) -> None:
         df_events = EventListDataFrameBuilder(events=events, sections=sections).build()
-        self._write_to_excel(file, df_events)
+        self._write_to_csv(df_events, export_specification)
 
-    def _write_to_excel(self, file: Path, df_events: pd.DataFrame) -> None:
-        df_events.to_csv(file, index=False)
+    def _write_to_csv(
+        self, df_events: pd.DataFrame, export_specification: EventExportSpecification
+    ) -> None:
+        file = export_specification.file
+        append = export_specification.export_mode.is_subsequent_write()
+        header = not append
+        write_mode: Literal["w", "a"] = "a" if append else "w"
+        df_events.to_csv(file, index=False, mode=write_mode, header=header)
 
     def get_extension(self) -> str:
         return f".{EXTENSION_CSV}"
@@ -136,13 +192,49 @@ class EventListCSVExporter(EventListExporter):
 
 
 class EventListOteventsExporter(EventListExporter):
+    """
+    A EventListExporter exporting to .otevents format.
+    Allows to either instantly write or incrementally collect data.
+
+    Export mode OVERWRITE serializes given events.
+
+    Export modes INITIAL_MERGE and MERGE transform this exporter into a
+    stateful exporter collecting events until ExportMode FLUSH is provided.
+    Only then all previously collected events are serialized.
+    This may consume a lot of memory, use with care!
+    """
+
     def __init__(self, event_list_parser: EventListParser) -> None:
         self._event_list_parser = event_list_parser
+        self._events_collect: list[Event] = list()
+        self._sections_collect: list[Section] = list()
 
     def export(
-        self, events: Iterable[Event], sections: Iterable[Section], file: Path
+        self,
+        events: Iterable[Event],
+        sections: Iterable[Section],
+        export_specification: EventExportSpecification,
     ) -> None:
-        self._event_list_parser.serialize(events, sections, file)
+        file = export_specification.file
+        export_mode = export_specification.export_mode
+
+        if export_mode == INITIAL_MERGE:
+            logger().info(
+                "WARNING: Using EventListOteventsExporter in incremental mode "
+                + "might consume a lot of memory."
+            )
+
+        self._events_collect += events
+        self._sections_collect += [
+            section for section in sections if section not in self._sections_collect
+        ]
+
+        if export_mode.is_final_write():
+            self._event_list_parser.serialize(
+                self._events_collect, self._sections_collect, file
+            )
+            self._events_collect.clear()
+            self._sections_collect.clear()
 
     def get_extension(self) -> str:
         return f".{EXTENSION_OTEVENTS}"
@@ -152,16 +244,38 @@ class EventListOteventsExporter(EventListExporter):
 
 
 class EventListDictPrinter(EventListExporter):
+    """
+    A EventListExporter exporting events in dict format to the log.
+    Allows to incrementally log events. Incrementally logging events
+    turns this EventListDictPrinter into a stateful EventListExporter
+    collecting Sections to be logged on the end after all Events were logged.
+    """
+
+    def __init__(self) -> None:
+        self._section_collect: set[Section] = set()
+
     def export(
-        self, events: Iterable[Event], sections: Iterable[Section], file: Path
+        self,
+        events: Iterable[Event],
+        sections: Iterable[Section],
+        export_specification: EventExportSpecification,
     ) -> None:
-        logger().info("Events:")
+        export_mode = export_specification.export_mode
+        self._section_collect = self._section_collect.union(sections)
+
+        if export_mode.is_first_write():
+            logger().info("Events:")
+
         logger().info([event.to_dict() for event in events])
-        logger().info(
-            "__________________________________________________________________"
-        )
-        logger().info("Sections:")
-        logger().info([section.to_dict() for section in sections])
+
+        if export_mode.is_final_write():
+            logger().info(
+                "__________________________________________________________________"
+            )
+            logger().info("Sections:")
+            logger().info([section.to_dict() for section in self._section_collect])
+
+            self._section_collect.clear()
 
     def get_extension(self) -> str:
         return ""
@@ -171,18 +285,44 @@ class EventListDictPrinter(EventListExporter):
 
 
 class EventListDataFramePrinter(EventListExporter):
+    """
+    A EventListExporter exporting events in data frame format to the log.
+    Allows to incrementally log events. Incrementally logging events
+    turns this EventListDictPrinter into a stateful EventListExporter
+    collecting Sections to be logged on the end after all Events were logged.
+    """
+
+    def __init__(self) -> None:
+        self._section_collect: set[Section] = set()
+
     def export(
-        self, events: Iterable[Event], sections: Iterable[Section], file: Path
+        self,
+        events: Iterable[Event],
+        sections: Iterable[Section],
+        export_specification: EventExportSpecification,
     ) -> None:
+        export_mode = export_specification.export_mode
+        self._section_collect = self._section_collect.union(sections)
+
         df_events = EventListDataFrameBuilder(events=events, sections=sections).build()
-        df_sections = SectionsDataFrameBuilder(sections=sections).build()
-        logger().info("Events:")
+
+        if export_mode.is_first_write():
+            logger().info("Events:")
+
         logger().info(df_events)
-        logger().info(
-            "__________________________________________________________________"
-        )
-        logger().info("Sections:")
-        logger().info(df_sections)
+
+        if export_mode.is_final_write():
+            df_sections = SectionsDataFrameBuilder(
+                sections=self._section_collect
+            ).build()
+
+            logger().info(
+                "__________________________________________________________________"
+            )
+            logger().info("Sections:")
+            logger().info(df_sections)
+
+            self._section_collect.clear()
 
     def get_extension(self) -> str:
         return ""

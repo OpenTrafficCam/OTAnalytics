@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pandas
+import pytest
 from pandas import DataFrame
 
 from OTAnalytics.application.analysis.traffic_counting import (
@@ -26,6 +27,13 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportSpecificationDto,
     FlowNameDto,
 )
+from OTAnalytics.application.export_formats.export_mode import (
+    FLUSH,
+    INITIAL_MERGE,
+    MERGE,
+    OVERWRITE,
+    ExportMode,
+)
 from OTAnalytics.plugin_parser.export import (
     END_DATE,
     END_TIME,
@@ -38,27 +46,45 @@ from OTAnalytics.plugin_parser.export import (
 
 
 class TestCsvExport:
+
     def test_empty_data(self, test_data_tmp_dir: Path) -> None:
         output_file = test_data_tmp_dir / "counts.csv"
         counts = Mock(spec=Count)
         counts.to_dict.return_value = {}
         export = CsvExport(output_file=str(output_file))
-        export.export(counts)
+        export.export(counts, OVERWRITE)
 
         assert not output_file.exists()
 
-    def test_export(self, test_data_tmp_dir: Path) -> None:
+    @pytest.mark.parametrize("export_mode", [FLUSH, OVERWRITE])
+    def test_export(self, test_data_tmp_dir: Path, export_mode: ExportMode) -> None:
         output_file = test_data_tmp_dir / "counts.csv"
-        counts = Mock(spec=Count)
-        tag = (
-            SingleTag(LEVEL_START_TIME, "2023-01-02 08:00:00")
-            .combine(SingleTag(LEVEL_END_TIME, "2023-01-02 08:15:00"))
-            .combine(SingleTag(LEVEL_CLASSIFICATION, "car"))
-            .combine(SingleTag(LEVEL_FLOW, "West --> Ost"))
-            .combine(SingleTag(LEVEL_FROM_SECTION, "West"))
-            .combine(SingleTag(LEVEL_TO_SECTION, "Ost"))
-        )
-        counts.to_dict.return_value = {tag: 1}
+        counts = self._mock_counts_with_single_tag()
+        expected = self._expected_counts()
+        export = CsvExport(output_file=str(output_file))
+        export.export(counts, export_mode)
+
+        actual: DataFrame = pandas.read_csv(output_file)
+        assert actual.to_dict() == expected
+
+    @pytest.mark.parametrize("export_mode", [INITIAL_MERGE, MERGE])
+    def test_increment_no_export(
+        self, test_data_tmp_dir: Path, export_mode: ExportMode
+    ) -> None:
+        output_file = test_data_tmp_dir / "no_counts.csv"
+        counts = self._mock_counts_with_single_tag()
+
+        export = CsvExport(output_file=str(output_file))
+        export.export(counts, export_mode)
+
+        assert not output_file.exists()
+        assert len(export._counts) == 1 and list(export._counts.values())[0] == 1
+
+        export.export(counts, export_mode)
+        assert not output_file.exists()
+        assert len(export._counts) == 1 and list(export._counts.values())[0] == 2
+
+    def _expected_counts(self) -> dict:
         expected = {
             LEVEL_START_TIME: {0: "2023-01-02 08:00:00"},
             START_DATE: {0: "2023-01-02"},
@@ -72,11 +98,21 @@ class TestCsvExport:
             LEVEL_TO_SECTION: {0: "Ost"},
             "count": {0: 1},
         }
-        export = CsvExport(output_file=str(output_file))
-        export.export(counts)
 
-        actual: DataFrame = pandas.read_csv(output_file)
-        assert actual.to_dict() == expected
+        return expected
+
+    def _mock_counts_with_single_tag(self) -> Count:
+        counts = Mock(spec=Count)
+        tag = (
+            SingleTag(LEVEL_START_TIME, "2023-01-02 08:00:00")
+            .combine(SingleTag(LEVEL_END_TIME, "2023-01-02 08:15:00"))
+            .combine(SingleTag(LEVEL_CLASSIFICATION, "car"))
+            .combine(SingleTag(LEVEL_FLOW, "West --> Ost"))
+            .combine(SingleTag(LEVEL_FROM_SECTION, "West"))
+            .combine(SingleTag(LEVEL_TO_SECTION, "Ost"))
+        )
+        counts.to_dict.return_value = {tag: 1}
+        return counts
 
 
 def execute_explode(
@@ -96,6 +132,7 @@ def execute_explode(
         modes=modes,
         output_format=output_format,
         output_file=output_file,
+        export_mode=OVERWRITE,
     )
     specification = ExportSpecificationDto(
         counting_specification=counting_specification,
@@ -197,6 +234,6 @@ class TestFillZerosExporter:
         tag_exploder.explode.return_value = tags
         exporter = FillZerosExporter(other, tag_exploder)
 
-        exporter.export(counts)
+        exporter.export(counts, OVERWRITE)
 
-        other.export.assert_called_with(FillEmptyCount(counts, tags))
+        other.export.assert_called_once_with(FillEmptyCount(counts, tags), OVERWRITE)
