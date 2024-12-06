@@ -572,7 +572,8 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         intersection_points = self.intersection_points([section], offset)
         cut_indices = {
             track_id.id: [
-                ip[1].index for ip in sorted(intersection_points, key=lambda ip: ip[1])
+                ip[1].upper_index
+                for ip in sorted(intersection_points, key=lambda ip: ip[1])
             ]
             for track_id, intersection_points in intersection_points.items()
         }

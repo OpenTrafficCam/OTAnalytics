@@ -218,6 +218,7 @@ def create_event(
     track_id: TrackId,
     section: SectionId,
     second: int,
+    relative_position: float = 0,
 ) -> Event:
     real_seconds = second % 60
     minute = int(second / 60)
@@ -231,6 +232,7 @@ def create_event(
         frame_number=1,
         section_id=section,
         event_coordinate=ImageCoordinate(0, 0),
+        relative_position=relative_position,
         event_type=EventType.SECTION_ENTER,
         direction_vector=DirectionVector2D(x1=1, x2=1),
         video_name="my_video_name.mp4",
@@ -297,6 +299,7 @@ class TestCaseBuilder:
             self.__create_single_track_single_event(),
             self.__create_tracks_without_match(),
             self.__create_unordered_events(),
+            self.__create_same_frame_events(),
         ]
 
     def __create_single_track_single_event(
@@ -438,6 +441,38 @@ class TestCaseBuilder:
             ]
         )
         return (events, self.flows, expected_result)
+
+    def __create_same_frame_events(
+        self,
+    ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
+        first_south = create_event(
+            track_id=self.first_track,
+            section=self.south_section_id,
+            second=0,
+            relative_position=0.1,
+        )
+        first_north = create_event(
+            track_id=self.first_track,
+            section=self.north_section_id,
+            second=0,
+            relative_position=0.9,
+        )
+        events = [
+            first_north,
+            first_south,
+        ]
+        expected_result: RoadUserAssignments = RoadUserAssignments(
+            [
+                RoadUserAssignment(
+                    self.first_track.id,
+                    "car",
+                    self.south_to_north,
+                    EventPair(first_south, first_north),
+                )
+            ]
+        )
+
+        return events, self.flows, expected_result
 
     def create_tagging_test_cases(self) -> list[tuple[RoadUserAssignment, Tag]]:
         first_south = create_event(self.first_track, self.south_section_id, 0)
@@ -645,6 +680,9 @@ class TestSimpleRoadUserAssigner:
         flows: list[Flow],
         expected_result: RoadUserAssignments,
     ) -> None:
+        """
+        https://openproject.platomo.de/projects/otanalytics/work_packages/6321/activity
+        """
         analysis = SimpleRoadUserAssigner()
         result = analysis.assign(events, flows)
 
