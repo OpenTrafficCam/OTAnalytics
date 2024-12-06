@@ -284,6 +284,19 @@ def third_section() -> Section:
 
 
 @pytest.fixture
+def forth_section() -> Section:
+    name = "third"
+    coordinates = [Coordinate(4.25, 0), Coordinate(4.25, 2)]
+    return LineSection(
+        SectionId(name),
+        name,
+        {EventType.SECTION_ENTER: RelativeOffsetCoordinate(0, 0)},
+        {},
+        coordinates,
+    )
+
+
+@pytest.fixture
 def area_section() -> Section:
     name = "area"
     coordinates = [
@@ -534,12 +547,14 @@ class TestPygeosTrackGeometryDataset:
         first_section: Section,
         second_section: Section,
         third_section: Section,
+        forth_section: Section,
     ) -> None:
         sections = [
             not_intersecting_section,
             first_section,
             second_section,
             third_section,
+            forth_section,
         ]
         track_dataset = create_track_dataset(
             [single_detection_track, not_intersecting_track, first_track, second_track]
@@ -550,14 +565,40 @@ class TestPygeosTrackGeometryDataset:
         result = geometry_dataset.intersection_points(sections)
         assert result == {
             first_track.id: [
-                (first_section.id, IntersectionPoint(1)),
-                (second_section.id, IntersectionPoint(2)),
-                (third_section.id, IntersectionPoint(3)),
+                (
+                    first_section.id,
+                    IntersectionPoint(upper_index=1, relative_position=0.5),
+                ),
+                (
+                    second_section.id,
+                    IntersectionPoint(upper_index=2, relative_position=0.5),
+                ),
+                (
+                    third_section.id,
+                    IntersectionPoint(upper_index=3, relative_position=0.5),
+                ),
+                (
+                    forth_section.id,
+                    IntersectionPoint(upper_index=4, relative_position=0.25),
+                ),
             ],
             second_track.id: [
-                (first_section.id, IntersectionPoint(1)),
-                (second_section.id, IntersectionPoint(2)),
-                (third_section.id, IntersectionPoint(3)),
+                (
+                    first_section.id,
+                    IntersectionPoint(upper_index=1, relative_position=0.5),
+                ),
+                (
+                    second_section.id,
+                    IntersectionPoint(upper_index=2, relative_position=0.5),
+                ),
+                (
+                    third_section.id,
+                    IntersectionPoint(upper_index=3, relative_position=0.5),
+                ),
+                (
+                    forth_section.id,
+                    IntersectionPoint(upper_index=4, relative_position=0.25),
+                ),
             ],
         }
 

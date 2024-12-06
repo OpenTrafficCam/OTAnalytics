@@ -217,7 +217,12 @@ def test_case_track_line_section(track: Track) -> _TestCase:
     detection = track.detections[detection_index]
     track_dataset = Mock(spec=TrackDataset)
     track_dataset.intersection_points.return_value = {
-        track.id: [(section.id, IntersectionPoint(detection_index))]
+        track.id: [
+            (
+                section.id,
+                IntersectionPoint(upper_index=detection_index, relative_position=0),
+            )
+        ]
     }
     track_dataset.get_for.return_value = track
     expected_event_coords = [
@@ -243,8 +248,8 @@ def test_case_closed_track_line_section(
     track_dataset = Mock(spec=TrackDataset)
     track_dataset.intersection_points.return_value = {
         closed_track.id: [
-            (section.id, IntersectionPoint(2)),
-            (section.id, IntersectionPoint(4)),
+            (section.id, IntersectionPoint(upper_index=2, relative_position=0)),
+            (section.id, IntersectionPoint(upper_index=4, relative_position=0)),
         ]
     }
     track_dataset.get_for.return_value = closed_track

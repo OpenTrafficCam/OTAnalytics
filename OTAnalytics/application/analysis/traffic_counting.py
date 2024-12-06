@@ -705,10 +705,13 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             list[EventPair]: event pairs
         """
         candidates: list[EventPair] = []
-        for index, start in enumerate(events):
+        events_to_process = sorted(
+            events, key=lambda event: (event.occurrence, event.relative_position)
+        )
+        for index, start in enumerate(events_to_process):
             candidates.extend(
                 EventPair(start=start, end=end)
-                for end in events[index + 1 :]
+                for end in events_to_process[index + 1 :]
                 if end != start
             )
         return candidates
