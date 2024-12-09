@@ -26,10 +26,12 @@ class PandasDetectionParser(DetectionParser):
         calculator: PandasTrackClassificationCalculator,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
         track_length_limit: TrackLengthLimit = DEFAULT_TRACK_LENGTH_LIMIT,
+        track_ids: list[str] | None = None,
     ) -> None:
         self._calculator = calculator
         self._track_geometry_factory = track_geometry_factory
         self._track_length_limit = track_length_limit
+        self._track_ids = track_ids
 
     def parse_tracks(
         self,
@@ -90,6 +92,10 @@ class PandasDetectionParser(DetectionParser):
             & (tracks_by_size[0] <= self._track_length_limit.upper_bound),
             track.TRACK_ID,
         ]
+        if self._track_ids:
+            track_ids_to_remain = track_ids_to_remain.loc[
+                track_ids_to_remain.isin(self._track_ids)
+            ]
         all_track_ids = tracks_by_size[track.TRACK_ID].unique()
         track_ids_outside_bounds = set(all_track_ids) - set(track_ids_to_remain)
         percentage_of_tracks_outside_bounds = (
