@@ -66,6 +66,10 @@ from OTAnalytics.application.use_cases.track_statistics import (
     CalculateTrackStatistics,
     TrackStatistics,
 )
+from OTAnalytics.application.use_cases.track_statistics_export import (
+    ExportTrackStatistics,
+    TrackStatisticsExportSpecification,
+)
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
@@ -140,6 +144,7 @@ class OTAnalyticsApplication:
         file_name_suggester: SavePathSuggester,
         calculate_track_statistics: CalculateTrackStatistics,
         number_of_tracks_assigned_to_each_flow: NumberOfTracksAssignedToEachFlow,
+        export_track_statistics: ExportTrackStatistics,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -184,6 +189,7 @@ class OTAnalyticsApplication:
         self._number_of_tracks_assigned_to_each_flow = (
             number_of_tracks_assigned_to_each_flow
         )
+        self._export_track_statistics = export_track_statistics
 
     def connect_observers(self) -> None:
         """
@@ -685,6 +691,16 @@ class OTAnalyticsApplication:
 
     def number_of_tracks_assigned_to_each_flow(self) -> dict[FlowId, int]:
         return self._number_of_tracks_assigned_to_each_flow.get()
+
+    def export_track_statistics(
+        self, specification: TrackStatisticsExportSpecification
+    ) -> None:
+        self._export_track_statistics.export(specification)
+
+    def get_track_statistics_export_formats(
+        self,
+    ) -> Iterable[ExportFormat]:
+        return self._export_track_statistics.get_supported_formats()
 
 
 class MissingTracksError(Exception):
