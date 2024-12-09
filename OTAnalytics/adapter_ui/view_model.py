@@ -437,3 +437,7 @@ class ViewModel(ABC):
     @abstractmethod
     def get_tracks_assigned_to_each_flow(self) -> dict[FlowId, int]:
         raise NotImplementedError
+
+    @abstractmethod
+    def export_track_statistics(self) -> None:
+        raise NotImplementedError
