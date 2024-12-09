@@ -58,6 +58,11 @@ class FrameAnalysis(AbstractCTkFrame):
             text="Export road user assignments ...",
             command=self._viewmodel.export_road_user_assignments,
         )
+        self.button_export_track_statistics = CTkButton(
+            master=self,
+            text="Export track statistics ...",
+            command=self._viewmodel.export_track_statistics,
+        )
 
     def _place_widgets(self) -> None:
         self.button_export_eventlist.grid(
@@ -69,10 +74,14 @@ class FrameAnalysis(AbstractCTkFrame):
         self.button_export_road_user_assignments.grid(
             row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
         )
+        self.button_export_track_statistics.grid(
+            row=3, column=0, padx=PADX, pady=PADY, sticky=STICKY
+        )
 
     def get_general_buttons(self) -> list[CTkButton]:
         return [
             self.button_export_counts,
             self.button_export_eventlist,
             self.button_export_road_user_assignments,
+            self.button_export_track_statistics,
         ]
