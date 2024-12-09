@@ -1,5 +1,6 @@
 av==13.0.0
 customtkinter==5.2.2
+ijson==3.2.3
 matplotlib==3.9.0
 more-itertools==10.3.0
 numpy==1.26.4

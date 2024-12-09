@@ -67,6 +67,7 @@ from OTAnalytics.application.config import (
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
@@ -103,6 +104,9 @@ from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportSpecification,
 )
 from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave
+from OTAnalytics.application.use_cases.track_statistics_export import (
+    TrackStatisticsExportSpecification,
+)
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.date import (
     DateRange,
@@ -1641,6 +1645,7 @@ class DummyViewModel(
                 modes=modes,
                 output_format=export_values[EXPORT_FORMAT],
                 output_file=export_values[EXPORT_FILE],
+                export_mode=OVERWRITE,
             )
             self._application.export_counts(export_specification)
         except CancelExportCounts:
@@ -1747,7 +1752,9 @@ class DummyViewModel(
             save_path = export_values[toplevel_export_events.EXPORT_FILE]
             export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
 
-            export_specification = ExportSpecification(save_path, export_format)
+            export_specification = ExportSpecification(
+                save_path, export_format, OVERWRITE
+            )
             self._application.export_road_user_assignments(export_specification)
             logger().info(f"Exporting road user assignments to {save_path}")
         except CancelExportEvents:
@@ -1826,3 +1833,45 @@ class DummyViewModel(
 
     def get_tracks_assigned_to_each_flow(self) -> dict[FlowId, int]:
         return self._application.number_of_tracks_assigned_to_each_flow()
+
+    def export_track_statistics(self) -> None:
+        if self._application.get_track_repository_size() == 0:
+            InfoBox(
+                message=(
+                    "Calculating track statistics is impossible without tracks.\n"
+                    "Please add tracks."
+                ),
+                initial_position=(
+                    self._window.get_position() if self._window else (0, 0)
+                ),
+            )
+            return
+        export_formats: dict = {
+            export_format.name: export_format.file_extension
+            for export_format in self._application.get_track_statistics_export_formats()
+        }
+        default_format = next(iter(export_formats.keys()))
+        default_values: dict = {
+            EXPORT_FORMAT: default_format,
+        }
+
+        try:
+            export_values = ToplevelExportEvents(
+                title="Export track statistics",
+                initial_position=(50, 50),
+                input_values=default_values,
+                export_format_extensions=export_formats,
+                initial_file_stem="track_statistics",
+                viewmodel=self,
+            ).get_data()
+            logger().debug(export_values)
+            save_path = export_values[toplevel_export_events.EXPORT_FILE]
+            export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
+
+            export_specification = TrackStatisticsExportSpecification(
+                save_path, export_format
+            )
+            self._application.export_track_statistics(export_specification)
+            logger().info(f"Exporting track statistics to {save_path}")
+        except CancelExportEvents:
+            logger().info("User canceled configuration of export")

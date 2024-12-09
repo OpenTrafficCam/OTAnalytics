@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import timedelta
 from pathlib import Path
 from typing import Iterable
@@ -25,6 +26,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
     ExportSpecificationDto,
 )
+from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.logger import logger
 
 START_DATE = "start occurrence date"
@@ -37,22 +39,40 @@ TIME_FORMAT = "%H:%M:%S"
 
 
 class CsvExport(Exporter):
+    """
+    A counts Exporter exporting to .csv format.
+    Allows to either overwrite result file or incrementally collect count data.
+
+    Incrementally exporting count data turns this CsvExporter
+    into a stateful exporter. Counts are aggregated until ExportMode.FLUSH
+    is provided.
+    """
+
     def __init__(self, output_file: str) -> None:
         self._output_file = output_file
+        self._counts: dict[Tag, int] = defaultdict(int)
 
-    def export(self, counts: Count) -> None:
+    def export(self, counts: Count, export_mode: ExportMode) -> None:
         logger().info(f"Exporting counts to {self._output_file}")
-        dataframe = self.__create_data_frame(counts)
-        if dataframe.empty:
-            logger().info("Nothing to count.")
-            return
-        dataframe = self._add_detailed_date_time_columns(dataframe)
-        dataframe = self._set_column_order(dataframe)
-        dataframe = dataframe.sort_values(
-            by=[LEVEL_START_TIME, LEVEL_END_TIME, LEVEL_CLASSIFICATION]
-        )
-        dataframe.to_csv(self.__create_path(), index=False)
-        logger().info(f"Counts saved at {self._output_file}")
+
+        for tag, value in counts.to_dict().items():
+            self._counts[tag] += value
+
+        if export_mode.is_final_write():
+            dataframe = self.__create_data_frame(self._counts)
+            if dataframe.empty:
+                logger().info("Nothing to count.")
+                return
+            dataframe = self._add_detailed_date_time_columns(dataframe)
+            dataframe = self._set_column_order(dataframe)
+            dataframe = dataframe.sort_values(
+                by=[LEVEL_START_TIME, LEVEL_END_TIME, LEVEL_CLASSIFICATION]
+            )
+
+            dataframe.to_csv(self.__create_path(), index=False)
+            logger().info(f"Counts saved at {self._output_file}")
+
+            self._counts.clear()
 
     def _add_detailed_date_time_columns(self, df: DataFrame) -> DataFrame:
         start_occurrence = to_datetime(df[LEVEL_START_TIME])
@@ -86,8 +106,7 @@ class CsvExport(Exporter):
         return dataframe
 
     @staticmethod
-    def __create_data_frame(counts: Count) -> DataFrame:
-        transformed = counts.to_dict()
+    def __create_data_frame(transformed: dict) -> DataFrame:
         indexed: list[dict] = []
         for key, value in transformed.items():
             result_dict: dict = key.as_dict()
@@ -163,9 +182,9 @@ class FillZerosExporter(Exporter):
         self._other = other
         self._tag_exploder = tag_exploder
 
-    def export(self, counts: Count) -> None:
+    def export(self, counts: Count, export_mode: ExportMode) -> None:
         tags = self._tag_exploder.explode()
-        self._other.export(FillEmptyCount(counts, tags))
+        self._other.export(FillEmptyCount(counts, tags), export_mode)
 
 
 class FillZerosExporterFactory(ExporterFactory):
@@ -187,11 +206,11 @@ class AddSectionInformationExporter(Exporter):
         self._other = other
         self._specification = specification
 
-    def export(self, counts: Count) -> None:
+    def export(self, counts: Count, export_mode: ExportMode) -> None:
         flow_info_dict = {
             flow_dto.name: flow_dto for flow_dto in self._specification.flow_name_info
         }
-        self._other.export(AddSectionInformation(counts, flow_info_dict))
+        self._other.export(AddSectionInformation(counts, flow_info_dict), export_mode)
 
 
 class AddSectionInformationExporterFactory(ExporterFactory):
@@ -205,3 +224,67 @@ class AddSectionInformationExporterFactory(ExporterFactory):
         return AddSectionInformationExporter(
             self.other.create_exporter(specification), specification
         )
+
+
+class CacheException(Exception):
+
+    def __init__(
+        self,
+        message: str,
+        output_format: str,
+        output_file: str,
+        export_mode: ExportMode,
+    ) -> None:
+        super().__init__(
+            message
+            + f"Error occurred when exporting {output_format} to {output_file} using"
+            + " export mode {export_mode}"
+        )
+
+
+class CachedExporterFactory(ExporterFactory):
+
+    def __init__(self, other: ExporterFactory) -> None:
+        self.other = other
+        self._cache: dict[tuple[str, str], Exporter] = dict()
+
+    def get_supported_formats(self) -> Iterable[ExportFormat]:
+        return self.other.get_supported_formats()
+
+    def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
+        count_specification = specification.counting_specification
+        export_mode = count_specification.export_mode
+
+        key = (count_specification.output_format, count_specification.output_file)
+        key_exists = key in self._cache.keys()
+
+        exporter: Exporter
+        if export_mode.is_first_write():
+            if key_exists:
+                raise CacheException(
+                    "Exporter already exists for format+file upon first write!"
+                    + " Maybe previous export was not finished or cache was not"
+                    + "cleared properly.",
+                    count_specification.output_format,
+                    count_specification.output_file,
+                    export_mode,
+                )
+
+            exporter = self.other.create_exporter(specification)
+            self._cache[key] = exporter
+
+        else:
+            if not key_exists:
+                raise CacheException(
+                    "Exporter missing in cache for format+file upon subsequent write!"
+                    + "Maybe the cache was cleared too early.",
+                    count_specification.output_format,
+                    count_specification.output_file,
+                    export_mode,
+                )
+            exporter = self._cache[key]
+
+        if export_mode.is_final_write():
+            del self._cache[key]
+
+        return exporter

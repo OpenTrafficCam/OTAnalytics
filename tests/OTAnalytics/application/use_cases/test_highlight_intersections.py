@@ -327,8 +327,12 @@ class TestTracksAssignedToSelectedFlows:
         flow_state = Mock(spec=FlowState)
         flow_state.selected_flows = selected_flows
 
-        first_assignment = RoadUserAssignment("1", first_flow, Mock(spec=EventPair))
-        second_assignment = RoadUserAssignment("2", second_flow, Mock(spec=EventPair))
+        first_assignment = RoadUserAssignment(
+            "1", "car", first_flow, Mock(spec=EventPair)
+        )
+        second_assignment = RoadUserAssignment(
+            "2", "car", second_flow, Mock(spec=EventPair)
+        )
         assignments = Mock(spec=RoadUserAssignments)
         assignments.as_list.return_value = [first_assignment, second_assignment]
         assigner = Mock(spec=RoadUserAssigner)
