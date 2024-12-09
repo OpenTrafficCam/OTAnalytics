@@ -10,6 +10,8 @@ from OTAnalytics.application.use_cases.track_statistics import TrackStatistics
 from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
 
+INITIAL_VALUE_OF_TRACK_STATISTIC: str = "Please update flow highlighting"
+
 
 class FrameTrackStatistics(AbstractCTkFrame, AbstractFrameTrackStatistics):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
@@ -31,7 +33,7 @@ class FrameTrackStatistics(AbstractCTkFrame, AbstractFrameTrackStatistics):
         )
         self._label_all_tracks_value = CTkLabel(
             master=self,
-            text="Please update flow highlighting",
+            text=INITIAL_VALUE_OF_TRACK_STATISTIC,
             anchor="nw",
             justify="right",
         )
@@ -40,7 +42,7 @@ class FrameTrackStatistics(AbstractCTkFrame, AbstractFrameTrackStatistics):
         )
         self._label_inside_tracks_value = CTkLabel(
             master=self,
-            text="Please update flow highlighting",
+            text=INITIAL_VALUE_OF_TRACK_STATISTIC,
             anchor="nw",
             justify="right",
         )
@@ -49,7 +51,7 @@ class FrameTrackStatistics(AbstractCTkFrame, AbstractFrameTrackStatistics):
         )
         self._label_assigned_tracks_value = CTkLabel(
             master=self,
-            text="Please update flow highlighting",
+            text=INITIAL_VALUE_OF_TRACK_STATISTIC,
             anchor="nw",
             justify="right",
         )
@@ -61,7 +63,7 @@ class FrameTrackStatistics(AbstractCTkFrame, AbstractFrameTrackStatistics):
         )
         self._label_not_intersection_tracks_value = CTkLabel(
             master=self,
-            text="Please update flow highlighting",
+            text=INITIAL_VALUE_OF_TRACK_STATISTIC,
             anchor="nw",
             justify="right",
         )
@@ -73,7 +75,7 @@ class FrameTrackStatistics(AbstractCTkFrame, AbstractFrameTrackStatistics):
         )
         self._label_intersecting_not_assigned_tracks_value = CTkLabel(
             master=self,
-            text="Please update flow highlighting",
+            text=INITIAL_VALUE_OF_TRACK_STATISTIC,
             anchor="nw",
             justify="right",
         )
@@ -85,7 +87,19 @@ class FrameTrackStatistics(AbstractCTkFrame, AbstractFrameTrackStatistics):
         )
         self._label_number_of_tracks_to_be_validated_value = CTkLabel(
             master=self,
-            text="Please update flow highlighting",
+            text=INITIAL_VALUE_OF_TRACK_STATISTIC,
+            anchor="nw",
+            justify="right",
+        )
+        self._label_number_of_simultaneous_section_events = CTkLabel(
+            master=self,
+            text="Number of tracks with simultaneous section events:",
+            anchor="nw",
+            justify="right",
+        )
+        self._label_number_of_simultaneous_section_events_value = CTkLabel(
+            master=self,
+            text=INITIAL_VALUE_OF_TRACK_STATISTIC,
             anchor="nw",
             justify="right",
         )
@@ -108,6 +122,8 @@ class FrameTrackStatistics(AbstractCTkFrame, AbstractFrameTrackStatistics):
                 self._label_intersecting_not_assigned_tracks_value,
                 self._label_number_of_tracks_to_be_validated,
                 self._label_number_of_tracks_to_be_validated_value,
+                self._label_number_of_simultaneous_section_events,
+                self._label_number_of_simultaneous_section_events_value,
             ]
         ):
             label.grid(
@@ -137,4 +153,7 @@ class FrameTrackStatistics(AbstractCTkFrame, AbstractFrameTrackStatistics):
         )
         self._label_number_of_tracks_to_be_validated_value.configure(
             text=str(track_statistics.number_of_tracks_to_be_validated)
+        )
+        self._label_number_of_simultaneous_section_events_value.configure(
+            text=str(track_statistics.number_of_tracks_with_simultaneous_section_events)
         )
