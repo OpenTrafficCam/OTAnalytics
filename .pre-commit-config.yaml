@@ -22,7 +22,7 @@ repos:
         language: system
         files: ^requirements.*\.txt$
         stages:
-          - commit
+          - pre-commit
   - repo: https://github.com/PyCQA/flake8
     rev: 7.1.1
     hooks:
