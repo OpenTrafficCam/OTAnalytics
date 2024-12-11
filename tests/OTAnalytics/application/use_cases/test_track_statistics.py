@@ -44,6 +44,13 @@ def given_number_of_tracks_to_be_validated() -> Mock:
     return given
 
 
+@pytest.fixture
+def given_enter_section_events() -> Mock:
+    given = Mock()
+    given.get.return_value = []
+    return given
+
+
 def create_trackids_set_with_list_of_ids(ids: list[str]) -> set[TrackId]:
     return set([TrackId(id) for id in ids])
 
@@ -56,6 +63,7 @@ class TestCalculateTrackStatistics:
         get_all_track_ids: Mock,
         track_ids_inside_cutting_sections: Mock,
         given_number_of_tracks_to_be_validated: Mock,
+        given_enter_section_events: Mock,
     ) -> None:
         intersection_all_non_cutting_sections.get_ids.return_value = (
             create_trackids_set_with_list_of_ids(
@@ -79,6 +87,7 @@ class TestCalculateTrackStatistics:
             get_all_track_ids,
             track_ids_inside_cutting_sections,
             given_number_of_tracks_to_be_validated,
+            given_enter_section_events,
         )
 
         trackStatistics = calculator.get_statistics()
@@ -99,3 +108,4 @@ class TestCalculateTrackStatistics:
             == NUMBER_OF_TRACKS_TO_BE_VALIDATED
         )
         given_number_of_tracks_to_be_validated.calculate.assert_called_once()
+        assert trackStatistics.number_of_tracks_with_simultaneous_section_events == 0
