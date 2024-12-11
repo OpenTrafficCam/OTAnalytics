@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -257,8 +257,24 @@ class UseCaseProvider:
 
     def counting_specification(self, save_dir: Path) -> CountingSpecificationDto:
         return CountingSpecificationDto(
-            start=datetime(2023, 5, 24, 8, 0, 0),
-            end=datetime(2023, 5, 24, 8, 15, 0),
+            start=datetime(
+                year=2023,
+                month=5,
+                day=24,
+                hour=8,
+                minute=0,
+                second=0,
+                tzinfo=timezone.utc,
+            ),
+            end=datetime(
+                year=2023,
+                month=5,
+                day=24,
+                hour=8,
+                minute=15,
+                second=0,
+                tzinfo=timezone.utc,
+            ),
             interval_in_minutes=15,
             modes=list(self._detection_metadata.detection_classes),
             output_file=f"{save_dir / self._otflow_file.with_suffix('.csv').name}",
