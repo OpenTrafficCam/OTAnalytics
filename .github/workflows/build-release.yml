@@ -8,8 +8,7 @@ on:
     tags:
       - "v*.*.*.*"
 
-permissions:
-  contents: write
+permissions: read-all
 
 jobs:
   test:
@@ -20,6 +19,8 @@ jobs:
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
   create_release:
+    permissions:
+      contents: write
     needs:
       - test
       - regression-test
