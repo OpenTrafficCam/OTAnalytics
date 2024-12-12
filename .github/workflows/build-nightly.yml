@@ -11,21 +11,7 @@ on:
     branches:
       - main
 
-permissions:
-  actions: read
-  attestations: read
-  checks: read
-  contents: write
-  deployments: read
-  discussions: read
-  issues: read
-  packages: read
-  pages: read
-  pull-requests: read
-  repository-projects: read
-  statuses: read
-  security-events: read
-  id-token: read
+permissions: read-all
 
 jobs:
   test:
@@ -34,6 +20,8 @@ jobs:
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
   create_nightly:
+    permissions:
+      contents: write
     needs:
       - test
       - regression-test
