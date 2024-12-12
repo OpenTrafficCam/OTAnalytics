@@ -51,6 +51,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideo,
     CachedVideoParser,
     DetectionFixer,
+    FormatVersions,
     InvalidSectionData,
     MetadataFixer,
     Otdet_Version_1_0_to_1_1,
@@ -62,6 +63,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     PythonDetectionParser,
     TrackLengthLimit,
     Version,
+    version_of_otdet,
+    version_of_ottrk,
 )
 from tests.utils.assertions import assert_track_datasets_equal
 from tests.utils.builders.track_builder import (
@@ -131,6 +134,7 @@ class TestVersion_1_1_To_1_2:
 
 
 class TestOttrkFormatFixer:
+
     def test_run_all_fixer(
         self, track_builder_setup_with_sample_data: TrackBuilder
     ) -> None:
@@ -150,8 +154,11 @@ class TestOttrkFormatFixer:
         some_metadata_fixer = Mock(spec=MetadataFixer)
         other_metadata_fixer = Mock(spec=MetadataFixer)
         some_metadata_fixer.fix.side_effect = lambda metadata, _: metadata
+        some_metadata_fixer._version_extractor = version_of_ottrk
         other_metadata_fixer.fix.side_effect = lambda metadata, _: metadata
+        other_metadata_fixer._version_extractor = version_of_otdet
         detection_fixes: list[DetectionFixer] = [some_fixer, other_fixer]
+
         metadata_fixes: list[MetadataFixer] = [
             some_metadata_fixer,
             other_metadata_fixer,
@@ -159,6 +166,7 @@ class TestOttrkFormatFixer:
         fixer = OttrkFormatFixer(detection_fixes, metadata_fixes)
 
         fixed_content = fixer.fix(content)
+        versions = FormatVersions(ottrk_version, otdet_version)
 
         assert fixed_content == content
         assert some_fixer.fix.call_args_list == [
@@ -167,8 +175,9 @@ class TestOttrkFormatFixer:
         assert other_fixer.fix.call_args_list == [
             call(detection, otdet_version) for detection in detections
         ]
-        some_metadata_fixer.fix.assert_called_with(metadata, ottrk_version)
-        other_metadata_fixer.fix.assert_called_with(metadata, ottrk_version)
+
+        some_metadata_fixer.fix.assert_called_with(metadata, versions)
+        other_metadata_fixer.fix.assert_called_with(metadata, versions)
 
     def test_no_fixes_in_newest_version(
         self, track_builder_setup_with_sample_data: TrackBuilder
@@ -286,14 +295,14 @@ class TestPythonDetectionParser:
             ottrk_dataformat.VIDEO
         ]
 
-        result_sorted_input = parser._parse_detections(
+        result_sorted_input = parser._parse_track_detections(
             detections,
             metadata_video,
             input_file,
             TrackId,
         )
         unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = parser._parse_detections(
+        result_unsorted_input = parser._parse_track_detections(
             unsorted_detections,
             metadata_video,
             input_file,
@@ -641,6 +650,7 @@ class TestOtEventListParser:
             frame_number=1,
             section_id=section_id,
             event_coordinate=ImageCoordinate(0, 0),
+            relative_position=0,
             event_type=EventType.SECTION_ENTER,
             direction_vector=direction_vector,
             video_name=video_name,
@@ -653,6 +663,7 @@ class TestOtEventListParser:
             frame_number=2,
             section_id=section_id,
             event_coordinate=ImageCoordinate(10, 0),
+            relative_position=0,
             event_type=EventType.SECTION_LEAVE,
             direction_vector=direction_vector,
             video_name=video_name,

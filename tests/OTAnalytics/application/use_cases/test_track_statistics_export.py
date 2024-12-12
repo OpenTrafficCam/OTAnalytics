@@ -64,8 +64,6 @@ class TestExportTrackStatistics:
             exporter_factory,
         )
         specification = Mock()
-        specification.save_path = Mock()
-        specification.format = "csv"
 
         export_track_statistics.export(specification)
 

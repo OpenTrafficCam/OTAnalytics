@@ -11,13 +11,12 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportSpecificationDto,
     FlowNameDto,
 )
+from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import TrackId
-from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
 
 LEVEL_FROM_SECTION = "from section"
@@ -328,6 +327,7 @@ class RoadUserAssignment:
     """
 
     road_user: str
+    road_user_type: str
     assignment: Flow
     events: EventPair
 
@@ -356,9 +356,6 @@ class ModeTagger(Tagger):
     Split RoadUserAssignments by mode.
     """
 
-    def __init__(self, track_repository: TrackRepository) -> None:
-        self._track_repository = track_repository
-
     def create_tag(self, assignment: RoadUserAssignment) -> Tag:
         """
         Group name for classification of a track or UNCLASSIFIED.
@@ -369,8 +366,7 @@ class ModeTagger(Tagger):
         Returns:
             Tag: tag of the assignment
         """
-        track = self._track_repository.get_for(TrackId(assignment.road_user))
-        tag = track.classification if track else UNCLASSIFIED
+        tag = assignment.road_user_type
         return create_mode_tag(tag)
 
 
@@ -628,7 +624,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
 
     def __group_events_by_road_user(
         self, events: Iterable[Event]
-    ) -> dict[str, list[Event]]:
+    ) -> dict[tuple[str, str], list[Event]]:
         """
         Group events by road user.
 
@@ -638,17 +634,19 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         Returns:
             dict[int, list[Event]]: events grouped by user
         """
-        events_by_road_user: dict[str, list[Event]] = defaultdict(list)
+        events_by_road_user: dict[tuple[str, str], list[Event]] = defaultdict(list)
         sorted_events = sorted(events, key=lambda event: event.occurrence)
         for event in sorted_events:
             if event.section_id:
-                events_by_road_user[event.road_user_id].append(event)
+                events_by_road_user[(event.road_user_id, event.road_user_type)].append(
+                    event
+                )
         return events_by_road_user
 
     def __assign_user_to_flow(
         self,
         flows: dict[tuple[SectionId, SectionId], list[Flow]],
-        events_by_road_user: dict[str, list[Event]],
+        events_by_road_user: dict[tuple[str, str], list[Event]],
     ) -> RoadUserAssignments:
         """
         Assign each user to exactly one flow.
@@ -667,7 +665,8 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
                 current = self.__select_flow(candidate_flows)
                 assignments.append(
                     RoadUserAssignment(
-                        road_user=road_user,
+                        road_user=road_user[0],
+                        road_user_type=road_user[1],
                         assignment=current.flow,
                         events=current.candidate,
                     )
@@ -706,10 +705,13 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             list[EventPair]: event pairs
         """
         candidates: list[EventPair] = []
-        for index, start in enumerate(events):
+        events_to_process = sorted(
+            events, key=lambda event: (event.occurrence, event.relative_position)
+        )
+        for index, start in enumerate(events_to_process):
             candidates.extend(
                 EventPair(start=start, end=end)
-                for end in events[index + 1 :]
+                for end in events_to_process[index + 1 :]
                 if end != start
             )
         return candidates
@@ -805,9 +807,6 @@ class SimpleTaggerFactory(TaggerFactory):
     Factory to create Tagger for a given CountingSpecification.
     """
 
-    def __init__(self, track_repository: TrackRepository) -> None:
-        self._track_repository = track_repository
-
     def create_tagger(self, specification: CountingSpecificationDto) -> Tagger:
         """
         Create a tagger for the given CountingSpecificationDto.
@@ -818,7 +817,7 @@ class SimpleTaggerFactory(TaggerFactory):
         Returns:
             Tagger: Tagger specified by the given CountingSpecificationDto
         """
-        mode_tagger = ModeTagger(self._track_repository)
+        mode_tagger = ModeTagger()
         time_tagger = TimeslotTagger(
             timedelta(minutes=specification.interval_in_minutes)
         )
@@ -831,12 +830,15 @@ class Exporter(ABC):
     """
 
     @abstractmethod
-    def export(self, counts: Count) -> None:
+    def export(self, counts: Count, export_mode: ExportMode) -> None:
         """
         Export the given counts.
 
         Args:
             counts (Count): counts to export
+            export_mode (ExportMode): export mode specifies whether result data
+                should overwrite file, be appended (or flushed to file in case
+                of stateful exporter).
         """
         raise NotImplementedError
 
@@ -931,7 +933,7 @@ class ExportTrafficCounting(ExportCounts):
             flows, specification, self._get_sections_by_id
         )
         exporter = self._exporter_factory.create_exporter(export_specification)
-        exporter.export(counts)
+        exporter.export(counts, specification.export_mode)
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """

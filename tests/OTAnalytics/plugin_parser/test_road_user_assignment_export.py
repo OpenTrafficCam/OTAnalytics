@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     RoadUserAssignments,
 )
 from OTAnalytics.application.export_formats import road_user_assignments as ras
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.use_cases.road_user_assignment_export import (
     RoadUserAssignmentBuilder,
 )
@@ -52,7 +53,8 @@ class TestRoadUserAssignmentCsvExporter:
         exporter.export(
             RoadUserAssignments(
                 [first_road_user_assignment, second_road_user_assignment]
-            )
+            ),
+            OVERWRITE,
         )
         expected = DataFrame(
             [

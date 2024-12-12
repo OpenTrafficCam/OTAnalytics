@@ -9,7 +9,7 @@ from OTAnalytics.application.config import (
     DEFAULT_NUM_PROCESSES,
 )
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
-from OTAnalytics.application.parser.cli_parser import CliArguments
+from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode
 from OTAnalytics.application.parser.config_parser import OtConfig
 from OTAnalytics.application.run_configuration import RunConfiguration
 
@@ -22,6 +22,8 @@ def cli_args_otconfig() -> CliArguments:
     ]
     return CliArguments(
         start_cli=True,
+        cli_mode=CliMode.BULK,
+        cli_chunk_size=5,
         config_file="my_config.otconfig",
         debug=True,
         track_files=cli_track_files,

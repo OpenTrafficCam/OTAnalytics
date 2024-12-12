@@ -16,7 +16,12 @@ def create_flow(flow_id: FlowId) -> Flow:
 
 
 def create_assignment(road_user: str, assignment: Flow) -> RoadUserAssignment:
-    return RoadUserAssignment(road_user=road_user, assignment=assignment, events=Mock())
+    return RoadUserAssignment(
+        road_user=road_user,
+        road_user_type=road_user,
+        assignment=assignment,
+        events=Mock(),
+    )
 
 
 FIRST_FLOW = create_flow(FlowId("first flow"))
