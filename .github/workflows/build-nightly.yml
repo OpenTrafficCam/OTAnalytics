@@ -7,9 +7,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 permissions: read-all
 
@@ -29,7 +26,7 @@ jobs:
     secrets:
       PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
     with:
-      package-version: nightly-test
+      package-version: nightly
       package-path: OTAnalytics
       draft-release: false
       pre-release: true
