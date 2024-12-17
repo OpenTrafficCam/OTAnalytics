@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -22,6 +22,8 @@ from OTAnalytics.application.config import (
     CUTTING_SECTION_MARKER,
 )
 from OTAnalytics.application.datastore import DetectionMetadata, TrackParser
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.parser.cli_parser import CliMode
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
@@ -114,6 +116,7 @@ class UseCaseProvider:
         return create_run_config(
             flow_parser=self._flow_parser,
             start_cli=True,
+            cli_mode=CliMode.BULK,
             debug=False,
             logfile_overwrite=True,
             track_export=False,
@@ -184,7 +187,6 @@ class UseCaseProvider:
         return self._starter._create_export_counts(
             self._event_repository,
             self._flow_repository,
-            self._track_repository,
             GetSectionsById(self._section_repository),
             self.get_create_events(),
         )
@@ -255,12 +257,29 @@ class UseCaseProvider:
 
     def counting_specification(self, save_dir: Path) -> CountingSpecificationDto:
         return CountingSpecificationDto(
-            start=datetime(2023, 5, 24, 8, 0, 0),
-            end=datetime(2023, 5, 24, 8, 15, 0),
+            start=datetime(
+                year=2023,
+                month=5,
+                day=24,
+                hour=8,
+                minute=0,
+                second=0,
+                tzinfo=timezone.utc,
+            ),
+            end=datetime(
+                year=2023,
+                month=5,
+                day=24,
+                hour=8,
+                minute=15,
+                second=0,
+                tzinfo=timezone.utc,
+            ),
             interval_in_minutes=15,
             modes=list(self._detection_metadata.detection_classes),
-            output_file=f"{save_dir/ self._otflow_file.with_suffix('.csv').name}",
+            output_file=f"{save_dir / self._otflow_file.with_suffix('.csv').name}",
             output_format="CSV",
+            export_mode=OVERWRITE,
         )
 
     def run_cli(self) -> Callable[[RunConfiguration], None]:
