@@ -4,6 +4,7 @@ from unittest.mock import Mock
 import pandas
 from pandas.testing import assert_frame_equal
 
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.track_export import (
     TrackExportSpecification,
@@ -43,6 +44,7 @@ class TestCsvTrackExport:
         specification = TrackExportSpecification(
             save_path=export_file,
             export_format=[TrackFileFormat.CSV],
+            export_mode=OVERWRITE,
         )
 
         use_case.export(specification=specification)

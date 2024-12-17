@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
+from OTAnalytics.application.export_formats.export_mode import ExportMode
+
 CSV: str = "csv"
 OTTRK: str = "ottrk"
 
@@ -16,11 +18,15 @@ class TrackFileFormat(Enum):
 class TrackExportSpecification:
     save_path: Path
     export_format: list[TrackFileFormat]
+    export_mode: ExportMode
 
 
 class ExportTracks(ABC):
     @abstractmethod
-    def export(self, specification: TrackExportSpecification) -> None:
+    def export(
+        self,
+        specification: TrackExportSpecification,
+    ) -> None:
         raise NotImplementedError
 
 

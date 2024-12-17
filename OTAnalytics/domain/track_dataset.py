@@ -25,7 +25,12 @@ class TrackDoesNotExistError(Exception):
 
 @dataclass(frozen=True, order=True)
 class IntersectionPoint:
-    index: int
+    upper_index: int
+    relative_position: float
+
+    @property
+    def lower_index(self) -> int:
+        return self.upper_index - 1
 
 
 class TrackSegmentDataset(ABC):
