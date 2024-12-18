@@ -8,7 +8,7 @@ mypy==1.12.1
 pandas-stubs==2.2.2.240807
 pre-commit==4.0.1
 pytest==8.3.2
-pytest-benchmark==4.0.0
+pytest-benchmark==5.1.0
 pytest-cov==5.0.0
 pytest-lazy-fixtures==1.1.1
 PyYAML==6.0.1
