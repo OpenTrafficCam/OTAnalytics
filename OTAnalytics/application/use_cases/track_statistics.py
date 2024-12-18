@@ -103,7 +103,7 @@ class CalculateTrackStatistics:
 
         grouped_data = defaultdict(set)
         for event in events:
-            grouped_data[(event.road_user_id, event.frame_number)].add(event.section_id)
+            grouped_data[(event.road_user_id, event.occurrence)].add(event.section_id)
 
         for (_, _), section_id in grouped_data.items():
             if len(section_id) > 1:
