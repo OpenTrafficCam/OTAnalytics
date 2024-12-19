@@ -244,7 +244,8 @@ class Plotter(ABC):
 
 class VideosMetadata:
     def __init__(self) -> None:
-        self._metadata: dict[datetime, VideoMetadata] = {}
+        self._metadata_by_date: dict[datetime, VideoMetadata] = {}
+        self._metadata_by_name: dict[str, VideoMetadata] = {}
         self._first_video_start: Optional[datetime] = None
         self._last_video_end: Optional[datetime] = None
 
@@ -252,12 +253,13 @@ class VideosMetadata:
         """
         Update the stored metadata.
         """
-        if metadata.start in self._metadata.keys():
+        if metadata.start in self._metadata_by_date.keys():
             raise ValueError(
                 f"metadata with start date {metadata.start} already exists."
             )
-        self._metadata[metadata.start] = metadata
-        self._metadata = dict(sorted(self._metadata.items()))
+        self._metadata_by_date[metadata.start] = metadata
+        self._metadata_by_name[metadata.path] = metadata
+        self._metadata_by_date = dict(sorted(self._metadata_by_date.items()))
         self._update_start_end_by(metadata)
 
     def _update_start_end_by(self, metadata: VideoMetadata) -> None:
@@ -272,19 +274,18 @@ class VideosMetadata:
         start time of a video, the corresponding VideoMetadata is returned. Otherwise,
         the metadata of the video containing the datetime will be returned.
         """
-        if current in self._metadata:
-            return self._metadata[current]
-        keys = list(self._metadata.keys())
+        if current in self._metadata_by_date:
+            return self._metadata_by_date[current]
+        keys = list(self._metadata_by_date.keys())
         key = bisect.bisect_left(keys, current) - 1
-        metadata = self._metadata[keys[key]]
+        metadata = self._metadata_by_date[keys[key]]
         if metadata.start <= current <= metadata.end:
             return metadata
         return None
 
     def get_by_video_name(self, video_name: str) -> Optional[VideoMetadata]:
-        for metadata in self._metadata.values():
-            if metadata.path == video_name:
-                return metadata
+        if video_name in self._metadata_by_name:
+            return self._metadata_by_name[video_name]
         return None
 
     @property
@@ -298,7 +299,7 @@ class VideosMetadata:
     def to_dict(self) -> dict:
         return {
             key.timestamp(): metadata.to_dict()
-            for key, metadata in self._metadata.items()
+            for key, metadata in self._metadata_by_date.items()
         }
 
     def merge_into_dict(self, other: dict) -> dict:
