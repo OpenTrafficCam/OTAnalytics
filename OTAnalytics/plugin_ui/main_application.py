@@ -79,7 +79,11 @@ from OTAnalytics.application.use_cases.create_intersection_events import (
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
-from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.event_repository import (
+    AddEvents,
+    ClearAllEvents,
+    GetAllEnterSectionEvents,
+)
 from OTAnalytics.application.use_cases.filter_visualization import (
     CreateDefaultFilterRange,
     EnableFilterTrackByDate,
@@ -1252,10 +1256,12 @@ class ApplicationStarter:
             detection_rate_strategy=detection_rate_strategy,
             metric_rates_builder=metric_rates_builder,
         )
+        get_events = GetAllEnterSectionEvents(event_repository=event_repository)
         return CalculateTrackStatistics(
             tracks_intersecting_all_sections,
             tracks_assigned_to_all_flows,
             get_all_track_ids,
             track_ids_inside_cutting_sections,
             number_of_tracks_to_be_validated,
+            get_events,
         )
