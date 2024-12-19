@@ -228,7 +228,7 @@ class TestStreamOttrkParser:
 
         assert tracks_metadata.detection_classifications == expected_detection_classes
 
-        assert list(videos_metadata._metadata.values())[0] == VideoMetadata(
+        assert list(videos_metadata._metadata_by_date.values())[0] == VideoMetadata(
             path="myhostname_file.mp4",
             recorded_start_date=datetime(
                 year=2020,

@@ -1,5 +1,6 @@
 from datetime import timedelta
 from pathlib import Path
+from unittest.mock import Mock
 
 import av
 import pytest
@@ -23,7 +24,7 @@ class TestPyAVVideoReader:
 
     @pytest.fixture
     def video_reader(self) -> VideoReader:
-        return PyAvVideoReader()
+        return PyAvVideoReader(Mock())
 
     def test_get_image_possible(
         self, cyclist_video: Path, video_reader: VideoReader
@@ -57,3 +58,48 @@ class TestPyAVVideoReader:
         streaming_frame = expected_frames[frame_num]
         assert frame.size == streaming_frame.size
         assert ImageChops.difference(frame, streaming_frame).getbbox() is None
+
+    def test_get_total_frames_video_stream_has_no_frame_info(self) -> None:
+        given_video_path = Path("some/path/to/video.mp4")
+        given_video_stream = Mock()
+        given_video_stream.frames = 0
+
+        expected = 120
+        given_metadata = Mock()
+        given_metadata.number_of_frames = expected
+        given_videos_metadata = Mock()
+        given_videos_metadata.get_by_video_name.return_value = given_metadata
+
+        target = PyAvVideoReader(given_videos_metadata)
+        actual = target._get_total_frames(given_video_stream, given_video_path)
+
+        assert actual == expected
+        given_videos_metadata.get_by_video_name.assert_called_once_with(
+            given_video_path.name
+        )
+
+    def test_get_total_frames_video_stream_has_frame_info(self) -> None:
+        expected = 120
+        given_video_path = Path("some/path/to/video.mp4")
+        given_video_stream = Mock()
+        given_video_stream.frames = expected
+        given_videos_metadata = Mock()
+
+        target = PyAvVideoReader(given_videos_metadata)
+        actual = target._get_total_frames(given_video_stream, given_video_path)
+        assert actual == expected
+
+    def test_get_total_frames_video_no_frame_info_available(self) -> None:
+        given_video_path = Path("some/path/to/video.mp4")
+        given_video_stream = Mock()
+        given_video_stream.frames = 0
+        given_videos_metadata = Mock()
+        given_videos_metadata.get_by_video_name.return_value = None
+
+        target = PyAvVideoReader(given_videos_metadata)
+        with pytest.raises(ValueError):
+            target._get_total_frames(given_video_stream, given_video_path)
+
+        given_videos_metadata.get_by_video_name.assert_called_once_with(
+            given_video_path.name
+        )
