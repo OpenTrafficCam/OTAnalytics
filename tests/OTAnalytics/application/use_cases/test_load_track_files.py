@@ -54,12 +54,12 @@ class TestLoadTrackFile:
 
         order = MagicMock()
         order.track_parser = track_parser
+        order.videos_metadata = videos_metadata
         order.track_video_parser = track_video_parser
         order.video_repository = video_repository
         order.track_repository = track_repository
         order.track_to_video_repository = track_to_video_repository
         order.tracks_metadata = tracks_metadata
-        order.videos_metadata = videos_metadata
         load_track_file = LoadTrackFiles(
             track_parser,
             track_video_parser,
@@ -79,11 +79,11 @@ class TestLoadTrackFile:
             call.track_video_parser.parse(
                 some_file, [some_track_id], some_video_metadata
             ),
+            call.videos_metadata.update(some_video_metadata),
             call.video_repository.add_all([some_video]),
             call.track_to_video_repository.add_all([some_track_id], [some_video]),
             call.track_repository.add_all(track_dataset_result),
             call.tracks_metadata.update_detection_classes(
                 detection_metadata.detection_classes
             ),
-            call.videos_metadata.update(some_video_metadata),
         ]

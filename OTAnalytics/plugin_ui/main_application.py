@@ -291,7 +291,7 @@ class ApplicationStarter:
         flow_parser = self._create_flow_parser()
         config_parser = OtConfigParser(
             format_fixer=format_fixer,
-            video_parser=self._create_video_parser(),
+            video_parser=self._create_video_parser(VideosMetadata()),
             flow_parser=flow_parser,
         )
 
@@ -341,7 +341,8 @@ class ApplicationStarter:
         flow_repository = self._create_flow_repository()
         intersection_repository = self._create_intersection_repository()
         event_repository = self._create_event_repository()
-        video_parser = self._create_video_parser()
+        videos_metadata = VideosMetadata()
+        video_parser = self._create_video_parser(videos_metadata)
         video_repository = self._create_video_repository()
         track_to_video_repository = self._create_track_to_video_repository()
         datastore = self._create_datastore(
@@ -369,7 +370,6 @@ class ApplicationStarter:
         section_repository.register_section_changed_observer(
             clear_all_intersections.on_section_changed
         )
-        videos_metadata = VideosMetadata()
         layer_groups, layers = self._create_layers(
             datastore,
             intersection_repository,
@@ -1155,8 +1155,8 @@ class ApplicationStarter:
             videos_metadata,
         )
 
-    def _create_video_parser(self) -> VideoParser:
-        return CachedVideoParser(SimpleVideoParser(PyAvVideoReader()))
+    def _create_video_parser(self, videos_metadata: VideosMetadata) -> VideoParser:
+        return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(videos_metadata)))
 
     def _create_video_repository(self) -> VideoRepository:
         return VideoRepository()
