@@ -281,6 +281,12 @@ class VideosMetadata:
             return metadata
         return None
 
+    def get_by_video_name(self, video_name: str) -> Optional[VideoMetadata]:
+        for metadata in self._metadata.values():
+            if metadata.path == video_name:
+                return metadata
+        return None
+
     @property
     def first_video_start(self) -> Optional[datetime]:
         return self._first_video_start
