@@ -8,6 +8,9 @@ on:
 
 permissions: read-all
 
+env:
+  GH_TOKEN: ${{ secrets.PLATOMO_OTC_TESTDATA_ACCESS }}
+
 jobs:
   regression-test:
     name: Run pytest regression test
@@ -23,8 +26,6 @@ jobs:
           --pattern 'OTCamera19_FR20_2023-05-24_06-00-00_11-45-00.zip' \
           --pattern 'OTCamera19_FR20_2023-05-24_00-00-00.zip' \
           -R platomo/OpenTrafficCam-testdata -D tests/data
-        env:
-          GH_TOKEN: ${{ secrets.PLATOMO_OTC_TESTDATA_ACCESS }}
       - name: Unzip test data
         run: |
           cd tests/data
