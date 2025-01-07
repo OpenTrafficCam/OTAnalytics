@@ -66,6 +66,7 @@ class LoadTrackFiles:
         track_ids, videos = self._track_video_parser.parse(
             file, track_ids, parse_result.video_metadata
         )
+        self._videos_metadata.update(parse_result.video_metadata)
         self._video_repository.add_all(videos)
         self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(parse_result.tracks)
@@ -73,4 +74,3 @@ class LoadTrackFiles:
         self._tracks_metadata.update_detection_classes(
             parse_result.detection_metadata.detection_classes
         )
-        self._videos_metadata.update(parse_result.video_metadata)

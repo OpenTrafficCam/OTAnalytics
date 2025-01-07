@@ -1,5 +1,8 @@
+from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 
+from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
 from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksAssignedToAllFlows,
     TracksIntersectingAllNonCuttingSections,
@@ -11,8 +14,6 @@ from OTAnalytics.application.use_cases.number_of_tracks_to_be_validated import (
     NumberOfTracksToBeValidated,
 )
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackIds
-
-START_OF_CUTTING_SECTION_NAME: str = "#clicut"
 
 
 @dataclass
@@ -27,6 +28,7 @@ class TrackStatistics:
     percentage_inside_not_intersection: float
     percentage_inside_intersecting_but_unassigned: float
     number_of_tracks_to_be_validated: int
+    number_of_tracks_with_simultaneous_section_events: int
 
 
 class CalculateTrackStatistics:
@@ -37,6 +39,7 @@ class CalculateTrackStatistics:
         get_all_track_ids: GetAllTrackIds,
         track_ids_inside_cutting_sections: TrackIdsInsideCuttingSections,
         number_of_tracks_to_be_validated: NumberOfTracksToBeValidated,
+        get_all_enter_section_events: GetAllEnterSectionEvents,
     ) -> None:
         self._intersection_all_non_cutting_sections = (
             intersection_all_non_cutting_sections
@@ -45,6 +48,7 @@ class CalculateTrackStatistics:
         self._get_all_track_ids = get_all_track_ids
         self._track_ids_inside_cutting_sections = track_ids_inside_cutting_sections
         self._number_of_tracks_to_be_validated = number_of_tracks_to_be_validated
+        self._get_all_enter_section_events = get_all_enter_section_events
 
     def get_statistics(self) -> TrackStatistics:
         ids_all = set(self._get_all_track_ids())
@@ -90,7 +94,31 @@ class CalculateTrackStatistics:
             percentage_inside_not_intersection,
             percentage_inside_intersecting_but_unassigned,
             self._number_of_tracks_to_be_validated.calculate(),
+            self.get_number_of_tracks_with_simultaneous_events(),
         )
+
+    def get_number_of_tracks_with_simultaneous_events(self) -> int:
+        # Group events by road_user_id and occurrence
+        event_counts = self._count_simultaneous_events()
+
+        # Count tracks with simultaneous events
+        return sum(
+            1
+            for occurrences in event_counts.values()
+            if any(count > 1 for count in occurrences.values())
+        )
+
+    def _count_simultaneous_events(self) -> dict[str, dict[datetime, int]]:
+        """
+        Count occurrences of events per road user and timestamp.
+        """
+        events = self._get_all_enter_section_events.get()
+        event_counts: dict[str, dict[datetime, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
+        for event in events:
+            event_counts[event.road_user_id][event.occurrence] += 1
+        return event_counts
 
     def __percentage(self, track_count: int, all_tracks: int) -> float:
         if all_tracks == 0:

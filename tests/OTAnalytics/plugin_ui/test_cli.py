@@ -201,7 +201,7 @@ def mock_flow_parser() -> Mock:
 
 @pytest.fixture
 def video_parser() -> VideoParser:
-    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader()))
+    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(VideosMetadata())))
 
 
 @pytest.fixture

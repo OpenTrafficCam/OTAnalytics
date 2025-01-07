@@ -79,7 +79,11 @@ from OTAnalytics.application.use_cases.create_intersection_events import (
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
-from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.event_repository import (
+    AddEvents,
+    ClearAllEvents,
+    GetAllEnterSectionEvents,
+)
 from OTAnalytics.application.use_cases.filter_visualization import (
     CreateDefaultFilterRange,
     EnableFilterTrackByDate,
@@ -287,7 +291,7 @@ class ApplicationStarter:
         flow_parser = self._create_flow_parser()
         config_parser = OtConfigParser(
             format_fixer=format_fixer,
-            video_parser=self._create_video_parser(),
+            video_parser=self._create_video_parser(VideosMetadata()),
             flow_parser=flow_parser,
         )
 
@@ -337,7 +341,8 @@ class ApplicationStarter:
         flow_repository = self._create_flow_repository()
         intersection_repository = self._create_intersection_repository()
         event_repository = self._create_event_repository()
-        video_parser = self._create_video_parser()
+        videos_metadata = VideosMetadata()
+        video_parser = self._create_video_parser(videos_metadata)
         video_repository = self._create_video_repository()
         track_to_video_repository = self._create_track_to_video_repository()
         datastore = self._create_datastore(
@@ -365,7 +370,6 @@ class ApplicationStarter:
         section_repository.register_section_changed_observer(
             clear_all_intersections.on_section_changed
         )
-        videos_metadata = VideosMetadata()
         layer_groups, layers = self._create_layers(
             datastore,
             intersection_repository,
@@ -1151,8 +1155,8 @@ class ApplicationStarter:
             videos_metadata,
         )
 
-    def _create_video_parser(self) -> VideoParser:
-        return CachedVideoParser(SimpleVideoParser(PyAvVideoReader()))
+    def _create_video_parser(self, videos_metadata: VideosMetadata) -> VideoParser:
+        return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(videos_metadata)))
 
     def _create_video_repository(self) -> VideoRepository:
         return VideoRepository()
@@ -1252,10 +1256,12 @@ class ApplicationStarter:
             detection_rate_strategy=detection_rate_strategy,
             metric_rates_builder=metric_rates_builder,
         )
+        get_events = GetAllEnterSectionEvents(event_repository=event_repository)
         return CalculateTrackStatistics(
             tracks_intersecting_all_sections,
             tracks_assigned_to_all_flows,
             get_all_track_ids,
             track_ids_inside_cutting_sections,
             number_of_tracks_to_be_validated,
+            get_events,
         )

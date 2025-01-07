@@ -28,6 +28,7 @@ class TestTrackStatisticsBuilder:
         track_statistics.track_count_inside_assigned = 5
         track_statistics.percentage_inside_assigned = 5.0 / 9
         track_statistics.number_of_tracks_to_be_validated = 23
+        track_statistics.number_of_tracks_with_simultaneous_section_events = 0
 
         result = _builder.build(track_statistics)
 
@@ -43,6 +44,7 @@ class TestTrackStatisticsBuilder:
                 ts.PERCENTAGE_INSIDE_NOT_INTERSECTING: track_statistics.percentage_inside_not_intersection,  # noqa
                 ts.PERCENTAGE_INSIDE_INTERSECTING_BUT_UNASSIGNED: track_statistics.percentage_inside_intersecting_but_unassigned,  # noqa
                 ts.NUMBER_OF_TRACKS_TO_BE_VALIDATED: track_statistics.number_of_tracks_to_be_validated,  # noqa
+                ts.NUMBER_OF_TRACKS_WITH_SIMULTANEOUS_ENTER_SECTION_EVENTS: track_statistics.number_of_tracks_with_simultaneous_section_events,  # noqa
             }
         ]
 
