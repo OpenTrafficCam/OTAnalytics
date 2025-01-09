@@ -63,7 +63,7 @@ class TrackStatisticsExporter(ABC):
         """Hook for implementations to serialize in their respective save format.
 
         Args:
-            dtos (list[dict]): the vehicle flow assignments as dtos.
+            dtos (list[dict]): the track statistics as dtos.
         """
         raise NotImplementedError
 

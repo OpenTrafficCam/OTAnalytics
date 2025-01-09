@@ -760,6 +760,28 @@ class ApplicationStarter:
             flow_repository,
             create_events,
         )
+        get_sections = GetAllSections(section_repository)
+        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
+            get_all_tracks
+        )
+        intersection_repository = self._create_intersection_repository()
+        road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
+        calculate_track_statistics = self._create_calculate_track_statistics(
+            get_sections,
+            tracks_intersecting_sections,
+            get_sections_by_id,
+            intersection_repository,
+            road_user_assigner,
+            event_repository,
+            flow_repository,
+            track_repository,
+            section_repository,
+            get_all_tracks,
+        )
+        track_statistics_export_factory = SimpleTrackStatisticsExporterFactory()
+        export_track_statistics = ExportTrackStatistics(
+            calculate_track_statistics, track_statistics_export_factory
+        )
 
         cli: OTAnalyticsCli
         if run_config.cli_bulk_mode:
@@ -782,6 +804,7 @@ class ApplicationStarter:
                 videos_metadata,
                 export_tracks,
                 export_road_user_assignments,
+                export_track_statistics,
                 track_parser,
                 progressbar=TqdmBuilder(),
             )
@@ -796,6 +819,7 @@ class ApplicationStarter:
                 add_flow,
                 create_events,
                 export_counts,
+                export_track_statistics,
                 provide_available_eventlist_exporter,
                 apply_cli_cuts,
                 add_all_tracks,
