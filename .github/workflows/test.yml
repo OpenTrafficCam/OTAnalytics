@@ -3,25 +3,29 @@ name: Test
 
 on:
   # Run tests each time a PR is opened or changed.
-  # Allow other Workflows (e.g. build workflows) to call this workflow.
+  # Allow other Workflows (e.g., build workflows) to call this workflow.
   pull_request:
   workflow_call:
 
+permissions: read-all
+
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    name: Execute tests across various operating systems and Python versions.
     strategy:
-      fail-fast: True
       matrix:
         os: [ubuntu-latest, windows-latest]
-    permissions:
-      id-token: write
+        py: ["3.11"]
+      fail-fast: true
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Run Python Tests
-        uses: platomo/test-python-app-action@main
+        uses: platomo/test-python-app-action@v1
+        timeout-minutes: 60
         with:
-          py-version: 3.11
-          test_path: OTAnalytics
-          ffmpeg-required: false
+          py-version: ${{ matrix.py }}
+          package-path: OTAnalytics
+          test-path: tests
+          ffmpeg-required: true
