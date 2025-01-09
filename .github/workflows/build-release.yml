@@ -8,6 +8,8 @@ on:
     tags:
       - "v*.*.*.*"
 
+permissions: read-all
+
 jobs:
   test:
     if: endsWith(github.event.base_ref, 'main')
@@ -16,7 +18,9 @@ jobs:
     if: endsWith(github.event.base_ref, 'main')
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
-  create-release:
+  create_release:
+    permissions:
+      contents: write
     needs:
       - test
       - regression-test

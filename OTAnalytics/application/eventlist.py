@@ -24,6 +24,9 @@ from OTAnalytics.domain.track_dataset import (
 )
 from OTAnalytics.domain.types import EventType
 
+AT_START_DETECTION = 0
+AT_END_DETECTION = 1
+
 
 def extract_hostname(name: str) -> str:
     """Extract hostname from name.
@@ -93,6 +96,7 @@ class SceneEventListBuilder:
             key_occurrence=START_OCCURRENCE,
             key_frame=START_FRAME,
             key_video_name=START_VIDEO_NAME,
+            relative_position=AT_START_DETECTION,
         )
         self._events.append(event)
 
@@ -105,6 +109,7 @@ class SceneEventListBuilder:
             key_occurrence=END_OCCURRENCE,
             key_frame=END_FRAME,
             key_video_name=END_VIDEO_NAME,
+            relative_position=AT_END_DETECTION,
         )
         self._events.append(event)
 
@@ -117,6 +122,7 @@ class SceneEventListBuilder:
         key_occurrence: str,
         key_frame: str,
         key_video_name: str,
+        relative_position: float,
     ) -> Event:
         return Event(
             road_user_id=value[track.TRACK_ID],
@@ -126,6 +132,7 @@ class SceneEventListBuilder:
             frame_number=value[key_frame],
             section_id=None,
             event_coordinate=ImageCoordinate(value[key_x], value[key_y]),
+            relative_position=relative_position,
             event_type=event_type,
             direction_vector=calculate_direction_vector(
                 value[START_X],

@@ -187,6 +187,7 @@ def create_expected_leave_scene_events(track: Track) -> list[Event]:
             event_coordinate=ImageCoordinate(
                 track.last_detection.x, track.last_detection.y
             ),
+            relative_position=1.0,
             event_type=EventType.LEAVE_SCENE,
             direction_vector=calculate_direction_vector(
                 track.detections[-2].x,
@@ -211,6 +212,7 @@ def create_expected_enter_scene_events(track: Track) -> list[Event]:
             event_coordinate=ImageCoordinate(
                 track.first_detection.x, track.first_detection.y
             ),
+            relative_position=0.0,
             event_type=EventType.ENTER_SCENE,
             direction_vector=calculate_direction_vector(
                 track.first_detection.x,

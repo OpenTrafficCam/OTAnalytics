@@ -8,13 +8,17 @@ on:
     branches:
       - main
 
+permissions: read-all
+
 jobs:
   test:
     uses: './.github/workflows/test.yml'
   regression-test:
     uses: './.github/workflows/regression-test.yml'
     secrets: inherit
-  create-nightly:
+  create_nightly:
+    permissions:
+      contents: write
     needs:
       - test
       - regression-test

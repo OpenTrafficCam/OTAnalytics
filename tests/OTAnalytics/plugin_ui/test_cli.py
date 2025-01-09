@@ -26,8 +26,13 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import TrackParser, VideoParser
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
-from OTAnalytics.application.parser.cli_parser import CliArguments, CliParseError
+from OTAnalytics.application.parser.cli_parser import (
+    CliArguments,
+    CliMode,
+    CliParseError,
+)
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.run_configuration import RunConfiguration
@@ -101,6 +106,11 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 from OTAnalytics.plugin_parser.road_user_assignment_export import (
     SimpleRoadUserAssignmentExporterFactory,
 )
+from OTAnalytics.plugin_parser.streaming_parser import (
+    PythonStreamDetectionParser,
+    StreamOttrkParser,
+    StreamTrackParser,
+)
 from OTAnalytics.plugin_parser.track_export import CsvTrackExport
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
@@ -109,7 +119,9 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
 )
 from OTAnalytics.plugin_ui.cli import (
     InvalidSectionFileType,
+    OTAnalyticsBulkCli,
     OTAnalyticsCli,
+    OTAnalyticsStreamCli,
     SectionsFileDoesNotExist,
 )
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
@@ -160,7 +172,7 @@ def temp_otconfig(
     test_data_tmp_dir: Path, otconfig_file: Path, ottrk_path: Path, cyclist_video: Path
 ) -> YieldFixture[Path]:
     temp_dir = test_data_tmp_dir / "temp_otconfig"
-    temp_dir.mkdir(parents=True)
+    temp_dir.mkdir(parents=True, exist_ok=True)
     temp_otconfig = temp_dir / otconfig_file.name
     temp_ottrk = temp_dir / ottrk_path.name
     temp_video = temp_dir / cyclist_video.name
@@ -189,7 +201,7 @@ def mock_flow_parser() -> Mock:
 
 @pytest.fixture
 def video_parser() -> VideoParser:
-    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader()))
+    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(VideosMetadata())))
 
 
 @pytest.fixture
@@ -208,6 +220,8 @@ def config_parser(
 def create_run_config(
     flow_parser: FlowParser,
     start_cli: bool = True,
+    cli_mode: CliMode = CliMode.BULK,
+    cli_chunk_size: int = 5,
     debug: bool = False,
     config_file: str = CONFIG_FILE,
     track_files: list[str] | None = None,
@@ -236,6 +250,8 @@ def create_run_config(
         track_files = [TRACK_FILE]
     cli_args = CliArguments(
         start_cli=start_cli,
+        cli_mode=cli_mode,
+        cli_chunk_size=cli_chunk_size,
         debug=debug,
         logfile_overwrite=logfile_overwrite,
         track_export=track_export,
@@ -273,10 +289,23 @@ class TestOTAnalyticsCli:
     PROGRESSBAR: str = "progressbar"
     EXPORT_ROAD_USER_ASSIGNMENT: str = "export_road_user_assignments"
 
+    def init_cli_with(
+        self,
+        mode: CliMode,
+        cli_bulk_dependencies: dict[str, Any],
+        cli_stream_dependencies: dict[str, Any],
+        run_config: RunConfiguration,
+    ) -> OTAnalyticsCli:
+        cli: OTAnalyticsCli
+        if mode == CliMode.STREAM:
+            cli = OTAnalyticsStreamCli(run_config, **cli_stream_dependencies)
+        else:
+            cli = OTAnalyticsBulkCli(run_config, **cli_bulk_dependencies)
+        return cli
+
     @pytest.fixture
     def mock_cli_dependencies(self) -> dict[str, Any]:
         return {
-            self.TRACK_PARSER: Mock(spec=TrackParser),
             self.EVENT_REPOSITORY: Mock(spec=EventRepository),
             self.ADD_SECTION: Mock(spec=AddSection),
             self.GET_ALL_SECTIONS: Mock(spec=GetAllSections),
@@ -291,8 +320,121 @@ class TestOTAnalyticsCli:
             self.CLEAR_ALL_TRACKS: Mock(spec=ClearAllTracks),
             self.TRACKS_METADATA: Mock(spec=TracksMetadata),
             self.VIDEOS_METADATA: Mock(spec=VideosMetadata),
-            self.PROGRESSBAR: Mock(spec=NoProgressbarBuilder),
             self.EXPORT_ROAD_USER_ASSIGNMENT: Mock(spec=ExportRoadUserAssignments),
+        }
+
+    @pytest.fixture
+    def mock_cli_stream_dependencies(
+        self, mock_cli_dependencies: dict[str, Any]
+    ) -> dict[str, Any]:
+        return {
+            self.TRACK_PARSER: Mock(spec=StreamTrackParser),
+            **mock_cli_dependencies,
+        }
+
+    @pytest.fixture
+    def mock_cli_bulk_dependencies(
+        self, mock_cli_dependencies: dict[str, Any]
+    ) -> dict[str, Any]:
+        return {
+            self.PROGRESSBAR: Mock(spec=NoProgressbarBuilder),
+            self.TRACK_PARSER: Mock(spec=TrackParser),
+            **mock_cli_dependencies,
+        }
+
+    def cli_dependencies_old(self) -> dict[str, Any]:
+        track_repository = TrackRepository(
+            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+        )
+        section_repository = SectionRepository()
+        event_repository = EventRepository()
+        flow_repository = FlowRepository()
+        add_events = AddEvents(event_repository)
+
+        get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
+            track_repository
+        )
+        get_all_tracks = GetAllTracks(track_repository)
+        get_all_track_ids = GetAllTrackIds(track_repository)
+        add_all_tracks = AddAllTracks(track_repository)
+        clear_all_tracks = ClearAllTracks(track_repository)
+
+        clear_all_events = ClearAllEvents(event_repository)
+        create_intersection_events = SimpleCreateIntersectionEvents(
+            BatchedTracksRunIntersect(
+                MultiprocessingIntersectParallelization(),
+                get_all_tracks,
+            ),
+            section_repository.get_all,
+            add_events,
+        )
+        cut_tracks = SimpleCutTracksIntersectingSection(
+            GetSectionsById(section_repository),
+            get_all_tracks,
+            add_all_tracks,
+            RemoveTracks(track_repository),
+            RemoveSection(section_repository),
+        )
+        apply_cli_cuts = ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
+        create_scene_events = SimpleCreateSceneEvents(
+            get_tracks_without_single_detections,
+            SceneActionDetector(),
+            add_events,
+        )
+        create_events = CreateEvents(
+            clear_all_events, create_intersection_events, create_scene_events
+        )
+        assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
+        export_counts = ExportTrafficCounting(
+            event_repository,
+            flow_repository,
+            GetSectionsById(section_repository),
+            create_events,
+            assigner,
+            SimpleTaggerFactory(),
+            FillZerosExporterFactory(
+                AddSectionInformationExporterFactory(SimpleExporterFactory())
+            ),
+        )
+        tracks_metadata = TracksMetadata(track_repository)
+        videos_metadata = VideosMetadata()
+        export_tracks = CsvTrackExport(
+            track_repository, tracks_metadata, videos_metadata
+        )
+        export_road_user_assignments = ExportRoadUserAssignments(
+            event_repository=event_repository,
+            flow_repository=flow_repository,
+            create_events=create_events,
+            assigner=assigner,
+            exporter_factory=SimpleRoadUserAssignmentExporterFactory(
+                section_repository, get_all_tracks
+            ),
+        )
+        return {
+            self.TRACK_PARSER: OttrkParser(
+                PythonDetectionParser(
+                    ByMaxConfidence(),
+                    track_repository,
+                    PygeosTrackGeometryDataset.from_track_dataset,
+                    DEFAULT_TRACK_LENGTH_LIMIT,
+                ),
+            ),
+            self.EVENT_REPOSITORY: event_repository,
+            self.ADD_SECTION: AddSection(section_repository),
+            self.GET_ALL_SECTIONS: GetAllSections(section_repository),
+            self.ADD_FLOW: AddFlow(flow_repository),
+            self.CREATE_EVENTS: create_events,
+            self.EXPORT_COUNTS: export_counts,
+            self.EXPORT_TRACKS: export_tracks,
+            self.PROVIDE_EVENTLIST_EXPORTER: provide_available_eventlist_exporter,
+            self.APPLY_CLI_CUTS: apply_cli_cuts,
+            self.ADD_ALL_TRACKS: add_all_tracks,
+            self.GET_ALL_TRACK_IDS: get_all_track_ids,
+            self.CLEAR_ALL_TRACKS: clear_all_tracks,
+            self.TRACKS_METADATA: tracks_metadata,
+            self.VIDEOS_METADATA: videos_metadata,
+            self.PROGRESSBAR: NoProgressbarBuilder(),
+            self.EXPORT_ROAD_USER_ASSIGNMENT: export_road_user_assignments,
         }
 
     @pytest.fixture
@@ -345,7 +487,7 @@ class TestOTAnalyticsCli:
             GetSectionsById(section_repository),
             create_events,
             assigner,
-            SimpleTaggerFactory(track_repository),
+            SimpleTaggerFactory(),
             FillZerosExporterFactory(
                 AddSectionInformationExporterFactory(SimpleExporterFactory())
             ),
@@ -365,14 +507,6 @@ class TestOTAnalyticsCli:
             ),
         )
         return {
-            self.TRACK_PARSER: OttrkParser(
-                PythonDetectionParser(
-                    ByMaxConfidence(),
-                    track_repository,
-                    PygeosTrackGeometryDataset.from_track_dataset,
-                    DEFAULT_TRACK_LENGTH_LIMIT,
-                ),
-            ),
             self.EVENT_REPOSITORY: event_repository,
             self.ADD_SECTION: AddSection(section_repository),
             self.GET_ALL_SECTIONS: GetAllSections(section_repository),
@@ -387,61 +521,199 @@ class TestOTAnalyticsCli:
             self.CLEAR_ALL_TRACKS: clear_all_tracks,
             self.TRACKS_METADATA: tracks_metadata,
             self.VIDEOS_METADATA: videos_metadata,
-            self.PROGRESSBAR: NoProgressbarBuilder(),
             self.EXPORT_ROAD_USER_ASSIGNMENT: export_road_user_assignments,
         }
 
+    @pytest.fixture
+    def cli_stream_dependencies(
+        self, cli_dependencies: dict[str, Any]
+    ) -> dict[str, Any]:
+        dependencies = cli_dependencies
+        tracks_metadata = dependencies[self.TRACKS_METADATA]
+        videos_metadata = dependencies[self.VIDEOS_METADATA]
+        return {
+            self.TRACK_PARSER: StreamOttrkParser(
+                PythonStreamDetectionParser(
+                    ByMaxConfidence(), DEFAULT_TRACK_LENGTH_LIMIT
+                ),
+                registered_tracks_metadata=[tracks_metadata],
+                registered_videos_metadata=[videos_metadata],
+                chunk_size=2,
+            ),
+            **dependencies,
+        }
+
+    @pytest.fixture
+    def cli_bulk_dependencies(self, cli_dependencies: dict[str, Any]) -> dict[str, Any]:
+        dependencies = cli_dependencies
+        tracks_metadata: TracksMetadata = dependencies[self.TRACKS_METADATA]
+
+        return {
+            self.TRACK_PARSER: OttrkParser(
+                PythonDetectionParser(
+                    ByMaxConfidence(),
+                    tracks_metadata._track_repository,
+                    PygeosTrackGeometryDataset.from_track_dataset,
+                    DEFAULT_TRACK_LENGTH_LIMIT,
+                ),
+            ),
+            self.PROGRESSBAR: NoProgressbarBuilder(),
+            **dependencies,
+        }
+
+    @pytest.fixture
+    def init_bulk_cli(
+        self, cli_bulk_dependencies: dict[str, Any], run_config: RunConfiguration
+    ) -> tuple[OTAnalyticsBulkCli, dict[str, Any]]:
+        dependencies = cli_bulk_dependencies  # self.cli_bulk_dependencies()
+        return (
+            OTAnalyticsBulkCli(run_config, **dependencies),
+            dependencies,
+        )
+
+    @pytest.fixture
+    def init_stream_cli(
+        self,
+        cli_stream_dependencies: dict[str, Any],
+        run_config: RunConfiguration,
+    ) -> tuple[OTAnalyticsStreamCli, dict[str, Any]]:
+        dependencies = cli_stream_dependencies
+        return (
+            OTAnalyticsStreamCli(run_config, **dependencies),
+            dependencies,
+        )
+
+    @pytest.fixture
+    def init_bulk_cli_mock(
+        self, mock_cli_bulk_dependencies: dict[str, Any], run_config: RunConfiguration
+    ) -> tuple[OTAnalyticsBulkCli, dict[str, Any]]:
+        dependencies = mock_cli_bulk_dependencies
+        return (
+            OTAnalyticsBulkCli(run_config, **dependencies),
+            dependencies,
+        )
+
+    @pytest.fixture
+    def init_stream_cli_mock(
+        self, mock_cli_stream_dependencies: dict[str, Any], run_config: RunConfiguration
+    ) -> tuple[OTAnalyticsStreamCli, dict[str, Any]]:
+        dependencies = mock_cli_stream_dependencies
+        return (
+            OTAnalyticsStreamCli(run_config, **dependencies),
+            dependencies,
+        )
+
+    @pytest.mark.parametrize(
+        "mode",
+        [CliMode.STREAM, CliMode.BULK],
+    )
     def test_init(
-        self, mock_cli_dependencies: dict[str, Any], mock_flow_parser: FlowParser
+        self,
+        mode: CliMode,
+        mock_flow_parser: FlowParser,
+        mock_cli_stream_dependencies: dict[str, Any],
+        mock_cli_bulk_dependencies: dict[str, Any],
     ) -> None:
-        run_config = create_run_config(mock_flow_parser)
-        cli = OTAnalyticsCli(run_config, **mock_cli_dependencies)
+        run_config = create_run_config(mock_flow_parser, cli_mode=mode)
+
+        # cant use self.init_cli_with since setting  _track_parser
+        # requires knowing more specific type of cli object
+        cli: OTAnalyticsCli
+        if mode == CliMode.STREAM:
+            cli = OTAnalyticsStreamCli(run_config, **mock_cli_stream_dependencies)
+            expected_dependencies = mock_cli_stream_dependencies
+            assert cli._track_parser == expected_dependencies[self.TRACK_PARSER]
+        else:
+            cli = OTAnalyticsBulkCli(run_config, **mock_cli_bulk_dependencies)
+            expected_dependencies = mock_cli_bulk_dependencies
+            assert cli._track_parser == expected_dependencies[self.TRACK_PARSER]
+
         assert cli._run_config == run_config
-        assert cli._track_parser == mock_cli_dependencies[self.TRACK_PARSER]
-        assert cli._add_section == mock_cli_dependencies[self.ADD_SECTION]
-        assert cli._get_all_sections == mock_cli_dependencies[self.GET_ALL_SECTIONS]
-        assert cli._add_flow == mock_cli_dependencies[self.ADD_FLOW]
-        assert cli._create_events == mock_cli_dependencies[self.CREATE_EVENTS]
-        assert cli._export_counts == mock_cli_dependencies[self.EXPORT_COUNTS]
-        assert cli._export_tracks == mock_cli_dependencies[self.EXPORT_TRACKS]
-        assert cli._apply_cli_cuts == mock_cli_dependencies[self.APPLY_CLI_CUTS]
-        assert cli._add_all_tracks == mock_cli_dependencies[self.ADD_ALL_TRACKS]
-        assert cli._clear_all_tracks == mock_cli_dependencies[self.CLEAR_ALL_TRACKS]
-        assert cli._tracks_metadata == mock_cli_dependencies[self.TRACKS_METADATA]
-        assert cli._videos_metadata == mock_cli_dependencies[self.VIDEOS_METADATA]
-        assert cli._progressbar == mock_cli_dependencies[self.PROGRESSBAR]
+        assert cli._add_section == expected_dependencies[self.ADD_SECTION]
+        assert cli._get_all_sections == expected_dependencies[self.GET_ALL_SECTIONS]
+        assert cli._add_flow == expected_dependencies[self.ADD_FLOW]
+        assert cli._create_events == expected_dependencies[self.CREATE_EVENTS]
+        assert cli._export_counts == expected_dependencies[self.EXPORT_COUNTS]
+        assert cli._export_tracks == expected_dependencies[self.EXPORT_TRACKS]
+        assert cli._apply_cli_cuts == expected_dependencies[self.APPLY_CLI_CUTS]
+        assert cli._add_all_tracks == expected_dependencies[self.ADD_ALL_TRACKS]
+        assert cli._clear_all_tracks == expected_dependencies[self.CLEAR_ALL_TRACKS]
+        assert cli._tracks_metadata == expected_dependencies[self.TRACKS_METADATA]
+        assert cli._videos_metadata == expected_dependencies[self.VIDEOS_METADATA]
+
         assert (
             cli._export_road_user_assignments
-            == mock_cli_dependencies[self.EXPORT_ROAD_USER_ASSIGNMENT]
+            == expected_dependencies[self.EXPORT_ROAD_USER_ASSIGNMENT]
         )
 
-    def test_init_empty_tracks_cli_arg(
-        self, mock_cli_dependencies: dict[str, Any], mock_flow_parser: FlowParser
-    ) -> None:
-        run_config = create_run_config(mock_flow_parser, track_files=[])
-        with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
-            OTAnalyticsCli(run_config, **mock_cli_dependencies)
+        if isinstance(cli, OTAnalyticsBulkCli):
+            assert cli._progressbar == expected_dependencies[self.PROGRESSBAR]
 
+    @pytest.mark.parametrize(
+        "mode",
+        [CliMode.STREAM, CliMode.BULK],
+    )
+    def test_init_empty_tracks_cli_arg(
+        self,
+        mode: CliMode,
+        mock_cli_bulk_dependencies: dict[str, Any],
+        mock_cli_stream_dependencies: dict[str, Any],
+        mock_flow_parser: FlowParser,
+    ) -> None:
+        run_config = create_run_config(mock_flow_parser, track_files=[], cli_mode=mode)
+
+        with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
+            self.init_cli_with(
+                mode,
+                mock_cli_bulk_dependencies,
+                mock_cli_stream_dependencies,
+                run_config,
+            )
+
+    @pytest.mark.parametrize(
+        "mode",
+        [CliMode.STREAM, CliMode.BULK],
+    )
     def test_init_no_otflow_and_otconfig_file_present(
-        self, mock_cli_dependencies: dict[str, Any], mock_flow_parser: FlowParser
+        self,
+        mode: CliMode,
+        mock_cli_stream_dependencies: dict[str, Any],
+        mock_cli_bulk_dependencies: dict[str, Any],
+        mock_flow_parser: FlowParser,
     ) -> None:
         run_config = create_run_config(
-            mock_flow_parser, config_file="", sections_file=""
+            mock_flow_parser, config_file="", sections_file="", cli_mode=mode
         )
         expected_error_msg = "No otflow or otconfig file passed.*"
-        with pytest.raises(CliParseError, match=expected_error_msg):
-            OTAnalyticsCli(run_config, **mock_cli_dependencies)
 
-    def test_validate_cli_args_no_tracks(self, mock_flow_parser: FlowParser) -> None:
-        run_config = create_run_config(mock_flow_parser, track_files=[])
+        with pytest.raises(CliParseError, match=expected_error_msg):
+            self.init_cli_with(
+                mode,
+                mock_cli_bulk_dependencies,
+                mock_cli_stream_dependencies,
+                run_config,
+            )
+
+    @pytest.mark.parametrize(
+        "mode",
+        [CliMode.STREAM, CliMode.BULK],
+    )
+    def test_validate_cli_args_no_tracks(
+        self, mode: CliMode, mock_flow_parser: FlowParser
+    ) -> None:
+        run_config = create_run_config(mock_flow_parser, track_files=[], cli_mode=mode)
         with pytest.raises(CliParseError, match=r"No ottrk files passed.*"):
             OTAnalyticsCli._validate_cli_args(run_config)
 
+    @pytest.mark.parametrize(
+        "mode",
+        [CliMode.STREAM, CliMode.BULK],
+    )
     def test_validate_cli_args_no_otflow_and_otconfig(
-        self, mock_flow_parser: FlowParser
+        self, mode: CliMode, mock_flow_parser: FlowParser
     ) -> None:
         run_config = create_run_config(
-            mock_flow_parser, config_file="", sections_file=""
+            mock_flow_parser, config_file="", sections_file="", cli_mode=mode
         )
         expected_error_msg = "No otflow or otconfig file passed.*"
         with pytest.raises(CliParseError, match=expected_error_msg):
@@ -510,12 +782,18 @@ class TestOTAnalyticsCli:
         with pytest.raises(InvalidSectionFileType):
             OTAnalyticsCli._get_sections_file(str(section_with_wrong_filetype))
 
+    @pytest.mark.parametrize(
+        "mode",
+        [CliMode.STREAM, CliMode.BULK],
+    )
     def test_start_with_no_video_in_folder(
         self,
+        mode: CliMode,
         test_data_tmp_dir: Path,
         temp_ottrk: Path,
         temp_section: Path,
-        cli_dependencies: dict[str, Any],
+        cli_bulk_dependencies: dict[str, Any],
+        cli_stream_dependencies: dict[str, Any],
         flow_parser: FlowParser,
     ) -> None:
         save_name = test_data_tmp_dir / "stem"
@@ -529,8 +807,13 @@ class TestOTAnalyticsCli:
             save_name=str(save_name),
             save_suffix=save_suffix,
             count_intervals=[count_interval],
+            cli_mode=mode,
         )
-        cli = OTAnalyticsCli(run_config, **cli_dependencies)
+
+        cli = self.init_cli_with(
+            mode, cli_bulk_dependencies, cli_stream_dependencies, run_config
+        )
+
         cli.start()
         expected_event_list_file = save_name.with_name(
             f"stem_{save_suffix}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
@@ -543,10 +826,16 @@ class TestOTAnalyticsCli:
         assert expected_event_list_file.exists()
         assert expected_counts_file.exists()
 
+    @pytest.mark.parametrize(
+        "mode",
+        [CliMode.STREAM, CliMode.BULK],
+    )
     def test_use_video_start_and_end_for_counting(
         self,
+        mode: CliMode,
         test_data_tmp_dir: Path,
-        mock_cli_dependencies: dict[str, Mock],
+        mock_cli_stream_dependencies: dict[str, Mock],
+        mock_cli_bulk_dependencies: dict[str, Mock],
     ) -> None:
         section_1 = Mock()
         section_1.id = SectionId("Section 1")
@@ -568,19 +857,31 @@ class TestOTAnalyticsCli:
             f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}."
             f"{DEFAULT_COUNTS_FILE_TYPE}"
         )
-        mock_cli_dependencies[self.GET_ALL_TRACK_IDS].return_value = [TrackId("1")]
-        mock_cli_dependencies[self.VIDEOS_METADATA].first_video_start = start_date
-        mock_cli_dependencies[self.VIDEOS_METADATA].last_video_end = end_date
-        mock_cli_dependencies[
-            self.TRACKS_METADATA
-        ].filtered_detection_classifications = classifications
+
+        if mode == CliMode.STREAM:
+            dependencies = mock_cli_stream_dependencies
+        else:
+            dependencies = mock_cli_bulk_dependencies
+
+        dependencies[self.GET_ALL_TRACK_IDS].return_value = [TrackId("1")]
+        dependencies[self.VIDEOS_METADATA].first_video_start = start_date
+        dependencies[self.VIDEOS_METADATA].last_video_end = end_date
+        dependencies[self.TRACKS_METADATA].filtered_detection_classifications = (
+            classifications
+        )
 
         run_config = Mock()
         run_config.count_intervals = {interval}
-        cli = OTAnalyticsCli(run_config, **mock_cli_dependencies)
-        cli._do_export_counts(test_data_tmp_dir / filename)
 
-        export_counts = mock_cli_dependencies[self.EXPORT_COUNTS]
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode,
+            dependencies,
+            dependencies,
+            run_config,
+        )
+
+        cli._do_export_counts(test_data_tmp_dir / filename, OVERWRITE)
+        export_counts = dependencies[self.EXPORT_COUNTS]
 
         expected_specification = CountingSpecificationDto(
             start=start_date,
@@ -589,18 +890,27 @@ class TestOTAnalyticsCli:
             modes=list(classifications),
             output_format="CSV",
             output_file=str(expected_output_file),
+            export_mode=OVERWRITE,
         )
         export_counts.export.assert_called_with(specification=expected_specification)
 
+    @pytest.mark.parametrize(
+        "mode",
+        [CliMode.STREAM, CliMode.BULK],
+    )
     def test_cli_with_otconfig_has_expected_output_files(
         self,
-        cli_dependencies: dict[str, Any],
+        mode: CliMode,
+        cli_stream_dependencies: dict[str, Any],
+        cli_bulk_dependencies: dict[str, Any],
         flow_parser: FlowParser,
         config_parser: ConfigParser,
         temp_otconfig: Path,
     ) -> None:
         cli_args = CliArguments(
             start_cli=True,
+            cli_mode=mode,
+            cli_chunk_size=2,
             debug=False,
             logfile_overwrite=False,
             track_export=False,
@@ -608,7 +918,13 @@ class TestOTAnalyticsCli:
         )
         otconfig = config_parser.parse(temp_otconfig)
         run_config = RunConfiguration(flow_parser, cli_args, otconfig)
-        cli = OTAnalyticsCli(run_config, **cli_dependencies)
+
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode,
+            cli_bulk_dependencies,
+            cli_stream_dependencies,
+            run_config,
+        )
 
         cli.start()
         for event_format in run_config.event_formats:
@@ -624,37 +940,57 @@ class TestOTAnalyticsCli:
             )
             assert expected_counts_file.is_file()
 
-    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._run_analysis")
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._prepare_analysis")
     @patch("OTAnalytics.plugin_ui.cli.logger")
+    @pytest.mark.parametrize(
+        "mode",
+        [CliMode.STREAM, CliMode.BULK],
+    )
     def test_exceptions_are_being_logged(
         self,
         get_logger: Mock,
         mock_run_analysis: Mock,
-        mock_cli_dependencies: dict[str, Mock],
+        mode: CliMode,
+        mock_cli_bulk_dependencies: dict[str, Mock],
+        mock_cli_stream_dependencies: dict[str, Mock],
     ) -> None:
         exception = Exception("My Exception")
         mock_run_analysis.side_effect = exception
         logger = Mock()
         get_logger.return_value = logger
 
-        cli = OTAnalyticsCli(Mock(), **mock_cli_dependencies)
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode,
+            mock_cli_bulk_dependencies,
+            mock_cli_stream_dependencies,
+            Mock(),
+        )
+
         cli.start()
         logger.exception.assert_called_once_with(exception, exc_info=True)
         mock_run_analysis.assert_called_once()
 
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._do_export_counts")
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._export_events")
-    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._parse_tracks")
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsBulkCli._parse_tracks")
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._add_sections")
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._add_flows")
+    @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsStreamCli._parse_track_stream")
+    @pytest.mark.parametrize(
+        "mode",
+        [CliMode.STREAM, CliMode.BULK],
+    )
     def test_run_analysis(
         self,
+        mock_parse_track_stream: Mock,
         mock_add_flows: Mock,
         mock_add_sections: Mock,
         mock_parse_tracks: Mock,
         mock_export_events: Mock,
         mock_do_export_counts: Mock,
-        mock_cli_dependencies: dict[str, Mock],
+        mode: CliMode,
+        mock_cli_stream_dependencies: dict[str, Mock],
+        mock_cli_bulk_dependencies: dict[str, Mock],
     ) -> None:
         run_config = Mock()
         type(run_config).do_events = PropertyMock(return_value=True)
@@ -666,25 +1002,56 @@ class TestOTAnalyticsCli:
         second_track_file = Path("path/to/b.ottrk")
         sections = [Mock()]
         flows = [Mock()]
+        tracks = [Mock()]
+        mock_parse_track_stream.return_value = tracks
 
-        mock_cli_dependencies[self.GET_ALL_SECTIONS].return_value = sections
+        type(run_config).sections = PropertyMock(return_value=sections)
 
-        cli = OTAnalyticsCli(run_config, **mock_cli_dependencies)
-        cli._run_analysis({second_track_file, first_track_file}, sections, flows)
+        if mode == CliMode.STREAM:
+            dependencies = mock_cli_stream_dependencies
+            dependencies[self.GET_ALL_SECTIONS].return_value = sections
+        else:
+            dependencies = mock_cli_bulk_dependencies
+            dependencies[self.GET_ALL_SECTIONS].return_value = sections
 
-        mock_cli_dependencies[self.CLEAR_ALL_TRACKS].assert_called_once()
-        mock_cli_dependencies[self.EVENT_REPOSITORY].clear.assert_called_once()
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode,
+            dependencies,
+            dependencies,
+            run_config,
+        )
+
+        cli._prepare_analysis(sections, flows)
+        cli._run_analysis({second_track_file, first_track_file})
+        cli._export_analysis(sections, OVERWRITE)
+
         mock_add_flows.assert_called_once_with(flows)
         mock_add_sections.assert_called_once_with(sections)
-        mock_parse_tracks.assert_called_once_with([first_track_file, second_track_file])
-        mock_cli_dependencies[self.GET_ALL_SECTIONS].assert_called_once()
-        mock_cli_dependencies[self.APPLY_CLI_CUTS].apply.assert_called_once_with(
-            sections, preserve_cutting_sections=False
-        )
-        mock_cli_dependencies[self.CREATE_EVENTS].assert_called_once()
+
+        dependencies[self.GET_ALL_SECTIONS].assert_called_once()
+        dependencies[self.CREATE_EVENTS].assert_called_once()
         mock_export_events.assert_called_once_with(
-            sections, run_config.save_dir / run_config.save_name
+            sections, run_config.save_dir / run_config.save_name, OVERWRITE
         )
         mock_do_export_counts.assert_called_once_with(
-            run_config.save_dir / run_config.save_name
+            run_config.save_dir / run_config.save_name, OVERWRITE
         )
+
+        if mode == CliMode.STREAM:
+            mock_parse_track_stream.assert_called_once_with(
+                {second_track_file, first_track_file}
+            )
+            dependencies[self.CLEAR_ALL_TRACKS].assert_called()
+            dependencies[self.EVENT_REPOSITORY].clear.assert_called()
+            dependencies[self.APPLY_CLI_CUTS].apply.assert_called_once_with(
+                sections, preserve_cutting_sections=True
+            )
+        else:
+            mock_parse_tracks.assert_called_once_with(
+                [first_track_file, second_track_file]
+            )
+            dependencies[self.CLEAR_ALL_TRACKS].assert_called_once()
+            dependencies[self.EVENT_REPOSITORY].clear.assert_called_once()
+            dependencies[self.APPLY_CLI_CUTS].apply.assert_called_once_with(
+                sections, preserve_cutting_sections=False
+            )

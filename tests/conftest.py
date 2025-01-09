@@ -369,6 +369,7 @@ def first_road_user_assignment(
 ) -> RoadUserAssignment:
     return RoadUserAssignment(
         "Road User 1",
+        "car",
         first_flow,
         EventPair(first_section_event, second_section_event),
     )
@@ -380,6 +381,7 @@ def second_road_user_assignment(
 ) -> RoadUserAssignment:
     return RoadUserAssignment(
         "Road User 2",
+        "bike",
         first_flow,
         EventPair(first_section_event, second_section_event),
     )

@@ -296,10 +296,18 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         projection: Any,
     ) -> tuple[TrackId, SectionId, IntersectionPoint]:
         dist = line_locate_point(track_geom, point)
+        upper_index = bisect(projection, dist)
+        lower_index = upper_index - 1
+        lower_distance = projection[lower_index]
+        upper_distance = projection[upper_index]
+        relative_position = (dist - lower_distance) / (upper_distance - lower_distance)
         return (
             TrackId(track_id),
             section_id,
-            IntersectionPoint(bisect(projection, dist)),
+            IntersectionPoint(
+                upper_index=upper_index,
+                relative_position=relative_position,
+            ),
         )
 
     def contained_by_sections(

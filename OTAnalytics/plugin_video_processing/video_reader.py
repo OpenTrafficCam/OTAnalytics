@@ -7,9 +7,11 @@ import av
 import numpy
 from av import VideoFrame
 from av.container import InputContainer
+from av.video.stream import VideoStream
 from numpy import ndarray
 from PIL import Image
 
+from OTAnalytics.application.state import VideosMetadata
 from OTAnalytics.domain.track import PilImage, TrackImage
 from OTAnalytics.domain.video import InvalidVideoError, VideoReader
 
@@ -48,6 +50,10 @@ def rotate(array: ndarray, side_data: dict) -> ndarray:
 
 
 class PyAvVideoReader(VideoReader):
+
+    def __init__(self, videos_metadata: VideosMetadata) -> None:
+        self._videos_metadata = videos_metadata
+
     def get_fps(self, video_path: Path) -> float:
         with self.__get_clip(video_path) as container:
             rate = self.__get_fps(container, video_path)
@@ -77,12 +83,16 @@ class PyAvVideoReader(VideoReader):
         """
         return self._read_frame(frame_number, video_path)
 
-    def _read_frame(self, frame_to_read: int, video_path: Path) -> PilImage:
+    def _read_frame(
+        self,
+        frame_to_read: int,
+        video_path: Path,
+    ) -> PilImage:
         with self.__get_clip(video_path) as container:
             if len(container.streams.video) <= 0:
                 raise InvalidVideoError(f"{str(video_path)} is not a video")
             video = container.streams.video[0]
-            max_frames = video.frames
+            max_frames = self._get_total_frames(video, video_path)
             frame_to_read = min(frame_to_read, max_frames - OFFSET)
             framerate = self.__get_fps(container, video_path)
             time_base = (
@@ -92,6 +102,13 @@ class PyAvVideoReader(VideoReader):
             frame = self._decode_frame(container, frame_to_read, framerate, time_base)
             side_data = container.streams.video[0].side_data
         return av_to_image(frame, side_data)
+
+    def _get_total_frames(self, video_stream: VideoStream, video_path: Path) -> int:
+        if frames := video_stream.frames:
+            return frames
+        if metadata := self._videos_metadata.get_by_video_name(video_path.name):
+            return metadata.number_of_frames
+        raise ValueError(f"Could not read total frames from {str(video_path)}")
 
     def _decode_frame(
         self,

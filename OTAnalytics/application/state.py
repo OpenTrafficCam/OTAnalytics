@@ -244,7 +244,8 @@ class Plotter(ABC):
 
 class VideosMetadata:
     def __init__(self) -> None:
-        self._metadata: dict[datetime, VideoMetadata] = {}
+        self._metadata_by_date: dict[datetime, VideoMetadata] = {}
+        self._metadata_by_name: dict[str, VideoMetadata] = {}
         self._first_video_start: Optional[datetime] = None
         self._last_video_end: Optional[datetime] = None
 
@@ -252,12 +253,13 @@ class VideosMetadata:
         """
         Update the stored metadata.
         """
-        if metadata.start in self._metadata.keys():
+        if metadata.start in self._metadata_by_date.keys():
             raise ValueError(
                 f"metadata with start date {metadata.start} already exists."
             )
-        self._metadata[metadata.start] = metadata
-        self._metadata = dict(sorted(self._metadata.items()))
+        self._metadata_by_date[metadata.start] = metadata
+        self._metadata_by_name[metadata.path] = metadata
+        self._metadata_by_date = dict(sorted(self._metadata_by_date.items()))
         self._update_start_end_by(metadata)
 
     def _update_start_end_by(self, metadata: VideoMetadata) -> None:
@@ -272,13 +274,18 @@ class VideosMetadata:
         start time of a video, the corresponding VideoMetadata is returned. Otherwise,
         the metadata of the video containing the datetime will be returned.
         """
-        if current in self._metadata:
-            return self._metadata[current]
-        keys = list(self._metadata.keys())
+        if current in self._metadata_by_date:
+            return self._metadata_by_date[current]
+        keys = list(self._metadata_by_date.keys())
         key = bisect.bisect_left(keys, current) - 1
-        metadata = self._metadata[keys[key]]
+        metadata = self._metadata_by_date[keys[key]]
         if metadata.start <= current <= metadata.end:
             return metadata
+        return None
+
+    def get_by_video_name(self, video_name: str) -> Optional[VideoMetadata]:
+        if video_name in self._metadata_by_name:
+            return self._metadata_by_name[video_name]
         return None
 
     @property
@@ -292,8 +299,19 @@ class VideosMetadata:
     def to_dict(self) -> dict:
         return {
             key.timestamp(): metadata.to_dict()
-            for key, metadata in self._metadata.items()
+            for key, metadata in self._metadata_by_date.items()
         }
+
+    def merge_into_dict(self, other: dict) -> dict:
+        values: dict
+        if len(other) == 0:
+            values = self.to_dict()
+        else:
+            values = {**self.to_dict(), **other}
+
+        other.update(values)
+
+        return other
 
 
 class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
@@ -617,6 +635,42 @@ class TracksMetadata(TrackListObserver):
             CLASSIFICATIONS: list(self._classifications.get()),
             DETECTION_CLASSIFICATIONS: list(self._detection_classifications.get()),
         }
+
+    def merge_into_dict(self, other: dict) -> dict:
+        this = self.to_dict()
+        this_first_occurrence = this[FIRST_DETECTION_OCCURRENCE]
+        other_first_occurrence = other[FIRST_DETECTION_OCCURRENCE]
+        if this_first_occurrence is None:
+            first_occurrence = other_first_occurrence
+        elif other_first_occurrence is None:
+            first_occurrence = this_first_occurrence
+        else:
+            first_occurrence = min(this_first_occurrence, other_first_occurrence)
+
+        other[FIRST_DETECTION_OCCURRENCE] = first_occurrence
+
+        this_last_occurrence = this[LAST_DETECTION_OCCURRENCE]
+        other_last_occurrence = other[LAST_DETECTION_OCCURRENCE]
+        if this_last_occurrence is None:
+            last_occurrence = other_last_occurrence
+        elif other_last_occurrence is None:
+            last_occurrence = this_last_occurrence
+        else:
+            last_occurrence = max(this_last_occurrence, other_last_occurrence)
+
+        other[LAST_DETECTION_OCCURRENCE] = last_occurrence
+
+        other[CLASSIFICATIONS] = list(
+            set(this[CLASSIFICATIONS]).union(set(other[CLASSIFICATIONS]))
+        )
+
+        other[DETECTION_CLASSIFICATIONS] = list(
+            set(this[DETECTION_CLASSIFICATIONS]).union(
+                set(other[DETECTION_CLASSIFICATIONS])
+            )
+        )
+
+        return other
 
 
 class ActionState:

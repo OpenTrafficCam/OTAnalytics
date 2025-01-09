@@ -4,9 +4,9 @@ on:
   pull_request:
     branches:
       - main
-    types:
-      - review_requested
   workflow_call:
+
+permissions: read-all
 
 jobs:
   regression-test:
@@ -28,8 +28,8 @@ jobs:
       - name: Unzip test data
         run: |
           cd tests/data
-          unzip \*.zip
-          rm *.zip
+          unzip ./\*.zip
+          rm ./*.zip
           cd ..
       - name: Install requirements
         run: |
