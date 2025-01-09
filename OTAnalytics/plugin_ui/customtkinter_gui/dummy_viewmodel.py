@@ -62,6 +62,7 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     OTCONFIG_FILE_TYPE,
@@ -1861,7 +1862,7 @@ class DummyViewModel(
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_format_extensions=export_formats,
-                initial_file_stem="track_statistics",
+                initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
                 viewmodel=self,
             ).get_data()
             logger().debug(export_values)
