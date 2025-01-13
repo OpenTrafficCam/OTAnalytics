@@ -296,7 +296,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         projection: Any,
     ) -> tuple[TrackId, SectionId, IntersectionPoint]:
         dist = line_locate_point(track_geom, point)
-        upper_index = bisect(projection, dist)
+        upper_index = min(bisect(projection, dist), len(projection) - 1)
         lower_index = upper_index - 1
         lower_distance = projection[lower_index]
         upper_distance = projection[upper_index]
