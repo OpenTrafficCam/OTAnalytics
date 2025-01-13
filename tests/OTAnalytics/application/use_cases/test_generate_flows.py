@@ -3,6 +3,7 @@ from unittest.mock import Mock, call
 
 import pytest
 
+from OTAnalytics.application.use_cases.create_events import SectionProvider
 from OTAnalytics.application.use_cases.generate_flows import (
     AndPredicate,
     CrossProductFlowGenerator,
@@ -15,7 +16,7 @@ from OTAnalytics.application.use_cases.generate_flows import (
     GenerateFlows,
 )
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
-from OTAnalytics.domain.section import Section, SectionId, SectionRepository
+from OTAnalytics.domain.section import Section, SectionId
 
 
 class TestFilterSameSection:
@@ -186,15 +187,15 @@ class TestGenerateFlows:
     def test_generate_all_flows(self) -> None:
         sections: list[Section] = []
         created_flows: list[Flow] = []
-        section_repository = Mock(spec=SectionRepository)
-        section_repository.get_all.return_value = sections
+        section_provider = Mock(spec=SectionProvider)
+        section_provider.return_value = sections
         flow_generator = Mock(spec=FlowGenerator)
         flow_generator.return_value = created_flows
         flow_repository = Mock(spec=FlowRepository)
-        generator = GenerateFlows(section_repository, flow_repository, flow_generator)
+        generator = GenerateFlows(section_provider, flow_repository, flow_generator)
 
         generator.generate()
 
-        section_repository.get_all.assert_called_once()
+        section_provider.assert_called_once()
         flow_generator.assert_called_with(sections)
         flow_repository.add_all.assert_called_with(created_flows)
