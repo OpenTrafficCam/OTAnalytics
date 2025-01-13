@@ -23,6 +23,8 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
+    COLUMNS,
+    INDEX_NAMES,
     PandasDetection,
     PandasTrack,
     PandasTrackDataset,
@@ -637,3 +639,15 @@ class TestPandasTrackDataset:
         )
         result = dataset._create_track_flyweight(single_detection_track.id.id)
         assert_equal_track_properties(result, single_detection_track)
+
+    def test_initializing_empty_dataset_has_correct_columns_index(self) -> None:
+        """
+        #Bugfix https://openproject.platomo.de/projects/001-opentrafficcam-live/work_packages/5291
+
+        @bug by randy-seng
+        """  # noqa
+        target = PandasTrackDataset(track_geometry_factory=Mock())
+        actual = target.get_data()
+        assert actual.index.names == INDEX_NAMES
+        assert INDEX_NAMES not in actual.columns.to_list()
+        assert set(COLUMNS) - set(INDEX_NAMES) - set(actual.columns.to_list()) == set()

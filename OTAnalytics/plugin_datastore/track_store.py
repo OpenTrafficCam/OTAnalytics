@@ -34,6 +34,7 @@ from OTAnalytics.domain.track_dataset import (
     TrackGeometryDataset,
     TrackSegmentDataset,
 )
+from OTAnalytics.plugin_parser import ottrk_dataformat
 
 
 class PandasDetection(Detection):
@@ -178,6 +179,24 @@ class PandasByMaxConfidence(PandasTrackClassificationCalculator):
         return renamed.loc[:, [track.TRACK_CLASSIFICATION]]
 
 
+COLUMNS = [
+    track.CLASSIFICATION,
+    track.CONFIDENCE,
+    track.X,
+    track.Y,
+    track.W,
+    track.H,
+    track.FRAME,
+    track.OCCURRENCE,
+    ottrk_dataformat.INPUT_FILE_PATH,
+    track.INTERPOLATED_DETECTION,
+    ottrk_dataformat.FIRST,
+    ottrk_dataformat.FINISHED,
+    track.VIDEO_NAME,
+    track.INPUT_FILE,
+    track.TRACK_ID,
+    track.TRACK_CLASSIFICATION,
+]
 DEFAULT_CLASSIFICATOR = PandasByMaxConfidence()
 INDEX_NAMES = [track.TRACK_ID, track.OCCURRENCE]
 LEVEL_TRACK_ID = track.TRACK_ID
@@ -263,7 +282,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         if dataset is not None:
             self._dataset: DataFrame = dataset
         else:
-            self._dataset = DataFrame()
+            self._dataset = create_empty_dataframe()
 
         self.calculator = calculator
         self.track_geometry_factory = track_geometry_factory
@@ -753,6 +772,8 @@ def _convert_tracks(tracks: Iterable[Track]) -> DataFrame:
     Returns:
         DataFrame: tracks as dataframe.
     """
+    if not tracks:
+        return create_empty_dataframe()
     prepared: list[dict] = []
     for current_track in list(tracks):
         for detection in current_track.detections:
@@ -776,3 +797,7 @@ def _sort_tracks(track_df: DataFrame) -> DataFrame:
         DataFrame: sorted dataframe by track id and frame
     """
     return track_df.sort_index()
+
+
+def create_empty_dataframe() -> DataFrame:
+    return DataFrame(columns=COLUMNS).set_index(INDEX_NAMES)
