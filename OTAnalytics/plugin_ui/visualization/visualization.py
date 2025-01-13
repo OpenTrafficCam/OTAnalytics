@@ -266,7 +266,7 @@ class VisualizationBuilder:
                     False,
                 ),
             ],
-            "Show detection of current frame": [
+            "Show detections of current frame": [
                 (
                     "Bounding Box",
                     track_bounding_box_plotter,
