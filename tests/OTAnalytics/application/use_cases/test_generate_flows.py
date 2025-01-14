@@ -3,7 +3,10 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from OTAnalytics.application.use_cases.create_events import SectionProvider
+from OTAnalytics.application.use_cases.create_events import (
+    FilterOutCuttingSections,
+    SectionProvider,
+)
 from OTAnalytics.application.use_cases.generate_flows import (
     AndPredicate,
     CrossProductFlowGenerator,
@@ -16,7 +19,7 @@ from OTAnalytics.application.use_cases.generate_flows import (
     GenerateFlows,
 )
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
-from OTAnalytics.domain.section import Section, SectionId
+from OTAnalytics.domain.section import Section, SectionId, SectionType
 
 
 class TestFilterSameSection:
@@ -199,3 +202,50 @@ class TestGenerateFlows:
         section_provider.assert_called_once()
         flow_generator.assert_called_with(sections)
         flow_repository.add_all.assert_called_with(created_flows)
+
+    def test_cutting_sections_are_filtered_before(self) -> None:
+        """
+        # Bugfix https://openproject.platomo.de/projects/001-opentrafficcam-live/work_packages/4892
+
+        @bug by randy-seng
+        """  # noqa
+        line_section = create_section("line_section", SectionType.LINE)
+        area_section = create_section("area_section", SectionType.AREA)
+        cli_cutting_section = create_section("#clicut_section", SectionType.LINE)
+        cutting_section = create_section("#cut_section", SectionType.CUTTING)
+
+        given_sections = [
+            line_section,
+            area_section,
+            cli_cutting_section,
+            cutting_section,
+        ]
+        expected_flows: list[Flow] = [Mock()]
+        given_flow_repository = Mock()
+        given_flow_generator = create_flow_generator(expected_flows)
+        given = create_section_provider(given_sections)
+
+        target = GenerateFlows(given, given_flow_repository, given_flow_generator)
+        target.generate()
+
+        given_flow_generator.assert_called_with([line_section, area_section])
+        given_flow_repository.add_all.assert_called_with(expected_flows)
+
+
+def create_section_provider(sections: list[Section]) -> SectionProvider:
+    section_provider = Mock()
+    section_provider.return_value = sections
+    return FilterOutCuttingSections(section_provider)
+
+
+def create_flow_generator(flows: list[Flow]) -> Mock:
+    flow_generator = Mock()
+    flow_generator.return_value = flows
+    return flow_generator
+
+
+def create_section(name: str, section_type: SectionType) -> Section:
+    section = Mock()
+    section.name = name
+    section.get_type.return_value = section_type
+    return section
