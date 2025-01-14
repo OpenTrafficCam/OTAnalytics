@@ -29,6 +29,9 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_canvas import FrameCanvas
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
     TabviewConfiguration,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_date_filter_control import (
+    FrameDateFilterControl,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_files import FrameFiles
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_project import TabviewProject
@@ -39,9 +42,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_statistics import (
     FrameTrackStatistics,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_video_control import (
-    FrameVideoControl,
-)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_videos import FrameVideos
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
@@ -174,8 +174,8 @@ class FrameCanvasControls(CTkScrollableFrame):
         )
         self._frame_video_control = SingleFrameTabview(
             master=self,
-            title="Video Control",
-            frame_factory=partial(FrameVideoControl, viewmodel=self._viewmodel),
+            title="Date Filter Control",
+            frame_factory=partial(FrameDateFilterControl, viewmodel=self._viewmodel),
         )
 
     def _place_widgets(self) -> None:
