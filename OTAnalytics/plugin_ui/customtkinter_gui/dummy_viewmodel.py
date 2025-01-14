@@ -528,6 +528,15 @@ class DummyViewModel(
 
     def _notify_action_running_state(self, running: bool) -> None:
         self._update_enabled_buttons()
+        self._update_treeview_states()
+
+    def _update_treeview_states(self) -> None:
+        if self._application.action_state.action_running.get():
+            self.treeview_sections.disable()
+            self.treeview_flows.disable()
+        else:
+            self.treeview_sections.enable()
+            self.treeview_flows.enable()
 
     def register_observers(self) -> None:
         self._application._datastore.register_video_observer(self)
