@@ -49,13 +49,13 @@ class FrameBboxOffset(CTkFrame):
         self.slider_y.bind("<ButtonRelease-1>", self._on_slider_release)
 
     def _place_widgets(self) -> None:
-        self.label.grid(row=0, column=0, columnspan=2, padx=PADX, sticky="E")
+        self.label.grid(row=0, column=0, columnspan=3, padx=PADX, sticky="EW")
         self.label_x.grid(row=1, column=0, padx=PADX, sticky="E")
         self.label_y.grid(row=2, column=0, padx=PADX, sticky="E")
         self.slider_x.grid(row=1, column=1, padx=PADX, sticky="EW")
         self.slider_y.grid(row=2, column=1, padx=PADX, sticky="EW")
-        self.label_x_value.grid(row=1, column=3, padx=PADX, sticky="W")
-        self.label_y_value.grid(row=2, column=3, padx=PADX, sticky="W")
+        self.label_x_value.grid(row=1, column=2, padx=PADX, sticky="W")
+        self.label_y_value.grid(row=2, column=2, padx=PADX, sticky="W")
 
     def _set_initial_values(self) -> None:
         self.slider_x.set(self._relative_offset_coordinates["x"])
