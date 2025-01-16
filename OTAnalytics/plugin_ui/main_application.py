@@ -416,10 +416,10 @@ class ApplicationStarter:
         add_section = AddSection(section_repository)
         remove_section = RemoveSection(section_repository)
         clear_all_sections = ClearAllSections(section_repository)
-
-        generate_flows = self._create_flow_generator(
-            section_repository, flow_repository
+        section_provider = FilterOutCuttingSections(
+            MissingEventsSectionProvider(section_repository, event_repository)
         )
+        generate_flows = self._create_flow_generator(section_provider, flow_repository)
         add_flow = AddFlow(flow_repository)
         clear_all_flows = ClearAllFlows(flow_repository)
 
@@ -429,9 +429,6 @@ class ApplicationStarter:
         clear_all_videos = ClearAllVideos(datastore._video_repository)
         clear_all_track_to_videos = ClearAllTrackToVideos(
             datastore._track_to_video_repository
-        )
-        section_provider = FilterOutCuttingSections(
-            MissingEventsSectionProvider(section_repository, event_repository)
         )
         create_events = self._create_use_case_create_events(
             section_provider,
@@ -956,7 +953,7 @@ class ApplicationStarter:
         return GetAllTrackFiles(track_file_repository)
 
     def _create_flow_generator(
-        self, section_repository: SectionRepository, flow_repository: FlowRepository
+        self, section_provider: SectionProvider, flow_repository: FlowRepository
     ) -> GenerateFlows:
         id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(flow_repository)
         name_generator = ArrowFlowNameGenerator()
@@ -966,7 +963,7 @@ class ApplicationStarter:
             predicate=FilterSameSection().and_then(FilterExisting(flow_repository)),
         )
         return GenerateFlows(
-            section_repository=section_repository,
+            section_provider=section_provider,
             flow_repository=flow_repository,
             flow_generator=flow_generator,
         )
