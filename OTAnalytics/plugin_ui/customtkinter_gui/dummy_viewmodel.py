@@ -837,14 +837,14 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     def save_configuration(self) -> None:
-        suggested_save_path = self._application.suggest_save_path(OTFLOW_FILE_TYPE)
+        suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
         configuration_file = ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
-                (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
                 (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
+                (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
             ],
-            defaultextension=f".{OTFLOW_FILE_TYPE}",
+            defaultextension=f".{OTCONFIG_FILE_TYPE}",
             initialfile=suggested_save_path.name,
             initialdir=suggested_save_path.parent,
         )
