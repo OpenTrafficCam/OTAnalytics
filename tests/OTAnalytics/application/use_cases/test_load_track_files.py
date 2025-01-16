@@ -7,12 +7,13 @@ from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.video import Video
 
+some_file = Path("some.file.ottrk")
+other_file = Path("other.file.ottrk")
+
 
 class TestLoadTrackFile:
     @patch("OTAnalytics.application.use_cases.load_track_files.LoadTrackFiles.load")
     def test_load_multiple_files(self, mock_load: Mock) -> None:
-        some_file = Path("some.file.ottrk")
-        other_file = Path("other.file.ottrk")
         given = setup(
             track_ids=[],
             video_files=[],
@@ -32,7 +33,6 @@ class TestLoadTrackFile:
 
         @bug by randy-seng
         """  # noqa
-        some_file = Path("some.file.ottrk")
         given = setup(
             track_ids=[],
             video_files=[],
@@ -45,8 +45,26 @@ class TestLoadTrackFile:
         target([some_file])
         mock_load.assert_not_called()
 
+    @patch("OTAnalytics.application.use_cases.load_track_files.LoadTrackFiles.load")
+    def test_load_multiple_with_existing_track_file(self, mock_load: Mock) -> None:
+        """
+        # Requirement https://openproject.platomo.de/projects/001-opentrafficcam-live/work_packages/2665
+
+        @bug by randy-seng
+        """  # noqa
+        given = setup(
+            track_ids=[],
+            video_files=[],
+            track_files=[some_file, other_file],
+            existing_track_files=[some_file],
+            classes=set(),
+        )
+        target = create_target(given)
+
+        target([some_file, other_file])
+        mock_load.assert_called_with(other_file)
+
     def test_load(self) -> None:
-        some_file = Path("some.file.ottrk")
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
