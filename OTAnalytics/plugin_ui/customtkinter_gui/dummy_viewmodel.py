@@ -532,9 +532,13 @@ class DummyViewModel(
 
     def _update_treeview_states(self) -> None:
         if self._application.action_state.action_running.get():
+            self.treeview_videos.disable()
+            self.treeview_files.disable()
             self.treeview_sections.disable()
             self.treeview_flows.disable()
         else:
+            self.treeview_videos.enable()
+            self.treeview_files.enable()
             self.treeview_sections.enable()
             self.treeview_flows.enable()
 
