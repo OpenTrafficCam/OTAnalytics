@@ -650,4 +650,4 @@ class TestPandasTrackDataset:
         actual = target.get_data()
         assert actual.index.names == INDEX_NAMES
         assert INDEX_NAMES not in actual.columns.to_list()
-        assert set(COLUMNS) - set(INDEX_NAMES) - set(actual.columns.to_list()) == set()
+        assert set(COLUMNS) - set(INDEX_NAMES) == set(actual.columns.to_list())
