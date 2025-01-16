@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from pandas import DataFrame
@@ -644,6 +644,38 @@ class TestPygeosTrackGeometryDataset:
         )
         result = geometry_dataset.intersecting_tracks(sections)
         assert result == {first_track.id, second_track.id}
+
+    @patch(
+        "OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store."
+        "distance_on_track"
+    )
+    def test_intersection_point_with_rounding_error(
+        self, mock_distance_on_track: Mock, first_track: Track, first_section: Section
+    ) -> None:
+        """
+        https://openproject.platomo.de/projects/otanalytics/work_packages/6836/activity
+        """
+        distances_to_create_geometry = [0, 1, 2, 3, 4]
+        distance_to_create_event = [4.1]
+        distances = distances_to_create_geometry + distance_to_create_event
+        mock_distance_on_track.side_effect = iter(distances)
+        sections = [
+            first_section,
+        ]
+        track_dataset = create_track_dataset([first_track])
+        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+            track_dataset, BASE_GEOMETRY
+        )
+        result = geometry_dataset.intersection_points(sections)
+        expected = {
+            first_track.id: [
+                (
+                    first_section.id,
+                    IntersectionPoint(upper_index=4, relative_position=1.0),
+                )
+            ]
+        }
+        assert result == expected
 
     def test_as_dict(self, first_track: Track, second_track: Track) -> None:
         tracks = [first_track, second_track]
