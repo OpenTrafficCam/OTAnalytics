@@ -46,10 +46,10 @@ class LoadTrackFiles:
         for file in self._progressbar(
             files, unit="files", description="Processed ottrk files: "
         ):
+            if self._is_file_already_loaded(file):
+                logger().warning(f"File '{file}' already loaded. Skipping... ")
+                continue
             try:
-                if self._is_file_already_loaded(file):
-                    logger().warning(f"File '{file}' already loaded. Skipping... ")
-                    continue
 
                 self.load(file)
             except Exception as cause:
