@@ -301,10 +301,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         point: Geometry,
         projection: Any,
     ) -> tuple[TrackId, SectionId, IntersectionPoint]:
-        dist = distance_on_track(point, track_geom)
-        upper_index_distance = bisect(projection, dist)
-        max_index = len(projection) - 1
-        upper_index = min(upper_index_distance, max_index)
+        dist, upper_index = self.__get_distance_and_index(point, projection, track_geom)
         lower_index = upper_index - 1
         lower_distance = projection[lower_index]
         upper_distance = projection[upper_index]
@@ -317,6 +314,18 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
                 relative_position=relative_position,
             ),
         )
+
+    def __get_distance_and_index(
+        self, point: Geometry, projection: Any, track_geom: Geometry
+    ) -> tuple[float, int]:
+        dist = distance_on_track(point, track_geom)
+        if dist <= projection[-1]:
+            upper_index = bisect(projection, dist)
+            return dist, upper_index
+
+        max_index = len(projection) - 1
+        bounded_dist = projection[-1]
+        return bounded_dist, max_index
 
     def contained_by_sections(
         self, sections: list[Section]
