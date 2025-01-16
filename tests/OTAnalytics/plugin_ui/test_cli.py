@@ -46,7 +46,11 @@ from OTAnalytics.application.use_cases.create_events import (
 from OTAnalytics.application.use_cases.create_intersection_events import (
     BatchedTracksRunIntersect,
 )
-from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.event_repository import (
+    AddEvents,
+    ClearAllEvents,
+    GetAllEnterSectionEvents,
+)
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow, FlowRepository
 from OTAnalytics.application.use_cases.highlight_intersections import (
@@ -238,7 +242,7 @@ def mock_flow_parser() -> Mock:
 
 @pytest.fixture
 def video_parser() -> VideoParser:
-    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader()))
+    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(VideosMetadata())))
 
 
 @pytest.fixture
@@ -555,6 +559,7 @@ class TestOTAnalyticsCli:
                     DetectionRateByPercentile(DETECTION_RATE_PERCENTILE_VALUE),
                     MetricRatesBuilder(SVZ_CLASSIFICATION),
                 ),
+                GetAllEnterSectionEvents(event_repository),
             ),
             SimpleTrackStatisticsExporterFactory(),
         )

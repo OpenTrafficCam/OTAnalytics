@@ -21,7 +21,7 @@ jobs:
           # list of files that changed across commits
           fetch-depth: 0
       - name: Lint Code Base
-        uses: github/super-linter/slim@v6
+        uses: github/super-linter/slim@v7
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: main
@@ -31,6 +31,7 @@ jobs:
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_JSCPD: false
           VALIDATE_PYTHON_BLACK: false
+          VALIDATE_PYTHON_PYINK: false
 
           LINTER_RULES_PATH: /
           PYTHON_FLAKE8_CONFIG_FILE: .flake8

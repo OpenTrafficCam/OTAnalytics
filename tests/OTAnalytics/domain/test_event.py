@@ -12,6 +12,7 @@ from OTAnalytics.domain.event import (
     FRAME_NUMBER,
     HOSTNAME,
     OCCURRENCE,
+    RELATIVE_POSITION,
     ROAD_USER_ID,
     ROAD_USER_TYPE,
     SECTION_ID,
@@ -81,6 +82,7 @@ class TestEvent:
                 frame_number=frame,
                 section_id=SectionId("N"),
                 event_coordinate=ImageCoordinate(0, 0),
+                relative_position=0,
                 event_type=EventType.SECTION_ENTER,
                 direction_vector=DirectionVector2D(1, 0),
                 video_name="my_video_name.mp4",
@@ -88,6 +90,7 @@ class TestEvent:
 
     def test_instantiate_with_valid_args(self) -> None:
         event_coordinate = ImageCoordinate(0, 0)
+        relative_position = 0
         direction = DirectionVector2D(1, 0)
         event = Event(
             road_user_id="1",
@@ -97,6 +100,7 @@ class TestEvent:
             frame_number=1,
             section_id=SectionId("N"),
             event_coordinate=event_coordinate,
+            relative_position=relative_position,
             event_type=EventType.SECTION_ENTER,
             direction_vector=direction,
             video_name="my_video_name.mp4",
@@ -108,6 +112,7 @@ class TestEvent:
         assert event.frame_number == 1
         assert event.section_id == SectionId("N")
         assert event.event_coordinate == event_coordinate
+        assert event.relative_position == relative_position
         assert event.event_type == EventType.SECTION_ENTER
         assert event.direction_vector == direction
         assert event.video_name == "my_video_name.mp4"
@@ -120,6 +125,7 @@ class TestEvent:
         frame_number = 1
         section_id = SectionId("N")
         event_coordinate = ImageCoordinate(0, 0)
+        relative_position = 0
         direction_vector = DirectionVector2D(1, 0)
         video_name = "my_video_name.mp4"
         event = Event(
@@ -130,6 +136,7 @@ class TestEvent:
             frame_number=frame_number,
             section_id=section_id,
             event_coordinate=event_coordinate,
+            relative_position=relative_position,
             event_type=EventType.SECTION_ENTER,
             direction_vector=direction_vector,
             video_name=video_name,
@@ -143,6 +150,7 @@ class TestEvent:
             FRAME_NUMBER: frame_number,
             SECTION_ID: section_id.serialize(),
             EVENT_COORDINATE: [event_coordinate.x, event_coordinate.y],
+            RELATIVE_POSITION: relative_position,
             EVENT_TYPE: EventType.SECTION_ENTER.value,
             DIRECTION_VECTOR: [direction_vector.x1, direction_vector.x2],
             VIDEO_NAME: video_name,
@@ -217,6 +225,7 @@ class TestSectionEventBuilder:
         event_builder.add_event_type(EventType.SECTION_ENTER)
         event_builder.add_road_user_type("car")
         event_builder.add_event_coordinate(1, 1)
+        event_builder.add_relative_position(0)
         event = event_builder.create_event(valid_detection)
 
         assert event.road_user_id == valid_detection.track_id.id
@@ -265,11 +274,13 @@ class TestSceneEventBuilder:
     def test_create_event_with_correctly_initialised_builder(
         self, valid_detection: Detection
     ) -> None:
+        relative_position = 0
         event_builder = SceneEventBuilder()
         direction_vector = Mock(spec=DirectionVector2D)
         event_builder.add_direction_vector(direction_vector)
         event_builder.add_event_type(EventType.ENTER_SCENE)
         event_builder.add_event_coordinate(0, 0)
+        event_builder.add_relative_position(relative_position)
         event_builder.add_road_user_type("car")
         event = event_builder.create_event(valid_detection)
 
@@ -286,6 +297,7 @@ class TestSceneEventBuilder:
         assert event.direction_vector == direction_vector
         assert event.video_name == valid_detection.video_name
         assert event.event_coordinate == ImageCoordinate(0, 0)
+        assert event.relative_position == relative_position
 
 
 def enter_scene_event_1() -> Event:

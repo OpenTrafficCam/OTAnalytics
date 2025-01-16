@@ -12,3 +12,6 @@ PERCENTAGE_INSIDE_INTERSECTING_BUT_UNASSIGNED: str = (
     "percentage_inside_intersecting_but_unassigned"
 )
 NUMBER_OF_TRACKS_TO_BE_VALIDATED: str = "number_of_tracks_to_be_validated"
+NUMBER_OF_TRACKS_WITH_SIMULTANEOUS_ENTER_SECTION_EVENTS: str = (
+    "number_of_tracks_with_simultaneous_enter_section_events"
+)
