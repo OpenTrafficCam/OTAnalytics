@@ -38,6 +38,7 @@ INTERSECTS = "intersects"
 COLUMNS = [GEOMETRY, PROJECTION]
 BASE_GEOMETRY = RelativeOffsetCoordinate(0, 0)
 ORIENTATION_INDEX: Literal["index"] = "index"
+NDIGITS_DISTANCE = 5
 
 
 def line_sections_to_pygeos_multi(sections: Iterable[Section]) -> Geometry:
@@ -88,6 +89,11 @@ def create_pygeos_track(
 
 class InvalidTrackGeometryDataset(Exception):
     pass
+
+
+def distance_on_track(point: Geometry, track_geom: Geometry) -> float:
+    distance = line_locate_point(track_geom, point)
+    return round(distance, NDIGITS_DISTANCE)
 
 
 class PygeosTrackGeometryDataset(TrackGeometryDataset):
@@ -167,7 +173,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             track_id = _track.id.id
             geometry = create_pygeos_track(_track, offset)
             projection = [
-                line_locate_point(geometry, points(p))
+                distance_on_track(points(p), geometry)
                 for p in get_coordinates(geometry)
             ]
             entries[track_id] = {
@@ -295,8 +301,10 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         point: Geometry,
         projection: Any,
     ) -> tuple[TrackId, SectionId, IntersectionPoint]:
-        dist = line_locate_point(track_geom, point)
-        upper_index = min(bisect(projection, dist), len(projection) - 1)
+        dist = distance_on_track(point, track_geom)
+        upper_index_distance = bisect(projection, dist)
+        max_index = len(projection) - 1
+        upper_index = min(upper_index_distance, max_index)
         lower_index = upper_index - 1
         lower_distance = projection[lower_index]
         upper_distance = projection[upper_index]

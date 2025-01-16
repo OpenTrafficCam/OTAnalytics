@@ -23,10 +23,12 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     BASE_GEOMETRY,
     COLUMNS,
     GEOMETRY,
+    NDIGITS_DISTANCE,
     PROJECTION,
     TRACK_ID,
     PygeosTrackGeometryDataset,
     create_pygeos_track,
+    distance_on_track,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
@@ -63,7 +65,7 @@ def create_geometry_dataset_from(
         _id = track.id.id
         geometry = create_pygeos_track(track, offset)
         projection = [
-            line_locate_point(geometry, points(p)) for p in get_coordinates(geometry)
+            distance_on_track(points(p), geometry) for p in get_coordinates(geometry)
         ]
         entries.append((_id, geometry, projection))
     return PygeosTrackGeometryDataset(
@@ -430,6 +432,21 @@ def contained_by_section_test_case(
         ],
         expected,
     )
+
+
+def test_distance_on_track(first_track: Track) -> None:
+    """
+    Fix https://openproject.platomo.de/projects/otanalytics/work_packages/6836/activity
+    """
+    geometry = create_pygeos_track(first_track, BASE_GEOMETRY)
+    original = [
+        line_locate_point(geometry, points(p)) for p in get_coordinates(geometry)
+    ]
+    rounded = [
+        line_locate_point(geometry, points(p)) for p in get_coordinates(geometry)
+    ]
+    for expected, actual in zip(original, rounded):
+        assert abs(actual - expected) <= pow(10, -NDIGITS_DISTANCE)
 
 
 class TestPygeosTrackGeometryDataset:
