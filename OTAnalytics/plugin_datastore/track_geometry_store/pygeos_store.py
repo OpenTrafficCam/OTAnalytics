@@ -315,11 +315,30 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             ),
         )
 
+    @staticmethod
     def __get_distance_and_index(
-        self, point: Geometry, projection: Any, track_geom: Geometry
+        point: Geometry, projection: Any, track_geom: Geometry
     ) -> tuple[float, int]:
+        """
+        Computes the distance along the track and identifies the corresponding index of
+        the projection list. This utility function determines whether the input point is
+        within the projected range on the geometry track and calculates its distance and
+        projection index accordingly.
+
+        Args:
+            point (Geometry): The geometry point whose distance along the track is to be
+                computed.
+            projection (Any): A list of pre-computed projection distances along the
+                track.
+            track_geom (Geometry): The geometry of the track used for distance
+                computation.
+
+        Returns:
+            tuple[float, int]: A tuple containing the computed distance along the track
+            and its corresponding index in the projection list.
+        """
         dist = distance_on_track(point, track_geom)
-        if dist <= projection[-1]:
+        if dist < projection[-1]:
             upper_index = bisect(projection, dist)
             return dist, upper_index
 

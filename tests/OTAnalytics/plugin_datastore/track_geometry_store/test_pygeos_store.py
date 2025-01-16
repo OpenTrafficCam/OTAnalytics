@@ -649,14 +649,35 @@ class TestPygeosTrackGeometryDataset:
         "OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store."
         "distance_on_track"
     )
+    @pytest.mark.parametrize(
+        "distance, upper_index, relative_position",
+        [
+            (0.0, 1, 0.0),
+            (0.5, 1, 0.5),
+            (1.0, 2, 0.0),
+            (1.5, 2, 0.5),
+            (2.0, 3, 0.0),
+            (2.5, 3, 0.5),
+            (3.0, 4, 0.0),
+            (3.5, 4, 0.5),
+            (4.0, 4, 1.0),
+            (4.1, 4, 1.0),
+        ],
+    )
     def test_intersection_point_with_rounding_error(
-        self, mock_distance_on_track: Mock, first_track: Track, first_section: Section
+        self,
+        mock_distance_on_track: Mock,
+        first_track: Track,
+        first_section: Section,
+        distance: float,
+        upper_index: int,
+        relative_position: float,
     ) -> None:
         """
         https://openproject.platomo.de/projects/otanalytics/work_packages/6836/activity
         """
         distances_to_create_geometry = [0, 1, 2, 3, 4]
-        distance_to_create_event = [4.1]
+        distance_to_create_event = [distance]
         distances = distances_to_create_geometry + distance_to_create_event
         mock_distance_on_track.side_effect = iter(distances)
         sections = [
@@ -671,7 +692,10 @@ class TestPygeosTrackGeometryDataset:
             first_track.id: [
                 (
                     first_section.id,
-                    IntersectionPoint(upper_index=4, relative_position=1.0),
+                    IntersectionPoint(
+                        upper_index=upper_index,
+                        relative_position=relative_position,
+                    ),
                 )
             ]
         }
