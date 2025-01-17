@@ -18,7 +18,12 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import LayerGroup
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STICKY,
+    TkEvents,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
     EmbeddedCTkScrollableFrame,
@@ -60,6 +65,10 @@ class ModifiedCTk(AbstractMainWindow, CTk):
         self.protocol("WM_DELETE_WINDOW", self._ask_to_close)
         self._viewmodel: ViewModel = viewmodel
         self.introduce_to_viewmodel()
+        self._bind_events()
+
+    def _bind_events(self) -> None:
+        self.bind(TkEvents.LEFT_BUTTON_DOWN, lambda event: event.widget.focus_set())
 
     def _ask_to_close(self) -> None:
         infobox = InfoBox(
