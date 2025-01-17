@@ -33,6 +33,9 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     tk_events,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_date_filter_control import (
+    FrameDateFilterControl,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
@@ -88,6 +91,10 @@ class FrameFilter(AbstractFrameFilter, EmbeddedCTkFrame):
             button_default_color=COLOR_GRAY,
             viewmodel=self._viewmodel,
         )
+        self.date_filter_control_frame = FrameDateFilterControl(
+            master=self,
+            viewmodel=self._viewmodel,
+        )
 
     def _place_widgets(self) -> None:
         self.filter_by_date_button.grid(
@@ -98,6 +105,9 @@ class FrameFilter(AbstractFrameFilter, EmbeddedCTkFrame):
         )
         self.filter_by_classification_button.grid(
             row=0, column=2, padx=PADX, pady=PADY, sticky=STICKY
+        )
+        self.date_filter_control_frame.grid(
+            row=1, column=0, columnspan=3, padx=0, pady=PADY, sticky=STICKY
         )
 
     def reset(self) -> None:

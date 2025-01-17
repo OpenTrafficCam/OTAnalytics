@@ -44,9 +44,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_statistics import (
     FrameTrackStatistics,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_video_control import (
-    FrameVideoControl,
-)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_videos import FrameVideos
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
@@ -181,11 +178,6 @@ class FrameCanvasControls(CTkScrollableFrame):
             title="Visualization Filters",
             frame_factory=partial(FrameFilter, viewmodel=self._viewmodel),
         )
-        self._frame_video_control = SingleFrameTabview(
-            master=self,
-            title="Video Control",
-            frame_factory=partial(FrameVideoControl, viewmodel=self._viewmodel),
-        )
 
     def _place_widgets(self) -> None:
         self.grid_rowconfigure(0, weight=0)
@@ -193,7 +185,6 @@ class FrameCanvasControls(CTkScrollableFrame):
         self.grid_rowconfigure(2, weight=0)
         self._frame_track_statistics.grid(row=0, column=0, pady=PADY, sticky=STICKY)
         self._frame_filter.grid(row=1, column=0, pady=PADY, sticky=STICKY)
-        self._frame_video_control.grid(row=2, column=0, pady=PADY, sticky=STICKY)
 
 
 class FrameNavigation(EmbeddedCTkScrollableFrame):
