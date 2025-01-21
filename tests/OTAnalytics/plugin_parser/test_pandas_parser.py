@@ -19,7 +19,10 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from tests.utils.assertions import assert_equal_track_properties
-from tests.utils.builders.track_builder import track_builder_with_sample_data
+from tests.utils.builders.track_builder import (
+    TrackBuilder,
+    track_builder_with_sample_data,
+)
 
 
 @pytest.fixture
@@ -97,3 +100,22 @@ class TestPandasDetectionParser:
         ).as_list()
 
         assert len(result_sorted_input) == 0
+
+    def test_can_parse_tracks_with_empty_detections(
+        self,
+        parser: DetectionParser,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+    ) -> None:
+        """
+        #Bugfix https://openproject.platomo.de/projects/001-opentrafficcam-live/work_packages/5291
+
+        @bug by randy-seng
+        """  # noqa
+        track_builder = TrackBuilder()
+        actual = parser.parse_tracks(
+            detections=[],
+            metadata_video=track_builder.get_metadata()[ottrk_dataformat.VIDEO],
+            input_file=track_builder.input_file,
+        )
+        assert actual.empty
+        assert isinstance(actual, PandasTrackDataset)

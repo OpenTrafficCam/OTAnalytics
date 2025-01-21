@@ -58,6 +58,11 @@ class PandasDetectionParser(DetectionParser):
             metadata_video[ottrk_format.FILENAME]
             + metadata_video[ottrk_format.FILETYPE]
         )
+        if not detections:
+            return PandasTrackDataset(
+                track_geometry_factory=self._track_geometry_factory,
+                calculator=self._calculator,
+            )
         data = DataFrame(detections)
         data.rename(
             columns={
