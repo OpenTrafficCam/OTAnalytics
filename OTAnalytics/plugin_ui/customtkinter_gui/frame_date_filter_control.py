@@ -9,7 +9,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.style import COLOR_RED
 
 
-class FrameVideoControl(AbstractCTkFrame):
+class FrameDateFilterControl(AbstractCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._is_initialized = False

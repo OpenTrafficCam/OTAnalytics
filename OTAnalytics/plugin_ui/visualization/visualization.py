@@ -306,14 +306,14 @@ class VisualizationBuilder:
                     False,
                 ),
             ],
-            "Show Bounding Box": [
+            "Show detections of current frame": [
                 (
-                    "Current frame",
+                    "Bounding Box",
                     track_bounding_box_plotter,
                     False,
                 ),
                 (
-                    "Track point of current frame",
+                    "Track point",
                     track_point_plotter,
                     False,
                 ),
