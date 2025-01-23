@@ -3,6 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.application.export_formats import track_statistics as ts
+from OTAnalytics.application.export_formats.export_mode import INITIAL_MERGE
 from OTAnalytics.application.use_cases.track_statistics_export import (
     ExportTrackStatistics,
     TrackStatisticsBuilder,
@@ -61,10 +62,14 @@ class TestExportTrackStatistics:
             calculate_track_statistics,
             exporter_factory,
         )
+
         specification = Mock()
+        specification.export_mode = INITIAL_MERGE
 
         export_track_statistics.export(specification)
 
         calculate_track_statistics.get_statistics.assert_called_once()
         exporter_factory.create.assert_called_once_with(specification)
-        exporter.export.assert_called_once_with(track_statistics)
+        exporter.export.assert_called_once_with(
+            track_statistics, specification.export_mode
+        )
