@@ -145,7 +145,9 @@ class FrameContent(CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=0)
         self._frame_canvas.grid(row=0, column=0, pady=PADY, sticky=STICKY)
-        self._frame_track_plotting.grid(row=0, column=1, pady=PADY, sticky=STICKY)
+        self._frame_track_plotting.grid(
+            row=0, column=1, pady=PADY, sticky="ne", rowspan=2
+        )
         self._frame_canvas_controls.grid(row=1, column=0, pady=PADY, sticky=STICKY)
 
 
