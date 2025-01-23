@@ -54,23 +54,14 @@ class TrackStatisticsExporter(ABC):
         self._builder = builder
         self._outputfile = output_file
         self.reset_track_statistics()
-        self._counter = 0
 
     def export(
         self, track_statistics: TrackStatistics, export_mode: ExportMode
     ) -> None:
         self._preliminary_track_statistics += track_statistics
 
-        self._counter += 1
-        print("#####################################")
-        print(self._counter)
-        print(track_statistics)
-        print(self._preliminary_track_statistics)
-
         if export_mode.is_final_write():
             dtos = self._convert(self._preliminary_track_statistics)
-            print("writing")
-            print(dtos)
             self._serialize(dtos)
             self.reset_track_statistics()
 

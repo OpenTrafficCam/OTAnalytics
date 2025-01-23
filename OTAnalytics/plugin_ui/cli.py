@@ -461,15 +461,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
 
         track_stream = peekable(self._parse_track_stream(ottrk_files))
 
-        counter = 0
-
         for track_ds in track_stream:
-            print(f"DS Length: {len(track_ds)}")
-
-            print("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
-            counter += 1
-            print(f"counter = {counter}")
-
             is_last = track_stream.peek(default=None) is None
 
             self._add_all_tracks(track_ds)
