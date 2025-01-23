@@ -32,21 +32,19 @@ class TestTrackStatisticsBuilder:
 
         result = _builder.build(track_statistics)
 
-        assert result == [
-            {
-                ts.TRACK_COUNT: track_statistics.track_count,
-                ts.TRACK_COUNT_OUTSIDE: track_statistics.track_count_outside,
-                ts.TRACK_COUNT_INSIDE: track_statistics.track_count_inside,
-                ts.TRACK_COUNT_INSIDE_NOT_INTERSECTING: track_statistics.track_count_inside_not_intersecting,  # noqa
-                ts.TRACK_COUNT_INSIDE_INTERSECTING_BUT_UNASSIGNED: track_statistics.track_count_inside_intersecting_but_unassigned,  # noqa
-                ts.TRACK_COUNT_INSIDE_ASSIGNED: track_statistics.track_count_inside_assigned,  # noqa
-                ts.PERCENTAGE_INSIDE_ASSIGNED: track_statistics.percentage_inside_assigned,  # noqa
-                ts.PERCENTAGE_INSIDE_NOT_INTERSECTING: track_statistics.percentage_inside_not_intersection,  # noqa
-                ts.PERCENTAGE_INSIDE_INTERSECTING_BUT_UNASSIGNED: track_statistics.percentage_inside_intersecting_but_unassigned,  # noqa
-                ts.NUMBER_OF_TRACKS_TO_BE_VALIDATED: track_statistics.number_of_tracks_to_be_validated,  # noqa
-                ts.NUMBER_OF_TRACKS_WITH_SIMULTANEOUS_ENTER_SECTION_EVENTS: track_statistics.number_of_tracks_with_simultaneous_section_events,  # noqa
-            }
-        ]
+        assert result == {
+            ts.TRACK_COUNT: track_statistics.track_count,
+            ts.TRACK_COUNT_OUTSIDE: track_statistics.track_count_outside,
+            ts.TRACK_COUNT_INSIDE: track_statistics.track_count_inside,
+            ts.TRACK_COUNT_INSIDE_NOT_INTERSECTING: track_statistics.track_count_inside_not_intersecting,  # noqa
+            ts.TRACK_COUNT_INSIDE_INTERSECTING_BUT_UNASSIGNED: track_statistics.track_count_inside_intersecting_but_unassigned,  # noqa
+            ts.TRACK_COUNT_INSIDE_ASSIGNED: track_statistics.track_count_inside_assigned,  # noqa
+            ts.PERCENTAGE_INSIDE_ASSIGNED: track_statistics.percentage_inside_assigned,  # noqa
+            ts.PERCENTAGE_INSIDE_NOT_INTERSECTING: track_statistics.percentage_inside_not_intersection,  # noqa
+            ts.PERCENTAGE_INSIDE_INTERSECTING_BUT_UNASSIGNED: track_statistics.percentage_inside_intersecting_but_unassigned,  # noqa
+            ts.NUMBER_OF_TRACKS_TO_BE_VALIDATED: track_statistics.number_of_tracks_to_be_validated,  # noqa
+            ts.NUMBER_OF_TRACKS_WITH_SIMULTANEOUS_ENTER_SECTION_EVENTS: track_statistics.number_of_tracks_with_simultaneous_section_events,  # noqa
+        }
 
 
 class TestExportTrackStatistics:
