@@ -107,7 +107,8 @@ class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
         if export_mode.is_first_write():
             if key_exists:
                 raise CacheTrackStatisticsException(
-                    "TrackStatisticsExporter already exists for format+file upon first write!"
+                    "TrackStatisticsExporter already exists for format+file"
+                    + " upon first write!"
                     + " Maybe previous export was not finished or cache was not"
                     + "cleared properly.",
                     specification.save_path,
@@ -121,7 +122,8 @@ class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
         else:
             if not key_exists:
                 raise CacheTrackStatisticsException(
-                    "TrackStatisticsExporter missing in cache for format+file upon subsequent write!"
+                    "TrackStatisticsExporter missing in cache for format+file"
+                    + " upon subsequent write!"
                     + "Maybe the cache was cleared too early.",
                     specification.save_path,
                     specification.format,

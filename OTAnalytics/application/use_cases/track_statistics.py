@@ -52,7 +52,9 @@ class TrackStatistics:
             track_count_outside=(self.track_count_outside + other.track_count_outside),
             track_count_inside=track_count_inside,
             track_count_inside_not_intersecting=track_count_inside_not_intersecting,
-            track_count_inside_intersecting_but_unassigned=track_count_inside_intersecting_but_unassigned,
+            track_count_inside_intersecting_but_unassigned=(
+                track_count_inside_intersecting_but_unassigned
+            ),
             track_count_inside_assigned=track_count_inside_assigned,
             percentage_inside_assigned=percentage(
                 track_count_inside_assigned, track_count_inside
