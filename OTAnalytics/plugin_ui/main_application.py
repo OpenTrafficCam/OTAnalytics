@@ -243,6 +243,7 @@ from OTAnalytics.plugin_parser.streaming_parser import (
 )
 from OTAnalytics.plugin_parser.track_export import CsvTrackExport
 from OTAnalytics.plugin_parser.track_statistics_export import (
+    CachedTrackStatisticsExporterFactory,
     SimpleTrackStatisticsExporterFactory,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
@@ -576,7 +577,9 @@ class ApplicationStarter:
         number_of_tracks_assigned_to_each_flow = NumberOfTracksAssignedToEachFlow(
             get_road_user_assignments, flow_repository
         )
-        track_statistics_export_factory = SimpleTrackStatisticsExporterFactory()
+        track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
+            SimpleTrackStatisticsExporterFactory()
+        )
         export_track_statistics = ExportTrackStatistics(
             calculate_track_statistics, track_statistics_export_factory
         )
@@ -779,7 +782,9 @@ class ApplicationStarter:
             section_repository,
             get_all_tracks,
         )
-        track_statistics_export_factory = SimpleTrackStatisticsExporterFactory()
+        track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
+            SimpleTrackStatisticsExporterFactory()
+        )
         export_track_statistics = ExportTrackStatistics(
             calculate_track_statistics, track_statistics_export_factory
         )
