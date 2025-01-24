@@ -601,6 +601,9 @@ class DummyViewModel(
                 selected_videos.append(video)
         self._application.track_view_state.selected_videos.set(selected_videos)
 
+    def get_remarks(self) -> str | None:
+        return self._application.get_remark()
+
     def get_all_videos(self) -> list[Video]:
         return self._application.get_all_videos()
 

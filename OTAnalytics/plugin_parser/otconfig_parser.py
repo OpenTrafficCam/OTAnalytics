@@ -141,6 +141,7 @@ class OtConfigParser(ConfigParser):
             videos=videos,
             sections=sections,
             flows=flows,
+            remark="",
         )
 
     def _parse_videos(
@@ -271,6 +272,7 @@ class OtConfigParser(ConfigParser):
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
+        remark: str | None,
     ) -> None:
         self._validate_data(project)
         content = self.convert(project, video_files, track_files, sections, flows, file)
@@ -284,6 +286,7 @@ class OtConfigParser(ConfigParser):
             config.sections,
             config.flows,
             file,
+            config.remark,
         )
 
     @staticmethod

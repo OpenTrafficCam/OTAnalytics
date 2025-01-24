@@ -63,8 +63,8 @@ def mock_otconfig() -> OtConfig:
     videos = Mock()
     sections = Mock()
     flows = Mock()
-
-    return OtConfig(project, analysis, videos, sections, flows)
+    remark = Mock()
+    return OtConfig(project, analysis, videos, sections, flows, remark)
 
 
 @pytest.fixture
@@ -93,6 +93,7 @@ class TestOtConfigParser:
         track_files: list[Path] = []
         sections: list[Section] = []
         flows: list[Flow] = []
+        remark: str | None = None
         output = test_data_tmp_dir / "config.otconfig"
         serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
         serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
@@ -121,6 +122,7 @@ class TestOtConfigParser:
             sections=sections,
             flows=flows,
             file=output,
+            remark=remark,
         )
 
         serialized_content = parse_json(output)
@@ -174,7 +176,7 @@ class TestOtConfigParser:
             otconfig_file.parent
             / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
         }
-
+        remark = ""
         serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
         serialized_flows = {
             section.SECTIONS: {"serialized": "sections"},
@@ -207,6 +209,7 @@ class TestOtConfigParser:
             videos=videos,
             sections=sections,
             flows=flows,
+            remark=remark,
         )
         assert config == expected_config
 

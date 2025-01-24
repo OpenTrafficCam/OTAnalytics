@@ -171,6 +171,7 @@ from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
@@ -344,6 +345,7 @@ class ApplicationStarter:
         videos_metadata = VideosMetadata()
         video_parser = self._create_video_parser(videos_metadata)
         video_repository = self._create_video_repository()
+        remark_repository = self._create_remark_repository()
         track_to_video_repository = self._create_track_to_video_repository()
         datastore = self._create_datastore(
             video_parser,
@@ -355,6 +357,7 @@ class ApplicationStarter:
             flow_repository,
             event_repository,
             pulling_progressbar_builder,
+            remark_repository,
         )
         flow_parser = self._create_flow_parser()
         track_state = self._create_track_state()
@@ -822,6 +825,7 @@ class ApplicationStarter:
         flow_repository: FlowRepository,
         event_repository: EventRepository,
         progressbar_builder: ProgressbarBuilder,
+        remark_repository: RemarkRepository,
     ) -> Datastore:
         """
         Build all required objects and inject them where necessary
@@ -846,6 +850,7 @@ class ApplicationStarter:
             video_parser,
             track_video_parser,
             progressbar_builder,
+            remark_repository,
         )
 
     def _create_track_repository(self, run_config: RunConfiguration) -> TrackRepository:
@@ -1154,6 +1159,9 @@ class ApplicationStarter:
 
     def _create_video_parser(self, videos_metadata: VideosMetadata) -> VideoParser:
         return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(videos_metadata)))
+
+    def _create_remark_repository(self) -> RemarkRepository:
+        return RemarkRepository()
 
     def _create_video_repository(self) -> VideoRepository:
         return VideoRepository()

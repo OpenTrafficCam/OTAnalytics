@@ -37,6 +37,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_configuration import (
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_files import FrameFiles
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import FrameFilter
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_project import TabviewProject
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_remarks import FrameRemarks
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_plotting import (
     FrameTrackPlotting,
 )
@@ -168,6 +169,11 @@ class FrameCanvasControls(CTkScrollableFrame):
         self._place_widgets()
 
     def _get_widgets(self) -> None:
+        self._remarks = SingleFrameTabview(
+            master=self,
+            title="Remarks",
+            frame_factory=partial(FrameRemarks, viewmodel=self._viewmodel),
+        )
         self._frame_track_statistics = SingleFrameTabview(
             master=self,
             title="Track Statistics",
@@ -183,6 +189,7 @@ class FrameCanvasControls(CTkScrollableFrame):
         self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure(1, weight=0)
         self.grid_rowconfigure(2, weight=0)
+        self._remarks.grid(row=2, column=0, pady=PADY, sticky=STICKY)
         self._frame_track_statistics.grid(row=0, column=0, pady=PADY, sticky=STICKY)
         self._frame_filter.grid(row=1, column=0, pady=PADY, sticky=STICKY)
 

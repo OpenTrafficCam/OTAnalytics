@@ -243,6 +243,9 @@ class OTAnalyticsApplication:
             else:
                 self.track_view_state.selected_videos.set([])
 
+    def get_remark(self) -> str | None:
+        return self._datastore.get_remark()
+
     def get_all_videos(self) -> list[Video]:
         return self._datastore.get_all_videos()
 

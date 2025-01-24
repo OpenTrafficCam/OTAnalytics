@@ -27,7 +27,7 @@ class SaveOtconfig:
             track_files = self._datastore._track_file_repository.get_all()
             sections = self._datastore.get_all_sections()
             flows = self._datastore.get_all_flows()
-
+            remark = self._datastore.get_remark()
             self._config_parser.serialize(
                 project=project,
                 video_files=video_files,
@@ -35,6 +35,7 @@ class SaveOtconfig:
                 sections=sections,
                 flows=flows,
                 file=file,
+                remark=remark,
             )
             self._state.last_saved_config.set(
                 ConfigurationFile(
