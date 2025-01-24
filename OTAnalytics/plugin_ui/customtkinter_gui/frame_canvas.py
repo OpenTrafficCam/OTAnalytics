@@ -24,16 +24,15 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     LEFT_KEY,
     MOTION,
     MOTION_WHILE_LEFT_BUTTON_DOWN,
-    PADX,
     PLUS_KEYS,
     RETURN_KEY,
     RIGHT_BUTTON_UP,
     RIGHT_KEY,
-    STICKY,
     tk_events,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
+from OTAnalytics.plugin_ui.customtkinter_gui.scrollable_xy_frame import CTkXYFrame
 
 
 @dataclass
@@ -62,15 +61,14 @@ class FrameCanvas(AbstractFrameCanvas, EmbeddedCTkFrame):
         self._viewmodel.set_frame_canvas(self)
 
     def _get_widgets(self) -> None:
+        self.xy_frame = CTkXYFrame(master=self)
         self.canvas_background = CanvasBackground(
-            master=self, viewmodel=self._viewmodel
+            master=self.xy_frame, viewmodel=self._viewmodel
         )
 
     def _place_widgets(self) -> None:
-        PADY = 10
-        self.canvas_background.grid(
-            row=2, column=0, padx=PADX, pady=PADY, sticky=STICKY
-        )
+        self.xy_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.canvas_background.pack(fill="both", expand=True, padx=10, pady=10)
 
     def update_background(self, image: TrackImage) -> None:
         self.add_image(DisplayableImage(image), layer="background")
