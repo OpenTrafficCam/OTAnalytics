@@ -320,15 +320,16 @@ class OTAnalyticsCli(ABC):
     def _do_export_track_statistics(
         self, save_path: Path, export_mode: ExportMode
     ) -> None:
-        logger().info("Start track statistics export")
+        logger().info("Create track statistics ...")
         track_statistics_path = save_path.with_suffix(
             f".{CONTEXT_FILE_TYPE_TRACK_STATISTICS}.csv"
         )
         specification = TrackStatisticsExportSpecification(
-            save_path=track_statistics_path, format="CSV"
+            save_path=track_statistics_path,
+            format="CSV",
+            export_mode=export_mode,
         )
         self._export_track_statistics.export(specification)
-        logger().info("Finished track statistics export")
 
 
 class OTAnalyticsBulkCli(OTAnalyticsCli):

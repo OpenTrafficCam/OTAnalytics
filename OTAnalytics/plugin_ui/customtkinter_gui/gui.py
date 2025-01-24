@@ -2,13 +2,7 @@ import tkinter
 from functools import partial
 from typing import Any, Sequence
 
-from customtkinter import (
-    CTk,
-    CTkFrame,
-    CTkScrollableFrame,
-    set_appearance_mode,
-    set_default_color_theme,
-)
+from customtkinter import CTk, CTkFrame, set_appearance_mode, set_default_color_theme
 
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -146,16 +140,18 @@ class FrameContent(CTkFrame):
         self._frame_canvas_controls = FrameCanvasControls(
             master=self, viewmodel=self._viewmodel
         )
-        self.grid_rowconfigure(0, weight=0)
-        self.grid_rowconfigure(1, weight=10)
-        self.grid_columnconfigure(0, weight=0)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=0)
         self._frame_canvas.grid(row=0, column=0, pady=PADY, sticky=STICKY)
-        self._frame_track_plotting.grid(row=0, column=1, pady=PADY, sticky=STICKY)
+        self._frame_track_plotting.grid(
+            row=0, column=1, pady=PADY, sticky="ne", rowspan=2
+        )
         self._frame_canvas_controls.grid(row=1, column=0, pady=PADY, sticky=STICKY)
 
 
-class FrameCanvasControls(CTkScrollableFrame):
+class FrameCanvasControls(CTkFrame):
     def __init__(
         self,
         master: Any,
