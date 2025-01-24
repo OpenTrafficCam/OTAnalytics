@@ -8,6 +8,7 @@ from OTAnalytics.domain.section import (
     SectionRepositoryEvent,
 )
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
+from OTAnalytics.domain.types import EventType
 
 
 class AddEvents:
@@ -52,3 +53,13 @@ class ClearAllEvents(SectionListObserver, TrackListObserver):
 
     def on_tracks_cut(self, _: CutTracksDto) -> None:
         self.clear()
+
+
+class GetAllEnterSectionEvents:
+    """Get all enter section events from the event repository"""
+
+    def __init__(self, event_repository: EventRepository) -> None:
+        self._event_repository = event_repository
+
+    def get(self) -> Iterable[Event]:
+        return self._event_repository.get(event_types=[EventType.SECTION_ENTER])

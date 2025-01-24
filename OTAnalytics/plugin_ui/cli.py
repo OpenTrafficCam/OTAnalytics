@@ -11,6 +11,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_COUNTS,
     CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
+    CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_SECTIONS_FILE_TYPE,
@@ -45,6 +46,10 @@ from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
     GetAllTrackIds,
+)
+from OTAnalytics.application.use_cases.track_statistics_export import (
+    ExportTrackStatistics,
+    TrackStatisticsExportSpecification,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
@@ -85,6 +90,7 @@ class OTAnalyticsCli(ABC):
         videos_metadata: VideosMetadata,
         export_tracks: ExportTracks,
         export_road_user_assignments: ExportRoadUserAssignments,
+        export_track_statistics: ExportTrackStatistics,
     ) -> None:
         self._validate_cli_args(run_config)
         self._run_config = run_config
@@ -106,6 +112,7 @@ class OTAnalyticsCli(ABC):
 
         self._export_tracks = export_tracks
         self._export_road_user_assignments = export_road_user_assignments
+        self._export_track_statistics = export_track_statistics
 
     def start(self) -> None:
         """Start analysis."""
@@ -156,6 +163,9 @@ class OTAnalyticsCli(ABC):
 
         if self._run_config.do_export_tracks:
             self._do_export_tracks(save_path, export_mode)
+
+        if self._run_config.do_export_track_statistics:
+            self._do_export_track_statistics(save_path, export_mode)
 
     @staticmethod
     def _validate_cli_args(run_config: RunConfiguration) -> None:
@@ -307,6 +317,20 @@ class OTAnalyticsCli(ABC):
         self._export_tracks.export(specification)
         logger().info("Finished tracks export")
 
+    def _do_export_track_statistics(
+        self, save_path: Path, export_mode: ExportMode
+    ) -> None:
+        logger().info("Create track statistics ...")
+        track_statistics_path = save_path.with_suffix(
+            f".{CONTEXT_FILE_TYPE_TRACK_STATISTICS}.csv"
+        )
+        specification = TrackStatisticsExportSpecification(
+            save_path=track_statistics_path,
+            format="CSV",
+            export_mode=export_mode,
+        )
+        self._export_track_statistics.export(specification)
+
 
 class OTAnalyticsBulkCli(OTAnalyticsCli):
 
@@ -328,6 +352,7 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
         videos_metadata: VideosMetadata,
         export_tracks: ExportTracks,
         export_road_user_assignments: ExportRoadUserAssignments,
+        export_track_statistics: ExportTrackStatistics,
         track_parser: TrackParser,
         progressbar: ProgressbarBuilder,
     ) -> None:
@@ -348,6 +373,7 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
             videos_metadata,
             export_tracks,
             export_road_user_assignments,
+            export_track_statistics,
         )
         self._track_parser = track_parser
         self._progressbar = progressbar
@@ -362,7 +388,7 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
         )
         self._parse_tracks(ottrk_files_sorted)
         self._apply_cli_cuts.apply(
-            self._get_all_sections(), preserve_cutting_sections=False
+            self._get_all_sections(), preserve_cutting_sections=True
         )
         logger().info("Create event list ...")
         self._create_events()
@@ -389,6 +415,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
         add_flow: AddFlow,
         create_events: CreateEvents,
         export_counts: ExportCounts,
+        export_track_statistics: ExportTrackStatistics,
         provide_eventlist_exporter: EventListExporterProvider,
         apply_cli_cuts: ApplyCliCuts,
         add_all_tracks: AddAllTracks,
@@ -417,6 +444,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
             videos_metadata,
             export_tracks,
             export_road_user_assignments,
+            export_track_statistics,
         )
         self._track_parser = track_parser
 

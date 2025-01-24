@@ -62,12 +62,13 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
-from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.export_formats.export_mode import INITIAL_MERGE, OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
@@ -528,6 +529,19 @@ class DummyViewModel(
 
     def _notify_action_running_state(self, running: bool) -> None:
         self._update_enabled_buttons()
+        self._update_treeview_states()
+
+    def _update_treeview_states(self) -> None:
+        if self._application.action_state.action_running.get():
+            self.treeview_videos.disable()
+            self.treeview_files.disable()
+            self.treeview_sections.disable()
+            self.treeview_flows.disable()
+        else:
+            self.treeview_videos.enable()
+            self.treeview_files.enable()
+            self.treeview_sections.enable()
+            self.treeview_flows.enable()
 
     def register_observers(self) -> None:
         self._application._datastore.register_video_observer(self)
@@ -837,14 +851,14 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     def save_configuration(self) -> None:
-        suggested_save_path = self._application.suggest_save_path(OTFLOW_FILE_TYPE)
+        suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
         configuration_file = ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
-                (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
                 (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
+                (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
             ],
-            defaultextension=f".{OTFLOW_FILE_TYPE}",
+            defaultextension=f".{OTCONFIG_FILE_TYPE}",
             initialfile=suggested_save_path.name,
             initialdir=suggested_save_path.parent,
         )
@@ -1861,7 +1875,7 @@ class DummyViewModel(
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_format_extensions=export_formats,
-                initial_file_stem="track_statistics",
+                initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
                 viewmodel=self,
             ).get_data()
             logger().debug(export_values)
@@ -1869,7 +1883,7 @@ class DummyViewModel(
             export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
 
             export_specification = TrackStatisticsExportSpecification(
-                save_path, export_format
+                save_path, export_format, INITIAL_MERGE
             )
             self._application.export_track_statistics(export_specification)
             logger().info(f"Exporting track statistics to {save_path}")

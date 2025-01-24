@@ -46,15 +46,28 @@ from OTAnalytics.application.use_cases.create_events import (
 from OTAnalytics.application.use_cases.create_intersection_events import (
     BatchedTracksRunIntersect,
 )
-from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.event_repository import (
+    AddEvents,
+    ClearAllEvents,
+    GetAllEnterSectionEvents,
+)
 from OTAnalytics.application.use_cases.export_events import EventListExporter
 from OTAnalytics.application.use_cases.flow_repository import AddFlow, FlowRepository
+from OTAnalytics.application.use_cases.highlight_intersections import (
+    IntersectionRepository,
+    TracksAssignedToAllFlows,
+    TracksIntersectingAllNonCuttingSections,
+)
+from OTAnalytics.application.use_cases.inside_cutting_section import (
+    TrackIdsInsideCuttingSections,
+)
 from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportRoadUserAssignments,
 )
 from OTAnalytics.application.use_cases.section_repository import (
     AddSection,
     GetAllSections,
+    GetCuttingSections,
     GetSectionsById,
     RemoveSection,
 )
@@ -67,6 +80,10 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetTracksWithoutSingleDetections,
     RemoveTracks,
     TrackRepositorySize,
+)
+from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
+from OTAnalytics.application.use_cases.track_statistics_export import (
+    ExportTrackStatistics,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.progress import NoProgressbarBuilder
@@ -83,8 +100,26 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
 )
+from OTAnalytics.plugin_intersect.simple_intersect import (
+    SimpleTracksIntersectingSections,
+)
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
     MultiprocessingIntersectParallelization,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.calculation_strategy import (
+    DetectionRateByPercentile,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.metric_rates_builder import (
+    MetricRatesBuilder,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.metric_rates import (
+    SVZ_CLASSIFICATION,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.number_of_tracks_to_be_validated import (  # noqa
+    SvzNumberOfTracksToBeValidated,
+)
+from OTAnalytics.plugin_number_of_tracks_to_be_validated.tracks_as_dataframe_provider import (  # noqa
+    TracksAsDataFrameProvider,
 )
 from OTAnalytics.plugin_parser.export import (
     AddSectionInformationExporterFactory,
@@ -112,6 +147,9 @@ from OTAnalytics.plugin_parser.streaming_parser import (
     StreamTrackParser,
 )
 from OTAnalytics.plugin_parser.track_export import CsvTrackExport
+from OTAnalytics.plugin_parser.track_statistics_export import (
+    SimpleTrackStatisticsExporterFactory,
+)
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
     OTC_OTEVENTS_FORMAT_NAME,
@@ -126,6 +164,9 @@ from OTAnalytics.plugin_ui.cli import (
 )
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 from tests.conftest import YieldFixture
+
+# duplicate
+DETECTION_RATE_PERCENTILE_VALUE = 0.9
 
 CONFIG_FILE = "path/to/config.otconfig"
 SECTION_FILE = "path/to/section.otflow"
@@ -201,7 +242,7 @@ def mock_flow_parser() -> Mock:
 
 @pytest.fixture
 def video_parser() -> VideoParser:
-    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader()))
+    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(VideosMetadata())))
 
 
 @pytest.fixture
@@ -232,6 +273,7 @@ def create_run_config(
     event_formats: list[str] | None = None,
     count_intervals: list[int] | None = None,
     track_export: bool = False,
+    track_statistics_export: bool = False,
     num_processes: int = DEFAULT_NUM_PROCESSES,
     logfile: str = str(DEFAULT_LOG_FILE),
     logfile_overwrite: bool = False,
@@ -255,6 +297,7 @@ def create_run_config(
         debug=debug,
         logfile_overwrite=logfile_overwrite,
         track_export=track_export,
+        track_statistics_export=track_statistics_export,
         config_file=config_file,
         track_files=track_files,
         otflow_file=sections_file,
@@ -278,6 +321,7 @@ class TestOTAnalyticsCli:
     ADD_FLOW: str = "add_flow"
     CREATE_EVENTS: str = "create_events"
     EXPORT_COUNTS: str = "export_counts"
+    EXPORT_TRACK_STATISTICS: str = "export_track_statistics"
     EXPORT_TRACKS: str = "export_tracks"
     PROVIDE_EVENTLIST_EXPORTER: str = "provide_eventlist_exporter"
     APPLY_CLI_CUTS: str = "apply_cli_cuts"
@@ -312,6 +356,7 @@ class TestOTAnalyticsCli:
             self.ADD_FLOW: Mock(spec=AddFlow),
             self.CREATE_EVENTS: Mock(spec=CreateEvents),
             self.EXPORT_COUNTS: Mock(spec=ExportCounts),
+            self.EXPORT_TRACK_STATISTICS: Mock(spec=ExportTrackStatistics),
             self.EXPORT_TRACKS: Mock(spec=ExportTracks),
             self.PROVIDE_EVENTLIST_EXPORTER: Mock(),
             self.APPLY_CLI_CUTS: Mock(spec=ApplyCliCuts),
@@ -439,9 +484,8 @@ class TestOTAnalyticsCli:
 
     @pytest.fixture
     def cli_dependencies(self) -> dict[str, Any]:
-        track_repository = TrackRepository(
-            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
-        )
+        track_geometry_factory = PygeosTrackGeometryDataset.from_track_dataset
+        track_repository = TrackRepository(PythonTrackDataset(track_geometry_factory))
         section_repository = SectionRepository()
         event_repository = EventRepository()
         flow_repository = FlowRepository()
@@ -492,6 +536,33 @@ class TestOTAnalyticsCli:
                 AddSectionInformationExporterFactory(SimpleExporterFactory())
             ),
         )
+        get_all_tracks = GetAllTracks(track_repository)
+        get_cutting_sections = GetCuttingSections(section_repository)
+        tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
+            SimpleRoadUserAssigner(), event_repository, flow_repository
+        )
+        export_track_statistics = ExportTrackStatistics(
+            CalculateTrackStatistics(
+                TracksIntersectingAllNonCuttingSections(
+                    get_cutting_sections,
+                    GetAllSections(section_repository),
+                    SimpleTracksIntersectingSections(get_all_tracks),
+                    GetSectionsById(section_repository),
+                    IntersectionRepository(),
+                ),
+                tracks_assigned_to_all_flows,
+                GetAllTrackIds(track_repository),
+                TrackIdsInsideCuttingSections(get_all_tracks, get_cutting_sections),
+                SvzNumberOfTracksToBeValidated(
+                    TracksAsDataFrameProvider(get_all_tracks, track_geometry_factory),
+                    tracks_assigned_to_all_flows,
+                    DetectionRateByPercentile(DETECTION_RATE_PERCENTILE_VALUE),
+                    MetricRatesBuilder(SVZ_CLASSIFICATION),
+                ),
+                GetAllEnterSectionEvents(event_repository),
+            ),
+            SimpleTrackStatisticsExporterFactory(),
+        )
         tracks_metadata = TracksMetadata(track_repository)
         videos_metadata = VideosMetadata()
         export_tracks = CsvTrackExport(
@@ -513,6 +584,7 @@ class TestOTAnalyticsCli:
             self.ADD_FLOW: AddFlow(flow_repository),
             self.CREATE_EVENTS: create_events,
             self.EXPORT_COUNTS: export_counts,
+            self.EXPORT_TRACK_STATISTICS: export_track_statistics,
             self.EXPORT_TRACKS: export_tracks,
             self.PROVIDE_EVENTLIST_EXPORTER: provide_available_eventlist_exporter,
             self.APPLY_CLI_CUTS: apply_cli_cuts,
@@ -634,6 +706,10 @@ class TestOTAnalyticsCli:
         assert cli._add_flow == expected_dependencies[self.ADD_FLOW]
         assert cli._create_events == expected_dependencies[self.CREATE_EVENTS]
         assert cli._export_counts == expected_dependencies[self.EXPORT_COUNTS]
+        assert (
+            cli._export_track_statistics
+            == expected_dependencies[self.EXPORT_TRACK_STATISTICS]
+        )
         assert cli._export_tracks == expected_dependencies[self.EXPORT_TRACKS]
         assert cli._apply_cli_cuts == expected_dependencies[self.APPLY_CLI_CUTS]
         assert cli._add_all_tracks == expected_dependencies[self.ADD_ALL_TRACKS]
@@ -914,6 +990,7 @@ class TestOTAnalyticsCli:
             debug=False,
             logfile_overwrite=False,
             track_export=False,
+            track_statistics_export=False,
             config_file=str(temp_otconfig),
         )
         otconfig = config_parser.parse(temp_otconfig)
@@ -1053,5 +1130,5 @@ class TestOTAnalyticsCli:
             dependencies[self.CLEAR_ALL_TRACKS].assert_called_once()
             dependencies[self.EVENT_REPOSITORY].clear.assert_called_once()
             dependencies[self.APPLY_CLI_CUTS].apply.assert_called_once_with(
-                sections, preserve_cutting_sections=False
+                sections, preserve_cutting_sections=True
             )

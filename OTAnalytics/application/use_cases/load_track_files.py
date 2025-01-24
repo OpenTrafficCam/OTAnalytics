@@ -5,6 +5,7 @@ from OTAnalytics.application.datastore import (
     TrackToVideoRepository,
     TrackVideoParser,
 )
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
@@ -45,7 +46,11 @@ class LoadTrackFiles:
         for file in self._progressbar(
             files, unit="files", description="Processed ottrk files: "
         ):
+            if self._is_file_already_loaded(file):
+                logger().warning(f"File '{file}' already loaded. Skipping... ")
+                continue
             try:
+
                 self.load(file)
             except Exception as cause:
                 raised_exceptions.append(cause)
@@ -53,6 +58,9 @@ class LoadTrackFiles:
             raise ExceptionGroup(
                 "Errors occurred while loading the track files:", raised_exceptions
             )
+
+    def _is_file_already_loaded(self, file: Path) -> bool:
+        return file in self._track_file_repository.get_all()
 
     def load(self, file: Path) -> None:
         """
@@ -66,6 +74,7 @@ class LoadTrackFiles:
         track_ids, videos = self._track_video_parser.parse(
             file, track_ids, parse_result.video_metadata
         )
+        self._videos_metadata.update(parse_result.video_metadata)
         self._video_repository.add_all(videos)
         self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(parse_result.tracks)
@@ -73,4 +82,3 @@ class LoadTrackFiles:
         self._tracks_metadata.update_detection_classes(
             parse_result.detection_metadata.detection_classes
         )
-        self._videos_metadata.update(parse_result.video_metadata)

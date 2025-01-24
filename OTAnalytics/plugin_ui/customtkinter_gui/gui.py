@@ -2,13 +2,7 @@ import tkinter
 from functools import partial
 from typing import Any, Sequence
 
-from customtkinter import (
-    CTk,
-    CTkFrame,
-    CTkScrollableFrame,
-    set_appearance_mode,
-    set_default_color_theme,
-)
+from customtkinter import CTk, CTkFrame, set_appearance_mode, set_default_color_theme
 
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -18,7 +12,12 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import LayerGroup
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFiles
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STICKY,
+    TkEvents,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
     CustomCTkTabview,
     EmbeddedCTkScrollableFrame,
@@ -39,9 +38,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_statistics import (
     FrameTrackStatistics,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_video_control import (
-    FrameVideoControl,
-)
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_videos import FrameVideos
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
@@ -60,6 +56,10 @@ class ModifiedCTk(AbstractMainWindow, CTk):
         self.protocol("WM_DELETE_WINDOW", self._ask_to_close)
         self._viewmodel: ViewModel = viewmodel
         self.introduce_to_viewmodel()
+        self._bind_events()
+
+    def _bind_events(self) -> None:
+        self.bind(TkEvents.LEFT_BUTTON_DOWN, lambda event: event.widget.focus_set())
 
     def _ask_to_close(self) -> None:
         infobox = InfoBox(
@@ -140,16 +140,18 @@ class FrameContent(CTkFrame):
         self._frame_canvas_controls = FrameCanvasControls(
             master=self, viewmodel=self._viewmodel
         )
-        self.grid_rowconfigure(0, weight=0)
-        self.grid_rowconfigure(1, weight=10)
-        self.grid_columnconfigure(0, weight=0)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=0)
         self._frame_canvas.grid(row=0, column=0, pady=PADY, sticky=STICKY)
-        self._frame_track_plotting.grid(row=0, column=1, pady=PADY, sticky=STICKY)
+        self._frame_track_plotting.grid(
+            row=0, column=1, pady=PADY, sticky="ne", rowspan=2
+        )
         self._frame_canvas_controls.grid(row=1, column=0, pady=PADY, sticky=STICKY)
 
 
-class FrameCanvasControls(CTkScrollableFrame):
+class FrameCanvasControls(CTkFrame):
     def __init__(
         self,
         master: Any,
@@ -172,11 +174,6 @@ class FrameCanvasControls(CTkScrollableFrame):
             title="Visualization Filters",
             frame_factory=partial(FrameFilter, viewmodel=self._viewmodel),
         )
-        self._frame_video_control = SingleFrameTabview(
-            master=self,
-            title="Video Control",
-            frame_factory=partial(FrameVideoControl, viewmodel=self._viewmodel),
-        )
 
     def _place_widgets(self) -> None:
         self.grid_rowconfigure(0, weight=0)
@@ -184,7 +181,6 @@ class FrameCanvasControls(CTkScrollableFrame):
         self.grid_rowconfigure(2, weight=0)
         self._frame_track_statistics.grid(row=0, column=0, pady=PADY, sticky=STICKY)
         self._frame_filter.grid(row=1, column=0, pady=PADY, sticky=STICKY)
-        self._frame_video_control.grid(row=2, column=0, pady=PADY, sticky=STICKY)
 
 
 class FrameNavigation(EmbeddedCTkScrollableFrame):

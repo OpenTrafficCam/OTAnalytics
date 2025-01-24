@@ -21,3 +21,11 @@ class AbstractTreeviewInterface(WidgetPositionProvider):
     @abstractmethod
     def update_selected_items(self, item_ids: list[str]) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def enable(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def disable(self) -> None:
+        raise NotImplementedError
