@@ -582,7 +582,7 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
 
     def add_video(self) -> None:
-        self.frame_remark.load_remark()
+        self.frame_remark.load_remark()  # TODO Change where to place this
         track_files = askopenfilenames(
             title="Load video files",
             filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
