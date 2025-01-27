@@ -20,6 +20,7 @@ from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionId, SectionRepository
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
@@ -147,6 +148,11 @@ def config_parser() -> Mock:
 @pytest.fixture
 def progressbar() -> Mock:
     return Mock(spec=ProgressbarBuilder)
+
+
+@pytest.fixture
+def remark_repository() -> Mock:
+    return Mock(spec=RemarkRepository)
 
 
 class TestDatastore:
