@@ -17,6 +17,7 @@ from OTAnalytics.adapter_ui.abstract_frame_project import (
     AbstractFrameProject,
     AbstractFrameSvzMetadata,
 )
+from OTAnalytics.adapter_ui.abstract_frame_remark import AbstractFrameRemark
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
@@ -275,6 +276,12 @@ class DummyViewModel(
         return self._frame_filter
 
     @property
+    def frame_remark(self) -> AbstractFrameRemark:
+        if self._frame_remarks is None:
+            raise MissingInjectedInstanceError("frame remark")
+        return self._frame_remarks
+
+    @property
     def frame_analysis(self) -> AbstractFrame:
         if self._frame_analysis is None:
             raise MissingInjectedInstanceError("frame analysis")
@@ -357,6 +364,7 @@ class DummyViewModel(
         self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
         self._frame_analysis: Optional[AbstractFrame] = None
+        self._frame_remarks: Optional[AbstractFrameRemark] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._frame_track_plotting: Optional[AbstractFrameTrackPlotting] = None
         self._frame_svz_metadata: Optional[AbstractFrameSvzMetadata] = None
@@ -574,6 +582,7 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
 
     def add_video(self) -> None:
+        self.frame_remark.load_remark()
         track_files = askopenfilenames(
             title="Load video files",
             filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
@@ -601,7 +610,7 @@ class DummyViewModel(
                 selected_videos.append(video)
         self._application.track_view_state.selected_videos.set(selected_videos)
 
-    def get_remarks(self) -> str | None:
+    def get_remark(self) -> str:
         return self._application.get_remark()
 
     def get_all_videos(self) -> list[Video]:
@@ -1712,6 +1721,9 @@ class DummyViewModel(
 
         logger().info(msg)
         InfoBox(msg, window_position)
+
+    def set_remark_frame(self, frame: AbstractFrameRemark) -> None:
+        self._frame_remarks = frame
 
     def set_analysis_frame(self, frame: AbstractFrame) -> None:
         self._frame_analysis = frame

@@ -135,13 +135,14 @@ class OtConfigParser(ConfigParser):
         sections, flows = self._flow_parser.parse_content(
             fixed_content[section.SECTIONS], fixed_content[flow.FLOWS]
         )
+        remark = fixed_content[REMARK]
         return OtConfig(
             project=_project,
             analysis=analysis_config,
             videos=videos,
             sections=sections,
             flows=flows,
-            remark="",
+            remark=remark,
         )
 
     def _parse_videos(

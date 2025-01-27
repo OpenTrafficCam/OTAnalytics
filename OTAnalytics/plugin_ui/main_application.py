@@ -531,6 +531,7 @@ class ApplicationStarter:
             AddAllSections(add_section),
             AddAllFlows(add_flow),
             load_track_files,
+            remark_repository,
             parse_json,
         )
         get_all_videos = GetAllVideos(video_repository)

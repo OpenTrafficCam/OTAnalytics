@@ -34,7 +34,7 @@ class TestLoadOtconfig:
         clear_repositories = Mock()
         config_parser = Mock()
         config_parser.parse.return_value = otconfig
-
+        remark_repository = Mock()
         update_project = Mock()
         add_videos = Mock()
         add_sections = Mock()
@@ -52,6 +52,7 @@ class TestLoadOtconfig:
             add_sections,
             add_flows,
             load_track_files,
+            remark_repository,
             deserializer,
         )
         observer = Mock()
@@ -88,6 +89,7 @@ class TestLoadOtconfig:
             Mock(),
             Mock(),
             add_sections,
+            Mock(),
             Mock(),
             Mock(),
             Mock(),

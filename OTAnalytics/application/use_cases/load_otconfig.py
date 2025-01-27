@@ -16,6 +16,7 @@ from OTAnalytics.application.use_cases.section_repository import (
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import AddAllVideos
 from OTAnalytics.domain.observer import OBSERVER, Subject
+from OTAnalytics.domain.remark import RemarkRepository
 
 
 class LoadOtconfig:
@@ -28,9 +29,10 @@ class LoadOtconfig:
         add_sections: AddAllSections,
         add_flows: AddAllFlows,
         load_track_files: LoadTrackFiles,
+        remark_repository: RemarkRepository,
         deserialize: Deserializer,
     ) -> None:
-
+        self._remark_repository = remark_repository
         self._clear_repositories = clear_repositories
         self._config_parser = config_parser
         self._update_project = update_project
@@ -58,6 +60,8 @@ class LoadOtconfig:
                     self._deserialize(file),
                 )
             )
+            if config.remark:
+                self._remark_repository.add(config.remark)
         except (SectionAlreadyExists, FlowAlreadyExists) as cause:
             self._clear_repositories()
             raise UnableToLoadOtconfigFile(

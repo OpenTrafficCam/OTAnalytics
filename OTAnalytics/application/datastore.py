@@ -455,5 +455,8 @@ class Datastore:
             video.get_frame(frame) if (video := self.get_video_for(track_id)) else None
         )
 
-    def get_remark(self) -> str | None:
+    def add_remark(self, remark: str) -> None:
+        self._remark_repository.add(remark)
+
+    def get_remark(self) -> str:
         return self._remark_repository.get()
