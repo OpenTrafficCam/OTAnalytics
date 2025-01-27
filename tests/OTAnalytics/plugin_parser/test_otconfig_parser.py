@@ -153,6 +153,7 @@ class TestOtConfigParser:
             mock_otconfig.sections,
             mock_otconfig.flows,
             save_path,
+            mock_otconfig.remark,
         )
 
     def test_parse_config(
