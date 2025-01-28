@@ -56,6 +56,7 @@ from OTAnalytics.application.ui.frame_control import (
     SwitchToNext,
     SwitchToPrevious,
 )
+from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.config import SaveOtconfig
@@ -107,6 +108,7 @@ from OTAnalytics.application.use_cases.generate_flows import (
     RepositoryFlowIdGenerator,
 )
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
+from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
 from OTAnalytics.application.use_cases.get_road_user_assignments import (
     GetRoadUserAssignments,
 )
@@ -518,11 +520,15 @@ class ApplicationStarter:
         get_sections = GetAllSections(section_repository)
         get_flows = GetAllFlows(flow_repository)
         save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, file_state)
+        get_current_remark = GetCurrentRemark(remark_repository)
         config_parser = self.create_config_parser(run_config, video_parser)
-        save_otconfig = SaveOtconfig(datastore, config_parser, file_state)
+        save_otconfig = SaveOtconfig(
+            datastore, config_parser, file_state, get_current_remark
+        )
         quick_save_configuration = QuickSaveConfiguration(
             file_state, save_otflow, save_otconfig
         )
+        add_new_remark = AddNewRemark(remark_repository)
         load_otconfig = LoadOtconfig(
             clear_repositories,
             config_parser,
@@ -531,7 +537,7 @@ class ApplicationStarter:
             AddAllSections(add_section),
             AddAllFlows(add_flow),
             load_track_files,
-            remark_repository,
+            add_new_remark,
             parse_json,
         )
         get_all_videos = GetAllVideos(video_repository)
@@ -621,6 +627,7 @@ class ApplicationStarter:
             calculate_track_statistics,
             number_of_tracks_assigned_to_each_flow,
             export_track_statistics,
+            get_current_remark,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
