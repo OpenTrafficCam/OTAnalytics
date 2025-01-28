@@ -1,10 +1,9 @@
 from pathlib import Path
 
-from application.use_cases.get_current_remark import GetCurrentRemark
-
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.state import ConfigurationFile, FileState
+from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
 
 
 class MissingDate(Exception):
