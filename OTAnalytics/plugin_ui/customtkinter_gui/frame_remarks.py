@@ -1,6 +1,8 @@
 import tkinter as tk
 from typing import Any
 
+from customtkinter import CTkTextbox
+
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 
@@ -14,8 +16,7 @@ class FrameRemarks(AbstractCTkFrame):
         self.introduce_to_viewmodel()
 
     def create_widgets(self) -> None:
-        # Create a text box for remarks
-        self.text_remarks = tk.Text(self, wrap=tk.WORD, height=10, width=30)
+        self.text_remarks = CTkTextbox(self, wrap=tk.WORD, height=10, width=30)
         self.text_remarks.pack(pady=5, padx=10, fill=tk.BOTH, expand=True)
 
     def introduce_to_viewmodel(self) -> None:
