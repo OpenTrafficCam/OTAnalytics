@@ -63,12 +63,13 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
-from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.export_formats.export_mode import INITIAL_MERGE, OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
@@ -1891,7 +1892,7 @@ class DummyViewModel(
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_format_extensions=export_formats,
-                initial_file_stem="track_statistics",
+                initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
                 viewmodel=self,
             ).get_data()
             logger().debug(export_values)
@@ -1899,7 +1900,7 @@ class DummyViewModel(
             export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
 
             export_specification = TrackStatisticsExportSpecification(
-                save_path, export_format
+                save_path, export_format, INITIAL_MERGE
             )
             self._application.export_track_statistics(export_specification)
             logger().info(f"Exporting track statistics to {save_path}")

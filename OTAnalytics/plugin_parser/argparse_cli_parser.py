@@ -116,6 +116,12 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--no-track-statistics-export",
+            action="store_true",
+            help="Do not export track statistics as csv",
+            required=False,
+        )
+        self._parser.add_argument(
             "--num-processes",
             type=int,
             help="Number of processes to use in multi-processing.",
@@ -175,6 +181,7 @@ class ArgparseCliParser(CliParser):
             event_formats=args.event_formats,
             count_intervals=args.count_intervals,
             track_export=not args.no_track_export,
+            track_statistics_export=not args.no_track_statistics_export,
             num_processes=args.num_processes,
             log_file=args.logfile,
             include_classes=args.include_classes,

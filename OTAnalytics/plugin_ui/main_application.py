@@ -246,6 +246,7 @@ from OTAnalytics.plugin_parser.streaming_parser import (
 )
 from OTAnalytics.plugin_parser.track_export import CsvTrackExport
 from OTAnalytics.plugin_parser.track_statistics_export import (
+    CachedTrackStatisticsExporterFactory,
     SimpleTrackStatisticsExporterFactory,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
@@ -417,14 +418,14 @@ class ApplicationStarter:
         remove_tracks = RemoveTracks(track_repository)
         clear_all_tracks = ClearAllTracks(track_repository)
 
+        get_sections = GetAllSections(section_repository)
         get_sections_by_id = GetSectionsById(section_repository)
         add_section = AddSection(section_repository)
         remove_section = RemoveSection(section_repository)
         clear_all_sections = ClearAllSections(section_repository)
-        section_provider = FilterOutCuttingSections(
-            MissingEventsSectionProvider(section_repository, event_repository)
+        generate_flows = self._create_flow_generator(
+            FilterOutCuttingSections(get_sections), flow_repository
         )
-        generate_flows = self._create_flow_generator(section_provider, flow_repository)
         add_flow = AddFlow(flow_repository)
         clear_all_flows = ClearAllFlows(flow_repository)
 
@@ -434,6 +435,9 @@ class ApplicationStarter:
         clear_all_videos = ClearAllVideos(datastore._video_repository)
         clear_all_track_to_videos = ClearAllTrackToVideos(
             datastore._track_to_video_repository
+        )
+        section_provider = FilterOutCuttingSections(
+            MissingEventsSectionProvider(section_repository, event_repository)
         )
         create_events = self._create_use_case_create_events(
             section_provider,
@@ -517,7 +521,6 @@ class ApplicationStarter:
             section_state=section_state,
             create_default_filter=create_default_filter,
         )
-        get_sections = GetAllSections(section_repository)
         get_flows = GetAllFlows(flow_repository)
         save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, file_state)
         get_current_remark = GetCurrentRemark(remark_repository)
@@ -586,7 +589,9 @@ class ApplicationStarter:
         number_of_tracks_assigned_to_each_flow = NumberOfTracksAssignedToEachFlow(
             get_road_user_assignments, flow_repository
         )
-        track_statistics_export_factory = SimpleTrackStatisticsExporterFactory()
+        track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
+            SimpleTrackStatisticsExporterFactory()
+        )
         export_track_statistics = ExportTrackStatistics(
             calculate_track_statistics, track_statistics_export_factory
         )
@@ -773,6 +778,30 @@ class ApplicationStarter:
             flow_repository,
             create_events,
         )
+        get_sections = GetAllSections(section_repository)
+        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
+            get_all_tracks
+        )
+        intersection_repository = self._create_intersection_repository()
+        road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
+        calculate_track_statistics = self._create_calculate_track_statistics(
+            get_sections,
+            tracks_intersecting_sections,
+            get_sections_by_id,
+            intersection_repository,
+            road_user_assigner,
+            event_repository,
+            flow_repository,
+            track_repository,
+            section_repository,
+            get_all_tracks,
+        )
+        track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
+            SimpleTrackStatisticsExporterFactory()
+        )
+        export_track_statistics = ExportTrackStatistics(
+            calculate_track_statistics, track_statistics_export_factory
+        )
 
         cli: OTAnalyticsCli
         if run_config.cli_bulk_mode:
@@ -795,6 +824,7 @@ class ApplicationStarter:
                 videos_metadata,
                 export_tracks,
                 export_road_user_assignments,
+                export_track_statistics,
                 track_parser,
                 progressbar=TqdmBuilder(),
             )
@@ -809,6 +839,7 @@ class ApplicationStarter:
                 add_flow,
                 create_events,
                 export_counts,
+                export_track_statistics,
                 provide_available_eventlist_exporter,
                 apply_cli_cuts,
                 add_all_tracks,
