@@ -17,6 +17,7 @@ from OTAnalytics.adapter_ui.abstract_frame_project import (
     AbstractFrameProject,
     AbstractFrameSvzMetadata,
 )
+from OTAnalytics.adapter_ui.abstract_frame_remark import AbstractFrameRemark
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
@@ -62,12 +63,13 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
-from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.export_formats.export_mode import INITIAL_MERGE, OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
@@ -275,6 +277,12 @@ class DummyViewModel(
         return self._frame_filter
 
     @property
+    def frame_remark(self) -> AbstractFrameRemark:
+        if self._frame_remarks is None:
+            raise MissingInjectedInstanceError("frame remark")
+        return self._frame_remarks
+
+    @property
     def frame_analysis(self) -> AbstractFrame:
         if self._frame_analysis is None:
             raise MissingInjectedInstanceError("frame analysis")
@@ -357,6 +365,7 @@ class DummyViewModel(
         self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
         self._frame_analysis: Optional[AbstractFrame] = None
+        self._frame_remarks: Optional[AbstractFrameRemark] = None
         self._canvas: Optional[AbstractCanvas] = None
         self._frame_track_plotting: Optional[AbstractFrameTrackPlotting] = None
         self._frame_svz_metadata: Optional[AbstractFrameSvzMetadata] = None
@@ -528,6 +537,19 @@ class DummyViewModel(
 
     def _notify_action_running_state(self, running: bool) -> None:
         self._update_enabled_buttons()
+        self._update_treeview_states()
+
+    def _update_treeview_states(self) -> None:
+        if self._application.action_state.action_running.get():
+            self.treeview_videos.disable()
+            self.treeview_files.disable()
+            self.treeview_sections.disable()
+            self.treeview_flows.disable()
+        else:
+            self.treeview_videos.enable()
+            self.treeview_files.enable()
+            self.treeview_sections.enable()
+            self.treeview_flows.enable()
 
     def register_observers(self) -> None:
         self._application._datastore.register_video_observer(self)
@@ -587,6 +609,9 @@ class DummyViewModel(
             if video := self._application._datastore.get_video_at(Path(path)):
                 selected_videos.append(video)
         self._application.track_view_state.selected_videos.set(selected_videos)
+
+    def get_remark(self) -> str:
+        return self._application.get_remark()
 
     def get_all_videos(self) -> list[Video]:
         return self._application.get_all_videos()
@@ -837,14 +862,14 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     def save_configuration(self) -> None:
-        suggested_save_path = self._application.suggest_save_path(OTFLOW_FILE_TYPE)
+        suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
         configuration_file = ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
-                (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
                 (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
+                (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
             ],
-            defaultextension=f".{OTFLOW_FILE_TYPE}",
+            defaultextension=f".{OTCONFIG_FILE_TYPE}",
             initialfile=suggested_save_path.name,
             initialdir=suggested_save_path.parent,
         )
@@ -1697,6 +1722,9 @@ class DummyViewModel(
         logger().info(msg)
         InfoBox(msg, window_position)
 
+    def set_remark_frame(self, frame: AbstractFrameRemark) -> None:
+        self._frame_remarks = frame
+
     def set_analysis_frame(self, frame: AbstractFrame) -> None:
         self._frame_analysis = frame
 
@@ -1821,6 +1849,9 @@ class DummyViewModel(
         else:
             self.frame_svz_metadata.update({})
 
+    def update_remark_view(self, _: Any = None) -> None:
+        self.frame_remark.load_remark()
+
     def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
         return self._application.suggest_save_path(file_type, context_file_type)
 
@@ -1861,7 +1892,7 @@ class DummyViewModel(
                 initial_position=(50, 50),
                 input_values=default_values,
                 export_format_extensions=export_formats,
-                initial_file_stem="track_statistics",
+                initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
                 viewmodel=self,
             ).get_data()
             logger().debug(export_values)
@@ -1869,7 +1900,7 @@ class DummyViewModel(
             export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
 
             export_specification = TrackStatisticsExportSpecification(
-                save_path, export_format
+                save_path, export_format, INITIAL_MERGE
             )
             self._application.export_track_statistics(export_specification)
             logger().info(f"Exporting track statistics to {save_path}")

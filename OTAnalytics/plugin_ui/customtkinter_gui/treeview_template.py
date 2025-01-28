@@ -17,15 +17,24 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
         **kwargs: Any,
     ) -> None:
         super().__init__(selectmode="none", show=show, **kwargs)
-        self.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)
-        self.bind(tk_events.LEFT_BUTTON_UP, self._on_single_select)
-        self.bind(tk_events.MULTI_SELECT_SINGLE, self._on_single_multi_select)
-        self.bind(tk_events.LEFT_BUTTON_DOUBLE, self._on_double_click)
+        self._bind_events()
         self._define_columns()
         self._introduce_to_viewmodel()
         self.update_items()
 
     # TODO: add property viewmodel
+
+    def _bind_events(self) -> None:
+        self.bind(tk_events.RIGHT_BUTTON_UP, self._on_deselect)
+        self.bind(tk_events.LEFT_BUTTON_UP, self._on_single_select)
+        self.bind(tk_events.MULTI_SELECT_SINGLE, self._on_single_multi_select)
+        self.bind(tk_events.LEFT_BUTTON_DOUBLE, self._on_double_click)
+
+    def _unbind_events(self) -> None:
+        self.unbind(tk_events.RIGHT_BUTTON_UP)
+        self.unbind(tk_events.LEFT_BUTTON_UP)
+        self.unbind(tk_events.MULTI_SELECT_SINGLE)
+        self.unbind(tk_events.LEFT_BUTTON_DOUBLE)
 
     @abstractmethod
     def _define_columns(self) -> None:
@@ -76,3 +85,9 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
 
     def get_current_selection(self) -> list[str]:
         return list(self.selection())
+
+    def enable(self) -> None:
+        self._bind_events()
+
+    def disable(self) -> None:
+        self._unbind_events()

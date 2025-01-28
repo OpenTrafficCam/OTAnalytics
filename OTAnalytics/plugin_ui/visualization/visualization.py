@@ -83,6 +83,33 @@ MARKER_EVENT_FILTER = "x"
 MARKER_EVENT_FRAME = "o"
 
 
+ALPHA_ALL_TRACKS_PLOTTER = 0.5
+ALPHA_HIGHLIGHT_TRACKS = 1
+ALPHA_HIGHLIGHT_TRACKS_NOT_ASSIGNED_TO_FLOWS = ALPHA_HIGHLIGHT_TRACKS
+ALPHA_HIGHLIGHT_TRACKS_ASSIGNED_TO_FLOWS = ALPHA_HIGHLIGHT_TRACKS
+ALPHA_HIGHLIGHT_TRACKS_NOT_INTERSECTING_SECTIONS = ALPHA_HIGHLIGHT_TRACKS
+ALPHA_HIGHLIGHT_TRACKS_INTERSECTING_SECTIONS = ALPHA_HIGHLIGHT_TRACKS
+
+ALPHA_HIGHLIGHT_START_END_POINTS = 1
+ALPHA_HIGHLIGHT_START_END_POINTS_NOT_ASSIGNED_TO_FLOWS = (
+    ALPHA_HIGHLIGHT_START_END_POINTS
+)
+ALPHA_HIGHLIGHT_START_END_POINTS_ASSIGNED_TO_FLOWS = ALPHA_HIGHLIGHT_START_END_POINTS
+ALPHA_HIGHLIGHT_START_END_POINTS_NOT_INTERSECTING_SECTIONS = (
+    ALPHA_HIGHLIGHT_START_END_POINTS
+)
+ALPHA_HIGHLIGHT_START_END_POINTS_INTERSECTING_SECTIONS = (
+    ALPHA_HIGHLIGHT_START_END_POINTS
+)
+
+
+ALL: str = "All"
+INTERSECTING_SECTIONS: str = "Intersecting sections"
+NOT_INTERSECTING_SECTIONS: str = "Not intersecting sections"
+ASSIGNED_TO_FLOWS: str = "Assigned to flows"
+NOT_ASSIGNED_TO_FLOWS: str = "Not assigned to flows"
+
+
 class FilterStartDateProvider(VisualizationTimeProvider):
     def __init__(self, state: TrackViewState) -> None:
         self._state = state
@@ -101,14 +128,6 @@ class FilterEndDateProvider(VisualizationTimeProvider):
         if end_date := self._state.filter_element.get().date_range.end_date:
             return end_date
         return LONG_IN_THE_PAST
-
-
-ALPHA_ALL_TRACKS_PLOTTER = 0.5
-ALPHA_HIGHLIGHT_TRACKS = 1
-ALPHA_HIGHLIGHT_TRACKS_NOT_ASSIGNED_TO_FLOWS = ALPHA_HIGHLIGHT_TRACKS
-ALPHA_HIGHLIGHT_TRACKS_ASSIGNED_TO_FLOWS = ALPHA_HIGHLIGHT_TRACKS
-ALPHA_HIGHLIGHT_TRACKS_NOT_INTERSECTING_SECTIONS = ALPHA_HIGHLIGHT_TRACKS
-ALPHA_HIGHLIGHT_TRACKS_INTERSECTING_SECTIONS = ALPHA_HIGHLIGHT_TRACKS
 
 
 class TracksNotAssignedToSelection(PandasDataFrameProvider):
@@ -217,6 +236,17 @@ class VisualizationBuilder:
             )
         )
 
+        highlight_start_end_point_assigned_to_flows_plotter = (
+            self._create_highlight_start_end_point_assigned_to_flows_plotter(
+                flow_state, road_user_assigner
+            )
+        )
+        highlight_start_end_point_not_assigned_to_flows_plotter = (
+            self._create_highlight_start_end_point_not_assigned_to_flows_plotter(
+                road_user_assigner, flow_state
+            )
+        )
+
         track_bounding_box_plotter = self._create_track_bounding_box_plotter()
         track_point_plotter = self._create_track_point_plotter()
         event_point_plotter_frame = self._create_event_point_plotter_frame()
@@ -227,53 +257,63 @@ class VisualizationBuilder:
                 ("Background", background_image_plotter, True),
             ],
             "Show tracks": [
-                ("All", all_tracks_plotter, False),
+                (ALL, all_tracks_plotter, False),
                 (
-                    "Intersecting sections",
+                    INTERSECTING_SECTIONS,
                     self._create_highlight_tracks_intersecting_sections_plotter(),
                     False,
                 ),
                 (
-                    "Not intersecting sections",
+                    NOT_INTERSECTING_SECTIONS,
                     self._create_highlight_tracks_not_intersecting_sections_plotter(),
                     False,
                 ),
                 (
-                    "Assigned to flows",
+                    ASSIGNED_TO_FLOWS,
                     highlight_tracks_assigned_to_flows_plotter,
                     False,
                 ),
                 (
-                    "Not assigned to flows",
+                    NOT_ASSIGNED_TO_FLOWS,
                     highlight_tracks_not_assigned_to_flows_plotter,
                     False,
                 ),
             ],
             "Show start and end points": [
                 (
-                    "All",
+                    ALL,
                     self._create_start_end_point_plotter(),
                     False,
                 ),
                 (
-                    "Intersecting sections",
+                    INTERSECTING_SECTIONS,
                     self._create_start_end_point_intersecting_sections_plotter(),
                     False,
                 ),
                 (
-                    "Not intersecting sections",
+                    NOT_INTERSECTING_SECTIONS,
                     self._create_start_end_point_not_intersection_sections_plotter(),
                     False,
                 ),
-            ],
-            "Show Bounding Box": [
                 (
-                    "Current frame",
+                    ASSIGNED_TO_FLOWS,
+                    highlight_start_end_point_assigned_to_flows_plotter,
+                    False,
+                ),
+                (
+                    NOT_ASSIGNED_TO_FLOWS,
+                    highlight_start_end_point_not_assigned_to_flows_plotter,
+                    False,
+                ),
+            ],
+            "Show detections of current frame": [
+                (
+                    "Bounding Box",
                     track_bounding_box_plotter,
                     False,
                 ),
                 (
-                    "Track point of current frame",
+                    "Track point",
                     track_point_plotter,
                     False,
                 ),
@@ -346,6 +386,7 @@ class VisualizationBuilder:
                     self._create_get_sections_by_id(),
                 ),
                 self._color_palette_provider,
+                alpha=ALPHA_HIGHLIGHT_START_END_POINTS_INTERSECTING_SECTIONS,
                 enable_legend=False,
             ),
             self._section_state,
@@ -364,10 +405,85 @@ class VisualizationBuilder:
             self._create_start_end_point_intersecting_section_factory(
                 section_filter,
                 self._color_palette_provider,
+                alpha=ALPHA_HIGHLIGHT_START_END_POINTS_NOT_INTERSECTING_SECTIONS,
                 enable_legend=False,
             ),
             self._section_state,
         )
+
+    def _create_highlight_start_end_point_assigned_to_flows_factory(
+        self,
+        pandas_data_provider_factory: Callable[[FlowId], PandasDataFrameProvider],
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float,
+        enable_legend: bool,
+    ) -> Callable[[FlowId], Plotter]:
+        return lambda flow: self._create_track_start_end_point_plotter(
+            pandas_data_provider_factory(flow),
+            color_palette_provider,
+            alpha,
+            enable_legend,
+        )
+
+    def _create_highlight_start_end_point_assigned_to_flow(
+        self,
+        plotter_factory: Callable[[FlowId], Plotter],
+        flow_state: FlowState,
+    ) -> Plotter:
+        plotter = FlowLayerPlotter(
+            plotter_factory,
+            flow_state,
+            self._flow_repository,
+            self._track_repository,
+            self._event_repository,
+            EventToFlowResolver(self._flow_repository),
+        )
+        self._track_view_state.filter_element.register(plotter.notify_invalidate)
+        self._track_view_state.track_offset.register(plotter.notify_invalidate)
+        return plotter
+
+    def _create_highlight_start_end_point_assigned_to_flows_plotter(
+        self, flow_state: FlowState, road_user_assigner: RoadUserAssigner
+    ) -> Plotter:
+        return self._create_highlight_start_end_point_assigned_to_flow(
+            self._create_highlight_start_end_point_assigned_to_flows_factory(
+                self._create_tracks_assigned_to_flows_filter(
+                    self._get_data_provider_all_filters_with_offset(),
+                    road_user_assigner,
+                ),
+                self._color_palette_provider,
+                alpha=ALPHA_HIGHLIGHT_START_END_POINTS_ASSIGNED_TO_FLOWS,
+                enable_legend=False,
+            ),
+            flow_state,
+        )
+
+    def _create_highlight_start_end_point_not_assigned_to_flows_plotter(
+        self, road_user_assigner: RoadUserAssigner, flow_state: FlowState
+    ) -> Plotter:
+        flows_filter = TracksNotAssignedToSelection(
+            self._get_data_provider_all_filters_with_offset(),
+            road_user_assigner,
+            self._event_repository,
+            self._flow_repository,
+            flow_state,
+            self._track_repository,
+        )
+        cached_plotter = CachedPlotter(
+            self._create_track_start_end_point_plotter(
+                flows_filter,
+                self._color_palette_provider,
+                alpha=ALPHA_HIGHLIGHT_START_END_POINTS_NOT_ASSIGNED_TO_FLOWS,
+                enable_legend=False,
+            ),
+            [],
+        )
+        invalidate = cached_plotter.invalidate_cache
+        self._event_repository.register_observer(invalidate)
+        flow_state.selected_flows.register(invalidate)
+        self._track_view_state.filter_element.register(invalidate)
+        self._track_view_state.track_offset.register(invalidate)
+        return cached_plotter
 
     def _create_start_end_point_plotter(self) -> Plotter:
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
@@ -375,6 +491,7 @@ class VisualizationBuilder:
                 self._get_data_provider_class_filter_with_offset()
             ),
             self._color_palette_provider,
+            alpha=ALPHA_HIGHLIGHT_START_END_POINTS,
             enable_legend=False,
         )
         start_end_point_plotter = self._wrap_plotter_with_cache(
@@ -595,6 +712,7 @@ class VisualizationBuilder:
         self,
         data_provider: PandasDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
+        alpha: float,
         enable_legend: bool,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
@@ -602,6 +720,7 @@ class VisualizationBuilder:
                 data_provider,
                 color_palette_provider,
                 enable_legend=enable_legend,
+                alpha=alpha,
             ),
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
@@ -673,10 +792,14 @@ class VisualizationBuilder:
         self,
         pandas_data_provider_factory: Callable[[SectionId], PandasDataFrameProvider],
         color_palette_provider: ColorPaletteProvider,
+        alpha: float,
         enable_legend: bool,
     ) -> Callable[[SectionId], Plotter]:
         return lambda section: self._create_track_start_end_point_plotter(
-            pandas_data_provider_factory(section), color_palette_provider, enable_legend
+            pandas_data_provider_factory(section),
+            color_palette_provider,
+            alpha,
+            enable_legend,
         )
 
     def _create_start_end_point_tracks_not_intersecting_sections_plotter(
@@ -684,6 +807,7 @@ class VisualizationBuilder:
         tracks_not_intersecting_sections: TracksNotIntersectingSelection,
         pandas_track_provider: PandasDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
+        alpha: float,
         enable_legend: bool,
     ) -> Plotter:
         return self._create_track_start_end_point_plotter(
@@ -691,6 +815,7 @@ class VisualizationBuilder:
                 pandas_track_provider, tracks_not_intersecting_sections
             ),
             color_palette_provider,
+            alpha,
             enable_legend,
         )
 

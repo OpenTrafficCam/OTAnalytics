@@ -40,6 +40,7 @@ from OTAnalytics.application.use_cases.flow_statistics import (
     NumberOfTracksAssignedToEachFlow,
 )
 from OTAnalytics.application.use_cases.generate_flows import GenerateFlows
+from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
 from OTAnalytics.application.use_cases.load_otconfig import LoadOtconfig
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
@@ -145,6 +146,7 @@ class OTAnalyticsApplication:
         calculate_track_statistics: CalculateTrackStatistics,
         number_of_tracks_assigned_to_each_flow: NumberOfTracksAssignedToEachFlow,
         export_track_statistics: ExportTrackStatistics,
+        get_current_remark: GetCurrentRemark,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -190,6 +192,7 @@ class OTAnalyticsApplication:
             number_of_tracks_assigned_to_each_flow
         )
         self._export_track_statistics = export_track_statistics
+        self._get_current_remark = get_current_remark
 
     def connect_observers(self) -> None:
         """
@@ -242,6 +245,9 @@ class OTAnalyticsApplication:
                 self.track_view_state.selected_videos.set([videos[0]])
             else:
                 self.track_view_state.selected_videos.set([])
+
+    def get_remark(self) -> str:
+        return self._get_current_remark.get()
 
     def get_all_videos(self) -> list[Video]:
         return self._datastore.get_all_videos()

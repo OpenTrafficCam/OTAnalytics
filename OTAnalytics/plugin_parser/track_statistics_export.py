@@ -1,11 +1,15 @@
+from pathlib import Path
 from typing import Iterable
 
 from pandas import DataFrame
 
+from OTAnalytics.application.export_formats.export_mode import ExportMode
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.track_statistics_export import (
     ExportFormat,
     TrackStatisticsBuilder,
     TrackStatisticsExporter,
+    TrackStatisticsExporterFactory,
     TrackStatisticsExportSpecification,
 )
 
@@ -18,11 +22,15 @@ class TrackStatisticsCsvExporter(TrackStatisticsExporter):
     def format(self) -> ExportFormat:
         return ExportFormat("csv", ".csv")
 
-    def _serialize(self, dtos: list[dict]) -> None:
-        DataFrame(dtos).to_csv(self._outputfile, index=False)
+    def _serialize(self, dtos: dict) -> None:
+        logger().info(f"Exporting track statistics to {self._outputfile}")
+
+        DataFrame([dtos]).to_csv(self._outputfile, index=False)
+
+        logger().info(f"Track statistics saved at {self._outputfile}")
 
 
-class SimpleTrackStatisticsExporterFactory:
+class SimpleTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
     def __init__(
         self,
     ) -> None:
@@ -60,3 +68,70 @@ class SimpleTrackStatisticsExporterFactory:
         return self._factories[specification.format](
             TrackStatisticsBuilder(), specification.save_path
         )
+
+
+class CacheTrackStatisticsException(Exception):
+
+    def __init__(
+        self,
+        message: str,
+        save_path: Path,
+        format: str,
+        export_mode: ExportMode,
+    ) -> None:
+        super().__init__(
+            message
+            + f"Error occurred when exporting {format} to {save_path} using"
+            + " export mode {export_mode}"
+        )
+
+
+class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
+
+    def __init__(self, other: TrackStatisticsExporterFactory) -> None:
+        self.other = other
+        self._cache: dict[tuple[Path, str], TrackStatisticsExporter] = dict()
+
+    def get_supported_formats(self) -> Iterable[ExportFormat]:
+        return self.other.get_supported_formats()
+
+    def create(
+        self, specification: TrackStatisticsExportSpecification
+    ) -> TrackStatisticsExporter:
+        export_mode = specification.export_mode
+
+        key = (specification.save_path, specification.format)
+        key_exists = key in self._cache.keys()
+
+        exporter: TrackStatisticsExporter
+        if export_mode.is_first_write():
+            if key_exists:
+                raise CacheTrackStatisticsException(
+                    "TrackStatisticsExporter already exists for format+file"
+                    + " upon first write!"
+                    + " Maybe previous export was not finished or cache was not"
+                    + "cleared properly.",
+                    specification.save_path,
+                    specification.format,
+                    export_mode,
+                )
+
+            exporter = self.other.create(specification)
+            self._cache[key] = exporter
+
+        else:
+            if not key_exists:
+                raise CacheTrackStatisticsException(
+                    "TrackStatisticsExporter missing in cache for format+file"
+                    + " upon subsequent write!"
+                    + "Maybe the cache was cleared too early.",
+                    specification.save_path,
+                    specification.format,
+                    export_mode,
+                )
+            exporter = self._cache[key]
+
+        if export_mode.is_final_write():
+            del self._cache[key]
+
+        return exporter
