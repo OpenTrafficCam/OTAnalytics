@@ -687,6 +687,7 @@ class ApplicationStarter:
         event_repository.register_observer(dummy_viewmodel.update_track_statistics)
         load_otflow.register(file_state.last_saved_config.set)
         load_otconfig.register(file_state.last_saved_config.set)
+        load_otconfig.register(dummy_viewmodel.update_remark_view)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
         track_file_repository.register(dummy_viewmodel.update_quick_save_button)
         project_updater.register(dummy_viewmodel.show_current_project)

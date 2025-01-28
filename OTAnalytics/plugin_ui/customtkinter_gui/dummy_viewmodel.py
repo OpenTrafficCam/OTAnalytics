@@ -582,7 +582,6 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
 
     def add_video(self) -> None:
-        self.frame_remark.load_remark()  # TODO Change where to place this
         track_files = askopenfilenames(
             title="Load video files",
             filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
@@ -1848,6 +1847,9 @@ class DummyViewModel(
             self.frame_svz_metadata.update(metadata=metadata.to_dict())
         else:
             self.frame_svz_metadata.update({})
+
+    def update_remark_view(self, _: Any = None) -> None:
+        self.frame_remark.load_remark()
 
     def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
         return self._application.suggest_save_path(file_type, context_file_type)

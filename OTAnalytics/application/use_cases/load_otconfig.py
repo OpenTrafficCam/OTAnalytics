@@ -54,14 +54,14 @@ class LoadOtconfig:
             self._add_sections.add(config.sections)
             self._add_flows.add(config.flows)
             self._load_track_files(list(config.analysis.track_files))
+            if config.remark:
+                self._remark_repository.add(config.remark)
             self._subject.notify(
                 ConfigurationFile(
                     file,
                     self._deserialize(file),
                 )
             )
-            if config.remark:
-                self._remark_repository.add(config.remark)
         except (SectionAlreadyExists, FlowAlreadyExists) as cause:
             self._clear_repositories()
             raise UnableToLoadOtconfigFile(
