@@ -91,7 +91,7 @@ class ConfigParser(ABC):
             sections (Iterable[Section]): sections to store
             flows (Iterable[Flow]): flows to store
             file (Path): output file
-            remark(str | None): comment on these file
+            remark(str | None): comment on this file
 
         Raises:
             StartDateMissing: if start date is not configured
