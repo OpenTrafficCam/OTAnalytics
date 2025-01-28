@@ -23,7 +23,10 @@ class TestSaveOtconfig:
         config_parser.convert.return_value = convert_result
         output = test_data_tmp_dir / "test.otconfig"
         file_state = Mock()
-        use_case = SaveOtconfig(datastore, config_parser, file_state)
+        get_current_remark = Mock()
+        use_case = SaveOtconfig(
+            datastore, config_parser, file_state, get_current_remark
+        )
 
         use_case(output)
 
@@ -31,6 +34,7 @@ class TestSaveOtconfig:
         file_state.last_saved_config.set.assert_called_once_with(
             ConfigurationFile(output, convert_result)
         )
+        get_current_remark.get.assert_called_once()
 
     def test_missing_date(self, test_data_tmp_dir: Path) -> None:
         datastore = Mock(spec=Datastore)
@@ -38,8 +42,12 @@ class TestSaveOtconfig:
         config_parser = Mock(spec=ConfigParser)
         output = test_data_tmp_dir / "test.otconfig"
         file_state = Mock()
-        use_case = SaveOtconfig(datastore, config_parser, file_state)
+        get_current_remark = Mock()
+        use_case = SaveOtconfig(
+            datastore, config_parser, file_state, get_current_remark
+        )
 
         with pytest.raises(MissingDate):
             use_case(output)
         file_state.last_saved_config.set.assert_not_called()
+        get_current_remark.get.assert_not_called()

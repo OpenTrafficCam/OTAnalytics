@@ -18,6 +18,7 @@ from OTAnalytics.domain.flow import (
     FlowRepository,
 )
 from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import (
     Section,
     SectionChangedObserver,
@@ -178,6 +179,7 @@ class Datastore:
         video_parser: VideoParser,
         track_video_parser: TrackVideoParser,
         progressbar: ProgressbarBuilder,
+        remark_repository: RemarkRepository,
     ) -> None:
         self._track_parser = track_parser
         self._event_list_parser = event_list_parser
@@ -189,6 +191,7 @@ class Datastore:
         self._flow_repository = flow_repository
         self._event_repository = event_repository
         self._video_repository = video_repository
+        self._remark_repository = remark_repository
         self._track_to_video_repository = track_to_video_repository
         self._progressbar = progressbar
         self.project = Project(name="", start_date=None, metadata=None)

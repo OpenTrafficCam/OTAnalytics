@@ -56,6 +56,7 @@ from OTAnalytics.application.ui.frame_control import (
     SwitchToNext,
     SwitchToPrevious,
 )
+from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.config import SaveOtconfig
@@ -107,6 +108,7 @@ from OTAnalytics.application.use_cases.generate_flows import (
     RepositoryFlowIdGenerator,
 )
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
+from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
 from OTAnalytics.application.use_cases.get_road_user_assignments import (
     GetRoadUserAssignments,
 )
@@ -171,6 +173,7 @@ from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.filter import FilterElementSettingRestorer
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
@@ -345,6 +348,7 @@ class ApplicationStarter:
         videos_metadata = VideosMetadata()
         video_parser = self._create_video_parser(videos_metadata)
         video_repository = self._create_video_repository()
+        remark_repository = self._create_remark_repository()
         track_to_video_repository = self._create_track_to_video_repository()
         datastore = self._create_datastore(
             video_parser,
@@ -356,6 +360,7 @@ class ApplicationStarter:
             flow_repository,
             event_repository,
             pulling_progressbar_builder,
+            remark_repository,
         )
         flow_parser = self._create_flow_parser()
         track_state = self._create_track_state()
@@ -518,11 +523,15 @@ class ApplicationStarter:
         )
         get_flows = GetAllFlows(flow_repository)
         save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, file_state)
+        get_current_remark = GetCurrentRemark(remark_repository)
         config_parser = self.create_config_parser(run_config, video_parser)
-        save_otconfig = SaveOtconfig(datastore, config_parser, file_state)
+        save_otconfig = SaveOtconfig(
+            datastore, config_parser, file_state, get_current_remark
+        )
         quick_save_configuration = QuickSaveConfiguration(
             file_state, save_otflow, save_otconfig
         )
+        add_new_remark = AddNewRemark(remark_repository)
         load_otconfig = LoadOtconfig(
             clear_repositories,
             config_parser,
@@ -531,6 +540,7 @@ class ApplicationStarter:
             AddAllSections(add_section),
             AddAllFlows(add_flow),
             load_track_files,
+            add_new_remark,
             parse_json,
         )
         get_all_videos = GetAllVideos(video_repository)
@@ -622,6 +632,7 @@ class ApplicationStarter:
             calculate_track_statistics,
             number_of_tracks_assigned_to_each_flow,
             export_track_statistics,
+            get_current_remark,
         )
         section_repository.register_sections_observer(cut_tracks_intersecting_section)
         section_repository.register_section_changed_observer(
@@ -688,6 +699,7 @@ class ApplicationStarter:
         event_repository.register_observer(dummy_viewmodel.update_track_statistics)
         load_otflow.register(file_state.last_saved_config.set)
         load_otconfig.register(file_state.last_saved_config.set)
+        load_otconfig.register(dummy_viewmodel.update_remark_view)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
         track_file_repository.register(dummy_viewmodel.update_quick_save_button)
         project_updater.register(dummy_viewmodel.show_current_project)
@@ -853,6 +865,7 @@ class ApplicationStarter:
         flow_repository: FlowRepository,
         event_repository: EventRepository,
         progressbar_builder: ProgressbarBuilder,
+        remark_repository: RemarkRepository,
     ) -> Datastore:
         """
         Build all required objects and inject them where necessary
@@ -877,6 +890,7 @@ class ApplicationStarter:
             video_parser,
             track_video_parser,
             progressbar_builder,
+            remark_repository,
         )
 
     def _create_track_repository(self, run_config: RunConfiguration) -> TrackRepository:
@@ -1185,6 +1199,9 @@ class ApplicationStarter:
 
     def _create_video_parser(self, videos_metadata: VideosMetadata) -> VideoParser:
         return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(videos_metadata)))
+
+    def _create_remark_repository(self) -> RemarkRepository:
+        return RemarkRepository()
 
     def _create_video_repository(self) -> VideoRepository:
         return VideoRepository()
