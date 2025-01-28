@@ -34,6 +34,7 @@ class OtConfig:
     videos: Sequence[Video]
     sections: Sequence[Section]
     flows: Sequence[Flow]
+    remark: str | None
 
 
 class ConfigParser(ABC):
@@ -78,6 +79,7 @@ class ConfigParser(ABC):
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
+        remark: str | None,
     ) -> None:
         """Serializes the project with the given videos, sections and flows into the
         file.
@@ -89,6 +91,7 @@ class ConfigParser(ABC):
             sections (Iterable[Section]): sections to store
             flows (Iterable[Flow]): flows to store
             file (Path): output file
+            remark(str | None): comment on this file
 
         Raises:
             StartDateMissing: if start date is not configured

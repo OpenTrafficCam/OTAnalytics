@@ -28,6 +28,7 @@ from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 
 DISTANCES: str = "distances"
 
@@ -225,6 +226,10 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_remark(self) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
     def generate_flows(self) -> None:
         raise NotImplementedError
 
@@ -360,6 +365,10 @@ class ViewModel(ABC):
     def set_frame_track_plotting(
         self, frame_track_plotting: AbstractFrameTrackPlotting
     ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_remark_frame(self, frame: AbstractCTkFrame) -> None:
         raise NotImplementedError
 
     @abstractmethod
