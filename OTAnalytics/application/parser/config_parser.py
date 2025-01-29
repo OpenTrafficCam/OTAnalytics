@@ -118,6 +118,7 @@ class ConfigParser(ABC):
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
+        remark: str | None,
     ) -> dict:
         """Converts the given information into a dictionary."""
         raise NotImplementedError

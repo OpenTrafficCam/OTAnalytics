@@ -49,7 +49,9 @@ class TestOtconfigHasChanged:
         get_videos = Mock()
         get_track_files = Mock()
         config_parser = Mock()
-
+        get_remark = Mock()
+        remark = Mock()
+        get_remark.get.return_value = remark
         get_sections.return_value = sections
         get_flows.get.return_value = flows
         get_current_project.get.return_value = current_project
@@ -64,6 +66,7 @@ class TestOtconfigHasChanged:
             get_current_project,
             get_videos,
             get_track_files,
+            get_remark,
         )
         config_file = ConfigurationFile(Mock(), previous_data)
 
@@ -75,12 +78,14 @@ class TestOtconfigHasChanged:
             sections,
             flows,
             config_file.file,
+            remark,
         )
         get_current_project.get.assert_called_once()
         get_videos.get.assert_called_once()
         get_track_files.assert_called_once()
         get_sections.assert_called_once()
         get_flows.get.assert_called_once()
+        get_remark.get.assert_called_once()
 
 
 class TestOtflowHasChanged:
