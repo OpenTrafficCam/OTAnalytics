@@ -44,7 +44,7 @@ class SaveOtconfig:
                 ConfigurationFile(
                     file,
                     self._config_parser.convert(
-                        project, video_files, track_files, sections, flows, file
+                        project, video_files, track_files, sections, flows, file, remark
                     ),
                 )
             )
