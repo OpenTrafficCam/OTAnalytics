@@ -128,7 +128,7 @@ class TreeviewSections(TreeviewTemplate):
         columns = [COLUMN_NAME]
         self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
-        self.column(column=COLUMN_NAME, anchor="e", width=150, minwidth=40)
+        self.column(column=COLUMN_NAME, anchor="center", width=150, minwidth=40)
         self["displaycolumns"] = columns
 
     def _introduce_to_viewmodel(self) -> None:

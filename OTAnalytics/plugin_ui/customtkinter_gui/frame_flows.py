@@ -115,7 +115,7 @@ class TreeviewFlows(TreeviewTemplate):
         columns = [COLUMN_FLOW]
         self["columns"] = columns
         self.column(column="#0", width=0, stretch=False)
-        self.column(column=COLUMN_FLOW, anchor="e", width=150, minwidth=40)
+        self.column(column=COLUMN_FLOW, anchor="center", width=150, minwidth=40)
         self["displaycolumns"] = columns
 
     def _introduce_to_viewmodel(self) -> None:
