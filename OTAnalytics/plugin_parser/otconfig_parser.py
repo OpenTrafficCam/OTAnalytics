@@ -135,7 +135,7 @@ class OtConfigParser(ConfigParser):
         sections, flows = self._flow_parser.parse_content(
             fixed_content[section.SECTIONS], fixed_content[flow.FLOWS]
         )
-        remark = fixed_content[REMARK]
+        remark = fixed_content[REMARK] if REMARK in fixed_content else ""
         return OtConfig(
             project=_project,
             analysis=analysis_config,
