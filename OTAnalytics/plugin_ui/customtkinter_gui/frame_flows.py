@@ -145,5 +145,5 @@ class TreeviewFlows(TreeviewTemplate):
 
     @staticmethod
     def __to_resource(flow: Flow, tracks_assigned: int) -> ColumnResource:
-        values = {COLUMN_FLOW: f"{flow.name} ({tracks_assigned})"}
+        values = {COLUMN_FLOW: f"({tracks_assigned}) {flow.name}"}
         return ColumnResource(id=flow.id.id, values=values)
