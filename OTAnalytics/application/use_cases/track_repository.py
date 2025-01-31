@@ -2,13 +2,30 @@ from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application.logger import logger
-from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider
 from OTAnalytics.domain.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import (
     RemoveMultipleTracksError,
     TrackFileRepository,
     TrackRepository,
 )
+
+
+class AllTrackIdsProvider(TrackIdProvider):
+    def __init__(self, track_repository: TrackRepository) -> None:
+        self._track_repository = track_repository
+
+    def get_ids(self) -> Iterable[TrackId]:
+        return self._track_repository.get_all_ids()
+
+
+class FilteredTrackIdProviderByTrackIdProvider(TrackIdProvider):
+    def __init__(self, other: TrackIdProvider, by: TrackIdProvider):
+        self._other = other
+        self._by = by
+
+    def get_ids(self) -> set[TrackId]:
+        return set(self._other.get_ids()).intersection(self._by.get_ids())
 
 
 class GetAllTracks:
