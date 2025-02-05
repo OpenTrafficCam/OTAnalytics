@@ -680,6 +680,9 @@ class ApplicationStarter:
         application.track_view_state.filter_element.register(
             dummy_viewmodel._update_date_range
         )
+        application.track_view_state.filter_element.register(
+            dummy_viewmodel.update_track_statistics
+        )
         application.action_state.action_running.register(
             dummy_viewmodel._notify_action_running_state
         )
