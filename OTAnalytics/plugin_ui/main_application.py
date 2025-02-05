@@ -560,6 +560,7 @@ class ApplicationStarter:
                 get_current_project,
                 get_all_videos,
                 get_all_track_files,
+                get_current_remark,
             ),
             OtflowHasChanged(flow_parser, get_sections, get_flows),
             file_state,
