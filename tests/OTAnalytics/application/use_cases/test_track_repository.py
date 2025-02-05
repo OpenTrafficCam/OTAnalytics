@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Iterable
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -6,6 +7,7 @@ import pytest
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     ClearAllTracks,
+    FilteredTrackIdProviderByTrackIdProvider,
     GetAllTrackFiles,
     GetAllTrackIds,
     GetAllTracks,
@@ -15,7 +17,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
     TrackRepositorySize,
 )
-from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider
 from OTAnalytics.domain.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 
@@ -46,6 +48,45 @@ def track_file_repository(track_files: list[Mock]) -> Mock:
     repository = Mock(spec=TrackFileRepository)
     repository.get_all.return_value = track_files
     return repository
+
+
+def create_track_ids_from_ids(ids: Iterable[str]) -> Iterable[TrackId]:
+    return [TrackId(id) for id in ids]
+
+
+@pytest.fixture
+def track_id_provider() -> Mock:
+    return Mock(spec=TrackIdProvider)
+
+
+class TestFilteredTrackIdProviderByTrackIdProvider:
+    def test_get_ids_of_filter_by_self(self, track_id_provider: Mock) -> None:
+        track_ids = create_track_ids_from_ids(["0", "8", "15"])
+        track_id_provider.get_ids.return_value = track_ids
+
+        filtered_provider = FilteredTrackIdProviderByTrackIdProvider(
+            track_id_provider, track_id_provider
+        )
+        filtered_ids = filtered_provider.get_ids()
+
+        assert filtered_ids == set(track_ids)
+        assert track_id_provider.get_ids.call_count == 2
+
+    def test_get_ids(self, track_id_provider: Mock) -> None:
+        track_id_provider.get_ids.return_value = create_track_ids_from_ids(
+            ["1", "2", "3"]
+        )
+        filter = Mock(spec=TrackIdProvider)
+        filter.get_ids.return_value = create_track_ids_from_ids(["2", "3", "4"])
+
+        filtered_provider = FilteredTrackIdProviderByTrackIdProvider(
+            track_id_provider, filter
+        )
+        filtered_ids = filtered_provider.get_ids()
+
+        assert filtered_ids == {TrackId("2"), TrackId("3")}
+        track_id_provider.get_ids.assert_called_once()
+        filter.get_ids.assert_called_once()
 
 
 class TestGetAllTracks:
