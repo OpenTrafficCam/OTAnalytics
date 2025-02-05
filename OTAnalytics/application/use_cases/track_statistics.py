@@ -4,17 +4,10 @@ from datetime import datetime
 from typing import Any
 
 from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
-from OTAnalytics.application.use_cases.highlight_intersections import (
-    TracksAssignedToAllFlows,
-    TracksIntersectingAllNonCuttingSections,
-)
-from OTAnalytics.application.use_cases.inside_cutting_section import (
-    TrackIdsInsideCuttingSections,
-)
 from OTAnalytics.application.use_cases.number_of_tracks_to_be_validated import (
     NumberOfTracksToBeValidated,
 )
-from OTAnalytics.application.use_cases.track_repository import GetAllTrackIds
+from OTAnalytics.domain.track import TrackIdProvider
 
 
 @dataclass
@@ -79,10 +72,10 @@ class TrackStatistics:
 class CalculateTrackStatistics:
     def __init__(
         self,
-        intersection_all_non_cutting_sections: TracksIntersectingAllNonCuttingSections,
-        assigned_to_all_flows: TracksAssignedToAllFlows,
-        get_all_track_ids: GetAllTrackIds,
-        track_ids_inside_cutting_sections: TrackIdsInsideCuttingSections,
+        intersection_all_non_cutting_sections: TrackIdProvider,
+        assigned_to_all_flows: TrackIdProvider,
+        all_tracks: TrackIdProvider,
+        track_ids_inside_cutting_sections: TrackIdProvider,
         number_of_tracks_to_be_validated: NumberOfTracksToBeValidated,
         get_all_enter_section_events: GetAllEnterSectionEvents,
     ) -> None:
@@ -90,14 +83,16 @@ class CalculateTrackStatistics:
             intersection_all_non_cutting_sections
         )
         self._assigned_to_all_flows = assigned_to_all_flows
-        self._get_all_track_ids = get_all_track_ids
+        self._all_tracks = all_tracks
         self._track_ids_inside_cutting_sections = track_ids_inside_cutting_sections
         self._number_of_tracks_to_be_validated = number_of_tracks_to_be_validated
         self._get_all_enter_section_events = get_all_enter_section_events
 
     def get_statistics(self) -> TrackStatistics:
-        ids_all = set(self._get_all_track_ids())
-        ids_inside_cutting_sections = self._track_ids_inside_cutting_sections()
+        ids_all = set(self._all_tracks.get_ids())
+        ids_inside_cutting_sections = set(
+            self._track_ids_inside_cutting_sections.get_ids()
+        )
 
         track_count_inside = len(ids_inside_cutting_sections)
         track_count = len(ids_all)

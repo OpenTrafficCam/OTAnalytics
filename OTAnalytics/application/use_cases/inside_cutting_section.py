@@ -1,18 +1,18 @@
 from OTAnalytics.application.use_cases.section_repository import GetCuttingSections
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track import TrackId, TrackIdProvider
 from OTAnalytics.domain.types import EventType
 
 
-class TrackIdsInsideCuttingSections:
+class TrackIdsInsideCuttingSections(TrackIdProvider):
     def __init__(
         self, get_tracks: GetAllTracks, get_cutting_sections: GetCuttingSections
     ):
         self._get_tracks = get_tracks
         self._get_cutting_sections = get_cutting_sections
 
-    def __call__(self) -> set[TrackId]:
+    def get_ids(self) -> set[TrackId]:
         track_dataset = self._get_tracks.as_dataset()
         cutting_sections = self._get_cutting_sections()
         if not cutting_sections:
