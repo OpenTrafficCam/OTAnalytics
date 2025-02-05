@@ -793,7 +793,7 @@ class ApplicationStarter:
         )
         intersection_repository = self._create_intersection_repository()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
-        simple_track_id_provider = AllTrackIdsProvider(track_repository)
+        all_track_ids_provider = AllTrackIdsProvider(track_repository)
         calculate_track_statistics = self._create_calculate_track_statistics(
             get_sections,
             tracks_intersecting_sections,
@@ -804,7 +804,7 @@ class ApplicationStarter:
             flow_repository,
             section_repository,
             get_all_tracks,
-            simple_track_id_provider,
+            all_track_ids_provider,
         )
         track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
             SimpleTrackStatisticsExporterFactory()
