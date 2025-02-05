@@ -7,7 +7,6 @@ from PIL import Image
 
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 
-MIN_NUMBER_OF_DETECTIONS = 5
 CLASSIFICATION: str = "classification"
 TRACK_CLASSIFICATION: str = "track_classification"
 CONFIDENCE: str = "confidence"
