@@ -6,10 +6,12 @@ from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.domain import geometry
 from OTAnalytics.domain.geometry import coordinate_from_tuple
 from OTAnalytics.domain.section import (
+    ID,
     NAME,
     RELATIVE_OFFSET_COORDINATES,
     Area,
     LineSection,
+    MissingSection,
     Section,
     SectionId,
     SectionRepository,
@@ -30,6 +32,14 @@ def validate_coordinates(coordinates: list[tuple[int, int]]) -> None:
         raise MissingCoordinate("First coordinate is missing")
     elif len(coordinates) == 1:
         raise MissingCoordinate("Second coordinate is missing")
+
+
+def validate_section_information(
+    meta_data: dict, coordinates: list[tuple[int, int]]
+) -> None:
+    validate_coordinates(coordinates)
+    if not meta_data:
+        raise ValueError("Metadata of line_section are not defined")
 
 
 class AddNewSection:
@@ -102,3 +112,21 @@ class AddNewSection:
         ):
             metadata = get_metadata()
         return metadata
+
+
+class UpdateSectionCoordinates:
+    def __init__(self, section_repository: SectionRepository) -> None:
+        self._section_repository = section_repository
+
+    def update(self, meta_data: dict, coordinates: list[tuple[int, int]]) -> SectionId:
+        validate_section_information(meta_data, coordinates)
+        section_id = SectionId(meta_data[ID])
+        if not (section := self._section_repository.get(section_id)):
+            raise MissingSection(
+                f"Could not update section '{section_id.serialize()}' after editing"
+            )
+        section.update_coordinates(
+            [coordinate_from_tuple(coordinate) for coordinate in coordinates]
+        )
+        self._section_repository.update(section)
+        return section_id
