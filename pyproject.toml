@@ -13,7 +13,7 @@ description = "OTAnalytics is a core module of the OpenTrafficCam framework to p
 
 readme = "README.md"
 requires-python = ">=3.11"
-license-files = { paths = ["LICENSE"] }
+license-files = ["LICENSE"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
