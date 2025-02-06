@@ -106,8 +106,8 @@ class FrameTrackStatistics(AbstractCTkFrame, AbstractFrameTrackStatistics):
 
     def _place_widgets(self) -> None:
         self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(0, weight=0)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure((0, 2), weight=0)
+        self.grid_columnconfigure((1, 3), weight=1)
         for index, label in enumerate(
             [
                 self._label_all_tracks,
@@ -127,8 +127,8 @@ class FrameTrackStatistics(AbstractCTkFrame, AbstractFrameTrackStatistics):
             ]
         ):
             label.grid(
-                row=int(index / 2),
-                column=int(index % 2),
+                row=int(index / 4),
+                column=int(index % 4),
                 padx=PADX,
                 pady=0,
                 sticky=STICKY,

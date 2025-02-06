@@ -63,8 +63,8 @@ def mock_otconfig() -> OtConfig:
     videos = Mock()
     sections = Mock()
     flows = Mock()
-
-    return OtConfig(project, analysis, videos, sections, flows)
+    remark = Mock()
+    return OtConfig(project, analysis, videos, sections, flows, remark)
 
 
 @pytest.fixture
@@ -93,9 +93,11 @@ class TestOtConfigParser:
         track_files: list[Path] = []
         sections: list[Section] = []
         flows: list[Flow] = []
+        remark: str | None = "Comment"
         output = test_data_tmp_dir / "config.otconfig"
         serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
         serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
+        serialized_remark = {"remark": "Comment"}
         serialized_analysis: dict = {
             ANALYSIS: {
                 DO_EVENTS: DEFAULT_DO_EVENTS,
@@ -111,6 +113,7 @@ class TestOtConfigParser:
                 LOGFILE: str(DEFAULT_LOG_FILE),
             }
         }
+
         video_parser.convert.return_value = serialized_videos
         flow_parser.convert.return_value = serialized_sections
 
@@ -121,6 +124,7 @@ class TestOtConfigParser:
             sections=sections,
             flows=flows,
             file=output,
+            remark=remark,
         )
 
         serialized_content = parse_json(output)
@@ -128,6 +132,7 @@ class TestOtConfigParser:
         expected_content |= serialized_videos
         expected_content |= serialized_analysis
         expected_content |= serialized_sections
+        expected_content |= serialized_remark
 
         assert serialized_content == expected_content
         assert video_parser.convert.call_args_list == [
@@ -151,6 +156,7 @@ class TestOtConfigParser:
             mock_otconfig.sections,
             mock_otconfig.flows,
             save_path,
+            mock_otconfig.remark,
         )
 
     def test_parse_config(
@@ -174,7 +180,7 @@ class TestOtConfigParser:
             otconfig_file.parent
             / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
         }
-
+        remark = ""
         serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
         serialized_flows = {
             section.SECTIONS: {"serialized": "sections"},
@@ -207,6 +213,7 @@ class TestOtConfigParser:
             videos=videos,
             sections=sections,
             flows=flows,
+            remark=remark,
         )
         assert config == expected_config
 

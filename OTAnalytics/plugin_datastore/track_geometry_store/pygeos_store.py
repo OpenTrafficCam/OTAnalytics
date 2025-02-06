@@ -38,6 +38,7 @@ INTERSECTS = "intersects"
 COLUMNS = [GEOMETRY, PROJECTION]
 BASE_GEOMETRY = RelativeOffsetCoordinate(0, 0)
 ORIENTATION_INDEX: Literal["index"] = "index"
+NDIGITS_DISTANCE = 5
 
 
 def line_sections_to_pygeos_multi(sections: Iterable[Section]) -> Geometry:
@@ -88,6 +89,11 @@ def create_pygeos_track(
 
 class InvalidTrackGeometryDataset(Exception):
     pass
+
+
+def distance_on_track(point: Geometry, track_geom: Geometry) -> float:
+    distance = line_locate_point(track_geom, point)
+    return round(distance, NDIGITS_DISTANCE)
 
 
 class PygeosTrackGeometryDataset(TrackGeometryDataset):
@@ -167,7 +173,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             track_id = _track.id.id
             geometry = create_pygeos_track(_track, offset)
             projection = [
-                line_locate_point(geometry, points(p))
+                distance_on_track(points(p), geometry)
                 for p in get_coordinates(geometry)
             ]
             entries[track_id] = {
@@ -295,8 +301,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         point: Geometry,
         projection: Any,
     ) -> tuple[TrackId, SectionId, IntersectionPoint]:
-        dist = line_locate_point(track_geom, point)
-        upper_index = bisect(projection, dist)
+        dist, upper_index = self.__get_distance_and_index(point, projection, track_geom)
         lower_index = upper_index - 1
         lower_distance = projection[lower_index]
         upper_distance = projection[upper_index]
@@ -309,6 +314,37 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
                 relative_position=relative_position,
             ),
         )
+
+    @staticmethod
+    def __get_distance_and_index(
+        point: Geometry, projection: Any, track_geom: Geometry
+    ) -> tuple[float, int]:
+        """
+        Computes the distance along the track and identifies the corresponding index of
+        the projection list. This utility function determines whether the input point is
+        within the projected range on the geometry track and calculates its distance and
+        projection index accordingly.
+
+        Args:
+            point (Geometry): The geometry point whose distance along the track is to be
+                computed.
+            projection (Any): A list of pre-computed projection distances along the
+                track.
+            track_geom (Geometry): The geometry of the track used for distance
+                computation.
+
+        Returns:
+            tuple[float, int]: A tuple containing the computed distance along the track
+            and its corresponding index in the projection list.
+        """
+        dist = distance_on_track(point, track_geom)
+        if dist < projection[-1]:
+            upper_index = bisect(projection, dist)
+            return dist, upper_index
+
+        max_index = len(projection) - 1
+        bounded_dist = projection[-1]
+        return bounded_dist, max_index
 
     def contained_by_sections(
         self, sections: list[Section]

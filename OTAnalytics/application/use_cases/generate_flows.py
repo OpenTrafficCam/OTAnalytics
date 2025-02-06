@@ -1,8 +1,9 @@
 import itertools
 from abc import ABC, abstractmethod
 
+from OTAnalytics.application.use_cases.create_events import SectionProvider
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
-from OTAnalytics.domain.section import Section, SectionId, SectionRepository
+from OTAnalytics.domain.section import Section, SectionId
 
 
 class FlowIdGenerator(ABC):
@@ -151,11 +152,11 @@ class GenerateFlows:
 
     def __init__(
         self,
-        section_repository: SectionRepository,
+        section_provider: SectionProvider,
         flow_repository: FlowRepository,
         flow_generator: FlowGenerator,
     ) -> None:
-        self._section_repository = section_repository
+        self._provide_sections = section_provider
         self._flow_repository = flow_repository
         self._flow_generator = flow_generator
 
@@ -164,6 +165,6 @@ class GenerateFlows:
         Use all sections from the section repository to generate flows using the flow
         generator. Store the resulting flows in the flow repository.
         """
-        sections = self._section_repository.get_all()
+        sections = self._provide_sections()
         flows = self._flow_generator(sections)
         self._flow_repository.add_all(flows)

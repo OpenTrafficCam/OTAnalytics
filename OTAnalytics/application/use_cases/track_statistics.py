@@ -1,6 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
 from OTAnalytics.application.use_cases.highlight_intersections import (
@@ -18,17 +19,61 @@ from OTAnalytics.application.use_cases.track_repository import GetAllTrackIds
 
 @dataclass
 class TrackStatistics:
-    track_count: int
-    track_count_outside: int
-    track_count_inside: int
-    track_count_inside_not_intersecting: int
-    track_count_inside_intersecting_but_unassigned: int
-    track_count_inside_assigned: int
-    percentage_inside_assigned: float
-    percentage_inside_not_intersection: float
-    percentage_inside_intersecting_but_unassigned: float
-    number_of_tracks_to_be_validated: int
-    number_of_tracks_with_simultaneous_section_events: int
+    track_count: int = 0
+    track_count_outside: int = 0
+    track_count_inside: int = 0
+    track_count_inside_not_intersecting: int = 0
+    track_count_inside_intersecting_but_unassigned: int = 0
+    track_count_inside_assigned: int = 0
+    percentage_inside_assigned: float = 1
+    percentage_inside_not_intersection: float = 1
+    percentage_inside_intersecting_but_unassigned: float = 1
+    number_of_tracks_to_be_validated: int = 0
+    number_of_tracks_with_simultaneous_section_events: int = 0
+
+    def __add__(self, other: Any) -> "TrackStatistics":
+        if not isinstance(other, TrackStatistics):
+            raise TypeError(f"{type(other)} is not of type {TrackStatistics}")
+
+        track_count_inside = self.track_count_inside + other.track_count_inside
+        track_count_inside_not_intersecting = (
+            self.track_count_inside_not_intersecting
+            + other.track_count_inside_not_intersecting
+        )
+        track_count_inside_intersecting_but_unassigned = (
+            self.track_count_inside_intersecting_but_unassigned
+            + other.track_count_inside_intersecting_but_unassigned
+        )
+        track_count_inside_assigned = (
+            self.track_count_inside_assigned + other.track_count_inside_assigned
+        )
+        return TrackStatistics(
+            track_count=(self.track_count + other.track_count),
+            track_count_outside=(self.track_count_outside + other.track_count_outside),
+            track_count_inside=track_count_inside,
+            track_count_inside_not_intersecting=track_count_inside_not_intersecting,
+            track_count_inside_intersecting_but_unassigned=(
+                track_count_inside_intersecting_but_unassigned
+            ),
+            track_count_inside_assigned=track_count_inside_assigned,
+            percentage_inside_assigned=percentage(
+                track_count_inside_assigned, track_count_inside
+            ),
+            percentage_inside_not_intersection=percentage(
+                track_count_inside_not_intersecting, track_count_inside
+            ),
+            percentage_inside_intersecting_but_unassigned=percentage(
+                track_count_inside_intersecting_but_unassigned, track_count_inside
+            ),
+            number_of_tracks_to_be_validated=(
+                self.number_of_tracks_to_be_validated
+                + other.number_of_tracks_to_be_validated
+            ),
+            number_of_tracks_with_simultaneous_section_events=(
+                self.number_of_tracks_with_simultaneous_section_events
+                + other.number_of_tracks_with_simultaneous_section_events
+            ),
+        )
 
 
 class CalculateTrackStatistics:
@@ -74,13 +119,13 @@ class CalculateTrackStatistics:
             - track_count_inside_not_intersecting
             - track_count_inside_assigned
         )
-        percentage_inside_assigned = self.__percentage(
+        percentage_inside_assigned = percentage(
             track_count_inside_assigned, track_count_inside
         )
-        percentage_inside_not_intersection = self.__percentage(
+        percentage_inside_not_intersection = percentage(
             track_count_inside_not_intersecting, track_count_inside
         )
-        percentage_inside_intersecting_but_unassigned = self.__percentage(
+        percentage_inside_intersecting_but_unassigned = percentage(
             track_count_inside_intersecting_but_unassigned, track_count_inside
         )
         return TrackStatistics(
@@ -120,7 +165,8 @@ class CalculateTrackStatistics:
             event_counts[event.road_user_id][event.occurrence] += 1
         return event_counts
 
-    def __percentage(self, track_count: int, all_tracks: int) -> float:
-        if all_tracks == 0:
-            return 1.0
-        return track_count / all_tracks
+
+def percentage(track_count: int, all_tracks: int) -> float:
+    if all_tracks == 0:
+        return 1.0
+    return track_count / all_tracks

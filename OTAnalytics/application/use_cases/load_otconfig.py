@@ -3,6 +3,7 @@ from pathlib import Path
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.parser.deserializer import Deserializer
 from OTAnalytics.application.state import ConfigurationFile
+from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.flow_repository import (
     AddAllFlows,
@@ -28,9 +29,10 @@ class LoadOtconfig:
         add_sections: AddAllSections,
         add_flows: AddAllFlows,
         load_track_files: LoadTrackFiles,
+        add_new_remark: AddNewRemark,
         deserialize: Deserializer,
     ) -> None:
-
+        self._add_new_remark = add_new_remark
         self._clear_repositories = clear_repositories
         self._config_parser = config_parser
         self._update_project = update_project
@@ -52,6 +54,8 @@ class LoadOtconfig:
             self._add_sections.add(config.sections)
             self._add_flows.add(config.flows)
             self._load_track_files(list(config.analysis.track_files))
+            if config.remark:
+                self._add_new_remark.add(config.remark)
             self._subject.notify(
                 ConfigurationFile(
                     file,

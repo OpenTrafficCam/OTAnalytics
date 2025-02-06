@@ -135,12 +135,14 @@ class OtConfigParser(ConfigParser):
         sections, flows = self._flow_parser.parse_content(
             fixed_content[section.SECTIONS], fixed_content[flow.FLOWS]
         )
+        remark = fixed_content[REMARK] if REMARK in fixed_content else ""
         return OtConfig(
             project=_project,
             analysis=analysis_config,
             videos=videos,
             sections=sections,
             flows=flows,
+            remark=remark,
         )
 
     def _parse_videos(
@@ -271,9 +273,12 @@ class OtConfigParser(ConfigParser):
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
+        remark: str | None,
     ) -> None:
         self._validate_data(project)
-        content = self.convert(project, video_files, track_files, sections, flows, file)
+        content = self.convert(
+            project, video_files, track_files, sections, flows, file, remark
+        )
         write_json(data=content, path=file)
 
     def serialize_from_config(self, config: OtConfig, file: Path) -> None:
@@ -284,6 +289,7 @@ class OtConfigParser(ConfigParser):
             config.sections,
             config.flows,
             file,
+            config.remark,
         )
 
     @staticmethod
@@ -299,6 +305,7 @@ class OtConfigParser(ConfigParser):
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
+        remark: str | None,
     ) -> dict:
         parent_folder = file.parent
         project_content = project.to_dict()
@@ -306,6 +313,7 @@ class OtConfigParser(ConfigParser):
             video_files,
             relative_to=parent_folder,
         )
+        remark_content: dict = {"remark": remark}
         section_content = self._flow_parser.convert(sections, flows)
         analysis_content: dict = {
             ANALYSIS: {
@@ -340,5 +348,5 @@ class OtConfigParser(ConfigParser):
         content |= video_content
         content |= analysis_content
         content |= section_content
-
+        content |= remark_content
         return content
