@@ -25,14 +25,6 @@ class MissingCoordinate(Exception):
     pass
 
 
-class CreateSectionId:
-    def __init__(self, section_repository: SectionRepository) -> None:
-        self._section_repository = section_repository
-
-    def create_id(self) -> SectionId:
-        return self._section_repository.get_id()
-
-
 def validate_coordinates(coordinates: list[tuple[int, int]]) -> None:
     if not coordinates:
         raise MissingCoordinate("First coordinate is missing")
@@ -46,6 +38,14 @@ def validate_section_information(
     validate_coordinates(coordinates)
     if not meta_data:
         raise ValueError("Metadata of line_section are not defined")
+
+
+class CreateSectionId:
+    def __init__(self, section_repository: SectionRepository) -> None:
+        self._section_repository = section_repository
+
+    def create_id(self) -> SectionId:
+        return self._section_repository.get_id()
 
 
 class AddNewSection:
