@@ -89,6 +89,10 @@ from OTAnalytics.application.project import (
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.config_has_changed import NoExistingConfigFound
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
+from OTAnalytics.application.use_cases.editor.section_editor import (
+    AddNewSection,
+    UpdateSectionCoordinates,
+)
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
@@ -132,10 +136,6 @@ from OTAnalytics.domain.track_repository import TrackListObserver, TrackReposito
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
-from OTAnalytics.plugin_ui.customtkinter_gui.add_new_section import (
-    AddNewSection,
-    UpdateSectionCoordinates,
-)
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,

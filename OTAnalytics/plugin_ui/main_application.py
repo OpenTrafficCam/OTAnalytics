@@ -80,6 +80,11 @@ from OTAnalytics.application.use_cases.create_intersection_events import (
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
+from OTAnalytics.application.use_cases.editor.section_editor import (
+    AddNewSection,
+    CreateSectionId,
+    UpdateSectionCoordinates,
+)
 from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearAllEvents,
@@ -258,11 +263,6 @@ from OTAnalytics.plugin_ui.cli import (
     OTAnalyticsBulkCli,
     OTAnalyticsCli,
     OTAnalyticsStreamCli,
-)
-from OTAnalytics.plugin_ui.customtkinter_gui.add_new_section import (
-    AddNewSection,
-    CreateSectionId,
-    UpdateSectionCoordinates,
 )
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
