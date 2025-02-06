@@ -956,9 +956,10 @@ class DummyViewModel(
             is_area_section=is_area_section,
             get_metadata=get_metadata,
         )
-        if section and not section.name.startswith(CUTTING_SECTION_MARKER):
-            logger().info(f"New section created: {section.id}")
-            self._update_selected_sections([section.id])
+        if section:
+            if not section.name.startswith(CUTTING_SECTION_MARKER):
+                logger().info(f"New section created: {section.id}")
+                self._update_selected_sections([section.id])
         self._finish_action()
 
     def update_section_coordinates(
