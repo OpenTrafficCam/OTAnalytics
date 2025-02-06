@@ -47,11 +47,7 @@ from OTAnalytics.adapter_ui.ui_texts import (
     DIRECTIONS_OF_STATIONING,
     WEATHER_TYPES,
 )
-from OTAnalytics.adapter_ui.view_model import (
-    MetadataProvider,
-    MissingCoordinate,
-    ViewModel,
-)
+from OTAnalytics.adapter_ui.view_model import MetadataProvider, ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
@@ -138,7 +134,10 @@ from OTAnalytics.domain.track_repository import TrackListObserver, TrackReposito
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
-from OTAnalytics.plugin_ui.customtkinter_gui.add_new_section import AddNewSection
+from OTAnalytics.plugin_ui.customtkinter_gui.add_new_section import (
+    AddNewSection,
+    validate_coordinates,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -964,10 +963,7 @@ class DummyViewModel(
     def __validate_section_information(
         self, meta_data: dict, coordinates: list[tuple[int, int]]
     ) -> None:
-        if not coordinates:
-            raise MissingCoordinate("First coordinate is missing")
-        elif len(coordinates) == 1:
-            raise MissingCoordinate("Second coordinate is missing")
+        validate_coordinates(coordinates)
         if not meta_data:
             raise ValueError("Metadata of line_section are not defined")
 

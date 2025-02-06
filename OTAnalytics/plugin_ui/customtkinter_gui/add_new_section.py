@@ -25,6 +25,13 @@ class CreateSectionId:
         return self._section_repository.get_id()
 
 
+def validate_coordinates(coordinates: list[tuple[int, int]]) -> None:
+    if not coordinates:
+        raise MissingCoordinate("First coordinate is missing")
+    elif len(coordinates) == 1:
+        raise MissingCoordinate("Second coordinate is missing")
+
+
 class AddNewSection:
     def __init__(self, create_section_id: CreateSectionId, add_section: AddSection):
         self._create_section_id = create_section_id
@@ -36,10 +43,7 @@ class AddNewSection:
         is_area_section: bool,
         get_metadata: MetadataProvider,
     ) -> Section | None:
-        if not coordinates:
-            raise MissingCoordinate("First coordinate is missing")
-        elif len(coordinates) == 1:
-            raise MissingCoordinate("Second coordinate is missing")
+        validate_coordinates(coordinates)
         with contextlib.suppress(CancelAddSection):
             return self.__create_section(coordinates, is_area_section, get_metadata)
         return None
