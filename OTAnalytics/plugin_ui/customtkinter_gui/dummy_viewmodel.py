@@ -121,6 +121,7 @@ from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.files import DifferentDrivesException
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
+from OTAnalytics.domain.geometry import coordinate_from_tuple
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
@@ -140,7 +141,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
 from OTAnalytics.plugin_ui.customtkinter_gui.add_new_section import (
     AddNewSection,
     CreateSectionId,
-    to_coordinate,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
@@ -996,7 +996,7 @@ class DummyViewModel(
         self._finish_action()
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
-        return to_coordinate(coordinate)
+        return coordinate_from_tuple(coordinate)
 
     def _is_area_section(self, section: Section | None) -> bool:
         return isinstance(section, Area)

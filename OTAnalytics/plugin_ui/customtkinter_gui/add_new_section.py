@@ -4,6 +4,7 @@ from OTAnalytics.adapter_ui.view_model import MetadataProvider, MissingCoordinat
 from OTAnalytics.application.application import CancelAddSection
 from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.domain import geometry
+from OTAnalytics.domain.geometry import coordinate_from_tuple
 from OTAnalytics.domain.section import (
     NAME,
     RELATIVE_OFFSET_COORDINATES,
@@ -64,7 +65,9 @@ class AddNewSection:
                     )
                 },
                 plugin_data={},
-                coordinates=[to_coordinate(coordinate) for coordinate in coordinates],
+                coordinates=[
+                    coordinate_from_tuple(coordinate) for coordinate in coordinates
+                ],
             )
         else:
             section = LineSection(
@@ -76,7 +79,9 @@ class AddNewSection:
                     )
                 },
                 plugin_data={},
-                coordinates=[to_coordinate(coordinate) for coordinate in coordinates],
+                coordinates=[
+                    coordinate_from_tuple(coordinate) for coordinate in coordinates
+                ],
             )
         if section is None:
             raise TypeError("section has to be LineSection or Area, but is None")
@@ -93,7 +98,3 @@ class AddNewSection:
         ):
             metadata = get_metadata()
         return metadata
-
-
-def to_coordinate(coordinate: tuple[int, int]) -> geometry.Coordinate:
-    return geometry.Coordinate(coordinate[0], coordinate[1])
