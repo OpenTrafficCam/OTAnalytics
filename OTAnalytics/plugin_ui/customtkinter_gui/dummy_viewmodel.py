@@ -124,8 +124,6 @@ from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
-    NAME,
-    RELATIVE_OFFSET_COORDINATES,
     Area,
     LineSection,
     MissingSection,
@@ -139,6 +137,11 @@ from OTAnalytics.domain.track_repository import TrackListObserver, TrackReposito
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
+from OTAnalytics.plugin_ui.customtkinter_gui.add_new_section import (
+    AddNewSection,
+    CreateSectionId,
+    to_coordinate,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -949,71 +952,21 @@ class DummyViewModel(
         is_area_section: bool,
         get_metadata: MetadataProvider,
     ) -> None:
-        if not coordinates:
-            raise MissingCoordinate("First coordinate is missing")
-        elif len(coordinates) == 1:
-            raise MissingCoordinate("Second coordinate is missing")
-        with contextlib.suppress(CancelAddSection):
-            section = self.__create_section(coordinates, is_area_section, get_metadata)
-            if not section.name.startswith(CUTTING_SECTION_MARKER):
-                logger().info(f"New section created: {section.id}")
-                self._update_selected_sections([section.id])
+        create_section_id = CreateSectionId(
+            self._application._datastore._section_repository
+        )
+        section = AddNewSection(
+            create_section_id=create_section_id,
+            add_section=self._application._add_section,
+        ).add_new_section(
+            coordinates=coordinates,
+            is_area_section=is_area_section,
+            get_metadata=get_metadata,
+        )
+        if section and not section.name.startswith(CUTTING_SECTION_MARKER):
+            logger().info(f"New section created: {section.id}")
+            self._update_selected_sections([section.id])
         self._finish_action()
-
-    def __create_section(
-        self,
-        coordinates: list[tuple[int, int]],
-        is_area_section: bool,
-        get_metadata: MetadataProvider,
-    ) -> Section:
-        metadata = self.__get_metadata(get_metadata)
-        relative_offset_coordinates_enter = metadata[RELATIVE_OFFSET_COORDINATES][
-            EventType.SECTION_ENTER.serialize()
-        ]
-        section: Section | None = None
-        if is_area_section:
-            section = Area(
-                id=self._application.get_section_id(),
-                name=metadata[NAME],
-                relative_offset_coordinates={
-                    EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
-                        **relative_offset_coordinates_enter
-                    )
-                },
-                plugin_data={},
-                coordinates=[
-                    self._to_coordinate(coordinate) for coordinate in coordinates
-                ],
-            )
-        else:
-            section = LineSection(
-                id=self._application.get_section_id(),
-                name=metadata[NAME],
-                relative_offset_coordinates={
-                    EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
-                        **relative_offset_coordinates_enter
-                    )
-                },
-                plugin_data={},
-                coordinates=[
-                    self._to_coordinate(coordinate) for coordinate in coordinates
-                ],
-            )
-        if section is None:
-            raise TypeError("section has to be LineSection or Area, but is None")
-        self._application.add_section(section)
-        return section
-
-    def __get_metadata(self, get_metadata: MetadataProvider) -> dict:
-        metadata = get_metadata()
-        while (
-            (not metadata)
-            or (NAME not in metadata)
-            or (not self.is_section_name_valid(metadata[NAME]))
-            or (RELATIVE_OFFSET_COORDINATES not in metadata)
-        ):
-            metadata = get_metadata()
-        return metadata
 
     def __validate_section_information(
         self, meta_data: dict, coordinates: list[tuple[int, int]]
@@ -1043,7 +996,7 @@ class DummyViewModel(
         self._finish_action()
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
-        return geometry.Coordinate(coordinate[0], coordinate[1])
+        return to_coordinate(coordinate)
 
     def _is_area_section(self, section: Section | None) -> bool:
         return isinstance(section, Area)
