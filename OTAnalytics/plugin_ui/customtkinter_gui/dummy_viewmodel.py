@@ -138,10 +138,7 @@ from OTAnalytics.domain.track_repository import TrackListObserver, TrackReposito
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
-from OTAnalytics.plugin_ui.customtkinter_gui.add_new_section import (
-    AddNewSection,
-    CreateSectionId,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.add_new_section import AddNewSection
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
     ArrowPainter,
@@ -352,12 +349,14 @@ class DummyViewModel(
         name_generator: FlowNameGenerator,
         event_list_export_formats: dict,
         show_svz: bool,
+        add_new_section: AddNewSection,
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
         self._show_svz = show_svz
+        self._add_new_section = add_new_section
         self._window: Optional[AbstractMainWindow] = None
         self._frame_project: Optional[AbstractFrameProject] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
@@ -952,13 +951,7 @@ class DummyViewModel(
         is_area_section: bool,
         get_metadata: MetadataProvider,
     ) -> None:
-        create_section_id = CreateSectionId(
-            self._application._datastore._section_repository
-        )
-        section = AddNewSection(
-            create_section_id=create_section_id,
-            add_section=self._application._add_section,
-        ).add_new_section(
+        section = self._add_new_section.add_new_section(
             coordinates=coordinates,
             is_area_section=is_area_section,
             get_metadata=get_metadata,

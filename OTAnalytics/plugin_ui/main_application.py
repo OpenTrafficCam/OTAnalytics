@@ -259,6 +259,10 @@ from OTAnalytics.plugin_ui.cli import (
     OTAnalyticsCli,
     OTAnalyticsStreamCli,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.add_new_section import (
+    AddNewSection,
+    CreateSectionId,
+)
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
@@ -642,12 +646,18 @@ class ApplicationStarter:
         cut_tracks_intersecting_section.register(clear_all_events.on_tracks_cut)
         application.connect_clear_event_repository_observer()
         name_generator = ArrowFlowNameGenerator()
+        create_section_id = CreateSectionId(section_repository)
+        add_new_section = AddNewSection(
+            create_section_id=create_section_id,
+            add_section=add_section,
+        )
         dummy_viewmodel = DummyViewModel(
             application,
             flow_parser,
             name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
             show_svz=run_config.show_svz,
+            add_new_section=add_new_section,
         )
         application.register_video_observer(dummy_viewmodel)
         application.register_sections_observer(dummy_viewmodel)
