@@ -3,7 +3,7 @@ requires = ["hatchling", "hatch-requirements-txt"]
 build-backend = "hatchling.build"
 
 [project]
-name = "OTAnalytics-EXAMPLE-TEST-DISTRIBUTION"
+name = "OTAnalytics"
 dynamic = ["dependencies", "version"]
 authors = [
   { name="OpenTrafficCam contributors", email="team@opentrafficcam.org" },
