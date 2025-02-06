@@ -10,9 +10,9 @@ permissions: read-all
 
 jobs:
   test:
-    uses: './.github/workflows/test.yml'
+    uses: "./.github/workflows/test.yml"
   regression-test:
-    uses: './.github/workflows/regression-test.yml'
+    uses: "./.github/workflows/regression-test.yml"
     secrets: inherit
   publish-to-testpypi:
     runs-on: ubuntu-latest
@@ -23,7 +23,7 @@ jobs:
       name: testpypi
       url: https://test.pypi.org/p/OTAnalytics
     permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+      id-token: write # IMPORTANT: mandatory for trusted publishing
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
