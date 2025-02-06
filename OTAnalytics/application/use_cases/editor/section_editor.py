@@ -1,6 +1,6 @@
 import contextlib
+from typing import Callable
 
-from OTAnalytics.adapter_ui.view_model import MetadataProvider, MissingCoordinate
 from OTAnalytics.application.application import CancelAddSection
 from OTAnalytics.application.use_cases.section_repository import AddSection
 from OTAnalytics.domain import geometry
@@ -17,6 +17,12 @@ from OTAnalytics.domain.section import (
     SectionRepository,
 )
 from OTAnalytics.domain.types import EventType
+
+MetadataProvider = Callable[[], dict]
+
+
+class MissingCoordinate(Exception):
+    pass
 
 
 class CreateSectionId:

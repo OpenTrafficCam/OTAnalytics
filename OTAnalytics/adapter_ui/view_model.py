@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterable, Optional
+from typing import Iterable, Optional
+
+from application.use_cases.editor.section_editor import MetadataProvider
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -31,12 +33,6 @@ from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 
 DISTANCES: str = "distances"
-
-MetadataProvider = Callable[[], dict]
-
-
-class MissingCoordinate(Exception):
-    pass
 
 
 class ViewModel(ABC):

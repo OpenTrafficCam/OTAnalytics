@@ -47,7 +47,7 @@ from OTAnalytics.adapter_ui.ui_texts import (
     DIRECTIONS_OF_STATIONING,
     WEATHER_TYPES,
 )
-from OTAnalytics.adapter_ui.view_model import MetadataProvider, ViewModel
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
@@ -91,6 +91,7 @@ from OTAnalytics.application.use_cases.config_has_changed import NoExistingConfi
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.application.use_cases.editor.section_editor import (
     AddNewSection,
+    MetadataProvider,
     UpdateSectionCoordinates,
 )
 from OTAnalytics.application.use_cases.export_events import (
