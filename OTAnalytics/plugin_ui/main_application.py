@@ -118,7 +118,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksIntersectingAllNonCuttingSections,
 )
 from OTAnalytics.application.use_cases.inside_cutting_section import (
-    TrackIdsInsideCuttingSections,
+    CachedTrackIdsInsideCuttingSections,
 )
 from OTAnalytics.application.use_cases.intersection_repository import (
     ClearAllIntersections,
@@ -591,6 +591,7 @@ class ApplicationStarter:
             section_repository,
             get_all_tracks,
             get_all_filtered_track_ids,
+            track_repository,
         )
         get_road_user_assignments = GetRoadUserAssignments(
             flow_repository, event_repository, road_user_assigner
@@ -805,6 +806,7 @@ class ApplicationStarter:
             section_repository,
             get_all_tracks,
             all_track_ids_provider,
+            track_repository,
         )
         track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
             SimpleTrackStatisticsExporterFactory()
@@ -1287,6 +1289,7 @@ class ApplicationStarter:
         section_repository: SectionRepository,
         get_all_tracks: GetAllTracks,
         all_filtered_track_ids: TrackIdProvider,
+        track_repository: TrackRepository,
     ) -> CalculateTrackStatistics:
         get_cutting_sections = GetCuttingSections(section_repository)
         tracks_intersecting_all_sections = FilteredTrackIdProviderByTrackIdProvider(
@@ -1306,7 +1309,12 @@ class ApplicationStarter:
             all_filtered_track_ids,
         )
         track_ids_inside_cutting_sections = FilteredTrackIdProviderByTrackIdProvider(
-            TrackIdsInsideCuttingSections(get_all_tracks, get_cutting_sections),
+            CachedTrackIdsInsideCuttingSections(
+                get_all_tracks,
+                get_cutting_sections,
+                track_repository,
+                section_repository,
+            ),
             all_filtered_track_ids,
         )
         tracks_as_dataframe_provider = TracksAsDataFrameProvider(
