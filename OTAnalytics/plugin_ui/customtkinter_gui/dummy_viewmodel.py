@@ -988,15 +988,12 @@ class DummyViewModel(
                 f"Could not update section '{section_id.serialize()}' after editing"
             )
         section.update_coordinates(
-            [self._to_coordinate(coordinate) for coordinate in coordinates]
+            [coordinate_from_tuple(coordinate) for coordinate in coordinates]
         )
         self._application.update_section(section)
         logger().info(f"Update section: {section.id}")
         self._update_selected_sections([section.id])
         self._finish_action()
-
-    def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
-        return coordinate_from_tuple(coordinate)
 
     def _is_area_section(self, section: Section | None) -> bool:
         return isinstance(section, Area)
