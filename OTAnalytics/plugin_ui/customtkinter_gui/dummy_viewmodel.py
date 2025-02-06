@@ -347,6 +347,7 @@ class DummyViewModel(
         event_list_export_formats: dict,
         show_svz: bool,
         add_new_section: AddNewSection,
+        update_section_coordinates: UpdateSectionCoordinates,
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
@@ -354,6 +355,7 @@ class DummyViewModel(
         self._event_list_export_formats = event_list_export_formats
         self._show_svz = show_svz
         self._add_new_section = add_new_section
+        self._update_section_coordinates = update_section_coordinates
         self._window: Optional[AbstractMainWindow] = None
         self._frame_project: Optional[AbstractFrameProject] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
@@ -961,10 +963,7 @@ class DummyViewModel(
     def update_section_coordinates(
         self, meta_data: dict, coordinates: list[tuple[int, int]]
     ) -> None:
-        update_section_coordinates = UpdateSectionCoordinates(
-            self._application._datastore._section_repository
-        )
-        section_id = update_section_coordinates.update(meta_data, coordinates)
+        section_id = self._update_section_coordinates.update(meta_data, coordinates)
         logger().info(f"Update section: {section_id}")
         self._update_selected_sections([section_id])
         self._finish_action()

@@ -262,6 +262,7 @@ from OTAnalytics.plugin_ui.cli import (
 from OTAnalytics.plugin_ui.customtkinter_gui.add_new_section import (
     AddNewSection,
     CreateSectionId,
+    UpdateSectionCoordinates,
 )
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
@@ -651,6 +652,7 @@ class ApplicationStarter:
             create_section_id=create_section_id,
             add_section=add_section,
         )
+        update_section_coordinates = UpdateSectionCoordinates(section_repository)
         dummy_viewmodel = DummyViewModel(
             application,
             flow_parser,
@@ -658,6 +660,7 @@ class ApplicationStarter:
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
             show_svz=run_config.show_svz,
             add_new_section=add_new_section,
+            update_section_coordinates=update_section_coordinates,
         )
         application.register_video_observer(dummy_viewmodel)
         application.register_sections_observer(dummy_viewmodel)
