@@ -3,8 +3,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
-from application.use_cases.editor.section_editor import MetadataProvider
-
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
 )
@@ -26,6 +24,7 @@ from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
+from OTAnalytics.application.use_cases.editor.section_editor import MetadataProvider
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.section import Section
