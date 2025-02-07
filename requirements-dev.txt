@@ -6,7 +6,7 @@ interrogate==1.7.0
 isort==5.13.2
 mypy==1.12.1
 pandas-stubs==2.2.3.241126
-pre-commit==4.0.1
+pre-commit==4.1.0
 pytest==8.3.4
 pytest-benchmark==5.1.0
 pytest-cov==6.0.0
