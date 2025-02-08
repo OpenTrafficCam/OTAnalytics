@@ -1309,7 +1309,7 @@ class ApplicationStarter:
             all_filtered_track_ids,
         )
         track_ids_inside_cutting_sections = FilteredTrackIdProviderByTrackIdProvider(
-            CachedTrackIdsInsideCuttingSections(
+            self._create_cached_track_ids_inside_cutting_sections(
                 get_all_tracks,
                 get_cutting_sections,
                 track_repository,
@@ -1340,3 +1340,17 @@ class ApplicationStarter:
             number_of_tracks_to_be_validated,
             get_events,
         )
+
+    def _create_cached_track_ids_inside_cutting_sections(
+        self,
+        get_all_tracks: GetAllTracks,
+        get_cutting_sections: GetCuttingSections,
+        track_repository: TrackRepository,
+        section_repository: SectionRepository,
+    ) -> CachedTrackIdsInsideCuttingSections:
+        cached = CachedTrackIdsInsideCuttingSections(
+            get_all_tracks, get_cutting_sections
+        )
+        track_repository.register_tracks_observer(cached)
+        section_repository.register_sections_observer(cached)
+        return cached

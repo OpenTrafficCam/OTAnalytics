@@ -5,15 +5,10 @@ from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
-    SectionRepository,
     SectionRepositoryEvent,
 )
 from OTAnalytics.domain.track import TrackId, TrackIdProvider
-from OTAnalytics.domain.track_repository import (
-    TrackListObserver,
-    TrackRepository,
-    TrackRepositoryEvent,
-)
+from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 
 
@@ -56,12 +51,8 @@ class CachedTrackIdsInsideCuttingSections(
         self,
         get_tracks: GetAllTracks,
         get_cutting_sections: GetCuttingSections,
-        track_repository: TrackRepository,
-        section_repository: SectionRepository,
     ) -> None:
         super().__init__(get_tracks, get_cutting_sections)
-        track_repository.register_tracks_observer(self)
-        section_repository.register_sections_observer(self)
         self._cached_ids: set[TrackId] = self.__get_empty_cache()
 
     def get_ids(self) -> set[TrackId]:
