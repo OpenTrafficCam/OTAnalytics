@@ -560,6 +560,7 @@ class ApplicationStarter:
                 get_current_project,
                 get_all_videos,
                 get_all_track_files,
+                get_current_remark,
             ),
             OtflowHasChanged(flow_parser, get_sections, get_flows),
             file_state,
@@ -679,6 +680,9 @@ class ApplicationStarter:
         )
         application.track_view_state.filter_element.register(
             dummy_viewmodel._update_date_range
+        )
+        application.track_view_state.filter_element.register(
+            dummy_viewmodel.update_track_statistics
         )
         application.action_state.action_running.register(
             dummy_viewmodel._notify_action_running_state

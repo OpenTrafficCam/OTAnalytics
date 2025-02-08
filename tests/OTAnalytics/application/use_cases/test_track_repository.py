@@ -60,6 +60,10 @@ def track_id_provider() -> Mock:
 
 
 class TestFilteredTrackIdProviderByTrackIdProvider:
+    """
+    https://openproject.platomo.de/wp/5990
+    """
+
     def test_get_ids_of_filter_by_self(self, track_id_provider: Mock) -> None:
         track_ids = create_track_ids_from_ids(["0", "8", "15"])
         track_id_provider.get_ids.return_value = track_ids
@@ -84,7 +88,7 @@ class TestFilteredTrackIdProviderByTrackIdProvider:
         )
         filtered_ids = filtered_provider.get_ids()
 
-        assert filtered_ids == {TrackId("2"), TrackId("3")}
+        assert filtered_ids == set(create_track_ids_from_ids(["2", "3"]))
         track_id_provider.get_ids.assert_called_once()
         filter.get_ids.assert_called_once()
 

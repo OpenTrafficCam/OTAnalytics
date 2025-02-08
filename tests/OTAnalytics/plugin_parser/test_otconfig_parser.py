@@ -93,10 +93,11 @@ class TestOtConfigParser:
         track_files: list[Path] = []
         sections: list[Section] = []
         flows: list[Flow] = []
-        remark: str | None = None
+        remark: str | None = "Comment"
         output = test_data_tmp_dir / "config.otconfig"
         serialized_videos = {video.VIDEOS: {"serialized": "videos"}}
         serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
+        serialized_remark = {"remark": "Comment"}
         serialized_analysis: dict = {
             ANALYSIS: {
                 DO_EVENTS: DEFAULT_DO_EVENTS,
@@ -112,6 +113,7 @@ class TestOtConfigParser:
                 LOGFILE: str(DEFAULT_LOG_FILE),
             }
         }
+
         video_parser.convert.return_value = serialized_videos
         flow_parser.convert.return_value = serialized_sections
 
@@ -130,6 +132,7 @@ class TestOtConfigParser:
         expected_content |= serialized_videos
         expected_content |= serialized_analysis
         expected_content |= serialized_sections
+        expected_content |= serialized_remark
 
         assert serialized_content == expected_content
         assert video_parser.convert.call_args_list == [
