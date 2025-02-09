@@ -20,6 +20,7 @@ from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionId, SectionRepository
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
@@ -149,6 +150,11 @@ def progressbar() -> Mock:
     return Mock(spec=ProgressbarBuilder)
 
 
+@pytest.fixture
+def remark_repository() -> Mock:
+    return Mock(spec=RemarkRepository)
+
+
 class TestDatastore:
 
     def test_save_event_list_file(
@@ -165,6 +171,7 @@ class TestDatastore:
         video_repository: Mock,
         track_to_video_repository: Mock,
         progressbar: Mock,
+        remark_repository: Mock,
     ) -> None:
         track_parser.parse.return_value = []
         track_video_parser.parse.return_value = []
@@ -181,6 +188,7 @@ class TestDatastore:
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
             progressbar=progressbar,
+            remark_repository=remark_repository,
         )
         some_file = Mock()
 
@@ -202,6 +210,7 @@ class TestDatastore:
         video_repository: Mock,
         track_to_video_repository: Mock,
         progressbar: Mock,
+        remark_repository: Mock,
     ) -> None:
         store = Datastore(
             track_repository=track_repository,
@@ -216,6 +225,7 @@ class TestDatastore:
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
             progressbar=progressbar,
+            remark_repository=remark_repository,
         )
         section_id = SectionId("my section")
         plugin_data = {"some": "new_value"}
@@ -243,6 +253,7 @@ class TestDatastore:
         video_repository: Mock,
         track_to_video_repository: Mock,
         progressbar: Mock,
+        remark_repository: Mock,
     ) -> None:
         store = Datastore(
             track_repository=track_repository,
@@ -257,6 +268,7 @@ class TestDatastore:
             track_video_parser=track_video_parser,
             track_to_video_repository=track_to_video_repository,
             progressbar=progressbar,
+            remark_repository=remark_repository,
         )
         section_id = SectionId("my section")
         new_plugin_data = {"other": "new_value"}

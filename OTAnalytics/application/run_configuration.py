@@ -182,6 +182,10 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         return self._cli_args.track_export
 
     @property
+    def do_export_track_statistics(self) -> bool:
+        return self._cli_args.track_statistics_export
+
+    @property
     def project(self) -> Project | None:
         if self._otconfig:
             return self._otconfig.project

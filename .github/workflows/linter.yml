@@ -7,7 +7,11 @@ name: super-linter
 
 on: pull_request
 
-permissions: read-all
+permissions:
+  contents: read
+  packages: read
+  # To report GitHub Actions status checks
+  statuses: write
 
 jobs:
   lint:
@@ -31,6 +35,7 @@ jobs:
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_JSCPD: false
           VALIDATE_PYTHON_BLACK: false
+          VALIDATE_PYTHON_PYINK: false
 
           LINTER_RULES_PATH: /
           PYTHON_FLAKE8_CONFIG_FILE: .flake8
