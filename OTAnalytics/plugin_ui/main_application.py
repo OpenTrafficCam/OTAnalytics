@@ -352,18 +352,17 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        section_provider = FilterOutCuttingSections(
-            MissingEventsSectionProvider(self.section_repository, self.event_repository)
-        )
         create_events = self._create_use_case_create_events(
-            section_provider,
+            self.section_provider_event_creation_ui,
             self.clear_all_events,
             self.get_tracks_without_single_detections,
             DEFAULT_NUM_PROCESSES,
         )
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
-                section_provider, self.get_all_tracks, DEFAULT_NUM_PROCESSES
+                self.section_provider_event_creation_ui,
+                self.get_all_tracks,
+                DEFAULT_NUM_PROCESSES,
             )
         )
         export_counts = self._create_export_counts(create_events)
@@ -595,6 +594,12 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def section_provider_event_creation_ui(self) -> SectionProvider:
+        return FilterOutCuttingSections(
+            MissingEventsSectionProvider(self.section_repository, self.event_repository)
+        )
 
     @cached_property
     def clear_all_track_to_videos(self) -> ClearAllTrackToVideos:
