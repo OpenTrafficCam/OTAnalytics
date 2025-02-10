@@ -352,7 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        get_all_track_files = self._create_get_all_track_files()
         get_all_tracks = GetAllTracks(self.track_repository)
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             self.track_repository
@@ -476,7 +475,7 @@ class ApplicationStarter:
                 get_flows,
                 get_current_project,
                 get_all_videos,
-                get_all_track_files,
+                self.get_all_track_files,
                 get_current_remark,
             ),
             OtflowHasChanged(self.flow_parser, get_sections, get_flows),
@@ -486,7 +485,10 @@ class ApplicationStarter:
             get_all_tracks, create_events
         )
         save_path_suggester = SavePathSuggester(
-            self.file_state, get_all_track_files, get_all_videos, get_current_project
+            self.file_state,
+            self.get_all_track_files,
+            get_all_videos,
+            get_current_project,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
             get_all_tracks
@@ -521,7 +523,7 @@ class ApplicationStarter:
             self.videos_metadata,
             self.action_state,
             self.filter_element_settings_restorer,
-            get_all_track_files,
+            self.get_all_track_files,
             generate_flows,
             intersect_tracks_with_sections,
             export_counts,
@@ -925,7 +927,8 @@ class ApplicationStarter:
     def flow_state(self) -> FlowState:
         return FlowState()
 
-    def _create_get_all_track_files(self) -> GetAllTrackFiles:
+    @cached_property
+    def get_all_track_files(self) -> GetAllTrackFiles:
         return GetAllTrackFiles(self.track_file_repository)
 
     def _create_flow_generator(
