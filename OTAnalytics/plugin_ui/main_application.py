@@ -333,7 +333,6 @@ class ApplicationStarter:
             OTAnalyticsGui,
         )
 
-        flow_state = self._create_flow_state()
         file_state = FileState()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
@@ -344,7 +343,7 @@ class ApplicationStarter:
             clear_all_intersections.on_section_changed
         )
         layer_groups, layers = self._create_layers(
-            flow_state, road_user_assigner, color_palette_provider
+            road_user_assigner, color_palette_provider
         )
         plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(
@@ -354,7 +353,7 @@ class ApplicationStarter:
             self.datastore,
             self.track_view_state,
             self.section_state,
-            flow_state,
+            self.flow_state,
             plotter,
         )
         self.track_view_state.selected_videos.register(properties_updater.notify_videos)
@@ -537,7 +536,7 @@ class ApplicationStarter:
             self.track_state,
             self.track_view_state,
             self.section_state,
-            flow_state,
+            self.flow_state,
             file_state,
             tracks_metadata,
             self.videos_metadata,
@@ -892,7 +891,6 @@ class ApplicationStarter:
 
     def _create_layers(
         self,
-        flow_state: FlowState,
         road_user_assigner: RoadUserAssigner,
         color_palette_provider: ColorPaletteProvider,
     ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
@@ -905,7 +903,7 @@ class ApplicationStarter:
             color_palette_provider,
             self.pulling_progressbar_builder,
         ).build(
-            flow_state,
+            self.flow_state,
             road_user_assigner,
         )
 
@@ -913,7 +911,8 @@ class ApplicationStarter:
     def section_state(self) -> SectionState:
         return SectionState(GetSectionsById(self.section_repository))
 
-    def _create_flow_state(self) -> FlowState:
+    @cached_property
+    def flow_state(self) -> FlowState:
         return FlowState()
 
     def _create_get_all_track_files(self) -> GetAllTrackFiles:
