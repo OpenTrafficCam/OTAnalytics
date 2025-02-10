@@ -352,7 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        add_flow = AddFlow(self.flow_repository)
         clear_all_flows = ClearAllFlows(self.flow_repository)
 
         add_events = AddEvents(self.event_repository)
@@ -382,7 +381,7 @@ class ApplicationStarter:
         )
         export_counts = self._create_export_counts(create_events)
         load_otflow = self._create_use_case_load_otflow(
-            clear_all_flows, clear_all_events, add_flow
+            clear_all_flows, clear_all_events
         )
         load_track_files = self._create_load_tracks_file()
         clear_repositories = self._create_use_case_clear_all_repositories(
@@ -438,7 +437,7 @@ class ApplicationStarter:
             project_updater,
             AddAllVideos(self.video_repository),
             AddAllSections(self.add_section),
-            AddAllFlows(add_flow),
+            AddAllFlows(self.add_flow),
             load_track_files,
             add_new_remark,
             parse_json,
@@ -504,7 +503,7 @@ class ApplicationStarter:
             create_events,
             load_otflow,
             self.add_section,
-            add_flow,
+            self.add_flow,
             clear_all_events,
             start_new_project,
             project_updater,
@@ -618,6 +617,10 @@ class ApplicationStarter:
         ).start()
 
     @cached_property
+    def add_flow(self) -> AddFlow:
+        return AddFlow(self.flow_repository)
+
+    @cached_property
     def clear_all_sections(self) -> ClearAllSections:
         return ClearAllSections(self.section_repository)
 
@@ -721,7 +724,6 @@ class ApplicationStarter:
         return VideosMetadata()
 
     def start_cli(self) -> None:
-        add_flow = AddFlow(self.flow_repository)
         add_events = AddEvents(self.event_repository)
         get_all_track_ids = GetAllTrackIds(self.track_repository)
         clear_all_events = ClearAllEvents(self.event_repository)
@@ -764,7 +766,7 @@ class ApplicationStarter:
                 self.event_repository,
                 self.add_section,
                 self.get_all_sections,
-                add_flow,
+                self.add_flow,
                 create_events,
                 export_counts,
                 provide_available_eventlist_exporter,
@@ -788,7 +790,7 @@ class ApplicationStarter:
                 self.event_repository,
                 self.add_section,
                 self.get_all_sections,
-                add_flow,
+                self.add_flow,
                 create_events,
                 export_counts,
                 export_track_statistics,
@@ -1020,10 +1022,7 @@ class ApplicationStarter:
         return SimpleTracksIntersectingSections(get_tracks)
 
     def _create_use_case_load_otflow(
-        self,
-        clear_all_flows: ClearAllFlows,
-        clear_all_events: ClearAllEvents,
-        add_flow: AddFlow,
+        self, clear_all_flows: ClearAllFlows, clear_all_events: ClearAllEvents
     ) -> LoadOtflow:
         return LoadOtflow(
             self.clear_all_sections,
@@ -1031,7 +1030,7 @@ class ApplicationStarter:
             clear_all_events,
             self.flow_parser,
             self.add_section,
-            add_flow,
+            self.add_flow,
             parse_json,
         )
 
