@@ -333,7 +333,6 @@ class ApplicationStarter:
             OTAnalyticsGui,
         )
 
-        track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
         section_state = self._create_section_state()
         flow_state = self._create_flow_state()
@@ -535,7 +534,7 @@ class ApplicationStarter:
         )
         application = OTAnalyticsApplication(
             self.datastore,
-            track_state,
+            self.track_state,
             track_view_state,
             section_state,
             flow_state,
@@ -883,7 +882,8 @@ class ApplicationStarter:
     def _create_event_list_parser(self) -> EventListParser:
         return OtEventListParser()
 
-    def _create_track_state(self) -> TrackState:
+    @cached_property
+    def track_state(self) -> TrackState:
         return TrackState()
 
     def _create_track_view_state(self) -> TrackViewState:
