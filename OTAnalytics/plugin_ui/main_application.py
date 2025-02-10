@@ -352,9 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        clear_all_track_to_videos = ClearAllTrackToVideos(
-            self.track_to_video_repository
-        )
         section_provider = FilterOutCuttingSections(
             MissingEventsSectionProvider(self.section_repository, self.event_repository)
         )
@@ -372,9 +369,7 @@ class ApplicationStarter:
         export_counts = self._create_export_counts(create_events)
         load_otflow = self._create_use_case_load_otflow()
         load_track_files = self._create_load_tracks_file()
-        clear_repositories = self._create_use_case_clear_all_repositories(
-            clear_all_track_to_videos
-        )
+        clear_repositories = self._create_use_case_clear_all_repositories()
         project_updater = self._create_project_updater()
         reset_project_config = self._create_reset_project_config(project_updater)
         start_new_project = self._create_use_case_start_new_project(
@@ -600,6 +595,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def clear_all_track_to_videos(self) -> ClearAllTrackToVideos:
+        return ClearAllTrackToVideos(self.track_to_video_repository)
 
     @cached_property
     def clear_all_videos(self) -> ClearAllVideos:
@@ -1032,15 +1031,13 @@ class ApplicationStarter:
             parse_json,
         )
 
-    def _create_use_case_clear_all_repositories(
-        self, clear_all_track_to_videos: ClearAllTrackToVideos
-    ) -> ClearRepositories:
+    def _create_use_case_clear_all_repositories(self) -> ClearRepositories:
         return ClearRepositories(
             self.clear_all_events,
             self.clear_all_flows,
             self.clear_all_intersections,
             self.clear_all_sections,
-            clear_all_track_to_videos,
+            self.clear_all_track_to_videos,
             self.clear_all_tracks,
             self.clear_all_videos,
         )
