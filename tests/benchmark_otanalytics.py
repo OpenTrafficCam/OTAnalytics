@@ -181,12 +181,10 @@ class UseCaseProvider:
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             self._track_repository
         )
-        get_tracks = GetAllTracks(self._track_repository)
         add_events = AddEvents(self._event_repository)
         create_events = self._starter._create_use_case_create_events(
             self._section_repository.get_all,
             clear_all_events,
-            get_tracks,
             get_tracks_without_single_detections,
             add_events,
             num_processes=NUM_PROCESSES,

@@ -352,7 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        get_all_tracks = GetAllTracks(self.track_repository)
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             self.track_repository
         )
@@ -384,7 +383,6 @@ class ApplicationStarter:
         create_events = self._create_use_case_create_events(
             section_provider,
             clear_all_events,
-            get_all_tracks,
             get_tracks_without_single_detections,
             add_events,
             DEFAULT_NUM_PROCESSES,
@@ -392,7 +390,7 @@ class ApplicationStarter:
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
                 section_provider,
-                get_all_tracks,
+                self.get_all_tracks,
                 add_events,
                 DEFAULT_NUM_PROCESSES,
             )
@@ -417,7 +415,7 @@ class ApplicationStarter:
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
             get_sections_by_id,
-            get_all_tracks,
+            self.get_all_tracks,
             add_all_tracks,
             remove_tracks,
             remove_section,
@@ -482,7 +480,7 @@ class ApplicationStarter:
             self.file_state,
         )
         export_road_user_assignments = self.create_export_road_user_assignments(
-            get_all_tracks, create_events
+            create_events
         )
         save_path_suggester = SavePathSuggester(
             self.file_state,
@@ -491,14 +489,11 @@ class ApplicationStarter:
             get_current_project,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            get_all_tracks
+            self.get_all_tracks
         )
 
         calculate_track_statistics = self._create_calculate_track_statistics(
-            get_sections,
-            tracks_intersecting_sections,
-            get_sections_by_id,
-            get_all_tracks,
+            get_sections, tracks_intersecting_sections, get_sections_by_id
         )
         get_road_user_assignments = GetRoadUserAssignments(
             self.flow_repository, self.event_repository, self.road_user_assigner
@@ -644,6 +639,10 @@ class ApplicationStarter:
         ).start()
 
     @cached_property
+    def get_all_tracks(self) -> GetAllTracks:
+        return GetAllTracks(self.track_repository)
+
+    @cached_property
     def selected_video_updater(self) -> SelectedVideoUpdate:
         return SelectedVideoUpdate(
             self.datastore, self.track_view_state, self.videos_metadata
@@ -715,21 +714,19 @@ class ApplicationStarter:
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             self.track_repository
         )
-        get_all_tracks = GetAllTracks(self.track_repository)
         get_all_track_ids = GetAllTrackIds(self.track_repository)
         clear_all_events = ClearAllEvents(self.event_repository)
         section_provider = FilterOutCuttingSections(self.section_repository.get_all)
         create_events = self._create_use_case_create_events(
             section_provider,
             clear_all_events,
-            get_all_tracks,
             get_tracks_without_single_detections,
             add_events,
             self.run_config.num_processes,
         )
         cut_tracks = self._create_cut_tracks_intersecting_section(
             GetSectionsById(self.section_repository),
-            get_all_tracks,
+            self.get_all_tracks,
             AddAllTracks(self.track_repository),
             RemoveTracks(self.track_repository),
             RemoveSection(self.section_repository),
@@ -742,17 +739,14 @@ class ApplicationStarter:
             self.track_repository, self.tracks_metadata, self.videos_metadata
         )
         export_road_user_assignments = self.create_export_road_user_assignments(
-            get_all_tracks, create_events
+            create_events
         )
         get_sections = GetAllSections(self.section_repository)
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            get_all_tracks
+            self.get_all_tracks
         )
         calculate_track_statistics = self._create_calculate_track_statistics(
-            get_sections,
-            tracks_intersecting_sections,
-            get_sections_by_id,
-            get_all_tracks,
+            get_sections, tracks_intersecting_sections, get_sections_by_id
         )
         track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
             SimpleTrackStatisticsExporterFactory()
@@ -1005,12 +999,11 @@ class ApplicationStarter:
         self,
         section_provider: SectionProvider,
         clear_events: ClearAllEvents,
-        get_all_tracks: GetAllTracks,
         get_all_tracks_without_single_detections: GetTracksWithoutSingleDetections,
         add_events: AddEvents,
         num_processes: int,
     ) -> CreateEvents:
-        run_intersect = self._create_intersect(get_all_tracks, num_processes)
+        run_intersect = self._create_intersect(self.get_all_tracks, num_processes)
         create_intersection_events = SimpleCreateIntersectionEvents(
             run_intersect, section_provider, add_events
         )
@@ -1167,7 +1160,7 @@ class ApplicationStarter:
         )
 
     def create_export_road_user_assignments(
-        self, get_all_tracks: GetAllTracks, create_events: CreateEvents
+        self, create_events: CreateEvents
     ) -> ExportRoadUserAssignments:
         return ExportRoadUserAssignments(
             self.event_repository,
@@ -1175,7 +1168,7 @@ class ApplicationStarter:
             create_events,
             self.road_user_assigner,
             SimpleRoadUserAssignmentExporterFactory(
-                self.section_repository, get_all_tracks
+                self.section_repository, self.get_all_tracks
             ),
         )
 
@@ -1184,7 +1177,6 @@ class ApplicationStarter:
         get_all_sections: GetAllSections,
         tracks_intersecting_sections: TracksIntersectingSections,
         get_section_by_id: GetSectionsById,
-        get_all_tracks: GetAllTracks,
     ) -> CalculateTrackStatistics:
         get_cutting_sections = GetCuttingSections(self.section_repository)
         tracks_intersecting_all_sections = TracksIntersectingAllNonCuttingSections(
@@ -1198,11 +1190,11 @@ class ApplicationStarter:
             self.road_user_assigner, self.event_repository, self.flow_repository
         )
         track_ids_inside_cutting_sections = TrackIdsInsideCuttingSections(
-            get_all_tracks, get_cutting_sections
+            self.get_all_tracks, get_cutting_sections
         )
         get_all_track_ids = GetAllTrackIds(self.track_repository)
         tracks_as_dataframe_provider = TracksAsDataFrameProvider(
-            get_all_tracks=get_all_tracks,
+            get_all_tracks=self.get_all_tracks,
             track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset,
         )
         detection_rate_strategy = DetectionRateByPercentile(
