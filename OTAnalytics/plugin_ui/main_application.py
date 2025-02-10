@@ -351,7 +351,6 @@ class ApplicationStarter:
         self.tracks_metadata._classifications.register(
             observer=self.color_palette_provider.update
         )
-        action_state = self._create_action_state()
         filter_element_settings_restorer = (
             self._create_filter_element_setting_restorer()
         )
@@ -523,7 +522,7 @@ class ApplicationStarter:
             self.file_state,
             self.tracks_metadata,
             self.videos_metadata,
-            action_state,
+            self.action_state,
             filter_element_settings_restorer,
             get_all_track_files,
             generate_flows,
@@ -977,7 +976,8 @@ class ApplicationStarter:
             self.run_config.exclude_classes,
         )
 
-    def _create_action_state(self) -> ActionState:
+    @cached_property
+    def action_state(self) -> ActionState:
         return ActionState()
 
     def _create_filter_element_setting_restorer(self) -> FilterElementSettingRestorer:
