@@ -352,7 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        add_section = AddSection(self.section_repository)
         remove_section = RemoveSection(self.section_repository)
         clear_all_sections = ClearAllSections(self.section_repository)
         generate_flows = self._create_flow_generator(
@@ -388,7 +387,7 @@ class ApplicationStarter:
         )
         export_counts = self._create_export_counts(create_events)
         load_otflow = self._create_use_case_load_otflow(
-            clear_all_sections, clear_all_flows, clear_all_events, add_section, add_flow
+            clear_all_sections, clear_all_flows, clear_all_events, add_flow
         )
         load_track_files = self._create_load_tracks_file()
         clear_repositories = self._create_use_case_clear_all_repositories(
@@ -444,7 +443,7 @@ class ApplicationStarter:
             config_parser,
             project_updater,
             AddAllVideos(self.video_repository),
-            AddAllSections(add_section),
+            AddAllSections(self.add_section),
             AddAllFlows(add_flow),
             load_track_files,
             add_new_remark,
@@ -510,7 +509,7 @@ class ApplicationStarter:
             export_counts,
             create_events,
             load_otflow,
-            add_section,
+            self.add_section,
             add_flow,
             clear_all_events,
             start_new_project,
@@ -625,6 +624,10 @@ class ApplicationStarter:
         ).start()
 
     @cached_property
+    def add_section(self) -> AddSection:
+        return AddSection(self.section_repository)
+
+    @cached_property
     def get_sections_by_id(self) -> GetSectionsById:
         return GetSectionsById(self.section_repository)
 
@@ -716,7 +719,6 @@ class ApplicationStarter:
         return VideosMetadata()
 
     def start_cli(self) -> None:
-        add_section = AddSection(self.section_repository)
         add_flow = AddFlow(self.flow_repository)
         add_events = AddEvents(self.event_repository)
         get_all_track_ids = GetAllTrackIds(self.track_repository)
@@ -760,7 +762,7 @@ class ApplicationStarter:
             cli = OTAnalyticsBulkCli(
                 self.run_config,
                 self.event_repository,
-                add_section,
+                self.add_section,
                 self.get_all_sections,
                 add_flow,
                 create_events,
@@ -784,7 +786,7 @@ class ApplicationStarter:
             cli = OTAnalyticsStreamCli(
                 self.run_config,
                 self.event_repository,
-                add_section,
+                self.add_section,
                 self.get_all_sections,
                 add_flow,
                 create_events,
@@ -1022,7 +1024,6 @@ class ApplicationStarter:
         clear_all_sections: ClearAllSections,
         clear_all_flows: ClearAllFlows,
         clear_all_events: ClearAllEvents,
-        add_section: AddSection,
         add_flow: AddFlow,
     ) -> LoadOtflow:
         return LoadOtflow(
@@ -1030,7 +1031,7 @@ class ApplicationStarter:
             clear_all_flows,
             clear_all_events,
             self.flow_parser,
-            add_section,
+            self.add_section,
             add_flow,
             parse_json,
         )
