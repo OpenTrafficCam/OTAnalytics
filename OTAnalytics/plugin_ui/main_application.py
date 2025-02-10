@@ -352,9 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        generate_flows = self._create_flow_generator(
-            FilterOutCuttingSections(self.get_all_sections)
-        )
         add_flow = AddFlow(self.flow_repository)
         clear_all_flows = ClearAllFlows(self.flow_repository)
 
@@ -501,7 +498,7 @@ class ApplicationStarter:
             self.action_state,
             self.filter_element_settings_restorer,
             self.get_all_track_files,
-            generate_flows,
+            self.flow_generator,
             intersect_tracks_with_sections,
             export_counts,
             create_events,
@@ -928,9 +925,9 @@ class ApplicationStarter:
     def get_all_track_files(self) -> GetAllTrackFiles:
         return GetAllTrackFiles(self.track_file_repository)
 
-    def _create_flow_generator(
-        self, section_provider: SectionProvider
-    ) -> GenerateFlows:
+    @cached_property
+    def flow_generator(self) -> GenerateFlows:
+        section_provider = FilterOutCuttingSections(self.get_all_sections)
         id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(self.flow_repository)
         name_generator = ArrowFlowNameGenerator()
         flow_generator = CrossProductFlowGenerator(
