@@ -367,21 +367,6 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        config_has_changed = ConfigHasChanged(
-            OtconfigHasChanged(
-                self.otconfig_parser,
-                self.get_all_sections,
-                self.get_all_flows,
-                self.get_current_project,
-                self.get_all_videos,
-                self.get_all_track_files,
-                self.get_current_remark,
-            ),
-            OtflowHasChanged(
-                self.flow_parser, self.get_all_sections, self.get_all_flows
-            ),
-            self.file_state,
-        )
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
         )
@@ -441,7 +426,7 @@ class ApplicationStarter:
             self.save_otflow,
             self.quick_save_configuration,
             self.load_otconfig,
-            config_has_changed,
+            self.config_has_changed,
             export_road_user_assignments,
             save_path_suggester,
             calculate_track_statistics,
@@ -536,6 +521,24 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def config_has_changed(self) -> ConfigHasChanged:
+        return ConfigHasChanged(
+            OtconfigHasChanged(
+                self.otconfig_parser,
+                self.get_all_sections,
+                self.get_all_flows,
+                self.get_current_project,
+                self.get_all_videos,
+                self.get_all_track_files,
+                self.get_current_remark,
+            ),
+            OtflowHasChanged(
+                self.flow_parser, self.get_all_sections, self.get_all_flows
+            ),
+            self.file_state,
+        )
 
     @cached_property
     def get_current_project(self) -> GetCurrentProject:
