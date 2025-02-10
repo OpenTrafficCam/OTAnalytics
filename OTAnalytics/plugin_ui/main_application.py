@@ -342,7 +342,6 @@ class ApplicationStarter:
             pulling_progressbar_popup_builder
         )
 
-        track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
         intersection_repository = self._create_intersection_repository()
@@ -355,7 +354,6 @@ class ApplicationStarter:
         datastore = self._create_datastore(
             video_parser,
             video_repository,
-            track_file_repository,
             track_to_video_repository,
             section_repository,
             flow_repository,
@@ -410,7 +408,7 @@ class ApplicationStarter:
             self._create_filter_element_setting_restorer()
         )
 
-        get_all_track_files = self._create_get_all_track_files(track_file_repository)
+        get_all_track_files = self._create_get_all_track_files()
         get_all_tracks = GetAllTracks(self.track_repository)
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             self.track_repository
@@ -472,7 +470,6 @@ class ApplicationStarter:
         )
         load_track_files = self._create_load_tracks_file(
             video_parser,
-            track_file_repository,
             video_repository,
             track_to_video_repository,
             pulling_progressbar_builder,
@@ -700,7 +697,7 @@ class ApplicationStarter:
         load_otconfig.register(file_state.last_saved_config.set)
         load_otconfig.register(dummy_viewmodel.update_remark_view)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
-        track_file_repository.register(dummy_viewmodel.update_quick_save_button)
+        self.track_file_repository.register(dummy_viewmodel.update_quick_save_button)
         project_updater.register(dummy_viewmodel.show_current_project)
         project_updater.register(dummy_viewmodel.update_svz_metadata_view)
 
@@ -857,7 +854,6 @@ class ApplicationStarter:
         self,
         video_parser: VideoParser,
         video_repository: VideoRepository,
-        track_file_repository: TrackFileRepository,
         track_to_video_repository: TrackToVideoRepository,
         section_repository: SectionRepository,
         flow_repository: FlowRepository,
@@ -876,7 +872,7 @@ class ApplicationStarter:
         track_video_parser = OttrkVideoParser(video_parser)
         return Datastore(
             self.track_repository,
-            track_file_repository,
+            self.track_file_repository,
             track_parser,
             section_repository,
             flow_repository,
@@ -983,10 +979,8 @@ class ApplicationStarter:
     def _create_flow_state(self) -> FlowState:
         return FlowState()
 
-    def _create_get_all_track_files(
-        self, track_file_repository: TrackFileRepository
-    ) -> GetAllTrackFiles:
-        return GetAllTrackFiles(track_file_repository)
+    def _create_get_all_track_files(self) -> GetAllTrackFiles:
+        return GetAllTrackFiles(self.track_file_repository)
 
     def _create_flow_generator(
         self, section_provider: SectionProvider, flow_repository: FlowRepository
@@ -1144,7 +1138,8 @@ class ApplicationStarter:
     def _create_project_updater(datastore: Datastore) -> ProjectUpdater:
         return ProjectUpdater(datastore)
 
-    def _create_track_file_repository(self) -> TrackFileRepository:
+    @cached_property
+    def track_file_repository(self) -> TrackFileRepository:
         return TrackFileRepository()
 
     @staticmethod
@@ -1166,7 +1161,6 @@ class ApplicationStarter:
     def _create_load_tracks_file(
         self,
         video_parser: VideoParser,
-        track_file_repository: TrackFileRepository,
         video_repository: VideoRepository,
         track_to_video_repository: TrackToVideoRepository,
         progressbar: ProgressbarBuilder,
@@ -1179,7 +1173,7 @@ class ApplicationStarter:
             track_parser,
             track_video_parser,
             self.track_repository,
-            track_file_repository,
+            self.track_file_repository,
             video_repository,
             track_to_video_repository,
             progressbar,
