@@ -88,6 +88,7 @@ from OTAnalytics.application.use_cases.event_repository import (
     GetAllEnterSectionEvents,
 )
 from OTAnalytics.application.use_cases.filter_visualization import (
+    CreateDefaultFilter,
     CreateDefaultFilterRange,
     EnableFilterTrackByDate,
 )
@@ -366,22 +367,21 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        create_default_filter = CreateDefaultFilterRange(
-            state=self.track_view_state,
-            videos_metadata=self.videos_metadata,
-            enable_filter_track_by_date=self.enable_filter_track_by_date,
-        )
         previous_frame = SwitchToPrevious(
-            self.track_view_state, self.videos_metadata, create_default_filter
+            self.track_view_state,
+            self.videos_metadata,
+            self.create_default_filter_range,
         )
         next_frame = SwitchToNext(
-            self.track_view_state, self.videos_metadata, create_default_filter
+            self.track_view_state,
+            self.videos_metadata,
+            self.create_default_filter_range,
         )
         switch_event = SwitchToEvent(
             event_repository=self.event_repository,
             track_view_state=self.track_view_state,
             section_state=self.section_state,
-            create_default_filter=create_default_filter,
+            create_default_filter=self.create_default_filter_range,
         )
         get_flows = GetAllFlows(self.flow_repository)
         save_otflow = SaveOtflow(
@@ -578,6 +578,14 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def create_default_filter_range(self) -> CreateDefaultFilter:
+        return CreateDefaultFilterRange(
+            state=self.track_view_state,
+            videos_metadata=self.videos_metadata,
+            enable_filter_track_by_date=self.enable_filter_track_by_date,
+        )
 
     @cached_property
     def enable_filter_track_by_date(self) -> EnableFilterTrackByDate:
