@@ -342,7 +342,6 @@ class ApplicationStarter:
             pulling_progressbar_popup_builder
         )
 
-        track_repository = self._create_track_repository()
         track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
@@ -356,7 +355,6 @@ class ApplicationStarter:
         datastore = self._create_datastore(
             video_parser,
             video_repository,
-            track_repository,
             track_file_repository,
             track_to_video_repository,
             section_repository,
@@ -374,7 +372,7 @@ class ApplicationStarter:
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
         clear_all_intersections = ClearAllIntersections(intersection_repository)
-        track_repository.register_tracks_observer(clear_all_intersections)
+        self.track_repository.register_tracks_observer(clear_all_intersections)
         section_repository.register_sections_observer(clear_all_intersections)
         section_repository.register_section_changed_observer(
             clear_all_intersections.on_section_changed
@@ -401,7 +399,7 @@ class ApplicationStarter:
             datastore, track_view_state, videos_metadata
         )
 
-        tracks_metadata = self._create_tracks_metadata(track_repository)
+        tracks_metadata = self._create_tracks_metadata()
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
         tracks_metadata._classifications.register(
@@ -413,13 +411,13 @@ class ApplicationStarter:
         )
 
         get_all_track_files = self._create_get_all_track_files(track_file_repository)
-        get_all_tracks = GetAllTracks(track_repository)
+        get_all_tracks = GetAllTracks(self.track_repository)
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
-            track_repository
+            self.track_repository
         )
-        add_all_tracks = AddAllTracks(track_repository)
-        remove_tracks = RemoveTracks(track_repository)
-        clear_all_tracks = ClearAllTracks(track_repository)
+        add_all_tracks = AddAllTracks(self.track_repository)
+        remove_tracks = RemoveTracks(self.track_repository)
+        clear_all_tracks = ClearAllTracks(self.track_repository)
 
         get_sections = GetAllSections(section_repository)
         get_sections_by_id = GetSectionsById(section_repository)
@@ -461,7 +459,6 @@ class ApplicationStarter:
         export_counts = self._create_export_counts(
             event_repository,
             flow_repository,
-            # track_repository,
             get_sections_by_id,
             create_events,
         )
@@ -475,7 +472,6 @@ class ApplicationStarter:
         )
         load_track_files = self._create_load_tracks_file(
             video_parser,
-            track_repository,
             track_file_repository,
             video_repository,
             track_to_video_repository,
@@ -583,7 +579,6 @@ class ApplicationStarter:
             road_user_assigner,
             event_repository,
             flow_repository,
-            track_repository,
             section_repository,
             get_all_tracks,
         )
@@ -713,9 +708,7 @@ class ApplicationStarter:
             group.register(image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         pulling_progressbar_popup_builder.add_widget(main_window)
-        apply_cli_cuts = self.create_apply_cli_cuts(
-            cut_tracks_intersecting_section, track_repository
-        )
+        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks_intersecting_section)
         preload_input_files = self.create_preload_input_files(
             load_otconfig=load_otconfig,
             load_otflow=load_otflow,
@@ -731,7 +724,6 @@ class ApplicationStarter:
         ).start()
 
     def start_cli(self) -> None:
-        track_repository = self._create_track_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
 
@@ -742,12 +734,12 @@ class ApplicationStarter:
         add_flow = AddFlow(flow_repository)
         add_events = AddEvents(event_repository)
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
-            track_repository
+            self.track_repository
         )
-        get_all_tracks = GetAllTracks(track_repository)
-        get_all_track_ids = GetAllTrackIds(track_repository)
+        get_all_tracks = GetAllTracks(self.track_repository)
+        get_all_track_ids = GetAllTrackIds(self.track_repository)
         clear_all_events = ClearAllEvents(event_repository)
-        tracks_metadata = self._create_tracks_metadata(track_repository)
+        tracks_metadata = self._create_tracks_metadata()
         videos_metadata = VideosMetadata()
         section_provider = FilterOutCuttingSections(section_repository.get_all)
         create_events = self._create_use_case_create_events(
@@ -761,23 +753,23 @@ class ApplicationStarter:
         cut_tracks = self._create_cut_tracks_intersecting_section(
             GetSectionsById(section_repository),
             get_all_tracks,
-            AddAllTracks(track_repository),
-            RemoveTracks(track_repository),
+            AddAllTracks(self.track_repository),
+            RemoveTracks(self.track_repository),
             RemoveSection(section_repository),
         )
-        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks, track_repository)
-        add_all_tracks = AddAllTracks(track_repository)
-        clear_all_tracks = ClearAllTracks(track_repository)
+        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks)
+        add_all_tracks = AddAllTracks(self.track_repository)
+        clear_all_tracks = ClearAllTracks(self.track_repository)
         export_counts = self._create_export_counts(
             event_repository,
             flow_repository,
             get_sections_by_id,
             create_events,
         )
-        tracks_metadata = self._create_tracks_metadata(track_repository)
+        tracks_metadata = self._create_tracks_metadata()
         videos_metadata = VideosMetadata()
         export_tracks = CsvTrackExport(
-            track_repository, tracks_metadata, videos_metadata
+            self.track_repository, tracks_metadata, videos_metadata
         )
         export_road_user_assignments = self.create_export_road_user_assignments(
             get_all_tracks,
@@ -800,7 +792,6 @@ class ApplicationStarter:
             road_user_assigner,
             event_repository,
             flow_repository,
-            track_repository,
             section_repository,
             get_all_tracks,
         )
@@ -813,7 +804,7 @@ class ApplicationStarter:
 
         cli: OTAnalyticsCli
         if self.run_config.cli_bulk_mode:
-            track_parser = self._create_track_parser(track_repository)
+            track_parser = self._create_track_parser()
 
             cli = OTAnalyticsBulkCli(
                 self.run_config,
@@ -866,7 +857,6 @@ class ApplicationStarter:
         self,
         video_parser: VideoParser,
         video_repository: VideoRepository,
-        track_repository: TrackRepository,
         track_file_repository: TrackFileRepository,
         track_to_video_repository: TrackToVideoRepository,
         section_repository: SectionRepository,
@@ -879,14 +869,13 @@ class ApplicationStarter:
         Build all required objects and inject them where necessary
 
         Args:
-            track_repository (TrackRepository): the track repository to inject
             progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
-        track_parser = self._create_track_parser(track_repository)
+        track_parser = self._create_track_parser()
         event_list_parser = self._create_event_list_parser()
         track_video_parser = OttrkVideoParser(video_parser)
         return Datastore(
-            track_repository,
+            self.track_repository,
             track_file_repository,
             track_parser,
             section_repository,
@@ -901,7 +890,8 @@ class ApplicationStarter:
             remark_repository,
         )
 
-    def _create_track_repository(self) -> TrackRepository:
+    @cached_property
+    def track_repository(self) -> TrackRepository:
         return TrackRepository(
             FilteredPandasTrackDataset(
                 PandasTrackDataset.from_list(
@@ -911,19 +901,14 @@ class ApplicationStarter:
                 self.run_config.exclude_classes,
             )
         )
-        # return TrackRepository(PythonTrackDataset())
 
-    def _create_track_parser(self, track_repository: TrackRepository) -> TrackParser:
+    def _create_track_parser(self) -> TrackParser:
         calculator = PandasByMaxConfidence()
         detection_parser = PandasDetectionParser(
             calculator,
             PygeosTrackGeometryDataset.from_track_dataset,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
-        # calculator = ByMaxConfidence()
-        # detection_parser = PythonDetectionParser(
-        # noqa   calculator, track_repository, track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT
-        # )
         return OttrkParser(detection_parser)
 
     def _create_stream_track_parser(self) -> StreamTrackParser:
@@ -1038,11 +1023,9 @@ class ApplicationStarter:
             get_tracks=get_tracks,
         )
 
-    def _create_tracks_metadata(
-        self, track_repository: TrackRepository
-    ) -> TracksMetadata:
+    def _create_tracks_metadata(self) -> TracksMetadata:
         return TracksMetadata(
-            track_repository,
+            self.track_repository,
             self.run_config.include_classes,
             self.run_config.exclude_classes,
         )
@@ -1183,7 +1166,6 @@ class ApplicationStarter:
     def _create_load_tracks_file(
         self,
         video_parser: VideoParser,
-        track_repository: TrackRepository,
         track_file_repository: TrackFileRepository,
         video_repository: VideoRepository,
         track_to_video_repository: TrackToVideoRepository,
@@ -1191,12 +1173,12 @@ class ApplicationStarter:
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
     ) -> LoadTrackFiles:
-        track_parser = self._create_track_parser(track_repository)
+        track_parser = self._create_track_parser()
         track_video_parser = OttrkVideoParser(video_parser)
         return LoadTrackFiles(
             track_parser,
             track_video_parser,
-            track_repository,
+            self.track_repository,
             track_file_repository,
             video_repository,
             track_to_video_repository,
@@ -1232,11 +1214,9 @@ class ApplicationStarter:
         )
 
     def create_apply_cli_cuts(
-        self,
-        cut_tracks: CutTracksIntersectingSection,
-        track_repository: TrackRepository,
+        self, cut_tracks: CutTracksIntersectingSection
     ) -> ApplyCliCuts:
-        return ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
+        return ApplyCliCuts(cut_tracks, TrackRepositorySize(self.track_repository))
 
     def create_config_parser(self, video_parser: VideoParser) -> OtConfigParser:
         flow_parser = self._create_flow_parser()
@@ -1272,7 +1252,6 @@ class ApplicationStarter:
         road_user_assigner: RoadUserAssigner,
         event_repository: EventRepository,
         flow_repository: FlowRepository,
-        track_repository: TrackRepository,
         section_repository: SectionRepository,
         get_all_tracks: GetAllTracks,
     ) -> CalculateTrackStatistics:
@@ -1290,7 +1269,7 @@ class ApplicationStarter:
         track_ids_inside_cutting_sections = TrackIdsInsideCuttingSections(
             get_all_tracks, get_cutting_sections
         )
-        get_all_track_ids = GetAllTrackIds(track_repository)
+        get_all_track_ids = GetAllTrackIds(self.track_repository)
         tracks_as_dataframe_provider = TracksAsDataFrameProvider(
             get_all_tracks=get_all_tracks,
             track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset,
