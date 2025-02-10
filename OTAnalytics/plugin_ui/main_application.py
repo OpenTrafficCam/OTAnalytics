@@ -342,7 +342,6 @@ class ApplicationStarter:
             pulling_progressbar_popup_builder
         )
 
-        flow_repository = self._create_flow_repository()
         intersection_repository = self._create_intersection_repository()
         event_repository = self._create_event_repository()
         videos_metadata = VideosMetadata()
@@ -354,7 +353,6 @@ class ApplicationStarter:
             video_parser,
             video_repository,
             track_to_video_repository,
-            flow_repository,
             event_repository,
             pulling_progressbar_builder,
             remark_repository,
@@ -421,10 +419,10 @@ class ApplicationStarter:
         remove_section = RemoveSection(self.section_repository)
         clear_all_sections = ClearAllSections(self.section_repository)
         generate_flows = self._create_flow_generator(
-            FilterOutCuttingSections(get_sections), flow_repository
+            FilterOutCuttingSections(get_sections)
         )
-        add_flow = AddFlow(flow_repository)
-        clear_all_flows = ClearAllFlows(flow_repository)
+        add_flow = AddFlow(self.flow_repository)
+        clear_all_flows = ClearAllFlows(self.flow_repository)
 
         add_events = AddEvents(event_repository)
         clear_all_events = ClearAllEvents(event_repository)
@@ -453,10 +451,7 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(
-            event_repository,
-            flow_repository,
-            get_sections_by_id,
-            create_events,
+            event_repository, get_sections_by_id, create_events
         )
         load_otflow = self._create_use_case_load_otflow(
             clear_all_sections,
@@ -515,7 +510,7 @@ class ApplicationStarter:
             section_state=section_state,
             create_default_filter=create_default_filter,
         )
-        get_flows = GetAllFlows(flow_repository)
+        get_flows = GetAllFlows(self.flow_repository)
         save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, file_state)
         get_current_remark = GetCurrentRemark(remark_repository)
         config_parser = self.create_config_parser(video_parser)
@@ -553,7 +548,7 @@ class ApplicationStarter:
             file_state,
         )
         export_road_user_assignments = self.create_export_road_user_assignments(
-            get_all_tracks, event_repository, flow_repository, create_events
+            get_all_tracks, event_repository, create_events
         )
         save_path_suggester = SavePathSuggester(
             file_state, get_all_track_files, get_all_videos, get_current_project
@@ -569,14 +564,13 @@ class ApplicationStarter:
             intersection_repository,
             road_user_assigner,
             event_repository,
-            flow_repository,
             get_all_tracks,
         )
         get_road_user_assignments = GetRoadUserAssignments(
-            flow_repository, event_repository, road_user_assigner
+            self.flow_repository, event_repository, road_user_assigner
         )
         number_of_tracks_assigned_to_each_flow = NumberOfTracksAssignedToEachFlow(
-            get_road_user_assignments, flow_repository
+            get_road_user_assignments, self.flow_repository
         )
         track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
             SimpleTrackStatisticsExporterFactory()
@@ -716,13 +710,11 @@ class ApplicationStarter:
         ).start()
 
     def start_cli(self) -> None:
-        flow_repository = self._create_flow_repository()
-
         event_repository = self._create_event_repository()
         add_section = AddSection(self.section_repository)
         get_sections_by_id = GetSectionsById(self.section_repository)
         get_all_sections = GetAllSections(self.section_repository)
-        add_flow = AddFlow(flow_repository)
+        add_flow = AddFlow(self.flow_repository)
         add_events = AddEvents(event_repository)
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             self.track_repository
@@ -752,10 +744,7 @@ class ApplicationStarter:
         add_all_tracks = AddAllTracks(self.track_repository)
         clear_all_tracks = ClearAllTracks(self.track_repository)
         export_counts = self._create_export_counts(
-            event_repository,
-            flow_repository,
-            get_sections_by_id,
-            create_events,
+            event_repository, get_sections_by_id, create_events
         )
         tracks_metadata = self._create_tracks_metadata()
         videos_metadata = VideosMetadata()
@@ -763,7 +752,7 @@ class ApplicationStarter:
             self.track_repository, tracks_metadata, videos_metadata
         )
         export_road_user_assignments = self.create_export_road_user_assignments(
-            get_all_tracks, event_repository, flow_repository, create_events
+            get_all_tracks, event_repository, create_events
         )
         get_sections = GetAllSections(self.section_repository)
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
@@ -778,7 +767,6 @@ class ApplicationStarter:
             intersection_repository,
             road_user_assigner,
             event_repository,
-            flow_repository,
             get_all_tracks,
         )
         track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
@@ -844,7 +832,6 @@ class ApplicationStarter:
         video_parser: VideoParser,
         video_repository: VideoRepository,
         track_to_video_repository: TrackToVideoRepository,
-        flow_repository: FlowRepository,
         event_repository: EventRepository,
         progressbar_builder: ProgressbarBuilder,
         remark_repository: RemarkRepository,
@@ -863,7 +850,7 @@ class ApplicationStarter:
             self.track_file_repository,
             track_parser,
             self.section_repository,
-            flow_repository,
+            self.flow_repository,
             event_repository,
             event_list_parser,
             track_to_video_repository,
@@ -918,7 +905,8 @@ class ApplicationStarter:
     def _create_flow_parser(self) -> FlowParser:
         return OtFlowParser()
 
-    def _create_flow_repository(self) -> FlowRepository:
+    @cached_property
+    def flow_repository(self) -> FlowRepository:
         return FlowRepository()
 
     def _create_intersection_repository(self) -> IntersectionRepository:
@@ -971,18 +959,20 @@ class ApplicationStarter:
         return GetAllTrackFiles(self.track_file_repository)
 
     def _create_flow_generator(
-        self, section_provider: SectionProvider, flow_repository: FlowRepository
+        self, section_provider: SectionProvider
     ) -> GenerateFlows:
-        id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(flow_repository)
+        id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(self.flow_repository)
         name_generator = ArrowFlowNameGenerator()
         flow_generator = CrossProductFlowGenerator(
             id_generator=id_generator,
             name_generator=name_generator,
-            predicate=FilterSameSection().and_then(FilterExisting(flow_repository)),
+            predicate=FilterSameSection().and_then(
+                FilterExisting(self.flow_repository)
+            ),
         )
         return GenerateFlows(
             section_provider=section_provider,
-            flow_repository=flow_repository,
+            flow_repository=self.flow_repository,
             flow_generator=flow_generator,
         )
 
@@ -1018,16 +1008,15 @@ class ApplicationStarter:
     def _create_filter_element_setting_restorer(self) -> FilterElementSettingRestorer:
         return FilterElementSettingRestorer()
 
-    @staticmethod
     def _create_export_counts(
+        self,
         event_repository: EventRepository,
-        flow_repository: FlowRepository,
         get_sections_by_id: GetSectionsById,
         create_events: CreateEvents,
     ) -> ExportCounts:
         return ExportTrafficCounting(
             event_repository,
-            flow_repository,
+            self.flow_repository,
             get_sections_by_id,
             create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
@@ -1213,12 +1202,11 @@ class ApplicationStarter:
         self,
         get_all_tracks: GetAllTracks,
         event_repository: EventRepository,
-        flow_repository: FlowRepository,
         create_events: CreateEvents,
     ) -> ExportRoadUserAssignments:
         return ExportRoadUserAssignments(
             event_repository,
-            flow_repository,
+            self.flow_repository,
             create_events,
             FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
             SimpleRoadUserAssignmentExporterFactory(
@@ -1234,7 +1222,6 @@ class ApplicationStarter:
         intersection_repository: IntersectionRepository,
         road_user_assigner: RoadUserAssigner,
         event_repository: EventRepository,
-        flow_repository: FlowRepository,
         get_all_tracks: GetAllTracks,
     ) -> CalculateTrackStatistics:
         get_cutting_sections = GetCuttingSections(self.section_repository)
@@ -1246,7 +1233,7 @@ class ApplicationStarter:
             intersection_repository,
         )
         tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
-            road_user_assigner, event_repository, flow_repository
+            road_user_assigner, event_repository, self.flow_repository
         )
         track_ids_inside_cutting_sections = TrackIdsInsideCuttingSections(
             get_all_tracks, get_cutting_sections
