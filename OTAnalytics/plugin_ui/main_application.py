@@ -367,9 +367,11 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        config_parser = self.create_config_parser()
         save_otconfig = SaveOtconfig(
-            self.datastore, config_parser, self.file_state, self.get_current_remark
+            self.datastore,
+            self.otconfig_parser,
+            self.file_state,
+            self.get_current_remark,
         )
         quick_save_configuration = QuickSaveConfiguration(
             self.file_state, self.save_otflow, save_otconfig
@@ -377,7 +379,7 @@ class ApplicationStarter:
         add_new_remark = AddNewRemark(self.remark_repository)
         load_otconfig = LoadOtconfig(
             self.clear_all_repositories,
-            config_parser,
+            self.otconfig_parser,
             self.project_updater,
             AddAllVideos(self.video_repository),
             AddAllSections(self.add_section),
@@ -390,7 +392,7 @@ class ApplicationStarter:
         get_current_project = GetCurrentProject(self.datastore)
         config_has_changed = ConfigHasChanged(
             OtconfigHasChanged(
-                config_parser,
+                self.otconfig_parser,
                 self.get_all_sections,
                 self.get_all_flows,
                 get_current_project,
@@ -1147,7 +1149,8 @@ class ApplicationStarter:
             TrackRepositorySize(self.track_repository),
         )
 
-    def create_config_parser(self) -> OtConfigParser:
+    @cached_property
+    def otconfig_parser(self) -> OtConfigParser:
         format_fixer = self._create_format_fixer(self.run_config)
         return OtConfigParser(
             video_parser=self.video_parser,
