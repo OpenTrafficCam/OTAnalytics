@@ -352,7 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        add_events = AddEvents(self.event_repository)
         clear_all_events = ClearAllEvents(self.event_repository)
 
         clear_all_videos = ClearAllVideos(self.video_repository)
@@ -366,15 +365,11 @@ class ApplicationStarter:
             section_provider,
             clear_all_events,
             self.get_tracks_without_single_detections,
-            add_events,
             DEFAULT_NUM_PROCESSES,
         )
         intersect_tracks_with_sections = (
             self._create_use_case_create_intersection_events(
-                section_provider,
-                self.get_all_tracks,
-                add_events,
-                DEFAULT_NUM_PROCESSES,
+                section_provider, self.get_all_tracks, DEFAULT_NUM_PROCESSES
             )
         )
         export_counts = self._create_export_counts(create_events)
@@ -610,6 +605,10 @@ class ApplicationStarter:
         ).start()
 
     @cached_property
+    def add_events(self) -> AddEvents:
+        return AddEvents(self.event_repository)
+
+    @cached_property
     def clear_all_flows(self) -> ClearAllFlows:
         return ClearAllFlows(self.flow_repository)
 
@@ -721,7 +720,6 @@ class ApplicationStarter:
         return VideosMetadata()
 
     def start_cli(self) -> None:
-        add_events = AddEvents(self.event_repository)
         get_all_track_ids = GetAllTrackIds(self.track_repository)
         clear_all_events = ClearAllEvents(self.event_repository)
         section_provider = FilterOutCuttingSections(self.section_repository.get_all)
@@ -729,7 +727,6 @@ class ApplicationStarter:
             section_provider,
             clear_all_events,
             self.get_tracks_without_single_detections,
-            add_events,
             self.run_config.num_processes,
         )
         cut_tracks = self._create_cut_tracks_intersecting_section(self.get_all_tracks)
@@ -946,11 +943,12 @@ class ApplicationStarter:
         self,
         section_provider: SectionProvider,
         get_tracks: GetAllTracks,
-        add_events: AddEvents,
         num_processes: int,
     ) -> CreateIntersectionEvents:
         intersect = self._create_intersect(get_tracks, num_processes)
-        return SimpleCreateIntersectionEvents(intersect, section_provider, add_events)
+        return SimpleCreateIntersectionEvents(
+            intersect, section_provider, self.add_events
+        )
 
     @staticmethod
     def _create_intersect(get_tracks: GetAllTracks, num_processes: int) -> RunIntersect:
@@ -997,16 +995,17 @@ class ApplicationStarter:
         section_provider: SectionProvider,
         clear_events: ClearAllEvents,
         get_all_tracks_without_single_detections: GetTracksWithoutSingleDetections,
-        add_events: AddEvents,
         num_processes: int,
     ) -> CreateEvents:
         run_intersect = self._create_intersect(self.get_all_tracks, num_processes)
         create_intersection_events = SimpleCreateIntersectionEvents(
-            run_intersect, section_provider, add_events
+            run_intersect, section_provider, self.add_events
         )
         scene_action_detector = SceneActionDetector()
         create_scene_events = SimpleCreateSceneEvents(
-            get_all_tracks_without_single_detections, scene_action_detector, add_events
+            get_all_tracks_without_single_detections,
+            scene_action_detector,
+            self.add_events,
         )
         return CreateEvents(
             clear_events, create_intersection_events, create_scene_events

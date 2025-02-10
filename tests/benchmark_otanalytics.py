@@ -30,7 +30,7 @@ from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
-from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
     RemoveSection,
@@ -181,12 +181,10 @@ class UseCaseProvider:
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             self._track_repository
         )
-        add_events = AddEvents(self._event_repository)
         create_events = self._starter._create_use_case_create_events(
             self._section_repository.get_all,
             clear_all_events,
             get_tracks_without_single_detections,
-            add_events,
             num_processes=NUM_PROCESSES,
         )
         return create_events
