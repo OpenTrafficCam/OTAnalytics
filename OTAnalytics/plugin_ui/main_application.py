@@ -367,9 +367,6 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        quick_save_configuration = QuickSaveConfiguration(
-            self.file_state, self.save_otflow, self.save_otconfig
-        )
         add_new_remark = AddNewRemark(self.remark_repository)
         load_otconfig = LoadOtconfig(
             self.clear_all_repositories,
@@ -456,7 +453,7 @@ class ApplicationStarter:
             self.switch_to_next,
             self.switch_to_event,
             self.save_otflow,
-            quick_save_configuration,
+            self.quick_save_configuration,
             load_otconfig,
             config_has_changed,
             export_road_user_assignments,
@@ -555,6 +552,12 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def quick_save_configuration(self) -> QuickSaveConfiguration:
+        return QuickSaveConfiguration(
+            self.file_state, self.save_otflow, self.save_otconfig
+        )
 
     @cached_property
     def save_otconfig(self) -> SaveOtconfig:
