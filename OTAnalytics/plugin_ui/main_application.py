@@ -333,7 +333,6 @@ class ApplicationStarter:
             OTAnalyticsGui,
         )
 
-        track_view_state = self._create_track_view_state()
         section_state = self._create_section_state()
         flow_state = self._create_flow_state()
         file_state = FileState()
@@ -346,21 +345,19 @@ class ApplicationStarter:
             clear_all_intersections.on_section_changed
         )
         layer_groups, layers = self._create_layers(
-            track_view_state,
-            flow_state,
-            section_state,
-            road_user_assigner,
-            color_palette_provider,
+            flow_state, section_state, road_user_assigner, color_palette_provider
         )
         plotter = LayeredPlotter(layers=layers)
-        properties_updater = TrackPropertiesUpdater(self.datastore, track_view_state)
-        image_updater = TrackImageUpdater(
-            self.datastore, track_view_state, section_state, flow_state, plotter
+        properties_updater = TrackPropertiesUpdater(
+            self.datastore, self.track_view_state
         )
-        track_view_state.selected_videos.register(properties_updater.notify_videos)
-        track_view_state.selected_videos.register(image_updater.notify_video)
+        image_updater = TrackImageUpdater(
+            self.datastore, self.track_view_state, section_state, flow_state, plotter
+        )
+        self.track_view_state.selected_videos.register(properties_updater.notify_videos)
+        self.track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(
-            self.datastore, track_view_state, self.videos_metadata
+            self.datastore, self.track_view_state, self.videos_metadata
         )
 
         tracks_metadata = self._create_tracks_metadata()
@@ -437,7 +434,7 @@ class ApplicationStarter:
         project_updater = self._create_project_updater()
         reset_project_config = self._create_reset_project_config(project_updater)
         start_new_project = self._create_use_case_start_new_project(
-            clear_repositories, reset_project_config, track_view_state, file_state
+            clear_repositories, reset_project_config, file_state
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
             get_sections_by_id,
@@ -447,22 +444,22 @@ class ApplicationStarter:
             remove_section,
         )
         enable_filter_track_by_date = EnableFilterTrackByDate(
-            track_view_state, filter_element_settings_restorer
+            self.track_view_state, filter_element_settings_restorer
         )
         create_default_filter = CreateDefaultFilterRange(
-            state=track_view_state,
+            state=self.track_view_state,
             videos_metadata=self.videos_metadata,
             enable_filter_track_by_date=enable_filter_track_by_date,
         )
         previous_frame = SwitchToPrevious(
-            track_view_state, self.videos_metadata, create_default_filter
+            self.track_view_state, self.videos_metadata, create_default_filter
         )
         next_frame = SwitchToNext(
-            track_view_state, self.videos_metadata, create_default_filter
+            self.track_view_state, self.videos_metadata, create_default_filter
         )
         switch_event = SwitchToEvent(
             event_repository=self.event_repository,
-            track_view_state=track_view_state,
+            track_view_state=self.track_view_state,
             section_state=section_state,
             create_default_filter=create_default_filter,
         )
@@ -535,7 +532,7 @@ class ApplicationStarter:
         application = OTAnalyticsApplication(
             self.datastore,
             self.track_state,
-            track_view_state,
+            self.track_view_state,
             section_state,
             flow_state,
             file_state,
@@ -612,10 +609,10 @@ class ApplicationStarter:
         application.action_state.action_running.register(
             dummy_viewmodel._notify_action_running_state
         )
-        track_view_state.filter_date_active.register(
+        self.track_view_state.filter_date_active.register(
             dummy_viewmodel.change_filter_date_active
         )
-        track_view_state.filter_element.register(
+        self.track_view_state.filter_element.register(
             selected_video_updater.on_filter_element_change
         )
         # TODO: Refactor observers - move registering to subjects happening in
@@ -886,12 +883,12 @@ class ApplicationStarter:
     def track_state(self) -> TrackState:
         return TrackState()
 
-    def _create_track_view_state(self) -> TrackViewState:
+    @cached_property
+    def track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
     def _create_layers(
         self,
-        track_view_state: TrackViewState,
         flow_state: FlowState,
         section_state: SectionState,
         road_user_assigner: RoadUserAssigner,
@@ -900,7 +897,7 @@ class ApplicationStarter:
         return VisualizationBuilder(
             self.datastore,
             self.intersection_repository,
-            track_view_state,
+            self.track_view_state,
             self.videos_metadata,
             section_state,
             color_palette_provider,
@@ -1051,15 +1048,14 @@ class ApplicationStarter:
             clear_all_videos,
         )
 
-    @staticmethod
     def _create_use_case_start_new_project(
+        self,
         clear_repositories: ClearRepositories,
         reset_project_config: ResetProjectConfig,
-        track_view_state: TrackViewState,
         file_state: FileState,
     ) -> StartNewProject:
         return StartNewProject(
-            clear_repositories, reset_project_config, track_view_state, file_state
+            clear_repositories, reset_project_config, self.track_view_state, file_state
         )
 
     @staticmethod
