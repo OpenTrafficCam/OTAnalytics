@@ -352,7 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        clear_all_sections = ClearAllSections(self.section_repository)
         generate_flows = self._create_flow_generator(
             FilterOutCuttingSections(self.get_all_sections)
         )
@@ -386,13 +385,12 @@ class ApplicationStarter:
         )
         export_counts = self._create_export_counts(create_events)
         load_otflow = self._create_use_case_load_otflow(
-            clear_all_sections, clear_all_flows, clear_all_events, add_flow
+            clear_all_flows, clear_all_events, add_flow
         )
         load_track_files = self._create_load_tracks_file()
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
             clear_all_flows,
-            clear_all_sections,
             clear_all_track_to_videos,
             clear_all_videos,
         )
@@ -621,6 +619,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def clear_all_sections(self) -> ClearAllSections:
+        return ClearAllSections(self.section_repository)
 
     @cached_property
     def remove_section(self) -> RemoveSection:
@@ -1022,13 +1024,12 @@ class ApplicationStarter:
 
     def _create_use_case_load_otflow(
         self,
-        clear_all_sections: ClearAllSections,
         clear_all_flows: ClearAllFlows,
         clear_all_events: ClearAllEvents,
         add_flow: AddFlow,
     ) -> LoadOtflow:
         return LoadOtflow(
-            clear_all_sections,
+            self.clear_all_sections,
             clear_all_flows,
             clear_all_events,
             self.flow_parser,
@@ -1041,7 +1042,6 @@ class ApplicationStarter:
         self,
         clear_all_events: ClearAllEvents,
         clear_all_flows: ClearAllFlows,
-        clear_all_sections: ClearAllSections,
         clear_all_track_to_videos: ClearAllTrackToVideos,
         clear_all_videos: ClearAllVideos,
     ) -> ClearRepositories:
@@ -1049,7 +1049,7 @@ class ApplicationStarter:
             clear_all_events,
             clear_all_flows,
             self.clear_all_intersections,
-            clear_all_sections,
+            self.clear_all_sections,
             clear_all_track_to_videos,
             self.clear_all_tracks,
             clear_all_videos,
