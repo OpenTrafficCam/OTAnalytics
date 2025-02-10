@@ -367,13 +367,12 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        get_current_project = GetCurrentProject(self.datastore)
         config_has_changed = ConfigHasChanged(
             OtconfigHasChanged(
                 self.otconfig_parser,
                 self.get_all_sections,
                 self.get_all_flows,
-                get_current_project,
+                self.get_current_project,
                 self.get_all_videos,
                 self.get_all_track_files,
                 self.get_current_remark,
@@ -390,7 +389,7 @@ class ApplicationStarter:
             self.file_state,
             self.get_all_track_files,
             self.get_all_videos,
-            get_current_project,
+            self.get_current_project,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
             self.get_all_tracks
@@ -537,6 +536,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def get_current_project(self) -> GetCurrentProject:
+        return GetCurrentProject(self.datastore)
 
     @cached_property
     def get_all_videos(self) -> GetAllVideos:
