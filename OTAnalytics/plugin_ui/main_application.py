@@ -333,11 +333,10 @@ class ApplicationStarter:
             OTAnalyticsGui,
         )
 
-        clear_all_intersections = ClearAllIntersections(self.intersection_repository)
-        self.track_repository.register_tracks_observer(clear_all_intersections)
-        self.section_repository.register_sections_observer(clear_all_intersections)
+        self.track_repository.register_tracks_observer(self.clear_all_intersections)
+        self.section_repository.register_sections_observer(self.clear_all_intersections)
         self.section_repository.register_section_changed_observer(
-            clear_all_intersections.on_section_changed
+            self.clear_all_intersections.on_section_changed
         )
         layer_groups, layers = self._create_layers()
         plotter = LayeredPlotter(layers=layers)
@@ -422,7 +421,6 @@ class ApplicationStarter:
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
             clear_all_flows,
-            clear_all_intersections,
             clear_all_sections,
             clear_all_track_to_videos,
             clear_all_tracks,
@@ -657,6 +655,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def clear_all_intersections(self) -> ClearAllIntersections:
+        return ClearAllIntersections(self.intersection_repository)
 
     @cached_property
     def color_palette_provider(self) -> ColorPaletteProvider:
@@ -1036,11 +1038,10 @@ class ApplicationStarter:
             parse_json,
         )
 
-    @staticmethod
     def _create_use_case_clear_all_repositories(
+        self,
         clear_all_events: ClearAllEvents,
         clear_all_flows: ClearAllFlows,
-        clear_all_intersections: ClearAllIntersections,
         clear_all_sections: ClearAllSections,
         clear_all_track_to_videos: ClearAllTrackToVideos,
         clear_all_tracks: ClearAllTracks,
@@ -1049,7 +1050,7 @@ class ApplicationStarter:
         return ClearRepositories(
             clear_all_events,
             clear_all_flows,
-            clear_all_intersections,
+            self.clear_all_intersections,
             clear_all_sections,
             clear_all_track_to_videos,
             clear_all_tracks,
