@@ -351,9 +351,6 @@ class ApplicationStarter:
         self.tracks_metadata._classifications.register(
             observer=self.color_palette_provider.update
         )
-        filter_element_settings_restorer = (
-            self._create_filter_element_setting_restorer()
-        )
 
         get_all_track_files = self._create_get_all_track_files()
         get_all_tracks = GetAllTracks(self.track_repository)
@@ -427,7 +424,7 @@ class ApplicationStarter:
             remove_section,
         )
         enable_filter_track_by_date = EnableFilterTrackByDate(
-            self.track_view_state, filter_element_settings_restorer
+            self.track_view_state, self.filter_element_settings_restorer
         )
         create_default_filter = CreateDefaultFilterRange(
             state=self.track_view_state,
@@ -523,7 +520,7 @@ class ApplicationStarter:
             self.tracks_metadata,
             self.videos_metadata,
             self.action_state,
-            filter_element_settings_restorer,
+            self.filter_element_settings_restorer,
             get_all_track_files,
             generate_flows,
             intersect_tracks_with_sections,
@@ -980,7 +977,8 @@ class ApplicationStarter:
     def action_state(self) -> ActionState:
         return ActionState()
 
-    def _create_filter_element_setting_restorer(self) -> FilterElementSettingRestorer:
+    @cached_property
+    def filter_element_settings_restorer(self) -> FilterElementSettingRestorer:
         return FilterElementSettingRestorer()
 
     def _create_export_counts(
