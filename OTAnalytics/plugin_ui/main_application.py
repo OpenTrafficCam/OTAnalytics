@@ -340,17 +340,11 @@ class ApplicationStarter:
         )
         layer_groups, layers = self._create_layers()
         plotter = LayeredPlotter(layers=layers)
-        image_updater = TrackImageUpdater(
-            self.datastore,
-            self.track_view_state,
-            self.section_state,
-            self.flow_state,
-            plotter,
-        )
+        track_image_updater = self._create_track_image_updater(plotter)
         self.track_view_state.selected_videos.register(
             self.track_properties_updater.notify_videos
         )
-        self.track_view_state.selected_videos.register(image_updater.notify_video)
+        self.track_view_state.selected_videos.register(track_image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(
             self.datastore, self.track_view_state, self.videos_metadata
         )
@@ -620,13 +614,13 @@ class ApplicationStarter:
         application.connect_observers()
         self.datastore.register_tracks_observer(selected_video_updater)
         self.datastore.register_tracks_observer(dummy_viewmodel)
-        self.datastore.register_tracks_observer(image_updater)
+        self.datastore.register_tracks_observer(track_image_updater)
         self.datastore.register_video_observer(selected_video_updater)
         self.datastore.register_section_changed_observer(
-            image_updater.notify_section_changed
+            track_image_updater.notify_section_changed
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
-        self.event_repository.register_observer(image_updater.notify_events)
+        self.event_repository.register_observer(track_image_updater.notify_events)
         self.event_repository.register_observer(dummy_viewmodel.update_track_statistics)
         load_otflow.register(self.file_state.last_saved_config.set)
         load_otconfig.register(self.file_state.last_saved_config.set)
@@ -637,7 +631,7 @@ class ApplicationStarter:
         project_updater.register(dummy_viewmodel.update_svz_metadata_view)
 
         for group in layer_groups:
-            group.register(image_updater.notify_layers)
+            group.register(track_image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         self.pulling_progressbar_popup_builder.add_widget(main_window)
         apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks_intersecting_section)
@@ -654,6 +648,15 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    def _create_track_image_updater(self, plotter: LayeredPlotter) -> TrackImageUpdater:
+        return TrackImageUpdater(
+            self.datastore,
+            self.track_view_state,
+            self.section_state,
+            self.flow_state,
+            plotter,
+        )
 
     @cached_property
     def track_properties_updater(self) -> TrackPropertiesUpdater:
