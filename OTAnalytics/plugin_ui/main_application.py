@@ -352,8 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        clear_all_events = ClearAllEvents(self.event_repository)
-
         clear_all_videos = ClearAllVideos(self.video_repository)
         clear_all_track_to_videos = ClearAllTrackToVideos(
             self.track_to_video_repository
@@ -363,7 +361,7 @@ class ApplicationStarter:
         )
         create_events = self._create_use_case_create_events(
             section_provider,
-            clear_all_events,
+            self.clear_all_events,
             self.get_tracks_without_single_detections,
             DEFAULT_NUM_PROCESSES,
         )
@@ -373,10 +371,10 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        load_otflow = self._create_use_case_load_otflow(clear_all_events)
+        load_otflow = self._create_use_case_load_otflow()
         load_track_files = self._create_load_tracks_file()
         clear_repositories = self._create_use_case_clear_all_repositories(
-            clear_all_events, clear_all_track_to_videos, clear_all_videos
+            clear_all_track_to_videos, clear_all_videos
         )
         project_updater = self._create_project_updater()
         reset_project_config = self._create_reset_project_config(project_updater)
@@ -492,7 +490,7 @@ class ApplicationStarter:
             load_otflow,
             self.add_section,
             self.add_flow,
-            clear_all_events,
+            self.clear_all_events,
             start_new_project,
             project_updater,
             save_otconfig,
@@ -518,7 +516,7 @@ class ApplicationStarter:
         self.section_repository.register_section_changed_observer(
             cut_tracks_intersecting_section.notify_section_changed
         )
-        cut_tracks_intersecting_section.register(clear_all_events.on_tracks_cut)
+        cut_tracks_intersecting_section.register(self.clear_all_events.on_tracks_cut)
         application.connect_clear_event_repository_observer()
         name_generator = ArrowFlowNameGenerator()
         dummy_viewmodel = DummyViewModel(
@@ -603,6 +601,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def clear_all_events(self) -> ClearAllEvents:
+        return ClearAllEvents(self.event_repository)
 
     @cached_property
     def add_events(self) -> AddEvents:
@@ -721,11 +723,10 @@ class ApplicationStarter:
 
     def start_cli(self) -> None:
         get_all_track_ids = GetAllTrackIds(self.track_repository)
-        clear_all_events = ClearAllEvents(self.event_repository)
         section_provider = FilterOutCuttingSections(self.section_repository.get_all)
         create_events = self._create_use_case_create_events(
             section_provider,
-            clear_all_events,
+            self.clear_all_events,
             self.get_tracks_without_single_detections,
             self.run_config.num_processes,
         )
@@ -1017,13 +1018,11 @@ class ApplicationStarter:
     ) -> TracksIntersectingSections:
         return SimpleTracksIntersectingSections(get_tracks)
 
-    def _create_use_case_load_otflow(
-        self, clear_all_events: ClearAllEvents
-    ) -> LoadOtflow:
+    def _create_use_case_load_otflow(self) -> LoadOtflow:
         return LoadOtflow(
             self.clear_all_sections,
             self.clear_all_flows,
-            clear_all_events,
+            self.clear_all_events,
             self.flow_parser,
             self.add_section,
             self.add_flow,
@@ -1032,12 +1031,11 @@ class ApplicationStarter:
 
     def _create_use_case_clear_all_repositories(
         self,
-        clear_all_events: ClearAllEvents,
         clear_all_track_to_videos: ClearAllTrackToVideos,
         clear_all_videos: ClearAllVideos,
     ) -> ClearRepositories:
         return ClearRepositories(
-            clear_all_events,
+            self.clear_all_events,
             self.clear_all_flows,
             self.clear_all_intersections,
             self.clear_all_sections,
