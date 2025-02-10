@@ -298,7 +298,7 @@ class ApplicationStarter:
         flow_parser = self._create_flow_parser()
         config_parser = OtConfigParser(
             format_fixer=format_fixer,
-            video_parser=self._create_video_parser(),
+            video_parser=self.video_parser,
             flow_parser=flow_parser,
         )
 
@@ -342,12 +342,10 @@ class ApplicationStarter:
             pulling_progressbar_popup_builder
         )
 
-        video_parser = self._create_video_parser()
         video_repository = self._create_video_repository()
         remark_repository = self._create_remark_repository()
         track_to_video_repository = self._create_track_to_video_repository()
         datastore = self._create_datastore(
-            video_parser,
             video_repository,
             track_to_video_repository,
             pulling_progressbar_builder,
@@ -454,7 +452,6 @@ class ApplicationStarter:
             add_flow,
         )
         load_track_files = self._create_load_tracks_file(
-            video_parser,
             video_repository,
             track_to_video_repository,
             pulling_progressbar_builder,
@@ -504,7 +501,7 @@ class ApplicationStarter:
         get_flows = GetAllFlows(self.flow_repository)
         save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, file_state)
         get_current_remark = GetCurrentRemark(remark_repository)
-        config_parser = self.create_config_parser(video_parser)
+        config_parser = self.create_config_parser()
         save_otconfig = SaveOtconfig(
             datastore, config_parser, file_state, get_current_remark
         )
@@ -814,7 +811,6 @@ class ApplicationStarter:
 
     def _create_datastore(
         self,
-        video_parser: VideoParser,
         video_repository: VideoRepository,
         track_to_video_repository: TrackToVideoRepository,
         progressbar_builder: ProgressbarBuilder,
@@ -828,7 +824,7 @@ class ApplicationStarter:
         """
         track_parser = self._create_track_parser()
         event_list_parser = self._create_event_list_parser()
-        track_video_parser = OttrkVideoParser(video_parser)
+        track_video_parser = OttrkVideoParser(self.video_parser)
         return Datastore(
             self.track_repository,
             self.track_file_repository,
@@ -839,7 +835,7 @@ class ApplicationStarter:
             event_list_parser,
             track_to_video_repository,
             video_repository,
-            video_parser,
+            self.video_parser,
             track_video_parser,
             progressbar_builder,
             remark_repository,
@@ -1118,14 +1114,13 @@ class ApplicationStarter:
 
     def _create_load_tracks_file(
         self,
-        video_parser: VideoParser,
         video_repository: VideoRepository,
         track_to_video_repository: TrackToVideoRepository,
         progressbar: ProgressbarBuilder,
         tracks_metadata: TracksMetadata,
     ) -> LoadTrackFiles:
         track_parser = self._create_track_parser()
-        track_video_parser = OttrkVideoParser(video_parser)
+        track_video_parser = OttrkVideoParser(self.video_parser)
         return LoadTrackFiles(
             track_parser,
             track_video_parser,
@@ -1138,7 +1133,8 @@ class ApplicationStarter:
             self.videos_metadata,
         )
 
-    def _create_video_parser(self) -> VideoParser:
+    @cached_property
+    def video_parser(self) -> VideoParser:
         return CachedVideoParser(
             SimpleVideoParser(PyAvVideoReader(self.videos_metadata))
         )
@@ -1171,11 +1167,11 @@ class ApplicationStarter:
     ) -> ApplyCliCuts:
         return ApplyCliCuts(cut_tracks, TrackRepositorySize(self.track_repository))
 
-    def create_config_parser(self, video_parser: VideoParser) -> OtConfigParser:
+    def create_config_parser(self) -> OtConfigParser:
         flow_parser = self._create_flow_parser()
         format_fixer = self._create_format_fixer(self.run_config)
         return OtConfigParser(
-            video_parser=video_parser,
+            video_parser=self.video_parser,
             flow_parser=flow_parser,
             format_fixer=format_fixer,
         )
