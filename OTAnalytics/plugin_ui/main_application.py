@@ -333,7 +333,6 @@ class ApplicationStarter:
             OTAnalyticsGui,
         )
 
-        section_state = self._create_section_state()
         flow_state = self._create_flow_state()
         file_state = FileState()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
@@ -345,14 +344,18 @@ class ApplicationStarter:
             clear_all_intersections.on_section_changed
         )
         layer_groups, layers = self._create_layers(
-            flow_state, section_state, road_user_assigner, color_palette_provider
+            flow_state, road_user_assigner, color_palette_provider
         )
         plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(
             self.datastore, self.track_view_state
         )
         image_updater = TrackImageUpdater(
-            self.datastore, self.track_view_state, section_state, flow_state, plotter
+            self.datastore,
+            self.track_view_state,
+            self.section_state,
+            flow_state,
+            plotter,
         )
         self.track_view_state.selected_videos.register(properties_updater.notify_videos)
         self.track_view_state.selected_videos.register(image_updater.notify_video)
@@ -460,7 +463,7 @@ class ApplicationStarter:
         switch_event = SwitchToEvent(
             event_repository=self.event_repository,
             track_view_state=self.track_view_state,
-            section_state=section_state,
+            section_state=self.section_state,
             create_default_filter=create_default_filter,
         )
         get_flows = GetAllFlows(self.flow_repository)
@@ -533,7 +536,7 @@ class ApplicationStarter:
             self.datastore,
             self.track_state,
             self.track_view_state,
-            section_state,
+            self.section_state,
             flow_state,
             file_state,
             tracks_metadata,
@@ -890,7 +893,6 @@ class ApplicationStarter:
     def _create_layers(
         self,
         flow_state: FlowState,
-        section_state: SectionState,
         road_user_assigner: RoadUserAssigner,
         color_palette_provider: ColorPaletteProvider,
     ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
@@ -899,7 +901,7 @@ class ApplicationStarter:
             self.intersection_repository,
             self.track_view_state,
             self.videos_metadata,
-            section_state,
+            self.section_state,
             color_palette_provider,
             self.pulling_progressbar_builder,
         ).build(
@@ -907,7 +909,8 @@ class ApplicationStarter:
             road_user_assigner,
         )
 
-    def _create_section_state(self) -> SectionState:
+    @cached_property
+    def section_state(self) -> SectionState:
         return SectionState(GetSectionsById(self.section_repository))
 
     def _create_flow_state(self) -> FlowState:
