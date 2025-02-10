@@ -367,22 +367,6 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        previous_frame = SwitchToPrevious(
-            self.track_view_state,
-            self.videos_metadata,
-            self.create_default_filter_range,
-        )
-        next_frame = SwitchToNext(
-            self.track_view_state,
-            self.videos_metadata,
-            self.create_default_filter_range,
-        )
-        switch_event = SwitchToEvent(
-            event_repository=self.event_repository,
-            track_view_state=self.track_view_state,
-            section_state=self.section_state,
-            create_default_filter=self.create_default_filter_range,
-        )
         get_flows = GetAllFlows(self.flow_repository)
         save_otflow = SaveOtflow(
             self.flow_parser, self.get_all_sections, get_flows, self.file_state
@@ -475,9 +459,9 @@ class ApplicationStarter:
             save_otconfig,
             self.load_track_files,
             self.enable_filter_track_by_date,
-            previous_frame,
-            next_frame,
-            switch_event,
+            self.switch_to_previous,
+            self.switch_to_next,
+            self.switch_to_event,
             save_otflow,
             quick_save_configuration,
             load_otconfig,
@@ -578,6 +562,31 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def switch_to_event(self) -> SwitchToEvent:
+        return SwitchToEvent(
+            event_repository=self.event_repository,
+            track_view_state=self.track_view_state,
+            section_state=self.section_state,
+            create_default_filter=self.create_default_filter_range,
+        )
+
+    @cached_property
+    def switch_to_next(self) -> SwitchToNext:
+        return SwitchToNext(
+            self.track_view_state,
+            self.videos_metadata,
+            self.create_default_filter_range,
+        )
+
+    @cached_property
+    def switch_to_previous(self) -> SwitchToPrevious:
+        return SwitchToPrevious(
+            self.track_view_state,
+            self.videos_metadata,
+            self.create_default_filter_range,
+        )
 
     @cached_property
     def create_default_filter_range(self) -> CreateDefaultFilter:
