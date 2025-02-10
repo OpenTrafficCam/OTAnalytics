@@ -366,13 +366,10 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        enable_filter_track_by_date = EnableFilterTrackByDate(
-            self.track_view_state, self.filter_element_settings_restorer
-        )
         create_default_filter = CreateDefaultFilterRange(
             state=self.track_view_state,
             videos_metadata=self.videos_metadata,
-            enable_filter_track_by_date=enable_filter_track_by_date,
+            enable_filter_track_by_date=self.enable_filter_track_by_date,
         )
         previous_frame = SwitchToPrevious(
             self.track_view_state, self.videos_metadata, create_default_filter
@@ -477,7 +474,7 @@ class ApplicationStarter:
             self.project_updater,
             save_otconfig,
             self.load_track_files,
-            enable_filter_track_by_date,
+            self.enable_filter_track_by_date,
             previous_frame,
             next_frame,
             switch_event,
@@ -581,6 +578,12 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def enable_filter_track_by_date(self) -> EnableFilterTrackByDate:
+        return EnableFilterTrackByDate(
+            self.track_view_state, self.filter_element_settings_restorer
+        )
 
     @cached_property
     def section_provider_event_creation_ui(self) -> SectionProvider:
