@@ -367,17 +367,6 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        load_otconfig = LoadOtconfig(
-            self.clear_all_repositories,
-            self.otconfig_parser,
-            self.project_updater,
-            AddAllVideos(self.video_repository),
-            AddAllSections(self.add_section),
-            AddAllFlows(self.add_flow),
-            self.load_track_files,
-            self.add_new_remark,
-            parse_json,
-        )
         get_all_videos = GetAllVideos(self.video_repository)
         get_current_project = GetCurrentProject(self.datastore)
         config_has_changed = ConfigHasChanged(
@@ -453,7 +442,7 @@ class ApplicationStarter:
             self.switch_to_event,
             self.save_otflow,
             self.quick_save_configuration,
-            load_otconfig,
+            self.load_otconfig,
             config_has_changed,
             export_road_user_assignments,
             save_path_suggester,
@@ -530,8 +519,8 @@ class ApplicationStarter:
         self.event_repository.register_observer(track_image_updater.notify_events)
         self.event_repository.register_observer(dummy_viewmodel.update_track_statistics)
         self.load_otflow.register(self.file_state.last_saved_config.set)
-        load_otconfig.register(self.file_state.last_saved_config.set)
-        load_otconfig.register(dummy_viewmodel.update_remark_view)
+        self.load_otconfig.register(self.file_state.last_saved_config.set)
+        self.load_otconfig.register(dummy_viewmodel.update_remark_view)
         self.project_updater.register(dummy_viewmodel.update_quick_save_button)
         self.track_file_repository.register(dummy_viewmodel.update_quick_save_button)
         self.project_updater.register(dummy_viewmodel.show_current_project)
@@ -541,9 +530,7 @@ class ApplicationStarter:
             group.register(track_image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         self.pulling_progressbar_popup_builder.add_widget(main_window)
-        preload_input_files = self.create_preload_input_files(
-            load_otconfig=load_otconfig
-        )
+        preload_input_files = self.create_preload_input_files()
         OTAnalyticsGui(
             main_window,
             dummy_viewmodel,
@@ -551,6 +538,20 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def load_otconfig(self) -> LoadOtconfig:
+        return LoadOtconfig(
+            self.clear_all_repositories,
+            self.otconfig_parser,
+            self.project_updater,
+            AddAllVideos(self.video_repository),
+            AddAllSections(self.add_section),
+            AddAllFlows(self.add_flow),
+            self.load_track_files,
+            self.add_new_remark,
+            parse_json,
+        )
 
     @cached_property
     def add_new_remark(self) -> AddNewRemark:
@@ -1141,12 +1142,10 @@ class ApplicationStarter:
     def track_to_video_repository(self) -> TrackToVideoRepository:
         return TrackToVideoRepository()
 
-    def create_preload_input_files(
-        self, load_otconfig: LoadOtconfig
-    ) -> PreloadInputFiles:
+    def create_preload_input_files(self) -> PreloadInputFiles:
         return PreloadInputFiles(
             load_track_files=self.load_track_files,
-            load_otconfig=load_otconfig,
+            load_otconfig=self.load_otconfig,
             load_otflow=self.load_otflow,
             apply_cli_cuts=self.apply_cli_cuts,
         )
