@@ -3,6 +3,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Sequence
 
+from OTAnalytics.adapter_ui.abstract_progressbar_popup import ProgressbarPopupBuilder
 from OTAnalytics.adapter_visualization.color_provider import (
     DEFAULT_COLOR_PALETTE,
     ColorPaletteProvider,
@@ -332,17 +333,8 @@ class ApplicationStarter:
             ModifiedCTk,
             OTAnalyticsGui,
         )
-        from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (
-            PullingProgressbarBuilder,
-            PullingProgressbarPopupBuilder,
-        )
 
-        pulling_progressbar_popup_builder = PullingProgressbarPopupBuilder()
-        pulling_progressbar_builder = PullingProgressbarBuilder(
-            pulling_progressbar_popup_builder
-        )
-
-        datastore = self._create_datastore(pulling_progressbar_builder)
+        datastore = self._create_datastore()
         flow_parser = self._create_flow_parser()
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
@@ -362,7 +354,6 @@ class ApplicationStarter:
             track_view_state,
             flow_state,
             section_state,
-            pulling_progressbar_builder,
             road_user_assigner,
             color_palette_provider,
         )
@@ -443,9 +434,7 @@ class ApplicationStarter:
             add_section,
             add_flow,
         )
-        load_track_files = self._create_load_tracks_file(
-            pulling_progressbar_builder, tracks_metadata
-        )
+        load_track_files = self._create_load_tracks_file(tracks_metadata)
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
             clear_all_flows,
@@ -668,7 +657,7 @@ class ApplicationStarter:
         for group in layer_groups:
             group.register(image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
-        pulling_progressbar_popup_builder.add_widget(main_window)
+        self.pulling_progressbar_popup_builder.add_widget(main_window)
         apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks_intersecting_section)
         preload_input_files = self.create_preload_input_files(
             load_otconfig=load_otconfig,
@@ -683,6 +672,26 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def pulling_progressbar_builder(self) -> ProgressbarBuilder:
+        from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (
+            PullingProgressbarBuilder,
+        )
+
+        pulling_progressbar_builder = PullingProgressbarBuilder(
+            self.pulling_progressbar_popup_builder
+        )
+        return pulling_progressbar_builder
+
+    @cached_property
+    def pulling_progressbar_popup_builder(self) -> ProgressbarPopupBuilder:
+        from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (
+            PullingProgressbarPopupBuilder,
+        )
+
+        pulling_progressbar_popup_builder = PullingProgressbarPopupBuilder()
+        return pulling_progressbar_popup_builder
 
     @cached_property
     def videos_metadata(self) -> VideosMetadata:
@@ -798,12 +807,10 @@ class ApplicationStarter:
 
         cli.start()
 
-    def _create_datastore(self, progressbar_builder: ProgressbarBuilder) -> Datastore:
+    def _create_datastore(self) -> Datastore:
         """
         Build all required objects and inject them where necessary
 
-        Args:
-            progressbar_builder (ProgressbarBuilder): the progressbar builder to inject
         """
         track_parser = self._create_track_parser()
         event_list_parser = self._create_event_list_parser()
@@ -820,7 +827,7 @@ class ApplicationStarter:
             self.video_repository,
             self.video_parser,
             track_video_parser,
-            progressbar_builder,
+            self.pulling_progressbar_builder,
             self.remark_repository,
         )
 
@@ -895,7 +902,6 @@ class ApplicationStarter:
         track_view_state: TrackViewState,
         flow_state: FlowState,
         section_state: SectionState,
-        pulling_progressbar_builder: ProgressbarBuilder,
         road_user_assigner: RoadUserAssigner,
         color_palette_provider: ColorPaletteProvider,
     ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
@@ -906,7 +912,7 @@ class ApplicationStarter:
             self.videos_metadata,
             section_state,
             color_palette_provider,
-            pulling_progressbar_builder,
+            self.pulling_progressbar_builder,
         ).build(
             flow_state,
             road_user_assigner,
@@ -1096,7 +1102,7 @@ class ApplicationStarter:
         )
 
     def _create_load_tracks_file(
-        self, progressbar: ProgressbarBuilder, tracks_metadata: TracksMetadata
+        self, tracks_metadata: TracksMetadata
     ) -> LoadTrackFiles:
         track_parser = self._create_track_parser()
         track_video_parser = OttrkVideoParser(self.video_parser)
@@ -1107,7 +1113,7 @@ class ApplicationStarter:
             self.track_file_repository,
             self.video_repository,
             self.track_to_video_repository,
-            progressbar,
+            self.pulling_progressbar_builder,
             tracks_metadata,
             self.videos_metadata,
         )
