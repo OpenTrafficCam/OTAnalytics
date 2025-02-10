@@ -346,10 +346,9 @@ class ApplicationStarter:
         )
         self.track_view_state.selected_videos.register(track_image_updater.notify_video)
 
-        tracks_metadata = self._create_tracks_metadata()
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
-        tracks_metadata._classifications.register(
+        self.tracks_metadata._classifications.register(
             observer=self.color_palette_provider.update
         )
         action_state = self._create_action_state()
@@ -407,7 +406,7 @@ class ApplicationStarter:
         load_otflow = self._create_use_case_load_otflow(
             clear_all_sections, clear_all_flows, clear_all_events, add_section, add_flow
         )
-        load_track_files = self._create_load_tracks_file(tracks_metadata)
+        load_track_files = self._create_load_tracks_file()
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
             clear_all_flows,
@@ -522,7 +521,7 @@ class ApplicationStarter:
             self.section_state,
             self.flow_state,
             self.file_state,
-            tracks_metadata,
+            self.tracks_metadata,
             self.videos_metadata,
             action_state,
             filter_element_settings_restorer,
@@ -721,7 +720,6 @@ class ApplicationStarter:
         get_all_tracks = GetAllTracks(self.track_repository)
         get_all_track_ids = GetAllTrackIds(self.track_repository)
         clear_all_events = ClearAllEvents(self.event_repository)
-        tracks_metadata = self._create_tracks_metadata()
         section_provider = FilterOutCuttingSections(self.section_repository.get_all)
         create_events = self._create_use_case_create_events(
             section_provider,
@@ -742,9 +740,8 @@ class ApplicationStarter:
         add_all_tracks = AddAllTracks(self.track_repository)
         clear_all_tracks = ClearAllTracks(self.track_repository)
         export_counts = self._create_export_counts(get_sections_by_id, create_events)
-        tracks_metadata = self._create_tracks_metadata()
         export_tracks = CsvTrackExport(
-            self.track_repository, tracks_metadata, self.videos_metadata
+            self.track_repository, self.tracks_metadata, self.videos_metadata
         )
         export_road_user_assignments = self.create_export_road_user_assignments(
             get_all_tracks, create_events
@@ -783,7 +780,7 @@ class ApplicationStarter:
                 add_all_tracks,
                 get_all_track_ids,
                 clear_all_tracks,
-                tracks_metadata,
+                self.tracks_metadata,
                 self.videos_metadata,
                 export_tracks,
                 export_road_user_assignments,
@@ -808,7 +805,7 @@ class ApplicationStarter:
                 add_all_tracks,
                 get_all_track_ids,
                 clear_all_tracks,
-                tracks_metadata,
+                self.tracks_metadata,
                 self.videos_metadata,
                 export_tracks,
                 export_road_user_assignments,
@@ -972,7 +969,8 @@ class ApplicationStarter:
             get_tracks=get_tracks,
         )
 
-    def _create_tracks_metadata(self) -> TracksMetadata:
+    @cached_property
+    def tracks_metadata(self) -> TracksMetadata:
         return TracksMetadata(
             self.track_repository,
             self.run_config.include_classes,
@@ -1107,9 +1105,7 @@ class ApplicationStarter:
             remove_section,
         )
 
-    def _create_load_tracks_file(
-        self, tracks_metadata: TracksMetadata
-    ) -> LoadTrackFiles:
+    def _create_load_tracks_file(self) -> LoadTrackFiles:
         track_parser = self._create_track_parser()
         track_video_parser = OttrkVideoParser(self.video_parser)
         return LoadTrackFiles(
@@ -1120,7 +1116,7 @@ class ApplicationStarter:
             self.video_repository,
             self.track_to_video_repository,
             self.pulling_progressbar_builder,
-            tracks_metadata,
+            self.tracks_metadata,
             self.videos_metadata,
         )
 
