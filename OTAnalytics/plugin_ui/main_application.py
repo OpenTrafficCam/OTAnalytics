@@ -340,9 +340,6 @@ class ApplicationStarter:
         )
         layer_groups, layers = self._create_layers()
         plotter = LayeredPlotter(layers=layers)
-        properties_updater = TrackPropertiesUpdater(
-            self.datastore, self.track_view_state
-        )
         image_updater = TrackImageUpdater(
             self.datastore,
             self.track_view_state,
@@ -350,7 +347,9 @@ class ApplicationStarter:
             self.flow_state,
             plotter,
         )
-        self.track_view_state.selected_videos.register(properties_updater.notify_videos)
+        self.track_view_state.selected_videos.register(
+            self.track_properties_updater.notify_videos
+        )
         self.track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(
             self.datastore, self.track_view_state, self.videos_metadata
@@ -655,6 +654,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def track_properties_updater(self) -> TrackPropertiesUpdater:
+        return TrackPropertiesUpdater(self.datastore, self.track_view_state)
 
     @cached_property
     def clear_all_intersections(self) -> ClearAllIntersections:
