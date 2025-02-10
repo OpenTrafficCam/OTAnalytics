@@ -367,16 +367,13 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        save_otflow = SaveOtflow(
-            self.flow_parser, self.get_all_sections, self.get_all_flows, self.file_state
-        )
         get_current_remark = GetCurrentRemark(self.remark_repository)
         config_parser = self.create_config_parser()
         save_otconfig = SaveOtconfig(
             self.datastore, config_parser, self.file_state, get_current_remark
         )
         quick_save_configuration = QuickSaveConfiguration(
-            self.file_state, save_otflow, save_otconfig
+            self.file_state, self.save_otflow, save_otconfig
         )
         add_new_remark = AddNewRemark(self.remark_repository)
         load_otconfig = LoadOtconfig(
@@ -463,7 +460,7 @@ class ApplicationStarter:
             self.switch_to_previous,
             self.switch_to_next,
             self.switch_to_event,
-            save_otflow,
+            self.save_otflow,
             quick_save_configuration,
             load_otconfig,
             config_has_changed,
@@ -563,6 +560,12 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def save_otflow(self) -> SaveOtflow:
+        return SaveOtflow(
+            self.flow_parser, self.get_all_sections, self.get_all_flows, self.file_state
+        )
 
     @cached_property
     def get_all_flows(self) -> GetAllFlows:
