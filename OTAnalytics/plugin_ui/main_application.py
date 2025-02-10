@@ -352,8 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        clear_all_tracks = ClearAllTracks(self.track_repository)
-
         get_sections = GetAllSections(self.section_repository)
         get_sections_by_id = GetSectionsById(self.section_repository)
         add_section = AddSection(self.section_repository)
@@ -400,7 +398,6 @@ class ApplicationStarter:
             clear_all_flows,
             clear_all_sections,
             clear_all_track_to_videos,
-            clear_all_tracks,
             clear_all_videos,
         )
         project_updater = self._create_project_updater()
@@ -630,6 +627,10 @@ class ApplicationStarter:
         ).start()
 
     @cached_property
+    def clear_all_tracks(self) -> ClearAllTracks:
+        return ClearAllTracks(self.track_repository)
+
+    @cached_property
     def remove_tracks(self) -> RemoveTracks:
         return RemoveTracks(self.track_repository)
 
@@ -730,7 +731,6 @@ class ApplicationStarter:
             RemoveSection(self.section_repository),
         )
         apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks)
-        clear_all_tracks = ClearAllTracks(self.track_repository)
         export_counts = self._create_export_counts(get_sections_by_id, create_events)
         export_tracks = CsvTrackExport(
             self.track_repository, self.tracks_metadata, self.videos_metadata
@@ -768,7 +768,7 @@ class ApplicationStarter:
                 apply_cli_cuts,
                 self.add_all_tracks,
                 get_all_track_ids,
-                clear_all_tracks,
+                self.clear_all_tracks,
                 self.tracks_metadata,
                 self.videos_metadata,
                 export_tracks,
@@ -793,7 +793,7 @@ class ApplicationStarter:
                 apply_cli_cuts,
                 self.add_all_tracks,
                 get_all_track_ids,
-                clear_all_tracks,
+                self.clear_all_tracks,
                 self.tracks_metadata,
                 self.videos_metadata,
                 export_tracks,
@@ -1042,7 +1042,6 @@ class ApplicationStarter:
         clear_all_flows: ClearAllFlows,
         clear_all_sections: ClearAllSections,
         clear_all_track_to_videos: ClearAllTrackToVideos,
-        clear_all_tracks: ClearAllTracks,
         clear_all_videos: ClearAllVideos,
     ) -> ClearRepositories:
         return ClearRepositories(
@@ -1051,7 +1050,7 @@ class ApplicationStarter:
             self.clear_all_intersections,
             clear_all_sections,
             clear_all_track_to_videos,
-            clear_all_tracks,
+            self.clear_all_tracks,
             clear_all_videos,
         )
 
