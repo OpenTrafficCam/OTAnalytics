@@ -366,7 +366,6 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        load_track_files = self._create_load_tracks_file()
         clear_repositories = self._create_use_case_clear_all_repositories()
         project_updater = self._create_project_updater()
         reset_project_config = self._create_reset_project_config(project_updater)
@@ -416,7 +415,7 @@ class ApplicationStarter:
             AddAllVideos(self.video_repository),
             AddAllSections(self.add_section),
             AddAllFlows(self.add_flow),
-            load_track_files,
+            self.load_track_files,
             add_new_remark,
             parse_json,
         )
@@ -486,7 +485,7 @@ class ApplicationStarter:
             start_new_project,
             project_updater,
             save_otconfig,
-            load_track_files,
+            self.load_track_files,
             enable_filter_track_by_date,
             previous_frame,
             next_frame,
@@ -581,9 +580,7 @@ class ApplicationStarter:
         self.pulling_progressbar_popup_builder.add_widget(main_window)
         apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks_intersecting_section)
         preload_input_files = self.create_preload_input_files(
-            load_otconfig=load_otconfig,
-            load_track_files=load_track_files,
-            apply_cli_cuts=apply_cli_cuts,
+            load_otconfig=load_otconfig, apply_cli_cuts=apply_cli_cuts
         )
         OTAnalyticsGui(
             main_window,
@@ -1082,7 +1079,8 @@ class ApplicationStarter:
             self.remove_section,
         )
 
-    def _create_load_tracks_file(self) -> LoadTrackFiles:
+    @cached_property
+    def load_track_files(self) -> LoadTrackFiles:
         track_parser = self._create_track_parser()
         track_video_parser = OttrkVideoParser(self.video_parser)
         return LoadTrackFiles(
@@ -1116,13 +1114,10 @@ class ApplicationStarter:
         return TrackToVideoRepository()
 
     def create_preload_input_files(
-        self,
-        load_otconfig: LoadOtconfig,
-        load_track_files: LoadTrackFiles,
-        apply_cli_cuts: ApplyCliCuts,
+        self, load_otconfig: LoadOtconfig, apply_cli_cuts: ApplyCliCuts
     ) -> PreloadInputFiles:
         return PreloadInputFiles(
-            load_track_files=load_track_files,
+            load_track_files=self.load_track_files,
             load_otconfig=load_otconfig,
             load_otflow=self.load_otflow,
             apply_cli_cuts=apply_cli_cuts,
