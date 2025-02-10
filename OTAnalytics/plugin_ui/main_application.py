@@ -1,4 +1,5 @@
 import logging
+from functools import cached_property
 from pathlib import Path
 from typing import Sequence
 
@@ -269,14 +270,15 @@ DETECTION_RATE_PERCENTILE_VALUE = 0.9
 class ApplicationStarter:
     @log_processing_time(description="overall")
     def start(self) -> None:
-        run_config = self._parse_configuration()
         self._setup_logger(
-            Path(run_config.log_file), run_config.logfile_overwrite, run_config.debug
+            Path(self.run_config.log_file),
+            self.run_config.logfile_overwrite,
+            self.run_config.debug,
         )
-        if run_config.start_cli:
+        if self.run_config.start_cli:
             try:
 
-                self.start_cli(run_config)
+                self.start_cli()
                 # add command line tag for activating -> add to PipelineBenchmark,
                 # add github actions for benchmark
                 # regression test lokal runner neben benchmark ->
@@ -285,9 +287,10 @@ class ApplicationStarter:
             except CliParseError as e:
                 logger().exception(e, exc_info=True)
         else:
-            self.start_gui(run_config)
+            self.start_gui()
 
-    def _parse_configuration(self) -> RunConfiguration:
+    @cached_property
+    def run_config(self) -> RunConfiguration:
         cli_args_parser = self._build_cli_argument_parser()
         cli_args = cli_args_parser.parse()
         cli_value_provider: OtConfigDefaultValueProvider = CliValueProvider(cli_args)
@@ -321,7 +324,7 @@ class ApplicationStarter:
         else:
             setup_logger(log_file=log_file, overwrite=overwrite, log_level=logging.INFO)
 
-    def start_gui(self, run_config: RunConfiguration) -> None:
+    def start_gui(self) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
             DummyViewModel,
         )
@@ -339,7 +342,7 @@ class ApplicationStarter:
             pulling_progressbar_popup_builder
         )
 
-        track_repository = self._create_track_repository(run_config)
+        track_repository = self._create_track_repository()
         track_file_repository = self._create_track_file_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
@@ -398,7 +401,7 @@ class ApplicationStarter:
             datastore, track_view_state, videos_metadata
         )
 
-        tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
+        tracks_metadata = self._create_tracks_metadata(track_repository)
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
         tracks_metadata._classifications.register(
@@ -524,7 +527,7 @@ class ApplicationStarter:
         get_flows = GetAllFlows(flow_repository)
         save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, file_state)
         get_current_remark = GetCurrentRemark(remark_repository)
-        config_parser = self.create_config_parser(run_config, video_parser)
+        config_parser = self.create_config_parser(video_parser)
         save_otconfig = SaveOtconfig(
             datastore, config_parser, file_state, get_current_remark
         )
@@ -647,7 +650,7 @@ class ApplicationStarter:
             flow_parser,
             name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
-            show_svz=run_config.show_svz,
+            show_svz=self.run_config.show_svz,
         )
         application.register_video_observer(dummy_viewmodel)
         application.register_sections_observer(dummy_viewmodel)
@@ -720,11 +723,15 @@ class ApplicationStarter:
             apply_cli_cuts=apply_cli_cuts,
         )
         OTAnalyticsGui(
-            main_window, dummy_viewmodel, layer_groups, preload_input_files, run_config
+            main_window,
+            dummy_viewmodel,
+            layer_groups,
+            preload_input_files,
+            self.run_config,
         ).start()
 
-    def start_cli(self, run_config: RunConfiguration) -> None:
-        track_repository = self._create_track_repository(run_config)
+    def start_cli(self) -> None:
+        track_repository = self._create_track_repository()
         section_repository = self._create_section_repository()
         flow_repository = self._create_flow_repository()
 
@@ -740,7 +747,7 @@ class ApplicationStarter:
         get_all_tracks = GetAllTracks(track_repository)
         get_all_track_ids = GetAllTrackIds(track_repository)
         clear_all_events = ClearAllEvents(event_repository)
-        tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
+        tracks_metadata = self._create_tracks_metadata(track_repository)
         videos_metadata = VideosMetadata()
         section_provider = FilterOutCuttingSections(section_repository.get_all)
         create_events = self._create_use_case_create_events(
@@ -749,7 +756,7 @@ class ApplicationStarter:
             get_all_tracks,
             get_tracks_without_single_detections,
             add_events,
-            run_config.num_processes,
+            self.run_config.num_processes,
         )
         cut_tracks = self._create_cut_tracks_intersecting_section(
             GetSectionsById(section_repository),
@@ -767,7 +774,7 @@ class ApplicationStarter:
             get_sections_by_id,
             create_events,
         )
-        tracks_metadata = self._create_tracks_metadata(track_repository, run_config)
+        tracks_metadata = self._create_tracks_metadata(track_repository)
         videos_metadata = VideosMetadata()
         export_tracks = CsvTrackExport(
             track_repository, tracks_metadata, videos_metadata
@@ -805,11 +812,11 @@ class ApplicationStarter:
         )
 
         cli: OTAnalyticsCli
-        if run_config.cli_bulk_mode:
+        if self.run_config.cli_bulk_mode:
             track_parser = self._create_track_parser(track_repository)
 
             cli = OTAnalyticsBulkCli(
-                run_config,
+                self.run_config,
                 event_repository,
                 add_section,
                 get_all_sections,
@@ -831,9 +838,9 @@ class ApplicationStarter:
             )
 
         else:
-            stream_track_parser = self._create_stream_track_parser(run_config)
+            stream_track_parser = self._create_stream_track_parser()
             cli = OTAnalyticsStreamCli(
-                run_config,
+                self.run_config,
                 event_repository,
                 add_section,
                 get_all_sections,
@@ -894,14 +901,14 @@ class ApplicationStarter:
             remark_repository,
         )
 
-    def _create_track_repository(self, run_config: RunConfiguration) -> TrackRepository:
+    def _create_track_repository(self) -> TrackRepository:
         return TrackRepository(
             FilteredPandasTrackDataset(
                 PandasTrackDataset.from_list(
                     [], PygeosTrackGeometryDataset.from_track_dataset
                 ),
-                run_config.include_classes,
-                run_config.exclude_classes,
+                self.run_config.include_classes,
+                self.run_config.exclude_classes,
             )
         )
         # return TrackRepository(PythonTrackDataset())
@@ -919,9 +926,7 @@ class ApplicationStarter:
         # )
         return OttrkParser(detection_parser)
 
-    def _create_stream_track_parser(
-        self, run_config: RunConfiguration
-    ) -> StreamTrackParser:
+    def _create_stream_track_parser(self) -> StreamTrackParser:
         return StreamOttrkParser(
             detection_parser=PythonStreamDetectionParser(
                 track_classification_calculator=ByMaxConfidence(),
@@ -934,7 +939,7 @@ class ApplicationStarter:
                 PygeosTrackGeometryDataset.from_track_dataset,
                 PandasByMaxConfidence(),
             ),
-            chunk_size=run_config.cli_chunk_size,
+            chunk_size=self.run_config.cli_chunk_size,
         )
 
     def _create_section_repository(self) -> SectionRepository:
@@ -1034,10 +1039,12 @@ class ApplicationStarter:
         )
 
     def _create_tracks_metadata(
-        self, track_repository: TrackRepository, run_config: RunConfiguration
+        self, track_repository: TrackRepository
     ) -> TracksMetadata:
         return TracksMetadata(
-            track_repository, run_config.include_classes, run_config.exclude_classes
+            track_repository,
+            self.run_config.include_classes,
+            self.run_config.exclude_classes,
         )
 
     def _create_action_state(self) -> ActionState:
@@ -1231,13 +1238,9 @@ class ApplicationStarter:
     ) -> ApplyCliCuts:
         return ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
 
-    def create_config_parser(
-        self,
-        run_config: RunConfiguration,
-        video_parser: VideoParser,
-    ) -> OtConfigParser:
+    def create_config_parser(self, video_parser: VideoParser) -> OtConfigParser:
         flow_parser = self._create_flow_parser()
-        format_fixer = self._create_format_fixer(run_config)
+        format_fixer = self._create_format_fixer(self.run_config)
         return OtConfigParser(
             video_parser=video_parser,
             flow_parser=flow_parser,

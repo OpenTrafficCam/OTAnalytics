@@ -1,6 +1,8 @@
+from functools import cached_property
 from pathlib import Path
 
 import pytest
+from application.run_configuration import RunConfiguration
 from more_itertools import chunked
 from tqdm import tqdm
 
@@ -312,5 +314,14 @@ class TestRegressionCompleteApplication:
             cli_mode=cli_mode,
             cli_chunk_size=cli_chunk_size,
         )
-        ApplicationStarter().start_cli(run_config)
+        RegressionApplicationStarter(run_config).start_cli()
         return save_name
+
+
+class RegressionApplicationStarter(ApplicationStarter):
+    def __init__(self, run_config: RunConfiguration) -> None:
+        self._run_config = run_config
+
+    @cached_property
+    def run_config(self) -> RunConfiguration:
+        return self._run_config

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from functools import cached_property
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -106,6 +107,15 @@ def _fill_track_repository(
     return DetectionMetadata(frozenset(detection_classes))
 
 
+class BenchmarkApplicationStarter(ApplicationStarter):
+    def __init__(self, run_config: RunConfiguration) -> None:
+        self._run_config = run_config
+
+    @cached_property
+    def run_config(self) -> RunConfiguration:
+        return self._run_config
+
+
 class UseCaseProvider:
     GEOMETRY_FACTORY: TRACK_GEOMETRY_FACTORY = (
         PygeosTrackGeometryDataset.from_track_dataset
@@ -144,7 +154,8 @@ class UseCaseProvider:
         self._save_dir = save_dir
         self._include_classes: frozenset[str] = frozenset()
         self._exclude_classes: frozenset[str] = frozenset()
-        self._starter = ApplicationStarter()
+        self._flow_parser = OtFlowParser()
+        self._starter = BenchmarkApplicationStarter(self.run_config)
         track_repository, detection_metadata = self.provide_track_repository(
             self._ottrk_files, dataset_type
         )
@@ -153,7 +164,6 @@ class UseCaseProvider:
         self._section_repository = SectionRepository()
         self._flow_repository = FlowRepository()
         self._event_repository = EventRepository()
-        self._flow_parser = OtFlowParser()
 
         self._parse_otflow(self._otflow_file)
 
@@ -282,7 +292,7 @@ class UseCaseProvider:
             export_mode=OVERWRITE,
         )
 
-    def run_cli(self) -> Callable[[RunConfiguration], None]:
+    def run_cli(self) -> Callable[[], None]:
         return self._starter.start_cli
 
     def get_track_parser(self, dataset_type: str = CURRENT_DATASET_TYPE) -> TrackParser:
@@ -589,7 +599,7 @@ class TestPipelineBenchmark:
         use_case = use_case_provider_15min.run_cli()
         benchmark.pedantic(
             use_case,
-            args=(use_case_provider_15min.run_config,),
+            args=(),
             rounds=self.ROUNDS,
             iterations=5,
             warmup_rounds=self.WARMUP_ROUNDS,
@@ -603,7 +613,7 @@ class TestPipelineBenchmark:
         use_case = use_case_provider_15min_filtered.run_cli()
         benchmark.pedantic(
             use_case,
-            args=(use_case_provider_15min_filtered.run_config,),
+            args=(),
             rounds=self.ROUNDS,
             iterations=5,
             warmup_rounds=self.WARMUP_ROUNDS,
@@ -615,7 +625,7 @@ class TestPipelineBenchmark:
         use_case = use_case_provider_2hours.run_cli()
         benchmark.pedantic(
             use_case,
-            args=(use_case_provider_2hours.run_config,),
+            args=(),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
@@ -629,7 +639,7 @@ class TestPipelineBenchmark:
         use_case = use_case_provider_2hours_filtered.run_cli()
         benchmark.pedantic(
             use_case,
-            args=(use_case_provider_2hours_filtered.run_config,),
+            args=(),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
