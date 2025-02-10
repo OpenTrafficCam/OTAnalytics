@@ -366,9 +366,6 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        start_new_project = self._create_use_case_start_new_project(
-            self.clear_all_repositories
-        )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
             self.get_all_tracks
         )
@@ -479,7 +476,7 @@ class ApplicationStarter:
             self.add_section,
             self.add_flow,
             self.clear_all_events,
-            start_new_project,
+            self.start_new_project,
             self.project_updater,
             save_otconfig,
             self.load_track_files,
@@ -560,7 +557,7 @@ class ApplicationStarter:
         self.datastore.register_section_changed_observer(
             track_image_updater.notify_section_changed
         )
-        start_new_project.register(dummy_viewmodel.on_start_new_project)
+        self.start_new_project.register(dummy_viewmodel.on_start_new_project)
         self.event_repository.register_observer(track_image_updater.notify_events)
         self.event_repository.register_observer(dummy_viewmodel.update_track_statistics)
         self.load_otflow.register(self.file_state.last_saved_config.set)
@@ -1041,11 +1038,10 @@ class ApplicationStarter:
             self.clear_all_videos,
         )
 
-    def _create_use_case_start_new_project(
-        self, clear_repositories: ClearRepositories
-    ) -> StartNewProject:
+    @cached_property
+    def start_new_project(self) -> StartNewProject:
         return StartNewProject(
-            clear_repositories,
+            self.clear_all_repositories,
             self.reset_project_config,
             self.track_view_state,
             self.file_state,
