@@ -367,7 +367,6 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        get_all_videos = GetAllVideos(self.video_repository)
         get_current_project = GetCurrentProject(self.datastore)
         config_has_changed = ConfigHasChanged(
             OtconfigHasChanged(
@@ -375,7 +374,7 @@ class ApplicationStarter:
                 self.get_all_sections,
                 self.get_all_flows,
                 get_current_project,
-                get_all_videos,
+                self.get_all_videos,
                 self.get_all_track_files,
                 self.get_current_remark,
             ),
@@ -390,7 +389,7 @@ class ApplicationStarter:
         save_path_suggester = SavePathSuggester(
             self.file_state,
             self.get_all_track_files,
-            get_all_videos,
+            self.get_all_videos,
             get_current_project,
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
@@ -538,6 +537,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def get_all_videos(self) -> GetAllVideos:
+        return GetAllVideos(self.video_repository)
 
     @cached_property
     def load_otconfig(self) -> LoadOtconfig:
