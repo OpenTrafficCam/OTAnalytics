@@ -333,7 +333,6 @@ class ApplicationStarter:
             OTAnalyticsGui,
         )
 
-        file_state = FileState()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
         clear_all_intersections = ClearAllIntersections(self.intersection_repository)
@@ -436,7 +435,7 @@ class ApplicationStarter:
         project_updater = self._create_project_updater()
         reset_project_config = self._create_reset_project_config(project_updater)
         start_new_project = self._create_use_case_start_new_project(
-            clear_repositories, reset_project_config, file_state
+            clear_repositories, reset_project_config
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
             get_sections_by_id,
@@ -466,14 +465,16 @@ class ApplicationStarter:
             create_default_filter=create_default_filter,
         )
         get_flows = GetAllFlows(self.flow_repository)
-        save_otflow = SaveOtflow(self.flow_parser, get_sections, get_flows, file_state)
+        save_otflow = SaveOtflow(
+            self.flow_parser, get_sections, get_flows, self.file_state
+        )
         get_current_remark = GetCurrentRemark(self.remark_repository)
         config_parser = self.create_config_parser()
         save_otconfig = SaveOtconfig(
-            self.datastore, config_parser, file_state, get_current_remark
+            self.datastore, config_parser, self.file_state, get_current_remark
         )
         quick_save_configuration = QuickSaveConfiguration(
-            file_state, save_otflow, save_otconfig
+            self.file_state, save_otflow, save_otconfig
         )
         add_new_remark = AddNewRemark(self.remark_repository)
         load_otconfig = LoadOtconfig(
@@ -500,13 +501,13 @@ class ApplicationStarter:
                 get_current_remark,
             ),
             OtflowHasChanged(self.flow_parser, get_sections, get_flows),
-            file_state,
+            self.file_state,
         )
         export_road_user_assignments = self.create_export_road_user_assignments(
             get_all_tracks, create_events
         )
         save_path_suggester = SavePathSuggester(
-            file_state, get_all_track_files, get_all_videos, get_current_project
+            self.file_state, get_all_track_files, get_all_videos, get_current_project
         )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
             get_all_tracks
@@ -537,7 +538,7 @@ class ApplicationStarter:
             self.track_view_state,
             self.section_state,
             self.flow_state,
-            file_state,
+            self.file_state,
             tracks_metadata,
             self.videos_metadata,
             action_state,
@@ -635,8 +636,8 @@ class ApplicationStarter:
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         self.event_repository.register_observer(image_updater.notify_events)
         self.event_repository.register_observer(dummy_viewmodel.update_track_statistics)
-        load_otflow.register(file_state.last_saved_config.set)
-        load_otconfig.register(file_state.last_saved_config.set)
+        load_otflow.register(self.file_state.last_saved_config.set)
+        load_otconfig.register(self.file_state.last_saved_config.set)
         load_otconfig.register(dummy_viewmodel.update_remark_view)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
         self.track_file_repository.register(dummy_viewmodel.update_quick_save_button)
@@ -661,6 +662,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def file_state(self) -> FileState:
+        return FileState()
 
     @cached_property
     def pulling_progressbar_builder(self) -> ProgressbarBuilder:
@@ -1054,10 +1059,12 @@ class ApplicationStarter:
         self,
         clear_repositories: ClearRepositories,
         reset_project_config: ResetProjectConfig,
-        file_state: FileState,
     ) -> StartNewProject:
         return StartNewProject(
-            clear_repositories, reset_project_config, self.track_view_state, file_state
+            clear_repositories,
+            reset_project_config,
+            self.track_view_state,
+            self.file_state,
         )
 
     @staticmethod
