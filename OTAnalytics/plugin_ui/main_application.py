@@ -298,7 +298,7 @@ class ApplicationStarter:
         flow_parser = self._create_flow_parser()
         config_parser = OtConfigParser(
             format_fixer=format_fixer,
-            video_parser=self._create_video_parser(VideosMetadata()),
+            video_parser=self._create_video_parser(),
             flow_parser=flow_parser,
         )
 
@@ -342,8 +342,7 @@ class ApplicationStarter:
             pulling_progressbar_popup_builder
         )
 
-        videos_metadata = VideosMetadata()
-        video_parser = self._create_video_parser(videos_metadata)
+        video_parser = self._create_video_parser()
         video_repository = self._create_video_repository()
         remark_repository = self._create_remark_repository()
         track_to_video_repository = self._create_track_to_video_repository()
@@ -371,7 +370,6 @@ class ApplicationStarter:
         layer_groups, layers = self._create_layers(
             datastore,
             track_view_state,
-            videos_metadata,
             flow_state,
             section_state,
             pulling_progressbar_builder,
@@ -386,7 +384,7 @@ class ApplicationStarter:
         track_view_state.selected_videos.register(properties_updater.notify_videos)
         track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(
-            datastore, track_view_state, videos_metadata
+            datastore, track_view_state, self.videos_metadata
         )
 
         tracks_metadata = self._create_tracks_metadata()
@@ -461,7 +459,6 @@ class ApplicationStarter:
             track_to_video_repository,
             pulling_progressbar_builder,
             tracks_metadata,
-            videos_metadata,
         )
         clear_repositories = self._create_use_case_clear_all_repositories(
             clear_all_events,
@@ -489,14 +486,14 @@ class ApplicationStarter:
         )
         create_default_filter = CreateDefaultFilterRange(
             state=track_view_state,
-            videos_metadata=videos_metadata,
+            videos_metadata=self.videos_metadata,
             enable_filter_track_by_date=enable_filter_track_by_date,
         )
         previous_frame = SwitchToPrevious(
-            track_view_state, videos_metadata, create_default_filter
+            track_view_state, self.videos_metadata, create_default_filter
         )
         next_frame = SwitchToNext(
-            track_view_state, videos_metadata, create_default_filter
+            track_view_state, self.videos_metadata, create_default_filter
         )
         switch_event = SwitchToEvent(
             event_repository=self.event_repository,
@@ -578,7 +575,7 @@ class ApplicationStarter:
             flow_state,
             file_state,
             tracks_metadata,
-            videos_metadata,
+            self.videos_metadata,
             action_state,
             filter_element_settings_restorer,
             get_all_track_files,
@@ -701,6 +698,10 @@ class ApplicationStarter:
             self.run_config,
         ).start()
 
+    @cached_property
+    def videos_metadata(self) -> VideosMetadata:
+        return VideosMetadata()
+
     def start_cli(self) -> None:
         add_section = AddSection(self.section_repository)
         get_sections_by_id = GetSectionsById(self.section_repository)
@@ -714,7 +715,6 @@ class ApplicationStarter:
         get_all_track_ids = GetAllTrackIds(self.track_repository)
         clear_all_events = ClearAllEvents(self.event_repository)
         tracks_metadata = self._create_tracks_metadata()
-        videos_metadata = VideosMetadata()
         section_provider = FilterOutCuttingSections(self.section_repository.get_all)
         create_events = self._create_use_case_create_events(
             section_provider,
@@ -736,9 +736,8 @@ class ApplicationStarter:
         clear_all_tracks = ClearAllTracks(self.track_repository)
         export_counts = self._create_export_counts(get_sections_by_id, create_events)
         tracks_metadata = self._create_tracks_metadata()
-        videos_metadata = VideosMetadata()
         export_tracks = CsvTrackExport(
-            self.track_repository, tracks_metadata, videos_metadata
+            self.track_repository, tracks_metadata, self.videos_metadata
         )
         export_road_user_assignments = self.create_export_road_user_assignments(
             get_all_tracks, create_events
@@ -780,7 +779,7 @@ class ApplicationStarter:
                 get_all_track_ids,
                 clear_all_tracks,
                 tracks_metadata,
-                videos_metadata,
+                self.videos_metadata,
                 export_tracks,
                 export_road_user_assignments,
                 export_track_statistics,
@@ -805,7 +804,7 @@ class ApplicationStarter:
                 get_all_track_ids,
                 clear_all_tracks,
                 tracks_metadata,
-                videos_metadata,
+                self.videos_metadata,
                 export_tracks,
                 export_road_user_assignments,
                 stream_track_parser,
@@ -915,7 +914,6 @@ class ApplicationStarter:
         self,
         datastore: Datastore,
         track_view_state: TrackViewState,
-        videos_metadata: VideosMetadata,
         flow_state: FlowState,
         section_state: SectionState,
         pulling_progressbar_builder: ProgressbarBuilder,
@@ -926,7 +924,7 @@ class ApplicationStarter:
             datastore,
             self.intersection_repository,
             track_view_state,
-            videos_metadata,
+            self.videos_metadata,
             section_state,
             color_palette_provider,
             pulling_progressbar_builder,
@@ -1125,7 +1123,6 @@ class ApplicationStarter:
         track_to_video_repository: TrackToVideoRepository,
         progressbar: ProgressbarBuilder,
         tracks_metadata: TracksMetadata,
-        videos_metadata: VideosMetadata,
     ) -> LoadTrackFiles:
         track_parser = self._create_track_parser()
         track_video_parser = OttrkVideoParser(video_parser)
@@ -1138,11 +1135,13 @@ class ApplicationStarter:
             track_to_video_repository,
             progressbar,
             tracks_metadata,
-            videos_metadata,
+            self.videos_metadata,
         )
 
-    def _create_video_parser(self, videos_metadata: VideosMetadata) -> VideoParser:
-        return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(videos_metadata)))
+    def _create_video_parser(self) -> VideoParser:
+        return CachedVideoParser(
+            SimpleVideoParser(PyAvVideoReader(self.videos_metadata))
+        )
 
     def _create_remark_repository(self) -> RemarkRepository:
         return RemarkRepository()
