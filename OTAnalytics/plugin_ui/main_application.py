@@ -366,7 +366,6 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        load_otflow = self._create_use_case_load_otflow()
         load_track_files = self._create_load_tracks_file()
         clear_repositories = self._create_use_case_clear_all_repositories()
         project_updater = self._create_project_updater()
@@ -480,7 +479,7 @@ class ApplicationStarter:
             intersect_tracks_with_sections,
             export_counts,
             create_events,
-            load_otflow,
+            self.load_otflow,
             self.add_section,
             self.add_flow,
             self.clear_all_events,
@@ -568,7 +567,7 @@ class ApplicationStarter:
         start_new_project.register(dummy_viewmodel.on_start_new_project)
         self.event_repository.register_observer(track_image_updater.notify_events)
         self.event_repository.register_observer(dummy_viewmodel.update_track_statistics)
-        load_otflow.register(self.file_state.last_saved_config.set)
+        self.load_otflow.register(self.file_state.last_saved_config.set)
         load_otconfig.register(self.file_state.last_saved_config.set)
         load_otconfig.register(dummy_viewmodel.update_remark_view)
         project_updater.register(dummy_viewmodel.update_quick_save_button)
@@ -583,7 +582,6 @@ class ApplicationStarter:
         apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks_intersecting_section)
         preload_input_files = self.create_preload_input_files(
             load_otconfig=load_otconfig,
-            load_otflow=load_otflow,
             load_track_files=load_track_files,
             apply_cli_cuts=apply_cli_cuts,
         )
@@ -1025,7 +1023,8 @@ class ApplicationStarter:
     ) -> TracksIntersectingSections:
         return SimpleTracksIntersectingSections(get_tracks)
 
-    def _create_use_case_load_otflow(self) -> LoadOtflow:
+    @cached_property
+    def load_otflow(self) -> LoadOtflow:
         return LoadOtflow(
             self.clear_all_sections,
             self.clear_all_flows,
@@ -1119,14 +1118,13 @@ class ApplicationStarter:
     def create_preload_input_files(
         self,
         load_otconfig: LoadOtconfig,
-        load_otflow: LoadOtflow,
         load_track_files: LoadTrackFiles,
         apply_cli_cuts: ApplyCliCuts,
     ) -> PreloadInputFiles:
         return PreloadInputFiles(
             load_track_files=load_track_files,
             load_otconfig=load_otconfig,
-            load_otflow=load_otflow,
+            load_otflow=self.load_otflow,
             apply_cli_cuts=apply_cli_cuts,
         )
 
