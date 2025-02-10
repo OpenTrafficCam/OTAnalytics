@@ -366,9 +366,8 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        reset_project_config = self._create_reset_project_config()
         start_new_project = self._create_use_case_start_new_project(
-            self.clear_all_repositories, reset_project_config
+            self.clear_all_repositories
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
             self.get_all_tracks
@@ -1043,18 +1042,17 @@ class ApplicationStarter:
         )
 
     def _create_use_case_start_new_project(
-        self,
-        clear_repositories: ClearRepositories,
-        reset_project_config: ResetProjectConfig,
+        self, clear_repositories: ClearRepositories
     ) -> StartNewProject:
         return StartNewProject(
             clear_repositories,
-            reset_project_config,
+            self.reset_project_config,
             self.track_view_state,
             self.file_state,
         )
 
-    def _create_reset_project_config(self) -> ResetProjectConfig:
+    @cached_property
+    def reset_project_config(self) -> ResetProjectConfig:
         return ResetProjectConfig(self.project_updater)
 
     @cached_property
