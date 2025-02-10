@@ -366,8 +366,7 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        project_updater = self._create_project_updater()
-        reset_project_config = self._create_reset_project_config(project_updater)
+        reset_project_config = self._create_reset_project_config()
         start_new_project = self._create_use_case_start_new_project(
             self.clear_all_repositories, reset_project_config
         )
@@ -410,7 +409,7 @@ class ApplicationStarter:
         load_otconfig = LoadOtconfig(
             self.clear_all_repositories,
             config_parser,
-            project_updater,
+            self.project_updater,
             AddAllVideos(self.video_repository),
             AddAllSections(self.add_section),
             AddAllFlows(self.add_flow),
@@ -482,7 +481,7 @@ class ApplicationStarter:
             self.add_flow,
             self.clear_all_events,
             start_new_project,
-            project_updater,
+            self.project_updater,
             save_otconfig,
             self.load_track_files,
             enable_filter_track_by_date,
@@ -568,10 +567,10 @@ class ApplicationStarter:
         self.load_otflow.register(self.file_state.last_saved_config.set)
         load_otconfig.register(self.file_state.last_saved_config.set)
         load_otconfig.register(dummy_viewmodel.update_remark_view)
-        project_updater.register(dummy_viewmodel.update_quick_save_button)
+        self.project_updater.register(dummy_viewmodel.update_quick_save_button)
         self.track_file_repository.register(dummy_viewmodel.update_quick_save_button)
-        project_updater.register(dummy_viewmodel.show_current_project)
-        project_updater.register(dummy_viewmodel.update_svz_metadata_view)
+        self.project_updater.register(dummy_viewmodel.show_current_project)
+        self.project_updater.register(dummy_viewmodel.update_svz_metadata_view)
 
         for group in layer_groups:
             group.register(track_image_updater.notify_layers)
@@ -1055,13 +1054,11 @@ class ApplicationStarter:
             self.file_state,
         )
 
-    @staticmethod
-    def _create_reset_project_config(
-        project_updater: ProjectUpdater,
-    ) -> ResetProjectConfig:
-        return ResetProjectConfig(project_updater)
+    def _create_reset_project_config(self) -> ResetProjectConfig:
+        return ResetProjectConfig(self.project_updater)
 
-    def _create_project_updater(self) -> ProjectUpdater:
+    @cached_property
+    def project_updater(self) -> ProjectUpdater:
         return ProjectUpdater(self.datastore)
 
     @cached_property
