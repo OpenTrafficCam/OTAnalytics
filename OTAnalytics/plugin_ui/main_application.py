@@ -352,7 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        remove_section = RemoveSection(self.section_repository)
         clear_all_sections = ClearAllSections(self.section_repository)
         generate_flows = self._create_flow_generator(
             FilterOutCuttingSections(self.get_all_sections)
@@ -403,7 +402,7 @@ class ApplicationStarter:
             clear_repositories, reset_project_config
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
-            self.get_all_tracks, remove_section
+            self.get_all_tracks
         )
         enable_filter_track_by_date = EnableFilterTrackByDate(
             self.track_view_state, self.filter_element_settings_restorer
@@ -624,6 +623,10 @@ class ApplicationStarter:
         ).start()
 
     @cached_property
+    def remove_section(self) -> RemoveSection:
+        return RemoveSection(self.section_repository)
+
+    @cached_property
     def add_section(self) -> AddSection:
         return AddSection(self.section_repository)
 
@@ -731,9 +734,7 @@ class ApplicationStarter:
             add_events,
             self.run_config.num_processes,
         )
-        cut_tracks = self._create_cut_tracks_intersecting_section(
-            self.get_all_tracks, RemoveSection(self.section_repository)
-        )
+        cut_tracks = self._create_cut_tracks_intersecting_section(self.get_all_tracks)
         apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks)
         export_counts = self._create_export_counts(create_events)
         export_tracks = CsvTrackExport(
@@ -1080,14 +1081,14 @@ class ApplicationStarter:
         return TrackFileRepository()
 
     def _create_cut_tracks_intersecting_section(
-        self, get_tracks: GetAllTracks, remove_section: RemoveSection
+        self, get_tracks: GetAllTracks
     ) -> CutTracksIntersectingSection:
         return SimpleCutTracksIntersectingSection(
             self.get_sections_by_id,
             get_tracks,
             self.add_all_tracks,
             self.remove_tracks,
-            remove_section,
+            self.remove_section,
         )
 
     def _create_load_tracks_file(self) -> LoadTrackFiles:
