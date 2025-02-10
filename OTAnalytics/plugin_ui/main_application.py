@@ -333,17 +333,13 @@ class ApplicationStarter:
             OTAnalyticsGui,
         )
 
-        road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
-        color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
         clear_all_intersections = ClearAllIntersections(self.intersection_repository)
         self.track_repository.register_tracks_observer(clear_all_intersections)
         self.section_repository.register_sections_observer(clear_all_intersections)
         self.section_repository.register_section_changed_observer(
             clear_all_intersections.on_section_changed
         )
-        layer_groups, layers = self._create_layers(
-            road_user_assigner, color_palette_provider
-        )
+        layer_groups, layers = self._create_layers()
         plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(
             self.datastore, self.track_view_state
@@ -365,7 +361,7 @@ class ApplicationStarter:
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
         tracks_metadata._classifications.register(
-            observer=color_palette_provider.update
+            observer=self.color_palette_provider.update
         )
         action_state = self._create_action_state()
         filter_element_settings_restorer = (
@@ -517,11 +513,10 @@ class ApplicationStarter:
             get_sections,
             tracks_intersecting_sections,
             get_sections_by_id,
-            road_user_assigner,
             get_all_tracks,
         )
         get_road_user_assignments = GetRoadUserAssignments(
-            self.flow_repository, self.event_repository, road_user_assigner
+            self.flow_repository, self.event_repository, self.road_user_assigner
         )
         number_of_tracks_assigned_to_each_flow = NumberOfTracksAssignedToEachFlow(
             get_road_user_assignments, self.flow_repository
@@ -664,6 +659,18 @@ class ApplicationStarter:
         ).start()
 
     @cached_property
+    def color_palette_provider(self) -> ColorPaletteProvider:
+        return ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
+
+    @cached_property
+    def road_user_assigner(self) -> RoadUserAssigner:
+        return FilterBySectionEnterEvent(self.simple_road_user_assigner)
+
+    @cached_property
+    def simple_road_user_assigner(self) -> RoadUserAssigner:
+        return SimpleRoadUserAssigner()
+
+    @cached_property
     def file_state(self) -> FileState:
         return FileState()
 
@@ -735,12 +742,10 @@ class ApplicationStarter:
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
             get_all_tracks
         )
-        road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         calculate_track_statistics = self._create_calculate_track_statistics(
             get_sections,
             tracks_intersecting_sections,
             get_sections_by_id,
-            road_user_assigner,
             get_all_tracks,
         )
         track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
@@ -894,22 +899,18 @@ class ApplicationStarter:
     def track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
-    def _create_layers(
-        self,
-        road_user_assigner: RoadUserAssigner,
-        color_palette_provider: ColorPaletteProvider,
-    ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
+    def _create_layers(self) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
         return VisualizationBuilder(
             self.datastore,
             self.intersection_repository,
             self.track_view_state,
             self.videos_metadata,
             self.section_state,
-            color_palette_provider,
+            self.color_palette_provider,
             self.pulling_progressbar_builder,
         ).build(
             self.flow_state,
-            road_user_assigner,
+            self.road_user_assigner,
         )
 
     @cached_property
@@ -981,7 +982,7 @@ class ApplicationStarter:
             self.flow_repository,
             get_sections_by_id,
             create_events,
-            FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
+            self.road_user_assigner,
             SimpleTaggerFactory(),
             CachedExporterFactory(
                 FillZerosExporterFactory(
@@ -1165,7 +1166,7 @@ class ApplicationStarter:
             self.event_repository,
             self.flow_repository,
             create_events,
-            FilterBySectionEnterEvent(SimpleRoadUserAssigner()),
+            self.road_user_assigner,
             SimpleRoadUserAssignmentExporterFactory(
                 self.section_repository, get_all_tracks
             ),
@@ -1176,7 +1177,6 @@ class ApplicationStarter:
         get_all_sections: GetAllSections,
         tracks_intersecting_sections: TracksIntersectingSections,
         get_section_by_id: GetSectionsById,
-        road_user_assigner: RoadUserAssigner,
         get_all_tracks: GetAllTracks,
     ) -> CalculateTrackStatistics:
         get_cutting_sections = GetCuttingSections(self.section_repository)
@@ -1188,7 +1188,7 @@ class ApplicationStarter:
             self.intersection_repository,
         )
         tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
-            road_user_assigner, self.event_repository, self.flow_repository
+            self.road_user_assigner, self.event_repository, self.flow_repository
         )
         track_ids_inside_cutting_sections = TrackIdsInsideCuttingSections(
             get_all_tracks, get_cutting_sections
