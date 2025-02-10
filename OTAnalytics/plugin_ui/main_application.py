@@ -334,7 +334,6 @@ class ApplicationStarter:
             OTAnalyticsGui,
         )
 
-        datastore = self._create_datastore()
         flow_parser = self._create_flow_parser()
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
@@ -350,7 +349,6 @@ class ApplicationStarter:
             clear_all_intersections.on_section_changed
         )
         layer_groups, layers = self._create_layers(
-            datastore,
             track_view_state,
             flow_state,
             section_state,
@@ -358,14 +356,14 @@ class ApplicationStarter:
             color_palette_provider,
         )
         plotter = LayeredPlotter(layers=layers)
-        properties_updater = TrackPropertiesUpdater(datastore, track_view_state)
+        properties_updater = TrackPropertiesUpdater(self.datastore, track_view_state)
         image_updater = TrackImageUpdater(
-            datastore, track_view_state, section_state, flow_state, plotter
+            self.datastore, track_view_state, section_state, flow_state, plotter
         )
         track_view_state.selected_videos.register(properties_updater.notify_videos)
         track_view_state.selected_videos.register(image_updater.notify_video)
         selected_video_updater = SelectedVideoUpdate(
-            datastore, track_view_state, self.videos_metadata
+            self.datastore, track_view_state, self.videos_metadata
         )
 
         tracks_metadata = self._create_tracks_metadata()
@@ -444,7 +442,7 @@ class ApplicationStarter:
             clear_all_tracks,
             clear_all_videos,
         )
-        project_updater = self._create_project_updater(datastore)
+        project_updater = self._create_project_updater()
         reset_project_config = self._create_reset_project_config(project_updater)
         start_new_project = self._create_use_case_start_new_project(
             clear_repositories, reset_project_config, track_view_state, file_state
@@ -481,7 +479,7 @@ class ApplicationStarter:
         get_current_remark = GetCurrentRemark(self.remark_repository)
         config_parser = self.create_config_parser()
         save_otconfig = SaveOtconfig(
-            datastore, config_parser, file_state, get_current_remark
+            self.datastore, config_parser, file_state, get_current_remark
         )
         quick_save_configuration = QuickSaveConfiguration(
             file_state, save_otflow, save_otconfig
@@ -499,7 +497,7 @@ class ApplicationStarter:
             parse_json,
         )
         get_all_videos = GetAllVideos(self.video_repository)
-        get_current_project = GetCurrentProject(datastore)
+        get_current_project = GetCurrentProject(self.datastore)
         config_has_changed = ConfigHasChanged(
             OtconfigHasChanged(
                 config_parser,
@@ -543,7 +541,7 @@ class ApplicationStarter:
             calculate_track_statistics, track_statistics_export_factory
         )
         application = OTAnalyticsApplication(
-            datastore,
+            self.datastore,
             track_state,
             track_view_state,
             section_state,
@@ -636,11 +634,11 @@ class ApplicationStarter:
         cut_tracks_intersecting_section.register(dummy_viewmodel.on_tracks_cut)
         dummy_viewmodel.register_observers()
         application.connect_observers()
-        datastore.register_tracks_observer(selected_video_updater)
-        datastore.register_tracks_observer(dummy_viewmodel)
-        datastore.register_tracks_observer(image_updater)
-        datastore.register_video_observer(selected_video_updater)
-        datastore.register_section_changed_observer(
+        self.datastore.register_tracks_observer(selected_video_updater)
+        self.datastore.register_tracks_observer(dummy_viewmodel)
+        self.datastore.register_tracks_observer(image_updater)
+        self.datastore.register_video_observer(selected_video_updater)
+        self.datastore.register_section_changed_observer(
             image_updater.notify_section_changed
         )
         start_new_project.register(dummy_viewmodel.on_start_new_project)
@@ -807,7 +805,8 @@ class ApplicationStarter:
 
         cli.start()
 
-    def _create_datastore(self) -> Datastore:
+    @cached_property
+    def datastore(self) -> Datastore:
         """
         Build all required objects and inject them where necessary
 
@@ -898,7 +897,6 @@ class ApplicationStarter:
 
     def _create_layers(
         self,
-        datastore: Datastore,
         track_view_state: TrackViewState,
         flow_state: FlowState,
         section_state: SectionState,
@@ -906,7 +904,7 @@ class ApplicationStarter:
         color_palette_provider: ColorPaletteProvider,
     ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
         return VisualizationBuilder(
-            datastore,
+            self.datastore,
             self.intersection_repository,
             track_view_state,
             self.videos_metadata,
@@ -1077,9 +1075,8 @@ class ApplicationStarter:
     ) -> ResetProjectConfig:
         return ResetProjectConfig(project_updater)
 
-    @staticmethod
-    def _create_project_updater(datastore: Datastore) -> ProjectUpdater:
-        return ProjectUpdater(datastore)
+    def _create_project_updater(self) -> ProjectUpdater:
+        return ProjectUpdater(self.datastore)
 
     @cached_property
     def track_file_repository(self) -> TrackFileRepository:
