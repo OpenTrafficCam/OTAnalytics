@@ -352,8 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        clear_all_flows = ClearAllFlows(self.flow_repository)
-
         add_events = AddEvents(self.event_repository)
         clear_all_events = ClearAllEvents(self.event_repository)
 
@@ -380,15 +378,10 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        load_otflow = self._create_use_case_load_otflow(
-            clear_all_flows, clear_all_events
-        )
+        load_otflow = self._create_use_case_load_otflow(clear_all_events)
         load_track_files = self._create_load_tracks_file()
         clear_repositories = self._create_use_case_clear_all_repositories(
-            clear_all_events,
-            clear_all_flows,
-            clear_all_track_to_videos,
-            clear_all_videos,
+            clear_all_events, clear_all_track_to_videos, clear_all_videos
         )
         project_updater = self._create_project_updater()
         reset_project_config = self._create_reset_project_config(project_updater)
@@ -615,6 +608,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def clear_all_flows(self) -> ClearAllFlows:
+        return ClearAllFlows(self.flow_repository)
 
     @cached_property
     def add_flow(self) -> AddFlow:
@@ -1022,11 +1019,11 @@ class ApplicationStarter:
         return SimpleTracksIntersectingSections(get_tracks)
 
     def _create_use_case_load_otflow(
-        self, clear_all_flows: ClearAllFlows, clear_all_events: ClearAllEvents
+        self, clear_all_events: ClearAllEvents
     ) -> LoadOtflow:
         return LoadOtflow(
             self.clear_all_sections,
-            clear_all_flows,
+            self.clear_all_flows,
             clear_all_events,
             self.flow_parser,
             self.add_section,
@@ -1037,13 +1034,12 @@ class ApplicationStarter:
     def _create_use_case_clear_all_repositories(
         self,
         clear_all_events: ClearAllEvents,
-        clear_all_flows: ClearAllFlows,
         clear_all_track_to_videos: ClearAllTrackToVideos,
         clear_all_videos: ClearAllVideos,
     ) -> ClearRepositories:
         return ClearRepositories(
             clear_all_events,
-            clear_all_flows,
+            self.clear_all_flows,
             self.clear_all_intersections,
             self.clear_all_sections,
             clear_all_track_to_videos,
