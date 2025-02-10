@@ -366,11 +366,10 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        clear_repositories = self._create_use_case_clear_all_repositories()
         project_updater = self._create_project_updater()
         reset_project_config = self._create_reset_project_config(project_updater)
         start_new_project = self._create_use_case_start_new_project(
-            clear_repositories, reset_project_config
+            self.clear_all_repositories, reset_project_config
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
             self.get_all_tracks
@@ -409,7 +408,7 @@ class ApplicationStarter:
         )
         add_new_remark = AddNewRemark(self.remark_repository)
         load_otconfig = LoadOtconfig(
-            clear_repositories,
+            self.clear_all_repositories,
             config_parser,
             project_updater,
             AddAllVideos(self.video_repository),
@@ -1032,7 +1031,8 @@ class ApplicationStarter:
             parse_json,
         )
 
-    def _create_use_case_clear_all_repositories(self) -> ClearRepositories:
+    @cached_property
+    def clear_all_repositories(self) -> ClearRepositories:
         return ClearRepositories(
             self.clear_all_events,
             self.clear_all_flows,
