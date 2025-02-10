@@ -367,7 +367,6 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        add_new_remark = AddNewRemark(self.remark_repository)
         load_otconfig = LoadOtconfig(
             self.clear_all_repositories,
             self.otconfig_parser,
@@ -376,7 +375,7 @@ class ApplicationStarter:
             AddAllSections(self.add_section),
             AddAllFlows(self.add_flow),
             self.load_track_files,
-            add_new_remark,
+            self.add_new_remark,
             parse_json,
         )
         get_all_videos = GetAllVideos(self.video_repository)
@@ -552,6 +551,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def add_new_remark(self) -> AddNewRemark:
+        return AddNewRemark(self.remark_repository)
 
     @cached_property
     def quick_save_configuration(self) -> QuickSaveConfiguration:
