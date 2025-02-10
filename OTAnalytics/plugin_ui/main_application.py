@@ -367,10 +367,9 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        get_current_remark = GetCurrentRemark(self.remark_repository)
         config_parser = self.create_config_parser()
         save_otconfig = SaveOtconfig(
-            self.datastore, config_parser, self.file_state, get_current_remark
+            self.datastore, config_parser, self.file_state, self.get_current_remark
         )
         quick_save_configuration = QuickSaveConfiguration(
             self.file_state, self.save_otflow, save_otconfig
@@ -397,7 +396,7 @@ class ApplicationStarter:
                 get_current_project,
                 get_all_videos,
                 self.get_all_track_files,
-                get_current_remark,
+                self.get_current_remark,
             ),
             OtflowHasChanged(
                 self.flow_parser, self.get_all_sections, self.get_all_flows
@@ -469,7 +468,7 @@ class ApplicationStarter:
             calculate_track_statistics,
             number_of_tracks_assigned_to_each_flow,
             export_track_statistics,
-            get_current_remark,
+            self.get_current_remark,
         )
         self.section_repository.register_sections_observer(
             self.cut_tracks_intersecting_section
@@ -560,6 +559,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def get_current_remark(self) -> GetCurrentRemark:
+        return GetCurrentRemark(self.remark_repository)
 
     @cached_property
     def save_otflow(self) -> SaveOtflow:
