@@ -342,7 +342,6 @@ class ApplicationStarter:
             pulling_progressbar_popup_builder
         )
 
-        intersection_repository = self._create_intersection_repository()
         event_repository = self._create_event_repository()
         videos_metadata = VideosMetadata()
         video_parser = self._create_video_parser(videos_metadata)
@@ -365,7 +364,7 @@ class ApplicationStarter:
         file_state = FileState()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         color_palette_provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
-        clear_all_intersections = ClearAllIntersections(intersection_repository)
+        clear_all_intersections = ClearAllIntersections(self.intersection_repository)
         self.track_repository.register_tracks_observer(clear_all_intersections)
         self.section_repository.register_sections_observer(clear_all_intersections)
         self.section_repository.register_section_changed_observer(
@@ -373,7 +372,6 @@ class ApplicationStarter:
         )
         layer_groups, layers = self._create_layers(
             datastore,
-            intersection_repository,
             track_view_state,
             videos_metadata,
             flow_state,
@@ -561,7 +559,6 @@ class ApplicationStarter:
             get_sections,
             tracks_intersecting_sections,
             get_sections_by_id,
-            intersection_repository,
             road_user_assigner,
             event_repository,
             get_all_tracks,
@@ -758,13 +755,11 @@ class ApplicationStarter:
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
             get_all_tracks
         )
-        intersection_repository = self._create_intersection_repository()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
         calculate_track_statistics = self._create_calculate_track_statistics(
             get_sections,
             tracks_intersecting_sections,
             get_sections_by_id,
-            intersection_repository,
             road_user_assigner,
             event_repository,
             get_all_tracks,
@@ -909,7 +904,8 @@ class ApplicationStarter:
     def flow_repository(self) -> FlowRepository:
         return FlowRepository()
 
-    def _create_intersection_repository(self) -> IntersectionRepository:
+    @cached_property
+    def intersection_repository(self) -> IntersectionRepository:
         return PythonIntersectionRepository()
 
     def _create_event_repository(self) -> EventRepository:
@@ -927,7 +923,6 @@ class ApplicationStarter:
     def _create_layers(
         self,
         datastore: Datastore,
-        intersection_repository: IntersectionRepository,
         track_view_state: TrackViewState,
         videos_metadata: VideosMetadata,
         flow_state: FlowState,
@@ -938,7 +933,7 @@ class ApplicationStarter:
     ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
         return VisualizationBuilder(
             datastore,
-            intersection_repository,
+            self.intersection_repository,
             track_view_state,
             videos_metadata,
             section_state,
@@ -1219,7 +1214,6 @@ class ApplicationStarter:
         get_all_sections: GetAllSections,
         tracks_intersecting_sections: TracksIntersectingSections,
         get_section_by_id: GetSectionsById,
-        intersection_repository: IntersectionRepository,
         road_user_assigner: RoadUserAssigner,
         event_repository: EventRepository,
         get_all_tracks: GetAllTracks,
@@ -1230,7 +1224,7 @@ class ApplicationStarter:
             get_all_sections,
             tracks_intersecting_sections,
             get_section_by_id,
-            intersection_repository,
+            self.intersection_repository,
         )
         tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
             road_user_assigner, event_repository, self.flow_repository
