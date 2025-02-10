@@ -352,7 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        clear_all_videos = ClearAllVideos(self.video_repository)
         clear_all_track_to_videos = ClearAllTrackToVideos(
             self.track_to_video_repository
         )
@@ -374,7 +373,7 @@ class ApplicationStarter:
         load_otflow = self._create_use_case_load_otflow()
         load_track_files = self._create_load_tracks_file()
         clear_repositories = self._create_use_case_clear_all_repositories(
-            clear_all_track_to_videos, clear_all_videos
+            clear_all_track_to_videos
         )
         project_updater = self._create_project_updater()
         reset_project_config = self._create_reset_project_config(project_updater)
@@ -601,6 +600,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def clear_all_videos(self) -> ClearAllVideos:
+        return ClearAllVideos(self.video_repository)
 
     @cached_property
     def clear_all_events(self) -> ClearAllEvents:
@@ -1030,9 +1033,7 @@ class ApplicationStarter:
         )
 
     def _create_use_case_clear_all_repositories(
-        self,
-        clear_all_track_to_videos: ClearAllTrackToVideos,
-        clear_all_videos: ClearAllVideos,
+        self, clear_all_track_to_videos: ClearAllTrackToVideos
     ) -> ClearRepositories:
         return ClearRepositories(
             self.clear_all_events,
@@ -1041,7 +1042,7 @@ class ApplicationStarter:
             self.clear_all_sections,
             clear_all_track_to_videos,
             self.clear_all_tracks,
-            clear_all_videos,
+            self.clear_all_videos,
         )
 
     def _create_use_case_start_new_project(
