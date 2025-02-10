@@ -366,9 +366,6 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
-            self.get_all_tracks
-        )
         enable_filter_track_by_date = EnableFilterTrackByDate(
             self.track_view_state, self.filter_element_settings_restorer
         )
@@ -496,12 +493,14 @@ class ApplicationStarter:
             get_current_remark,
         )
         self.section_repository.register_sections_observer(
-            cut_tracks_intersecting_section
+            self.cut_tracks_intersecting_section
         )
         self.section_repository.register_section_changed_observer(
-            cut_tracks_intersecting_section.notify_section_changed
+            self.cut_tracks_intersecting_section.notify_section_changed
         )
-        cut_tracks_intersecting_section.register(self.clear_all_events.on_tracks_cut)
+        self.cut_tracks_intersecting_section.register(
+            self.clear_all_events.on_tracks_cut
+        )
         application.connect_clear_event_repository_observer()
         name_generator = ArrowFlowNameGenerator()
         dummy_viewmodel = DummyViewModel(
@@ -547,7 +546,7 @@ class ApplicationStarter:
         # cut_tracks_intersecting_section.register(
         #    cached_pandas_track_provider.on_tracks_cut
         # )
-        cut_tracks_intersecting_section.register(dummy_viewmodel.on_tracks_cut)
+        self.cut_tracks_intersecting_section.register(dummy_viewmodel.on_tracks_cut)
         dummy_viewmodel.register_observers()
         application.connect_observers()
         self.datastore.register_tracks_observer(self.selected_video_updater)
@@ -572,9 +571,8 @@ class ApplicationStarter:
             group.register(track_image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         self.pulling_progressbar_popup_builder.add_widget(main_window)
-        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks_intersecting_section)
         preload_input_files = self.create_preload_input_files(
-            load_otconfig=load_otconfig, apply_cli_cuts=apply_cli_cuts
+            load_otconfig=load_otconfig
         )
         OTAnalyticsGui(
             main_window,
@@ -726,8 +724,6 @@ class ApplicationStarter:
             self.get_tracks_without_single_detections,
             self.run_config.num_processes,
         )
-        cut_tracks = self._create_cut_tracks_intersecting_section(self.get_all_tracks)
-        apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks)
         export_counts = self._create_export_counts(create_events)
         export_tracks = CsvTrackExport(
             self.track_repository, self.tracks_metadata, self.videos_metadata
@@ -761,7 +757,7 @@ class ApplicationStarter:
                 create_events,
                 export_counts,
                 provide_available_eventlist_exporter,
-                apply_cli_cuts,
+                self.apply_cli_cuts,
                 self.add_all_tracks,
                 get_all_track_ids,
                 self.clear_all_tracks,
@@ -786,7 +782,7 @@ class ApplicationStarter:
                 export_counts,
                 export_track_statistics,
                 provide_available_eventlist_exporter,
-                apply_cli_cuts,
+                self.apply_cli_cuts,
                 self.add_all_tracks,
                 get_all_track_ids,
                 self.clear_all_tracks,
@@ -1059,12 +1055,11 @@ class ApplicationStarter:
     def track_file_repository(self) -> TrackFileRepository:
         return TrackFileRepository()
 
-    def _create_cut_tracks_intersecting_section(
-        self, get_tracks: GetAllTracks
-    ) -> CutTracksIntersectingSection:
+    @cached_property
+    def cut_tracks_intersecting_section(self) -> CutTracksIntersectingSection:
         return SimpleCutTracksIntersectingSection(
             self.get_sections_by_id,
-            get_tracks,
+            self.get_all_tracks,
             self.add_all_tracks,
             self.remove_tracks,
             self.remove_section,
@@ -1105,19 +1100,21 @@ class ApplicationStarter:
         return TrackToVideoRepository()
 
     def create_preload_input_files(
-        self, load_otconfig: LoadOtconfig, apply_cli_cuts: ApplyCliCuts
+        self, load_otconfig: LoadOtconfig
     ) -> PreloadInputFiles:
         return PreloadInputFiles(
             load_track_files=self.load_track_files,
             load_otconfig=load_otconfig,
             load_otflow=self.load_otflow,
-            apply_cli_cuts=apply_cli_cuts,
+            apply_cli_cuts=self.apply_cli_cuts,
         )
 
-    def create_apply_cli_cuts(
-        self, cut_tracks: CutTracksIntersectingSection
-    ) -> ApplyCliCuts:
-        return ApplyCliCuts(cut_tracks, TrackRepositorySize(self.track_repository))
+    @cached_property
+    def apply_cli_cuts(self) -> ApplyCliCuts:
+        return ApplyCliCuts(
+            self.cut_tracks_intersecting_section,
+            TrackRepositorySize(self.track_repository),
+        )
 
     def create_config_parser(self) -> OtConfigParser:
         format_fixer = self._create_format_fixer(self.run_config)
