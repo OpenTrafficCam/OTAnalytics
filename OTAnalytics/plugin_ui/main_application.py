@@ -352,7 +352,6 @@ class ApplicationStarter:
             observer=self.color_palette_provider.update
         )
 
-        remove_tracks = RemoveTracks(self.track_repository)
         clear_all_tracks = ClearAllTracks(self.track_repository)
 
         get_sections = GetAllSections(self.section_repository)
@@ -410,7 +409,7 @@ class ApplicationStarter:
             clear_repositories, reset_project_config
         )
         cut_tracks_intersecting_section = self._create_cut_tracks_intersecting_section(
-            get_sections_by_id, self.get_all_tracks, remove_tracks, remove_section
+            get_sections_by_id, self.get_all_tracks, remove_section
         )
         enable_filter_track_by_date = EnableFilterTrackByDate(
             self.track_view_state, self.filter_element_settings_restorer
@@ -631,6 +630,10 @@ class ApplicationStarter:
         ).start()
 
     @cached_property
+    def remove_tracks(self) -> RemoveTracks:
+        return RemoveTracks(self.track_repository)
+
+    @cached_property
     def add_all_tracks(self) -> AddAllTracks:
         return AddAllTracks(self.track_repository)
 
@@ -724,7 +727,6 @@ class ApplicationStarter:
         cut_tracks = self._create_cut_tracks_intersecting_section(
             GetSectionsById(self.section_repository),
             self.get_all_tracks,
-            RemoveTracks(self.track_repository),
             RemoveSection(self.section_repository),
         )
         apply_cli_cuts = self.create_apply_cli_cuts(cut_tracks)
@@ -1082,14 +1084,13 @@ class ApplicationStarter:
         self,
         get_sections_by_id: GetSectionsById,
         get_tracks: GetAllTracks,
-        remove_tracks: RemoveTracks,
         remove_section: RemoveSection,
     ) -> CutTracksIntersectingSection:
         return SimpleCutTracksIntersectingSection(
             get_sections_by_id,
             get_tracks,
             self.add_all_tracks,
-            remove_tracks,
+            self.remove_tracks,
             remove_section,
         )
 
