@@ -367,9 +367,8 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        get_flows = GetAllFlows(self.flow_repository)
         save_otflow = SaveOtflow(
-            self.flow_parser, self.get_all_sections, get_flows, self.file_state
+            self.flow_parser, self.get_all_sections, self.get_all_flows, self.file_state
         )
         get_current_remark = GetCurrentRemark(self.remark_repository)
         config_parser = self.create_config_parser()
@@ -397,13 +396,15 @@ class ApplicationStarter:
             OtconfigHasChanged(
                 config_parser,
                 self.get_all_sections,
-                get_flows,
+                self.get_all_flows,
                 get_current_project,
                 get_all_videos,
                 self.get_all_track_files,
                 get_current_remark,
             ),
-            OtflowHasChanged(self.flow_parser, self.get_all_sections, get_flows),
+            OtflowHasChanged(
+                self.flow_parser, self.get_all_sections, self.get_all_flows
+            ),
             self.file_state,
         )
         export_road_user_assignments = self.create_export_road_user_assignments(
@@ -562,6 +563,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def get_all_flows(self) -> GetAllFlows:
+        return GetAllFlows(self.flow_repository)
 
     @cached_property
     def switch_to_event(self) -> SwitchToEvent:
