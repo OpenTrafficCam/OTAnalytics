@@ -296,17 +296,16 @@ class ApplicationStarter:
         cli_args = cli_args_parser.parse()
         cli_value_provider: OtConfigDefaultValueProvider = CliValueProvider(cli_args)
         format_fixer = self._create_format_fixer(cli_value_provider)
-        flow_parser = self._create_flow_parser()
         config_parser = OtConfigParser(
             format_fixer=format_fixer,
             video_parser=self.video_parser,
-            flow_parser=flow_parser,
+            flow_parser=self.flow_parser,
         )
 
         if config_file := cli_args.config_file:
             config = config_parser.parse(Path(config_file))
-            return RunConfiguration(flow_parser, cli_args, config)
-        return RunConfiguration(flow_parser, cli_args, None)
+            return RunConfiguration(self.flow_parser, cli_args, config)
+        return RunConfiguration(self.flow_parser, cli_args, None)
 
     @staticmethod
     def _create_format_fixer(
@@ -334,7 +333,6 @@ class ApplicationStarter:
             OTAnalyticsGui,
         )
 
-        flow_parser = self._create_flow_parser()
         track_state = self._create_track_state()
         track_view_state = self._create_track_view_state()
         section_state = self._create_section_state()
@@ -425,12 +423,7 @@ class ApplicationStarter:
         )
         export_counts = self._create_export_counts(get_sections_by_id, create_events)
         load_otflow = self._create_use_case_load_otflow(
-            clear_all_sections,
-            clear_all_flows,
-            clear_all_events,
-            flow_parser,
-            add_section,
-            add_flow,
+            clear_all_sections, clear_all_flows, clear_all_events, add_section, add_flow
         )
         load_track_files = self._create_load_tracks_file(tracks_metadata)
         clear_repositories = self._create_use_case_clear_all_repositories(
@@ -475,7 +468,7 @@ class ApplicationStarter:
             create_default_filter=create_default_filter,
         )
         get_flows = GetAllFlows(self.flow_repository)
-        save_otflow = SaveOtflow(flow_parser, get_sections, get_flows, file_state)
+        save_otflow = SaveOtflow(self.flow_parser, get_sections, get_flows, file_state)
         get_current_remark = GetCurrentRemark(self.remark_repository)
         config_parser = self.create_config_parser()
         save_otconfig = SaveOtconfig(
@@ -508,7 +501,7 @@ class ApplicationStarter:
                 get_all_track_files,
                 get_current_remark,
             ),
-            OtflowHasChanged(flow_parser, get_sections, get_flows),
+            OtflowHasChanged(self.flow_parser, get_sections, get_flows),
             file_state,
         )
         export_road_user_assignments = self.create_export_road_user_assignments(
@@ -590,7 +583,7 @@ class ApplicationStarter:
         name_generator = ArrowFlowNameGenerator()
         dummy_viewmodel = DummyViewModel(
             application,
-            flow_parser,
+            self.flow_parser,
             name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
             show_svz=self.run_config.show_svz,
@@ -871,7 +864,8 @@ class ApplicationStarter:
     def section_repository(self) -> SectionRepository:
         return SectionRepository()
 
-    def _create_flow_parser(self) -> FlowParser:
+    @cached_property
+    def flow_parser(self) -> FlowParser:
         return OtFlowParser()
 
     @cached_property
@@ -1019,12 +1013,11 @@ class ApplicationStarter:
     ) -> TracksIntersectingSections:
         return SimpleTracksIntersectingSections(get_tracks)
 
-    @staticmethod
     def _create_use_case_load_otflow(
+        self,
         clear_all_sections: ClearAllSections,
         clear_all_flows: ClearAllFlows,
         clear_all_events: ClearAllEvents,
-        flow_parser: FlowParser,
         add_section: AddSection,
         add_flow: AddFlow,
     ) -> LoadOtflow:
@@ -1032,7 +1025,7 @@ class ApplicationStarter:
             clear_all_sections,
             clear_all_flows,
             clear_all_events,
-            flow_parser,
+            self.flow_parser,
             add_section,
             add_flow,
             parse_json,
@@ -1153,11 +1146,10 @@ class ApplicationStarter:
         return ApplyCliCuts(cut_tracks, TrackRepositorySize(self.track_repository))
 
     def create_config_parser(self) -> OtConfigParser:
-        flow_parser = self._create_flow_parser()
         format_fixer = self._create_format_fixer(self.run_config)
         return OtConfigParser(
             video_parser=self.video_parser,
-            flow_parser=flow_parser,
+            flow_parser=self.flow_parser,
             format_fixer=format_fixer,
         )
 
