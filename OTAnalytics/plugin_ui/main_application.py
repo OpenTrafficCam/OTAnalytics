@@ -367,14 +367,8 @@ class ApplicationStarter:
             )
         )
         export_counts = self._create_export_counts(create_events)
-        save_otconfig = SaveOtconfig(
-            self.datastore,
-            self.otconfig_parser,
-            self.file_state,
-            self.get_current_remark,
-        )
         quick_save_configuration = QuickSaveConfiguration(
-            self.file_state, self.save_otflow, save_otconfig
+            self.file_state, self.save_otflow, self.save_otconfig
         )
         add_new_remark = AddNewRemark(self.remark_repository)
         load_otconfig = LoadOtconfig(
@@ -455,7 +449,7 @@ class ApplicationStarter:
             self.clear_all_events,
             self.start_new_project,
             self.project_updater,
-            save_otconfig,
+            self.save_otconfig,
             self.load_track_files,
             self.enable_filter_track_by_date,
             self.switch_to_previous,
@@ -561,6 +555,15 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def save_otconfig(self) -> SaveOtconfig:
+        return SaveOtconfig(
+            self.datastore,
+            self.otconfig_parser,
+            self.file_state,
+            self.get_current_remark,
+        )
 
     @cached_property
     def get_current_remark(self) -> GetCurrentRemark:
