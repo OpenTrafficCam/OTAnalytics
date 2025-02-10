@@ -345,9 +345,6 @@ class ApplicationStarter:
             self.track_properties_updater.notify_videos
         )
         self.track_view_state.selected_videos.register(track_image_updater.notify_video)
-        selected_video_updater = SelectedVideoUpdate(
-            self.datastore, self.track_view_state, self.videos_metadata
-        )
 
         tracks_metadata = self._create_tracks_metadata()
         # TODO: Should not register to tracks_metadata._classifications but to
@@ -602,7 +599,7 @@ class ApplicationStarter:
             dummy_viewmodel.change_filter_date_active
         )
         self.track_view_state.filter_element.register(
-            selected_video_updater.on_filter_element_change
+            self.selected_video_updater.on_filter_element_change
         )
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
@@ -612,10 +609,10 @@ class ApplicationStarter:
         cut_tracks_intersecting_section.register(dummy_viewmodel.on_tracks_cut)
         dummy_viewmodel.register_observers()
         application.connect_observers()
-        self.datastore.register_tracks_observer(selected_video_updater)
+        self.datastore.register_tracks_observer(self.selected_video_updater)
         self.datastore.register_tracks_observer(dummy_viewmodel)
         self.datastore.register_tracks_observer(track_image_updater)
-        self.datastore.register_video_observer(selected_video_updater)
+        self.datastore.register_video_observer(self.selected_video_updater)
         self.datastore.register_section_changed_observer(
             track_image_updater.notify_section_changed
         )
@@ -648,6 +645,12 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def selected_video_updater(self) -> SelectedVideoUpdate:
+        return SelectedVideoUpdate(
+            self.datastore, self.track_view_state, self.videos_metadata
+        )
 
     def _create_track_image_updater(self, plotter: LayeredPlotter) -> TrackImageUpdater:
         return TrackImageUpdater(
