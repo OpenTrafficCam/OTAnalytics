@@ -358,11 +358,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def name_generator(self) -> FlowNameGenerator:
         return ArrowFlowNameGenerator()
 
-    def export_track_statistics(
-        self, all_filtered_track_ids: TrackIdProvider
-    ) -> ExportTrackStatistics:
+    @cached_property
+    def export_track_statistics(self) -> ExportTrackStatistics:
         return ExportTrackStatistics(
-            self.calculate_track_statistics(all_filtered_track_ids),
+            self.calculate_track_statistics,
             self.track_statistics_export_factory,
         )
 
@@ -982,9 +981,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             ),
         )
 
-    def calculate_track_statistics(
-        self, all_filtered_track_ids: TrackIdProvider
-    ) -> CalculateTrackStatistics:
+    @cached_property
+    def calculate_track_statistics(self) -> CalculateTrackStatistics:
         tracks_intersecting_all_sections = FilteredTrackIdProviderByTrackIdProvider(
             TracksIntersectingAllNonCuttingSections(
                 self.get_cutting_sections,
@@ -993,13 +991,13 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                 self.get_sections_by_id,
                 self.intersection_repository,
             ),
-            all_filtered_track_ids,
+            self.all_filtered_track_ids,
         )
         tracks_assigned_to_all_flows = FilteredTrackIdProviderByTrackIdProvider(
             TracksAssignedToAllFlows(
                 self.road_user_assigner, self.event_repository, self.flow_repository
             ),
-            all_filtered_track_ids,
+            self.all_filtered_track_ids,
         )
         track_ids_inside_cutting_sections = FilteredTrackIdProviderByTrackIdProvider(
             self._create_cached_track_ids_inside_cutting_sections(
@@ -1008,7 +1006,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                 self.track_repository,
                 self.section_repository,
             ),
-            all_filtered_track_ids,
+            self.all_filtered_track_ids,
         )
         tracks_as_dataframe_provider = TracksAsDataFrameProvider(
             get_all_tracks=self.get_all_tracks,
@@ -1028,7 +1026,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return CalculateTrackStatistics(
             tracks_intersecting_all_sections,
             tracks_assigned_to_all_flows,
-            all_filtered_track_ids,
+            self.all_filtered_track_ids,
             track_ids_inside_cutting_sections,
             number_of_tracks_to_be_validated,
             get_events,
@@ -1051,6 +1049,11 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def get_cutting_sections(self) -> GetCuttingSections:
         return GetCuttingSections(self.section_repository)
+
+    @abstractmethod
+    @cached_property
+    def all_filtered_track_ids(self) -> TrackIdProvider:
+        raise NotImplementedError
 
 
 class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
@@ -1081,9 +1084,6 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             observer=self.color_palette_provider.update
         )
 
-        all_filtered_track_ids = PandasTrackIdProvider(
-            self.visualization_builder._get_data_provider_all_filters_with_offset()
-        )
         application = OTAnalyticsApplication(
             self.datastore,
             self.track_state,
@@ -1118,9 +1118,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.config_has_changed,
             self.export_road_user_assignments,
             self.save_path_suggester,
-            self.calculate_track_statistics(all_filtered_track_ids),
+            self.calculate_track_statistics,
             self.number_of_tracks_assigned_to_each_flow,
-            self.export_track_statistics(all_filtered_track_ids),
+            self.export_track_statistics,
             self.get_current_remark,
         )
         self.section_repository.register_sections_observer(
@@ -1215,6 +1215,12 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         ).start()
 
     @cached_property
+    def all_filtered_track_ids(self) -> TrackIdProvider:
+        return PandasTrackIdProvider(
+            self.visualization_builder._get_data_provider_all_filters_with_offset()
+        )
+
+    @cached_property
     def create_events(self) -> CreateEvents:
         return self._create_use_case_create_events(
             self.section_provider_event_creation_ui,
@@ -1237,7 +1243,6 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
 
 class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def start_cli(self) -> None:
-        all_filtered_track_ids = AllTrackIdsProvider(self.track_repository)
         cli: OTAnalyticsCli
         if self.run_config.cli_bulk_mode:
             track_parser = self._create_track_parser()
@@ -1259,7 +1264,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
                 self.videos_metadata,
                 self.csv_track_export,
                 self.export_road_user_assignments,
-                self.export_track_statistics(all_filtered_track_ids),
+                self.export_track_statistics,
                 track_parser,
                 progressbar=TqdmBuilder(),
             )
@@ -1274,7 +1279,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
                 self.add_flow,
                 self.create_events,
                 self.export_counts,
-                self.export_track_statistics(all_filtered_track_ids),
+                self.export_track_statistics,
                 provide_available_eventlist_exporter,
                 self.apply_cli_cuts,
                 self.add_all_tracks,
@@ -1288,6 +1293,10 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
             )
 
         cli.start()
+
+    @cached_property
+    def all_filtered_track_ids(self) -> TrackIdProvider:
+        return AllTrackIdsProvider(self.track_repository)
 
     @cached_property
     def create_events(self) -> CreateEvents:
