@@ -7,6 +7,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import 
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     ProjectForm,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
+    SvzMetadataForm,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
     VisualizationFilters,
 )
@@ -47,11 +50,15 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def configuration_bar(self) -> ConfigurationBar:
-        return ConfigurationBar(self.project_frame)
+        return ConfigurationBar(self.project_form, self.svz_metadata_form)
 
     @cached_property
-    def project_frame(self) -> ProjectForm:
-        return ProjectForm()
+    def project_form(self) -> ProjectForm:
+        return ProjectForm(self.view_model)
+
+    @cached_property
+    def svz_metadata_form(self) -> SvzMetadataForm:
+        return SvzMetadataForm(self.view_model)
 
     @cached_property
     def workspace(self) -> Workspace:

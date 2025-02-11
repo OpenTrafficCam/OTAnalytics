@@ -7,6 +7,7 @@ from nicegui.elements.checkbox import Checkbox
 from nicegui.elements.input import Input
 from nicegui.elements.mixins.validation_element import ValidationElement
 from nicegui.elements.number import Number
+from nicegui.events import ValueChangeEventArguments
 
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     MissingInstanceError,
@@ -184,6 +185,7 @@ class FormFieldText(FormField[Input, str]):
         validation: (
             Callable[..., str | None] | dict[str, Callable[..., bool]] | None
         ) = None,
+        on_value_change: Callable[[ValueChangeEventArguments], None] | None = None,
         autogrow: bool = True,
         disabled: bool = False,
         readonly: bool = False,
@@ -193,6 +195,7 @@ class FormFieldText(FormField[Input, str]):
         self._label_text = label_text
         self._initial_value = initial_value
         self._validation = validation
+        self._on_value_change = on_value_change
         self._autogrow = autogrow
         self._disabled = disabled
         self._readonly = readonly
@@ -205,6 +208,8 @@ class FormFieldText(FormField[Input, str]):
             value=self._initial_value,
             validation=self._validation,
         )
+        if self._on_value_change:
+            self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)
         if self._disabled:
             self.element.disable()
