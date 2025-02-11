@@ -371,9 +371,6 @@ class ApplicationStarter:
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
         )
-        export_track_statistics = ExportTrackStatistics(
-            self.calculate_track_statistics, self.track_statistics_export_factory
-        )
         application = OTAnalyticsApplication(
             self.datastore,
             self.track_state,
@@ -410,7 +407,7 @@ class ApplicationStarter:
             self.save_path_suggester,
             self.calculate_track_statistics,
             self.number_of_tracks_assigned_to_each_flow,
-            export_track_statistics,
+            self.export_track_statistics,
             self.get_current_remark,
         )
         self.section_repository.register_sections_observer(
@@ -500,6 +497,12 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def export_track_statistics(self) -> ExportTrackStatistics:
+        return ExportTrackStatistics(
+            self.calculate_track_statistics, self.track_statistics_export_factory
+        )
 
     @cached_property
     def track_statistics_export_factory(self) -> TrackStatisticsExporterFactory:
@@ -791,9 +794,6 @@ class ApplicationStarter:
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
         )
-        export_track_statistics = ExportTrackStatistics(
-            self.calculate_track_statistics, self.track_statistics_export_factory
-        )
 
         cli: OTAnalyticsCli
         if self.run_config.cli_bulk_mode:
@@ -816,7 +816,7 @@ class ApplicationStarter:
                 self.videos_metadata,
                 export_tracks,
                 export_road_user_assignments,
-                export_track_statistics,
+                self.export_track_statistics,
                 track_parser,
                 progressbar=TqdmBuilder(),
             )
@@ -831,7 +831,7 @@ class ApplicationStarter:
                 self.add_flow,
                 create_events,
                 export_counts,
-                export_track_statistics,
+                self.export_track_statistics,
                 provide_available_eventlist_exporter,
                 self.apply_cli_cuts,
                 self.add_all_tracks,
