@@ -793,9 +793,8 @@ class ApplicationStarter:
 
     def start_cli(self) -> None:
         get_all_track_ids = GetAllTrackIds(self.track_repository)
-        section_provider = FilterOutCuttingSections(self.section_repository.get_all)
         create_events = self._create_use_case_create_events(
-            section_provider,
+            self.section_provider_event_creation_cli,
             self.clear_all_events,
             self.get_tracks_without_single_detections,
         )
@@ -857,6 +856,10 @@ class ApplicationStarter:
             )
 
         cli.start()
+
+    @cached_property
+    def section_provider_event_creation_cli(self) -> SectionProvider:
+        return FilterOutCuttingSections(self.section_repository.get_all)
 
     @cached_property
     def datastore(self) -> Datastore:
