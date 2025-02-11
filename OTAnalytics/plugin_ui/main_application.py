@@ -118,7 +118,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksIntersectingAllNonCuttingSections,
 )
 from OTAnalytics.application.use_cases.inside_cutting_section import (
-    TrackIdsInsideCuttingSections,
+    CachedTrackIdsInsideCuttingSections,
 )
 from OTAnalytics.application.use_cases.intersection_repository import (
     ClearAllIntersections,
@@ -148,7 +148,9 @@ from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
+    AllTrackIdsProvider,
     ClearAllTracks,
+    FilteredTrackIdProviderByTrackIdProvider,
     GetAllTrackFiles,
     GetAllTrackIds,
     GetAllTracks,
@@ -175,6 +177,7 @@ from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
+from OTAnalytics.domain.track import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.helpers.time_profiling import log_processing_time
@@ -187,6 +190,7 @@ from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
+from OTAnalytics.plugin_filter.pandas_track_id import PandasTrackIdProvider
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
 )
@@ -376,16 +380,19 @@ class ApplicationStarter:
         section_repository.register_section_changed_observer(
             clear_all_intersections.on_section_changed
         )
-        layer_groups, layers = self._create_layers(
+        visualization_builder = self._create_visualization_builder(
             datastore,
             intersection_repository,
             track_view_state,
             videos_metadata,
-            flow_state,
             section_state,
             pulling_progressbar_builder,
-            road_user_assigner,
             color_palette_provider,
+        )
+        layer_groups, layers = self._create_layers(
+            visualization_builder,
+            flow_state,
+            road_user_assigner,
         )
         plotter = LayeredPlotter(layers=layers)
         properties_updater = TrackPropertiesUpdater(datastore, track_view_state)
@@ -571,7 +578,9 @@ class ApplicationStarter:
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
             get_all_tracks
         )
-
+        get_all_filtered_track_ids = PandasTrackIdProvider(
+            visualization_builder._get_data_provider_all_filters_with_offset()
+        )
         calculate_track_statistics = self._create_calculate_track_statistics(
             get_sections,
             tracks_intersecting_sections,
@@ -580,9 +589,10 @@ class ApplicationStarter:
             road_user_assigner,
             event_repository,
             flow_repository,
-            track_repository,
             section_repository,
             get_all_tracks,
+            get_all_filtered_track_ids,
+            track_repository,
         )
         get_road_user_assignments = GetRoadUserAssignments(
             flow_repository, event_repository, road_user_assigner
@@ -670,6 +680,9 @@ class ApplicationStarter:
         )
         application.track_view_state.filter_element.register(
             dummy_viewmodel._update_date_range
+        )
+        application.track_view_state.filter_element.register(
+            dummy_viewmodel.update_track_statistics
         )
         application.action_state.action_running.register(
             dummy_viewmodel._notify_action_running_state
@@ -785,6 +798,7 @@ class ApplicationStarter:
         )
         intersection_repository = self._create_intersection_repository()
         road_user_assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
+        all_track_ids_provider = AllTrackIdsProvider(track_repository)
         calculate_track_statistics = self._create_calculate_track_statistics(
             get_sections,
             tracks_intersecting_sections,
@@ -793,9 +807,10 @@ class ApplicationStarter:
             road_user_assigner,
             event_repository,
             flow_repository,
-            track_repository,
             section_repository,
             get_all_tracks,
+            all_track_ids_provider,
+            track_repository,
         )
         track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
             SimpleTrackStatisticsExporterFactory()
@@ -961,18 +976,16 @@ class ApplicationStarter:
     def _create_track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
-    def _create_layers(
+    def _create_visualization_builder(
         self,
         datastore: Datastore,
         intersection_repository: IntersectionRepository,
         track_view_state: TrackViewState,
         videos_metadata: VideosMetadata,
-        flow_state: FlowState,
         section_state: SectionState,
         pulling_progressbar_builder: ProgressbarBuilder,
-        road_user_assigner: RoadUserAssigner,
         color_palette_provider: ColorPaletteProvider,
-    ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
+    ) -> VisualizationBuilder:
         return VisualizationBuilder(
             datastore,
             intersection_repository,
@@ -981,7 +994,15 @@ class ApplicationStarter:
             section_state,
             color_palette_provider,
             pulling_progressbar_builder,
-        ).build(
+        )
+
+    def _create_layers(
+        self,
+        visualization_builder: VisualizationBuilder,
+        flow_state: FlowState,
+        road_user_assigner: RoadUserAssigner,
+    ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
+        return visualization_builder.build(
             flow_state,
             road_user_assigner,
         )
@@ -1269,25 +1290,37 @@ class ApplicationStarter:
         road_user_assigner: RoadUserAssigner,
         event_repository: EventRepository,
         flow_repository: FlowRepository,
-        track_repository: TrackRepository,
         section_repository: SectionRepository,
         get_all_tracks: GetAllTracks,
+        all_filtered_track_ids: TrackIdProvider,
+        track_repository: TrackRepository,
     ) -> CalculateTrackStatistics:
         get_cutting_sections = GetCuttingSections(section_repository)
-        tracks_intersecting_all_sections = TracksIntersectingAllNonCuttingSections(
-            get_cutting_sections,
-            get_all_sections,
-            tracks_intersecting_sections,
-            get_section_by_id,
-            intersection_repository,
+        tracks_intersecting_all_sections = FilteredTrackIdProviderByTrackIdProvider(
+            TracksIntersectingAllNonCuttingSections(
+                get_cutting_sections,
+                get_all_sections,
+                tracks_intersecting_sections,
+                get_section_by_id,
+                intersection_repository,
+            ),
+            all_filtered_track_ids,
         )
-        tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
-            road_user_assigner, event_repository, flow_repository
+        tracks_assigned_to_all_flows = FilteredTrackIdProviderByTrackIdProvider(
+            TracksAssignedToAllFlows(
+                road_user_assigner, event_repository, flow_repository
+            ),
+            all_filtered_track_ids,
         )
-        track_ids_inside_cutting_sections = TrackIdsInsideCuttingSections(
-            get_all_tracks, get_cutting_sections
+        track_ids_inside_cutting_sections = FilteredTrackIdProviderByTrackIdProvider(
+            self._create_cached_track_ids_inside_cutting_sections(
+                get_all_tracks,
+                get_cutting_sections,
+                track_repository,
+                section_repository,
+            ),
+            all_filtered_track_ids,
         )
-        get_all_track_ids = GetAllTrackIds(track_repository)
         tracks_as_dataframe_provider = TracksAsDataFrameProvider(
             get_all_tracks=get_all_tracks,
             track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset,
@@ -1306,8 +1339,22 @@ class ApplicationStarter:
         return CalculateTrackStatistics(
             tracks_intersecting_all_sections,
             tracks_assigned_to_all_flows,
-            get_all_track_ids,
+            all_filtered_track_ids,
             track_ids_inside_cutting_sections,
             number_of_tracks_to_be_validated,
             get_events,
         )
+
+    def _create_cached_track_ids_inside_cutting_sections(
+        self,
+        get_all_tracks: GetAllTracks,
+        get_cutting_sections: GetCuttingSections,
+        track_repository: TrackRepository,
+        section_repository: SectionRepository,
+    ) -> CachedTrackIdsInsideCuttingSections:
+        cached = CachedTrackIdsInsideCuttingSections(
+            get_all_tracks, get_cutting_sections
+        )
+        track_repository.register_tracks_observer(cached)
+        section_repository.register_sections_observer(cached)
+        return cached

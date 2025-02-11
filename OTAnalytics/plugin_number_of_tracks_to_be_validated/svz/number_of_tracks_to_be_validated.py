@@ -1,13 +1,15 @@
 from pandas import DataFrame
 
 from OTAnalytics.application.logger import logger
-from OTAnalytics.application.use_cases.highlight_intersections import (
-    TracksAssignedToAllFlows,
-)
 from OTAnalytics.application.use_cases.number_of_tracks_to_be_validated import (
     NumberOfTracksToBeValidated,
 )
-from OTAnalytics.domain.track import OCCURRENCE, TRACK_CLASSIFICATION, TRACK_ID
+from OTAnalytics.domain.track import (
+    OCCURRENCE,
+    TRACK_CLASSIFICATION,
+    TRACK_ID,
+    TrackIdProvider,
+)
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.calculation_strategy import (
     DETECTION_RATE,
     DetectionRateCalculationStrategy,
@@ -29,7 +31,7 @@ class SvzNumberOfTracksToBeValidated(NumberOfTracksToBeValidated):
     def __init__(
         self,
         tracks_provider: TracksAsDataFrameProvider,
-        tracks_assigned_to_all_flows: TracksAssignedToAllFlows,
+        tracks_assigned_to_all_flows: TrackIdProvider,
         detection_rate_strategy: DetectionRateCalculationStrategy,
         metric_rates_builder: MetricRatesBuilder,
     ) -> None:
