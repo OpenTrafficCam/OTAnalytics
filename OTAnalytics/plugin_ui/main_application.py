@@ -21,7 +21,6 @@ from OTAnalytics.application.analysis.traffic_counting import (
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.application import OTAnalyticsApplication
-from OTAnalytics.application.config import DEFAULT_NUM_PROCESSES
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import (
     Datastore,
@@ -362,14 +361,7 @@ class ApplicationStarter:
             self.section_provider_event_creation_ui,
             self.clear_all_events,
             self.get_tracks_without_single_detections,
-            DEFAULT_NUM_PROCESSES,
-        )
-        intersect_tracks_with_sections = (
-            self._create_use_case_create_intersection_events(
-                self.section_provider_event_creation_ui,
-                self.get_all_tracks,
-                DEFAULT_NUM_PROCESSES,
-            )
+            self.run_config.num_processes,
         )
         export_counts = self._create_export_counts(create_events)
         export_road_user_assignments = self.create_export_road_user_assignments(
@@ -391,7 +383,7 @@ class ApplicationStarter:
             self.filter_element_settings_restorer,
             self.get_all_track_files,
             self.flow_generator,
-            intersect_tracks_with_sections,
+            self.create_intersection_events,
             export_counts,
             create_events,
             self.load_otflow,
@@ -1011,15 +1003,13 @@ class ApplicationStarter:
             flow_generator=flow_generator,
         )
 
-    def _create_use_case_create_intersection_events(
-        self,
-        section_provider: SectionProvider,
-        get_tracks: GetAllTracks,
-        num_processes: int,
-    ) -> CreateIntersectionEvents:
-        intersect = self._create_intersect(get_tracks, num_processes)
+    @cached_property
+    def create_intersection_events(self) -> CreateIntersectionEvents:
+        intersect = self._create_intersect(
+            self.get_all_tracks, self.run_config.num_processes
+        )
         return SimpleCreateIntersectionEvents(
-            intersect, section_provider, self.add_events
+            intersect, self.section_provider_event_creation_ui, self.add_events
         )
 
     @staticmethod
