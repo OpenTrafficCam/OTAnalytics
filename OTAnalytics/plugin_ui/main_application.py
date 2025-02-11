@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Sequence
 
 from OTAnalytics.adapter_ui.abstract_progressbar_popup import ProgressbarPopupBuilder
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.adapter_visualization.color_provider import (
     DEFAULT_COLOR_PALETTE,
     ColorPaletteProvider,
@@ -1059,9 +1060,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
 class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def start_gui(self) -> None:
-        from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
-            DummyViewModel,
-        )
         from OTAnalytics.plugin_ui.customtkinter_gui.gui import (
             ModifiedCTk,
             OTAnalyticsGui,
@@ -1095,43 +1093,36 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.clear_all_events.on_tracks_cut
         )
         self.application.connect_clear_event_repository_observer()
-        dummy_viewmodel = DummyViewModel(
-            self.application,
-            self.flow_parser,
-            self.name_generator,
-            event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
-            show_svz=self.run_config.show_svz,
-        )
-        self.application.register_video_observer(dummy_viewmodel)
-        self.application.register_sections_observer(dummy_viewmodel)
-        self.application.register_flows_observer(dummy_viewmodel)
-        self.application.register_flow_changed_observer(dummy_viewmodel.on_flow_changed)
+        self.application.register_video_observer(self.view_model)
+        self.application.register_sections_observer(self.view_model)
+        self.application.register_flows_observer(self.view_model)
+        self.application.register_flow_changed_observer(self.view_model.on_flow_changed)
         self.application.track_view_state.selected_videos.register(
-            dummy_viewmodel.update_selected_videos
+            self.view_model.update_selected_videos
         )
         self.application.section_state.selected_sections.register(
-            dummy_viewmodel.update_selected_sections
+            self.view_model.update_selected_sections
         )
         self.application.flow_state.selected_flows.register(
-            dummy_viewmodel.update_selected_flows
+            self.view_model.update_selected_flows
         )
         self.application.track_view_state.background_image.register(
-            dummy_viewmodel.on_background_updated
+            self.view_model.on_background_updated
         )
         self.application.track_view_state.track_offset.register(
-            dummy_viewmodel.update_offset
+            self.view_model.update_offset
         )
         self.application.track_view_state.filter_element.register(
-            dummy_viewmodel.update_date_range
+            self.view_model.update_date_range
         )
         self.application.track_view_state.filter_element.register(
-            dummy_viewmodel.update_track_statistics
+            self.view_model.update_track_statistics
         )
         self.application.action_state.action_running.register(
-            dummy_viewmodel.notify_action_running_state
+            self.view_model.notify_action_running_state
         )
         self.track_view_state.filter_date_active.register(
-            dummy_viewmodel.change_filter_date_active
+            self.view_model.change_filter_date_active
         )
         self.track_view_state.filter_element.register(
             self.selected_video_updater.on_filter_element_change
@@ -1141,39 +1132,53 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         # cut_tracks_intersecting_section.register(
         #    cached_pandas_track_provider.on_tracks_cut
         # )
-        self.cut_tracks_intersecting_section.register(dummy_viewmodel.on_tracks_cut)
-        dummy_viewmodel.register_observers()
+        self.cut_tracks_intersecting_section.register(self.view_model.on_tracks_cut)
+        self.view_model.register_observers()
         self.application.connect_observers()
         self.datastore.register_tracks_observer(self.selected_video_updater)
-        self.datastore.register_tracks_observer(dummy_viewmodel)
+        self.datastore.register_tracks_observer(self.view_model)
         self.datastore.register_tracks_observer(self.track_image_updater)
         self.datastore.register_video_observer(self.selected_video_updater)
         self.datastore.register_section_changed_observer(
             self.track_image_updater.notify_section_changed
         )
-        self.start_new_project.register(dummy_viewmodel.on_start_new_project)
+        self.start_new_project.register(self.view_model.on_start_new_project)
         self.event_repository.register_observer(self.track_image_updater.notify_events)
-        self.event_repository.register_observer(dummy_viewmodel.update_track_statistics)
+        self.event_repository.register_observer(self.view_model.update_track_statistics)
         self.load_otflow.register(self.file_state.last_saved_config.set)
         self.load_otconfig.register(self.file_state.last_saved_config.set)
-        self.load_otconfig.register(dummy_viewmodel.update_remark_view)
-        self.project_updater.register(dummy_viewmodel.update_quick_save_button)
-        self.track_file_repository.register(dummy_viewmodel.update_quick_save_button)
-        self.project_updater.register(dummy_viewmodel.show_current_project)
-        self.project_updater.register(dummy_viewmodel.update_svz_metadata_view)
+        self.load_otconfig.register(self.view_model.update_remark_view)
+        self.project_updater.register(self.view_model.update_quick_save_button)
+        self.track_file_repository.register(self.view_model.update_quick_save_button)
+        self.project_updater.register(self.view_model.show_current_project)
+        self.project_updater.register(self.view_model.update_svz_metadata_view)
 
         layer_groups, layers = self.layers
         for group in layer_groups:
             group.register(self.track_image_updater.notify_layers)
-        main_window = ModifiedCTk(dummy_viewmodel)
+        main_window = ModifiedCTk(self.view_model)
         self.pulling_progressbar_popup_builder.add_widget(main_window)
         OTAnalyticsGui(
             main_window,
-            dummy_viewmodel,
+            self.view_model,
             layer_groups,
             self.preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def view_model(self) -> ViewModel:
+        from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
+            DummyViewModel,
+        )
+
+        return DummyViewModel(
+            self.application,
+            self.flow_parser,
+            self.name_generator,
+            event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
+            show_svz=self.run_config.show_svz,
+        )
 
     @cached_property
     def application(self) -> OTAnalyticsApplication:
