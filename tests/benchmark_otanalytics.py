@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from functools import cached_property
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -75,7 +74,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     PythonDetectionParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
-from OTAnalytics.plugin_ui.main_application import ApplicationStarter
+from OTAnalytics.plugin_ui.main_application import BaseOtAnalyticsApplicationStarter
 from tests.utils.builders.run_configuration import create_run_config
 
 PYTHON = "PYTHON"
@@ -105,15 +104,6 @@ def _fill_track_repository(
             track_parse_result.detection_metadata.detection_classes
         )
     return DetectionMetadata(frozenset(detection_classes))
-
-
-class BenchmarkApplicationStarter(ApplicationStarter):
-    def __init__(self, run_config: RunConfiguration) -> None:
-        self._run_config = run_config
-
-    @cached_property
-    def run_config(self) -> RunConfiguration:
-        return self._run_config
 
 
 class UseCaseProvider:
@@ -155,7 +145,7 @@ class UseCaseProvider:
         self._include_classes: frozenset[str] = frozenset()
         self._exclude_classes: frozenset[str] = frozenset()
         self._flow_parser = OtFlowParser()
-        self._starter = BenchmarkApplicationStarter(self.run_config)
+        self._starter = BaseOtAnalyticsApplicationStarter(self.run_config)
         track_repository, detection_metadata = self.provide_track_repository(
             self._ottrk_files, dataset_type
         )

@@ -284,8 +284,7 @@ class ApplicationStarter:
         )
         if self.run_config.start_cli:
             try:
-
-                self.start_cli()
+                BaseOtAnalyticsApplicationStarter(self.run_config).start_cli()
                 # add command line tag for activating -> add to PipelineBenchmark,
                 # add github actions for benchmark
                 # regression test lokal runner neben benchmark ->
@@ -294,14 +293,14 @@ class ApplicationStarter:
             except CliParseError as e:
                 logger().exception(e, exc_info=True)
         else:
-            self.start_gui()
+            BaseOtAnalyticsApplicationStarter(self.run_config).start_gui()
 
     @cached_property
     def run_config(self) -> RunConfiguration:
         cli_args_parser = self._build_cli_argument_parser()
         cli_args = cli_args_parser.parse()
         cli_value_provider: OtConfigDefaultValueProvider = CliValueProvider(cli_args)
-        format_fixer = self._create_format_fixer(cli_value_provider)
+        format_fixer = create_format_fixer(cli_value_provider)
         config_parser = OtConfigParser(
             format_fixer=format_fixer,
             video_parser=self.video_parser,
@@ -313,11 +312,19 @@ class ApplicationStarter:
             return RunConfiguration(self.flow_parser, cli_args, config)
         return RunConfiguration(self.flow_parser, cli_args, None)
 
-    @staticmethod
-    def _create_format_fixer(
-        default_value_provider: OtConfigDefaultValueProvider,
-    ) -> OtConfigFormatFixer:
-        return MultiFixer([FixMissingAnalysis(default_value_provider)])
+    @cached_property
+    def video_parser(self) -> VideoParser:
+        return CachedVideoParser(
+            SimpleVideoParser(PyAvVideoReader(self.videos_metadata))
+        )
+
+    @cached_property
+    def flow_parser(self) -> FlowParser:
+        return OtFlowParser()
+
+    @cached_property
+    def videos_metadata(self) -> VideosMetadata:
+        return VideosMetadata()
 
     def _build_cli_argument_parser(self) -> CliParser:
         return ArgparseCliParser()
@@ -329,6 +336,17 @@ class ApplicationStarter:
             )
         else:
             setup_logger(log_file=log_file, overwrite=overwrite, log_level=logging.INFO)
+
+
+def create_format_fixer(
+    default_value_provider: OtConfigDefaultValueProvider,
+) -> OtConfigFormatFixer:
+    return MultiFixer([FixMissingAnalysis(default_value_provider)])
+
+
+class BaseOtAnalyticsApplicationStarter:
+    def __init__(self, run_config: RunConfiguration) -> None:
+        self.run_config = run_config
 
     def start_gui(self) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
@@ -1185,7 +1203,7 @@ class ApplicationStarter:
 
     @cached_property
     def otconfig_parser(self) -> OtConfigParser:
-        format_fixer = self._create_format_fixer(self.run_config)
+        format_fixer = create_format_fixer(self.run_config)
         return OtConfigParser(
             video_parser=self.video_parser,
             flow_parser=self.flow_parser,

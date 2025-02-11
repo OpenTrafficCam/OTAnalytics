@@ -1,4 +1,3 @@
-from functools import cached_property
 from pathlib import Path
 
 import pytest
@@ -7,9 +6,8 @@ from tqdm import tqdm
 
 from OTAnalytics.application.parser.cli_parser import CliMode
 from OTAnalytics.application.parser.flow_parser import FlowParser
-from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser
-from OTAnalytics.plugin_ui.main_application import ApplicationStarter
+from OTAnalytics.plugin_ui.main_application import BaseOtAnalyticsApplicationStarter
 from tests.utils.assertions import assert_two_files_equal_sorted
 from tests.utils.builders.run_configuration import create_run_config
 
@@ -314,14 +312,5 @@ class TestRegressionCompleteApplication:
             cli_mode=cli_mode,
             cli_chunk_size=cli_chunk_size,
         )
-        RegressionApplicationStarter(run_config).start_cli()
+        BaseOtAnalyticsApplicationStarter(run_config).start_cli()
         return save_name
-
-
-class RegressionApplicationStarter(ApplicationStarter):
-    def __init__(self, run_config: RunConfiguration) -> None:
-        self._run_config = run_config
-
-    @cached_property
-    def run_config(self) -> RunConfiguration:
-        return self._run_config
