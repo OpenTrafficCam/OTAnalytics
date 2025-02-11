@@ -1,4 +1,5 @@
 import logging
+from abc import ABC, abstractmethod
 from functools import cached_property
 from pathlib import Path
 from typing import Sequence
@@ -344,7 +345,7 @@ def create_format_fixer(
     return MultiFixer([FixMissingAnalysis(default_value_provider)])
 
 
-class BaseOtAnalyticsApplicationStarter:
+class BaseOtAnalyticsApplicationStarter(ABC):
     def __init__(self, run_config: RunConfiguration) -> None:
         self.run_config = run_config
 
@@ -507,12 +508,6 @@ class BaseOtAnalyticsApplicationStarter:
         )
 
     @cached_property
-    def section_provider_event_creation_ui(self) -> SectionProvider:
-        return FilterOutCuttingSections(
-            MissingEventsSectionProvider(self.section_repository, self.event_repository)
-        )
-
-    @cached_property
     def clear_all_track_to_videos(self) -> ClearAllTrackToVideos:
         return ClearAllTrackToVideos(self.track_to_video_repository)
 
@@ -649,10 +644,6 @@ class BaseOtAnalyticsApplicationStarter:
     @cached_property
     def get_all_track_ids(self) -> GetAllTrackIds:
         return GetAllTrackIds(self.track_repository)
-
-    @cached_property
-    def section_provider_event_creation_cli(self) -> SectionProvider:
-        return FilterOutCuttingSections(self.section_repository.get_all)
 
     @cached_property
     def datastore(self) -> Datastore:
@@ -795,12 +786,6 @@ class BaseOtAnalyticsApplicationStarter:
             section_provider=section_provider,
             flow_repository=self.flow_repository,
             flow_generator=flow_generator,
-        )
-
-    @cached_property
-    def create_intersection_events(self) -> CreateIntersectionEvents:
-        return SimpleCreateIntersectionEvents(
-            self.intersect, self.section_provider_event_creation_ui, self.add_events
         )
 
     @cached_property
@@ -979,6 +964,11 @@ class BaseOtAnalyticsApplicationStarter:
             format_fixer=format_fixer,
         )
 
+    @abstractmethod
+    @cached_property
+    def create_events(self) -> CreateEvents:
+        raise NotImplementedError
+
     def create_export_road_user_assignments(
         self, create_events: CreateEvents
     ) -> ExportRoadUserAssignments:
@@ -1091,14 +1081,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             observer=self.color_palette_provider.update
         )
 
-        create_events = self._create_use_case_create_events(
-            self.section_provider_event_creation_ui,
-            self.clear_all_events,
-            self.get_tracks_without_single_detections,
-        )
-        export_counts = self._create_export_counts(create_events)
+        export_counts = self._create_export_counts(self.create_events)
         export_road_user_assignments = self.create_export_road_user_assignments(
-            create_events
+            self.create_events
         )
         all_filtered_track_ids = PandasTrackIdProvider(
             self.visualization_builder._get_data_provider_all_filters_with_offset()
@@ -1118,7 +1103,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.flow_generator,
             self.create_intersection_events,
             export_counts,
-            create_events,
+            self.create_events,
             self.load_otflow,
             self.add_section,
             self.add_flow,
@@ -1233,17 +1218,32 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.run_config,
         ).start()
 
-
-class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
-    def start_cli(self) -> None:
-        create_events = self._create_use_case_create_events(
-            self.section_provider_event_creation_cli,
+    @cached_property
+    def create_events(self) -> CreateEvents:
+        return self._create_use_case_create_events(
+            self.section_provider_event_creation_ui,
             self.clear_all_events,
             self.get_tracks_without_single_detections,
         )
-        export_counts = self._create_export_counts(create_events)
+
+    @cached_property
+    def section_provider_event_creation_ui(self) -> SectionProvider:
+        return FilterOutCuttingSections(
+            MissingEventsSectionProvider(self.section_repository, self.event_repository)
+        )
+
+    @cached_property
+    def create_intersection_events(self) -> CreateIntersectionEvents:
+        return SimpleCreateIntersectionEvents(
+            self.intersect, self.section_provider_event_creation_ui, self.add_events
+        )
+
+
+class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
+    def start_cli(self) -> None:
+        export_counts = self._create_export_counts(self.create_events)
         export_road_user_assignments = self.create_export_road_user_assignments(
-            create_events
+            self.create_events
         )
         all_filtered_track_ids = AllTrackIdsProvider(self.track_repository)
         cli: OTAnalyticsCli
@@ -1256,7 +1256,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
                 self.add_section,
                 self.get_all_sections,
                 self.add_flow,
-                create_events,
+                self.create_events,
                 export_counts,
                 provide_available_eventlist_exporter,
                 self.apply_cli_cuts,
@@ -1280,7 +1280,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
                 self.add_section,
                 self.get_all_sections,
                 self.add_flow,
-                create_events,
+                self.create_events,
                 export_counts,
                 self.export_track_statistics(all_filtered_track_ids),
                 provide_available_eventlist_exporter,
@@ -1296,3 +1296,15 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
             )
 
         cli.start()
+
+    @cached_property
+    def create_events(self) -> CreateEvents:
+        return self._create_use_case_create_events(
+            self.section_provider_event_creation_cli,
+            self.clear_all_events,
+            self.get_tracks_without_single_detections,
+        )
+
+    @cached_property
+    def section_provider_event_creation_cli(self) -> SectionProvider:
+        return FilterOutCuttingSections(self.section_repository.get_all)
