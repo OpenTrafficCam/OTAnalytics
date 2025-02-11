@@ -1257,56 +1257,62 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
 
 class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def start(self) -> None:
-        cli: OTAnalyticsCli
+        self.application.start()
+
+    @cached_property
+    def application(self) -> OTAnalyticsCli:
         if self.run_config.cli_bulk_mode:
-            track_parser = self._create_track_parser()
+            return self.create_bulk_cli()
+        return self.create_stream_cli()
 
-            cli = OTAnalyticsBulkCli(
-                self.run_config,
-                self.event_repository,
-                self.add_section,
-                self.get_all_sections,
-                self.add_flow,
-                self.create_events,
-                self.export_counts,
-                provide_available_eventlist_exporter,
-                self.apply_cli_cuts,
-                self.add_all_tracks,
-                self.get_all_track_ids,
-                self.clear_all_tracks,
-                self.tracks_metadata,
-                self.videos_metadata,
-                self.csv_track_export,
-                self.export_road_user_assignments,
-                self.export_track_statistics,
-                track_parser,
-                progressbar=TqdmBuilder(),
-            )
+    def create_bulk_cli(self) -> OTAnalyticsCli:
+        track_parser = self._create_track_parser()
+        cli = OTAnalyticsBulkCli(
+            self.run_config,
+            self.event_repository,
+            self.add_section,
+            self.get_all_sections,
+            self.add_flow,
+            self.create_events,
+            self.export_counts,
+            provide_available_eventlist_exporter,
+            self.apply_cli_cuts,
+            self.add_all_tracks,
+            self.get_all_track_ids,
+            self.clear_all_tracks,
+            self.tracks_metadata,
+            self.videos_metadata,
+            self.csv_track_export,
+            self.export_road_user_assignments,
+            self.export_track_statistics,
+            track_parser,
+            progressbar=TqdmBuilder(),
+        )
+        return cli
 
-        else:
-            stream_track_parser = self._create_stream_track_parser()
-            cli = OTAnalyticsStreamCli(
-                self.run_config,
-                self.event_repository,
-                self.add_section,
-                self.get_all_sections,
-                self.add_flow,
-                self.create_events,
-                self.export_counts,
-                self.export_track_statistics,
-                provide_available_eventlist_exporter,
-                self.apply_cli_cuts,
-                self.add_all_tracks,
-                self.get_all_track_ids,
-                self.clear_all_tracks,
-                self.tracks_metadata,
-                self.videos_metadata,
-                self.csv_track_export,
-                self.export_road_user_assignments,
-                stream_track_parser,
-            )
-
-        cli.start()
+    def create_stream_cli(self) -> OTAnalyticsCli:
+        stream_track_parser = self._create_stream_track_parser()
+        cli = OTAnalyticsStreamCli(
+            self.run_config,
+            self.event_repository,
+            self.add_section,
+            self.get_all_sections,
+            self.add_flow,
+            self.create_events,
+            self.export_counts,
+            self.export_track_statistics,
+            provide_available_eventlist_exporter,
+            self.apply_cli_cuts,
+            self.add_all_tracks,
+            self.get_all_track_ids,
+            self.clear_all_tracks,
+            self.tracks_metadata,
+            self.videos_metadata,
+            self.csv_track_export,
+            self.export_road_user_assignments,
+            stream_track_parser,
+        )
+        return cli
 
     @cached_property
     def all_filtered_track_ids(self) -> TrackIdProvider:
