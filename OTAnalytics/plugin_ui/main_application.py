@@ -345,14 +345,7 @@ class ApplicationStarter:
         self.section_repository.register_section_changed_observer(
             self.clear_all_intersections.on_section_changed
         )
-        visualization_builder = self._create_visualization_builder()
-        layer_groups, layers = self._create_layers(
-            visualization_builder,
-            self.flow_state,
-            self.road_user_assigner,
-        )
-        plotter = LayeredPlotter(layers=layers)
-        track_image_updater = self._create_track_image_updater(plotter)
+        track_image_updater = self._create_track_image_updater(self.layered_plotter)
         self.track_view_state.selected_videos.register(
             self.track_properties_updater.notify_videos
         )
@@ -382,7 +375,7 @@ class ApplicationStarter:
             create_events
         )
         all_filtered_track_ids = PandasTrackIdProvider(
-            visualization_builder._get_data_provider_all_filters_with_offset()
+            self.visualization_builder._get_data_provider_all_filters_with_offset()
         )
         application = OTAnalyticsApplication(
             self.datastore,
@@ -500,6 +493,7 @@ class ApplicationStarter:
         self.project_updater.register(dummy_viewmodel.show_current_project)
         self.project_updater.register(dummy_viewmodel.update_svz_metadata_view)
 
+        layer_groups, layers = self.layers
         for group in layer_groups:
             group.register(track_image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
@@ -512,6 +506,11 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def layered_plotter(self) -> LayeredPlotter:
+        layer_groups, layers = self.layers
+        return LayeredPlotter(layers=layers)
 
     @cached_property
     def name_generator(self) -> FlowNameGenerator:
@@ -960,7 +959,8 @@ class ApplicationStarter:
     def track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
-    def _create_visualization_builder(
+    @cached_property
+    def visualization_builder(
         self,
     ) -> VisualizationBuilder:
         return VisualizationBuilder(
@@ -973,15 +973,11 @@ class ApplicationStarter:
             self.pulling_progressbar_builder,
         )
 
-    def _create_layers(
-        self,
-        visualization_builder: VisualizationBuilder,
-        flow_state: FlowState,
-        road_user_assigner: RoadUserAssigner,
-    ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
-        return visualization_builder.build(
-            flow_state,
-            road_user_assigner,
+    @cached_property
+    def layers(self) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
+        return self.visualization_builder.build(
+            self.flow_state,
+            self.road_user_assigner,
         )
 
     @cached_property
