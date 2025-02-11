@@ -1065,6 +1065,20 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             OTAnalyticsGui,
         )
 
+        self.register_observers()
+
+        layer_groups, layers = self.layers
+        main_window = ModifiedCTk(self.view_model)
+        self.pulling_progressbar_popup_builder.add_widget(main_window)
+        OTAnalyticsGui(
+            main_window,
+            self.view_model,
+            layer_groups,
+            self.preload_input_files,
+            self.run_config,
+        ).start()
+
+    def register_observers(self) -> None:
         self.track_repository.register_tracks_observer(self.clear_all_intersections)
         self.section_repository.register_sections_observer(self.clear_all_intersections)
         self.section_repository.register_section_changed_observer(
@@ -1076,13 +1090,11 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.track_view_state.selected_videos.register(
             self.track_image_updater.notify_video
         )
-
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
         self.tracks_metadata._classifications.register(
             observer=self.color_palette_provider.update
         )
-
         self.section_repository.register_sections_observer(
             self.cut_tracks_intersecting_section
         )
@@ -1152,19 +1164,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.track_file_repository.register(self.view_model.update_quick_save_button)
         self.project_updater.register(self.view_model.show_current_project)
         self.project_updater.register(self.view_model.update_svz_metadata_view)
-
         layer_groups, layers = self.layers
         for group in layer_groups:
             group.register(self.track_image_updater.notify_layers)
-        main_window = ModifiedCTk(self.view_model)
-        self.pulling_progressbar_popup_builder.add_widget(main_window)
-        OTAnalyticsGui(
-            main_window,
-            self.view_model,
-            layer_groups,
-            self.preload_input_files,
-            self.run_config,
-        ).start()
 
     @cached_property
     def view_model(self) -> ViewModel:
