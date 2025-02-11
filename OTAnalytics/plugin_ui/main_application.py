@@ -345,11 +345,12 @@ class ApplicationStarter:
         self.section_repository.register_section_changed_observer(
             self.clear_all_intersections.on_section_changed
         )
-        track_image_updater = self._create_track_image_updater(self.layered_plotter)
         self.track_view_state.selected_videos.register(
             self.track_properties_updater.notify_videos
         )
-        self.track_view_state.selected_videos.register(track_image_updater.notify_video)
+        self.track_view_state.selected_videos.register(
+            self.track_image_updater.notify_video
+        )
 
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
@@ -477,13 +478,13 @@ class ApplicationStarter:
         application.connect_observers()
         self.datastore.register_tracks_observer(self.selected_video_updater)
         self.datastore.register_tracks_observer(dummy_viewmodel)
-        self.datastore.register_tracks_observer(track_image_updater)
+        self.datastore.register_tracks_observer(self.track_image_updater)
         self.datastore.register_video_observer(self.selected_video_updater)
         self.datastore.register_section_changed_observer(
-            track_image_updater.notify_section_changed
+            self.track_image_updater.notify_section_changed
         )
         self.start_new_project.register(dummy_viewmodel.on_start_new_project)
-        self.event_repository.register_observer(track_image_updater.notify_events)
+        self.event_repository.register_observer(self.track_image_updater.notify_events)
         self.event_repository.register_observer(dummy_viewmodel.update_track_statistics)
         self.load_otflow.register(self.file_state.last_saved_config.set)
         self.load_otconfig.register(self.file_state.last_saved_config.set)
@@ -495,7 +496,7 @@ class ApplicationStarter:
 
         layer_groups, layers = self.layers
         for group in layer_groups:
-            group.register(track_image_updater.notify_layers)
+            group.register(self.track_image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         self.pulling_progressbar_popup_builder.add_widget(main_window)
         preload_input_files = self.create_preload_input_files()
@@ -741,13 +742,14 @@ class ApplicationStarter:
             self.datastore, self.track_view_state, self.videos_metadata
         )
 
-    def _create_track_image_updater(self, plotter: LayeredPlotter) -> TrackImageUpdater:
+    @cached_property
+    def track_image_updater(self) -> TrackImageUpdater:
         return TrackImageUpdater(
             self.datastore,
             self.track_view_state,
             self.section_state,
             self.flow_state,
-            plotter,
+            self.layered_plotter,
         )
 
     @cached_property
