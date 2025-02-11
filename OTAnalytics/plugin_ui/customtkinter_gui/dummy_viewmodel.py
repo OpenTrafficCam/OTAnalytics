@@ -1783,7 +1783,7 @@ class DummyViewModel(
     def set_frame_track_statistics(self, frame: AbstractFrameTrackStatistics) -> None:
         self._frame_track_statistics = frame
 
-    def update_track_statistics(self, _: EventRepositoryEvent) -> None:
+    def update_track_statistics(self, _: EventRepositoryEvent | FilterElement) -> None:
         statistics = self._application.calculate_track_statistics()
         self.frame_track_statistics.update_track_statistics(statistics)
 
