@@ -1,4 +1,14 @@
+from functools import cached_property
+
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar import ConfigurationBar
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
+    VisualizationFilters,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import (
+    VisualizationLayers,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
 
 
 class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
@@ -12,7 +22,13 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             MainPageBuilder,
         )
 
-        main_page_builder = MainPageBuilder(ENDPOINT_MAIN_PAGE)
+        main_page_builder = MainPageBuilder(
+            ENDPOINT_MAIN_PAGE,
+            configuration_bar=self.configuration_bar,
+            workspace=self.workspace,
+            visualization_filters=self.visualization_filters,
+            visualization_layers=self.visualization_layers,
+        )
         from plugin_ui.nicegui_gui.nicegui.theme.nicegui_layout_components import (
             NiceguiLayoutComponents,
         )
@@ -23,3 +39,19 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             hostname="localhost",
             port=5000,
         ).run()
+
+    @cached_property
+    def configuration_bar(self) -> ConfigurationBar:
+        return ConfigurationBar()
+
+    @cached_property
+    def workspace(self) -> Workspace:
+        return Workspace()
+
+    @cached_property
+    def visualization_filters(self) -> VisualizationFilters:
+        return VisualizationFilters()
+
+    @cached_property
+    def visualization_layers(self) -> VisualizationLayers:
+        return VisualizationLayers()
