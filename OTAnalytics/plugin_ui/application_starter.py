@@ -16,18 +16,14 @@ from OTAnalytics.application.state import VideosMetadata
 from OTAnalytics.helpers.time_profiling import log_processing_time
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
 from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
-from OTAnalytics.plugin_parser.otconfig_parser import (
-    FixMissingAnalysis,
-    MultiFixer,
-    OtConfigFormatFixer,
-    OtConfigParser,
-)
+from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
 from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideoParser,
     OtFlowParser,
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_ui.ctk_application import OtAnalyticsGuiApplicationStarter
+from OTAnalytics.plugin_ui.main_application import create_format_fixer
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
 
@@ -93,9 +89,3 @@ class ApplicationStarter:
             )
         else:
             setup_logger(log_file=log_file, overwrite=overwrite, log_level=logging.INFO)
-
-
-def create_format_fixer(
-    default_value_provider: OtConfigDefaultValueProvider,
-) -> OtConfigFormatFixer:
-    return MultiFixer([FixMissingAnalysis(default_value_provider)])

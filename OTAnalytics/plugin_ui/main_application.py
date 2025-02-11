@@ -19,6 +19,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     SimpleTaggerFactory,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
+from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
@@ -212,7 +213,12 @@ from OTAnalytics.plugin_parser.export import (
     SimpleExporterFactory,
 )
 from OTAnalytics.plugin_parser.json_parser import parse_json
-from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
+from OTAnalytics.plugin_parser.otconfig_parser import (
+    FixMissingAnalysis,
+    MultiFixer,
+    OtConfigFormatFixer,
+    OtConfigParser,
+)
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     CachedVideoParser,
@@ -238,7 +244,6 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
     SimpleTrackStatisticsExporterFactory,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
-from OTAnalytics.plugin_ui.application_starter import create_format_fixer
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
@@ -960,3 +965,9 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @abstractmethod
     def start(self) -> None:
         raise NotImplementedError
+
+
+def create_format_fixer(
+    default_value_provider: OtConfigDefaultValueProvider,
+) -> OtConfigFormatFixer:
+    return MultiFixer([FixMissingAnalysis(default_value_provider)])
