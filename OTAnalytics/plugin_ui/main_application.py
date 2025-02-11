@@ -798,9 +798,6 @@ class ApplicationStarter:
             self.get_tracks_without_single_detections,
         )
         export_counts = self._create_export_counts(create_events)
-        export_tracks = CsvTrackExport(
-            self.track_repository, self.tracks_metadata, self.videos_metadata
-        )
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
         )
@@ -824,7 +821,7 @@ class ApplicationStarter:
                 self.clear_all_tracks,
                 self.tracks_metadata,
                 self.videos_metadata,
-                export_tracks,
+                self.csv_track_export,
                 export_road_user_assignments,
                 self.export_track_statistics(all_filtered_track_ids),
                 track_parser,
@@ -849,12 +846,18 @@ class ApplicationStarter:
                 self.clear_all_tracks,
                 self.tracks_metadata,
                 self.videos_metadata,
-                export_tracks,
+                self.csv_track_export,
                 export_road_user_assignments,
                 stream_track_parser,
             )
 
         cli.start()
+
+    @cached_property
+    def csv_track_export(self) -> CsvTrackExport:
+        return CsvTrackExport(
+            self.track_repository, self.tracks_metadata, self.videos_metadata
+        )
 
     @cached_property
     def get_all_track_ids(self) -> GetAllTrackIds:
