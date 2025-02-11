@@ -33,7 +33,7 @@ def validate_coordinates(coordinates: list[tuple[int, int]]) -> None:
 
 
 def validate_section_information(
-    meta_data: dict, coordinates: list[tuple[int, int]]
+    meta_data: dict | None, coordinates: list[tuple[int, int]]
 ) -> None:
     validate_coordinates(coordinates)
     if not meta_data:
