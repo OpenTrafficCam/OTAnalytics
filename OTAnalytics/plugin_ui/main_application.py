@@ -792,7 +792,6 @@ class ApplicationStarter:
         return VideosMetadata()
 
     def start_cli(self) -> None:
-        get_all_track_ids = GetAllTrackIds(self.track_repository)
         create_events = self._create_use_case_create_events(
             self.section_provider_event_creation_cli,
             self.clear_all_events,
@@ -821,7 +820,7 @@ class ApplicationStarter:
                 provide_available_eventlist_exporter,
                 self.apply_cli_cuts,
                 self.add_all_tracks,
-                get_all_track_ids,
+                self.get_all_track_ids,
                 self.clear_all_tracks,
                 self.tracks_metadata,
                 self.videos_metadata,
@@ -846,7 +845,7 @@ class ApplicationStarter:
                 provide_available_eventlist_exporter,
                 self.apply_cli_cuts,
                 self.add_all_tracks,
-                get_all_track_ids,
+                self.get_all_track_ids,
                 self.clear_all_tracks,
                 self.tracks_metadata,
                 self.videos_metadata,
@@ -856,6 +855,10 @@ class ApplicationStarter:
             )
 
         cli.start()
+
+    @cached_property
+    def get_all_track_ids(self) -> GetAllTrackIds:
+        return GetAllTrackIds(self.track_repository)
 
     @cached_property
     def section_provider_event_creation_cli(self) -> SectionProvider:
