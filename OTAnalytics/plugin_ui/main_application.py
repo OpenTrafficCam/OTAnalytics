@@ -162,6 +162,7 @@ from OTAnalytics.application.use_cases.track_repository import (
 from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
 from OTAnalytics.application.use_cases.track_statistics_export import (
     ExportTrackStatistics,
+    TrackStatisticsExporterFactory,
 )
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
@@ -370,11 +371,8 @@ class ApplicationStarter:
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
         )
-        track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
-            SimpleTrackStatisticsExporterFactory()
-        )
         export_track_statistics = ExportTrackStatistics(
-            self.calculate_track_statistics, track_statistics_export_factory
+            self.calculate_track_statistics, self.track_statistics_export_factory
         )
         application = OTAnalyticsApplication(
             self.datastore,
@@ -502,6 +500,12 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def track_statistics_export_factory(self) -> TrackStatisticsExporterFactory:
+        return CachedTrackStatisticsExporterFactory(
+            SimpleTrackStatisticsExporterFactory()
+        )
 
     @cached_property
     def number_of_tracks_assigned_to_each_flow(
@@ -787,11 +791,8 @@ class ApplicationStarter:
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
         )
-        track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
-            SimpleTrackStatisticsExporterFactory()
-        )
         export_track_statistics = ExportTrackStatistics(
-            self.calculate_track_statistics, track_statistics_export_factory
+            self.calculate_track_statistics, self.track_statistics_export_factory
         )
 
         cli: OTAnalyticsCli
