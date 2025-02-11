@@ -7,7 +7,11 @@ name: super-linter
 
 on: pull_request
 
-permissions: read-all
+permissions:
+  contents: read
+  packages: read
+  # To report GitHub Actions status checks
+  statuses: write
 
 jobs:
   lint:
