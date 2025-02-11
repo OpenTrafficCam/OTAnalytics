@@ -153,7 +153,6 @@ from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
-    AllTrackIdsProvider,
     ClearAllTracks,
     FilteredTrackIdProviderByTrackIdProvider,
     GetAllTrackFiles,
@@ -187,6 +186,7 @@ from OTAnalytics.domain.track import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.helpers.time_profiling import log_processing_time
+from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
@@ -262,12 +262,6 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
-    provide_available_eventlist_exporter,
-)
-from OTAnalytics.plugin_ui.cli import (
-    OTAnalyticsBulkCli,
-    OTAnalyticsCli,
-    OTAnalyticsStreamCli,
 )
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
@@ -1253,79 +1247,3 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         return SimpleCreateIntersectionEvents(
             self.intersect, self.section_provider_event_creation_ui, self.add_events
         )
-
-
-class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
-    def start(self) -> None:
-        self.application.start()
-
-    @cached_property
-    def application(self) -> OTAnalyticsCli:
-        if self.run_config.cli_bulk_mode:
-            return self.create_bulk_cli()
-        return self.create_stream_cli()
-
-    def create_bulk_cli(self) -> OTAnalyticsCli:
-        track_parser = self._create_track_parser()
-        cli = OTAnalyticsBulkCli(
-            self.run_config,
-            self.event_repository,
-            self.add_section,
-            self.get_all_sections,
-            self.add_flow,
-            self.create_events,
-            self.export_counts,
-            provide_available_eventlist_exporter,
-            self.apply_cli_cuts,
-            self.add_all_tracks,
-            self.get_all_track_ids,
-            self.clear_all_tracks,
-            self.tracks_metadata,
-            self.videos_metadata,
-            self.csv_track_export,
-            self.export_road_user_assignments,
-            self.export_track_statistics,
-            track_parser,
-            progressbar=TqdmBuilder(),
-        )
-        return cli
-
-    def create_stream_cli(self) -> OTAnalyticsCli:
-        stream_track_parser = self._create_stream_track_parser()
-        cli = OTAnalyticsStreamCli(
-            self.run_config,
-            self.event_repository,
-            self.add_section,
-            self.get_all_sections,
-            self.add_flow,
-            self.create_events,
-            self.export_counts,
-            self.export_track_statistics,
-            provide_available_eventlist_exporter,
-            self.apply_cli_cuts,
-            self.add_all_tracks,
-            self.get_all_track_ids,
-            self.clear_all_tracks,
-            self.tracks_metadata,
-            self.videos_metadata,
-            self.csv_track_export,
-            self.export_road_user_assignments,
-            stream_track_parser,
-        )
-        return cli
-
-    @cached_property
-    def all_filtered_track_ids(self) -> TrackIdProvider:
-        return AllTrackIdsProvider(self.track_repository)
-
-    @cached_property
-    def create_events(self) -> CreateEvents:
-        return self._create_use_case_create_events(
-            self.section_provider_event_creation_cli,
-            self.clear_all_events,
-            self.get_tracks_without_single_detections,
-        )
-
-    @cached_property
-    def section_provider_event_creation_cli(self) -> SectionProvider:
-        return FilterOutCuttingSections(self.section_repository.get_all)

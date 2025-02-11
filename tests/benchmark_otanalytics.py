@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 import pytest
-from plugin_ui.main_application import OtAnalyticsCliApplicationStarter
 from pytest_benchmark.fixture import BenchmarkFixture
 
 from OTAnalytics.adapter_visualization.color_provider import (
@@ -53,6 +52,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     FilteredPythonTrackDataset,
@@ -178,7 +178,7 @@ class UseCaseProvider:
         return create_events
 
     def get_export_counts(self) -> ExportCounts:
-        return self._starter.export_counts()
+        return self._starter.export_counts
 
     def get_cut_tracks(self) -> CutTracksIntersectingSection:
         get_sections_by_id = GetSectionsById(self._section_repository)
