@@ -1,7 +1,5 @@
-import logging
 from abc import ABC, abstractmethod
 from functools import cached_property
-from pathlib import Path
 from typing import Sequence
 
 from OTAnalytics.adapter_ui.abstract_progressbar_popup import ProgressbarPopupBuilder
@@ -21,7 +19,6 @@ from OTAnalytics.application.analysis.traffic_counting import (
     SimpleTaggerFactory,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
-from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
@@ -30,12 +27,6 @@ from OTAnalytics.application.datastore import (
     VideoParser,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
-from OTAnalytics.application.logger import logger, setup_logger
-from OTAnalytics.application.parser.cli_parser import (
-    CliParseError,
-    CliParser,
-    CliValueProvider,
-)
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
 from OTAnalytics.application.run_configuration import RunConfiguration
@@ -181,8 +172,6 @@ from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
-from OTAnalytics.helpers.time_profiling import log_processing_time
-from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
 from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
     PygeosTrackGeometryDataset,
@@ -216,7 +205,6 @@ from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.number_of_tracks_to
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.tracks_as_dataframe_provider import (  # noqa
     TracksAsDataFrameProvider,
 )
-from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 from OTAnalytics.plugin_parser.export import (
     AddSectionInformationExporterFactory,
     CachedExporterFactory,
@@ -224,12 +212,7 @@ from OTAnalytics.plugin_parser.export import (
     SimpleExporterFactory,
 )
 from OTAnalytics.plugin_parser.json_parser import parse_json
-from OTAnalytics.plugin_parser.otconfig_parser import (
-    FixMissingAnalysis,
-    MultiFixer,
-    OtConfigFormatFixer,
-    OtConfigParser,
-)
+from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     CachedVideoParser,
@@ -255,82 +238,12 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
     SimpleTrackStatisticsExporterFactory,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
-from OTAnalytics.plugin_ui.ctk_application import OtAnalyticsGuiApplicationStarter
+from OTAnalytics.plugin_ui.application_starter import create_format_fixer
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
 DETECTION_RATE_PERCENTILE_VALUE = 0.9
-
-
-class ApplicationStarter:
-    @log_processing_time(description="overall")
-    def start(self) -> None:
-        self._setup_logger(
-            Path(self.run_config.log_file),
-            self.run_config.logfile_overwrite,
-            self.run_config.debug,
-        )
-        if self.run_config.start_cli:
-            try:
-                OtAnalyticsCliApplicationStarter(self.run_config).start()
-                # add command line tag for activating -> add to PipelineBenchmark,
-                # add github actions for benchmark
-                # regression test lokal runner neben benchmark ->
-                # OTC -> test data -> 6-1145, flow in 00 -> in test resource ordner
-
-            except CliParseError as e:
-                logger().exception(e, exc_info=True)
-        else:
-            OtAnalyticsGuiApplicationStarter(self.run_config).start()
-
-    @cached_property
-    def run_config(self) -> RunConfiguration:
-        cli_args_parser = self._build_cli_argument_parser()
-        cli_args = cli_args_parser.parse()
-        cli_value_provider: OtConfigDefaultValueProvider = CliValueProvider(cli_args)
-        format_fixer = create_format_fixer(cli_value_provider)
-        config_parser = OtConfigParser(
-            format_fixer=format_fixer,
-            video_parser=self.video_parser,
-            flow_parser=self.flow_parser,
-        )
-
-        if config_file := cli_args.config_file:
-            config = config_parser.parse(Path(config_file))
-            return RunConfiguration(self.flow_parser, cli_args, config)
-        return RunConfiguration(self.flow_parser, cli_args, None)
-
-    @cached_property
-    def video_parser(self) -> VideoParser:
-        return CachedVideoParser(
-            SimpleVideoParser(PyAvVideoReader(self.videos_metadata))
-        )
-
-    @cached_property
-    def flow_parser(self) -> FlowParser:
-        return OtFlowParser()
-
-    @cached_property
-    def videos_metadata(self) -> VideosMetadata:
-        return VideosMetadata()
-
-    def _build_cli_argument_parser(self) -> CliParser:
-        return ArgparseCliParser()
-
-    def _setup_logger(self, log_file: Path, overwrite: bool, debug: bool) -> None:
-        if debug:
-            setup_logger(
-                log_file=log_file, overwrite=overwrite, log_level=logging.DEBUG
-            )
-        else:
-            setup_logger(log_file=log_file, overwrite=overwrite, log_level=logging.INFO)
-
-
-def create_format_fixer(
-    default_value_provider: OtConfigDefaultValueProvider,
-) -> OtConfigFormatFixer:
-    return MultiFixer([FixMissingAnalysis(default_value_provider)])
 
 
 class BaseOtAnalyticsApplicationStarter(ABC):
