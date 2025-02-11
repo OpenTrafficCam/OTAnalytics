@@ -370,11 +370,8 @@ class ApplicationStarter:
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
         )
-        get_road_user_assignments = GetRoadUserAssignments(
-            self.flow_repository, self.event_repository, self.road_user_assigner
-        )
         number_of_tracks_assigned_to_each_flow = NumberOfTracksAssignedToEachFlow(
-            get_road_user_assignments, self.flow_repository
+            self.get_road_user_assignments, self.flow_repository
         )
         track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
             SimpleTrackStatisticsExporterFactory()
@@ -508,6 +505,12 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def get_road_user_assignments(self) -> GetRoadUserAssignments:
+        return GetRoadUserAssignments(
+            self.flow_repository, self.event_repository, self.road_user_assigner
+        )
 
     @cached_property
     def save_path_suggester(self) -> SavePathSuggester:
