@@ -20,12 +20,14 @@ from OTAnalytics.plugin_ui.base_application import BaseOtAnalyticsApplicationSta
 
 class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def start(self) -> None:
+        self.register_observers()
+        self.start_ui()
+
+    def start_ui(self) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.gui import (
             ModifiedCTk,
             OTAnalyticsGui,
         )
-
-        self.register_observers()
 
         layer_groups, layers = self.layers
         main_window = ModifiedCTk(self.view_model)
