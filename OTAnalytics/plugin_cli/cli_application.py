@@ -11,12 +11,12 @@ from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     provide_available_eventlist_exporter,
 )
+from OTAnalytics.plugin_ui.base_application import BaseOtAnalyticsApplicationStarter
 from OTAnalytics.plugin_ui.cli import (
     OTAnalyticsBulkCli,
     OTAnalyticsCli,
     OTAnalyticsStreamCli,
 )
-from OTAnalytics.plugin_ui.main_application import BaseOtAnalyticsApplicationStarter
 
 
 class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):

@@ -22,8 +22,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     SimpleVideoParser,
 )
+from OTAnalytics.plugin_ui.base_application import create_format_fixer
 from OTAnalytics.plugin_ui.ctk_application import OtAnalyticsGuiApplicationStarter
-from OTAnalytics.plugin_ui.main_application import create_format_fixer
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
 

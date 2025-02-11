@@ -15,7 +15,7 @@ from OTAnalytics.plugin_filter.pandas_track_id import PandasTrackIdProvider
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
 )
-from OTAnalytics.plugin_ui.main_application import BaseOtAnalyticsApplicationStarter
+from OTAnalytics.plugin_ui.base_application import BaseOtAnalyticsApplicationStarter
 
 
 class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
