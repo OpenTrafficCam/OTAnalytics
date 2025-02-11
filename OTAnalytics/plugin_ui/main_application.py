@@ -107,6 +107,7 @@ from OTAnalytics.application.use_cases.generate_flows import (
     FilterExisting,
     FilterSameSection,
     FlowIdGenerator,
+    FlowNameGenerator,
     GenerateFlows,
     RepositoryFlowIdGenerator,
 )
@@ -420,11 +421,10 @@ class ApplicationStarter:
             self.clear_all_events.on_tracks_cut
         )
         application.connect_clear_event_repository_observer()
-        name_generator = ArrowFlowNameGenerator()
         dummy_viewmodel = DummyViewModel(
             application,
             self.flow_parser,
-            name_generator,
+            self.name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
             show_svz=self.run_config.show_svz,
         )
@@ -497,6 +497,10 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def name_generator(self) -> FlowNameGenerator:
+        return ArrowFlowNameGenerator()
 
     @cached_property
     def export_track_statistics(self) -> ExportTrackStatistics:
@@ -969,10 +973,9 @@ class ApplicationStarter:
     def flow_generator(self) -> GenerateFlows:
         section_provider = FilterOutCuttingSections(self.get_all_sections)
         id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(self.flow_repository)
-        name_generator = ArrowFlowNameGenerator()
         flow_generator = CrossProductFlowGenerator(
             id_generator=id_generator,
-            name_generator=name_generator,
+            name_generator=self.name_generator,
             predicate=FilterSameSection().and_then(
                 FilterExisting(self.flow_repository)
             ),
