@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from functools import cached_property
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -23,22 +24,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.register_observers()
         self.start_ui()
 
+    @abstractmethod
     def start_ui(self) -> None:
-        from OTAnalytics.plugin_ui.customtkinter_gui.gui import (
-            ModifiedCTk,
-            OTAnalyticsGui,
-        )
-
-        layer_groups, layers = self.layers
-        main_window = ModifiedCTk(self.view_model)
-        self.pulling_progressbar_popup_builder.add_widget(main_window)
-        OTAnalyticsGui(
-            main_window,
-            self.view_model,
-            layer_groups,
-            self.preload_input_files,
-            self.run_config,
-        ).start()
+        raise NotImplementedError
 
     def register_observers(self) -> None:
         self.track_repository.register_tracks_observer(self.clear_all_intersections)
@@ -213,3 +201,22 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         return SimpleCreateIntersectionEvents(
             self.intersect, self.section_provider_event_creation_ui, self.add_events
         )
+
+
+class OtAnalyticsCtkApplicationStarter(OtAnalyticsGuiApplicationStarter):
+    def start_ui(self) -> None:
+        from OTAnalytics.plugin_ui.customtkinter_gui.gui import (
+            ModifiedCTk,
+            OTAnalyticsGui,
+        )
+
+        layer_groups, layers = self.layers
+        main_window = ModifiedCTk(self.view_model)
+        self.pulling_progressbar_popup_builder.add_widget(main_window)
+        OTAnalyticsGui(
+            main_window,
+            self.view_model,
+            layer_groups,
+            self.preload_input_files,
+            self.run_config,
+        ).start()

@@ -23,7 +23,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_ui.base_application import create_format_fixer
-from OTAnalytics.plugin_ui.ctk_application import OtAnalyticsGuiApplicationStarter
+from OTAnalytics.plugin_ui.ctk_application import OtAnalyticsCtkApplicationStarter
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
 
@@ -46,7 +46,7 @@ class ApplicationStarter:
             except CliParseError as e:
                 logger().exception(e, exc_info=True)
         else:
-            OtAnalyticsGuiApplicationStarter(self.run_config).start()
+            OtAnalyticsCtkApplicationStarter(self.run_config).start()
 
     @cached_property
     def run_config(self) -> RunConfiguration:
