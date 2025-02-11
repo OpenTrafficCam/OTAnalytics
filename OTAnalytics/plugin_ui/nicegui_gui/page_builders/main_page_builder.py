@@ -1,7 +1,9 @@
 from nicegui import ui
 
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.page_builder import NiceguiPageBuilder
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar import ConfigurationBar
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
+    ConfigurationBar,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
     VisualizationFilters,
 )

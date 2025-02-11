@@ -1,7 +1,12 @@
 from functools import cached_property
 
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar import ConfigurationBar
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
+    ConfigurationBar,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_frame import (
+    ProjectFrame,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
     VisualizationFilters,
 )
@@ -42,7 +47,11 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def configuration_bar(self) -> ConfigurationBar:
-        return ConfigurationBar()
+        return ConfigurationBar(self.project_frame)
+
+    @cached_property
+    def project_frame(self) -> ProjectFrame:
+        return ProjectFrame()
 
     @cached_property
     def workspace(self) -> Workspace:
