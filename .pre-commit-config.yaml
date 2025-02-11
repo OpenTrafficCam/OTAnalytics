@@ -47,6 +47,7 @@ repos:
           - av==13.0.0
           - black==24.8.0
           - customtkinter==5.2.2
+          - fastapi==0.115.5
           - hatch-requirements-txt==0.4.1
           - ijson==3.3.0
           - interrogate==1.7.0
@@ -54,6 +55,7 @@ repos:
           - matplotlib==3.9.0
           - more-itertools==10.5.0
           - mypy==1.12.1
+          - nicegui==2.11.0
           - numpy==1.26.4
           - pandas-stubs==2.2.3.241126
           - pandas==2.2.3
@@ -63,15 +65,19 @@ repos:
           - pytest-cov==6.0.0
           - pytest-lazy-fixtures==1.1.2
           - pytest==8.3.4
+          - starlette==0.41.2
           - twine==6.1.0
           - types-PyYAML
           - types-flake8
           - types-openpyxl
           - types-pillow
+          - types-requests
           - types-seaborn
           - types-shapely
           - types-tqdm
           - types-ujson
+          - uvicorn==0.32.1
+          - watchdog==6.0.0
           - yamllint==1.35.1
         always_run: true
         pass_filenames: false
