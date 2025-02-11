@@ -71,6 +71,11 @@ from OTAnalytics.application.use_cases.create_intersection_events import (
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
+from OTAnalytics.application.use_cases.editor.section_editor import (
+    AddNewSection,
+    CreateSectionId,
+    UpdateSectionCoordinates,
+)
 from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearAllEvents,
@@ -956,6 +961,21 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def get_cutting_sections(self) -> GetCuttingSections:
         return GetCuttingSections(self.section_repository)
+
+    @cached_property
+    def create_section_id(self) -> CreateSectionId:
+        return CreateSectionId(self.section_repository)
+
+    @cached_property
+    def add_new_section(self) -> AddNewSection:
+        return AddNewSection(
+            create_section_id=self.create_section_id,
+            add_section=self.add_section,
+        )
+
+    @cached_property
+    def update_section_coordinates(self) -> UpdateSectionCoordinates:
+        return UpdateSectionCoordinates(self.section_repository)
 
     @abstractmethod
     @cached_property

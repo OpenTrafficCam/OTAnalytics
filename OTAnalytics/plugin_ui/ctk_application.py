@@ -140,6 +140,8 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
             show_svz=self.run_config.show_svz,
+            add_new_section=self.add_new_section,
+            update_section_coordinates=self.update_section_coordinates,
         )
 
     @cached_property

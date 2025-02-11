@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from application.use_cases.cut_tracks_with_sections import CutTracksDto
 from domain.event import EventRepositoryEvent
@@ -29,6 +29,7 @@ from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.application import geometry
+from OTAnalytics.application.use_cases.editor.section_editor import MetadataProvider
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
@@ -38,12 +39,6 @@ from OTAnalytics.domain.track_repository import TrackListObserver
 from OTAnalytics.domain.video import Video, VideoListObserver
 
 DISTANCES: str = "distances"
-
-MetadataProvider = Callable[[], dict]
-
-
-class MissingCoordinate(Exception):
-    pass
 
 
 class ViewModel(
