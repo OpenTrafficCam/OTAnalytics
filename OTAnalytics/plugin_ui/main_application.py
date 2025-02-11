@@ -122,7 +122,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
     TracksIntersectingAllNonCuttingSections,
 )
 from OTAnalytics.application.use_cases.inside_cutting_section import (
-    TrackIdsInsideCuttingSections,
+    CachedTrackIdsInsideCuttingSections,
 )
 from OTAnalytics.application.use_cases.intersection_repository import (
     ClearAllIntersections,
@@ -152,7 +152,9 @@ from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
+    AllTrackIdsProvider,
     ClearAllTracks,
+    FilteredTrackIdProviderByTrackIdProvider,
     GetAllTrackFiles,
     GetAllTrackIds,
     GetAllTracks,
@@ -180,6 +182,7 @@ from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
+from OTAnalytics.domain.track import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.helpers.time_profiling import log_processing_time
@@ -192,6 +195,7 @@ from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
+from OTAnalytics.plugin_filter.pandas_track_id import PandasTrackIdProvider
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
 )
@@ -341,7 +345,12 @@ class ApplicationStarter:
         self.section_repository.register_section_changed_observer(
             self.clear_all_intersections.on_section_changed
         )
-        layer_groups, layers = self._create_layers()
+        visualization_builder = self._create_visualization_builder()
+        layer_groups, layers = self._create_layers(
+            visualization_builder,
+            self.flow_state,
+            self.road_user_assigner,
+        )
         plotter = LayeredPlotter(layers=layers)
         track_image_updater = self._create_track_image_updater(plotter)
         self.track_view_state.selected_videos.register(
@@ -371,6 +380,9 @@ class ApplicationStarter:
         export_counts = self._create_export_counts(create_events)
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
+        )
+        all_filtered_track_ids = PandasTrackIdProvider(
+            visualization_builder._get_data_provider_all_filters_with_offset()
         )
         application = OTAnalyticsApplication(
             self.datastore,
@@ -406,9 +418,9 @@ class ApplicationStarter:
             self.config_has_changed,
             export_road_user_assignments,
             self.save_path_suggester,
-            self.calculate_track_statistics,
+            self.calculate_track_statistics(all_filtered_track_ids),
             self.number_of_tracks_assigned_to_each_flow,
-            self.export_track_statistics,
+            self.export_track_statistics(all_filtered_track_ids),
             self.get_current_remark,
         )
         self.section_repository.register_sections_observer(
@@ -449,6 +461,9 @@ class ApplicationStarter:
         )
         application.track_view_state.filter_element.register(
             dummy_viewmodel._update_date_range
+        )
+        application.track_view_state.filter_element.register(
+            dummy_viewmodel.update_track_statistics
         )
         application.action_state.action_running.register(
             dummy_viewmodel._notify_action_running_state
@@ -502,10 +517,12 @@ class ApplicationStarter:
     def name_generator(self) -> FlowNameGenerator:
         return ArrowFlowNameGenerator()
 
-    @cached_property
-    def export_track_statistics(self) -> ExportTrackStatistics:
+    def export_track_statistics(
+        self, all_filtered_track_ids: TrackIdProvider
+    ) -> ExportTrackStatistics:
         return ExportTrackStatistics(
-            self.calculate_track_statistics, self.track_statistics_export_factory
+            self.calculate_track_statistics(all_filtered_track_ids),
+            self.track_statistics_export_factory,
         )
 
     @cached_property
@@ -798,7 +815,7 @@ class ApplicationStarter:
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
         )
-
+        all_filtered_track_ids = AllTrackIdsProvider(self.track_repository)
         cli: OTAnalyticsCli
         if self.run_config.cli_bulk_mode:
             track_parser = self._create_track_parser()
@@ -820,7 +837,7 @@ class ApplicationStarter:
                 self.videos_metadata,
                 export_tracks,
                 export_road_user_assignments,
-                self.export_track_statistics,
+                self.export_track_statistics(all_filtered_track_ids),
                 track_parser,
                 progressbar=TqdmBuilder(),
             )
@@ -835,7 +852,7 @@ class ApplicationStarter:
                 self.add_flow,
                 create_events,
                 export_counts,
-                self.export_track_statistics,
+                self.export_track_statistics(all_filtered_track_ids),
                 provide_available_eventlist_exporter,
                 self.apply_cli_cuts,
                 self.add_all_tracks,
@@ -943,7 +960,9 @@ class ApplicationStarter:
     def track_view_state(self) -> TrackViewState:
         return TrackViewState()
 
-    def _create_layers(self) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
+    def _create_visualization_builder(
+        self,
+    ) -> VisualizationBuilder:
         return VisualizationBuilder(
             self.datastore,
             self.intersection_repository,
@@ -952,9 +971,17 @@ class ApplicationStarter:
             self.section_state,
             self.color_palette_provider,
             self.pulling_progressbar_builder,
-        ).build(
-            self.flow_state,
-            self.road_user_assigner,
+        )
+
+    def _create_layers(
+        self,
+        visualization_builder: VisualizationBuilder,
+        flow_state: FlowState,
+        road_user_assigner: RoadUserAssigner,
+    ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
+        return visualization_builder.build(
+            flow_state,
+            road_user_assigner,
         )
 
     @cached_property
@@ -1188,23 +1215,34 @@ class ApplicationStarter:
             ),
         )
 
-    @cached_property
-    def calculate_track_statistics(self) -> CalculateTrackStatistics:
-        get_cutting_sections = GetCuttingSections(self.section_repository)
-        tracks_intersecting_all_sections = TracksIntersectingAllNonCuttingSections(
-            get_cutting_sections,
-            self.get_all_sections,
-            self.tracks_intersecting_sections,
-            self.get_sections_by_id,
-            self.intersection_repository,
+    def calculate_track_statistics(
+        self, all_filtered_track_ids: TrackIdProvider
+    ) -> CalculateTrackStatistics:
+        tracks_intersecting_all_sections = FilteredTrackIdProviderByTrackIdProvider(
+            TracksIntersectingAllNonCuttingSections(
+                self.get_cutting_sections,
+                self.get_all_sections,
+                self.tracks_intersecting_sections,
+                self.get_sections_by_id,
+                self.intersection_repository,
+            ),
+            all_filtered_track_ids,
         )
-        tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
-            self.road_user_assigner, self.event_repository, self.flow_repository
+        tracks_assigned_to_all_flows = FilteredTrackIdProviderByTrackIdProvider(
+            TracksAssignedToAllFlows(
+                self.road_user_assigner, self.event_repository, self.flow_repository
+            ),
+            all_filtered_track_ids,
         )
-        track_ids_inside_cutting_sections = TrackIdsInsideCuttingSections(
-            self.get_all_tracks, get_cutting_sections
+        track_ids_inside_cutting_sections = FilteredTrackIdProviderByTrackIdProvider(
+            self._create_cached_track_ids_inside_cutting_sections(
+                self.get_all_tracks,
+                self.get_cutting_sections,
+                self.track_repository,
+                self.section_repository,
+            ),
+            all_filtered_track_ids,
         )
-        get_all_track_ids = GetAllTrackIds(self.track_repository)
         tracks_as_dataframe_provider = TracksAsDataFrameProvider(
             get_all_tracks=self.get_all_tracks,
             track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset,
@@ -1223,8 +1261,26 @@ class ApplicationStarter:
         return CalculateTrackStatistics(
             tracks_intersecting_all_sections,
             tracks_assigned_to_all_flows,
-            get_all_track_ids,
+            all_filtered_track_ids,
             track_ids_inside_cutting_sections,
             number_of_tracks_to_be_validated,
             get_events,
         )
+
+    def _create_cached_track_ids_inside_cutting_sections(
+        self,
+        get_all_tracks: GetAllTracks,
+        get_cutting_sections: GetCuttingSections,
+        track_repository: TrackRepository,
+        section_repository: SectionRepository,
+    ) -> CachedTrackIdsInsideCuttingSections:
+        cached = CachedTrackIdsInsideCuttingSections(
+            get_all_tracks, get_cutting_sections
+        )
+        track_repository.register_tracks_observer(cached)
+        section_repository.register_sections_observer(cached)
+        return cached
+
+    @cached_property
+    def get_cutting_sections(self) -> GetCuttingSections:
+        return GetCuttingSections(self.section_repository)

@@ -149,7 +149,6 @@ class PythonStreamDetectionParser(StreamDetectionParser):
             if not self._tracks_dict.get(det.track_id):
                 self._tracks_dict[det.track_id] = []
             self._tracks_dict[det.track_id].append(det)
-
             # the finished flag indicates the last detection of a track
             # so the detections can be assembled to a track object
             if det_dict[ottrk_format.FINISHED]:
