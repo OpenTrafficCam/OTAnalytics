@@ -178,7 +178,7 @@ class UseCaseProvider:
         return create_events
 
     def get_export_counts(self) -> ExportCounts:
-        return self._starter._create_export_counts(self.get_create_events())
+        return self._starter.export_counts()
 
     def get_cut_tracks(self) -> CutTracksIntersectingSection:
         get_sections_by_id = GetSectionsById(self._section_repository)

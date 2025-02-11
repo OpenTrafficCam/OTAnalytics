@@ -813,12 +813,13 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def filter_element_settings_restorer(self) -> FilterElementSettingRestorer:
         return FilterElementSettingRestorer()
 
-    def _create_export_counts(self, create_events: CreateEvents) -> ExportCounts:
+    @cached_property
+    def export_counts(self) -> ExportCounts:
         return ExportTrafficCounting(
             self.event_repository,
             self.flow_repository,
             self.get_sections_by_id,
-            create_events,
+            self.create_events,
             self.road_user_assigner,
             SimpleTaggerFactory(),
             CachedExporterFactory(
@@ -969,13 +970,11 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def create_events(self) -> CreateEvents:
         raise NotImplementedError
 
-    def create_export_road_user_assignments(
-        self, create_events: CreateEvents
-    ) -> ExportRoadUserAssignments:
+    def create_export_road_user_assignments(self) -> ExportRoadUserAssignments:
         return ExportRoadUserAssignments(
             self.event_repository,
             self.flow_repository,
-            create_events,
+            self.create_events,
             self.road_user_assigner,
             SimpleRoadUserAssignmentExporterFactory(
                 self.section_repository, self.get_all_tracks
@@ -1081,10 +1080,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             observer=self.color_palette_provider.update
         )
 
-        export_counts = self._create_export_counts(self.create_events)
-        export_road_user_assignments = self.create_export_road_user_assignments(
-            self.create_events
-        )
+        export_road_user_assignments = self.create_export_road_user_assignments()
         all_filtered_track_ids = PandasTrackIdProvider(
             self.visualization_builder._get_data_provider_all_filters_with_offset()
         )
@@ -1102,7 +1098,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.get_all_track_files,
             self.flow_generator,
             self.create_intersection_events,
-            export_counts,
+            self.export_counts,
             self.create_events,
             self.load_otflow,
             self.add_section,
@@ -1241,10 +1237,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
 
 class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def start_cli(self) -> None:
-        export_counts = self._create_export_counts(self.create_events)
-        export_road_user_assignments = self.create_export_road_user_assignments(
-            self.create_events
-        )
+        export_road_user_assignments = self.create_export_road_user_assignments()
         all_filtered_track_ids = AllTrackIdsProvider(self.track_repository)
         cli: OTAnalyticsCli
         if self.run_config.cli_bulk_mode:
@@ -1257,7 +1250,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
                 self.get_all_sections,
                 self.add_flow,
                 self.create_events,
-                export_counts,
+                self.export_counts,
                 provide_available_eventlist_exporter,
                 self.apply_cli_cuts,
                 self.add_all_tracks,
@@ -1281,7 +1274,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
                 self.get_all_sections,
                 self.add_flow,
                 self.create_events,
-                export_counts,
+                self.export_counts,
                 self.export_track_statistics(all_filtered_track_ids),
                 provide_available_eventlist_exporter,
                 self.apply_cli_cuts,
