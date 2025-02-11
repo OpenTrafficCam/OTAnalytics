@@ -970,7 +970,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def create_events(self) -> CreateEvents:
         raise NotImplementedError
 
-    def create_export_road_user_assignments(self) -> ExportRoadUserAssignments:
+    @cached_property
+    def export_road_user_assignments(self) -> ExportRoadUserAssignments:
         return ExportRoadUserAssignments(
             self.event_repository,
             self.flow_repository,
@@ -1080,7 +1081,6 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             observer=self.color_palette_provider.update
         )
 
-        export_road_user_assignments = self.create_export_road_user_assignments()
         all_filtered_track_ids = PandasTrackIdProvider(
             self.visualization_builder._get_data_provider_all_filters_with_offset()
         )
@@ -1116,7 +1116,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.quick_save_configuration,
             self.load_otconfig,
             self.config_has_changed,
-            export_road_user_assignments,
+            self.export_road_user_assignments,
             self.save_path_suggester,
             self.calculate_track_statistics(all_filtered_track_ids),
             self.number_of_tracks_assigned_to_each_flow,
@@ -1237,7 +1237,6 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
 
 class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def start_cli(self) -> None:
-        export_road_user_assignments = self.create_export_road_user_assignments()
         all_filtered_track_ids = AllTrackIdsProvider(self.track_repository)
         cli: OTAnalyticsCli
         if self.run_config.cli_bulk_mode:
@@ -1259,7 +1258,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
                 self.tracks_metadata,
                 self.videos_metadata,
                 self.csv_track_export,
-                export_road_user_assignments,
+                self.export_road_user_assignments,
                 self.export_track_statistics(all_filtered_track_ids),
                 track_parser,
                 progressbar=TqdmBuilder(),
@@ -1284,7 +1283,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
                 self.tracks_metadata,
                 self.videos_metadata,
                 self.csv_track_export,
-                export_road_user_assignments,
+                self.export_road_user_assignments,
                 stream_track_parser,
             )
 
