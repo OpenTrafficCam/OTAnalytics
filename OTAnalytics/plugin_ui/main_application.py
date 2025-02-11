@@ -940,7 +940,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def track_to_video_repository(self) -> TrackToVideoRepository:
         return TrackToVideoRepository()
 
-    def create_preload_input_files(self) -> PreloadInputFiles:
+    @cached_property
+    def preload_input_files(self) -> PreloadInputFiles:
         return PreloadInputFiles(
             load_track_files=self.load_track_files,
             load_otconfig=self.load_otconfig,
@@ -1168,12 +1169,11 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             group.register(self.track_image_updater.notify_layers)
         main_window = ModifiedCTk(dummy_viewmodel)
         self.pulling_progressbar_popup_builder.add_widget(main_window)
-        preload_input_files = self.create_preload_input_files()
         OTAnalyticsGui(
             main_window,
             dummy_viewmodel,
             layer_groups,
-            preload_input_files,
+            self.preload_input_files,
             self.run_config,
         ).start()
 
