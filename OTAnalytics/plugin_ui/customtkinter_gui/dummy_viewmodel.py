@@ -476,16 +476,16 @@ class DummyViewModel(
     def _on_section_changed(self, section: SectionId) -> None:
         self._refresh_sections_in_ui()
 
-    def _on_flow_changed(self, flow_id: FlowId) -> None:
+    def on_flow_changed(self, flow_id: FlowId) -> None:
         self.notify_flows([flow_id])
 
-    def _on_background_updated(self, image: Optional[TrackImage]) -> None:
+    def on_background_updated(self, image: Optional[TrackImage]) -> None:
         if image:
             self.frame_canvas.update_background(image)
         else:
             self.frame_canvas.clear_image()
 
-    def _update_date_range(self, filter_element: FilterElement) -> None:
+    def update_date_range(self, filter_element: FilterElement) -> None:
         date_range = filter_element.date_range
         start_date = (
             date_range.start_date.strftime(DATETIME_FORMAT)
@@ -535,7 +535,7 @@ class DummyViewModel(
         self.treeview_flows.update_items()
         self.update_quick_save_button(flow_id)
 
-    def _notify_action_running_state(self, running: bool) -> None:
+    def notify_action_running_state(self, running: bool) -> None:
         self._update_enabled_buttons()
         self._update_treeview_states()
 
@@ -554,10 +554,10 @@ class DummyViewModel(
     def register_observers(self) -> None:
         self._application._datastore.register_video_observer(self)
         self._application.track_view_state.selected_videos.register(
-            self._update_selected_videos
+            self.update_selected_videos
         )
         self._application.section_state.selected_sections.register(
-            self._update_selected_sections
+            self.update_selected_sections
         )
         self._application.register_section_changed_observer(self._on_section_changed)
         self._application.register_section_changed_observer(
@@ -576,7 +576,7 @@ class DummyViewModel(
     def set_window(self, window: AbstractMainWindow) -> None:
         self._window = window
 
-    def _update_selected_videos(self, videos: list[Video]) -> None:
+    def update_selected_videos(self, videos: list[Video]) -> None:
         current_paths = [str(video.get_path()) for video in videos]
         self._selected_videos = current_paths
         self.treeview_videos.update_selected_items(current_paths)
@@ -736,7 +736,7 @@ class DummyViewModel(
     def set_treeview_flows(self, treeview: AbstractTreeviewInterface) -> None:
         self._treeview_flows = treeview
 
-    def _update_selected_sections(self, section_ids: list[SectionId]) -> None:
+    def update_selected_sections(self, section_ids: list[SectionId]) -> None:
         self._update_selected_section_items()
         self._update_enabled_buttons()
         self.update_section_offset_button_state()
@@ -771,7 +771,7 @@ class DummyViewModel(
         else:
             self.frame_tracks.configure_offset_button(COLOR_ORANGE, True)
 
-    def _update_selected_flows(self, flow_ids: list[FlowId]) -> None:
+    def update_selected_flows(self, flow_ids: list[FlowId]) -> None:
         self._update_selected_flow_items()
         self._update_enabled_buttons()
 
@@ -957,7 +957,7 @@ class DummyViewModel(
             section = self.__create_section(coordinates, is_area_section, get_metadata)
             if not section.name.startswith(CUTTING_SECTION_MARKER):
                 logger().info(f"New section created: {section.id}")
-                self._update_selected_sections([section.id])
+                self.update_selected_sections([section.id])
         self._finish_action()
 
     def __create_section(
@@ -1039,7 +1039,7 @@ class DummyViewModel(
         )
         self._application.update_section(section)
         logger().info(f"Update section: {section.id}")
-        self._update_selected_sections([section.id])
+        self.update_selected_sections([section.id])
         self._finish_action()
 
     def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
@@ -1483,7 +1483,7 @@ class DummyViewModel(
             return (current_offset.x, current_offset.y)
         return None
 
-    def _update_offset(
+    def update_offset(
         self, offset: Optional[geometry.RelativeOffsetCoordinate]
     ) -> None:
         if offset:

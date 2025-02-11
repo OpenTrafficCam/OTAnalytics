@@ -14,6 +14,7 @@ from OTAnalytics.adapter_ui.abstract_frame_project import (
     AbstractFrameProject,
     AbstractFrameSvzMetadata,
 )
+from OTAnalytics.adapter_ui.abstract_frame_remark import AbstractFrameRemark
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
@@ -24,11 +25,13 @@ from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
+from OTAnalytics.application import geometry
 from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId
-from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.section import Section, SectionId
+from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.video import Video
-from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 
 DISTANCES: str = "distances"
 
@@ -368,7 +371,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_remark_frame(self, frame: AbstractCTkFrame) -> None:
+    def set_remark_frame(self, frame: AbstractFrameRemark) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -449,4 +452,38 @@ class ViewModel(ABC):
 
     @abstractmethod
     def export_track_statistics(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def on_flow_changed(self, flow_id: FlowId) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def on_background_updated(self, image: Optional[TrackImage]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_date_range(self, filter_element: FilterElement) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def notify_action_running_state(self, running: bool) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_selected_videos(self, videos: list[Video]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_selected_sections(self, section_ids: list[SectionId]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_selected_flows(self, flow_ids: list[FlowId]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_offset(
+        self, offset: Optional[geometry.RelativeOffsetCoordinate]
+    ) -> None:
         raise NotImplementedError
