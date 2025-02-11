@@ -173,8 +173,7 @@ class UseCaseProvider:
         self._flow_repository.add_all(flows)
 
     def get_tracks_intersecting_sections(self) -> TracksIntersectingSections:
-        get_all_tracks = GetAllTracks(self._track_repository)
-        return self._starter._create_tracks_intersecting_sections(get_all_tracks)
+        return self._starter.tracks_intersecting_sections
 
     def get_create_events(self) -> CreateEvents:
         clear_all_events = ClearAllEvents(self._event_repository)

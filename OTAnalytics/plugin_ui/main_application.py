@@ -370,13 +370,6 @@ class ApplicationStarter:
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
         )
-        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            self.get_all_tracks
-        )
-
-        calculate_track_statistics = self._create_calculate_track_statistics(
-            tracks_intersecting_sections
-        )
         get_road_user_assignments = GetRoadUserAssignments(
             self.flow_repository, self.event_repository, self.road_user_assigner
         )
@@ -387,7 +380,7 @@ class ApplicationStarter:
             SimpleTrackStatisticsExporterFactory()
         )
         export_track_statistics = ExportTrackStatistics(
-            calculate_track_statistics, track_statistics_export_factory
+            self.calculate_track_statistics, track_statistics_export_factory
         )
         application = OTAnalyticsApplication(
             self.datastore,
@@ -423,7 +416,7 @@ class ApplicationStarter:
             self.config_has_changed,
             export_road_user_assignments,
             self.save_path_suggester,
-            calculate_track_statistics,
+            self.calculate_track_statistics,
             number_of_tracks_assigned_to_each_flow,
             export_track_statistics,
             self.get_current_remark,
@@ -786,17 +779,11 @@ class ApplicationStarter:
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
         )
-        tracks_intersecting_sections = self._create_tracks_intersecting_sections(
-            self.get_all_tracks
-        )
-        calculate_track_statistics = self._create_calculate_track_statistics(
-            tracks_intersecting_sections
-        )
         track_statistics_export_factory = CachedTrackStatisticsExporterFactory(
             SimpleTrackStatisticsExporterFactory()
         )
         export_track_statistics = ExportTrackStatistics(
-            calculate_track_statistics, track_statistics_export_factory
+            self.calculate_track_statistics, track_statistics_export_factory
         )
 
         cli: OTAnalyticsCli
@@ -1059,11 +1046,9 @@ class ApplicationStarter:
             clear_events, create_intersection_events, create_scene_events
         )
 
-    @staticmethod
-    def _create_tracks_intersecting_sections(
-        get_tracks: GetAllTracks,
-    ) -> TracksIntersectingSections:
-        return SimpleTracksIntersectingSections(get_tracks)
+    @cached_property
+    def tracks_intersecting_sections(self) -> TracksIntersectingSections:
+        return SimpleTracksIntersectingSections(self.get_all_tracks)
 
     @cached_property
     def load_otflow(self) -> LoadOtflow:
@@ -1191,14 +1176,13 @@ class ApplicationStarter:
             ),
         )
 
-    def _create_calculate_track_statistics(
-        self, tracks_intersecting_sections: TracksIntersectingSections
-    ) -> CalculateTrackStatistics:
+    @cached_property
+    def calculate_track_statistics(self) -> CalculateTrackStatistics:
         get_cutting_sections = GetCuttingSections(self.section_repository)
         tracks_intersecting_all_sections = TracksIntersectingAllNonCuttingSections(
             get_cutting_sections,
             self.get_all_sections,
-            tracks_intersecting_sections,
+            self.tracks_intersecting_sections,
             self.get_sections_by_id,
             self.intersection_repository,
         )
