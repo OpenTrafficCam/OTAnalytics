@@ -4,8 +4,8 @@ from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStart
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
     ConfigurationBar,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_frame import (
-    ProjectFrame,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
+    ProjectForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
     VisualizationFilters,
@@ -50,8 +50,8 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return ConfigurationBar(self.project_frame)
 
     @cached_property
-    def project_frame(self) -> ProjectFrame:
-        return ProjectFrame()
+    def project_frame(self) -> ProjectForm:
+        return ProjectForm()
 
     @cached_property
     def workspace(self) -> Workspace:

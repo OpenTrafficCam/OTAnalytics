@@ -1,12 +1,12 @@
 from nicegui import ui
 
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_frame import (
-    ProjectFrame,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
+    ProjectForm,
 )
 
 
 class ConfigurationBar:
-    def __init__(self, project_frame: ProjectFrame) -> None:
+    def __init__(self, project_frame: ProjectForm) -> None:
         self.project_frame = project_frame
 
     def build(self) -> None:

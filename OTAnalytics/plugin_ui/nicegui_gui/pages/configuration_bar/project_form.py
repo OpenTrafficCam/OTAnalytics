@@ -1,6 +1,6 @@
 from nicegui import ui
 
 
-class ProjectFrame:
+class ProjectForm:
     def build(self) -> None:
-        ui.label("Project Frame")
+        ui.label("Project Form")
