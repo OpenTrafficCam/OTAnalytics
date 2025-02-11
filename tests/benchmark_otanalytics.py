@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 import pytest
+from plugin_ui.main_application import OtAnalyticsCliApplicationStarter
 from pytest_benchmark.fixture import BenchmarkFixture
 
 from OTAnalytics.adapter_visualization.color_provider import (
@@ -74,7 +75,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     PythonDetectionParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
-from OTAnalytics.plugin_ui.main_application import BaseOtAnalyticsApplicationStarter
 from tests.utils.builders.run_configuration import create_run_config
 
 PYTHON = "PYTHON"
@@ -145,7 +145,7 @@ class UseCaseProvider:
         self._include_classes: frozenset[str] = frozenset()
         self._exclude_classes: frozenset[str] = frozenset()
         self._flow_parser = OtFlowParser()
-        self._starter = BaseOtAnalyticsApplicationStarter(self.run_config)
+        self._starter = OtAnalyticsCliApplicationStarter(self.run_config)
         track_repository, detection_metadata = self.provide_track_repository(
             self._ottrk_files, dataset_type
         )

@@ -7,7 +7,7 @@ from tqdm import tqdm
 from OTAnalytics.application.parser.cli_parser import CliMode
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser
-from OTAnalytics.plugin_ui.main_application import BaseOtAnalyticsApplicationStarter
+from OTAnalytics.plugin_ui.main_application import OtAnalyticsCliApplicationStarter
 from tests.utils.assertions import assert_two_files_equal_sorted
 from tests.utils.builders.run_configuration import create_run_config
 
@@ -312,5 +312,5 @@ class TestRegressionCompleteApplication:
             cli_mode=cli_mode,
             cli_chunk_size=cli_chunk_size,
         )
-        BaseOtAnalyticsApplicationStarter(run_config).start_cli()
+        OtAnalyticsCliApplicationStarter(run_config).start_cli()
         return save_name

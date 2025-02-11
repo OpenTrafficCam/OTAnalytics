@@ -284,7 +284,7 @@ class ApplicationStarter:
         )
         if self.run_config.start_cli:
             try:
-                BaseOtAnalyticsApplicationStarter(self.run_config).start_cli()
+                OtAnalyticsCliApplicationStarter(self.run_config).start_cli()
                 # add command line tag for activating -> add to PipelineBenchmark,
                 # add github actions for benchmark
                 # regression test lokal runner neben benchmark ->
@@ -293,7 +293,7 @@ class ApplicationStarter:
             except CliParseError as e:
                 logger().exception(e, exc_info=True)
         else:
-            BaseOtAnalyticsApplicationStarter(self.run_config).start_gui()
+            OtAnalyticsGuiApplicationStarter(self.run_config).start_gui()
 
     @cached_property
     def run_config(self) -> RunConfiguration:
@@ -1062,6 +1062,8 @@ class BaseOtAnalyticsApplicationStarter:
     def get_cutting_sections(self) -> GetCuttingSections:
         return GetCuttingSections(self.section_repository)
 
+
+class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def start_gui(self) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
             DummyViewModel,
@@ -1231,6 +1233,8 @@ class BaseOtAnalyticsApplicationStarter:
             self.run_config,
         ).start()
 
+
+class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def start_cli(self) -> None:
         create_events = self._create_use_case_create_events(
             self.section_provider_event_creation_cli,
