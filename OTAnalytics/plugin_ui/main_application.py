@@ -361,7 +361,6 @@ class ApplicationStarter:
             self.section_provider_event_creation_ui,
             self.clear_all_events,
             self.get_tracks_without_single_detections,
-            self.run_config.num_processes,
         )
         export_counts = self._create_export_counts(create_events)
         export_road_user_assignments = self.create_export_road_user_assignments(
@@ -799,7 +798,6 @@ class ApplicationStarter:
             section_provider,
             self.clear_all_events,
             self.get_tracks_without_single_detections,
-            self.run_config.num_processes,
         )
         export_counts = self._create_export_counts(create_events)
         export_tracks = CsvTrackExport(
@@ -1005,20 +1003,17 @@ class ApplicationStarter:
 
     @cached_property
     def create_intersection_events(self) -> CreateIntersectionEvents:
-        intersect = self._create_intersect(
-            self.get_all_tracks, self.run_config.num_processes
-        )
         return SimpleCreateIntersectionEvents(
-            intersect, self.section_provider_event_creation_ui, self.add_events
+            self.intersect, self.section_provider_event_creation_ui, self.add_events
         )
 
-    @staticmethod
-    def _create_intersect(get_tracks: GetAllTracks, num_processes: int) -> RunIntersect:
+    @cached_property
+    def intersect(self) -> RunIntersect:
         return BatchedTracksRunIntersect(
             intersect_parallelizer=MultiprocessingIntersectParallelization(
-                num_processes
+                self.run_config.num_processes
             ),
-            get_tracks=get_tracks,
+            get_tracks=self.get_all_tracks,
         )
 
     @cached_property
@@ -1057,11 +1052,9 @@ class ApplicationStarter:
         section_provider: SectionProvider,
         clear_events: ClearAllEvents,
         get_all_tracks_without_single_detections: GetTracksWithoutSingleDetections,
-        num_processes: int,
     ) -> CreateEvents:
-        run_intersect = self._create_intersect(self.get_all_tracks, num_processes)
         create_intersection_events = SimpleCreateIntersectionEvents(
-            run_intersect, section_provider, self.add_events
+            self.intersect, section_provider, self.add_events
         )
         scene_action_detector = SceneActionDetector()
         create_scene_events = SimpleCreateSceneEvents(

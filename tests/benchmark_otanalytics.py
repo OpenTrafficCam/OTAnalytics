@@ -76,7 +76,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from OTAnalytics.plugin_ui.main_application import ApplicationStarter
-from tests.utils.builders.run_configuration import NUM_PROCESSES, create_run_config
+from tests.utils.builders.run_configuration import create_run_config
 
 PYTHON = "PYTHON"
 PANDAS = "PANDAS"
@@ -184,7 +184,6 @@ class UseCaseProvider:
             self._section_repository.get_all,
             clear_all_events,
             get_tracks_without_single_detections,
-            num_processes=NUM_PROCESSES,
         )
         return create_events
 
