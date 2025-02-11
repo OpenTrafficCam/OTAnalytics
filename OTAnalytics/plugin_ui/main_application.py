@@ -1084,7 +1084,102 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             observer=self.color_palette_provider.update
         )
 
-        application = OTAnalyticsApplication(
+        self.section_repository.register_sections_observer(
+            self.cut_tracks_intersecting_section
+        )
+        self.section_repository.register_section_changed_observer(
+            self.cut_tracks_intersecting_section.notify_section_changed
+        )
+        self.cut_tracks_intersecting_section.register(
+            self.clear_all_events.on_tracks_cut
+        )
+        self.application.connect_clear_event_repository_observer()
+        dummy_viewmodel = DummyViewModel(
+            self.application,
+            self.flow_parser,
+            self.name_generator,
+            event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
+            show_svz=self.run_config.show_svz,
+        )
+        self.application.register_video_observer(dummy_viewmodel)
+        self.application.register_sections_observer(dummy_viewmodel)
+        self.application.register_flows_observer(dummy_viewmodel)
+        self.application.register_flow_changed_observer(
+            dummy_viewmodel._on_flow_changed
+        )
+        self.application.track_view_state.selected_videos.register(
+            dummy_viewmodel._update_selected_videos
+        )
+        self.application.section_state.selected_sections.register(
+            dummy_viewmodel._update_selected_sections
+        )
+        self.application.flow_state.selected_flows.register(
+            dummy_viewmodel._update_selected_flows
+        )
+        self.application.track_view_state.background_image.register(
+            dummy_viewmodel._on_background_updated
+        )
+        self.application.track_view_state.track_offset.register(
+            dummy_viewmodel._update_offset
+        )
+        self.application.track_view_state.filter_element.register(
+            dummy_viewmodel._update_date_range
+        )
+        self.application.track_view_state.filter_element.register(
+            dummy_viewmodel.update_track_statistics
+        )
+        self.application.action_state.action_running.register(
+            dummy_viewmodel._notify_action_running_state
+        )
+        self.track_view_state.filter_date_active.register(
+            dummy_viewmodel.change_filter_date_active
+        )
+        self.track_view_state.filter_element.register(
+            self.selected_video_updater.on_filter_element_change
+        )
+        # TODO: Refactor observers - move registering to subjects happening in
+        #   constructor dummy_viewmodel
+        # cut_tracks_intersecting_section.register(
+        #    cached_pandas_track_provider.on_tracks_cut
+        # )
+        self.cut_tracks_intersecting_section.register(dummy_viewmodel.on_tracks_cut)
+        dummy_viewmodel.register_observers()
+        self.application.connect_observers()
+        self.datastore.register_tracks_observer(self.selected_video_updater)
+        self.datastore.register_tracks_observer(dummy_viewmodel)
+        self.datastore.register_tracks_observer(self.track_image_updater)
+        self.datastore.register_video_observer(self.selected_video_updater)
+        self.datastore.register_section_changed_observer(
+            self.track_image_updater.notify_section_changed
+        )
+        self.start_new_project.register(dummy_viewmodel.on_start_new_project)
+        self.event_repository.register_observer(self.track_image_updater.notify_events)
+        self.event_repository.register_observer(dummy_viewmodel.update_track_statistics)
+        self.load_otflow.register(self.file_state.last_saved_config.set)
+        self.load_otconfig.register(self.file_state.last_saved_config.set)
+        self.load_otconfig.register(dummy_viewmodel.update_remark_view)
+        self.project_updater.register(dummy_viewmodel.update_quick_save_button)
+        self.track_file_repository.register(dummy_viewmodel.update_quick_save_button)
+        self.project_updater.register(dummy_viewmodel.show_current_project)
+        self.project_updater.register(dummy_viewmodel.update_svz_metadata_view)
+
+        layer_groups, layers = self.layers
+        for group in layer_groups:
+            group.register(self.track_image_updater.notify_layers)
+        main_window = ModifiedCTk(dummy_viewmodel)
+        self.pulling_progressbar_popup_builder.add_widget(main_window)
+        preload_input_files = self.create_preload_input_files()
+        OTAnalyticsGui(
+            main_window,
+            dummy_viewmodel,
+            layer_groups,
+            preload_input_files,
+            self.run_config,
+        ).start()
+
+    @cached_property
+    def application(self) -> OTAnalyticsApplication:
+        return OTAnalyticsApplication(
             self.datastore,
             self.track_state,
             self.track_view_state,
@@ -1123,96 +1218,6 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.export_track_statistics,
             self.get_current_remark,
         )
-        self.section_repository.register_sections_observer(
-            self.cut_tracks_intersecting_section
-        )
-        self.section_repository.register_section_changed_observer(
-            self.cut_tracks_intersecting_section.notify_section_changed
-        )
-        self.cut_tracks_intersecting_section.register(
-            self.clear_all_events.on_tracks_cut
-        )
-        application.connect_clear_event_repository_observer()
-        dummy_viewmodel = DummyViewModel(
-            application,
-            self.flow_parser,
-            self.name_generator,
-            event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
-            show_svz=self.run_config.show_svz,
-        )
-        application.register_video_observer(dummy_viewmodel)
-        application.register_sections_observer(dummy_viewmodel)
-        application.register_flows_observer(dummy_viewmodel)
-        application.register_flow_changed_observer(dummy_viewmodel._on_flow_changed)
-        application.track_view_state.selected_videos.register(
-            dummy_viewmodel._update_selected_videos
-        )
-        application.section_state.selected_sections.register(
-            dummy_viewmodel._update_selected_sections
-        )
-        application.flow_state.selected_flows.register(
-            dummy_viewmodel._update_selected_flows
-        )
-        application.track_view_state.background_image.register(
-            dummy_viewmodel._on_background_updated
-        )
-        application.track_view_state.track_offset.register(
-            dummy_viewmodel._update_offset
-        )
-        application.track_view_state.filter_element.register(
-            dummy_viewmodel._update_date_range
-        )
-        application.track_view_state.filter_element.register(
-            dummy_viewmodel.update_track_statistics
-        )
-        application.action_state.action_running.register(
-            dummy_viewmodel._notify_action_running_state
-        )
-        self.track_view_state.filter_date_active.register(
-            dummy_viewmodel.change_filter_date_active
-        )
-        self.track_view_state.filter_element.register(
-            self.selected_video_updater.on_filter_element_change
-        )
-        # TODO: Refactor observers - move registering to subjects happening in
-        #   constructor dummy_viewmodel
-        # cut_tracks_intersecting_section.register(
-        #    cached_pandas_track_provider.on_tracks_cut
-        # )
-        self.cut_tracks_intersecting_section.register(dummy_viewmodel.on_tracks_cut)
-        dummy_viewmodel.register_observers()
-        application.connect_observers()
-        self.datastore.register_tracks_observer(self.selected_video_updater)
-        self.datastore.register_tracks_observer(dummy_viewmodel)
-        self.datastore.register_tracks_observer(self.track_image_updater)
-        self.datastore.register_video_observer(self.selected_video_updater)
-        self.datastore.register_section_changed_observer(
-            self.track_image_updater.notify_section_changed
-        )
-        self.start_new_project.register(dummy_viewmodel.on_start_new_project)
-        self.event_repository.register_observer(self.track_image_updater.notify_events)
-        self.event_repository.register_observer(dummy_viewmodel.update_track_statistics)
-        self.load_otflow.register(self.file_state.last_saved_config.set)
-        self.load_otconfig.register(self.file_state.last_saved_config.set)
-        self.load_otconfig.register(dummy_viewmodel.update_remark_view)
-        self.project_updater.register(dummy_viewmodel.update_quick_save_button)
-        self.track_file_repository.register(dummy_viewmodel.update_quick_save_button)
-        self.project_updater.register(dummy_viewmodel.show_current_project)
-        self.project_updater.register(dummy_viewmodel.update_svz_metadata_view)
-
-        layer_groups, layers = self.layers
-        for group in layer_groups:
-            group.register(self.track_image_updater.notify_layers)
-        main_window = ModifiedCTk(dummy_viewmodel)
-        self.pulling_progressbar_popup_builder.add_widget(main_window)
-        preload_input_files = self.create_preload_input_files()
-        OTAnalyticsGui(
-            main_window,
-            dummy_viewmodel,
-            layer_groups,
-            preload_input_files,
-            self.run_config,
-        ).start()
 
     @cached_property
     def all_filtered_track_ids(self) -> TrackIdProvider:
