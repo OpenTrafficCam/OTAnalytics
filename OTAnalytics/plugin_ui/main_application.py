@@ -370,12 +370,6 @@ class ApplicationStarter:
         export_road_user_assignments = self.create_export_road_user_assignments(
             create_events
         )
-        save_path_suggester = SavePathSuggester(
-            self.file_state,
-            self.get_all_track_files,
-            self.get_all_videos,
-            self.get_current_project,
-        )
         tracks_intersecting_sections = self._create_tracks_intersecting_sections(
             self.get_all_tracks
         )
@@ -428,7 +422,7 @@ class ApplicationStarter:
             self.load_otconfig,
             self.config_has_changed,
             export_road_user_assignments,
-            save_path_suggester,
+            self.save_path_suggester,
             calculate_track_statistics,
             number_of_tracks_assigned_to_each_flow,
             export_track_statistics,
@@ -521,6 +515,15 @@ class ApplicationStarter:
             preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def save_path_suggester(self) -> SavePathSuggester:
+        return SavePathSuggester(
+            self.file_state,
+            self.get_all_track_files,
+            self.get_all_videos,
+            self.get_current_project,
+        )
 
     @cached_property
     def config_has_changed(self) -> ConfigHasChanged:
