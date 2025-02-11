@@ -286,7 +286,7 @@ class ApplicationStarter:
         )
         if self.run_config.start_cli:
             try:
-                OtAnalyticsCliApplicationStarter(self.run_config).start_cli()
+                OtAnalyticsCliApplicationStarter(self.run_config).start()
                 # add command line tag for activating -> add to PipelineBenchmark,
                 # add github actions for benchmark
                 # regression test lokal runner neben benchmark ->
@@ -295,7 +295,7 @@ class ApplicationStarter:
             except CliParseError as e:
                 logger().exception(e, exc_info=True)
         else:
-            OtAnalyticsGuiApplicationStarter(self.run_config).start_gui()
+            OtAnalyticsGuiApplicationStarter(self.run_config).start()
 
     @cached_property
     def run_config(self) -> RunConfiguration:
@@ -1057,9 +1057,13 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def all_filtered_track_ids(self) -> TrackIdProvider:
         raise NotImplementedError
 
+    @abstractmethod
+    def start(self) -> None:
+        raise NotImplementedError
+
 
 class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
-    def start_gui(self) -> None:
+    def start(self) -> None:
         from OTAnalytics.plugin_ui.customtkinter_gui.gui import (
             ModifiedCTk,
             OTAnalyticsGui,
@@ -1252,7 +1256,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
 
 
 class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
-    def start_cli(self) -> None:
+    def start(self) -> None:
         cli: OTAnalyticsCli
         if self.run_config.cli_bulk_mode:
             track_parser = self._create_track_parser()

@@ -312,5 +312,5 @@ class TestRegressionCompleteApplication:
             cli_mode=cli_mode,
             cli_chunk_size=cli_chunk_size,
         )
-        OtAnalyticsCliApplicationStarter(run_config).start_cli()
+        OtAnalyticsCliApplicationStarter(run_config).start()
         return save_name

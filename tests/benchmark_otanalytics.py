@@ -272,7 +272,7 @@ class UseCaseProvider:
         )
 
     def run_cli(self) -> Callable[[], None]:
-        return self._starter.start_cli
+        return self._starter.start
 
     def get_track_parser(self, dataset_type: str = CURRENT_DATASET_TYPE) -> TrackParser:
         if dataset_type == PYTHON:
