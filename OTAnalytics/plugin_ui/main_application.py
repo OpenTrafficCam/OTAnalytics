@@ -80,6 +80,11 @@ from OTAnalytics.application.use_cases.create_intersection_events import (
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
+from OTAnalytics.application.use_cases.editor.section_editor import (
+    AddNewSection,
+    CreateSectionId,
+    UpdateSectionCoordinates,
+)
 from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearAllEvents,
@@ -652,12 +657,20 @@ class ApplicationStarter:
         cut_tracks_intersecting_section.register(clear_all_events.on_tracks_cut)
         application.connect_clear_event_repository_observer()
         name_generator = ArrowFlowNameGenerator()
+        create_section_id = CreateSectionId(section_repository)
+        add_new_section = AddNewSection(
+            create_section_id=create_section_id,
+            add_section=add_section,
+        )
+        update_section_coordinates = UpdateSectionCoordinates(section_repository)
         dummy_viewmodel = DummyViewModel(
             application,
             flow_parser,
             name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
             show_svz=run_config.show_svz,
+            add_new_section=add_new_section,
+            update_section_coordinates=update_section_coordinates,
         )
         application.register_video_observer(dummy_viewmodel)
         application.register_sections_observer(dummy_viewmodel)

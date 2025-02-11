@@ -47,11 +47,7 @@ from OTAnalytics.adapter_ui.ui_texts import (
     DIRECTIONS_OF_STATIONING,
     WEATHER_TYPES,
 )
-from OTAnalytics.adapter_ui.view_model import (
-    MetadataProvider,
-    MissingCoordinate,
-    ViewModel,
-)
+from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
@@ -93,6 +89,11 @@ from OTAnalytics.application.project import (
 from OTAnalytics.application.use_cases.config import MissingDate
 from OTAnalytics.application.use_cases.config_has_changed import NoExistingConfigFound
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
+from OTAnalytics.application.use_cases.editor.section_editor import (
+    AddNewSection,
+    MetadataProvider,
+    UpdateSectionCoordinates,
+)
 from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
     ExporterNotFoundError,
@@ -124,11 +125,8 @@ from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
-    NAME,
-    RELATIVE_OFFSET_COORDINATES,
     Area,
     LineSection,
-    MissingSection,
     Section,
     SectionId,
     SectionListObserver,
@@ -349,12 +347,16 @@ class DummyViewModel(
         name_generator: FlowNameGenerator,
         event_list_export_formats: dict,
         show_svz: bool,
+        add_new_section: AddNewSection,
+        update_section_coordinates: UpdateSectionCoordinates,
     ) -> None:
         self._application = application
         self._flow_parser: FlowParser = flow_parser
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
         self._show_svz = show_svz
+        self._add_new_section = add_new_section
+        self._update_section_coordinates = update_section_coordinates
         self._window: Optional[AbstractMainWindow] = None
         self._frame_project: Optional[AbstractFrameProject] = None
         self._frame_tracks: Optional[AbstractFrameTracks] = None
@@ -949,101 +951,24 @@ class DummyViewModel(
         is_area_section: bool,
         get_metadata: MetadataProvider,
     ) -> None:
-        if not coordinates:
-            raise MissingCoordinate("First coordinate is missing")
-        elif len(coordinates) == 1:
-            raise MissingCoordinate("Second coordinate is missing")
-        with contextlib.suppress(CancelAddSection):
-            section = self.__create_section(coordinates, is_area_section, get_metadata)
+        section = self._add_new_section.add_new_section(
+            coordinates=coordinates,
+            is_area_section=is_area_section,
+            get_metadata=get_metadata,
+        )
+        if section:
             if not section.name.startswith(CUTTING_SECTION_MARKER):
                 logger().info(f"New section created: {section.id}")
                 self._update_selected_sections([section.id])
         self._finish_action()
 
-    def __create_section(
-        self,
-        coordinates: list[tuple[int, int]],
-        is_area_section: bool,
-        get_metadata: MetadataProvider,
-    ) -> Section:
-        metadata = self.__get_metadata(get_metadata)
-        relative_offset_coordinates_enter = metadata[RELATIVE_OFFSET_COORDINATES][
-            EventType.SECTION_ENTER.serialize()
-        ]
-        section: Section | None = None
-        if is_area_section:
-            section = Area(
-                id=self._application.get_section_id(),
-                name=metadata[NAME],
-                relative_offset_coordinates={
-                    EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
-                        **relative_offset_coordinates_enter
-                    )
-                },
-                plugin_data={},
-                coordinates=[
-                    self._to_coordinate(coordinate) for coordinate in coordinates
-                ],
-            )
-        else:
-            section = LineSection(
-                id=self._application.get_section_id(),
-                name=metadata[NAME],
-                relative_offset_coordinates={
-                    EventType.SECTION_ENTER: geometry.RelativeOffsetCoordinate(
-                        **relative_offset_coordinates_enter
-                    )
-                },
-                plugin_data={},
-                coordinates=[
-                    self._to_coordinate(coordinate) for coordinate in coordinates
-                ],
-            )
-        if section is None:
-            raise TypeError("section has to be LineSection or Area, but is None")
-        self._application.add_section(section)
-        return section
-
-    def __get_metadata(self, get_metadata: MetadataProvider) -> dict:
-        metadata = get_metadata()
-        while (
-            (not metadata)
-            or (NAME not in metadata)
-            or (not self.is_section_name_valid(metadata[NAME]))
-            or (RELATIVE_OFFSET_COORDINATES not in metadata)
-        ):
-            metadata = get_metadata()
-        return metadata
-
-    def __validate_section_information(
-        self, meta_data: dict, coordinates: list[tuple[int, int]]
-    ) -> None:
-        if not coordinates:
-            raise MissingCoordinate("First coordinate is missing")
-        elif len(coordinates) == 1:
-            raise MissingCoordinate("Second coordinate is missing")
-        if not meta_data:
-            raise ValueError("Metadata of line_section are not defined")
-
     def update_section_coordinates(
         self, meta_data: dict, coordinates: list[tuple[int, int]]
     ) -> None:
-        self.__validate_section_information(meta_data, coordinates)
-        section_id = SectionId(meta_data[ID])
-        if not (section := self._application.get_section_for(section_id)):
-            raise MissingSection(
-                f"Could not update section '{section_id.serialize()}' after editing"
-            )
-        section.update_coordinates(
-            [self._to_coordinate(coordinate) for coordinate in coordinates]
-        )
-        self._application.update_section(section)
-        logger().info(f"Update section: {section.id}")
-        self._update_selected_sections([section.id])
+        section_id = self._update_section_coordinates.update(meta_data, coordinates)
+        logger().info(f"Update section: {section_id}")
+        self._update_selected_sections([section_id])
         self._finish_action()
-
-    def _to_coordinate(self, coordinate: tuple[int, int]) -> geometry.Coordinate:
-        return geometry.Coordinate(coordinate[0], coordinate[1])
 
     def _is_area_section(self, section: Section | None) -> bool:
         return isinstance(section, Area)

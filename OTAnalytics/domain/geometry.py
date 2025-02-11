@@ -23,6 +23,10 @@ class Coordinate(DataclassValidation):
         return [self.x, self.y]
 
 
+def coordinate_from_tuple(coordinate: tuple[float, float]) -> Coordinate:
+    return Coordinate(coordinate[0], coordinate[1])
+
+
 @dataclass(frozen=True)
 class Line(DataclassValidation):
     """A `Line` is a geometry that can consist of multiple line segments.
