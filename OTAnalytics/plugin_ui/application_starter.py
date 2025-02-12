@@ -24,6 +24,9 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 )
 from OTAnalytics.plugin_ui.base_application import create_format_fixer
 from OTAnalytics.plugin_ui.ctk_application import OtAnalyticsCtkApplicationStarter
+from OTAnalytics.plugin_ui.nicegui_application import (
+    OtAnalyticsNiceGuiApplicationStarter,
+)
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
 
@@ -45,6 +48,8 @@ class ApplicationStarter:
 
             except CliParseError as e:
                 logger().exception(e, exc_info=True)
+        elif self.run_config.start_webui:
+            OtAnalyticsNiceGuiApplicationStarter(self.run_config).start()
         else:
             OtAnalyticsCtkApplicationStarter(self.run_config).start()
 
