@@ -9,10 +9,13 @@ from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
 )
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.resources.resource_manager import (
+    ProjectKeys,
+    ResourceManager,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.style import COLOR_ORANGE
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import FormFieldText
 
-LABEL_PROJECT_NAME = "Project name"
 MARKER_PROJECT_NAME = "marker-project-name"
 
 
@@ -36,13 +39,19 @@ class NiceGuiButtonQuickSaveConfig(AbstractButtonQuickSaveConfig):
 
 
 class ProjectForm(AbstractFrameProject):
-    def __init__(self, view_model: ViewModel) -> None:
+    def __init__(
+        self,
+        view_model: ViewModel,
+        resource_manager: ResourceManager,
+    ) -> None:
         self._view_model = view_model
+        self._resource_manager = resource_manager
         self._quick_save_button = NiceGuiButtonQuickSaveConfig(
-            "Save", on_click=self._quick_save
+            self._resource_manager.get(ProjectKeys.LABEL_QUICK_SAVE),
+            on_click=self._quick_save,
         )
         self._files = FormFieldText(
-            LABEL_PROJECT_NAME,
+            self._resource_manager.get(ProjectKeys.LABEL_PROJECT_NAME),
             "",
             marker=MARKER_PROJECT_NAME,
             on_value_change=self._update_to_model,
@@ -54,10 +63,12 @@ class ProjectForm(AbstractFrameProject):
         self._view_model.set_button_quick_save_config(self._quick_save_button)
 
     def build(self) -> Self:
-        ui.label("Project").classes("text-lg font-bold")
+        ui.label(
+            self._resource_manager.get(ProjectKeys.LABEL_PROJECT_FORM_HEADER)
+        ).classes("text-lg font-bold")
         with ui.row():
-            ui.button("Open...")
-            ui.button("Save as...")
+            ui.button(self._resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT))
+            ui.button(self._resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT))
             self._quick_save_button.build()
         self._files.build()
         return self

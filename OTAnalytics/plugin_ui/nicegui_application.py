@@ -50,24 +50,26 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def configuration_bar(self) -> ConfigurationBar:
-        return ConfigurationBar(self.project_form, self.svz_metadata_form)
+        return ConfigurationBar(
+            self.resource_manager, self.project_form, self.svz_metadata_form
+        )
 
     @cached_property
     def project_form(self) -> ProjectForm:
-        return ProjectForm(self.view_model)
+        return ProjectForm(self.view_model, self.resource_manager)
 
     @cached_property
     def svz_metadata_form(self) -> SvzMetadataForm:
-        return SvzMetadataForm(self.view_model)
+        return SvzMetadataForm(self.view_model, self.resource_manager)
 
     @cached_property
     def workspace(self) -> Workspace:
-        return Workspace()
+        return Workspace(self.resource_manager)
 
     @cached_property
     def visualization_filters(self) -> VisualizationFilters:
-        return VisualizationFilters()
+        return VisualizationFilters(self.resource_manager)
 
     @cached_property
     def visualization_layers(self) -> VisualizationLayers:
-        return VisualizationLayers()
+        return VisualizationLayers(self.resource_manager)

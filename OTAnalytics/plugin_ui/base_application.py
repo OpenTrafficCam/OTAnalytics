@@ -30,6 +30,7 @@ from OTAnalytics.application.datastore import (
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
+from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import (
     ActionState,
@@ -976,6 +977,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def update_section_coordinates(self) -> UpdateSectionCoordinates:
         return UpdateSectionCoordinates(self.section_repository)
+
+    @cached_property
+    def resource_manager(self) -> ResourceManager:
+        return ResourceManager()
 
     @abstractmethod
     @cached_property
