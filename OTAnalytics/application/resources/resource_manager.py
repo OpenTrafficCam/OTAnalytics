@@ -49,8 +49,10 @@ DEFAULT_RESOURCE_MAP = {
 
 class ResourceManager:
 
-    def __init__(self) -> None:
-        self._resources: dict[ResourceKey, str] = DEFAULT_RESOURCE_MAP
+    def __init__(
+        self, resources: dict[ResourceKey, str] = DEFAULT_RESOURCE_MAP
+    ) -> None:
+        self._resources = resources
 
     def get(self, key: ResourceKey) -> str:
         return self._resources.get(key, str(key))
