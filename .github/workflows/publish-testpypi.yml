@@ -57,5 +57,5 @@ jobs:
       - name: Publish distribution
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: ${{ env.PYPI_REPO_URL }}
+          repository-url: https://test.pypi.org/legacy/
           verbose: true
