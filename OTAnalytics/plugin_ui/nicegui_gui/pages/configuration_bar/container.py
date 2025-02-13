@@ -9,6 +9,9 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     ProjectForm,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.start_date import (
+    StartDateForm,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
     SvzMetadataForm,
 )
@@ -20,10 +23,12 @@ class ConfigurationBar:
         resource_manager: ResourceManager,
         project_form: ProjectForm,
         svz_metadata_form: SvzMetadataForm,
+        start_date: StartDateForm,
     ) -> None:
         self._resource_manager = resource_manager
         self.project_form = project_form
         self.svz_metadata_form = svz_metadata_form
+        self.start_date = start_date
 
     def build(self) -> None:
         ui.label(
@@ -45,3 +50,5 @@ class ConfigurationBar:
                 self.project_form.build()
             with ui.tab_panel(two):
                 self.svz_metadata_form.build()
+
+        self.start_date.build()

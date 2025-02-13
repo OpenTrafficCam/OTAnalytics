@@ -29,11 +29,11 @@ class MainPageBuilder(NiceguiPageBuilder):
         self.visualization_layers = visualization_layers
 
     def _build(self) -> None:
-        with ui.grid(columns=3).classes("w-full"):
-            with ui.column():
+        with ui.grid(columns=8).classes("w-full"):
+            with ui.column().classes("col-span-1"):
                 self.configuration_bar.build()
-            with ui.column():
+            with ui.column().classes("col-span-6"):
                 self.workspace.build()
                 self.visualization_filters.build()
-            with ui.column():
+            with ui.column().classes("col-span-1"):
                 self.visualization_layers.build()
