@@ -1,7 +1,10 @@
 ---
 name: Publish to TestPyPI
 
-on: push
+on:
+  push:
+    branches:
+      - main
 
 permissions: read-all
 
