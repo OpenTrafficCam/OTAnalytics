@@ -144,9 +144,9 @@ class ArgparseCliParser(CliParser):
             nargs="+",
             type=str,
             help=(
-                "Whitelist filter to include tracks with given classes."
+                "Whitelist filter to include tracks with given classes. "
                 "Classes specified in `--include-classes` are always kept "
-                "even if they are appear in `--exclude-classes`."
+                "even if they appear in `--exclude-classes`."
             ),
             required=False,
         )
