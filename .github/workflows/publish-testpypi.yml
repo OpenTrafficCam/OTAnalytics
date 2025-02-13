@@ -12,11 +12,15 @@ env:
 jobs:
   test:
     uses: "./.github/workflows/test.yml"
+  regression-test:
+    uses: "./.github/workflows/regression-test.yml"
+    secrets: inherit
   build-n-publish:
     name: Build and upload release to PyPI
     runs-on: ubuntu-latest
     needs:
       - test
+      - regression-test
     strategy:
       fail-fast: True
     environment:
