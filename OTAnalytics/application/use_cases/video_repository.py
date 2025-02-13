@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterable, Optional
 
 from OTAnalytics.domain.video import Video, VideoRepository
@@ -82,12 +82,9 @@ class GetVideos:
         if current_video := self.get(date):
             index = sorted_videos.index(current_video)
             return sorted_videos[index + 1 :]
-        if (
-            sorted_videos
-            and sorted_videos[0].start_date
-            and sorted_videos[0].start_date > date
-        ):
-            return sorted_videos
+        for index, video in enumerate(sorted_videos):
+            if video.start_date and video.start_date > date:
+                return sorted_videos[index:]
         return []
 
     def _get_all_videos_sorted(self) -> list[Video]:
@@ -95,7 +92,7 @@ class GetVideos:
         Sorts and returns a list of all videos in a sorted order based on their start
         dates.
 
-        datetime.min will be assumed, if a video has no start date.
+        datetime.min will be assumed if a video has no start date.
 
         Returns:
             All videos sorted by their start dates.
@@ -103,7 +100,11 @@ class GetVideos:
         all_videos = self._video_repository.get_all()
         return sorted(
             all_videos,
-            key=lambda video: video.start_date if video.start_date else datetime.min,
+            key=lambda video: (
+                video.start_date
+                if video.start_date
+                else datetime.min.replace(tzinfo=timezone.utc)
+            ),
         )
 
     def get_before(self, date: datetime) -> list[Video]:
