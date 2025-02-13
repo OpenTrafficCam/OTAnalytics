@@ -1,0 +1,54 @@
+---
+name: Publish to TestPyPI
+
+on: push
+
+permissions: read-all
+
+env:
+  PYPI_REPO_URL: https://test.pypi.org/legacy/
+  out_dir: "dist/"
+
+jobs:
+  build-n-publish:
+    name: Build and upload release to PyPI
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: True
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/OTAnalytics
+    permissions:
+      id-token: write # IMPORTANT: mandatory for trusted publishing
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Update Python Package Version
+        uses: platomo/update-version-py-action@v1.0.1
+        with:
+          version: nightly
+          file-path: "OTAnalytics"
+      - name: Install pypa/build
+        shell: bash
+        run: |
+          python3 -m pip install build --user
+
+      - name: Build a binary wheel and a source tarball
+        shell: bash
+        run: python -m build --sdist --wheel --outdir ${{ env.out_dir }}
+
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: ${{ env.out_dir }}
+
+      - name: Publish distribution
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ env.PYPI_REPO_URL }}
+          verbose: true
