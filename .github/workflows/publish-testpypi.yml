@@ -6,7 +6,6 @@ on: push
 permissions: read-all
 
 env:
-  PYPI_REPO_URL: https://test.pypi.org/legacy/
   out_dir: "dist/"
 
 jobs:
