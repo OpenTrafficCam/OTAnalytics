@@ -3,9 +3,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-from application.use_cases.cut_tracks_with_sections import CutTracksDto
-from domain.event import EventRepositoryEvent
-
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
 )
@@ -29,8 +26,10 @@ from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.application import geometry
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.application.use_cases.editor.section_editor import MetadataProvider
 from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
