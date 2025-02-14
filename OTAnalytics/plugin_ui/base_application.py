@@ -287,11 +287,11 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def export_track_statistics(self) -> ExportTrackStatistics:
         return ExportTrackStatistics(
             self.calculate_track_statistics,
-            self.track_statistics_export_factory,
+            self.track_statistics_exporter_factory,
         )
 
     @cached_property
-    def track_statistics_export_factory(self) -> TrackStatisticsExporterFactory:
+    def track_statistics_exporter_factory(self) -> TrackStatisticsExporterFactory:
         return CachedTrackStatisticsExporterFactory(
             SimpleTrackStatisticsExporterFactory()
         )
