@@ -257,6 +257,20 @@ DETECTION_RATE_PERCENTILE_VALUE = 0.9
 
 
 class BaseOtAnalyticsApplicationStarter(ABC):
+    @abstractmethod
+    @cached_property
+    def create_events(self) -> CreateEvents:
+        raise NotImplementedError
+
+    @abstractmethod
+    @cached_property
+    def all_filtered_track_ids(self) -> TrackIdProvider:
+        raise NotImplementedError
+
+    @abstractmethod
+    def start(self) -> None:
+        raise NotImplementedError
+
     def __init__(self, run_config: RunConfiguration) -> None:
         self.run_config = run_config
 
@@ -874,11 +888,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             format_fixer=format_fixer,
         )
 
-    @abstractmethod
-    @cached_property
-    def create_events(self) -> CreateEvents:
-        raise NotImplementedError
-
     @cached_property
     def export_road_user_assignments(self) -> ExportRoadUserAssignments:
         return ExportRoadUserAssignments(
@@ -974,15 +983,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def update_section_coordinates(self) -> UpdateSectionCoordinates:
         return UpdateSectionCoordinates(self.section_repository)
-
-    @abstractmethod
-    @cached_property
-    def all_filtered_track_ids(self) -> TrackIdProvider:
-        raise NotImplementedError
-
-    @abstractmethod
-    def start(self) -> None:
-        raise NotImplementedError
 
 
 def create_format_fixer(
