@@ -258,6 +258,20 @@ DETECTION_RATE_PERCENTILE_VALUE = 0.9
 
 
 class BaseOtAnalyticsApplicationStarter(ABC):
+    @abstractmethod
+    @cached_property
+    def create_events(self) -> CreateEvents:
+        raise NotImplementedError
+
+    @abstractmethod
+    @cached_property
+    def all_filtered_track_ids(self) -> TrackIdProvider:
+        raise NotImplementedError
+
+    @abstractmethod
+    def start(self) -> None:
+        raise NotImplementedError
+
     def __init__(self, run_config: RunConfiguration) -> None:
         self.run_config = run_config
 
@@ -267,18 +281,18 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return LayeredPlotter(layers=layers)
 
     @cached_property
-    def name_generator(self) -> FlowNameGenerator:
+    def flow_name_generator(self) -> FlowNameGenerator:
         return ArrowFlowNameGenerator()
 
     @cached_property
     def export_track_statistics(self) -> ExportTrackStatistics:
         return ExportTrackStatistics(
             self.calculate_track_statistics,
-            self.track_statistics_export_factory,
+            self.track_statistics_exporter_factory,
         )
 
     @cached_property
-    def track_statistics_export_factory(self) -> TrackStatisticsExporterFactory:
+    def track_statistics_exporter_factory(self) -> TrackStatisticsExporterFactory:
         return CachedTrackStatisticsExporterFactory(
             SimpleTrackStatisticsExporterFactory()
         )
@@ -544,7 +558,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def videos_metadata(self) -> VideosMetadata:
-        return VideosMetadata()
+        return create_videos_metadata()
 
     @cached_property
     def csv_track_export(self) -> CsvTrackExport:
@@ -624,7 +638,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def flow_parser(self) -> FlowParser:
-        return OtFlowParser()
+        return create_otflow_parser()
 
     @cached_property
     def flow_repository(self) -> FlowRepository:
@@ -688,7 +702,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(self.flow_repository)
         flow_generator = CrossProductFlowGenerator(
             id_generator=id_generator,
-            name_generator=self.name_generator,
+            name_generator=self.flow_name_generator,
             predicate=FilterSameSection().and_then(
                 FilterExisting(self.flow_repository)
             ),
@@ -836,9 +850,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def video_parser(self) -> VideoParser:
-        return CachedVideoParser(
-            SimpleVideoParser(PyAvVideoReader(self.videos_metadata))
-        )
+        return create_video_parser(self.videos_metadata)
 
     @cached_property
     def remark_repository(self) -> RemarkRepository:
@@ -876,11 +888,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             flow_parser=self.flow_parser,
             format_fixer=format_fixer,
         )
-
-    @abstractmethod
-    @cached_property
-    def create_events(self) -> CreateEvents:
-        raise NotImplementedError
 
     @cached_property
     def export_road_user_assignments(self) -> ExportRoadUserAssignments:
@@ -982,17 +989,20 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def resource_manager(self) -> ResourceManager:
         return ResourceManager()
 
-    @abstractmethod
-    @cached_property
-    def all_filtered_track_ids(self) -> TrackIdProvider:
-        raise NotImplementedError
-
-    @abstractmethod
-    def start(self) -> None:
-        raise NotImplementedError
-
 
 def create_format_fixer(
     default_value_provider: OtConfigDefaultValueProvider,
 ) -> OtConfigFormatFixer:
     return MultiFixer([FixMissingAnalysis(default_value_provider)])
+
+
+def create_video_parser(videos_metadata: VideosMetadata) -> VideoParser:
+    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(videos_metadata)))
+
+
+def create_videos_metadata() -> VideosMetadata:
+    return VideosMetadata()
+
+
+def create_otflow_parser() -> OtFlowParser:
+    return OtFlowParser()

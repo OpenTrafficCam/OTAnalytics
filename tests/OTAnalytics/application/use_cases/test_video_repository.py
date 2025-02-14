@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -45,7 +45,7 @@ class TestGetAllVideos:
 
 
 def first_video_date() -> datetime:
-    return datetime(2020, 1, 1)
+    return datetime(2020, 1, 1).replace(tzinfo=timezone.utc)
 
 
 def video_duration() -> timedelta:
@@ -53,7 +53,7 @@ def video_duration() -> timedelta:
 
 
 def second_video_date() -> datetime:
-    return datetime(2020, 1, 2)
+    return datetime(2020, 1, 2).replace(tzinfo=timezone.utc)
 
 
 @pytest.fixture
@@ -69,6 +69,17 @@ def second_video() -> Video:
     video = Mock(spec=Video)
     video.start_date = second_video_date()
     video.end_date = video.start_date + video_duration()
+    return video
+
+
+@pytest.fixture
+def video_without_start_date() -> Video:
+    """
+    https://openproject.platomo.de/wp/7277
+    """
+    video = Mock(spec=Video)
+    video.start_date = None
+    video.end_date = None
     return video
 
 
@@ -112,13 +123,18 @@ class TestGetVideos:
         self,
         first_video: Mock,
         second_video: Mock,
+        video_without_start_date: Mock,
         query_date: datetime,
         get_by_date: list[Video],
         expected_videos: list[Video],
     ) -> None:
         repository = Mock(spec=VideoRepository)
         repository.get_by_date.return_value = get_by_date
-        repository.get_all.return_value = [first_video, second_video]
+        repository.get_all.return_value = [
+            first_video,
+            second_video,
+            video_without_start_date,
+        ]
 
         get = GetVideos(repository)
         actual_videos = get.get_after(query_date)
