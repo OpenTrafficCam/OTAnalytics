@@ -1,6 +1,6 @@
 import warnings
 
-from OTAnalytics.plugin_ui.main_application import ApplicationStarter
+from OTAnalytics.plugin_ui.application_starter import ApplicationStarter
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 

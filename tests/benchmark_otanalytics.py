@@ -29,7 +29,7 @@ from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
-from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
     RemoveSection,
@@ -52,6 +52,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     FilteredPythonTrackDataset,
@@ -74,8 +75,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     PythonDetectionParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
-from OTAnalytics.plugin_ui.main_application import ApplicationStarter
-from tests.utils.builders.run_configuration import NUM_PROCESSES, create_run_config
+from tests.utils.builders.run_configuration import create_run_config
 
 PYTHON = "PYTHON"
 PANDAS = "PANDAS"
@@ -144,7 +144,8 @@ class UseCaseProvider:
         self._save_dir = save_dir
         self._include_classes: frozenset[str] = frozenset()
         self._exclude_classes: frozenset[str] = frozenset()
-        self._starter = ApplicationStarter()
+        self._flow_parser = OtFlowParser()
+        self._starter = OtAnalyticsCliApplicationStarter(self.run_config)
         track_repository, detection_metadata = self.provide_track_repository(
             self._ottrk_files, dataset_type
         )
@@ -153,7 +154,6 @@ class UseCaseProvider:
         self._section_repository = SectionRepository()
         self._flow_repository = FlowRepository()
         self._event_repository = EventRepository()
-        self._flow_parser = OtFlowParser()
 
         self._parse_otflow(self._otflow_file)
 
@@ -163,33 +163,22 @@ class UseCaseProvider:
         self._flow_repository.add_all(flows)
 
     def get_tracks_intersecting_sections(self) -> TracksIntersectingSections:
-        get_all_tracks = GetAllTracks(self._track_repository)
-        return self._starter._create_tracks_intersecting_sections(get_all_tracks)
+        return self._starter.tracks_intersecting_sections
 
     def get_create_events(self) -> CreateEvents:
         clear_all_events = ClearAllEvents(self._event_repository)
         get_tracks_without_single_detections = GetTracksWithoutSingleDetections(
             self._track_repository
         )
-        get_tracks = GetAllTracks(self._track_repository)
-        add_events = AddEvents(self._event_repository)
         create_events = self._starter._create_use_case_create_events(
             self._section_repository.get_all,
             clear_all_events,
-            get_tracks,
             get_tracks_without_single_detections,
-            add_events,
-            num_processes=NUM_PROCESSES,
         )
         return create_events
 
     def get_export_counts(self) -> ExportCounts:
-        return self._starter._create_export_counts(
-            self._event_repository,
-            self._flow_repository,
-            GetSectionsById(self._section_repository),
-            self.get_create_events(),
-        )
+        return self._starter.export_counts
 
     def get_cut_tracks(self) -> CutTracksIntersectingSection:
         get_sections_by_id = GetSectionsById(self._section_repository)
@@ -282,8 +271,8 @@ class UseCaseProvider:
             export_mode=OVERWRITE,
         )
 
-    def run_cli(self) -> Callable[[RunConfiguration], None]:
-        return self._starter.start_cli
+    def run_cli(self) -> Callable[[], None]:
+        return self._starter.start
 
     def get_track_parser(self, dataset_type: str = CURRENT_DATASET_TYPE) -> TrackParser:
         if dataset_type == PYTHON:
@@ -589,7 +578,7 @@ class TestPipelineBenchmark:
         use_case = use_case_provider_15min.run_cli()
         benchmark.pedantic(
             use_case,
-            args=(use_case_provider_15min.run_config,),
+            args=(),
             rounds=self.ROUNDS,
             iterations=5,
             warmup_rounds=self.WARMUP_ROUNDS,
@@ -603,7 +592,7 @@ class TestPipelineBenchmark:
         use_case = use_case_provider_15min_filtered.run_cli()
         benchmark.pedantic(
             use_case,
-            args=(use_case_provider_15min_filtered.run_config,),
+            args=(),
             rounds=self.ROUNDS,
             iterations=5,
             warmup_rounds=self.WARMUP_ROUNDS,
@@ -615,7 +604,7 @@ class TestPipelineBenchmark:
         use_case = use_case_provider_2hours.run_cli()
         benchmark.pedantic(
             use_case,
-            args=(use_case_provider_2hours.run_config,),
+            args=(),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
@@ -629,7 +618,7 @@ class TestPipelineBenchmark:
         use_case = use_case_provider_2hours_filtered.run_cli()
         benchmark.pedantic(
             use_case,
-            args=(use_case_provider_2hours_filtered.run_config,),
+            args=(),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
