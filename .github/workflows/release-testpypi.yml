@@ -8,6 +8,9 @@ on:
 
 permissions: read-all
 
+env:
+  out_dir: "dist/"
+
 jobs:
   test:
     uses: "./.github/workflows/test.yml"
@@ -32,9 +35,26 @@ jobs:
         with:
           python-version: "3.11"
       - name: Update Python Package Version
-        uses: platomo/update-version-py-action@v1
+        uses: platomo/update-version-py-action@v1.0.1
         with:
           version: nightly
           file-path: "OTAnalytics"
-      - name: Publish Python Package
-        uses: platomo/publish-pypi-action@v1.0.1
+      - name: Install pypa/build
+        shell: bash
+        run: |
+          python3 -m pip install build --user
+
+      - name: Build a binary wheel and a source tarball
+        shell: bash
+        run: python -m build --outdir ${{ env.out_dir }}
+
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: ${{ env.out_dir }}
+
+      - name: Publish distribution
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ vars.PYPI_REPO_URL }}
