@@ -17,14 +17,13 @@ from OTAnalytics.helpers.time_profiling import log_processing_time
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
 from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
-from OTAnalytics.plugin_parser.otvision_parser import (
-    CachedVideoParser,
-    OtFlowParser,
-    SimpleVideoParser,
+from OTAnalytics.plugin_ui.base_application import (
+    create_format_fixer,
+    create_otflow_parser,
+    create_video_parser,
+    create_videos_metadata,
 )
-from OTAnalytics.plugin_ui.base_application import create_format_fixer
 from OTAnalytics.plugin_ui.ctk_application import OtAnalyticsCtkApplicationStarter
-from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
 
 class ApplicationStarter:
@@ -67,17 +66,15 @@ class ApplicationStarter:
 
     @cached_property
     def video_parser(self) -> VideoParser:
-        return CachedVideoParser(
-            SimpleVideoParser(PyAvVideoReader(self.videos_metadata))
-        )
+        return create_video_parser(self.videos_metadata)
 
     @cached_property
     def flow_parser(self) -> FlowParser:
-        return OtFlowParser()
+        return create_otflow_parser()
 
     @cached_property
     def videos_metadata(self) -> VideosMetadata:
-        return VideosMetadata()
+        return create_videos_metadata()
 
     def _build_cli_argument_parser(self) -> CliParser:
         return ArgparseCliParser()

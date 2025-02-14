@@ -543,7 +543,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def videos_metadata(self) -> VideosMetadata:
-        return VideosMetadata()
+        return create_videos_metadata()
 
     @cached_property
     def csv_track_export(self) -> CsvTrackExport:
@@ -623,7 +623,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def flow_parser(self) -> FlowParser:
-        return OtFlowParser()
+        return create_otflow_parser()
 
     @cached_property
     def flow_repository(self) -> FlowRepository:
@@ -835,9 +835,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def video_parser(self) -> VideoParser:
-        return CachedVideoParser(
-            SimpleVideoParser(PyAvVideoReader(self.videos_metadata))
-        )
+        return create_video_parser(self.videos_metadata)
 
     @cached_property
     def remark_repository(self) -> RemarkRepository:
@@ -991,3 +989,15 @@ def create_format_fixer(
     default_value_provider: OtConfigDefaultValueProvider,
 ) -> OtConfigFormatFixer:
     return MultiFixer([FixMissingAnalysis(default_value_provider)])
+
+
+def create_video_parser(videos_metadata: VideosMetadata) -> VideoParser:
+    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(videos_metadata)))
+
+
+def create_videos_metadata() -> VideosMetadata:
+    return VideosMetadata()
+
+
+def create_otflow_parser() -> OtFlowParser:
+    return OtFlowParser()
