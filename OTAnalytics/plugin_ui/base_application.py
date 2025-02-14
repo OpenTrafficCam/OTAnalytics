@@ -280,7 +280,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return LayeredPlotter(layers=layers)
 
     @cached_property
-    def name_generator(self) -> FlowNameGenerator:
+    def flow_name_generator(self) -> FlowNameGenerator:
         return ArrowFlowNameGenerator()
 
     @cached_property
@@ -701,7 +701,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(self.flow_repository)
         flow_generator = CrossProductFlowGenerator(
             id_generator=id_generator,
-            name_generator=self.name_generator,
+            name_generator=self.flow_name_generator,
             predicate=FilterSameSection().and_then(
                 FilterExisting(self.flow_repository)
             ),

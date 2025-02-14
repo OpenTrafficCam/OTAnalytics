@@ -127,7 +127,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         return DummyViewModel(
             self.application,
             self.flow_parser,
-            self.name_generator,
+            self.flow_name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
             show_svz=self.run_config.show_svz,
             add_new_section=self.add_new_section,
