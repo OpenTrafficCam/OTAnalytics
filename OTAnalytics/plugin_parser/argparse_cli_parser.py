@@ -28,6 +28,13 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--webui",
+            action="store_true",
+            help="Start OTAnalytics WebUI. "
+            "If omitted OTAnalytics tkinter GUI will be started.",
+            required=False,
+        )
+        self._parser.add_argument(
             "--cli-mode",
             type=CliMode,
             choices=list(CliMode),
@@ -167,6 +174,7 @@ class ArgparseCliParser(CliParser):
         args = self._parser.parse_args()
         return CliArguments(
             start_cli=args.cli,
+            start_webui=args.webui,
             cli_mode=args.cli_mode,
             cli_chunk_size=args.cli_chunk_size,
             debug=args.debug,
