@@ -59,28 +59,22 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.application.register_sections_observer(self.view_model)
         self.application.register_flows_observer(self.view_model)
         self.application.register_flow_changed_observer(self.view_model.on_flow_changed)
-        self.application.track_view_state.selected_videos.register(
+        self.track_view_state.selected_videos.register(
             self.view_model.update_selected_videos
         )
-        self.application.section_state.selected_sections.register(
+        self.section_state.selected_sections.register(
             self.view_model.update_selected_sections
         )
-        self.application.flow_state.selected_flows.register(
-            self.view_model.update_selected_flows
-        )
-        self.application.track_view_state.background_image.register(
+        self.flow_state.selected_flows.register(self.view_model.update_selected_flows)
+        self.track_view_state.background_image.register(
             self.view_model.on_background_updated
         )
-        self.application.track_view_state.track_offset.register(
-            self.view_model.update_offset
-        )
-        self.application.track_view_state.filter_element.register(
-            self.view_model.update_date_range
-        )
-        self.application.track_view_state.filter_element.register(
+        self.track_view_state.track_offset.register(self.view_model.update_offset)
+        self.track_view_state.filter_element.register(self.view_model.update_date_range)
+        self.track_view_state.filter_element.register(
             self.view_model.update_track_statistics
         )
-        self.application.action_state.action_running.register(
+        self.action_state.action_running.register(
             self.view_model.notify_action_running_state
         )
         self.track_view_state.filter_date_active.register(
