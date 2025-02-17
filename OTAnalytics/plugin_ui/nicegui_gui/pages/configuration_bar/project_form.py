@@ -50,7 +50,7 @@ class ProjectForm(AbstractFrameProject):
             self._resource_manager.get(ProjectKeys.LABEL_QUICK_SAVE),
             on_click=self._quick_save,
         )
-        self._files = FormFieldText(
+        self._project_name = FormFieldText(
             self._resource_manager.get(ProjectKeys.LABEL_PROJECT_NAME),
             "",
             marker=MARKER_PROJECT_NAME,
@@ -70,7 +70,7 @@ class ProjectForm(AbstractFrameProject):
             ui.button(self._resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT))
             ui.button(self._resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT))
             self._quick_save_button.build()
-        self._files.build()
+        self._project_name.build()
         return self
 
     def _update_to_model(self, events: ValueChangeEventArguments) -> None:
