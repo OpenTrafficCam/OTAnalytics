@@ -26,6 +26,9 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         from OTAnalytics.plugin_ui.nicegui_gui.nicegui.nicegui_webserver import (
             NiceguiWebserver,
         )
+        from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.nicegui_layout_components import (  # noqa
+            NiceguiLayoutComponents,
+        )
         from OTAnalytics.plugin_ui.nicegui_gui.page_builders.main_page_builder import (
             MainPageBuilder,
         )
@@ -36,9 +39,6 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             workspace=self.workspace,
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
-        )
-        from plugin_ui.nicegui_gui.nicegui.theme.nicegui_layout_components import (
-            NiceguiLayoutComponents,
         )
 
         return NiceguiWebserver(
