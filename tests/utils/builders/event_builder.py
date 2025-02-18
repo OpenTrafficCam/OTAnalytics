@@ -81,7 +81,6 @@ class EventBuilder:
             frame_number=self.frame_number,
             section_id=SectionId(self.section_id) if self.section_id else None,
             event_coordinate=event_coordinate,
-            relative_position=self.relative_position,
             event_type=EventType.parse(self.event_type),
             direction_vector=DirectionVector2D(
                 self.direction_vector_x, self.direction_vector_y
@@ -114,10 +113,6 @@ class EventBuilder:
     def add_event_coordinate(self, x: float, y: float) -> Self:
         self.event_coordinate_x = x
         self.event_coordinate_y = y
-        return self
-
-    def add_relative_position(self, relative_position: float) -> Self:
-        self.relative_position = relative_position
         return self
 
     def add_direction_vector(self, x: float, y: float) -> Self:

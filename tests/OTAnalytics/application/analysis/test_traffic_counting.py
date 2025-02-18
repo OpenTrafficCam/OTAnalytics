@@ -246,7 +246,6 @@ def create_event(
         frame_number=1,
         section_id=section,
         event_coordinate=event_coordinate,
-        relative_position=relative_position,
         event_type=EventType.SECTION_ENTER,
         direction_vector=DirectionVector2D(x1=1, x2=1),
         video_name="my_video_name.mp4",

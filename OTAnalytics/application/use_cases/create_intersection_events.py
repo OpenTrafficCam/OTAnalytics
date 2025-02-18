@@ -92,9 +92,6 @@ class IntersectByIntersectionPoints(Intersector):
                 event_builder.add_event_type(EventType.SECTION_ENTER)
                 event_builder.add_direction_vector(direction_vector)
                 event_builder.add_event_coordinate(current_coord.x, current_coord.y)
-                event_builder.add_relative_position(
-                    intersection_point.relative_position
-                )
                 event_builder.add_interpolated_occurrence(interpolated_occurrence)
                 event_builder.add_interpolated_event_coordinate(
                     interpolated_event_coordinate.x, interpolated_event_coordinate.y
