@@ -38,6 +38,7 @@ class CliArguments:
     logfile_overwrite: bool
     track_export: bool
     track_statistics_export: bool
+    start_webui: bool = False
     show_svz: bool = False
     config_file: str | None = None
     track_files: list[str] | None = None

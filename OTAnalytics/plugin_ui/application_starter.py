@@ -24,6 +24,9 @@ from OTAnalytics.plugin_ui.base_application import (
     create_videos_metadata,
 )
 from OTAnalytics.plugin_ui.ctk_application import OtAnalyticsCtkApplicationStarter
+from OTAnalytics.plugin_ui.nicegui_application import (
+    OtAnalyticsNiceGuiApplicationStarter,
+)
 
 
 class ApplicationStarter:
@@ -44,6 +47,8 @@ class ApplicationStarter:
 
             except CliParseError as e:
                 logger().exception(e, exc_info=True)
+        elif self.run_config.start_webui:
+            OtAnalyticsNiceGuiApplicationStarter(self.run_config).start()
         else:
             OtAnalyticsCtkApplicationStarter(self.run_config).start()
 
