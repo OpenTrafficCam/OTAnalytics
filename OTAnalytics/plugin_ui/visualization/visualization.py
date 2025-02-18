@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from functools import cached_property
 from typing import Callable, Optional, Sequence
 
 from pandas import DataFrame
@@ -220,11 +221,6 @@ class VisualizationBuilder:
         flow_state: FlowState,
         road_user_assigner: RoadUserAssigner,
     ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
-        background_image_plotter = TrackBackgroundPlotter(
-            self._track_view_state.selected_videos.get,
-            self._visualization_time_provider,
-        )
-        all_tracks_plotter = self._create_all_tracks_plotter()
         highlight_tracks_assigned_to_flows_plotter = (
             self._create_highlight_tracks_assigned_to_flows_plotter(
                 flow_state, road_user_assigner
@@ -254,10 +250,10 @@ class VisualizationBuilder:
 
         layer_definitions: dict[str, list[tuple]] = {
             "Background": [
-                ("Background", background_image_plotter, True),
+                ("Background", self.background_plotter, True),
             ],
             "Show tracks": [
-                (ALL, all_tracks_plotter, False),
+                (ALL, self.all_tracks_plotter, False),
                 (
                     INTERSECTING_SECTIONS,
                     self._create_highlight_tracks_intersecting_sections_plotter(),
@@ -282,7 +278,7 @@ class VisualizationBuilder:
             "Show start and end points": [
                 (
                     ALL,
-                    self._create_start_end_point_plotter(),
+                    self.start_end_point_plotter,
                     False,
                 ),
                 (
@@ -345,7 +341,15 @@ class VisualizationBuilder:
             plotting_layers.extend(layers)
         return grouped_layers, plotting_layers
 
-    def _create_all_tracks_plotter(self) -> Plotter:
+    @cached_property
+    def background_plotter(self) -> Plotter:
+        return TrackBackgroundPlotter(
+            self._track_view_state.selected_videos.get,
+            self._visualization_time_provider,
+        )
+
+    @cached_property
+    def all_tracks_plotter(self) -> Plotter:
         track_geometry_plotter = self._create_track_geometry_plotter(
             self._get_data_provider_all_filters_with_offset(),
             self._color_palette_provider,
@@ -485,7 +489,8 @@ class VisualizationBuilder:
         self._track_view_state.track_offset.register(invalidate)
         return cached_plotter
 
-    def _create_start_end_point_plotter(self) -> Plotter:
+    @cached_property
+    def start_end_point_plotter(self) -> Plotter:
         track_start_end_point_plotter = self._create_track_start_end_point_plotter(
             self._create_track_start_end_point_data_provider(
                 self._get_data_provider_class_filter_with_offset()
