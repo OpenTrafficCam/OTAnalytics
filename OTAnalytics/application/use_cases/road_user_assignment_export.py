@@ -86,6 +86,16 @@ class RoadUserAssignmentBuilder:
             ras.END_DIRECTION_VECTOR_X: end.direction_vector.x1,
             ras.END_DIRECTION_VECTOR_Y: end.direction_vector.x2,
             ras.HOSTNAME: start.hostname,
+            ras.START_INTERPOLATED_OCCURRENCE: start.interpolated_occurrence.strftime(
+                ras.DATE_TIME_FORMAT
+            ),
+            ras.END_INTERPOLATED_OCCURRENCE: end.interpolated_occurrence.strftime(
+                ras.DATE_TIME_FORMAT
+            ),
+            ras.START_INTERPOLATED_EVENT_COORD_X: start.interpolated_event_coordinate.x,
+            ras.START_INTERPOLATED_EVENT_COORD_Y: start.interpolated_event_coordinate.y,
+            ras.END_INTERPOLATED_EVENT_COORD_X: end.interpolated_event_coordinate.x,
+            ras.END_INTERPOLATED_EVENT_COORD_Y: end.interpolated_event_coordinate.y,
         }
 
     def reset(self) -> None:

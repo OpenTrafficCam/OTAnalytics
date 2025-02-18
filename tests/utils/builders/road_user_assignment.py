@@ -40,4 +40,14 @@ def create_road_user_assignment(
         ras.END_DIRECTION_VECTOR_X: end_event.event_coordinate.x,
         ras.END_DIRECTION_VECTOR_Y: end_event.event_coordinate.y,
         ras.HOSTNAME: start_event.hostname,
+        ras.START_INTERPOLATED_OCCURRENCE: start_event.interpolated_occurrence.strftime(
+            ras.DATE_TIME_FORMAT
+        ),
+        ras.END_INTERPOLATED_OCCURRENCE: end_event.interpolated_occurrence.strftime(
+            ras.DATE_TIME_FORMAT
+        ),
+        ras.START_INTERPOLATED_EVENT_COORD_X: start_event.interpolated_event_coordinate.x,  # noqa
+        ras.START_INTERPOLATED_EVENT_COORD_Y: start_event.interpolated_event_coordinate.y,  # noqa
+        ras.END_INTERPOLATED_EVENT_COORD_X: end_event.interpolated_event_coordinate.x,
+        ras.END_INTERPOLATED_EVENT_COORD_Y: end_event.interpolated_event_coordinate.y,
     }
