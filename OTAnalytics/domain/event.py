@@ -60,23 +60,28 @@ class Event(DataclassValidation):
         ValueError: vehicle_id < 1
         ValueError: frame_number < 1
 
-    Args:
+    Attributes:
         road_user_id (str): the road user id involved with this event. It must be
-            greater equal one
-        road_user_type (str): the road user type involved with this event
-        hostname (str): the OTCamera hostname that the video is associated with
-        occurrence (datetime): the time when this event occurred
+            greater equal one.
+        road_user_type (str): the road user type involved with this event.
+        hostname (str): the OTCamera hostname that the video is associated with.
+        occurrence (datetime): the time when this event occurred.
         frame_number (int): the video frame number that this event is associated with
         section_id (Optional[SectionId]): only set when event type is of section
             Defaults to `None`.
         event_coordinate (ImageCoordinate): location where the event occurred in
-            the video
+            the video.
         relative_position (float): the relative position of the event between two
-            detections
-        event_type (EventType): this event's type
+            detections.
+        event_type (EventType): this event's type.
         direction_vector (DirectionVector2D): a 2-dimensional direction vector denoting
-            the direction of the road user associated with this event
-        video_name (str): the video name associated with this event
+            the direction of the road user associated with this event.
+        video_name (str): the video name associated with this event.
+        interpolated_occurrence (Optional[datetime]): the interpolated time when this
+            event occurred. Defaults to `None`.
+        interpolated_event_coordinate (Optional[ImageCoordinate]): interpolated event
+            coordinate between two detections. Defaults to `None`.
+            direction vector. Defaults to `None`.
 
     """
 
@@ -91,6 +96,8 @@ class Event(DataclassValidation):
     event_type: EventType
     direction_vector: DirectionVector2D
     video_name: str
+    interpolated_occurrence: Optional[datetime] = None
+    interpolated_event_coordinate: Optional[ImageCoordinate] = None
 
     def _validate(self) -> None:
         self._validate_frame_number_greater_equal_one()
@@ -166,6 +173,8 @@ class EventBuilder(ABC):
         self.event_coordinate: Optional[ImageCoordinate] = None
         self.section_id: Optional[SectionId] = None
         self.relative_position: Optional[float] = None
+        self.interpolated_occurrence: Optional[datetime] = None
+        self.interpolated_event_coordinate: Optional[ImageCoordinate] = None
 
     @abstractmethod
     def create_event(self, detection: Detection) -> Event:
@@ -251,6 +260,12 @@ class EventBuilder(ABC):
         """
         self.relative_position = relative_position
 
+    def add_interpolated_occurrence(self, occurrence: datetime) -> None:
+        self.interpolated_occurrence = occurrence
+
+    def add_interpolated_event_coordinate(self, x: float, y: float) -> None:
+        self.interpolated_event_coordinate = ImageCoordinate(x, y)
+
 
 class SectionEventBuilder(EventBuilder):
     """A builder to build section events."""
@@ -295,6 +310,16 @@ class SectionEventBuilder(EventBuilder):
                 "attribute 'relative_position' is not set"
             )
 
+        if self.interpolated_occurrence is None:
+            raise IncompleteEventBuilderSetup(
+                "attribute 'interpolated_occurrence' is not set"
+            )
+
+        if self.interpolated_event_coordinate is None:
+            raise IncompleteEventBuilderSetup(
+                "attribute 'interpolated_event_coordinate' is not set"
+            )
+
         return Event(
             road_user_id=detection.track_id.id,
             road_user_type=self.road_user_type,
@@ -307,6 +332,8 @@ class SectionEventBuilder(EventBuilder):
             event_type=self.event_type,
             direction_vector=self.direction_vector,
             video_name=detection.video_name,
+            interpolated_occurrence=self.interpolated_occurrence,
+            interpolated_event_coordinate=self.interpolated_event_coordinate,
         )
 
 
