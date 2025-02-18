@@ -187,7 +187,7 @@ class EventBuilder(ABC):
             name (Path): name containing the hostname.
 
         Raises:
-            InproperFormattedFilename: if the name is not formatted as expected, an
+            ImproperFormattedFilename: if the name is not formatted as expected, an
                 exception will be raised.
 
         Returns:
