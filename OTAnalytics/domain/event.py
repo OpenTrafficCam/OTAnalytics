@@ -169,7 +169,7 @@ class EventBuilder(ABC):
     """Defines an interface to build various type of events.
 
     Raises:
-        InproperFormattedFilename: if hostname could not be extracted from filename
+        ImproperFormattedFilename: if hostname could not be extracted from filename
     """
 
     def __init__(self) -> None:
