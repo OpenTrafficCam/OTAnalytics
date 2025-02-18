@@ -649,11 +649,13 @@ class TestOtEventListParser:
             occurrence=datetime(2022, 1, 1, 0, 0, 0, 0),
             frame_number=1,
             section_id=section_id,
-            event_coordinate=ImageCoordinate(0, 0),
+            event_coordinate=ImageCoordinate(1, 0),
             relative_position=0,
             event_type=EventType.SECTION_ENTER,
             direction_vector=direction_vector,
             video_name=video_name,
+            interpolated_occurrence=datetime(2022, 1, 1, 23, 23, 59),
+            interpolated_event_coordinate=ImageCoordinate(0.5, 0),
         )
         second_event = Event(
             road_user_id=road_user_id,
@@ -667,6 +669,8 @@ class TestOtEventListParser:
             event_type=EventType.SECTION_LEAVE,
             direction_vector=direction_vector,
             video_name=video_name,
+            interpolated_occurrence=datetime(2022, 1, 1, 0, 0, 5),
+            interpolated_event_coordinate=ImageCoordinate(5, 0),
         )
         line_section = LineSection(
             id=SectionId("N"),

@@ -219,23 +219,47 @@ def create_event(
     section: SectionId,
     second: int,
     relative_position: float = 0,
+    interpolated_second: int | None = None,
 ) -> Event:
     real_seconds = second % 60
     minute = int(second / 60)
+    year = 2000
+    month = 1
+    day = 1
+    hour = 0
+    event_coordinate = ImageCoordinate(0, 0)
+
+    if interpolated_second is None:
+        interpolated_real_seconds = real_seconds
+        interpolated_minute = minute
+    else:
+        interpolated_real_seconds = interpolated_second % 60
+        interpolated_minute = int(interpolated_second / 60)
+
     return Event(
         road_user_id=track_id.id,
         road_user_type="car",
         hostname="my_hostname",
         occurrence=datetime(
-            2000, 1, 1, 0, minute, second=real_seconds, tzinfo=timezone.utc
+            year, month, day, hour, minute, second=real_seconds, tzinfo=timezone.utc
         ),
         frame_number=1,
         section_id=section,
-        event_coordinate=ImageCoordinate(0, 0),
+        event_coordinate=event_coordinate,
         relative_position=relative_position,
         event_type=EventType.SECTION_ENTER,
         direction_vector=DirectionVector2D(x1=1, x2=1),
         video_name="my_video_name.mp4",
+        interpolated_occurrence=datetime(
+            year,
+            month,
+            day,
+            hour,
+            interpolated_minute,
+            interpolated_real_seconds,
+            tzinfo=timezone.utc,
+        ),
+        interpolated_event_coordinate=event_coordinate,
     )
 
 

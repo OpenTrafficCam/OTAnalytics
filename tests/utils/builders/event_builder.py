@@ -40,6 +40,8 @@ class EventBuilder:
     direction_vector_x: float = 0.0
     direction_vector_y: float = 0.0
     video_name: str = DEFAULT_VIDEO_NAME
+    interpolated_occurrence: datetime | None = None
+    interpolated_event_coordinate: ImageCoordinate | None = None
 
     def __post_init__(self) -> None:
         self._events: list[Event] = []
@@ -48,31 +50,45 @@ class EventBuilder:
         return self._events
 
     def build_section_event(self) -> Event:
+        occurrence = datetime(
+            self.occurrence_year,
+            self.occurrence_month,
+            self.occurrence_day,
+            self.occurrence_hour,
+            self.occurrence_minute,
+            self.occurrence_second,
+            self.occurrence_microsecond,
+            tzinfo=timezone.utc,
+        )
+        event_coordinate = ImageCoordinate(
+            self.event_coordinate_x, self.event_coordinate_y
+        )
+        if self.interpolated_occurrence is None:
+            interpolated_occurrence = occurrence
+        else:
+            interpolated_occurrence = self.interpolated_occurrence
+
+        if self.interpolated_event_coordinate is None:
+            interpolated_event_coordinate = event_coordinate
+        else:
+            interpolated_event_coordinate = self.interpolated_event_coordinate
+
         return Event(
             road_user_id=self.road_user_id,
             road_user_type=self.road_user_type,
             hostname=self.hostname,
-            occurrence=datetime(
-                self.occurrence_year,
-                self.occurrence_month,
-                self.occurrence_day,
-                self.occurrence_hour,
-                self.occurrence_minute,
-                self.occurrence_second,
-                self.occurrence_microsecond,
-                tzinfo=timezone.utc,
-            ),
+            occurrence=occurrence,
             frame_number=self.frame_number,
             section_id=SectionId(self.section_id) if self.section_id else None,
-            event_coordinate=ImageCoordinate(
-                self.event_coordinate_x, self.event_coordinate_y
-            ),
+            event_coordinate=event_coordinate,
             relative_position=self.relative_position,
             event_type=EventType.parse(self.event_type),
             direction_vector=DirectionVector2D(
                 self.direction_vector_x, self.direction_vector_y
             ),
             video_name=self.video_name,
+            interpolated_occurrence=interpolated_occurrence,
+            interpolated_event_coordinate=interpolated_event_coordinate,
         )
 
     def append_section_event(self) -> Self:

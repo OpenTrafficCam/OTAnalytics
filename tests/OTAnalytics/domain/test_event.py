@@ -11,6 +11,8 @@ from OTAnalytics.domain.event import (
     EVENT_TYPE,
     FRAME_NUMBER,
     HOSTNAME,
+    INTERPOLATED_EVENT_COORDINATE,
+    INTERPOLATED_OCCURRENCE,
     OCCURRENCE,
     RELATIVE_POSITION,
     ROAD_USER_ID,
@@ -36,6 +38,7 @@ SECTION_ID_1 = SectionId("section 1")
 SECTION_ID_2 = SectionId("section 2")
 
 EVENT_OCCURRENCE = datetime(2022, 1, 1, 0, 0, 0, 0)
+INTERPOLATED_EVENT_OCCURRENCE = datetime(2022, 12, 31, 23, 59, 59, 0)
 
 
 @pytest.fixture
@@ -73,6 +76,7 @@ class TestEventType:
 class TestEvent:
     @pytest.mark.parametrize("frame", [-1, 0])
     def test_instantiate_event_with_invalid_frame_number(self, frame: int) -> None:
+        event_coordinate = ImageCoordinate(0, 0)
         with pytest.raises(ValueError):
             Event(
                 road_user_id="1",
@@ -81,11 +85,13 @@ class TestEvent:
                 occurrence=EVENT_OCCURRENCE,
                 frame_number=frame,
                 section_id=SectionId("N"),
-                event_coordinate=ImageCoordinate(0, 0),
+                event_coordinate=event_coordinate,
                 relative_position=0,
                 event_type=EventType.SECTION_ENTER,
                 direction_vector=DirectionVector2D(1, 0),
                 video_name="my_video_name.mp4",
+                interpolated_occurrence=EVENT_OCCURRENCE,
+                interpolated_event_coordinate=event_coordinate,
             )
 
     def test_instantiate_with_valid_args(self) -> None:
@@ -104,6 +110,8 @@ class TestEvent:
             event_type=EventType.SECTION_ENTER,
             direction_vector=direction,
             video_name="my_video_name.mp4",
+            interpolated_occurrence=EVENT_OCCURRENCE,
+            interpolated_event_coordinate=event_coordinate,
         )
         assert event.road_user_id == "1"
         assert event.road_user_type == "car"
@@ -124,7 +132,8 @@ class TestEvent:
         occurrence = EVENT_OCCURRENCE
         frame_number = 1
         section_id = SectionId("N")
-        event_coordinate = ImageCoordinate(0, 0)
+        event_coordinate = ImageCoordinate(1, 0)
+        interpolated_event_coordinate = ImageCoordinate(0.5, 0)
         relative_position = 0
         direction_vector = DirectionVector2D(1, 0)
         video_name = "my_video_name.mp4"
@@ -140,6 +149,8 @@ class TestEvent:
             event_type=EventType.SECTION_ENTER,
             direction_vector=direction_vector,
             video_name=video_name,
+            interpolated_occurrence=INTERPOLATED_EVENT_OCCURRENCE,
+            interpolated_event_coordinate=interpolated_event_coordinate,
         )
         event_dict = event.to_dict()
         expected = {
@@ -154,6 +165,13 @@ class TestEvent:
             EVENT_TYPE: EventType.SECTION_ENTER.value,
             DIRECTION_VECTOR: [direction_vector.x1, direction_vector.x2],
             VIDEO_NAME: video_name,
+            INTERPOLATED_OCCURRENCE: INTERPOLATED_EVENT_OCCURRENCE.strftime(
+                DATE_FORMAT
+            ),
+            INTERPOLATED_EVENT_COORDINATE: [
+                interpolated_event_coordinate.x,
+                interpolated_event_coordinate.y,
+            ],
         }
 
         assert event_dict == expected
@@ -226,6 +244,8 @@ class TestSectionEventBuilder:
         event_builder.add_road_user_type("car")
         event_builder.add_event_coordinate(1, 1)
         event_builder.add_relative_position(0)
+        event_builder.add_interpolated_occurrence(INTERPOLATED_EVENT_OCCURRENCE)
+        event_builder.add_interpolated_event_coordinate(1, 1)
         event = event_builder.create_event(valid_detection)
 
         assert event.road_user_id == valid_detection.track_id.id
@@ -238,6 +258,7 @@ class TestSectionEventBuilder:
         assert event.event_type == EventType.SECTION_ENTER
         assert event.direction_vector == direction_vector
         assert event.video_name == valid_detection.video_name
+        assert event.interpolated_occurrence == INTERPOLATED_EVENT_OCCURRENCE
 
 
 class TestSceneEventBuilder:

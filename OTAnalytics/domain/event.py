@@ -25,6 +25,8 @@ RELATIVE_POSITION = "relative_position"
 EVENT_TYPE = "event_type"
 DIRECTION_VECTOR = "direction_vector"
 VIDEO_NAME = "video_name"
+INTERPOLATED_OCCURRENCE = "interpolated_occurrence"
+INTERPOLATED_EVENT_COORDINATE = "interpolated_event_coordinate"
 
 DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
 FILE_NAME_PATTERN = r"(?P<hostname>[A-Za-z0-9]+)_.*\..*"
@@ -77,9 +79,9 @@ class Event(DataclassValidation):
         direction_vector (DirectionVector2D): a 2-dimensional direction vector denoting
             the direction of the road user associated with this event.
         video_name (str): the video name associated with this event.
-        interpolated_occurrence (Optional[datetime]): the interpolated time when this
+        interpolated_occurrence (datetime): the interpolated time when this
             event occurred. Defaults to `None`.
-        interpolated_event_coordinate (Optional[ImageCoordinate]): interpolated event
+        interpolated_event_coordinate (ImageCoordinate): interpolated event
             coordinate between two detections. Defaults to `None`.
             direction vector. Defaults to `None`.
 
@@ -96,8 +98,8 @@ class Event(DataclassValidation):
     event_type: EventType
     direction_vector: DirectionVector2D
     video_name: str
-    interpolated_occurrence: Optional[datetime] = None
-    interpolated_event_coordinate: Optional[ImageCoordinate] = None
+    interpolated_occurrence: datetime
+    interpolated_event_coordinate: ImageCoordinate
 
     def _validate(self) -> None:
         self._validate_frame_number_greater_equal_one()
@@ -132,6 +134,8 @@ class Event(DataclassValidation):
             EVENT_TYPE: self.event_type.value,
             DIRECTION_VECTOR: self.direction_vector.to_list(),
             VIDEO_NAME: self.video_name,
+            INTERPOLATED_OCCURRENCE: self.interpolated_occurrence.strftime(DATE_FORMAT),
+            INTERPOLATED_EVENT_COORDINATE: self.interpolated_event_coordinate.to_list(),
         }
 
     def to_typed_dict(self) -> dict:
@@ -153,6 +157,8 @@ class Event(DataclassValidation):
             EVENT_TYPE: self.event_type.value,
             DIRECTION_VECTOR: self.direction_vector.to_list(),
             VIDEO_NAME: self.video_name,
+            INTERPOLATED_OCCURRENCE: self.interpolated_occurrence,
+            INTERPOLATED_EVENT_COORDINATE: self.interpolated_event_coordinate.to_list(),
         }
 
     def _serialized_section_id(self) -> Optional[str]:
@@ -388,6 +394,8 @@ class SceneEventBuilder(EventBuilder):
             event_type=self.event_type,
             direction_vector=self.direction_vector,
             video_name=detection.video_name,
+            interpolated_occurrence=detection.occurrence,
+            interpolated_event_coordinate=self.event_coordinate,
         )
 
 

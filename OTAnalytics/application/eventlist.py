@@ -124,14 +124,16 @@ class SceneEventListBuilder:
         key_video_name: str,
         relative_position: float,
     ) -> Event:
+        image_coordinate = ImageCoordinate(value[key_x], value[key_y])
+        occurrence = value[key_occurrence]
         return Event(
             road_user_id=value[track.TRACK_ID],
             road_user_type=value[track.TRACK_CLASSIFICATION],
             hostname=extract_hostname(value[key_video_name]),
-            occurrence=value[key_occurrence],
+            occurrence=occurrence,
             frame_number=value[key_frame],
             section_id=None,
-            event_coordinate=ImageCoordinate(value[key_x], value[key_y]),
+            event_coordinate=image_coordinate,
             relative_position=relative_position,
             event_type=event_type,
             direction_vector=calculate_direction_vector(
@@ -141,6 +143,8 @@ class SceneEventListBuilder:
                 value[END_Y],
             ),
             video_name=value[key_video_name],
+            interpolated_occurrence=occurrence,
+            interpolated_event_coordinate=image_coordinate,
         )
 
 

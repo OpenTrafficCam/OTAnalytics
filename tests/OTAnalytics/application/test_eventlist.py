@@ -176,17 +176,17 @@ def create_expected_events(track: Track) -> list[Event]:
 
 
 def create_expected_leave_scene_events(track: Track) -> list[Event]:
+    occurrence = track.last_detection.occurrence
+    event_coordinate = ImageCoordinate(track.last_detection.x, track.last_detection.y)
     return [
         Event(
             road_user_id=track.id.id,
             road_user_type=track.classification,
             hostname=HOSTNAME,
-            occurrence=track.last_detection.occurrence,
+            occurrence=occurrence,
             frame_number=track.last_detection.frame,
             section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.last_detection.x, track.last_detection.y
-            ),
+            event_coordinate=event_coordinate,
             relative_position=1.0,
             event_type=EventType.LEAVE_SCENE,
             direction_vector=calculate_direction_vector(
@@ -196,22 +196,25 @@ def create_expected_leave_scene_events(track: Track) -> list[Event]:
                 track.last_detection.y,
             ),
             video_name=track.first_detection.video_name,
+            interpolated_occurrence=occurrence,
+            interpolated_event_coordinate=event_coordinate,
         ),
     ]
 
 
 def create_expected_enter_scene_events(track: Track) -> list[Event]:
+    event_coordinate = ImageCoordinate(track.first_detection.x, track.first_detection.y)
+    occurrence = track.first_detection.occurrence
+
     return [
         Event(
             road_user_id=track.id.id,
             road_user_type=track.classification,
             hostname=HOSTNAME,
-            occurrence=track.first_detection.occurrence,
+            occurrence=occurrence,
             frame_number=track.first_detection.frame,
             section_id=None,
-            event_coordinate=ImageCoordinate(
-                track.first_detection.x, track.first_detection.y
-            ),
+            event_coordinate=event_coordinate,
             relative_position=0.0,
             event_type=EventType.ENTER_SCENE,
             direction_vector=calculate_direction_vector(
@@ -221,6 +224,8 @@ def create_expected_enter_scene_events(track: Track) -> list[Event]:
                 track.detections[1].y,
             ),
             video_name=track.first_detection.video_name,
+            interpolated_occurrence=occurrence,
+            interpolated_event_coordinate=event_coordinate,
         )
     ]
 
