@@ -2,7 +2,7 @@ av==13.0.0
 customtkinter==5.2.2
 fastapi==0.115.5
 ijson==3.3.0
-matplotlib==3.9.0
+matplotlib==3.10.0
 more-itertools==10.5.0
 nicegui==2.11.0
 numpy==1.26.4
