@@ -218,7 +218,6 @@ def create_event(
     track_id: TrackId,
     section: SectionId,
     second: int,
-    relative_position: float = 0,
     interpolated_second: int | None = None,
 ) -> Event:
     real_seconds = second % 60
@@ -471,14 +470,14 @@ class TestCaseBuilder:
         first_south = create_event(
             track_id=self.first_track,
             section=self.south_section_id,
-            second=0,
-            relative_position=0.1,
+            second=10,
+            interpolated_second=5,
         )
         first_north = create_event(
             track_id=self.first_track,
             section=self.north_section_id,
-            second=0,
-            relative_position=0.9,
+            second=10,
+            interpolated_second=9,
         )
         events = [
             first_north,
