@@ -77,11 +77,9 @@ class Event(DataclassValidation):
             the direction of the road user associated with this event.
         video_name (str): the video name associated with this event.
         interpolated_occurrence (datetime): the interpolated time when this
-            event occurred. Defaults to `None`.
+            event occurred.
         interpolated_event_coordinate (ImageCoordinate): interpolated event
-            coordinate between two detections. Defaults to `None`.
-            direction vector. Defaults to `None`.
-
+            coordinate between two detections.
     """
 
     road_user_id: str
