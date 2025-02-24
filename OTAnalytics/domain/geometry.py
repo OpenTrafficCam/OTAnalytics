@@ -1,3 +1,4 @@
+import math
 from dataclasses import dataclass
 
 from OTAnalytics.domain.common import DataclassValidation
@@ -21,6 +22,10 @@ class Coordinate(DataclassValidation):
 
     def to_list(self) -> list[float]:
         return [self.x, self.y]
+
+
+def coordinate_from_tuple(coordinate: tuple[float, float]) -> Coordinate:
+    return Coordinate(coordinate[0], coordinate[1])
 
 
 @dataclass(frozen=True)
@@ -153,22 +158,41 @@ class RelativeOffsetCoordinate(Coordinate):
 def calculate_direction_vector(
     x1: float, x2: float, y1: float, y2: float
 ) -> DirectionVector2D:
-    """Calculate direction vector from coordinates x and y.
+    """Calculate and normalize the direction vector from coordinates x and y.
 
-    Let x = (x1, x2)^T and y = (y1, y2)^T.
-
-    Calculate direction vector with: direction_vector = y - x.
+    The direction vector is calculated using the formula: direction_vector = y - x.
+    It is always normalized, meaning its magnitude (length) is 1.
 
     Args:
-        x1 (float): the first component of coordinate x
-        x2 (float): the second component of coordinate x
-        y1 (float): the first component of coordinate y
-        y2 (float): the second component of coordinate y
+        x1 (float): The first component of the starting coordinate x.
+        x2 (float): The second component of the starting coordinate x.
+        y1 (float): The first component of the ending coordinate y.
+        y2 (float): The second component of the ending coordinate y.
 
     Returns:
-        DirectionVector2D: the two dimensional direction vector
+        DirectionVector2D: A normalized two-dimensional direction vector.
+
+    Raises:
+        ValueError: If the starting and ending points are the same, leading to a
+            zero-magnitude vector.
     """
-    return DirectionVector2D(x1=y1 - x1, x2=y2 - x2)
+    # Direction vector calculation
+    dx = y1 - x1
+    dy = y2 - x2
+
+    # Calculate the magnitude of the vector
+    magnitude = math.sqrt(dx**2 + dy**2)
+    if magnitude == 0:
+        raise ValueError(
+            "Cannot normalize a zero-magnitude vector "
+            "(start and end points are identical)."
+        )
+
+    # Normalize the vector
+    dx /= magnitude
+    dy /= magnitude
+
+    return DirectionVector2D(x1=dx, x2=dy)
 
 
 def apply_offset(

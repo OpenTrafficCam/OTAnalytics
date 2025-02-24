@@ -21,10 +21,11 @@ OCCURRENCE = "occurrence"
 FRAME_NUMBER = "frame_number"
 SECTION_ID = "section_id"
 EVENT_COORDINATE = "event_coordinate"
-RELATIVE_POSITION = "relative_position"
 EVENT_TYPE = "event_type"
 DIRECTION_VECTOR = "direction_vector"
 VIDEO_NAME = "video_name"
+INTERPOLATED_OCCURRENCE = "interpolated_occurrence"
+INTERPOLATED_EVENT_COORDINATE = "interpolated_event_coordinate"
 
 DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
 FILE_NAME_PATTERN = r"(?P<hostname>[A-Za-z0-9]+)_.*\..*"
@@ -60,24 +61,25 @@ class Event(DataclassValidation):
         ValueError: vehicle_id < 1
         ValueError: frame_number < 1
 
-    Args:
+    Attributes:
         road_user_id (str): the road user id involved with this event. It must be
-            greater equal one
-        road_user_type (str): the road user type involved with this event
-        hostname (str): the OTCamera hostname that the video is associated with
-        occurrence (datetime): the time when this event occurred
+            greater equal one.
+        road_user_type (str): the road user type involved with this event.
+        hostname (str): the OTCamera hostname that the video is associated with.
+        occurrence (datetime): the time when this event occurred.
         frame_number (int): the video frame number that this event is associated with
         section_id (Optional[SectionId]): only set when event type is of section
             Defaults to `None`.
         event_coordinate (ImageCoordinate): location where the event occurred in
-            the video
-        relative_position (float): the relative position of the event between two
-            detections
-        event_type (EventType): this event's type
+            the video.
+        event_type (EventType): this event's type.
         direction_vector (DirectionVector2D): a 2-dimensional direction vector denoting
-            the direction of the road user associated with this event
-        video_name (str): the video name associated with this event
-
+            the direction of the road user associated with this event.
+        video_name (str): the video name associated with this event.
+        interpolated_occurrence (datetime): the interpolated time when this
+            event occurred.
+        interpolated_event_coordinate (ImageCoordinate): interpolated event
+            coordinate between two detections.
     """
 
     road_user_id: str
@@ -87,10 +89,11 @@ class Event(DataclassValidation):
     frame_number: int
     section_id: Optional[SectionId]
     event_coordinate: ImageCoordinate
-    relative_position: float
     event_type: EventType
     direction_vector: DirectionVector2D
     video_name: str
+    interpolated_occurrence: datetime
+    interpolated_event_coordinate: ImageCoordinate
 
     def _validate(self) -> None:
         self._validate_frame_number_greater_equal_one()
@@ -121,10 +124,11 @@ class Event(DataclassValidation):
             FRAME_NUMBER: self.frame_number,
             SECTION_ID: self._serialized_section_id(),
             EVENT_COORDINATE: self.event_coordinate.to_list(),
-            RELATIVE_POSITION: self.relative_position,
             EVENT_TYPE: self.event_type.value,
             DIRECTION_VECTOR: self.direction_vector.to_list(),
             VIDEO_NAME: self.video_name,
+            INTERPOLATED_OCCURRENCE: self.interpolated_occurrence.strftime(DATE_FORMAT),
+            INTERPOLATED_EVENT_COORDINATE: self.interpolated_event_coordinate.to_list(),
         }
 
     def to_typed_dict(self) -> dict:
@@ -142,10 +146,11 @@ class Event(DataclassValidation):
             FRAME_NUMBER: self.frame_number,
             SECTION_ID: self._serialized_section_id(),
             EVENT_COORDINATE: self.event_coordinate.to_list(),
-            RELATIVE_POSITION: self.relative_position,
             EVENT_TYPE: self.event_type.value,
             DIRECTION_VECTOR: self.direction_vector.to_list(),
             VIDEO_NAME: self.video_name,
+            INTERPOLATED_OCCURRENCE: self.interpolated_occurrence,
+            INTERPOLATED_EVENT_COORDINATE: self.interpolated_event_coordinate.to_list(),
         }
 
     def _serialized_section_id(self) -> Optional[str]:
@@ -156,7 +161,7 @@ class EventBuilder(ABC):
     """Defines an interface to build various type of events.
 
     Raises:
-        InproperFormattedFilename: if hostname could not be extracted from filename
+        ImproperFormattedFilename: if hostname could not be extracted from filename
     """
 
     def __init__(self) -> None:
@@ -165,7 +170,8 @@ class EventBuilder(ABC):
         self.direction_vector: Optional[DirectionVector2D] = None
         self.event_coordinate: Optional[ImageCoordinate] = None
         self.section_id: Optional[SectionId] = None
-        self.relative_position: Optional[float] = None
+        self.interpolated_occurrence: Optional[datetime] = None
+        self.interpolated_event_coordinate: Optional[ImageCoordinate] = None
 
     @abstractmethod
     def create_event(self, detection: Detection) -> Event:
@@ -187,7 +193,7 @@ class EventBuilder(ABC):
             name (Path): name containing the hostname.
 
         Raises:
-            InproperFormattedFilename: if the name is not formatted as expected, an
+            ImproperFormattedFilename: if the name is not formatted as expected, an
                 exception will be raised.
 
         Returns:
@@ -243,13 +249,11 @@ class EventBuilder(ABC):
         """
         self.section_id = section_id
 
-    def add_relative_position(self, relative_position: float) -> None:
-        """Add relative position to the event to be built.
+    def add_interpolated_occurrence(self, occurrence: datetime) -> None:
+        self.interpolated_occurrence = occurrence
 
-        Args:
-            relative_position (float): the relative position
-        """
-        self.relative_position = relative_position
+    def add_interpolated_event_coordinate(self, x: float, y: float) -> None:
+        self.interpolated_event_coordinate = ImageCoordinate(x, y)
 
 
 class SectionEventBuilder(EventBuilder):
@@ -270,7 +274,10 @@ class SectionEventBuilder(EventBuilder):
             IncompleteEventBuilderSetup: if attribute 'event_type' is not set
             IncompleteEventBuilderSetup: attribute 'direction_vector' is not set
             IncompleteEventBuilderSetup: attribute 'event_coordinate' is not set
-            IncompleteEventBuilderSetup: attribute 'relative_position' is not set
+            IncompleteEventBuilderSetup: attribute 'interpolated_occurrence' is not set
+            IncompleteEventBuilderSetup: attribute 'interpolated_event_coordinate' is
+                not set
+
 
         Returns:
             Event: the section event
@@ -290,9 +297,14 @@ class SectionEventBuilder(EventBuilder):
         if not self.event_coordinate:
             raise IncompleteEventBuilderSetup("attribute 'event_coordinate' is not set")
 
-        if self.relative_position is None:
+        if self.interpolated_occurrence is None:
             raise IncompleteEventBuilderSetup(
-                "attribute 'relative_position' is not set"
+                "attribute 'interpolated_occurrence' is not set"
+            )
+
+        if self.interpolated_event_coordinate is None:
+            raise IncompleteEventBuilderSetup(
+                "attribute 'interpolated_event_coordinate' is not set"
             )
 
         return Event(
@@ -303,10 +315,11 @@ class SectionEventBuilder(EventBuilder):
             frame_number=detection.frame,
             section_id=self.section_id,
             event_coordinate=self.event_coordinate,
-            relative_position=self.relative_position,
             event_type=self.event_type,
             direction_vector=self.direction_vector,
             video_name=detection.video_name,
+            interpolated_occurrence=self.interpolated_occurrence,
+            interpolated_event_coordinate=self.interpolated_event_coordinate,
         )
 
 
@@ -326,7 +339,6 @@ class SceneEventBuilder(EventBuilder):
             IncompleteEventBuilderSetup: if attribute 'event_type' is not set
             IncompleteEventBuilderSetup: attribute 'direction_vector' is not set
             IncompleteEventBuilderSetup: attribute 'event_coordinate' is not set
-            IncompleteEventBuilderSetup: attribute 'relative_position' is not set
             IncompleteEventBuilderSetup: attribute 'road_user_type' is not set
 
         Returns:
@@ -341,11 +353,6 @@ class SceneEventBuilder(EventBuilder):
         if not self.event_coordinate:
             raise IncompleteEventBuilderSetup("attribute 'event_coordinate' is not set")
 
-        if self.relative_position is None:
-            raise IncompleteEventBuilderSetup(
-                "attribute 'relative_position' is not set"
-            )
-
         if not self.road_user_type:
             raise IncompleteEventBuilderSetup("attribute 'road_user_type' is not set")
 
@@ -357,10 +364,11 @@ class SceneEventBuilder(EventBuilder):
             frame_number=detection.frame,
             section_id=None,
             event_coordinate=self.event_coordinate,
-            relative_position=self.relative_position,
             event_type=self.event_type,
             direction_vector=self.direction_vector,
             video_name=detection.video_name,
+            interpolated_occurrence=detection.occurrence,
+            interpolated_event_coordinate=self.event_coordinate,
         )
 
 

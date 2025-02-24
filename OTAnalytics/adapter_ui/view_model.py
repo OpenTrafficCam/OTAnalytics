@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -14,6 +14,7 @@ from OTAnalytics.adapter_ui.abstract_frame_project import (
     AbstractFrameProject,
     AbstractFrameSvzMetadata,
 )
+from OTAnalytics.adapter_ui.abstract_frame_remark import AbstractFrameRemark
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
@@ -24,22 +25,24 @@ from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
+from OTAnalytics.application import geometry
+from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
+from OTAnalytics.application.use_cases.editor.section_editor import MetadataProvider
 from OTAnalytics.domain.date import DateRange
-from OTAnalytics.domain.flow import Flow, FlowId
-from OTAnalytics.domain.section import Section
-from OTAnalytics.domain.video import Video
-from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
+from OTAnalytics.domain.event import EventRepositoryEvent
+from OTAnalytics.domain.filter import FilterElement
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
+from OTAnalytics.domain.section import Section, SectionId, SectionListObserver
+from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track_repository import TrackListObserver
+from OTAnalytics.domain.video import Video, VideoListObserver
 
 DISTANCES: str = "distances"
 
-MetadataProvider = Callable[[], dict]
 
-
-class MissingCoordinate(Exception):
-    pass
-
-
-class ViewModel(ABC):
+class ViewModel(
+    VideoListObserver, TrackListObserver, SectionListObserver, FlowListObserver, ABC
+):
 
     @abstractmethod
     def show_svz(self) -> bool:
@@ -368,7 +371,7 @@ class ViewModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_remark_frame(self, frame: AbstractCTkFrame) -> None:
+    def set_remark_frame(self, frame: AbstractFrameRemark) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -449,4 +452,70 @@ class ViewModel(ABC):
 
     @abstractmethod
     def export_track_statistics(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def on_flow_changed(self, flow_id: FlowId) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def on_background_updated(self, image: Optional[TrackImage]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_date_range(self, filter_element: FilterElement) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def notify_action_running_state(self, running: bool) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_selected_videos(self, videos: list[Video]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_selected_sections(self, section_ids: list[SectionId]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_selected_flows(self, flow_ids: list[FlowId]) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_offset(
+        self, offset: Optional[geometry.RelativeOffsetCoordinate]
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_track_statistics(self, _: EventRepositoryEvent | FilterElement) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def change_filter_date_active(self, current: bool) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def on_tracks_cut(self, cut_tracks_dto: CutTracksDto) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def register_observers(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_remark_view(self, _: Any = None) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_quick_save_button(self, _: Any) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def show_current_project(self, _: Any = None) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_svz_metadata_view(self, _: Any = None) -> None:
         raise NotImplementedError

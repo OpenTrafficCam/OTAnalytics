@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from OTAnalytics.domain.geometry import (
@@ -97,7 +99,7 @@ class TestRelativeOffset:
 
 def test_calculate_direction_vector() -> None:
     result = calculate_direction_vector(0, 0, 1, 1)
-    assert result == DirectionVector2D(1, 1)
+    assert result == DirectionVector2D(1 / math.sqrt(2), 1 / math.sqrt(2))
 
 
 def test_apply_offset() -> None:

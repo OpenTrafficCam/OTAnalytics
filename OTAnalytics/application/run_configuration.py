@@ -50,6 +50,10 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         return self._cli_args.start_cli
 
     @property
+    def start_webui(self) -> bool:
+        return self._cli_args.start_webui
+
+    @property
     def cli_bulk_mode(self) -> bool:
         return self.start_cli and self._cli_args.cli_mode == CliMode.BULK
 

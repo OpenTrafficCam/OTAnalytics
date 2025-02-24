@@ -74,6 +74,7 @@ from OTAnalytics.application.use_cases.section_repository import (
 from OTAnalytics.application.use_cases.track_export import ExportTracks
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
+    AllTrackIdsProvider,
     ClearAllTracks,
     GetAllTrackIds,
     GetAllTracks,
@@ -551,7 +552,7 @@ class TestOTAnalyticsCli:
                     IntersectionRepository(),
                 ),
                 tracks_assigned_to_all_flows,
-                GetAllTrackIds(track_repository),
+                AllTrackIdsProvider(track_repository),
                 TrackIdsInsideCuttingSections(get_all_tracks, get_cutting_sections),
                 SvzNumberOfTracksToBeValidated(
                     TracksAsDataFrameProvider(get_all_tracks, track_geometry_factory),

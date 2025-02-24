@@ -13,9 +13,8 @@ from OTAnalytics.application.use_cases.inside_cutting_section import (
 from OTAnalytics.application.use_cases.number_of_tracks_to_be_validated import (
     NumberOfTracksToBeValidated,
 )
-from OTAnalytics.application.use_cases.track_repository import GetAllTrackIds
 from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
-from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track import TrackId, TrackIdProvider
 
 CUTTING_SECTION_NAME: str = "#clicut 0815"
 NUMBER_OF_TRACKS_TO_BE_VALIDATED = 23
@@ -32,8 +31,8 @@ def assigned_to_all_flows() -> Mock:
 
 
 @pytest.fixture
-def get_all_track_ids() -> Mock:
-    return Mock(spec=GetAllTrackIds)
+def all_track_ids() -> Mock:
+    return Mock(spec=TrackIdProvider)
 
 
 @pytest.fixture
@@ -69,7 +68,7 @@ class TestCalculateTrackStatistics:
         self,
         intersection_all_non_cutting_sections: Mock,
         assigned_to_all_flows: Mock,
-        get_all_track_ids: Mock,
+        all_track_ids: Mock,
         track_ids_inside_cutting_sections: Mock,
         given_number_of_tracks_to_be_validated: Mock,
         given_enter_section_events: Mock,
@@ -82,10 +81,10 @@ class TestCalculateTrackStatistics:
         assigned_to_all_flows.get_ids.return_value = (
             create_trackids_set_with_list_of_ids(["1", "2", "3", "4", "5"])
         )
-        get_all_track_ids.return_value = create_trackids_set_with_list_of_ids(
+        all_track_ids.get_ids.return_value = create_trackids_set_with_list_of_ids(
             ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
         )
-        track_ids_inside_cutting_sections.return_value = (
+        track_ids_inside_cutting_sections.get_ids.return_value = (
             create_trackids_set_with_list_of_ids(
                 ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
             )
@@ -93,7 +92,7 @@ class TestCalculateTrackStatistics:
         calculator = CalculateTrackStatistics(
             intersection_all_non_cutting_sections,
             assigned_to_all_flows,
-            get_all_track_ids,
+            all_track_ids,
             track_ids_inside_cutting_sections,
             given_number_of_tracks_to_be_validated,
             given_enter_section_events,
@@ -123,7 +122,7 @@ class TestCalculateTrackStatistics:
         self,
         intersection_all_non_cutting_sections: Mock,
         assigned_to_all_flows: Mock,
-        get_all_track_ids: Mock,
+        all_track_ids: Mock,
         track_ids_inside_cutting_sections: Mock,
         number_of_tracks_to_be_validated: Mock,
     ) -> None:
@@ -155,7 +154,7 @@ class TestCalculateTrackStatistics:
         calculator = CalculateTrackStatistics(
             intersection_all_non_cutting_sections,
             assigned_to_all_flows,
-            get_all_track_ids,
+            all_track_ids,
             track_ids_inside_cutting_sections,
             number_of_tracks_to_be_validated,
             get_all_enter_section_events,

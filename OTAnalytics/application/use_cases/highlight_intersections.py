@@ -70,7 +70,7 @@ class TracksIntersectingAllNonCuttingSections(TrackIdProvider):
         get_all_sections (GetAllSections): the use case to get all sections.
         tracks_intersecting_sections (TracksIntersectingSections): get track ids
             intersecting sections.
-        get_section_by_id (GetSectionsById): use case to get sections by id.
+        get_sections_by_id (GetSectionsById): use case to get sections by id.
     """
 
     def __init__(
@@ -78,13 +78,13 @@ class TracksIntersectingAllNonCuttingSections(TrackIdProvider):
         get_cutting_sections: GetCuttingSections,
         get_all_sections: GetAllSections,
         tracks_intersecting_sections: TracksIntersectingSections,
-        get_section_by_id: GetSectionsById,
+        get_sections_by_id: GetSectionsById,
         intersection_repository: IntersectionRepository,
     ) -> None:
         self._get_cutting_sections = get_cutting_sections
         self._get_all_sections = get_all_sections
         self._tracks_intersecting_sections = tracks_intersecting_sections
-        self._get_section_by_id = get_section_by_id
+        self._get_section_by_id = get_sections_by_id
         self._intersection_repository = intersection_repository
 
     def get_ids(self) -> set[TrackId]:

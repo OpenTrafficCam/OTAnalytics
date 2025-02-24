@@ -12,9 +12,9 @@ permissions: read-all
 
 jobs:
   test:
-    uses: './.github/workflows/test.yml'
+    uses: "./.github/workflows/test.yml"
   regression-test:
-    uses: './.github/workflows/regression-test.yml'
+    uses: "./.github/workflows/regression-test.yml"
     secrets: inherit
   create_nightly:
     permissions:
