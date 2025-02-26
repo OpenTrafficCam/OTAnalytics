@@ -9,6 +9,14 @@ class ConfigurationBarKeys(ResourceKey):
     LABEL_CONFIGURATION_BAR_FORM_HEADER = "label-configuration-bar-form-header"
 
 
+class AnalysisKeys(ResourceKey):
+    LABEL_ANALYSIS = "label-analysis"
+    BUTTON_TEXT_EXPORT_EVENT_LIST = "button-export-event_list"
+    BUTTON_TEXT_EXPORT_COUNTS = "button-export-counts"
+    BUTTON_TEXT_EXPORT_ROAD_USER_ASSIGNMENT = "button-road-user-assignment"
+    BUTTON_TEXT_EXPORT_TRACK_STATISTICS = "button-export-track-statistics"
+
+
 class ProjectKeys(ResourceKey):
     LABEL_OPEN_PROJECT = "label-open-project"
     LABEL_PROJECT_FORM_HEADER = "label-project-form-header"
@@ -44,6 +52,11 @@ DEFAULT_RESOURCE_MAP = {
     ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
     ProjectKeys.LABEL_START_DATE: "Start date",
     ProjectKeys.LABEL_START_TIME: "Start time",
+    AnalysisKeys.LABEL_ANALYSIS: "Analysis",
+    AnalysisKeys.BUTTON_TEXT_EXPORT_EVENT_LIST: "Export eventlist...",
+    AnalysisKeys.BUTTON_TEXT_EXPORT_COUNTS: "Export counts...",
+    AnalysisKeys.BUTTON_TEXT_EXPORT_ROAD_USER_ASSIGNMENT: "Export road user assignments...",  # noqa
+    AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS: "Export track statistics",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
     VisualizationFiltersKeys.LABEL_VISUALIZATION_FILTERS_FORM_HEADER: "Visualization Filters",  # noqa
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa

@@ -2,7 +2,7 @@ from nicegui import ui
 
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.page_builder import NiceguiPageBuilder
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.container import TrackBar
-from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_bar.container import AnalysisBar
+from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_bar.container import AnalysisForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.container import (
     CanvasAndFilesBar,
 )
@@ -27,7 +27,7 @@ class MainPageBuilder(NiceguiPageBuilder):
         configuration_bar: ConfigurationBar,
         add_tracker_bar: TrackBar,
         sections_and_flow_bar: SectionsAndFlowBar,
-        analysis_bar: AnalysisBar,
+        analysis_bar: AnalysisForm,
         canvas_files_bar: CanvasAndFilesBar,
         visualization_filters: VisualizationFilters,
         visualization_layers: VisualizationLayers,

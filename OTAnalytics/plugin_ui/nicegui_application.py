@@ -8,7 +8,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.container import Trac
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.offset_slider_form import (
     OffSetSliderForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_bar.container import AnalysisBar
+from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_bar.container import AnalysisForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.canvas_form import (
     CanvasForm,
 )
@@ -69,7 +69,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
             sections_and_flow_bar=self.sections_and_flow_bar,
-            analysis_bar=self.analysis_bar,
+            analysis_bar=self.analysis_form,
         )
         from plugin_ui.nicegui_gui.nicegui.theme.nicegui_layout_components import (
             NiceguiLayoutComponents,
@@ -83,10 +83,8 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         ).run()
 
     @cached_property
-    def analysis_bar(self) -> AnalysisBar:
-        return AnalysisBar(
-            self.resource_manager,
-        )
+    def analysis_form(self) -> AnalysisForm:
+        return AnalysisForm(self.resource_manager, self.view_model)
 
     @cached_property
     def configuration_bar(self) -> ConfigurationBar:
