@@ -220,11 +220,6 @@ class DummyViewModel(
     SectionListObserver,
     FlowListObserver,
 ):
-    @property
-    def window(self) -> AbstractMainWindow:
-        if self._window is None:
-            raise MissingInjectedInstanceError("window")
-        return self._window
 
     @property
     def frame_project(self) -> AbstractFrameProject:
@@ -517,7 +512,7 @@ class DummyViewModel(
     def _intersect_tracks_with_sections(self) -> None:
         start_msg_popup = MinimalInfoBox(
             message="Create events...",
-            initial_position=self.window.get_position(),
+            initial_position=self.get_position(),
         )
         self._application.intersect_tracks_with_sections()
         start_msg_popup.update_message(message="Creating events completed")
@@ -669,7 +664,7 @@ class DummyViewModel(
             return
 
     def _get_window_position(self) -> tuple[int, int]:
-        return self.window.get_position()
+        return self.get_position()
 
     def __show_error(self, message: str) -> None:
         InfoBox(
@@ -1334,7 +1329,7 @@ class DummyViewModel(
     def create_events(self) -> None:
         start_msg_popup = MinimalInfoBox(
             message="Create events...",
-            initial_position=self.window.get_position(),
+            initial_position=self.get_position(),
         )
         self._application.create_events()
         self.notify_flows(self.get_all_flow_ids())
@@ -1395,13 +1390,16 @@ class DummyViewModel(
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
         start_msg_popup = MinimalInfoBox(
             message="Apply offset...",
-            initial_position=self.window.get_position(),
+            initial_position=self.get_position(),
         )
         offset = geometry.RelativeOffsetCoordinate(offset_x, offset_y)
         self._application.track_view_state.track_offset.set(offset)
         start_msg_popup.update_message(message="Apply offset completed")
         start_msg_popup.close()
         self.update_section_offset_button_state()
+
+    def get_position(self) -> tuple[int, int]:
+        return self._window.get_position() if self._window else (0, 0)
 
     def get_track_offset(self) -> Optional[tuple[float, float]]:
         if current_offset := self._application.get_current_track_offset():
@@ -1558,9 +1556,7 @@ class DummyViewModel(
                     "There is no flow configurated.\n"
                     "Please create a flow."
                 ),
-                initial_position=(
-                    self._window.get_position() if self._window else (0, 0)
-                ),
+                initial_position=self.get_position(),
             )
             return
         export_formats: dict = {
@@ -1678,9 +1674,7 @@ class DummyViewModel(
                     "There is no flow configured.\n"
                     "Please create a flow."
                 ),
-                initial_position=(
-                    self._window.get_position() if self._window else (0, 0)
-                ),
+                initial_position=self.get_position(),
             )
             return
         export_formats: dict = {
@@ -1797,9 +1791,7 @@ class DummyViewModel(
                     "Calculating track statistics is impossible without tracks.\n"
                     "Please add tracks."
                 ),
-                initial_position=(
-                    self._window.get_position() if self._window else (0, 0)
-                ),
+                initial_position=self.get_position(),
             )
             return
         export_formats: dict = {

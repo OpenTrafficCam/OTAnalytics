@@ -31,12 +31,12 @@ class OffSetSliderForm(AbstractFrameTracks):
             with ui.row(wrap=False):
                 ui.label("X:")
                 self.x_offset_slider = ui.slider(
-                    min=0, max=100, value=50, on_change=self.on_offset_change
+                    min=0, max=1, value=0.5, step=0.1, on_change=self.on_offset_change
                 )
             with ui.row(wrap=False):
                 ui.label("Y:")
                 self.y_offset_slider = ui.slider(
-                    min=0, max=100, value=50, on_change=self.on_offset_change
+                    min=0, max=1, value=0.5, step=0.1, on_change=self.on_offset_change
                 )
         self.update_offset_button = ui.button(
             self._resource_manager.get(OffsetSliderKeys.BUTTON_UPDATE_OFFSET),
@@ -56,13 +56,17 @@ class OffSetSliderForm(AbstractFrameTracks):
                 self.update_offset_button.enable()
             else:
                 self.update_offset_button.disable()
-            self.update_offset_button.style(f"color = {color}")
 
     def update_offset(self, x: float, y: float) -> None:
-        pass
+        if self.y_offset_slider and self.x_offset_slider:
+            self.y_offset_slider.value = y
+            self.x_offset_slider.value = x
+            self.y_offset_slider.update()
+            self.x_offset_slider.update()
 
     def enable_update_offset_button(self, enabled: bool) -> None:
-        pass
+        if self.update_offset_button:
+            self.update_offset_button.enable()
 
     def set_offset_button_color(self, color: str) -> None:
         pass
