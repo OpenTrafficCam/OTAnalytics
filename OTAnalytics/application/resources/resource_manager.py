@@ -10,11 +10,13 @@ class ConfigurationBarKeys(ResourceKey):
 
 
 class ProjectKeys(ResourceKey):
-    LABEL_PROJECT_NAME = "label-project-name"
-    LABEL_PROJECT_FORM_HEADER = "label-project-form-header"
     LABEL_OPEN_PROJECT = "label-open-project"
-    LABEL_SAVE_AS_PROJECT = "label-save-project"
+    LABEL_PROJECT_FORM_HEADER = "label-project-form-header"
+    LABEL_PROJECT_NAME = "label-project-name"
     LABEL_QUICK_SAVE = "label-quick-save"
+    LABEL_SAVE_AS_PROJECT = "label-save-project"
+    LABEL_START_DATE = "label-start-date"
+    LABEL_START_TIME = "label-start-time"
 
 
 class SvzMetadataKeys(ResourceKey):
@@ -35,11 +37,13 @@ class WorkspaceKeys(ResourceKey):
 
 DEFAULT_RESOURCE_MAP = {
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
+    ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
     ProjectKeys.LABEL_PROJECT_NAME: "Project name",
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
-    ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
-    ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
     ProjectKeys.LABEL_QUICK_SAVE: "Save",
+    ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
+    ProjectKeys.LABEL_START_DATE: "Start date",
+    ProjectKeys.LABEL_START_TIME: "Start time",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
     VisualizationFiltersKeys.LABEL_VISUALIZATION_FILTERS_FORM_HEADER: "Visualization Filters",  # noqa
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa

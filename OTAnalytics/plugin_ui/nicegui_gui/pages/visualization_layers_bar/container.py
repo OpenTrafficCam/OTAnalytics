@@ -1,15 +1,13 @@
-from nicegui import ui
-
-from OTAnalytics.application.resources.resource_manager import (
-    ResourceManager,
-    VisualizationLayersKeys,
+from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
+    SvzMetadataForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_bar.layers_form import (  # noqa
     LayersForm,
 )
 
 
-class VisualizationLayers:
+class VisualizationLayerBar:
     def __init__(
         self,
         resource_manager: ResourceManager,
@@ -19,10 +17,4 @@ class VisualizationLayers:
         self._layers_form = layers_form
 
     def build(self) -> None:
-        ui.label(
-            self._resource_manager.get(
-                VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER
-            )
-        )
-
         self._layers_form.build()

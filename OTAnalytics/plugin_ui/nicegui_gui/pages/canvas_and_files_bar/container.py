@@ -5,24 +5,27 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     SvzMetadataKeys,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
-    ProjectForm,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.canvas_form import (
+    CanvasForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.files_form import (
+    FilesForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
     SvzMetadataForm,
 )
 
 
-class ConfigurationBar:
+class CanvasAndFilesBar:
     def __init__(
         self,
         resource_manager: ResourceManager,
-        project_form: ProjectForm,
-        svz_metadata_form: SvzMetadataForm,
+        canvas_form: CanvasForm,
+        files_form: FilesForm,
     ) -> None:
         self._resource_manager = resource_manager
-        self.project_form = project_form
-        self.svz_metadata_form = svz_metadata_form
+        self.canvas_form = canvas_form
+        self.files_form = files_form
 
     def build(self) -> None:
         with ui.tabs().classes("w-full") as tabs:
@@ -36,6 +39,6 @@ class ConfigurationBar:
             )
         with ui.tab_panels(tabs, value=one).classes("w-full"):
             with ui.tab_panel(one):
-                self.project_form.build()
+                self.canvas_form.build()
             with ui.tab_panel(two):
-                self.svz_metadata_form.build()
+                self.files_form.build()
