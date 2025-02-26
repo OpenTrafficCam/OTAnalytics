@@ -2,30 +2,70 @@ from typing import Self
 
 from nicegui import ui
 
-from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameSvzMetadata
+from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.application.resources.resource_manager import (
+    OffsetSliderKeys,
+    ResourceManager,
+)
 
 
-class OffSetSliderForm(AbstractFrameSvzMetadata):
+class OffSetSliderForm(AbstractFrameTracks):
     def __init__(
         self,
         view_model: ViewModel,
         resource_manager: ResourceManager,
     ) -> None:
+        self.update_offset_button: ui.button | None = None
+        self.y_offset_slider: ui.slider | None = None
+        self.x_offset_slider: ui.slider | None = None
         self._view_model = view_model
         self._resource_manager = resource_manager
-
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
-        self._view_model.set_svz_metadata_frame(self)
+        self._view_model.set_tracks_frame(self)
 
     def build(self) -> Self:
-        ui.slider(min=0, max=100, value=50)
-        ui.slider(min=0, max=100, value=50)
-        ui.button("Update")
+        with ui.grid(rows=2).style("width: 100%"):
+            with ui.row(wrap=False):
+                ui.label("X:")
+                self.x_offset_slider = ui.slider(
+                    min=0, max=100, value=50, on_change=self.on_offset_change
+                )
+            with ui.row(wrap=False):
+                ui.label("Y:")
+                self.y_offset_slider = ui.slider(
+                    min=0, max=100, value=50, on_change=self.on_offset_change
+                )
+        self.update_offset_button = ui.button(
+            self._resource_manager.get(OffsetSliderKeys.BUTTON_UPDATE_OFFSET),
+            on_click=self._view_model.change_track_offset_to_section_offset,
+        )
         return self
 
-    def update(self, metadata: dict) -> None:
+    def on_offset_change(self) -> None:
+        if self.x_offset_slider and self.y_offset_slider:
+            self._view_model.set_track_offset(
+                self.x_offset_slider.value, self.y_offset_slider.value
+            )
+
+    def configure_offset_button(self, color: str, enable: bool) -> None:
+        if self.update_offset_button:
+            if enable:
+                self.update_offset_button.enable()
+            else:
+                self.update_offset_button.disable()
+            self.update_offset_button.style(f"color = {color}")
+
+    def update_offset(self, x: float, y: float) -> None:
         pass
+
+    def enable_update_offset_button(self, enabled: bool) -> None:
+        pass
+
+    def set_offset_button_color(self, color: str) -> None:
+        pass
+
+    def get_default_offset_button_color(self) -> str:
+        return ""

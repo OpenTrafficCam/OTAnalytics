@@ -5,8 +5,8 @@ from nicegui import ui
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameSvzMetadata
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
+    AddTracksKeys,
     ResourceManager,
-    SvzMetadataKeys,
 )
 
 
@@ -26,7 +26,8 @@ class AddTracksForm(AbstractFrameSvzMetadata):
 
     def build(self) -> Self:
         ui.button(
-            self._resource_manager.get(SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER)
+            self._resource_manager.get(AddTracksKeys.BUTTON_ADD_TRACKS),
+            on_click=self._view_model.load_tracks,
         )
         return self
 
