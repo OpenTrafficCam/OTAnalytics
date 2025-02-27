@@ -51,7 +51,10 @@ class FlowCandidate:
         return self.flow.distance
 
     def duration(self) -> timedelta:
-        return self.candidate.end.occurrence - self.candidate.start.occurrence
+        return (
+            self.candidate.end.interpolated_occurrence
+            - self.candidate.start.interpolated_occurrence
+        )
 
 
 class Tag(ABC):
@@ -375,7 +378,9 @@ class TimeslotTagger(Tagger):
         self._interval = interval
 
     def create_tag(self, assignment: RoadUserAssignment) -> Tag:
-        return create_timeslot_tag(assignment.events.start.occurrence, self._interval)
+        return create_timeslot_tag(
+            assignment.events.start.interpolated_occurrence, self._interval
+        )
 
 
 class CountableAssignments:
@@ -635,7 +640,9 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             dict[int, list[Event]]: events grouped by user
         """
         events_by_road_user: dict[tuple[str, str], list[Event]] = defaultdict(list)
-        sorted_events = sorted(events, key=lambda event: event.occurrence)
+        sorted_events = sorted(
+            events, key=lambda _event: _event.interpolated_occurrence
+        )
         for event in sorted_events:
             if event.section_id:
                 events_by_road_user[(event.road_user_id, event.road_user_type)].append(
@@ -706,7 +713,8 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         """
         candidates: list[EventPair] = []
         events_to_process = sorted(
-            events, key=lambda event: (event.occurrence, event.relative_position)
+            events,
+            key=lambda event: event.interpolated_occurrence,
         )
         for index, start in enumerate(events_to_process):
             candidates.extend(

@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Callable, Generic, TypeVar
+from datetime import date, datetime, time
+from typing import Callable, Generic, Optional, TypeVar
 
 from nicegui import ui
 from nicegui.element import Element
@@ -361,27 +360,145 @@ class FormFieldInteger(FormField[Number, int]):
         self._apply(self.element)
 
 
-@dataclass  # Umbauen in 2 Elemente
-class DateTimeElement(ValidationElement):
-    date: Input
-    time: Input
+class FormFieldDate(FormField[Input, Optional[date]]):
 
-    def update(self) -> None:
-        self.date.update()
-        self.time.update()
+    @property
+    def initial_value_text(self) -> str:
+        return self.__format(self._initial_value)
 
-    def set_value(self, date_time: datetime | None) -> None:
-        if date_time:
-            self.date.value = date_time.date()
-            self.time.value = date_time.time()
-        else:
-            self.date.value = None
-            self.time.value = None
+    @property
+    def value(self) -> Optional[date]:
+        if self.element and self.element.value:
+            if isinstance(self.element.value, date):
+                return self.element.value
+            return datetime.strptime(self.element.value, "%Y-%m-%d").date()
+        return None
+
+    @property
+    def props(self) -> list[str] | None:
+        return self._props
+
+    @property
+    def marker(self) -> str | None:
+        return self._marker
+
+    def __init__(
+        self,
+        label_text: str,
+        initial_value: date | None = None,
+        min_value: date | None = None,
+        max_value: date | None = None,
+        validation: (
+            Callable[..., str | None] | dict[str, Callable[..., bool]] | None
+        ) = None,
+        on_value_change: Callable[[ValueChangeEventArguments], None] | None = None,
+        props: list[str] | None = None,
+        marker: str | None = None,
+    ):
+        super().__init__()
+        self._label_text = label_text
+        self._initial_value = initial_value
+        self._min = min_value
+        self._max = max_value
+        self._validation = validation
+        self._on_value_change = on_value_change
+        self._props = props
+        self._marker = marker
+
+    def build(self) -> None:
+        """Builds the UI form element."""
+        self._instance = ui.input(
+            self._label_text, value=self.initial_value_text
+        ).style("max-width: 40%")
+        with self._instance:
+            with ui.menu().props("no-parent-event") as menu:
+                with ui.date(value=self.initial_value_text).bind_value(self._instance):
+                    with ui.row().classes("justify-end"):
+                        ui.button("Close", on_click=menu.close).props("flat")
+            with self._instance.add_slot("append"):
+                ui.icon("edit_calendar").on("click", menu.open).classes(
+                    "cursor-pointer"
+                )
+
+        if self._on_value_change:
+            self._instance.on_value_change(self._on_value_change)
+        self._apply(self.element)
+
+    @staticmethod
+    def __format(value: date | None) -> str:
+        if value:
+            return value.strftime("%Y-%m-%d")
+        return ""
 
 
-# Form Field Date and FormFieldTime
-# FormFieldDateTime benutzt dann beide. Beide bekommen ein datetime element
-class FormFieldDateTime(FormField[DateTimeElement, datetime]):
+class FormFieldTime(FormField[Input, Optional[time]]):
+
+    @property
+    def initial_value_text(self) -> str:
+        return self.__format(self._initial_value)
+
+    @property
+    def value(self) -> Optional[time]:
+        if self.element and self.element.value:
+            if isinstance(self.element.value, time):
+                return self.element.value
+            return datetime.strptime(self.element.value, "%H:%M").time()
+        return None
+
+    @property
+    def props(self) -> list[str] | None:
+        return self._props
+
+    @property
+    def marker(self) -> str | None:
+        return self._marker
+
+    def __init__(
+        self,
+        label_text: str,
+        initial_value: time | None = None,
+        min_value: time | None = None,
+        max_value: time | None = None,
+        validation: (
+            Callable[..., str | None] | dict[str, Callable[..., bool]] | None
+        ) = None,
+        on_value_change: Callable[[ValueChangeEventArguments], None] | None = None,
+        props: list[str] | None = None,
+        marker: str | None = None,
+    ):
+        super().__init__()
+        self._label_text = label_text
+        self._initial_value = initial_value
+        self._min = min_value
+        self._max = max_value
+        self._validation = validation
+        self._on_value_change = on_value_change
+        self._props = props
+        self._marker = marker
+
+    def build(self) -> None:
+        self._instance = ui.input(
+            self._label_text, value=self.initial_value_text
+        ).style("max-width: 40%")
+        with self._instance:
+            with ui.menu().props("no-parent-event") as menu:
+                with ui.time(self.initial_value_text).bind_value(self._instance):
+                    with ui.row().classes("justify-end"):
+                        ui.button("Close", on_click=menu.close).props("flat")
+            with self._instance.add_slot("append"):
+                ui.icon("access_time").on("click", menu.open).classes("cursor-pointer")
+        if self._on_value_change:
+            self._instance.on_value_change(self._on_value_change)
+        self._apply(self.element)
+
+    @staticmethod
+    def __format(value: time | None) -> str:
+        if value:
+            return value.strftime("%H:%M")
+        return ""
+
+
+class DateTimeForm:
     """A class representing a integer form field with validation and updating
     capabilities.
 
@@ -398,74 +515,72 @@ class FormFieldDateTime(FormField[DateTimeElement, datetime]):
     """
 
     @property
-    def value(self) -> datetime:
+    def value(self) -> datetime | None:
         """Provides the current input of the form field
 
         Returns:
             int: The current input of the form field.
         """
-        return datetime(0, 0, 0, 0, 0)
+        start_date = self._start_date.value
+        start_time = self._start_time.value
+        if start_date and start_time:
+            return datetime.combine(start_date, start_time)
+        return None
 
-    @property
-    def props(self) -> list[str] | None:
-        return self._props
-
-    @property
-    def marker(self) -> str | None:
-        return self._marker_date
+    def set_value(self, value: datetime | None) -> None:
+        if value:
+            self._start_date.set_value(value.date())
+            self._start_time.set_value(value.time())
+        else:
+            self._start_date.set_value(None)
+            self._start_time.set_value(None)
 
     def __init__(
         self,
         label_date_text: str,
         label_time_text: str,
-        initial_value: datetime,
+        initial_value: datetime | None = None,
         min_value: datetime | None = None,
         max_value: datetime | None = None,
         validation: (
             Callable[..., str | None] | dict[str, Callable[..., bool]] | None
         ) = None,
+        on_value_change: Callable[[datetime | None], None] | None = None,
         props: list[str] | None = None,
         marker_date: str | None = None,
         marker_time: str | None = None,
     ) -> None:
         super().__init__()
-        self._label_date_text = label_date_text
-        self._label_time_text = label_time_text
-        self._initial_value = initial_value
-        self._min = min_value
-        self._max = max_value
-        self._precision = 0
         self._validation = validation
+        self._on_value_change = on_value_change
         self._props = props
-        self._marker_date = marker_date
-        self._marker_time = marker_time
+        self._start_date = FormFieldDate(
+            label_text=label_date_text,
+            initial_value=initial_value.date() if initial_value else None,
+            min_value=min_value.date() if min_value else None,
+            max_value=max_value.date() if max_value else None,
+            on_value_change=self.__internal_update,
+            marker=marker_date,
+        )
+        self._start_time = FormFieldTime(
+            label_text=label_time_text,
+            initial_value=initial_value.time() if initial_value else None,
+            min_value=min_value.time() if min_value else None,
+            max_value=max_value.time() if max_value else None,
+            on_value_change=self.__internal_update,
+            marker=marker_time,
+        )
+
+    def __internal_update(self, _: ValueChangeEventArguments) -> None:
+        if self._on_value_change:
+            self._on_value_change(self.value)
 
     def build(self) -> None:
         """Builds the UI form element."""
         with ui.grid().classes("w-full"):
             with ui.row():
-                date_input = ui.input(self._label_date_text).style("max-width: 40%")
-                with date_input:
-                    with ui.menu().props("no-parent-event") as menu:
-                        with ui.date().bind_value(date_input):
-                            with ui.row().classes("justify-end"):
-                                ui.button("Close", on_click=menu.close).props("flat")
-                    with date_input.add_slot("append"):
-                        ui.icon("edit_calendar").on("click", menu.open).classes(
-                            "cursor-pointer"
-                        )
-                time_input = ui.input(self._label_time_text).style("max-width: 40%")
-                with time_input:
-                    with ui.menu().props("no-parent-event") as menu:
-                        with ui.time().bind_value(time_input):
-                            with ui.row().classes("justify-end"):
-                                ui.button("Close", on_click=menu.close).props("flat")
-                    with time_input.add_slot("append"):
-                        ui.icon("access_time").on("click", menu.open).classes(
-                            "cursor-pointer"
-                        )
-        self._instance = DateTimeElement(date_input, time_input)
-        # self._apply(self.element)
+                self._start_date.build()
+                self._start_time.build()
 
 
 class FormFieldCheckbox(LazyInitializedElement[Checkbox]):
