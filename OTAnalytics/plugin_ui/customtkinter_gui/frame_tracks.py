@@ -27,6 +27,7 @@ class TracksFrame(AbstractFrameOffset, AbstractCTkFrame):
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
+        self._viewmodel.set_tracks_frame(self)
         self._viewmodel.set_offset_frame(self)
 
     def _get_widgets(self) -> None:

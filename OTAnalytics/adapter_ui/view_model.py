@@ -53,6 +53,10 @@ class ViewModel(
         pass
 
     @abstractmethod
+    def set_tracks_frame(self, frame: AbstractFrame) -> None:
+        pass
+
+    @abstractmethod
     def set_offset_frame(self, offset_frame: AbstractFrameOffset) -> None:
         pass
 

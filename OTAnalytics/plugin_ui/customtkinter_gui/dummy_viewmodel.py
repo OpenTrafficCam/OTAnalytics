@@ -228,6 +228,12 @@ class DummyViewModel(
         return self._frame_project
 
     @property
+    def frame_tracks(self) -> AbstractFrame:
+        if self._frame_tracks is None:
+            raise MissingInjectedInstanceError("frame tracks")
+        return self._frame_tracks
+
+    @property
     def frame_offset(self) -> AbstractFrameOffset:
         if self._frame_offset is None:
             raise MissingInjectedInstanceError("frame offset")
@@ -356,6 +362,7 @@ class DummyViewModel(
         self._update_section_coordinates = update_section_coordinates
         self._window: Optional[AbstractMainWindow] = None
         self._frame_project: Optional[AbstractFrameProject] = None
+        self._frame_tracks: Optional[AbstractFrame] = None
         self._frame_offset: Optional[AbstractFrameOffset] = None
         self._frame_videos: Optional[AbstractFrame] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
@@ -405,6 +412,7 @@ class DummyViewModel(
 
     def _get_frames(self) -> list[AbstractFrame | AbstractFrameProject]:
         return [
+            self.frame_tracks,
             self.frame_offset,
             self.frame_videos,
             self.frame_project,
@@ -418,7 +426,7 @@ class DummyViewModel(
         selected_section_ids = self.get_selected_section_ids()
         single_section_selected = len(selected_section_ids) == 1
         single_track_enabled = (not action_running) and single_section_selected
-        self.frame_offset.set_enabled_change_single_item_buttons(single_track_enabled)
+        self.frame_tracks.set_enabled_change_single_item_buttons(single_track_enabled)
 
     def _update_enabled_video_buttons(self) -> None:
         action_running = self._application.action_state.action_running.get()
@@ -705,6 +713,9 @@ class DummyViewModel(
         self._application.load_otconfig(file=Path(otconfig_file))
         self.show_current_project()
         self.update_svz_metadata_view()
+
+    def set_tracks_frame(self, frame: AbstractFrame) -> None:
+        self._frame_tracks = frame
 
     def set_offset_frame(self, offset_frame: AbstractFrameOffset) -> None:
         self._frame_offset = offset_frame

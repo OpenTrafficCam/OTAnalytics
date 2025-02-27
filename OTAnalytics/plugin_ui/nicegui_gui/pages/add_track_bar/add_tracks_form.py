@@ -24,7 +24,7 @@ class AddTracksForm(ButtonForm):
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
-        pass
+        self._view_model.set_tracks_frame(self)
 
     def build(self) -> Self:
         self._add_tracks_button = ui.button(
