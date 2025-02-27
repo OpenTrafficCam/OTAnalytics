@@ -10,6 +10,7 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
+from OTAnalytics.adapter_ui.abstract_frame_offset import AbstractFrameOffset
 from OTAnalytics.adapter_ui.abstract_frame_project import (
     AbstractFrameProject,
     AbstractFrameSvzMetadata,
@@ -21,7 +22,6 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
 from OTAnalytics.adapter_ui.abstract_frame_track_statistics import (
     AbstractFrameTrackStatistics,
 )
-from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
@@ -53,7 +53,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
+    def set_offset_frame(self, offset_frame: AbstractFrameOffset) -> None:
         pass
 
     @abstractmethod

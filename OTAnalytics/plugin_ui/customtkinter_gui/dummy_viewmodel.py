@@ -3,7 +3,6 @@ import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Any, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
@@ -13,6 +12,7 @@ from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
+from OTAnalytics.adapter_ui.abstract_frame_offset import AbstractFrameOffset
 from OTAnalytics.adapter_ui.abstract_frame_project import (
     AbstractFrameProject,
     AbstractFrameSvzMetadata,
@@ -24,7 +24,6 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
 from OTAnalytics.adapter_ui.abstract_frame_track_statistics import (
     AbstractFrameTrackStatistics,
 )
-from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.default_values import (
@@ -42,6 +41,7 @@ from OTAnalytics.adapter_ui.text_resources import (
     ColumnResource,
     ColumnResources,
 )
+from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.ui_texts import (
     COUNTING_DAY_TYPES,
     DIRECTIONS_OF_STATIONING,
@@ -228,10 +228,10 @@ class DummyViewModel(
         return self._frame_project
 
     @property
-    def frame_tracks(self) -> AbstractFrameTracks:
-        if self._frame_tracks is None:
-            raise MissingInjectedInstanceError("frame tracks")
-        return self._frame_tracks
+    def frame_offset(self) -> AbstractFrameOffset:
+        if self._frame_offset is None:
+            raise MissingInjectedInstanceError("frame offset")
+        return self._frame_offset
 
     @property
     def frame_videos(self) -> AbstractFrame:
@@ -338,6 +338,7 @@ class DummyViewModel(
     def __init__(
         self,
         application: OTAnalyticsApplication,
+        ui_factory: UiFactory,
         flow_parser: FlowParser,
         name_generator: FlowNameGenerator,
         event_list_export_formats: dict,
@@ -346,6 +347,7 @@ class DummyViewModel(
         update_section_coordinates: UpdateSectionCoordinates,
     ) -> None:
         self._application = application
+        self._ui_factory = ui_factory
         self._flow_parser: FlowParser = flow_parser
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
@@ -354,7 +356,7 @@ class DummyViewModel(
         self._update_section_coordinates = update_section_coordinates
         self._window: Optional[AbstractMainWindow] = None
         self._frame_project: Optional[AbstractFrameProject] = None
-        self._frame_tracks: Optional[AbstractFrameTracks] = None
+        self._frame_offset: Optional[AbstractFrameOffset] = None
         self._frame_videos: Optional[AbstractFrame] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_video_control: Optional[AbstractFrame] = None
@@ -403,7 +405,7 @@ class DummyViewModel(
 
     def _get_frames(self) -> list[AbstractFrame | AbstractFrameProject]:
         return [
-            self.frame_tracks,
+            self.frame_offset,
             self.frame_videos,
             self.frame_project,
             self.frame_sections,
@@ -416,7 +418,7 @@ class DummyViewModel(
         selected_section_ids = self.get_selected_section_ids()
         single_section_selected = len(selected_section_ids) == 1
         single_track_enabled = (not action_running) and single_section_selected
-        self.frame_tracks.set_enabled_change_single_item_buttons(single_track_enabled)
+        self.frame_offset.set_enabled_change_single_item_buttons(single_track_enabled)
 
     def _update_enabled_video_buttons(self) -> None:
         action_running = self._application.action_state.action_running.get()
@@ -580,7 +582,7 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
 
     def add_video(self) -> None:
-        track_files = askopenfilenames(
+        track_files = self._ui_factory.askopenfilenames(
             title="Load video files",
             filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
         )
@@ -674,7 +676,7 @@ class DummyViewModel(
 
     def load_otconfig(self) -> None:
         otconfig_file = Path(
-            askopenfilename(
+            self._ui_factory.askopenfilename(
                 title="Load configuration file",
                 filetypes=[
                     (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
@@ -704,8 +706,8 @@ class DummyViewModel(
         self.show_current_project()
         self.update_svz_metadata_view()
 
-    def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
-        self._frame_tracks = tracks_frame
+    def set_offset_frame(self, offset_frame: AbstractFrameOffset) -> None:
+        self._frame_offset = offset_frame
 
     def set_video_frame(self, frame: AbstractFrame) -> None:
         self._frame_videos = frame
@@ -748,11 +750,11 @@ class DummyViewModel(
         currently_selected_sections = (
             self._application.section_state.selected_sections.get()
         )
-        default_color = self.frame_tracks.get_default_offset_button_color()
+        default_color = self.frame_offset.get_default_offset_button_color()
         single_section_selected = len(currently_selected_sections) == 1
 
         if not single_section_selected:
-            self.frame_tracks.configure_offset_button(default_color, False)
+            self.frame_offset.configure_offset_button(default_color, False)
             return
 
         section_offset = self._application.get_section_offset(
@@ -764,9 +766,9 @@ class DummyViewModel(
 
         visualization_offset = self._application.track_view_state.track_offset.get()
         if section_offset == visualization_offset:
-            self.frame_tracks.configure_offset_button(default_color, False)
+            self.frame_offset.configure_offset_button(default_color, False)
         else:
-            self.frame_tracks.configure_offset_button(COLOR_ORANGE, True)
+            self.frame_offset.configure_offset_button(COLOR_ORANGE, True)
 
     def update_selected_flows(self, flow_ids: list[FlowId]) -> None:
         self._update_selected_flow_items()
@@ -807,7 +809,7 @@ class DummyViewModel(
 
     @action
     def load_tracks(self) -> None:
-        track_files = askopenfilenames(
+        track_files = self._ui_factory.askopenfilenames(
             title="Load track files", filetypes=[("tracks file", "*.ottrk")]
         )
         if not track_files:
@@ -819,7 +821,7 @@ class DummyViewModel(
     def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
         configuration_file = Path(
-            askopenfilename(
+            self._ui_factory.askopenfilename(
                 title="Load sections file",
                 filetypes=[
                     (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
@@ -1388,7 +1390,7 @@ class DummyViewModel(
         return event_list_exporter, file
 
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
-        start_msg_popup = MinimalInfoBox(
+        start_msg_popup = self._ui_factory.minimal_info_box(
             message="Apply offset...",
             initial_position=self.get_position(),
         )
@@ -1410,7 +1412,7 @@ class DummyViewModel(
         self, offset: Optional[geometry.RelativeOffsetCoordinate]
     ) -> None:
         if offset:
-            self.frame_tracks.update_offset(offset.x, offset.y)
+            self.frame_offset.update_offset(offset.x, offset.y)
 
     def change_track_offset_to_section_offset(self) -> None:
         self._application.change_track_offset_to_section_offset()

@@ -2,9 +2,10 @@ from typing import Any
 
 from customtkinter import CTkButton, ThemeManager
 
-from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
+from OTAnalytics.adapter_ui.abstract_frame_offset import AbstractFrameOffset
 from OTAnalytics.adapter_ui.default_values import RELATIVE_SECTION_OFFSET
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     PADX,
     PADY,
@@ -15,7 +16,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_bbox_offset import FrameBboxOffset
 
 
-class TracksFrame(AbstractFrameTracks):
+class TracksFrame(AbstractFrameOffset, AbstractCTkFrame):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
@@ -26,7 +27,7 @@ class TracksFrame(AbstractFrameTracks):
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
-        self._viewmodel.set_tracks_frame(self)
+        self._viewmodel.set_offset_frame(self)
 
     def _get_widgets(self) -> None:
         self.button_load_tracks = CTkButton(
