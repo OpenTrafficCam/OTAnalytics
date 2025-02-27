@@ -1,7 +1,9 @@
 import pytest
-from application.resources.resource_manager import ResourceKey
 
-from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.application.resources.resource_manager import (
+    ResourceKey,
+    ResourceManager,
+)
 
 
 class TestKeys(ResourceKey):

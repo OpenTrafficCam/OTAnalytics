@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from unittest.mock import Mock, call
 
 import pytest
@@ -99,6 +100,8 @@ class _TestCase:
         event_builder.add_event_type.assert_not_called()
         event_builder.add_event.assert_not_called()
         event_builder.add_event.assert_not_called()
+        event_builder.add_interpolated_occurrence.assert_not_called()
+        event_builder.add_interpolated_event_coordinate.assert_not_called()
 
 
 class LineSectionTestCase(_TestCase):
@@ -109,19 +112,33 @@ class LineSectionTestCase(_TestCase):
         section: Section,
         expected_event_coords: list[_ExpectedEventCoord],
         direction_vectors: list[tuple[float, float]],
+        expected_interpolated_occurrences: list[datetime],
+        expected_interpolated_coords: list[Coordinate],
     ):
         super().__init__(
             track, track_dataset, section, expected_event_coords, direction_vectors
         )
+        self.expected_interpolated_occurrences = expected_interpolated_occurrences
+        self.expected_interpolated_coords = expected_interpolated_coords
 
     def assert_valid(self, event_results: list, event_builder: Mock) -> None:
         super().assert_valid(event_results, event_builder)
-        self._assert_valid()
+        self._assert_valid(event_results, event_builder)
 
-    def _assert_valid(self) -> None:
+    def _assert_valid(self, event_results: list, event_builder: Mock) -> None:
         self.track_dataset.intersection_points.assert_called_once_with(
             [self.section], self.section.get_offset(EventType.SECTION_ENTER)
         )
+        if self.expected_event_coords:
+            self._event_builder_has_calls(event_builder)
+
+    def _event_builder_has_calls(self, event_builder: Mock) -> None:
+        assert event_builder.add_interpolated_occurrence.call_args_list == [
+            call(occurrence) for occurrence in self.expected_interpolated_occurrences
+        ]
+        assert event_builder.add_interpolated_event_coordinate.call_args_list == [
+            call(coord.x, coord.y) for coord in self.expected_interpolated_coords
+        ]
 
 
 class AreaSectionTestCase(_TestCase):
@@ -145,6 +162,16 @@ class AreaSectionTestCase(_TestCase):
         self.track_dataset.contained_by_sections.assert_called_once_with(
             [self.section], self.section.get_offset(EventType.SECTION_ENTER)
         )
+
+    def _event_builder_has_calls(self, event_builder: Mock) -> None:
+        assert event_builder.add_interpolated_occurrence.call_args_list == [
+            call(self.track.get_detection(event_coords.detection_index).occurrence)
+            for event_coords in self.expected_event_coords
+        ]
+        assert event_builder.add_interpolated_event_coordinate.call_args_list == [
+            call(event_coord.x, event_coord.y)
+            for event_coord in self.expected_event_coords
+        ]
 
 
 def create_section(
@@ -214,29 +241,47 @@ def test_case_track_line_section(track: Track) -> _TestCase:
     offset = (0, 0.5)
     section = create_section([(1.5, 0), (1.5, 1.5)], SectionType.LINE, offset)
     detection_index = 2
-    detection = track.detections[detection_index]
+    ip = IntersectionPoint(upper_index=detection_index, relative_position=0.5)
+    prev_detection = track.detections[ip.lower_index]
+    detection = track.detections[ip.upper_index]
     track_dataset = Mock(spec=TrackDataset)
-    track_dataset.intersection_points.return_value = {
-        track.id: [
-            (
-                section.id,
-                IntersectionPoint(upper_index=detection_index, relative_position=0),
-            )
-        ]
-    }
+    track_dataset.intersection_points.return_value = {track.id: [(section.id, ip)]}
     track_dataset.get_for.return_value = track
-    expected_event_coords = [
-        _ExpectedEventCoord.from_detection(
-            detection,
-            detection_index=detection_index,
-            offset=offset,
-            event_type=EventType.SECTION_ENTER,
-        ),
-    ]
+    expected_event_coord = _ExpectedEventCoord.from_detection(
+        detection,
+        detection_index=ip.upper_index,
+        offset=offset,
+        event_type=EventType.SECTION_ENTER,
+    )
+
+    expected_event_coords = [expected_event_coord]
     direction_vectors = [(1.0, 0.0)]
+    expected_interpolated_occurrence = (
+        prev_detection.occurrence
+        + ip.relative_position * (detection.occurrence - prev_detection.occurrence)
+    )
+
+    prev_coord = prev_detection.get_coordinate(RelativeOffsetCoordinate(*offset))
+    current_coord = detection.get_coordinate(RelativeOffsetCoordinate(*offset))
+
+    expected_interpolated_x = prev_coord.x + ip.relative_position * (
+        current_coord.x - prev_coord.x
+    )
+    expected_interpolated_y = prev_coord.y + ip.relative_position * (
+        current_coord.y - prev_coord.y
+    )
+    expected_interpolated_coord = Coordinate(
+        expected_interpolated_x, expected_interpolated_y
+    )
 
     return LineSectionTestCase(
-        track, track_dataset, section, expected_event_coords, direction_vectors
+        track,
+        track_dataset,
+        section,
+        expected_event_coords,
+        direction_vectors,
+        [expected_interpolated_occurrence],
+        [expected_interpolated_coord],
     )
 
 

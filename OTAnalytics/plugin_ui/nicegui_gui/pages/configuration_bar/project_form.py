@@ -61,18 +61,18 @@ class ProjectForm(AbstractFrameProject):
             self._resource_manager.get(ProjectKeys.LABEL_QUICK_SAVE),
             on_click=self._quick_save,
         )
+        self._project_name = FormFieldText(
+            self._resource_manager.get(ProjectKeys.LABEL_PROJECT_NAME),
+            "",
+            marker=MARKER_PROJECT_NAME,
+            on_value_change=self._update_to_model,
+        )
         self._start_date = DateTimeForm(
             self._resource_manager.get(ProjectKeys.LABEL_START_DATE),
             self._resource_manager.get(ProjectKeys.LABEL_START_TIME),
             on_value_change=self._update_start_date_to_model,
             marker_date=MARKER_START_DATE,
             marker_time=MARKER_START_TIME,
-        )
-        self._project_name = FormFieldText(
-            self._resource_manager.get(ProjectKeys.LABEL_PROJECT_NAME),
-            "",
-            marker=MARKER_PROJECT_NAME,
-            on_value_change=self._update_to_model,
         )
         self.introduce_to_viewmodel()
 
