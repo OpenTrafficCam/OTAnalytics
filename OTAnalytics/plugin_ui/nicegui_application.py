@@ -9,13 +9,13 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.offset_slider_form im
     OffSetSliderForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_bar.container import AnalysisBar
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.canvas_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     CanvasForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.container import (
-    CanvasAndFilesBar,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.container import (
+    CanvasAndFilesForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.files_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.files_form import (
     FilesForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
@@ -27,13 +27,13 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
     SvzMetadataForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_bar.container import (
-    SectionsAndFlowBar,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+    SectionsAndFlowForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_bar.flow_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     FlowForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_bar.sections_form import (  # noqa
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
     SectionsForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
@@ -93,14 +93,14 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         )
 
     @cached_property
-    def canvas_and_files_bar(self) -> CanvasAndFilesBar:
-        return CanvasAndFilesBar(
+    def canvas_and_files_bar(self) -> CanvasAndFilesForm:
+        return CanvasAndFilesForm(
             self.resource_manager, self.canvas_form, self.files_form
         )
 
     @cached_property
-    def sections_and_flow_bar(self) -> SectionsAndFlowBar:
-        return SectionsAndFlowBar(
+    def sections_and_flow_bar(self) -> SectionsAndFlowForm:
+        return SectionsAndFlowForm(
             self.resource_manager,
             self.section_form,
             self.flow_form,

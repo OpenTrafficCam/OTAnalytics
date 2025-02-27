@@ -6,8 +6,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_bar.container import Analy
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
     ConfigurationBar,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_bar.container import (
-    SectionsAndFlowBar,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+    SectionsAndFlowForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
     VisualizationFilters,
@@ -24,7 +24,7 @@ class MainPageBuilder(NiceguiPageBuilder):
         endpoint_name: str,
         configuration_bar: ConfigurationBar,
         add_tracker_bar: TrackBar,
-        sections_and_flow_bar: SectionsAndFlowBar,
+        sections_and_flow_bar: SectionsAndFlowForm,
         analysis_bar: AnalysisBar,
         workspace: Workspace,
         visualization_filters: VisualizationFilters,
