@@ -14,9 +14,14 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.style import COLOR_ORANGE
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import FormFieldText
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
+    DateTimeForm,
+    FormFieldText,
+)
 
 MARKER_PROJECT_NAME = "marker-project-name"
+MARKER_START_DATE = "marker-start-date"
+MARKER_START_TIME = "marker-start-time"
 
 
 class NiceGuiButtonQuickSaveConfig(AbstractButtonQuickSaveConfig):
@@ -37,6 +42,12 @@ class NiceGuiButtonQuickSaveConfig(AbstractButtonQuickSaveConfig):
     def set_default_color(self) -> None:
         pass
 
+    def enable(self) -> None:
+        self._instance.enable()
+
+    def disable(self) -> None:
+        self._instance.disable()
+
 
 class ProjectForm(AbstractFrameProject):
     def __init__(
@@ -56,6 +67,13 @@ class ProjectForm(AbstractFrameProject):
             marker=MARKER_PROJECT_NAME,
             on_value_change=self._update_to_model,
         )
+        self._start_date = DateTimeForm(
+            self._resource_manager.get(ProjectKeys.LABEL_START_DATE),
+            self._resource_manager.get(ProjectKeys.LABEL_START_TIME),
+            on_value_change=self._update_start_date_to_model,
+            marker_date=MARKER_START_DATE,
+            marker_time=MARKER_START_TIME,
+        )
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
@@ -67,20 +85,38 @@ class ProjectForm(AbstractFrameProject):
             self._resource_manager.get(ProjectKeys.LABEL_PROJECT_FORM_HEADER)
         ).classes("text-lg font-bold")
         with ui.row():
-            ui.button(self._resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT))
-            ui.button(self._resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT))
+            self.open_project_button = ui.button(
+                self._resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT)
+            )
+            self.save_project_button = ui.button(
+                self._resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT)
+            )
             self._quick_save_button.build()
         self._project_name.build()
+        self._start_date.build()
         return self
 
     def _update_to_model(self, events: ValueChangeEventArguments) -> None:
         self._view_model.update_project_name(events.value)
 
+    def _update_start_date_to_model(self, value: datetime | None) -> None:
+        self._view_model.update_project_start_date(value)
+
     def _quick_save(self, _: ClickEventArguments) -> None:
         self._view_model.quick_save_configuration()
 
     def update(self, name: str, start_date: Optional[datetime]) -> None:
-        pass
+        if self._project_name._instance:
+            self._project_name.set_value(name)
+            if start_date:
+                self._start_date.set_value(start_date)
 
     def set_enabled_general_buttons(self, enabled: bool) -> None:
-        pass
+        if enabled:
+            self.open_project_button.enable()
+            self.save_project_button.enable()
+            self._quick_save_button.enable()
+        else:
+            self.open_project_button.disable()
+            self.save_project_button.disable()
+            self._quick_save_button.disable()
