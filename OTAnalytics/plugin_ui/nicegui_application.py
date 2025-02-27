@@ -42,7 +42,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import (
     VisualizationLayers,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_bar.layers_form import (  # noqa
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     LayersForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
