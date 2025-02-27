@@ -4,7 +4,7 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     VisualizationLayersKeys,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_bar.layers_form import (  # noqa
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     LayersForm,
 )
 

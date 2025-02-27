@@ -8,15 +8,15 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
     SvzMetadataForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_bar.flow_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     FlowForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_bar.sections_form import (  # noqa
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
     SectionsForm,
 )
 
 
-class SectionsAndFlowBar:
+class SectionsAndFlowForm:
     def __init__(
         self,
         resource_manager: ResourceManager,
