@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Callable, Iterable
 
 from OTAnalytics.application.analysis.intersect import (
@@ -8,6 +9,7 @@ from OTAnalytics.application.analysis.intersect import (
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import Event, EventBuilder, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
+    Coordinate,
     DirectionVector2D,
     RelativeOffsetCoordinate,
     calculate_direction_vector,
@@ -68,24 +70,47 @@ class IntersectByIntersectionPoints(Intersector):
             for section_id, intersection_point in intersection_points:
                 event_builder.add_section_id(section_id)
                 detection = track.get_detection(intersection_point.upper_index)
+                previous_detection = track.get_detection(intersection_point.lower_index)
                 current_coord = detection.get_coordinate(offset)
-                prev_coord = track.get_detection(
-                    intersection_point.lower_index
-                ).get_coordinate(offset)
+                prev_coord = previous_detection.get_coordinate(offset)
                 direction_vector = self._calculate_direction_vector(
                     prev_coord.x,
                     prev_coord.y,
                     current_coord.x,
                     current_coord.y,
                 )
+                interpolated_occurrence = self._get_interpolated_occurrence(
+                    previous=previous_detection.occurrence,
+                    current=detection.occurrence,
+                    relative_position=intersection_point.relative_position,
+                )
+                interpolated_event_coordinate = self._get_interpolated_event_coordinate(
+                    previous=prev_coord,
+                    current=current_coord,
+                    relative_position=intersection_point.relative_position,
+                )
                 event_builder.add_event_type(EventType.SECTION_ENTER)
                 event_builder.add_direction_vector(direction_vector)
                 event_builder.add_event_coordinate(current_coord.x, current_coord.y)
-                event_builder.add_relative_position(
-                    intersection_point.relative_position
+                event_builder.add_interpolated_occurrence(interpolated_occurrence)
+                event_builder.add_interpolated_event_coordinate(
+                    interpolated_event_coordinate.x, interpolated_event_coordinate.y
                 )
                 events.append(event_builder.create_event(detection))
+
         return events
+
+    def _get_interpolated_occurrence(
+        self, previous: datetime, current: datetime, relative_position: float
+    ) -> datetime:
+        return previous + (current - previous) * relative_position
+
+    def _get_interpolated_event_coordinate(
+        self, previous: Coordinate, current: Coordinate, relative_position: float
+    ) -> Coordinate:
+        interpolated_x = previous.x + relative_position * (current.x - previous.x)
+        interpolated_y = previous.y + relative_position * (current.y - previous.y)
+        return Coordinate(interpolated_x, interpolated_y)
 
 
 class IntersectAreaByTrackPoints(Intersector):
@@ -182,6 +207,12 @@ class IntersectAreaByTrackPoints(Intersector):
                         )
                     )
                     event_builder.add_event_coordinate(current_coord.x, current_coord.y)
+                    event_builder.add_interpolated_event_coordinate(
+                        current_coord.x, current_coord.y
+                    )
+                    event_builder.add_interpolated_occurrence(
+                        current_detection.occurrence
+                    )
 
                     if entered:
                         event_builder.add_event_type(EventType.SECTION_ENTER)

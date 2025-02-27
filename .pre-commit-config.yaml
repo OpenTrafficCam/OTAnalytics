@@ -77,7 +77,6 @@ repos:
           - types-tqdm
           - types-ujson
           - uvicorn==0.32.1
-          - watchdog==6.0.0
           - yamllint==1.35.1
         always_run: true
         pass_filenames: false

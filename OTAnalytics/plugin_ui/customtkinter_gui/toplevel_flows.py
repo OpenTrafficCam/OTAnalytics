@@ -165,10 +165,6 @@ class FrameConfigureFlow(FrameContent):
             raise TooFewSectionsForFlowException(
                 "Please choose both a start and an end section!"
             )
-        elif section_start == section_end:
-            raise SectionSeveralTimesInFlowException(
-                "Start and end section have to be different!"
-            )
         else:
             for section in sections:
                 if not self._section_ids.has(section):
