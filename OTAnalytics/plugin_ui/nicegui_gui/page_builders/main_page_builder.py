@@ -3,9 +3,6 @@ from nicegui import ui
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.page_builder import NiceguiPageBuilder
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.container import TrackBar
 from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_bar.container import AnalysisBar
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.container import (
-    CanvasAndFilesBar,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
     ConfigurationBar,
 )
@@ -18,6 +15,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import (
     VisualizationLayers,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
 
 
 class MainPageBuilder(NiceguiPageBuilder):
@@ -28,7 +26,7 @@ class MainPageBuilder(NiceguiPageBuilder):
         add_tracker_bar: TrackBar,
         sections_and_flow_bar: SectionsAndFlowBar,
         analysis_bar: AnalysisBar,
-        canvas_files_bar: CanvasAndFilesBar,
+        workspace: Workspace,
         visualization_filters: VisualizationFilters,
         visualization_layers: VisualizationLayers,
     ) -> None:
@@ -37,7 +35,7 @@ class MainPageBuilder(NiceguiPageBuilder):
         self.add_track_bar = add_tracker_bar
         self.sections_and_flow_bar = sections_and_flow_bar
         self.analysis_bar = analysis_bar
-        self.canvas_files_bar = canvas_files_bar
+        self.workspace = workspace
         self.visualization_filters = visualization_filters
         self.visualization_layers = visualization_layers
 
@@ -51,7 +49,7 @@ class MainPageBuilder(NiceguiPageBuilder):
             with ui.column().classes("col-span-6"):
                 with ui.grid(rows=8):
                     with ui.row().classes("row-span-6"):
-                        self.canvas_files_bar.build()
+                        self.workspace.build()
                     with ui.row().classes("row-span-2"):
                         self.visualization_filters.build()
             with ui.column().classes("col-span-1"):

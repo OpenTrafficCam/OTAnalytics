@@ -18,9 +18,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.container impo
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.files_form import (
     FilesForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.workspace import (
-    Workspace,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
     ConfigurationBar,
 )
@@ -48,6 +45,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_bar.layers_form import (  # noqa
     LayersForm,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
 
 
 class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
@@ -68,7 +66,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             ENDPOINT_MAIN_PAGE,
             configuration_bar=self.configuration_bar,
             add_tracker_bar=self.track_bar,
-            canvas_files_bar=self.canvas_and_files_bar,
+            workspace=self.workspace,
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
             sections_and_flow_bar=self.sections_and_flow_bar,
@@ -155,7 +153,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def workspace(self) -> Workspace:
-        return Workspace(self.resource_manager)
+        return Workspace(self.resource_manager, self.canvas_and_files_bar)
 
     @cached_property
     def visualization_filters(self) -> VisualizationFilters:
