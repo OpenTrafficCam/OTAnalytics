@@ -15,7 +15,7 @@ from OTAnalytics.application.resources.resource_manager import (
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.style import COLOR_ORANGE
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
-    FormFieldDateTime,
+    DateTimeForm,
     FormFieldText,
 )
 
@@ -61,10 +61,10 @@ class ProjectForm(AbstractFrameProject):
             self._resource_manager.get(ProjectKeys.LABEL_QUICK_SAVE),
             on_click=self._quick_save,
         )
-        self._start_date = FormFieldDateTime(
+        self._start_date = DateTimeForm(
             self._resource_manager.get(ProjectKeys.LABEL_START_DATE),
             self._resource_manager.get(ProjectKeys.LABEL_START_TIME),
-            datetime.now(),
+            on_value_change=self._update_start_date_to_model,
             marker_date=MARKER_START_DATE,
             marker_time=MARKER_START_TIME,
         )
@@ -98,6 +98,9 @@ class ProjectForm(AbstractFrameProject):
 
     def _update_to_model(self, events: ValueChangeEventArguments) -> None:
         self._view_model.update_project_name(events.value)
+
+    def _update_start_date_to_model(self, value: datetime | None) -> None:
+        self._view_model.update_project_start_date(value)
 
     def _quick_save(self, _: ClickEventArguments) -> None:
         self._view_model.quick_save_configuration()
