@@ -23,6 +23,14 @@ class SvzMetadataKeys(ResourceKey):
     LABEL_SVZ_METADATA_FORM_HEADER = "label-svz-metadata-form-header"
 
 
+class AddTracksKeys(ResourceKey):
+    BUTTON_ADD_TRACKS = "button-add-tracks"
+
+
+class OffsetSliderKeys(ResourceKey):
+    BUTTON_UPDATE_OFFSET = "button-update-offset"
+
+
 class VisualizationFiltersKeys(ResourceKey):
     LABEL_VISUALIZATION_FILTERS_FORM_HEADER = "label-visualization-filters-form-header"
 
@@ -37,6 +45,7 @@ class WorkspaceKeys(ResourceKey):
 
 DEFAULT_RESOURCE_MAP = {
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
+    AddTracksKeys.BUTTON_ADD_TRACKS: "Add tracks...",
     ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
     ProjectKeys.LABEL_PROJECT_NAME: "Project name",
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
@@ -44,6 +53,7 @@ DEFAULT_RESOURCE_MAP = {
     ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
     ProjectKeys.LABEL_START_DATE: "Start date",
     ProjectKeys.LABEL_START_TIME: "Start time",
+    OffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
     VisualizationFiltersKeys.LABEL_VISUALIZATION_FILTERS_FORM_HEADER: "Visualization Filters",  # noqa
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa

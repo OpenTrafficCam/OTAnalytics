@@ -1,6 +1,8 @@
 from functools import cached_property
 
+from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.ui_factory import NiceGuiUiFactory
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.add_tracks_form import (
     AddTracksForm,
 )
@@ -162,3 +164,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     @cached_property
     def visualization_layers(self) -> VisualizationLayers:
         return VisualizationLayers(self.resource_manager, self.layers_form)
+
+    @cached_property
+    def ui_factory(self) -> UiFactory:
+        return NiceGuiUiFactory()
