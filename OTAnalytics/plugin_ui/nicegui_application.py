@@ -6,7 +6,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.ui_factory import NiceGuiUiFactor
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
     AddTracksForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import TrackBar
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import TrackForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.offset_slider_form import (
     OffSetSliderForm,
 )
@@ -89,19 +89,19 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             resource_manager=self.resource_manager,
             project_form=self.project_form,
             svz_metadata_form=self.svz_metadata_form,
-            add_tracker_bar=self.track_bar,
-            sections_and_flow_bar=self.sections_and_flow_bar,
+            track_form=self.track_form,
+            sections_and_flow_form=self.sections_and_flow_form,
             analysis_form=self.analysis_form,
         )
 
     @cached_property
-    def canvas_and_files_bar(self) -> CanvasAndFilesForm:
+    def canvas_and_files_form(self) -> CanvasAndFilesForm:
         return CanvasAndFilesForm(
             self.resource_manager, self.canvas_form, self.files_form
         )
 
     @cached_property
-    def sections_and_flow_bar(self) -> SectionsAndFlowForm:
+    def sections_and_flow_form(self) -> SectionsAndFlowForm:
         return SectionsAndFlowForm(
             self.resource_manager,
             self.section_form,
@@ -109,8 +109,8 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         )
 
     @cached_property
-    def track_bar(self) -> TrackBar:
-        return TrackBar(
+    def track_form(self) -> TrackForm:
+        return TrackForm(
             self.resource_manager,
             self.add_track_form,
             self.offset_slider_form,
@@ -155,7 +155,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def workspace(self) -> Workspace:
-        return Workspace(self.resource_manager, self.canvas_and_files_bar)
+        return Workspace(self.resource_manager, self.canvas_and_files_form)
 
     @cached_property
     def visualization_filters(self) -> VisualizationFilters:

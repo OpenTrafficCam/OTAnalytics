@@ -16,7 +16,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form
 )
 
 
-class TrackBar:
+class TrackForm:
     def __init__(
         self,
         resource_manager: ResourceManager,

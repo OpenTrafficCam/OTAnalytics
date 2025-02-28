@@ -5,7 +5,7 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     SvzMetadataKeys,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import TrackBar
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import TrackForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import AnalysisForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     ProjectForm,
@@ -24,15 +24,15 @@ class ConfigurationBar:
         resource_manager: ResourceManager,
         project_form: ProjectForm,
         svz_metadata_form: SvzMetadataForm,
-        add_tracker_bar: TrackBar,
-        sections_and_flow_bar: SectionsAndFlowForm,
+        track_form: TrackForm,
+        sections_and_flow_form: SectionsAndFlowForm,
         analysis_form: AnalysisForm,
     ) -> None:
         self._resource_manager = resource_manager
         self.project_form = project_form
         self.svz_metadata_form = svz_metadata_form
-        self.add_track_bar = add_tracker_bar
-        self.sections_and_flow_bar = sections_and_flow_bar
+        self.track_form = track_form
+        self.sections_and_flow_form = sections_and_flow_form
         self.analysis_form = analysis_form
 
     def build(self) -> None:
@@ -51,6 +51,6 @@ class ConfigurationBar:
             with ui.tab_panel(two):
                 self.svz_metadata_form.build()
 
-        self.add_track_bar.build()
-        self.sections_and_flow_bar.build()
+        self.track_form.build()
+        self.sections_and_flow_form.build()
         self.analysis_form.build()
