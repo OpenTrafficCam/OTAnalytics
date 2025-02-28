@@ -1,8 +1,15 @@
 from enum import StrEnum
+from pathlib import Path
+
+from PIL import Image
 
 
 class ResourceKey(StrEnum):
     pass
+
+
+class CanvasKeys(ResourceKey):
+    IMAGE_DEFAULT = "image-default"
 
 
 class ConfigurationBarKeys(ResourceKey):
@@ -73,13 +80,33 @@ DEFAULT_RESOURCE_MAP = {
     WorkspaceKeys.LABEL_WORKSPACE_FORM_HEADER: "Workspace",
 }
 
+DEFAULT_IMAGE_RESOURCE_MAP: dict[ResourceKey, str] = {
+    CanvasKeys.IMAGE_DEFAULT: r"OTAnalytics/assets/OpenTrafficCam_800.png"
+}
+
 
 class ResourceManager:
 
     def __init__(
-        self, resources: dict[ResourceKey, str] = DEFAULT_RESOURCE_MAP
+        self,
+        resources: dict[ResourceKey, str] = DEFAULT_RESOURCE_MAP,
+        image_resources: dict[ResourceKey, str] = DEFAULT_IMAGE_RESOURCE_MAP,
     ) -> None:
         self._resources = resources
+        self._image_resources = image_resources
 
     def get(self, key: ResourceKey) -> str:
         return self._resources.get(key, str(key))
+
+    def get_image(self, key: ResourceKey) -> Image.Image | None:
+        if key in self._image_resources:
+            return load_image(self._image_resources.get(key))
+        return None
+
+
+def load_image(src: str | None) -> Image.Image | None:
+    if src is None:
+        return None
+    if Path(src).exists():
+        return Image.open(src)
+    return None
