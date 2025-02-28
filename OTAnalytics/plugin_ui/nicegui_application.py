@@ -72,7 +72,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
             sections_and_flow_bar=self.sections_and_flow_bar,
-            analysis_bar=self.analysis_form,
+            analysis_form=self.analysis_form,
         )
 
         return NiceguiWebserver(

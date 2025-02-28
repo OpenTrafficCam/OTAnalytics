@@ -25,7 +25,7 @@ class MainPageBuilder(NiceguiPageBuilder):
         configuration_bar: ConfigurationBar,
         add_tracker_bar: TrackBar,
         sections_and_flow_bar: SectionsAndFlowForm,
-        analysis_bar: AnalysisForm,
+        analysis_form: AnalysisForm,
         workspace: Workspace,
         visualization_filters: VisualizationFilters,
         visualization_layers: VisualizationLayers,
@@ -34,7 +34,7 @@ class MainPageBuilder(NiceguiPageBuilder):
         self.configuration_bar = configuration_bar
         self.add_track_bar = add_tracker_bar
         self.sections_and_flow_bar = sections_and_flow_bar
-        self.analysis_bar = analysis_bar
+        self.analysis_form = analysis_form
         self.workspace = workspace
         self.visualization_filters = visualization_filters
         self.visualization_layers = visualization_layers
@@ -45,7 +45,7 @@ class MainPageBuilder(NiceguiPageBuilder):
                 self.configuration_bar.build()
                 self.add_track_bar.build()
                 self.sections_and_flow_bar.build()
-                self.analysis_bar.build()
+                self.analysis_form.build()
             with ui.column().classes("col-span-6"):
                 with ui.grid(rows=8):
                     with ui.row().classes("row-span-6"):
