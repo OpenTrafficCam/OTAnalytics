@@ -138,13 +138,6 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
-from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
-    ArrowPainter,
-    CanvasElementDeleter,
-    SectionBuilder,
-    SectionGeometryEditor,
-    SectionPainter,
-)
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox, MinimalInfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ARROW_STYLE,
@@ -916,16 +909,13 @@ class DummyViewModel(
     def add_line_section(self) -> None:
         self.set_selected_section_ids([])
         self._start_action()
-        SectionBuilder(viewmodel=self, canvas=self.canvas, style=EDITED_SECTION_STYLE)
+        self.canvas.start_section_builder(style=EDITED_SECTION_STYLE)
 
     def add_area_section(self) -> None:
         self.set_selected_section_ids([])
         self._start_action()
-        SectionBuilder(
-            viewmodel=self,
-            canvas=self.canvas,
-            is_area_section=True,
-            style=EDITED_SECTION_STYLE,
+        self.canvas.start_section_builder(
+            is_area_section=True, style=EDITED_SECTION_STYLE
         )
 
     def get_section_metadata(
@@ -991,14 +981,12 @@ class DummyViewModel(
             )
 
         self._start_action()
-        CanvasElementDeleter(canvas=self.canvas).delete(tag_or_id=TAG_SELECTED_SECTION)
+        self.canvas.delete_element(tag_or_id=TAG_SELECTED_SECTION)
         if selected_section_ids:
             if current_section := self._application.get_section_for(
                 SectionId(selected_section_ids[0])
             ):
-                SectionGeometryEditor(
-                    viewmodel=self,
-                    canvas=self.canvas,
+                self.canvas.start_section_geometry_editor(
                     section=current_section,
                     edited_section_style=EDITED_SECTION_STYLE,
                     pre_edit_section_style=PRE_EDIT_SECTION_STYLE,
@@ -1087,7 +1075,7 @@ class DummyViewModel(
         self._draw_items_on_canvas()
 
     def _remove_items_from_canvas(self) -> None:
-        CanvasElementDeleter(canvas=self.canvas).delete(tag_or_id=LINE_SECTION)
+        self.canvas.delete_element(tag_or_id=LINE_SECTION)
 
     def _draw_items_on_canvas(self) -> None:
         sections_to_highlight = self._get_sections_to_highlight()
@@ -1101,7 +1089,6 @@ class DummyViewModel(
         return []
 
     def _draw_sections(self, sections_to_highlight: list[str]) -> None:
-        section_painter = SectionPainter(canvas=self.canvas)
         for section in self._get_sections():
             tags = [LINE_SECTION]
             if section[ID] in sections_to_highlight:
@@ -1109,7 +1096,7 @@ class DummyViewModel(
                 tags.append(TAG_SELECTED_SECTION)
             else:
                 style = DEFAULT_SECTION_STYLE
-            section_painter.draw(
+            self.canvas.draw_section(
                 tags=tags,
                 id=section[ID],
                 coordinates=section[COORDINATES],
@@ -1129,7 +1116,7 @@ class DummyViewModel(
                     end_refpt_calculator = self._get_section_refpt_calculator(
                         end_section
                     )
-                    ArrowPainter(self.canvas).draw(
+                    self.canvas.draw_arrow(
                         start_section=start_section,
                         end_section=end_section,
                         start_refpt_calculator=start_refpt_calculator,

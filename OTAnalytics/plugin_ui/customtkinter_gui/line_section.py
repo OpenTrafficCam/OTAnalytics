@@ -2,6 +2,8 @@ import tkinter
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from plugin_ui.customtkinter_gui.abstract_ctk_canvas import AbstractCTkCanvas
+
 from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.flow_adapter import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -47,7 +49,7 @@ class SectionGeometryBuilderObserver(ABC):
 
 
 class ArrowPainter:
-    def __init__(self, canvas: AbstractCanvas) -> None:
+    def __init__(self, canvas: AbstractCTkCanvas) -> None:
         self._canvas = canvas
 
     def draw(
@@ -73,7 +75,7 @@ class ArrowPainter:
 
 
 class SectionPainter:
-    def __init__(self, canvas: AbstractCanvas) -> None:
+    def __init__(self, canvas: AbstractCTkCanvas) -> None:
         self._canvas = canvas
 
     def draw(
@@ -227,7 +229,7 @@ class SectionPainter:
 
 
 class CanvasElementDeleter:
-    def __init__(self, canvas: AbstractCanvas) -> None:
+    def __init__(self, canvas: AbstractCTkCanvas) -> None:
         self._canvas = canvas
 
     def delete(self, tag_or_id: str) -> None:
@@ -261,7 +263,7 @@ class SectionGeometryEditor(CanvasObserver):
     def __init__(
         self,
         viewmodel: ViewModel,
-        canvas: AbstractCanvas,
+        canvas: AbstractCTkCanvas,
         section: Section,
         edited_section_style: dict,
         pre_edit_section_style: dict,
@@ -609,7 +611,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
     def __init__(
         self,
         viewmodel: ViewModel,
-        canvas: AbstractCanvas,
+        canvas: AbstractCTkCanvas,
         style: dict,
         is_area_section: bool = False,
         section: Optional[Section] = None,

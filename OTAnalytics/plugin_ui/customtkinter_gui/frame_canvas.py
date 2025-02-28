@@ -1,12 +1,21 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from customtkinter import NW
+from domain.section import Section
 from PIL import Image, ImageTk
+from plugin_ui.customtkinter_gui.abstract_ctk_canvas import AbstractCTkCanvas
+from plugin_ui.customtkinter_gui.line_section import (
+    ArrowPainter,
+    CanvasElementDeleter,
+    SectionBuilder,
+    SectionGeometryEditor,
+    SectionPainter,
+)
 
-from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
+from OTAnalytics.adapter_ui.flow_adapter import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.track import TrackImage
@@ -80,7 +89,7 @@ class FrameCanvas(AbstractFrameCanvas, EmbeddedCTkFrame):
         self.canvas_background.clear_image()
 
 
-class CanvasBackground(AbstractCanvas):
+class CanvasBackground(AbstractCTkCanvas):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any):
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
@@ -122,6 +131,83 @@ class CanvasBackground(AbstractCanvas):
         if self._current_id:
             self.delete(self._current_id)
             self._viewmodel.refresh_items_on_canvas()
+
+    def draw_arrow(
+        self,
+        start_section: Section,
+        end_section: Section,
+        start_refpt_calculator: SectionRefPointCalculator,
+        end_refpt_calculator: SectionRefPointCalculator,
+        arrow_style: dict | None = None,
+        tags: list[str] | None = None,
+    ) -> None:
+        ArrowPainter(self).draw(
+            start_section=start_section,
+            end_section=end_section,
+            start_refpt_calculator=start_refpt_calculator,
+            end_refpt_calculator=end_refpt_calculator,
+            tags=tags,
+            arrow_style=arrow_style,
+        )
+
+    def delete_element(self, tag_or_id: str) -> None:
+        CanvasElementDeleter(canvas=self).delete(tag_or_id=tag_or_id)
+
+    def start_section_builder(
+        self,
+        style: dict,
+        is_area_section: bool = False,
+        section: Optional[Section] = None,
+    ) -> None:
+        SectionBuilder(
+            viewmodel=self._viewmodel,
+            canvas=self,
+            is_area_section=is_area_section,
+            style=style,
+            section=section,
+        )
+
+    def start_section_geometry_editor(
+        self,
+        section: Section,
+        edited_section_style: dict,
+        pre_edit_section_style: dict,
+        selected_knob_style: dict,
+        hovered_knob_style: dict | None = None,
+        is_area_section: bool = False,
+    ) -> None:
+        SectionGeometryEditor(
+            viewmodel=self._viewmodel,
+            canvas=self,
+            section=section,
+            edited_section_style=edited_section_style,
+            pre_edit_section_style=pre_edit_section_style,
+            selected_knob_style=selected_knob_style,
+            hovered_knob_style=hovered_knob_style,
+            is_area_section=is_area_section,
+        )
+
+    def draw_section(
+        self,
+        id: str,
+        coordinates: list[tuple[int, int]],
+        section_style: dict,
+        is_area_section: bool = False,
+        highlighted_knob_index: int | None = None,
+        highlighted_knob_style: dict | None = None,
+        text: str | None = None,
+        tags: list[str] | None = None,
+    ) -> None:
+        SectionPainter(canvas=self).draw(
+            id=id,
+            coordinates=coordinates,
+            section_style=section_style,
+            is_area_section=is_area_section,
+            highlighted_knob_index=highlighted_knob_index,
+            highlighted_knob_style=highlighted_knob_style,
+            text=text,
+            tags=tags,
+        )
 
 
 class CanvasEventHandler(EventHandler):
