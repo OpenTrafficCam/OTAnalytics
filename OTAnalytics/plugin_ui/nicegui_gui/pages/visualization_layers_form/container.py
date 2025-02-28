@@ -2,12 +2,12 @@ from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
     SvzMetadataForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_bar.layers_form import (  # noqa
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     LayersForm,
 )
 
 
-class VisualizationLayerBar:
+class VisualizationLayerForm:
     def __init__(
         self,
         resource_manager: ResourceManager,

@@ -1,3 +1,7 @@
+from functools import cached_property
+
+from OTAnalytics.adapter_ui.ui_factory import UiFactory
+from OTAnalytics.plugin_ui.customtkinter_gui.ctk_ui_factory import CtkUiFactory
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
 
 
@@ -18,3 +22,7 @@ class OtAnalyticsCtkApplicationStarter(OtAnalyticsGuiApplicationStarter):
             self.preload_input_files,
             self.run_config,
         ).start()
+
+    @cached_property
+    def ui_factory(self) -> UiFactory:
+        return CtkUiFactory()

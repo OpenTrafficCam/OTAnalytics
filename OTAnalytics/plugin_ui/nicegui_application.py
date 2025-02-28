@@ -1,6 +1,8 @@
 from functools import cached_property
 
+from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.ui_factory import NiceGuiUiFactory
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.add_tracks_form import (
     AddTracksForm,
 )
@@ -9,17 +11,14 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.offset_slider_form im
     OffSetSliderForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_bar.container import AnalysisForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.canvas_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     CanvasForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.container import (
-    CanvasAndFilesBar,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.container import (
+    CanvasAndFilesForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.files_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.files_form import (
     FilesForm,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_bar.workspace import (
-    Workspace,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
     ConfigurationBar,
@@ -30,13 +29,13 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
     SvzMetadataForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_bar.container import (
-    SectionsAndFlowBar,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+    SectionsAndFlowForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_bar.flow_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     FlowForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_bar.sections_form import (  # noqa
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
     SectionsForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
@@ -45,9 +44,10 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import (
     VisualizationLayers,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_bar.layers_form import (  # noqa
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     LayersForm,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
 
 
 class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
@@ -68,7 +68,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             ENDPOINT_MAIN_PAGE,
             configuration_bar=self.configuration_bar,
             add_tracker_bar=self.track_bar,
-            canvas_files_bar=self.canvas_and_files_bar,
+            workspace=self.workspace,
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
             sections_and_flow_bar=self.sections_and_flow_bar,
@@ -93,14 +93,14 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         )
 
     @cached_property
-    def canvas_and_files_bar(self) -> CanvasAndFilesBar:
-        return CanvasAndFilesBar(
+    def canvas_and_files_bar(self) -> CanvasAndFilesForm:
+        return CanvasAndFilesForm(
             self.resource_manager, self.canvas_form, self.files_form
         )
 
     @cached_property
-    def sections_and_flow_bar(self) -> SectionsAndFlowBar:
-        return SectionsAndFlowBar(
+    def sections_and_flow_bar(self) -> SectionsAndFlowForm:
+        return SectionsAndFlowForm(
             self.resource_manager,
             self.section_form,
             self.flow_form,
@@ -153,7 +153,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def workspace(self) -> Workspace:
-        return Workspace(self.resource_manager)
+        return Workspace(self.resource_manager, self.canvas_and_files_bar)
 
     @cached_property
     def visualization_filters(self) -> VisualizationFilters:
@@ -162,3 +162,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     @cached_property
     def visualization_layers(self) -> VisualizationLayers:
         return VisualizationLayers(self.resource_manager, self.layers_form)
+
+    @cached_property
+    def ui_factory(self) -> UiFactory:
+        return NiceGuiUiFactory()
