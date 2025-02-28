@@ -3,14 +3,14 @@ from functools import cached_property
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.ui_factory import NiceGuiUiFactory
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.add_tracks_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
     AddTracksForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.container import TrackBar
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.offset_slider_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import TrackBar
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.offset_slider_form import (
     OffSetSliderForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_bar.container import AnalysisBar
+from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import AnalysisForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     CanvasForm,
 )
@@ -67,12 +67,9 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         main_page_builder = MainPageBuilder(
             ENDPOINT_MAIN_PAGE,
             configuration_bar=self.configuration_bar,
-            add_tracker_bar=self.track_bar,
             workspace=self.workspace,
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
-            sections_and_flow_bar=self.sections_and_flow_bar,
-            analysis_bar=self.analysis_bar,
         )
 
         return NiceguiWebserver(
@@ -83,15 +80,18 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         ).run()
 
     @cached_property
-    def analysis_bar(self) -> AnalysisBar:
-        return AnalysisBar(
-            self.resource_manager,
-        )
+    def analysis_form(self) -> AnalysisForm:
+        return AnalysisForm(self.resource_manager, self.view_model)
 
     @cached_property
     def configuration_bar(self) -> ConfigurationBar:
         return ConfigurationBar(
-            self.resource_manager, self.project_form, self.svz_metadata_form
+            resource_manager=self.resource_manager,
+            project_form=self.project_form,
+            svz_metadata_form=self.svz_metadata_form,
+            add_tracker_bar=self.track_bar,
+            sections_and_flow_bar=self.sections_and_flow_bar,
+            analysis_form=self.analysis_form,
         )
 
     @cached_property
