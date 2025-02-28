@@ -3,7 +3,7 @@ from abc import abstractmethod
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 
 
-class AbstractFrameTracks(AbstractFrame):
+class AbstractFrameOffset(AbstractFrame):
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         raise NotImplementedError

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, TypeVar
+from datetime import date, datetime, time
+from typing import Callable, Generic, Optional, TypeVar
 
 from nicegui import ui
 from nicegui.element import Element
@@ -357,6 +358,229 @@ class FormFieldInteger(FormField[Number, int]):
             step=self._step,
         )
         self._apply(self.element)
+
+
+class FormFieldDate(FormField[Input, Optional[date]]):
+
+    @property
+    def initial_value_text(self) -> str:
+        return self.__format(self._initial_value)
+
+    @property
+    def value(self) -> Optional[date]:
+        if self.element and self.element.value:
+            if isinstance(self.element.value, date):
+                return self.element.value
+            return datetime.strptime(self.element.value, "%Y-%m-%d").date()
+        return None
+
+    @property
+    def props(self) -> list[str] | None:
+        return self._props
+
+    @property
+    def marker(self) -> str | None:
+        return self._marker
+
+    def __init__(
+        self,
+        label_text: str,
+        initial_value: date | None = None,
+        min_value: date | None = None,
+        max_value: date | None = None,
+        validation: (
+            Callable[..., str | None] | dict[str, Callable[..., bool]] | None
+        ) = None,
+        on_value_change: Callable[[ValueChangeEventArguments], None] | None = None,
+        props: list[str] | None = None,
+        marker: str | None = None,
+    ):
+        super().__init__()
+        self._label_text = label_text
+        self._initial_value = initial_value
+        self._min = min_value
+        self._max = max_value
+        self._validation = validation
+        self._on_value_change = on_value_change
+        self._props = props
+        self._marker = marker
+
+    def build(self) -> None:
+        """Builds the UI form element."""
+        self._instance = ui.input(
+            self._label_text, value=self.initial_value_text
+        ).style("max-width: 40%")
+        with self._instance:
+            with ui.menu().props("no-parent-event") as menu:
+                with ui.date(value=self.initial_value_text).bind_value(self._instance):
+                    with ui.row().classes("justify-end"):
+                        ui.button("Close", on_click=menu.close).props("flat")
+            with self._instance.add_slot("append"):
+                ui.icon("edit_calendar").on("click", menu.open).classes(
+                    "cursor-pointer"
+                )
+
+        if self._on_value_change:
+            self._instance.on_value_change(self._on_value_change)
+        self._apply(self.element)
+
+    @staticmethod
+    def __format(value: date | None) -> str:
+        if value:
+            return value.strftime("%Y-%m-%d")
+        return ""
+
+
+class FormFieldTime(FormField[Input, Optional[time]]):
+
+    @property
+    def initial_value_text(self) -> str:
+        return self.__format(self._initial_value)
+
+    @property
+    def value(self) -> Optional[time]:
+        if self.element and self.element.value:
+            if isinstance(self.element.value, time):
+                return self.element.value
+            return datetime.strptime(self.element.value, "%H:%M").time()
+        return None
+
+    @property
+    def props(self) -> list[str] | None:
+        return self._props
+
+    @property
+    def marker(self) -> str | None:
+        return self._marker
+
+    def __init__(
+        self,
+        label_text: str,
+        initial_value: time | None = None,
+        min_value: time | None = None,
+        max_value: time | None = None,
+        validation: (
+            Callable[..., str | None] | dict[str, Callable[..., bool]] | None
+        ) = None,
+        on_value_change: Callable[[ValueChangeEventArguments], None] | None = None,
+        props: list[str] | None = None,
+        marker: str | None = None,
+    ):
+        super().__init__()
+        self._label_text = label_text
+        self._initial_value = initial_value
+        self._min = min_value
+        self._max = max_value
+        self._validation = validation
+        self._on_value_change = on_value_change
+        self._props = props
+        self._marker = marker
+
+    def build(self) -> None:
+        self._instance = ui.input(
+            self._label_text, value=self.initial_value_text
+        ).style("max-width: 40%")
+        with self._instance:
+            with ui.menu().props("no-parent-event") as menu:
+                with ui.time(self.initial_value_text).bind_value(self._instance):
+                    with ui.row().classes("justify-end"):
+                        ui.button("Close", on_click=menu.close).props("flat")
+            with self._instance.add_slot("append"):
+                ui.icon("access_time").on("click", menu.open).classes("cursor-pointer")
+        if self._on_value_change:
+            self._instance.on_value_change(self._on_value_change)
+        self._apply(self.element)
+
+    @staticmethod
+    def __format(value: time | None) -> str:
+        if value:
+            return value.strftime("%H:%M")
+        return ""
+
+
+class DateTimeForm:
+    """A class representing a integer form field with validation and updating
+    capabilities.
+
+    Args:
+        label_text (int): The label for the input field.
+        initial_value (int): The initial value of the input.
+        min_value (int): The minimum allowable value for the input. Defaults to None.
+        max_value (int): The maximum allowable value for the input. Defaults to None.
+        validation(Callable[..., str | None] | dict[str, Callable[..., bool]] | None):
+            Validation functions to be applied on the element's data. Defaults to None.
+        props (list[str] | None): props to be set for the number element.
+        marker (str | None): marker to be set for the number element.
+
+    """
+
+    @property
+    def value(self) -> datetime | None:
+        """Provides the current input of the form field
+
+        Returns:
+            int: The current input of the form field.
+        """
+        start_date = self._start_date.value
+        start_time = self._start_time.value
+        if start_date and start_time:
+            return datetime.combine(start_date, start_time)
+        return None
+
+    def set_value(self, value: datetime | None) -> None:
+        if value:
+            self._start_date.set_value(value.date())
+            self._start_time.set_value(value.time())
+        else:
+            self._start_date.set_value(None)
+            self._start_time.set_value(None)
+
+    def __init__(
+        self,
+        label_date_text: str,
+        label_time_text: str,
+        initial_value: datetime | None = None,
+        min_value: datetime | None = None,
+        max_value: datetime | None = None,
+        validation: (
+            Callable[..., str | None] | dict[str, Callable[..., bool]] | None
+        ) = None,
+        on_value_change: Callable[[datetime | None], None] | None = None,
+        props: list[str] | None = None,
+        marker_date: str | None = None,
+        marker_time: str | None = None,
+    ) -> None:
+        super().__init__()
+        self._validation = validation
+        self._on_value_change = on_value_change
+        self._props = props
+        self._start_date = FormFieldDate(
+            label_text=label_date_text,
+            initial_value=initial_value.date() if initial_value else None,
+            min_value=min_value.date() if min_value else None,
+            max_value=max_value.date() if max_value else None,
+            on_value_change=self.__internal_update,
+            marker=marker_date,
+        )
+        self._start_time = FormFieldTime(
+            label_text=label_time_text,
+            initial_value=initial_value.time() if initial_value else None,
+            min_value=min_value.time() if min_value else None,
+            max_value=max_value.time() if max_value else None,
+            on_value_change=self.__internal_update,
+            marker=marker_time,
+        )
+
+    def __internal_update(self, _: ValueChangeEventArguments) -> None:
+        if self._on_value_change:
+            self._on_value_change(self.value)
+
+    def build(self) -> None:
+        """Builds the UI form element."""
+        with ui.grid().classes("w-full"):
+            with ui.row():
+                self._start_date.build()
+                self._start_time.build()
 
 
 class FormFieldCheckbox(LazyInitializedElement[Checkbox]):

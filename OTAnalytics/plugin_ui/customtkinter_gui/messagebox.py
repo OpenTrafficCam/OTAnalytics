@@ -2,6 +2,7 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkLabel, CTkToplevel
 
+from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     PADX,
     PADY,
@@ -75,7 +76,7 @@ class InfoBox(CTkToplevel):
         self.close(event)
 
 
-class MinimalInfoBox(CTkToplevel):
+class MinimalInfoBox(CTkToplevel, MessageBox):
     """InfoBox popup without title bar."""
 
     def __init__(
