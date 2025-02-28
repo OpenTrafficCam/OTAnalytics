@@ -5,8 +5,8 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     SvzMetadataKeys,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.container import TrackBar
-from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_bar.container import AnalysisForm
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import TrackBar
+from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import AnalysisForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     ProjectForm,
 )

@@ -3,14 +3,14 @@ from functools import cached_property
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.ui_factory import NiceGuiUiFactory
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.add_tracks_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
     AddTracksForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.container import TrackBar
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.offset_slider_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import TrackBar
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.offset_slider_form import (
     OffSetSliderForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_bar.container import AnalysisForm
+from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import AnalysisForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     CanvasForm,
 )

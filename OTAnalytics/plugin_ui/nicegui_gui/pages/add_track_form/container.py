@@ -5,10 +5,10 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     SvzMetadataKeys,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.add_tracks_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
     AddTracksForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_bar.offset_slider_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.offset_slider_form import (
     OffSetSliderForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
