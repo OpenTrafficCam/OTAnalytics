@@ -67,12 +67,9 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         main_page_builder = MainPageBuilder(
             ENDPOINT_MAIN_PAGE,
             configuration_bar=self.configuration_bar,
-            add_tracker_bar=self.track_bar,
             workspace=self.workspace,
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
-            sections_and_flow_bar=self.sections_and_flow_bar,
-            analysis_form=self.analysis_form,
         )
 
         return NiceguiWebserver(
@@ -89,7 +86,12 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     @cached_property
     def configuration_bar(self) -> ConfigurationBar:
         return ConfigurationBar(
-            self.resource_manager, self.project_form, self.svz_metadata_form
+            resource_manager=self.resource_manager,
+            project_form=self.project_form,
+            svz_metadata_form=self.svz_metadata_form,
+            add_tracker_bar=self.track_bar,
+            sections_and_flow_bar=self.sections_and_flow_bar,
+            analysis_form=self.analysis_form,
         )
 
     @cached_property
