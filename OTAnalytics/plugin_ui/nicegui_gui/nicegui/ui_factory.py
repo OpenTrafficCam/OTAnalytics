@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Iterable, Literal
 
 from OTAnalytics.adapter_ui.message_box import MessageBox
@@ -31,3 +32,13 @@ class NiceGuiUiFactory(UiFactory):
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
     ) -> Literal[""] | tuple[str, ...]:
         return tuple([""])
+
+    def ask_for_save_file_path(
+        self,
+        title: str,
+        filetypes: list[tuple[str, str]],
+        defaultextension: str,
+        initialfile: str,
+        initialdir: Path,
+    ) -> Path:
+        return Path("")

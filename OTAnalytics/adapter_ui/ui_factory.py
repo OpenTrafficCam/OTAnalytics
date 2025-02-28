@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Iterable, Literal
 
 from OTAnalytics.adapter_ui.message_box import MessageBox
@@ -28,3 +29,14 @@ class UiFactory(ABC):
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
     ) -> Literal[""] | tuple[str, ...]:
         pass
+
+    @abstractmethod
+    def ask_for_save_file_path(
+        self,
+        title: str,
+        filetypes: list[tuple[str, str]],
+        defaultextension: str,
+        initialfile: str,
+        initialdir: Path,
+    ) -> Path:
+        raise NotImplementedError

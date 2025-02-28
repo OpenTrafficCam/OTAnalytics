@@ -137,7 +137,6 @@ from OTAnalytics.domain.track_repository import TrackListObserver, TrackReposito
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox, MinimalInfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ARROW_STYLE,
@@ -629,7 +628,7 @@ class DummyViewModel(
 
     def save_otconfig(self) -> None:
         suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
-        configuration_file = ask_for_save_file_path(
+        configuration_file = self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")],
             defaultextension=f".{OTCONFIG_FILE_TYPE}",
@@ -866,7 +865,7 @@ class DummyViewModel(
 
     def save_configuration(self) -> None:
         suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
-        configuration_file = ask_for_save_file_path(
+        configuration_file = self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
                 (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
