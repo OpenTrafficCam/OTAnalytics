@@ -2,7 +2,7 @@ from pathlib import Path
 from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Iterable, Literal
 
-from OTAnalytics.adapter_ui.event_export_dto import EventExportDto
+from OTAnalytics.adapter_ui.file_export_dto import EventFileDto
 from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -55,12 +55,13 @@ class CtkUiFactory(UiFactory):
 
     def configure_export_file(
         self,
+        title: str,
         default_values: dict[str, str],
         export_format_extensions: dict[str, str],
         viewmodel: ViewModel,
-    ) -> EventExportDto:
+    ) -> EventFileDto:
         input_values = ToplevelExportEvents(
-            title="Export events",
+            title=title,
             initial_position=(50, 50),
             input_values=default_values,
             export_format_extensions=export_format_extensions,
@@ -68,4 +69,4 @@ class CtkUiFactory(UiFactory):
         ).get_data()
         file = input_values[toplevel_export_events.EXPORT_FILE]
         export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
-        return EventExportDto(file=file, export_format=export_format)
+        return EventFileDto(file=file, export_format=export_format)

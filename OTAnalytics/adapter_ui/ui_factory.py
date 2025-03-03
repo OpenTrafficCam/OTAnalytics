@@ -2,10 +2,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Iterable, Literal
 
-from adapter_ui.view_model import ViewModel
-
-from OTAnalytics.adapter_ui.event_export_dto import EventExportDto
+from OTAnalytics.adapter_ui.file_export_dto import EventFileDto
 from OTAnalytics.adapter_ui.message_box import MessageBox
+from OTAnalytics.adapter_ui.view_model import ViewModel
 
 
 class UiFactory(ABC):
@@ -46,8 +45,9 @@ class UiFactory(ABC):
 
     def configure_export_file(
         self,
+        title: str,
         default_values: dict[str, str],
         export_format_extensions: dict[str, str],
         viewmodel: ViewModel,
-    ) -> EventExportDto:
+    ) -> EventFileDto:
         raise NotImplementedError
