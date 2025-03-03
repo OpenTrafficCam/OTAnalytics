@@ -1687,17 +1687,16 @@ class DummyViewModel(
         }
 
         try:
-            export_values = ToplevelExportEvents(
+            export_config = self._ui_factory.configure_export_file(
                 title="Export road user assignments",
-                initial_position=(50, 50),
-                input_values=default_values,
+                default_values=default_values,
                 export_format_extensions=export_formats,
                 initial_file_stem="road_user_assignments",
                 viewmodel=self,
-            ).get_data()
-            logger().debug(export_values)
-            save_path = export_values[toplevel_export_events.EXPORT_FILE]
-            export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
+            )
+            logger().debug(export_config)
+            save_path = export_config.file
+            export_format = export_config.export_format
 
             export_specification = ExportSpecification(
                 save_path, export_format, OVERWRITE
