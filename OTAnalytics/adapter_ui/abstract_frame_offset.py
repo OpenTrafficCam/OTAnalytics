@@ -13,17 +13,5 @@ class AbstractFrameOffset(AbstractFrame):
         raise NotImplementedError
 
     @abstractmethod
-    def configure_offset_button(self, color: str, enabled: bool) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
     def enable_update_offset_button(self, enabled: bool) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def set_offset_button_color(self, color: str) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_default_offset_button_color(self) -> str:
         raise NotImplementedError

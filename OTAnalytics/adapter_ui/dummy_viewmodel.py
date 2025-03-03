@@ -137,7 +137,6 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui.style import COLOR_ORANGE
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
     END,
     EXPORT_FILE,
@@ -742,11 +741,10 @@ class DummyViewModel(
         currently_selected_sections = (
             self._application.section_state.selected_sections.get()
         )
-        default_color = self.frame_offset.get_default_offset_button_color()
         single_section_selected = len(currently_selected_sections) == 1
 
         if not single_section_selected:
-            self.frame_offset.configure_offset_button(default_color, False)
+            self.frame_offset.enable_update_offset_button(False)
             return
 
         section_offset = self._application.get_section_offset(
@@ -757,10 +755,9 @@ class DummyViewModel(
             return
 
         visualization_offset = self._application.track_view_state.track_offset.get()
-        if section_offset == visualization_offset:
-            self.frame_offset.configure_offset_button(default_color, False)
-        else:
-            self.frame_offset.configure_offset_button(COLOR_ORANGE, True)
+        self.frame_offset.enable_update_offset_button(
+            section_offset != visualization_offset
+        )
 
     def update_selected_flows(self, flow_ids: list[FlowId]) -> None:
         self._update_selected_flow_items()
