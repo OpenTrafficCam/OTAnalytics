@@ -13,6 +13,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 
 
 class UiFactory(ABC):
@@ -76,6 +77,18 @@ class UiFactory(ABC):
         export_formats: dict[str, str],
         viewmodel: ViewModel,
     ) -> CountingSpecificationDto:
+        raise NotImplementedError
+
+    @abstractmethod
+    def configure_section(
+        self,
+        title: str,
+        section_offset: RelativeOffsetCoordinate,
+        initial_position: tuple[int, int],
+        input_values: dict | None,
+        show_offset: bool,
+        viewmodel: ViewModel,
+    ) -> dict:
         raise NotImplementedError
 
     @abstractmethod

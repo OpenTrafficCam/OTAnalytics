@@ -17,6 +17,7 @@ from OTAnalytics.application.config import DEFAULT_COUNTING_INTERVAL_IN_MINUTES
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_file
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import (
@@ -35,6 +36,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_file import (
     ToplevelExportFile,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import ToplevelFlows
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 
 class CtkUiFactory(UiFactory):
@@ -138,6 +140,24 @@ class CtkUiFactory(UiFactory):
             output_file=export_values[EXPORT_FILE],
             export_mode=OVERWRITE,
         )
+
+    def configure_section(
+        self,
+        title: str,
+        section_offset: RelativeOffsetCoordinate,
+        initial_position: tuple[int, int],
+        input_values: dict | None,
+        show_offset: bool,
+        viewmodel: ViewModel,
+    ) -> dict:
+        return ToplevelSections(
+            title=title,
+            viewmodel=viewmodel,
+            section_offset=section_offset,
+            initial_position=initial_position,
+            input_values=input_values,
+            show_offset=show_offset,
+        ).get_metadata()
 
     def configure_flow(
         self,

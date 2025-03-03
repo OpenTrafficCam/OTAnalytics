@@ -136,7 +136,6 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
@@ -890,14 +889,14 @@ class DummyViewModel(
             section_offset := self._application.track_view_state.track_offset.get()
         ):
             section_offset = RELATIVE_SECTION_OFFSET
-        return ToplevelSections(
+        return self._ui_factory.configure_section(
             title=title,
             viewmodel=self,
             section_offset=section_offset,
             initial_position=initial_position,
             input_values=input_values,
             show_offset=self._show_offset(),
-        ).get_metadata()
+        )
 
     def _show_offset(self) -> bool:
         return True
