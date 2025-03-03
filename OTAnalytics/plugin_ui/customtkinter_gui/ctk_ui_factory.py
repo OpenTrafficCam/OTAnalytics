@@ -4,8 +4,10 @@ from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Iterable, Literal
 
 from OTAnalytics.adapter_ui.file_export_dto import EventFileDto
+from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
+from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
@@ -14,6 +16,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 from OTAnalytics.application.config import DEFAULT_COUNTING_INTERVAL_IN_MINUTES
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_file
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import (
@@ -31,6 +34,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_file import (
     ToplevelExportFile,
 )
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import ToplevelFlows
 
 
 class CtkUiFactory(UiFactory):
@@ -134,3 +138,21 @@ class CtkUiFactory(UiFactory):
             output_file=export_values[EXPORT_FILE],
             export_mode=OVERWRITE,
         )
+
+    def configure_flow(
+        self,
+        title: str,
+        initial_position: tuple[int, int],
+        section_ids: ColumnResources,
+        input_values: FlowDto | None,
+        name_generator: FlowNameGenerator,
+        show_distance: bool,
+    ) -> FlowDto:
+        return ToplevelFlows(
+            title=title,
+            initial_position=initial_position,
+            section_ids=section_ids,
+            name_generator=name_generator,
+            input_values=input_values,
+            show_distance=show_distance,
+        ).get_data()

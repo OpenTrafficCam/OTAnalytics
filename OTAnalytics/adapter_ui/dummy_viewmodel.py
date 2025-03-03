@@ -38,6 +38,7 @@ from OTAnalytics.adapter_ui.flow_adapter import (
     InnerSegmentsCenterCalculator,
     SectionRefPointCalculator,
 )
+from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.text_resources import (
     COLUMN_NAME,
     ColumnResource,
@@ -135,14 +136,6 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
-    DISTANCE,
-    END_SECTION,
-    FLOW_ID,
-    FLOW_NAME,
-    START_SECTION,
-    ToplevelFlows,
-)
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
@@ -1138,10 +1131,10 @@ class DummyViewModel(
     def __create_flow(self) -> Flow:
         flow_data = self._show_flow_popup()
         flow_id = self._application.get_flow_id()
-        name = flow_data[FLOW_NAME]
-        new_from_section_id = SectionId(flow_data[START_SECTION])
-        new_to_section_id = SectionId(flow_data[END_SECTION])
-        distance = flow_data.get(DISTANCE, None)
+        name = flow_data.name
+        new_from_section_id = SectionId(flow_data.start_section)
+        new_to_section_id = SectionId(flow_data.end_section)
+        distance = flow_data.distance
         flow = Flow(
             id=flow_id,
             name=name,
@@ -1154,9 +1147,9 @@ class DummyViewModel(
 
     def _show_flow_popup(
         self,
-        input_values: dict | None = None,
+        input_values: FlowDto | None = None,
         title: str = "Add flow",
-    ) -> dict:
+    ) -> FlowDto:
         position = self.treeview_flows.get_position()
         sections = list(self.get_all_sections())
         if len(sections) < 2:
@@ -1172,46 +1165,42 @@ class DummyViewModel(
 
     def __create_flow_data(
         self,
-        input_values: dict | None,
+        input_values: FlowDto | None,
         title: str,
         position: tuple[int, int],
         section_ids: ColumnResources,
-    ) -> dict:
+    ) -> FlowDto:
         flow_data = self.__get_flow_data(input_values, title, position, section_ids)
         while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
-            new_entry_name = flow_data[FLOW_NAME]
-            if (input_values is not None) and (
-                new_entry_name == input_values[FLOW_NAME]
-            ):
+            new_entry_name = flow_data.name
+            if (input_values is not None) and (new_entry_name == input_values.name):
                 break
             self._ui_factory.info_box(
                 message="To add a flow, a unique name is necessary",
                 initial_position=position,
             )
-            flow_data[FLOW_NAME] = ""
+            flow_data.derive_name("")
             flow_data = self.__get_flow_data(flow_data, title, position, section_ids)
         return flow_data
 
-    def __is_flow_name_valid(self, flow_data: dict) -> bool:
-        return flow_data[FLOW_NAME] and self._application.is_flow_name_valid(
-            flow_data[FLOW_NAME]
-        )
+    def __is_flow_name_valid(self, flow_data: FlowDto) -> bool:
+        return self._application.is_flow_name_valid(flow_data.name)
 
     def __get_flow_data(
         self,
-        input_values: dict | None,
+        input_values: FlowDto | None,
         title: str,
         position: tuple[int, int],
         section_ids: ColumnResources,
-    ) -> dict:
-        return ToplevelFlows(
+    ) -> FlowDto:
+        return self._ui_factory.configure_flow(
             title=title,
             initial_position=position,
             section_ids=section_ids,
-            name_generator=self._name_generator,
             input_values=input_values,
+            name_generator=self._name_generator,
             show_distance=self._show_distance(),
-        ).get_data()
+        )
 
     def __try_add_flow(self, flow: Flow) -> None:
         try:
@@ -1231,12 +1220,15 @@ class DummyViewModel(
         values = {COLUMN_NAME: section.name}
         return ColumnResource(id=section.id.serialize(), values=values)
 
-    def __update_flow_data(self, flow_data: dict) -> None:
-        flow_id = FlowId(flow_data.get(FLOW_ID, ""))
-        name = flow_data[FLOW_NAME]
-        new_from_section_id = SectionId(flow_data[START_SECTION])
-        new_to_section_id = SectionId(flow_data[END_SECTION])
-        distance = flow_data.get(DISTANCE, None)
+    def __update_flow_data(self, flow_data: FlowDto) -> None:
+        if flow_data.flow_id is None:
+            logger().error("Flow data has no flow_id: {flow_data}")
+            return
+        flow_id = FlowId(flow_data.flow_id)
+        name = flow_data.name
+        new_from_section_id = SectionId(flow_data.start_section)
+        new_to_section_id = SectionId(flow_data.end_section)
+        distance = flow_data.distance
         if flow := self._application.get_flow_for(flow_id):
             flow.name = name
             flow.start = new_from_section_id
@@ -1263,13 +1255,13 @@ class DummyViewModel(
                 )
 
     def _edit_flow(self, flow: Flow) -> None:
-        input_data = {
-            FLOW_ID: flow.id.serialize(),
-            FLOW_NAME: flow.name,
-            START_SECTION: flow.start.id,
-            END_SECTION: flow.end.id,
-            DISTANCE: flow.distance,
-        }
+        input_data = FlowDto(
+            flow_id=flow.id.serialize(),
+            name=flow.name,
+            start_section=flow.start.id,
+            end_section=flow.end.id,
+            distance=flow.distance,
+        )
 
         if flow_data := self._show_flow_popup(
             input_values=input_data,
