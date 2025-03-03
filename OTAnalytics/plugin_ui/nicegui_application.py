@@ -1,6 +1,8 @@
 from functools import cached_property
 
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
+from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.ui_factory import NiceGuiUiFactory
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
@@ -168,3 +170,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     @cached_property
     def ui_factory(self) -> UiFactory:
         return NiceGuiUiFactory()
+
+    @cached_property
+    def progressbar_builder(self) -> ProgressbarBuilder:
+        return TqdmBuilder()
