@@ -56,9 +56,6 @@ class AbstractCanvas(WidgetPositionProvider):
     def start_section_geometry_editor(
         self,
         section: Section,
-        edited_section_style: dict,
-        pre_edit_section_style: dict,
-        selected_knob_style: dict,
         hovered_knob_style: dict | None = None,
         is_area_section: bool = False,
     ) -> None:

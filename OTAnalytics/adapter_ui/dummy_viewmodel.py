@@ -137,12 +137,7 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui.style import (
-    COLOR_ORANGE,
-    EDITED_SECTION_STYLE,
-    PRE_EDIT_SECTION_STYLE,
-    SELECTED_KNOB_STYLE,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.style import COLOR_ORANGE
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
     END,
     EXPORT_FILE,
@@ -979,9 +974,6 @@ class DummyViewModel(
             ):
                 self.canvas.start_section_geometry_editor(
                     section=current_section,
-                    edited_section_style=EDITED_SECTION_STYLE,
-                    pre_edit_section_style=PRE_EDIT_SECTION_STYLE,
-                    selected_knob_style=SELECTED_KNOB_STYLE,
                     is_area_section=self._is_area_section(current_section),
                 )
 

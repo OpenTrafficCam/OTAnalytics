@@ -49,6 +49,8 @@ from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ARROW_STYLE,
     DEFAULT_SECTION_STYLE,
     EDITED_SECTION_STYLE,
+    PRE_EDIT_SECTION_STYLE,
+    SELECTED_KNOB_STYLE,
     SELECTED_SECTION_STYLE,
 )
 
@@ -178,9 +180,6 @@ class CanvasBackground(AbstractCTkCanvas):
     def start_section_geometry_editor(
         self,
         section: Section,
-        edited_section_style: dict,
-        pre_edit_section_style: dict,
-        selected_knob_style: dict,
         hovered_knob_style: dict | None = None,
         is_area_section: bool = False,
     ) -> None:
@@ -188,9 +187,9 @@ class CanvasBackground(AbstractCTkCanvas):
             viewmodel=self._viewmodel,
             canvas=self,
             section=section,
-            edited_section_style=edited_section_style,
-            pre_edit_section_style=pre_edit_section_style,
-            selected_knob_style=selected_knob_style,
+            edited_section_style=EDITED_SECTION_STYLE,
+            pre_edit_section_style=PRE_EDIT_SECTION_STYLE,
+            selected_knob_style=SELECTED_KNOB_STYLE,
             hovered_knob_style=hovered_knob_style,
             is_area_section=is_area_section,
         )
