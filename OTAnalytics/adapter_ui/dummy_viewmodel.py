@@ -137,7 +137,6 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ARROW_STYLE,
     COLOR_ORANGE,
@@ -668,7 +667,7 @@ class DummyViewModel(
         return self.get_position()
 
     def __show_error(self, message: str) -> None:
-        InfoBox(
+        self._ui_factory.info_box(
             message=message,
             initial_position=self.treeview_sections.get_position(),
         )
@@ -689,7 +688,7 @@ class DummyViewModel(
         self._load_otconfig(otconfig_file)
 
     def _load_otconfig(self, otconfig_file: Path) -> None:
-        proceed = InfoBox(
+        proceed = self._ui_factory.info_box(
             message=(
                 "This will load a stored configuration from file. \n"
                 "All configured sections, flows and videos will be removed before "
@@ -845,7 +844,7 @@ class DummyViewModel(
         sections = self._application.get_all_sections()
         flows = self._application.get_all_flows()
         if sections or flows:
-            proceed = InfoBox(
+            proceed = self._ui_factory.info_box(
                 message=(
                     "This will load a stored otflow configuration from file. \n"
                     "All configured sections and flows will be removed before "
@@ -895,7 +894,7 @@ class DummyViewModel(
             self._application.save_otflow(Path(otflow_file))
         except NoSectionsToSave:
             position = self.treeview_sections.get_position()
-            InfoBox(
+            self._ui_factory.info_box(
                 message="No sections to save, please add new sections first",
                 initial_position=position,
             )
@@ -995,7 +994,7 @@ class DummyViewModel(
     def edit_selected_section_metadata(self) -> None:
         if not (selected_section_ids := self.get_selected_section_ids()):
             position = self.treeview_sections.get_position()
-            InfoBox(
+            self._ui_factory.info_box(
                 message="Please select a section to edit", initial_position=position
             )
             return
@@ -1042,7 +1041,7 @@ class DummyViewModel(
     def remove_sections(self) -> None:
         if not (selected_section_ids := self.get_selected_section_ids()):
             position = self.treeview_sections.get_position()
-            InfoBox(
+            self._ui_factory.info_box(
                 message="Please select one or more sections to remove",
                 initial_position=position,
             )
@@ -1058,7 +1057,7 @@ class DummyViewModel(
                 for flow in self._application.flows_using_section(section_id):
                     message += flow.name + "\n"
                 position = self.treeview_sections.get_position()
-                InfoBox(
+                self._ui_factory.info_box(
                     message=message,
                     initial_position=position,
                 )
@@ -1197,7 +1196,7 @@ class DummyViewModel(
         position = self.treeview_flows.get_position()
         sections = list(self.get_all_sections())
         if len(sections) < 2:
-            InfoBox(
+            self._ui_factory.info_box(
                 message="To add a flow, at least two sections are needed",
                 initial_position=position,
             )
@@ -1221,7 +1220,7 @@ class DummyViewModel(
                 new_entry_name == input_values[FLOW_NAME]
             ):
                 break
-            InfoBox(
+            self._ui_factory.info_box(
                 message="To add a flow, a unique name is necessary",
                 initial_position=position,
             )
@@ -1255,7 +1254,7 @@ class DummyViewModel(
             self._application.add_flow(flow)
         except FlowAlreadyExists as cause:
             position = self.treeview_flows.get_position()
-            InfoBox(message=str(cause), initial_position=position)
+            self._ui_factory.info_box(message=str(cause), initial_position=position)
             raise CancelAddFlow()
 
     def _show_distance(self) -> bool:
@@ -1295,7 +1294,7 @@ class DummyViewModel(
                 self._edit_flow(flows[0])
             else:
                 position = self.treeview_flows.get_position()
-                InfoBox(
+                self._ui_factory.info_box(
                     message="Please select a flow to edit", initial_position=position
                 )
 
@@ -1322,7 +1321,9 @@ class DummyViewModel(
                 self.refresh_items_on_canvas()
         else:
             position = self.treeview_flows.get_position()
-            InfoBox(message="Please select a flow to remove", initial_position=position)
+            self._ui_factory.info_box(
+                message="Please select a flow to remove", initial_position=position
+            )
 
     def create_events(self) -> None:
         start_msg_popup = self._ui_factory.minimal_info_box(
@@ -1548,7 +1549,7 @@ class DummyViewModel(
 
     def export_counts(self) -> None:
         if len(self._application.get_all_flows()) == 0:
-            InfoBox(
+            self._ui_factory.info_box(
                 message=(
                     "Counting needs at least one flow.\n"
                     "There is no flow configurated.\n"
@@ -1596,7 +1597,7 @@ class DummyViewModel(
             logger().info("User canceled configuration of export")
 
     def start_new_project(self) -> None:
-        proceed = InfoBox(
+        proceed = self._ui_factory.info_box(
             message=(
                 "This will start a new project. \n"
                 "All configured project settings, sections, flows, tracks, and videos "
@@ -1639,7 +1640,7 @@ class DummyViewModel(
         )
 
         logger().info(msg)
-        InfoBox(msg, window_position)
+        self._ui_factory.info_box(msg, window_position)
 
     def set_remark_frame(self, frame: AbstractFrameRemark) -> None:
         self._frame_remarks = frame
@@ -1666,7 +1667,7 @@ class DummyViewModel(
 
     def export_road_user_assignments(self) -> None:
         if len(self._application.get_all_flows()) == 0:
-            InfoBox(
+            self._ui_factory.info_box(
                 message=(
                     "Counting needs at least one flow.\n"
                     "There is no flow configured.\n"
@@ -1783,7 +1784,7 @@ class DummyViewModel(
 
     def export_track_statistics(self) -> None:
         if self._application.get_track_repository_size() == 0:
-            InfoBox(
+            self._ui_factory.info_box(
                 message=(
                     "Calculating track statistics is impossible without tracks.\n"
                     "Please add tracks."

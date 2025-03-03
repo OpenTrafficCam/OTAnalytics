@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Iterable, Literal
 
 from OTAnalytics.adapter_ui.file_export_dto import EventFileDto
+from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.view_model import ViewModel
 
@@ -10,10 +11,16 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 class UiFactory(ABC):
 
     @abstractmethod
+    def info_box(
+        self, message: str, initial_position: tuple[int, int], show_cancel: bool = False
+    ) -> InfoBox:
+        raise NotImplementedError
+
+    @abstractmethod
     def minimal_info_box(
         self, message: str, initial_position: tuple[int, int]
     ) -> MessageBox:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def askopenfilename(
@@ -22,7 +29,7 @@ class UiFactory(ABC):
         filetypes: list[tuple[str, str]],
         defaultextension: str,
     ) -> str:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def askopenfilenames(
@@ -30,7 +37,7 @@ class UiFactory(ABC):
         title: str,
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
     ) -> Literal[""] | tuple[str, ...]:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def ask_for_save_file_path(
