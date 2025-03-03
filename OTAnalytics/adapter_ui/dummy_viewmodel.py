@@ -26,6 +26,7 @@ from OTAnalytics.adapter_ui.abstract_frame_track_statistics import (
 )
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.cancel_export_counts import CancelExportCounts
 from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
 from OTAnalytics.adapter_ui.default_values import (
     DATETIME_FORMAT,
@@ -134,10 +135,7 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
-    EXPORT_FORMAT,
-    CancelExportCounts,
-)
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import EXPORT_FORMAT
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
     END_SECTION,
