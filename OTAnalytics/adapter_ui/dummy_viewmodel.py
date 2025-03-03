@@ -156,8 +156,8 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
     CancelExportCounts,
     ToplevelExportCounts,
 )
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_events import (
-    CancelExportEvents,
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_file import (
+    CancelExportFile,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
@@ -1358,7 +1358,7 @@ class DummyViewModel(
             logger().info(
                 f"Exporting eventlist using {event_list_exporter.get_name()} to {file}"
             )
-        except CancelExportEvents:
+        except CancelExportFile:
             logger().info("User canceled configuration of export")
 
     def __get_default_export_format(self) -> str:
@@ -1701,7 +1701,7 @@ class DummyViewModel(
             )
             self._application.export_road_user_assignments(export_specification)
             logger().info(f"Exporting road user assignments to {save_path}")
-        except CancelExportEvents:
+        except CancelExportFile:
             logger().info("User canceled configuration of export")
 
     def update_svz_metadata(self, metadata: dict) -> None:
@@ -1817,5 +1817,5 @@ class DummyViewModel(
             )
             self._application.export_track_statistics(export_specification)
             logger().info(f"Exporting track statistics to {save_path}")
-        except CancelExportEvents:
+        except CancelExportFile:
             logger().info("User canceled configuration of export")

@@ -6,11 +6,11 @@ from OTAnalytics.adapter_ui.file_export_dto import EventFileDto
 from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
+from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_file
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import MinimalInfoBox
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_events import (
-    ToplevelExportEvents,
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_file import (
+    ToplevelExportFile,
 )
 
 
@@ -61,7 +61,7 @@ class CtkUiFactory(UiFactory):
         initial_file_stem: str,
         viewmodel: ViewModel,
     ) -> EventFileDto:
-        input_values = ToplevelExportEvents(
+        input_values = ToplevelExportFile(
             title=title,
             initial_position=(50, 50),
             input_values=default_values,
@@ -69,6 +69,6 @@ class CtkUiFactory(UiFactory):
             initial_file_stem=initial_file_stem,
             viewmodel=viewmodel,
         ).get_data()
-        file = input_values[toplevel_export_events.EXPORT_FILE]
-        export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
+        file = input_values[toplevel_export_file.EXPORT_FILE]
+        export_format = input_values[toplevel_export_file.EXPORT_FORMAT]
         return EventFileDto(file=file, export_format=export_format)
