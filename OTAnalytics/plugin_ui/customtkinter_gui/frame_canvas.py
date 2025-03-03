@@ -48,6 +48,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.scrollable_xy_frame import CTkXYFra
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ARROW_STYLE,
     DEFAULT_SECTION_STYLE,
+    EDITED_SECTION_STYLE,
     SELECTED_SECTION_STYLE,
 )
 
@@ -163,7 +164,6 @@ class CanvasBackground(AbstractCTkCanvas):
 
     def start_section_builder(
         self,
-        style: dict,
         is_area_section: bool = False,
         section: Optional[Section] = None,
     ) -> None:
@@ -171,7 +171,7 @@ class CanvasBackground(AbstractCTkCanvas):
             viewmodel=self._viewmodel,
             canvas=self,
             is_area_section=is_area_section,
-            style=style,
+            style=EDITED_SECTION_STYLE,
             section=section,
         )
 

@@ -47,7 +47,6 @@ class AbstractCanvas(WidgetPositionProvider):
     @abstractmethod
     def start_section_builder(
         self,
-        style: dict,
         is_area_section: bool = False,
         section: Optional[Section] = None,
     ) -> None:

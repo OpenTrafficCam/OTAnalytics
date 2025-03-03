@@ -902,14 +902,12 @@ class DummyViewModel(
     def add_line_section(self) -> None:
         self.set_selected_section_ids([])
         self._start_action()
-        self.canvas.start_section_builder(style=EDITED_SECTION_STYLE)
+        self.canvas.start_section_builder()
 
     def add_area_section(self) -> None:
         self.set_selected_section_ids([])
         self._start_action()
-        self.canvas.start_section_builder(
-            is_area_section=True, style=EDITED_SECTION_STYLE
-        )
+        self.canvas.start_section_builder(is_area_section=True)
 
     def get_section_metadata(
         self,
