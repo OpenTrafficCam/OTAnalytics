@@ -82,15 +82,18 @@ class CtkUiFactory(UiFactory):
     def configure_export_file(
         self,
         title: str,
-        input_values: dict[str, str],
         export_format_extensions: dict[str, str],
         initial_file_stem: str,
         viewmodel: ViewModel,
     ) -> EventFileDto:
+        default_format = next(iter(export_format_extensions.keys()))
+        default_values: dict = {
+            EXPORT_FORMAT: default_format,
+        }
         export_config = ToplevelExportFile(
             title=title,
             initial_position=(50, 50),
-            input_values=input_values,
+            input_values=default_values,
             export_format_extensions=export_format_extensions,
             initial_file_stem=initial_file_stem,
             viewmodel=viewmodel,

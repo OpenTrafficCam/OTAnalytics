@@ -64,7 +64,6 @@ class NiceGuiUiFactory(UiFactory):
     def configure_export_file(
         self,
         title: str,
-        input_values: dict,
         export_format_extensions: dict[str, str],
         initial_file_stem: str,
         viewmodel: ViewModel,

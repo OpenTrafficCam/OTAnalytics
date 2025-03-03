@@ -135,7 +135,6 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import EXPORT_FORMAT
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
     END_SECTION,
@@ -1309,16 +1308,13 @@ class DummyViewModel(
         logger().info(f"Eventlist file saved to '{file}'")
 
     def export_events(self) -> None:
-        default_values: dict[str, str] = {
-            EXPORT_FORMAT: self.__get_default_export_format()
-        }
         export_format_extensions: dict[str, str] = {
             key: exporter.get_extension()
             for key, exporter in self._event_list_export_formats.items()
         }
         try:
             event_list_exporter, file = self._configure_event_exporter(
-                default_values, export_format_extensions
+                export_format_extensions
             )
             self._application.export_events(Path(file), event_list_exporter)
             logger().info(
@@ -1333,14 +1329,13 @@ class DummyViewModel(
         return ""
 
     def _configure_event_exporter(
-        self, default_values: dict[str, str], export_format_extensions: dict[str, str]
+        self, export_format_extensions: dict[str, str]
     ) -> tuple[EventListExporter, Path]:
         export_config = self._ui_factory.configure_export_file(
-            "Export events",
-            default_values,
-            export_format_extensions,
-            CONTEXT_FILE_TYPE_EVENTS,
-            self,
+            title="Export events",
+            export_format_extensions=export_format_extensions,
+            initial_file_stem=CONTEXT_FILE_TYPE_EVENTS,
+            viewmodel=self,
         )
         file = export_config.file
         export_format = export_config.export_format
@@ -1630,15 +1625,10 @@ class DummyViewModel(
             export_format.name: export_format.file_extension
             for export_format in self._application.get_road_user_export_formats()
         }
-        default_format = next(iter(export_formats.keys()))
-        default_values: dict = {
-            EXPORT_FORMAT: default_format,
-        }
 
         try:
             export_config = self._ui_factory.configure_export_file(
                 title="Export road user assignments",
-                input_values=default_values,
                 export_format_extensions=export_formats,
                 initial_file_stem="road_user_assignments",
                 viewmodel=self,
@@ -1746,15 +1736,10 @@ class DummyViewModel(
             export_format.name: export_format.file_extension
             for export_format in self._application.get_track_statistics_export_formats()
         }
-        default_format = next(iter(export_formats.keys()))
-        default_values: dict = {
-            EXPORT_FORMAT: default_format,
-        }
 
         try:
             export_config = self._ui_factory.configure_export_file(
                 title="Export track statistics",
-                input_values=default_values,
                 export_format_extensions=export_formats,
                 initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
                 viewmodel=self,
