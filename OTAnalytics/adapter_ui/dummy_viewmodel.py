@@ -26,6 +26,7 @@ from OTAnalytics.adapter_ui.abstract_frame_track_statistics import (
 )
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
 from OTAnalytics.adapter_ui.default_values import (
     DATETIME_FORMAT,
     RELATIVE_SECTION_OFFSET,
@@ -145,9 +146,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
     START,
     CancelExportCounts,
     ToplevelExportCounts,
-)
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_file import (
-    CancelExportFile,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,

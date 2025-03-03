@@ -3,6 +3,10 @@ from typing import Any
 
 from customtkinter import CTkLabel, CTkOptionMenu
 
+from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
+from OTAnalytics.adapter_ui.file_selection_cancelled import (
+    FileSelectionCancelledException,
+)
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
@@ -13,14 +17,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
 
 EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
-
-
-class CancelExportFile(Exception):
-    pass
-
-
-class FileSelectionCancelledException(Exception):
-    pass
 
 
 class FrameConfigureExportFile(FrameContent):
