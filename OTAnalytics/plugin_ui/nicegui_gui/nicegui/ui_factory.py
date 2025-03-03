@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Literal
 
@@ -63,7 +64,7 @@ class NiceGuiUiFactory(UiFactory):
     def configure_export_file(
         self,
         title: str,
-        input_values: dict[str, str],
+        input_values: dict,
         export_format_extensions: dict[str, str],
         initial_file_stem: str,
         viewmodel: ViewModel,
@@ -72,7 +73,9 @@ class NiceGuiUiFactory(UiFactory):
 
     def configure_export_counts(
         self,
-        input_values: dict,
+        start: datetime | None,
+        end: datetime | None,
+        default_format: str,
         modes: list,
         export_formats: dict[str, str],
         viewmodel: ViewModel,

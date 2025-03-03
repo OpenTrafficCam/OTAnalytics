@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Iterable, Literal
@@ -10,6 +11,7 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
+from OTAnalytics.application.config import DEFAULT_COUNTING_INTERVAL_IN_MINUTES
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_file
@@ -99,15 +101,23 @@ class CtkUiFactory(UiFactory):
 
     def configure_export_counts(
         self,
-        input_values: dict,
+        start: datetime | None,
+        end: datetime | None,
+        default_format: str,
         modes: list,
         export_formats: dict[str, str],
         viewmodel: ViewModel,
     ) -> CountingSpecificationDto:
+        default_values: dict = {
+            INTERVAL: DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+            START: start,
+            END: end,
+            EXPORT_FORMAT: default_format,
+        }
         export_values: dict = ToplevelExportCounts(
             title="Export counts",
             initial_position=(50, 50),
-            input_values=input_values,
+            input_values=default_values,
             export_formats=export_formats,
             viewmodel=viewmodel,
         ).get_data()

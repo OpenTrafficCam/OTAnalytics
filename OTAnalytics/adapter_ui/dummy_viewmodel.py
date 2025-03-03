@@ -60,7 +60,6 @@ from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_EVENTS,
     CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     CUTTING_SECTION_MARKER,
-    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
@@ -136,10 +135,7 @@ from OTAnalytics.domain.track_repository import TrackListObserver, TrackReposito
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
-    END,
     EXPORT_FORMAT,
-    INTERVAL,
-    START,
     CancelExportCounts,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
@@ -1539,15 +1535,11 @@ class DummyViewModel(
         modes = list(
             self._application._tracks_metadata.filtered_detection_classifications
         )
-        default_values: dict = {
-            INTERVAL: DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
-            START: start,
-            END: end,
-            EXPORT_FORMAT: default_format,
-        }
         try:
             export_specification = self._ui_factory.configure_export_counts(
-                input_values=default_values,
+                start=start,
+                end=end,
+                default_format=default_format,
                 modes=modes,
                 export_formats=export_formats,
                 viewmodel=self,

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Literal
 
@@ -63,9 +64,12 @@ class UiFactory(ABC):
     ) -> EventFileDto:
         raise NotImplementedError
 
+    @abstractmethod
     def configure_export_counts(
         self,
-        input_values: dict,
+        start: datetime | None,
+        end: datetime | None,
+        default_format: str,
         modes: list,
         export_formats: dict[str, str],
         viewmodel: ViewModel,
