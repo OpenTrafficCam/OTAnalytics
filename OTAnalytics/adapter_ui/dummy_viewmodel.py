@@ -1648,7 +1648,7 @@ class DummyViewModel(
         try:
             export_config = self._ui_factory.configure_export_file(
                 title="Export road user assignments",
-                default_values=default_values,
+                input_values=default_values,
                 export_format_extensions=export_formats,
                 initial_file_stem="road_user_assignments",
                 viewmodel=self,
@@ -1764,7 +1764,7 @@ class DummyViewModel(
         try:
             export_config = self._ui_factory.configure_export_file(
                 title="Export track statistics",
-                default_values=default_values,
+                input_values=default_values,
                 export_format_extensions=export_formats,
                 initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
                 viewmodel=self,

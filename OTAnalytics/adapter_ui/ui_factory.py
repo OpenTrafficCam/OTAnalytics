@@ -56,7 +56,7 @@ class UiFactory(ABC):
     def configure_export_file(
         self,
         title: str,
-        default_values: dict[str, str],
+        input_values: dict[str, str],
         export_format_extensions: dict[str, str],
         initial_file_stem: str,
         viewmodel: ViewModel,
