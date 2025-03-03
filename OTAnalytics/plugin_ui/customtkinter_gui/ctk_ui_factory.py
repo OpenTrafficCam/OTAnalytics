@@ -58,6 +58,7 @@ class CtkUiFactory(UiFactory):
         title: str,
         default_values: dict[str, str],
         export_format_extensions: dict[str, str],
+        initial_file_stem: str,
         viewmodel: ViewModel,
     ) -> EventFileDto:
         input_values = ToplevelExportEvents(
@@ -65,6 +66,7 @@ class CtkUiFactory(UiFactory):
             initial_position=(50, 50),
             input_values=default_values,
             export_format_extensions=export_format_extensions,
+            initial_file_stem=initial_file_stem,
             viewmodel=viewmodel,
         ).get_data()
         file = input_values[toplevel_export_events.EXPORT_FILE]

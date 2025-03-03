@@ -48,6 +48,7 @@ class UiFactory(ABC):
         title: str,
         default_values: dict[str, str],
         export_format_extensions: dict[str, str],
+        initial_file_stem: str,
         viewmodel: ViewModel,
     ) -> EventFileDto:
         raise NotImplementedError

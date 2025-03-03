@@ -59,6 +59,7 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_EVENTS,
     CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     CUTTING_SECTION_MARKER,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
@@ -1371,7 +1372,11 @@ class DummyViewModel(
         self, default_values: dict[str, str], export_format_extensions: dict[str, str]
     ) -> tuple[EventListExporter, Path]:
         export_config = self._ui_factory.configure_export_file(
-            "Export events", default_values, export_format_extensions, self
+            "Export events",
+            default_values,
+            export_format_extensions,
+            CONTEXT_FILE_TYPE_EVENTS,
+            self,
         )
         file = export_config.file
         export_format = export_config.export_format
