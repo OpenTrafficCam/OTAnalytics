@@ -137,7 +137,6 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox, MinimalInfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ARROW_STYLE,
@@ -159,7 +158,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_events import (
     CancelExportEvents,
-    ToplevelExportEvents,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
@@ -1803,17 +1801,16 @@ class DummyViewModel(
         }
 
         try:
-            export_values = ToplevelExportEvents(
+            export_config = self._ui_factory.configure_export_file(
                 title="Export track statistics",
-                initial_position=(50, 50),
-                input_values=default_values,
+                default_values=default_values,
                 export_format_extensions=export_formats,
                 initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
                 viewmodel=self,
-            ).get_data()
-            logger().debug(export_values)
-            save_path = export_values[toplevel_export_events.EXPORT_FILE]
-            export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
+            )
+            logger().debug(export_config)
+            save_path = export_config.file
+            export_format = export_config.export_format
 
             export_specification = TrackStatisticsExportSpecification(
                 save_path, export_format, INITIAL_MERGE
