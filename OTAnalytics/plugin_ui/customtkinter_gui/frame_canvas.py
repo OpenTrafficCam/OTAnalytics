@@ -3,22 +3,18 @@ from pathlib import Path
 from typing import Any, Optional
 
 from customtkinter import NW
-from domain.section import Section
 from PIL import Image, ImageTk
-from plugin_ui.customtkinter_gui.abstract_ctk_canvas import AbstractCTkCanvas
-from plugin_ui.customtkinter_gui.line_section import (
-    ArrowPainter,
-    CanvasElementDeleter,
-    SectionBuilder,
-    SectionGeometryEditor,
-    SectionPainter,
-)
 
+from OTAnalytics.adapter_ui.abstract_canvas import TAG_SELECTED_SECTION
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.flow_adapter import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.logger import logger
+from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_canvas import (
+    AbstractCTkCanvas,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import (
     CanvasObserver,
     EventHandler,
@@ -41,7 +37,19 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import EmbeddedCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
+from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
+    ArrowPainter,
+    CanvasElementDeleter,
+    SectionBuilder,
+    SectionGeometryEditor,
+    SectionPainter,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.scrollable_xy_frame import CTkXYFrame
+from OTAnalytics.plugin_ui.customtkinter_gui.style import (
+    ARROW_STYLE,
+    DEFAULT_SECTION_STYLE,
+    SELECTED_SECTION_STYLE,
+)
 
 
 @dataclass
@@ -147,7 +155,7 @@ class CanvasBackground(AbstractCTkCanvas):
             start_refpt_calculator=start_refpt_calculator,
             end_refpt_calculator=end_refpt_calculator,
             tags=tags,
-            arrow_style=arrow_style,
+            arrow_style=ARROW_STYLE,
         )
 
     def delete_element(self, tag_or_id: str) -> None:
@@ -191,22 +199,29 @@ class CanvasBackground(AbstractCTkCanvas):
         self,
         id: str,
         coordinates: list[tuple[int, int]],
-        section_style: dict,
+        is_selected_section: bool,
         is_area_section: bool = False,
         highlighted_knob_index: int | None = None,
         highlighted_knob_style: dict | None = None,
         text: str | None = None,
         tags: list[str] | None = None,
     ) -> None:
+        section_tags: list[str] = []
+        if tags:
+            section_tags.extend(tags)
+        style = DEFAULT_SECTION_STYLE
+        if is_selected_section:
+            style = SELECTED_SECTION_STYLE
+            section_tags.append(TAG_SELECTED_SECTION)
         SectionPainter(canvas=self).draw(
             id=id,
             coordinates=coordinates,
-            section_style=section_style,
+            section_style=style,
             is_area_section=is_area_section,
             highlighted_knob_index=highlighted_knob_index,
             highlighted_knob_style=highlighted_knob_style,
             text=text,
-            tags=tags,
+            tags=section_tags,
         )
 
 

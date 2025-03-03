@@ -1,12 +1,14 @@
 from abc import abstractmethod
 from typing import Optional
 
-from adapter_ui.flow_adapter import SectionRefPointCalculator
-from domain.section import Section
-
+from OTAnalytics.adapter_ui.flow_adapter import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
+from OTAnalytics.domain.section import Section
 
 # from OTAnalytics.plugin_ui.canvas_observer import EventHandler
+
+
+TAG_SELECTED_SECTION: str = "selected_section"
 
 
 class AbstractCanvas(WidgetPositionProvider):
@@ -68,7 +70,7 @@ class AbstractCanvas(WidgetPositionProvider):
         self,
         id: str,
         coordinates: list[tuple[int, int]],
-        section_style: dict,
+        is_selected_section: bool,
         is_area_section: bool = False,
         highlighted_knob_index: int | None = None,
         highlighted_knob_style: dict | None = None,

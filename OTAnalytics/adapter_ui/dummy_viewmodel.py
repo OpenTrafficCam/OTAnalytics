@@ -8,7 +8,7 @@ from typing import Any, Iterable, Optional
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
 )
-from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_canvas import TAG_SELECTED_SECTION, AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
@@ -138,13 +138,10 @@ from OTAnalytics.domain.track_repository import TrackListObserver, TrackReposito
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
-    ARROW_STYLE,
     COLOR_ORANGE,
-    DEFAULT_SECTION_STYLE,
     EDITED_SECTION_STYLE,
     PRE_EDIT_SECTION_STYLE,
     SELECTED_KNOB_STYLE,
-    SELECTED_SECTION_STYLE,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
     END,
@@ -170,7 +167,6 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSe
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
-TAG_SELECTED_SECTION: str = "selected_section"
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
@@ -1088,16 +1084,12 @@ class DummyViewModel(
     def _draw_sections(self, sections_to_highlight: list[str]) -> None:
         for section in self._get_sections():
             tags = [LINE_SECTION]
-            if section[ID] in sections_to_highlight:
-                style = SELECTED_SECTION_STYLE
-                tags.append(TAG_SELECTED_SECTION)
-            else:
-                style = DEFAULT_SECTION_STYLE
+            is_selected = section[ID] in sections_to_highlight
             self.canvas.draw_section(
                 tags=tags,
                 id=section[ID],
                 coordinates=section[COORDINATES],
-                section_style=style,
+                is_selected_section=is_selected,
                 is_area_section=self._is_area_section(
                     self._application.get_section_for(SectionId(section[ID]))
                 ),
@@ -1119,7 +1111,6 @@ class DummyViewModel(
                         start_refpt_calculator=start_refpt_calculator,
                         end_refpt_calculator=end_refpt_calculator,
                         tags=[LINE_SECTION],
-                        arrow_style=ARROW_STYLE,
                     )
 
     def _get_section_refpt_calculator(
