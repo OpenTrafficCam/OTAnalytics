@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Iterable, Literal
 
+from OTAnalytics.adapter_ui.event_export_dto import EventExportDto
 from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
+from OTAnalytics.adapter_ui.view_model import ViewModel
 
 
 class NiceGuiInfoBox(MessageBox):
@@ -42,3 +44,11 @@ class NiceGuiUiFactory(UiFactory):
         initialdir: Path,
     ) -> Path:
         return Path("")
+
+    def configure_export_events(
+        self,
+        default_values: dict[str, str],
+        export_format_extensions: dict[str, str],
+        viewmodel: ViewModel,
+    ) -> EventExportDto:
+        raise NotImplementedError

@@ -1370,15 +1370,11 @@ class DummyViewModel(
     def _configure_event_exporter(
         self, default_values: dict[str, str], export_format_extensions: dict[str, str]
     ) -> tuple[EventListExporter, Path]:
-        input_values = ToplevelExportEvents(
-            title="Export events",
-            initial_position=(50, 50),
-            input_values=default_values,
-            export_format_extensions=export_format_extensions,
-            viewmodel=self,
-        ).get_data()
-        file = input_values[toplevel_export_events.EXPORT_FILE]
-        export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
+        export_config = self._ui_factory.configure_export_events(
+            default_values, export_format_extensions, self
+        )
+        file = export_config.file
+        export_format = export_config.export_format
         event_list_exporter = self._event_list_export_formats.get(export_format, None)
         if event_list_exporter is None:
             raise ExporterNotFoundError(
