@@ -45,7 +45,7 @@ class NiceGuiUiFactory(UiFactory):
     ) -> Path:
         return Path("")
 
-    def configure_export_events(
+    def configure_export_file(
         self,
         default_values: dict[str, str],
         export_format_extensions: dict[str, str],

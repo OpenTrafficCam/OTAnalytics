@@ -1370,7 +1370,7 @@ class DummyViewModel(
     def _configure_event_exporter(
         self, default_values: dict[str, str], export_format_extensions: dict[str, str]
     ) -> tuple[EventListExporter, Path]:
-        export_config = self._ui_factory.configure_export_events(
+        export_config = self._ui_factory.configure_export_file(
             default_values, export_format_extensions, self
         )
         file = export_config.file
