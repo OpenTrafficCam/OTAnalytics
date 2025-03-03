@@ -137,7 +137,7 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox, MinimalInfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ARROW_STYLE,
     COLOR_ORANGE,
@@ -511,7 +511,7 @@ class DummyViewModel(
         self.notify_files()
 
     def _intersect_tracks_with_sections(self) -> None:
-        start_msg_popup = MinimalInfoBox(
+        start_msg_popup = self._ui_factory.minimal_info_box(
             message="Create events...",
             initial_position=self.get_position(),
         )
@@ -1325,7 +1325,7 @@ class DummyViewModel(
             InfoBox(message="Please select a flow to remove", initial_position=position)
 
     def create_events(self) -> None:
-        start_msg_popup = MinimalInfoBox(
+        start_msg_popup = self._ui_factory.minimal_info_box(
             message="Create events...",
             initial_position=self.get_position(),
         )
