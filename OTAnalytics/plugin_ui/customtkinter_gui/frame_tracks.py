@@ -87,11 +87,8 @@ class TracksFrame(AbstractFrameOffset, AbstractCTkFrame):
     def enable_update_offset_button(self, enabled: bool) -> None:
         if enabled:
             self.button_change_to_section_offset.configure(state=STATE_NORMAL)
-            self.__configure_offset_button(COLOR_ORANGE, enabled)
+            self.button_change_to_section_offset.configure(fg_color=COLOR_ORANGE)
         else:
             self.button_change_to_section_offset.configure(state=STATE_DISABLED)
-            self.__configure_offset_button(get_default_offset_button_color(), enabled)
-
-    def __configure_offset_button(self, color: str, enabled: bool) -> None:
-        self.button_change_to_section_offset.configure(fg_color=color)
-        self.enable_update_offset_button(enabled)
+            color = get_default_offset_button_color()
+            self.button_change_to_section_offset.configure(fg_color=color)

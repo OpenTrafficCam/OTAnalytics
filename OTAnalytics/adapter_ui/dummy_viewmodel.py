@@ -49,9 +49,6 @@ from OTAnalytics.adapter_ui.ui_texts import (
     WEATHER_TYPES,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.analysis.traffic_counting_specification import (
-    CountingSpecificationDto,
-)
 from OTAnalytics.application.application import (
     CancelAddFlow,
     CancelAddSection,
@@ -140,12 +137,10 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
     END,
-    EXPORT_FILE,
     EXPORT_FORMAT,
     INTERVAL,
     START,
     CancelExportCounts,
-    ToplevelExportCounts,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
     DISTANCE,
@@ -1551,22 +1546,11 @@ class DummyViewModel(
             EXPORT_FORMAT: default_format,
         }
         try:
-            export_values: dict = ToplevelExportCounts(
-                title="Export counts",
-                initial_position=(50, 50),
+            export_specification = self._ui_factory.configure_export_counts(
                 input_values=default_values,
+                modes=modes,
                 export_formats=export_formats,
                 viewmodel=self,
-            ).get_data()
-            logger().debug(export_values)
-            export_specification = CountingSpecificationDto(
-                interval_in_minutes=export_values[INTERVAL],
-                start=export_values[START],
-                end=export_values[END],
-                modes=modes,
-                output_format=export_values[EXPORT_FORMAT],
-                output_file=export_values[EXPORT_FILE],
-                export_mode=OVERWRITE,
             )
             self._application.export_counts(export_specification)
         except CancelExportCounts:

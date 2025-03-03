@@ -6,6 +6,9 @@ from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+)
 
 
 class NiceGuiMessageBox(MessageBox):
@@ -65,4 +68,13 @@ class NiceGuiUiFactory(UiFactory):
         initial_file_stem: str,
         viewmodel: ViewModel,
     ) -> EventFileDto:
+        raise NotImplementedError
+
+    def configure_export_counts(
+        self,
+        input_values: dict,
+        modes: list,
+        export_formats: dict[str, str],
+        viewmodel: ViewModel,
+    ) -> CountingSpecificationDto:
         raise NotImplementedError
