@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from tkinter import Widget
 from typing import Optional
 
 from OTAnalytics.domain.progress import Counter
@@ -12,14 +11,10 @@ class AbstractPopupProgressbar(ABC):
 
 class ProgressbarPopupBuilder(ABC):
     def __init__(self) -> None:
-        self._master: Optional[Widget] = None
         self._counter: Optional[Counter] = None
         self._total: Optional[int] = None
         self._description = ""
         self._unit = ""
-
-    def add_widget(self, widget: Widget) -> None:
-        self._master = widget
 
     def add_counter(self, counter: Counter) -> None:
         self._counter = counter

@@ -4,6 +4,10 @@ from typing import Any
 
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
+from OTAnalytics.adapter_ui.cancel_export_counts import CancelExportCounts
+from OTAnalytics.adapter_ui.file_selection_cancelled import (
+    FileSelectionCancelledException,
+)
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_COUNTS,
@@ -22,14 +26,6 @@ START = "start"
 END = "end"
 EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
-
-
-class CancelExportCounts(Exception):
-    pass
-
-
-class FileSelectionCancelledException(Exception):
-    pass
 
 
 class FrameConfigureExportCounts(FrameContent):

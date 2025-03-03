@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import Sequence
 
-from OTAnalytics.adapter_ui.abstract_progressbar_popup import ProgressbarPopupBuilder
 from OTAnalytics.adapter_visualization.color_provider import (
     DEFAULT_COLOR_PALETTE,
     ColorPaletteProvider,
@@ -536,25 +535,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def file_state(self) -> FileState:
         return FileState()
 
-    @cached_property
-    def pulling_progressbar_builder(self) -> ProgressbarBuilder:
-        from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (
-            PullingProgressbarBuilder,
-        )
-
-        pulling_progressbar_builder = PullingProgressbarBuilder(
-            self.pulling_progressbar_popup_builder
-        )
-        return pulling_progressbar_builder
-
-    @cached_property
-    def pulling_progressbar_popup_builder(self) -> ProgressbarPopupBuilder:
-        from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (
-            PullingProgressbarPopupBuilder,
-        )
-
-        pulling_progressbar_popup_builder = PullingProgressbarPopupBuilder()
-        return pulling_progressbar_popup_builder
+    @property
+    @abstractmethod
+    def progressbar_builder(self) -> ProgressbarBuilder:
+        raise NotImplementedError
 
     @cached_property
     def videos_metadata(self) -> VideosMetadata:
@@ -591,7 +575,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.video_repository,
             self.video_parser,
             track_video_parser,
-            self.pulling_progressbar_builder,
+            self.progressbar_builder,
             self.remark_repository,
         )
 
@@ -674,7 +658,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.videos_metadata,
             self.section_state,
             self.color_palette_provider,
-            self.pulling_progressbar_builder,
+            self.progressbar_builder,
         )
 
     @cached_property
@@ -843,7 +827,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.track_file_repository,
             self.video_repository,
             self.track_to_video_repository,
-            self.pulling_progressbar_builder,
+            self.progressbar_builder,
             self.tracks_metadata,
             self.videos_metadata,
         )

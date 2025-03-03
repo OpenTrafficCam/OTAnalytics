@@ -1,0 +1,2 @@
+class CancelExportFile(Exception):
+    pass

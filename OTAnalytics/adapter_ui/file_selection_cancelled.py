@@ -1,0 +1,2 @@
+class FileSelectionCancelledException(Exception):
+    pass
