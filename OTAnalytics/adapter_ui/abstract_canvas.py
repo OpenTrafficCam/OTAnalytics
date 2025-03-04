@@ -5,20 +5,10 @@ from OTAnalytics.adapter_ui.flow_adapter import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.domain.section import Section
 
-# from OTAnalytics.plugin_ui.canvas_observer import EventHandler
-
-
 TAG_SELECTED_SECTION: str = "selected_section"
 
 
 class AbstractCanvas(WidgetPositionProvider):
-    # TODO: Properly define abstract property here and in derived class(es)
-    # @property
-    # @abstractmethod
-    # def event_handler(self) -> EventHandler:
-    #     pass
-
-    # TODO: Define whole interface (all properties and methods) required by viewmodel
 
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:

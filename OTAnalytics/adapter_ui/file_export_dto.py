@@ -3,6 +3,6 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
-class EventFileDto:
+class ExportFileDto:
     file: Path
     export_format: str

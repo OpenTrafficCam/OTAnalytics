@@ -3,7 +3,7 @@ from pathlib import Path
 from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Iterable, Literal
 
-from OTAnalytics.adapter_ui.file_export_dto import EventFileDto
+from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
@@ -91,7 +91,7 @@ class CtkUiFactory(UiFactory):
         export_format_extensions: dict[str, str],
         initial_file_stem: str,
         viewmodel: ViewModel,
-    ) -> EventFileDto:
+    ) -> ExportFileDto:
         default_format = next(iter(export_format_extensions.keys()))
         default_values: dict = {
             EXPORT_FORMAT: default_format,
@@ -106,7 +106,7 @@ class CtkUiFactory(UiFactory):
         ).get_data()
         file = export_config[toplevel_export_file.EXPORT_FILE]
         export_format = export_config[toplevel_export_file.EXPORT_FORMAT]
-        return EventFileDto(file=file, export_format=export_format)
+        return ExportFileDto(file=file, export_format=export_format)
 
     def configure_export_counts(
         self,

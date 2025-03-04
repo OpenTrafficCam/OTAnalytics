@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Literal
 
-from OTAnalytics.adapter_ui.file_export_dto import EventFileDto
+from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
@@ -58,13 +58,14 @@ class UiFactory(ABC):
     ) -> Path:
         raise NotImplementedError
 
+    @abstractmethod
     def configure_export_file(
         self,
         title: str,
         export_format_extensions: dict[str, str],
         initial_file_stem: str,
         viewmodel: ViewModel,
-    ) -> EventFileDto:
+    ) -> ExportFileDto:
         raise NotImplementedError
 
     @abstractmethod
