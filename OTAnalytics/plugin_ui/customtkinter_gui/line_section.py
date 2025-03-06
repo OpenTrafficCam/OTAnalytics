@@ -2,13 +2,13 @@ import tkinter
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from plugin_ui.customtkinter_gui.abstract_ctk_canvas import AbstractCTkCanvas
-
-from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
 from OTAnalytics.adapter_ui.flow_adapter import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.section import Section
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_canvas import (
+    AbstractCTkCanvas,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.canvas_observer import CanvasObserver
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     DELETE_KEYS,
@@ -563,7 +563,7 @@ class SectionGeometryBuilder:
     def __init__(
         self,
         observer: SectionGeometryBuilderObserver,
-        canvas: AbstractCanvas,
+        canvas: AbstractCTkCanvas,
         is_area_section: bool,
         style: dict,
     ) -> None:
