@@ -1178,7 +1178,7 @@ class DummyViewModel(
                 message="To add a flow, a unique name is necessary",
                 initial_position=position,
             )
-            flow_data.derive_name("")
+            flow_data = flow_data.derive_name("")
             flow_data = self.__get_flow_data(flow_data, title, position, section_ids)
         return flow_data
 
