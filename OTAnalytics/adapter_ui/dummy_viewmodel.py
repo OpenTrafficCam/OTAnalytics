@@ -1220,7 +1220,7 @@ class DummyViewModel(
         return ColumnResource(id=section.id.serialize(), values=values)
 
     def __update_flow_data(self, flow_data: FlowDto) -> None:
-        if flow_data.flow_id is None:
+        if not flow_data.flow_id:
             logger().error("Flow data has no flow_id: {flow_data}")
             return
         flow_id = FlowId(flow_data.flow_id)
