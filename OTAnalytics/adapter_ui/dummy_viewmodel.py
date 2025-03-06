@@ -1314,11 +1314,6 @@ class DummyViewModel(
         except CancelExportFile:
             logger().info("User canceled configuration of export")
 
-    def __get_default_export_format(self) -> str:
-        if self._event_list_export_formats:
-            return next(iter(self._event_list_export_formats.keys()))
-        return ""
-
     def _configure_event_exporter(
         self, export_format_extensions: dict[str, str]
     ) -> tuple[EventListExporter, Path]:
