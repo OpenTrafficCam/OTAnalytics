@@ -3,8 +3,11 @@ from typing import Any
 
 from customtkinter import CTkLabel, CTkOptionMenu
 
+from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
+from OTAnalytics.adapter_ui.file_selection_cancelled import (
+    FileSelectionCancelledException,
+)
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.config import CONTEXT_FILE_TYPE_EVENTS
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
@@ -16,15 +19,7 @@ EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
 
 
-class CancelExportEvents(Exception):
-    pass
-
-
-class FileSelectionCancelledException(Exception):
-    pass
-
-
-class FrameConfigureExportEvents(FrameContent):
+class FrameConfigureExportFile(FrameContent):
     def __init__(
         self,
         export_format_extensions: dict[str, str],
@@ -68,13 +63,13 @@ class FrameConfigureExportEvents(FrameContent):
         return int_value >= 0 if int_value else True
 
 
-class ToplevelExportEvents(ToplevelTemplate):
+class ToplevelExportFile(ToplevelTemplate):
     def __init__(
         self,
         viewmodel: ViewModel,
         export_format_extensions: dict[str, str],
         input_values: dict,
-        initial_file_stem: str = CONTEXT_FILE_TYPE_EVENTS,
+        initial_file_stem: str,
         **kwargs: Any,
     ) -> None:
         self._viewmodel = viewmodel
@@ -84,7 +79,7 @@ class ToplevelExportEvents(ToplevelTemplate):
         super().__init__(**kwargs)
 
     def _create_frame_content(self, master: Any) -> FrameContent:
-        return FrameConfigureExportEvents(
+        return FrameConfigureExportFile(
             master=master,
             export_format_extensions=self._export_format_extensions,
             input_values=self._input_values,
@@ -94,6 +89,7 @@ class ToplevelExportEvents(ToplevelTemplate):
         export_format = self._input_values[EXPORT_FORMAT]  #
         export_file_type = self._export_format_extensions[export_format][1:]
         export_extension = f"*.{export_file_type}"
+        # TODO refactor: inject get_save_path_suggestion as use case
         suggested_save_path = self._viewmodel.get_save_path_suggestion(
             export_file_type, context_file_type=self._initial_file_stem
         )
@@ -117,5 +113,5 @@ class ToplevelExportEvents(ToplevelTemplate):
     def get_data(self) -> dict:
         self.wait_window()
         if self._canceled:
-            raise CancelExportEvents()
+            raise CancelExportFile()
         return self._input_values

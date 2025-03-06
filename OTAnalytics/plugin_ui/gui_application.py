@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from functools import cached_property
 
+from OTAnalytics.adapter_ui.dummy_viewmodel import DummyViewModel
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
@@ -115,10 +116,6 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
 
     @cached_property
     def view_model(self) -> ViewModel:
-        from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
-            DummyViewModel,
-        )
-
         return DummyViewModel(
             self.application,
             self.ui_factory,

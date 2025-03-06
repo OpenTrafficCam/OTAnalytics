@@ -6,6 +6,7 @@ from OTAnalytics.application.use_cases.create_events import (
     SectionProvider,
 )
 from OTAnalytics.application.use_cases.track_repository import AllTrackIdsProvider
+from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track import TrackIdProvider
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
@@ -93,3 +94,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
     @cached_property
     def section_provider_event_creation_cli(self) -> SectionProvider:
         return FilterOutCuttingSections(self.section_repository.get_all)
+
+    @cached_property
+    def progressbar_builder(self) -> ProgressbarBuilder:
+        return TqdmBuilder()

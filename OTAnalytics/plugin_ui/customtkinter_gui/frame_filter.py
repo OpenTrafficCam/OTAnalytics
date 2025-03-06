@@ -37,7 +37,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_date_filter_control import (
     FrameDateFilterControl,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
-from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import CtkInfoBox
 from OTAnalytics.plugin_ui.customtkinter_gui.style import (
     ANCHOR_WEST,
     COLOR_GRAY,
@@ -386,7 +386,7 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
             logger().info("Filter tracks by date applied")
             self._close()
         except InvalidDatetimeFormatError as e:
-            InfoBox(message=str(e), initial_position=self.get_position())
+            CtkInfoBox(message=str(e), initial_position=self.get_position())
 
     def _on_reset_button_clicked(self) -> None:
         self._viewmodel.reset_filter_tracks_by_date()
