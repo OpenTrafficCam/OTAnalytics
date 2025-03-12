@@ -46,7 +46,16 @@ class OffsetSliderKeys(ResourceKey):
     BUTTON_UPDATE_OFFSET = "button-update-offset"
 
 
+class RemarkKeys(ResourceKey):
+    REMARK_PLACEHOLDER = "remark-placeholder"
+    REMARK_NO_COMMENT = "remark-no-comment"
+
+
 class VisualizationFiltersKeys(ResourceKey):
+    LABEL_VISUALIZATION_FILTERS_FORM_HEADER = "label-visualization-filters-form-header"
+
+
+class TrackStatisticKeys(ResourceKey):
     LABEL_VISUALIZATION_FILTERS_FORM_HEADER = "label-visualization-filters-form-header"
 
 
@@ -74,6 +83,8 @@ DEFAULT_RESOURCE_MAP = {
     ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
     ProjectKeys.LABEL_START_DATE: "Start date",
     ProjectKeys.LABEL_START_TIME: "Start time",
+    RemarkKeys.REMARK_PLACEHOLDER: "Comment",
+    RemarkKeys.REMARK_NO_COMMENT: "No Comment",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
     VisualizationFiltersKeys.LABEL_VISUALIZATION_FILTERS_FORM_HEADER: "Visualization Filters",  # noqa
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
