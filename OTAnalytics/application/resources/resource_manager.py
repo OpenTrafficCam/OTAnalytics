@@ -53,10 +53,26 @@ class RemarkKeys(ResourceKey):
 
 class VisualizationFiltersKeys(ResourceKey):
     LABEL_VISUALIZATION_FILTERS_FORM_HEADER = "label-visualization-filters-form-header"
+    BUTTON_FILTER_BY_DATE = "button-filter-by-date"
+    BUTTON_FILTER_BY_CLASSIFICATION = "button-filter-by-classification"
+    LABEL_EVENT = "label-event"
+    LABEL_DATE_RANGE_FROM = "label-date-range-from"
+    LABEL_DATE_RANGE_TO = "label-date-range-to"
+    LABEL_FIRST_DETECTION_OCCURRENCE = "label-first-detection-occurrence"
+    LABEL_LAST_DETECTION_OCCURRENCE = "label-last-detection-occurrence"
 
 
 class TrackStatisticKeys(ResourceKey):
-    LABEL_VISUALIZATION_FILTERS_FORM_HEADER = "label-visualization-filters-form-header"
+    LABEL_TRACK_STATISTIC_FORM_HEADER = "label-track-statistic-form-header"
+    LABEL_ALL_TRACKS = "label-all-tracks"
+    LABEL_TRACKS_INTERSECTING_NOT_ASSIGNED = "label-tracks-intersecting-not-assigned"
+    LABEL_TRACKS_ASSIGNED_TO_FLOWS = "label-tracks-assigned-to-flows"
+    LABEL_NUMBER_OF_TRACKS_WITH_SIMULTANEOUS_SECTION_EVENTS = (
+        "label-number-of-tracks-with-simultaneous-section-events"  # noqa
+    )
+    LABEL_INSIDE_CUTTING_SECTIONS = "label-inside-cutting-sections"
+    LABEL_TRACKS_NOT_INTERSECTING_SECTIONS = "label-tracks-not-intersecting-sections"
+    LABEL_NUMBER_OF_TRACKS_TO_BE_VALIDATED = "label-number-of-tracks-to-be-validated"
 
 
 class VisualizationLayersKeys(ResourceKey):
@@ -86,7 +102,22 @@ DEFAULT_RESOURCE_MAP = {
     RemarkKeys.REMARK_PLACEHOLDER: "Comment",
     RemarkKeys.REMARK_NO_COMMENT: "No Comment",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
+    TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER: "Track Statistics",
+    TrackStatisticKeys.LABEL_ALL_TRACKS: "All tracks:",
+    TrackStatisticKeys.LABEL_TRACKS_INTERSECTING_NOT_ASSIGNED: "Tracks intersecting not assigned:",  # noqa
+    TrackStatisticKeys.LABEL_TRACKS_ASSIGNED_TO_FLOWS: "Tracks assigend to flows:",
+    TrackStatisticKeys.LABEL_NUMBER_OF_TRACKS_WITH_SIMULTANEOUS_SECTION_EVENTS: "Number of tracks with simultaneous section events",  # noqa
+    TrackStatisticKeys.LABEL_INSIDE_CUTTING_SECTIONS: "Inside cutting section:",
+    TrackStatisticKeys.LABEL_TRACKS_NOT_INTERSECTING_SECTIONS: "Tracks not intersecting section:",  # noqa
+    TrackStatisticKeys.LABEL_NUMBER_OF_TRACKS_TO_BE_VALIDATED: "Number of tracks to be validated:",  # noqa
     VisualizationFiltersKeys.LABEL_VISUALIZATION_FILTERS_FORM_HEADER: "Visualization Filters",  # noqa
+    VisualizationFiltersKeys.BUTTON_FILTER_BY_DATE: "Filter by Date",
+    VisualizationFiltersKeys.BUTTON_FILTER_BY_CLASSIFICATION: "Filter by Classification",  # noqa
+    VisualizationFiltersKeys.LABEL_EVENT: "Event",
+    VisualizationFiltersKeys.LABEL_DATE_RANGE_TO: "To",
+    VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM: "From",
+    VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE: "Last detection occurrence",  # noqa
+    VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE: "First detection occurrence",  # noqa
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
     WorkspaceKeys.LABEL_WORKSPACE_FORM_HEADER: "Workspace",
 }
