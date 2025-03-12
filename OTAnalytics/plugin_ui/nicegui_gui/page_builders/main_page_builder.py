@@ -33,10 +33,10 @@ class MainPageBuilder(NiceguiPageBuilder):
             with ui.column().classes("col-span-1"):
                 self.configuration_bar.build()
             with ui.column().classes("col-span-6"):
-                with ui.grid(rows=8):
-                    with ui.row().classes("row-span-6"):
+                with ui.grid():
+                    with ui.row():
                         self.workspace.build()
-                    with ui.row().classes("row-span-2"):
+                    with ui.row():
                         self.visualization_filters.build()
             with ui.column().classes("col-span-1"):
                 self.visualization_layers.build()
