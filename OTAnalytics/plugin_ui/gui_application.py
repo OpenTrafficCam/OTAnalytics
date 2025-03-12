@@ -1,6 +1,8 @@
 from abc import abstractmethod
 from functools import cached_property
 
+from OTAnalytics.adapter_ui.dummy_viewmodel import DummyViewModel
+from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.use_cases.create_events import (
@@ -114,12 +116,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
 
     @cached_property
     def view_model(self) -> ViewModel:
-        from OTAnalytics.plugin_ui.customtkinter_gui.dummy_viewmodel import (
-            DummyViewModel,
-        )
-
         return DummyViewModel(
             self.application,
+            self.ui_factory,
             self.flow_parser,
             self.flow_name_generator,
             event_list_export_formats=AVAILABLE_EVENTLIST_EXPORTERS,
@@ -195,3 +194,8 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         return SimpleCreateIntersectionEvents(
             self.intersect, self.section_provider_event_creation_ui, self.add_events
         )
+
+    @property
+    @abstractmethod
+    def ui_factory(self) -> UiFactory:
+        raise NotImplementedError

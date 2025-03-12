@@ -3,16 +3,16 @@ import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from tkinter.filedialog import askopenfilename, askopenfilenames
 from typing import Any, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
 )
-from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_canvas import TAG_SELECTED_SECTION, AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
+from OTAnalytics.adapter_ui.abstract_frame_offset import AbstractFrameOffset
 from OTAnalytics.adapter_ui.abstract_frame_project import (
     AbstractFrameProject,
     AbstractFrameSvzMetadata,
@@ -24,9 +24,10 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
 from OTAnalytics.adapter_ui.abstract_frame_track_statistics import (
     AbstractFrameTrackStatistics,
 )
-from OTAnalytics.adapter_ui.abstract_frame_tracks import AbstractFrameTracks
 from OTAnalytics.adapter_ui.abstract_main_window import AbstractMainWindow
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.cancel_export_counts import CancelExportCounts
+from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
 from OTAnalytics.adapter_ui.default_values import (
     DATETIME_FORMAT,
     RELATIVE_SECTION_OFFSET,
@@ -37,20 +38,19 @@ from OTAnalytics.adapter_ui.flow_adapter import (
     InnerSegmentsCenterCalculator,
     SectionRefPointCalculator,
 )
+from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.text_resources import (
     COLUMN_NAME,
     ColumnResource,
     ColumnResources,
 )
+from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.ui_texts import (
     COUNTING_DAY_TYPES,
     DIRECTIONS_OF_STATIONING,
     WEATHER_TYPES,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.analysis.traffic_counting_specification import (
-    CountingSpecificationDto,
-)
 from OTAnalytics.application.application import (
     CancelAddFlow,
     CancelAddSection,
@@ -59,9 +59,9 @@ from OTAnalytics.application.application import (
     OTAnalyticsApplication,
 )
 from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_EVENTS,
     CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     CUTTING_SECTION_MARKER,
-    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
@@ -136,51 +136,9 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_events
-from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
-from OTAnalytics.plugin_ui.customtkinter_gui.line_section import (
-    ArrowPainter,
-    CanvasElementDeleter,
-    SectionBuilder,
-    SectionGeometryEditor,
-    SectionPainter,
-)
-from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox, MinimalInfoBox
-from OTAnalytics.plugin_ui.customtkinter_gui.style import (
-    ARROW_STYLE,
-    COLOR_ORANGE,
-    DEFAULT_SECTION_STYLE,
-    EDITED_SECTION_STYLE,
-    PRE_EDIT_SECTION_STYLE,
-    SELECTED_KNOB_STYLE,
-    SELECTED_SECTION_STYLE,
-)
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
-    END,
-    EXPORT_FILE,
-    EXPORT_FORMAT,
-    INTERVAL,
-    START,
-    CancelExportCounts,
-    ToplevelExportCounts,
-)
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_events import (
-    CancelExportEvents,
-    ToplevelExportEvents,
-)
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import (
-    DISTANCE,
-    END_SECTION,
-    FLOW_ID,
-    FLOW_NAME,
-    START_SECTION,
-    ToplevelFlows,
-)
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
-TAG_SELECTED_SECTION: str = "selected_section"
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
@@ -220,11 +178,6 @@ class DummyViewModel(
     SectionListObserver,
     FlowListObserver,
 ):
-    @property
-    def window(self) -> AbstractMainWindow:
-        if self._window is None:
-            raise MissingInjectedInstanceError("window")
-        return self._window
 
     @property
     def frame_project(self) -> AbstractFrameProject:
@@ -233,10 +186,16 @@ class DummyViewModel(
         return self._frame_project
 
     @property
-    def frame_tracks(self) -> AbstractFrameTracks:
+    def frame_tracks(self) -> AbstractFrame:
         if self._frame_tracks is None:
             raise MissingInjectedInstanceError("frame tracks")
         return self._frame_tracks
+
+    @property
+    def frame_offset(self) -> AbstractFrameOffset:
+        if self._frame_offset is None:
+            raise MissingInjectedInstanceError("frame offset")
+        return self._frame_offset
 
     @property
     def frame_videos(self) -> AbstractFrame:
@@ -343,6 +302,7 @@ class DummyViewModel(
     def __init__(
         self,
         application: OTAnalyticsApplication,
+        ui_factory: UiFactory,
         flow_parser: FlowParser,
         name_generator: FlowNameGenerator,
         event_list_export_formats: dict,
@@ -351,6 +311,7 @@ class DummyViewModel(
         update_section_coordinates: UpdateSectionCoordinates,
     ) -> None:
         self._application = application
+        self._ui_factory = ui_factory
         self._flow_parser: FlowParser = flow_parser
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
@@ -359,7 +320,8 @@ class DummyViewModel(
         self._update_section_coordinates = update_section_coordinates
         self._window: Optional[AbstractMainWindow] = None
         self._frame_project: Optional[AbstractFrameProject] = None
-        self._frame_tracks: Optional[AbstractFrameTracks] = None
+        self._frame_tracks: Optional[AbstractFrame] = None
+        self._frame_offset: Optional[AbstractFrameOffset] = None
         self._frame_videos: Optional[AbstractFrame] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_video_control: Optional[AbstractFrame] = None
@@ -409,6 +371,7 @@ class DummyViewModel(
     def _get_frames(self) -> list[AbstractFrame | AbstractFrameProject]:
         return [
             self.frame_tracks,
+            self.frame_offset,
             self.frame_videos,
             self.frame_project,
             self.frame_sections,
@@ -515,9 +478,9 @@ class DummyViewModel(
         self.notify_files()
 
     def _intersect_tracks_with_sections(self) -> None:
-        start_msg_popup = MinimalInfoBox(
+        start_msg_popup = self._ui_factory.minimal_info_box(
             message="Create events...",
-            initial_position=self.window.get_position(),
+            initial_position=self.get_position(),
         )
         self._application.intersect_tracks_with_sections()
         start_msg_popup.update_message(message="Creating events completed")
@@ -585,7 +548,7 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
 
     def add_video(self) -> None:
-        track_files = askopenfilenames(
+        track_files = self._ui_factory.askopenfilenames(
             title="Load video files",
             filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
         )
@@ -631,7 +594,7 @@ class DummyViewModel(
 
     def save_otconfig(self) -> None:
         suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
-        configuration_file = ask_for_save_file_path(
+        configuration_file = self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")],
             defaultextension=f".{OTCONFIG_FILE_TYPE}",
@@ -669,17 +632,17 @@ class DummyViewModel(
             return
 
     def _get_window_position(self) -> tuple[int, int]:
-        return self.window.get_position()
+        return self.get_position()
 
     def __show_error(self, message: str) -> None:
-        InfoBox(
+        self._ui_factory.info_box(
             message=message,
             initial_position=self.treeview_sections.get_position(),
         )
 
     def load_otconfig(self) -> None:
         otconfig_file = Path(
-            askopenfilename(
+            self._ui_factory.askopenfilename(
                 title="Load configuration file",
                 filetypes=[
                     (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
@@ -693,7 +656,7 @@ class DummyViewModel(
         self._load_otconfig(otconfig_file)
 
     def _load_otconfig(self, otconfig_file: Path) -> None:
-        proceed = InfoBox(
+        proceed = self._ui_factory.info_box(
             message=(
                 "This will load a stored configuration from file. \n"
                 "All configured sections, flows and videos will be removed before "
@@ -709,8 +672,11 @@ class DummyViewModel(
         self.show_current_project()
         self.update_svz_metadata_view()
 
-    def set_tracks_frame(self, tracks_frame: AbstractFrameTracks) -> None:
-        self._frame_tracks = tracks_frame
+    def set_tracks_frame(self, frame: AbstractFrame) -> None:
+        self._frame_tracks = frame
+
+    def set_offset_frame(self, offset_frame: AbstractFrameOffset) -> None:
+        self._frame_offset = offset_frame
 
     def set_video_frame(self, frame: AbstractFrame) -> None:
         self._frame_videos = frame
@@ -753,11 +719,10 @@ class DummyViewModel(
         currently_selected_sections = (
             self._application.section_state.selected_sections.get()
         )
-        default_color = self.frame_tracks.get_default_offset_button_color()
         single_section_selected = len(currently_selected_sections) == 1
 
         if not single_section_selected:
-            self.frame_tracks.configure_offset_button(default_color, False)
+            self.frame_offset.enable_update_offset_button(False)
             return
 
         section_offset = self._application.get_section_offset(
@@ -768,10 +733,9 @@ class DummyViewModel(
             return
 
         visualization_offset = self._application.track_view_state.track_offset.get()
-        if section_offset == visualization_offset:
-            self.frame_tracks.configure_offset_button(default_color, False)
-        else:
-            self.frame_tracks.configure_offset_button(COLOR_ORANGE, True)
+        self.frame_offset.enable_update_offset_button(
+            section_offset != visualization_offset
+        )
 
     def update_selected_flows(self, flow_ids: list[FlowId]) -> None:
         self._update_selected_flow_items()
@@ -812,7 +776,7 @@ class DummyViewModel(
 
     @action
     def load_tracks(self) -> None:
-        track_files = askopenfilenames(
+        track_files = self._ui_factory.askopenfilenames(
             title="Load track files", filetypes=[("tracks file", "*.ottrk")]
         )
         if not track_files:
@@ -824,7 +788,7 @@ class DummyViewModel(
     def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
         configuration_file = Path(
-            askopenfilename(
+            self._ui_factory.askopenfilename(
                 title="Load sections file",
                 filetypes=[
                     (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
@@ -846,7 +810,7 @@ class DummyViewModel(
         sections = self._application.get_all_sections()
         flows = self._application.get_all_flows()
         if sections or flows:
-            proceed = InfoBox(
+            proceed = self._ui_factory.info_box(
                 message=(
                     "This will load a stored otflow configuration from file. \n"
                     "All configured sections and flows will be removed before "
@@ -865,7 +829,7 @@ class DummyViewModel(
 
     def save_configuration(self) -> None:
         suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
-        configuration_file = ask_for_save_file_path(
+        configuration_file = self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
                 (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
@@ -896,7 +860,7 @@ class DummyViewModel(
             self._application.save_otflow(Path(otflow_file))
         except NoSectionsToSave:
             position = self.treeview_sections.get_position()
-            InfoBox(
+            self._ui_factory.info_box(
                 message="No sections to save, please add new sections first",
                 initial_position=position,
             )
@@ -908,17 +872,12 @@ class DummyViewModel(
     def add_line_section(self) -> None:
         self.set_selected_section_ids([])
         self._start_action()
-        SectionBuilder(viewmodel=self, canvas=self.canvas, style=EDITED_SECTION_STYLE)
+        self.canvas.start_section_builder()
 
     def add_area_section(self) -> None:
         self.set_selected_section_ids([])
         self._start_action()
-        SectionBuilder(
-            viewmodel=self,
-            canvas=self.canvas,
-            is_area_section=True,
-            style=EDITED_SECTION_STYLE,
-        )
+        self.canvas.start_section_builder(is_area_section=True)
 
     def get_section_metadata(
         self,
@@ -930,14 +889,14 @@ class DummyViewModel(
             section_offset := self._application.track_view_state.track_offset.get()
         ):
             section_offset = RELATIVE_SECTION_OFFSET
-        return ToplevelSections(
+        return self._ui_factory.configure_section(
             title=title,
             viewmodel=self,
             section_offset=section_offset,
             initial_position=initial_position,
             input_values=input_values,
             show_offset=self._show_offset(),
-        ).get_metadata()
+        )
 
     def _show_offset(self) -> bool:
         return True
@@ -983,25 +942,20 @@ class DummyViewModel(
             )
 
         self._start_action()
-        CanvasElementDeleter(canvas=self.canvas).delete(tag_or_id=TAG_SELECTED_SECTION)
+        self.canvas.delete_element(tag_or_id=TAG_SELECTED_SECTION)
         if selected_section_ids:
             if current_section := self._application.get_section_for(
                 SectionId(selected_section_ids[0])
             ):
-                SectionGeometryEditor(
-                    viewmodel=self,
-                    canvas=self.canvas,
+                self.canvas.start_section_geometry_editor(
                     section=current_section,
-                    edited_section_style=EDITED_SECTION_STYLE,
-                    pre_edit_section_style=PRE_EDIT_SECTION_STYLE,
-                    selected_knob_style=SELECTED_KNOB_STYLE,
                     is_area_section=self._is_area_section(current_section),
                 )
 
     def edit_selected_section_metadata(self) -> None:
         if not (selected_section_ids := self.get_selected_section_ids()):
             position = self.treeview_sections.get_position()
-            InfoBox(
+            self._ui_factory.info_box(
                 message="Please select a section to edit", initial_position=position
             )
             return
@@ -1048,7 +1002,7 @@ class DummyViewModel(
     def remove_sections(self) -> None:
         if not (selected_section_ids := self.get_selected_section_ids()):
             position = self.treeview_sections.get_position()
-            InfoBox(
+            self._ui_factory.info_box(
                 message="Please select one or more sections to remove",
                 initial_position=position,
             )
@@ -1064,7 +1018,7 @@ class DummyViewModel(
                 for flow in self._application.flows_using_section(section_id):
                     message += flow.name + "\n"
                 position = self.treeview_sections.get_position()
-                InfoBox(
+                self._ui_factory.info_box(
                     message=message,
                     initial_position=position,
                 )
@@ -1079,7 +1033,7 @@ class DummyViewModel(
         self._draw_items_on_canvas()
 
     def _remove_items_from_canvas(self) -> None:
-        CanvasElementDeleter(canvas=self.canvas).delete(tag_or_id=LINE_SECTION)
+        self.canvas.delete_element(tag_or_id=LINE_SECTION)
 
     def _draw_items_on_canvas(self) -> None:
         sections_to_highlight = self._get_sections_to_highlight()
@@ -1093,19 +1047,14 @@ class DummyViewModel(
         return []
 
     def _draw_sections(self, sections_to_highlight: list[str]) -> None:
-        section_painter = SectionPainter(canvas=self.canvas)
         for section in self._get_sections():
             tags = [LINE_SECTION]
-            if section[ID] in sections_to_highlight:
-                style = SELECTED_SECTION_STYLE
-                tags.append(TAG_SELECTED_SECTION)
-            else:
-                style = DEFAULT_SECTION_STYLE
-            section_painter.draw(
+            is_selected = section[ID] in sections_to_highlight
+            self.canvas.draw_section(
                 tags=tags,
                 id=section[ID],
                 coordinates=section[COORDINATES],
-                section_style=style,
+                is_selected_section=is_selected,
                 is_area_section=self._is_area_section(
                     self._application.get_section_for(SectionId(section[ID]))
                 ),
@@ -1121,13 +1070,12 @@ class DummyViewModel(
                     end_refpt_calculator = self._get_section_refpt_calculator(
                         end_section
                     )
-                    ArrowPainter(self.canvas).draw(
+                    self.canvas.draw_arrow(
                         start_section=start_section,
                         end_section=end_section,
                         start_refpt_calculator=start_refpt_calculator,
                         end_refpt_calculator=end_refpt_calculator,
                         tags=[LINE_SECTION],
-                        arrow_style=ARROW_STYLE,
                     )
 
     def _get_section_refpt_calculator(
@@ -1182,10 +1130,10 @@ class DummyViewModel(
     def __create_flow(self) -> Flow:
         flow_data = self._show_flow_popup()
         flow_id = self._application.get_flow_id()
-        name = flow_data[FLOW_NAME]
-        new_from_section_id = SectionId(flow_data[START_SECTION])
-        new_to_section_id = SectionId(flow_data[END_SECTION])
-        distance = flow_data.get(DISTANCE, None)
+        name = flow_data.name
+        new_from_section_id = SectionId(flow_data.start_section)
+        new_to_section_id = SectionId(flow_data.end_section)
+        distance = flow_data.distance
         flow = Flow(
             id=flow_id,
             name=name,
@@ -1198,13 +1146,13 @@ class DummyViewModel(
 
     def _show_flow_popup(
         self,
-        input_values: dict | None = None,
+        input_values: FlowDto | None = None,
         title: str = "Add flow",
-    ) -> dict:
+    ) -> FlowDto:
         position = self.treeview_flows.get_position()
         sections = list(self.get_all_sections())
         if len(sections) < 2:
-            InfoBox(
+            self._ui_factory.info_box(
                 message="To add a flow, at least two sections are needed",
                 initial_position=position,
             )
@@ -1216,53 +1164,49 @@ class DummyViewModel(
 
     def __create_flow_data(
         self,
-        input_values: dict | None,
+        input_values: FlowDto | None,
         title: str,
         position: tuple[int, int],
         section_ids: ColumnResources,
-    ) -> dict:
+    ) -> FlowDto:
         flow_data = self.__get_flow_data(input_values, title, position, section_ids)
         while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
-            new_entry_name = flow_data[FLOW_NAME]
-            if (input_values is not None) and (
-                new_entry_name == input_values[FLOW_NAME]
-            ):
+            new_entry_name = flow_data.name
+            if (input_values is not None) and (new_entry_name == input_values.name):
                 break
-            InfoBox(
+            self._ui_factory.info_box(
                 message="To add a flow, a unique name is necessary",
                 initial_position=position,
             )
-            flow_data[FLOW_NAME] = ""
+            flow_data = flow_data.derive_name("")
             flow_data = self.__get_flow_data(flow_data, title, position, section_ids)
         return flow_data
 
-    def __is_flow_name_valid(self, flow_data: dict) -> bool:
-        return flow_data[FLOW_NAME] and self._application.is_flow_name_valid(
-            flow_data[FLOW_NAME]
-        )
+    def __is_flow_name_valid(self, flow_data: FlowDto) -> bool:
+        return self._application.is_flow_name_valid(flow_data.name)
 
     def __get_flow_data(
         self,
-        input_values: dict | None,
+        input_values: FlowDto | None,
         title: str,
         position: tuple[int, int],
         section_ids: ColumnResources,
-    ) -> dict:
-        return ToplevelFlows(
+    ) -> FlowDto:
+        return self._ui_factory.configure_flow(
             title=title,
             initial_position=position,
             section_ids=section_ids,
-            name_generator=self._name_generator,
             input_values=input_values,
+            name_generator=self._name_generator,
             show_distance=self._show_distance(),
-        ).get_data()
+        )
 
     def __try_add_flow(self, flow: Flow) -> None:
         try:
             self._application.add_flow(flow)
         except FlowAlreadyExists as cause:
             position = self.treeview_flows.get_position()
-            InfoBox(message=str(cause), initial_position=position)
+            self._ui_factory.info_box(message=str(cause), initial_position=position)
             raise CancelAddFlow()
 
     def _show_distance(self) -> bool:
@@ -1275,12 +1219,15 @@ class DummyViewModel(
         values = {COLUMN_NAME: section.name}
         return ColumnResource(id=section.id.serialize(), values=values)
 
-    def __update_flow_data(self, flow_data: dict) -> None:
-        flow_id = FlowId(flow_data.get(FLOW_ID, ""))
-        name = flow_data[FLOW_NAME]
-        new_from_section_id = SectionId(flow_data[START_SECTION])
-        new_to_section_id = SectionId(flow_data[END_SECTION])
-        distance = flow_data.get(DISTANCE, None)
+    def __update_flow_data(self, flow_data: FlowDto) -> None:
+        if not flow_data.flow_id:
+            logger().error("Flow data has no flow_id: {flow_data}")
+            return
+        flow_id = FlowId(flow_data.flow_id)
+        name = flow_data.name
+        new_from_section_id = SectionId(flow_data.start_section)
+        new_to_section_id = SectionId(flow_data.end_section)
+        distance = flow_data.distance
         if flow := self._application.get_flow_for(flow_id):
             flow.name = name
             flow.start = new_from_section_id
@@ -1302,18 +1249,18 @@ class DummyViewModel(
                 self._edit_flow(flows[0])
             else:
                 position = self.treeview_flows.get_position()
-                InfoBox(
+                self._ui_factory.info_box(
                     message="Please select a flow to edit", initial_position=position
                 )
 
     def _edit_flow(self, flow: Flow) -> None:
-        input_data = {
-            FLOW_ID: flow.id.serialize(),
-            FLOW_NAME: flow.name,
-            START_SECTION: flow.start.id,
-            END_SECTION: flow.end.id,
-            DISTANCE: flow.distance,
-        }
+        input_data = FlowDto(
+            flow_id=flow.id.serialize(),
+            name=flow.name,
+            start_section=flow.start.id,
+            end_section=flow.end.id,
+            distance=flow.distance,
+        )
 
         if flow_data := self._show_flow_popup(
             input_values=input_data,
@@ -1329,12 +1276,14 @@ class DummyViewModel(
                 self.refresh_items_on_canvas()
         else:
             position = self.treeview_flows.get_position()
-            InfoBox(message="Please select a flow to remove", initial_position=position)
+            self._ui_factory.info_box(
+                message="Please select a flow to remove", initial_position=position
+            )
 
     def create_events(self) -> None:
-        start_msg_popup = MinimalInfoBox(
+        start_msg_popup = self._ui_factory.minimal_info_box(
             message="Create events...",
-            initial_position=self.window.get_position(),
+            initial_position=self.get_position(),
         )
         self._application.create_events()
         self.notify_flows(self.get_all_flow_ids())
@@ -1350,41 +1299,32 @@ class DummyViewModel(
         logger().info(f"Eventlist file saved to '{file}'")
 
     def export_events(self) -> None:
-        default_values: dict[str, str] = {
-            EXPORT_FORMAT: self.__get_default_export_format()
-        }
         export_format_extensions: dict[str, str] = {
             key: exporter.get_extension()
             for key, exporter in self._event_list_export_formats.items()
         }
         try:
             event_list_exporter, file = self._configure_event_exporter(
-                default_values, export_format_extensions
+                export_format_extensions
             )
             self._application.export_events(Path(file), event_list_exporter)
             logger().info(
                 f"Exporting eventlist using {event_list_exporter.get_name()} to {file}"
             )
-        except CancelExportEvents:
+        except CancelExportFile:
             logger().info("User canceled configuration of export")
 
-    def __get_default_export_format(self) -> str:
-        if self._event_list_export_formats:
-            return next(iter(self._event_list_export_formats.keys()))
-        return ""
-
     def _configure_event_exporter(
-        self, default_values: dict[str, str], export_format_extensions: dict[str, str]
+        self, export_format_extensions: dict[str, str]
     ) -> tuple[EventListExporter, Path]:
-        input_values = ToplevelExportEvents(
+        export_config = self._ui_factory.configure_export_file(
             title="Export events",
-            initial_position=(50, 50),
-            input_values=default_values,
             export_format_extensions=export_format_extensions,
+            initial_file_stem=CONTEXT_FILE_TYPE_EVENTS,
             viewmodel=self,
-        ).get_data()
-        file = input_values[toplevel_export_events.EXPORT_FILE]
-        export_format = input_values[toplevel_export_events.EXPORT_FORMAT]
+        )
+        file = export_config.file
+        export_format = export_config.export_format
         event_list_exporter = self._event_list_export_formats.get(export_format, None)
         if event_list_exporter is None:
             raise ExporterNotFoundError(
@@ -1393,15 +1333,18 @@ class DummyViewModel(
         return event_list_exporter, file
 
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
-        start_msg_popup = MinimalInfoBox(
+        start_msg_popup = self._ui_factory.minimal_info_box(
             message="Apply offset...",
-            initial_position=self.window.get_position(),
+            initial_position=self.get_position(),
         )
         offset = geometry.RelativeOffsetCoordinate(offset_x, offset_y)
         self._application.track_view_state.track_offset.set(offset)
         start_msg_popup.update_message(message="Apply offset completed")
         start_msg_popup.close()
         self.update_section_offset_button_state()
+
+    def get_position(self) -> tuple[int, int]:
+        return self._window.get_position() if self._window else (0, 0)
 
     def get_track_offset(self) -> Optional[tuple[float, float]]:
         if current_offset := self._application.get_current_track_offset():
@@ -1412,7 +1355,7 @@ class DummyViewModel(
         self, offset: Optional[geometry.RelativeOffsetCoordinate]
     ) -> None:
         if offset:
-            self.frame_tracks.update_offset(offset.x, offset.y)
+            self.frame_offset.update_offset(offset.x, offset.y)
 
     def change_track_offset_to_section_offset(self) -> None:
         self._application.change_track_offset_to_section_offset()
@@ -1552,15 +1495,13 @@ class DummyViewModel(
 
     def export_counts(self) -> None:
         if len(self._application.get_all_flows()) == 0:
-            InfoBox(
+            self._ui_factory.info_box(
                 message=(
                     "Counting needs at least one flow.\n"
                     "There is no flow configurated.\n"
                     "Please create a flow."
                 ),
-                initial_position=(
-                    self._window.get_position() if self._window else (0, 0)
-                ),
+                initial_position=self.get_position(),
             )
             return
         export_formats: dict = {
@@ -1573,36 +1514,21 @@ class DummyViewModel(
         modes = list(
             self._application._tracks_metadata.filtered_detection_classifications
         )
-        default_values: dict = {
-            INTERVAL: DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
-            START: start,
-            END: end,
-            EXPORT_FORMAT: default_format,
-        }
         try:
-            export_values: dict = ToplevelExportCounts(
-                title="Export counts",
-                initial_position=(50, 50),
-                input_values=default_values,
+            export_specification = self._ui_factory.configure_export_counts(
+                start=start,
+                end=end,
+                default_format=default_format,
+                modes=modes,
                 export_formats=export_formats,
                 viewmodel=self,
-            ).get_data()
-            logger().debug(export_values)
-            export_specification = CountingSpecificationDto(
-                interval_in_minutes=export_values[INTERVAL],
-                start=export_values[START],
-                end=export_values[END],
-                modes=modes,
-                output_format=export_values[EXPORT_FORMAT],
-                output_file=export_values[EXPORT_FILE],
-                export_mode=OVERWRITE,
             )
             self._application.export_counts(export_specification)
         except CancelExportCounts:
             logger().info("User canceled configuration of export")
 
     def start_new_project(self) -> None:
-        proceed = InfoBox(
+        proceed = self._ui_factory.info_box(
             message=(
                 "This will start a new project. \n"
                 "All configured project settings, sections, flows, tracks, and videos "
@@ -1645,7 +1571,7 @@ class DummyViewModel(
         )
 
         logger().info(msg)
-        InfoBox(msg, window_position)
+        self._ui_factory.info_box(msg, window_position)
 
     def set_remark_frame(self, frame: AbstractFrameRemark) -> None:
         self._frame_remarks = frame
@@ -1672,45 +1598,37 @@ class DummyViewModel(
 
     def export_road_user_assignments(self) -> None:
         if len(self._application.get_all_flows()) == 0:
-            InfoBox(
+            self._ui_factory.info_box(
                 message=(
                     "Counting needs at least one flow.\n"
                     "There is no flow configured.\n"
                     "Please create a flow."
                 ),
-                initial_position=(
-                    self._window.get_position() if self._window else (0, 0)
-                ),
+                initial_position=self.get_position(),
             )
             return
         export_formats: dict = {
             export_format.name: export_format.file_extension
             for export_format in self._application.get_road_user_export_formats()
         }
-        default_format = next(iter(export_formats.keys()))
-        default_values: dict = {
-            EXPORT_FORMAT: default_format,
-        }
 
         try:
-            export_values = ToplevelExportEvents(
+            export_config = self._ui_factory.configure_export_file(
                 title="Export road user assignments",
-                initial_position=(50, 50),
-                input_values=default_values,
                 export_format_extensions=export_formats,
                 initial_file_stem="road_user_assignments",
                 viewmodel=self,
-            ).get_data()
-            logger().debug(export_values)
-            save_path = export_values[toplevel_export_events.EXPORT_FILE]
-            export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
+            )
+            logger().debug(export_config)
+            save_path = export_config.file
+            export_format = export_config.export_format
 
             export_specification = ExportSpecification(
                 save_path, export_format, OVERWRITE
             )
             self._application.export_road_user_assignments(export_specification)
             logger().info(f"Exporting road user assignments to {save_path}")
-        except CancelExportEvents:
+        except CancelExportFile:
             logger().info("User canceled configuration of export")
 
     def update_svz_metadata(self, metadata: dict) -> None:
@@ -1792,42 +1710,34 @@ class DummyViewModel(
 
     def export_track_statistics(self) -> None:
         if self._application.get_track_repository_size() == 0:
-            InfoBox(
+            self._ui_factory.info_box(
                 message=(
                     "Calculating track statistics is impossible without tracks.\n"
                     "Please add tracks."
                 ),
-                initial_position=(
-                    self._window.get_position() if self._window else (0, 0)
-                ),
+                initial_position=self.get_position(),
             )
             return
         export_formats: dict = {
             export_format.name: export_format.file_extension
             for export_format in self._application.get_track_statistics_export_formats()
         }
-        default_format = next(iter(export_formats.keys()))
-        default_values: dict = {
-            EXPORT_FORMAT: default_format,
-        }
 
         try:
-            export_values = ToplevelExportEvents(
+            export_config = self._ui_factory.configure_export_file(
                 title="Export track statistics",
-                initial_position=(50, 50),
-                input_values=default_values,
                 export_format_extensions=export_formats,
                 initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
                 viewmodel=self,
-            ).get_data()
-            logger().debug(export_values)
-            save_path = export_values[toplevel_export_events.EXPORT_FILE]
-            export_format = export_values[toplevel_export_events.EXPORT_FORMAT]
+            )
+            logger().debug(export_config)
+            save_path = export_config.file
+            export_format = export_config.export_format
 
             export_specification = TrackStatisticsExportSpecification(
                 save_path, export_format, INITIAL_MERGE
             )
             self._application.export_track_statistics(export_specification)
             logger().info(f"Exporting track statistics to {save_path}")
-        except CancelExportEvents:
+        except CancelExportFile:
             logger().info("User canceled configuration of export")

@@ -1,0 +1,2 @@
+class CancelExportCounts(Exception):
+    pass

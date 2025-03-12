@@ -41,7 +41,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.frame_track_statistics import (
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_tracks import TracksFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_videos import FrameVideos
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import get_widget_position
-from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import InfoBox
+from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import CtkInfoBox
 
 CANVAS: str = "Canvas"
 FILES: str = "Files"
@@ -63,7 +63,7 @@ class ModifiedCTk(AbstractMainWindow, CTk):
         self.bind(TkEvents.LEFT_BUTTON_DOWN, lambda event: event.widget.focus_set())
 
     def _ask_to_close(self) -> None:
-        infobox = InfoBox(
+        infobox = CtkInfoBox(
             title="Close application",
             message="Do you want to close the application?",
             initial_position=get_widget_position(self),
@@ -86,7 +86,7 @@ class ModifiedCTk(AbstractMainWindow, CTk):
         messages = gather_exception_messages(val)
         message = "\n".join(messages)
         logger().exception(messages, exc_info=True)
-        InfoBox(message=message, title="Error", initial_position=self.get_position())
+        CtkInfoBox(message=message, title="Error", initial_position=self.get_position())
 
 
 class TabviewInputFiles(CustomCTkTabview):

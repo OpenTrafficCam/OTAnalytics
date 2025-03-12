@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
 
+from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.application.application import CancelAddFlow
 from OTAnalytics.application.logger import logger
@@ -42,7 +43,7 @@ class FrameConfigureFlow(FrameContent):
         self,
         section_ids: ColumnResources,
         name_generator: FlowNameGenerator,
-        input_values: dict | None = None,
+        input_values: FlowDto | None = None,
         show_distance: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -52,7 +53,7 @@ class FrameConfigureFlow(FrameContent):
         self._current_name = StringVar()
         self._input_values: dict = self.__create_input_values(input_values)
         self._show_distance = show_distance
-        self._last_autofilled_name: str = ""
+        self._last_autofilled_name: str = self._input_values.get(FLOW_NAME, "")
         self.__set_initial_values()
         self._get_widgets()
         self._place_widgets()
@@ -109,9 +110,15 @@ class FrameConfigureFlow(FrameContent):
     def __set_initial_values(self) -> None:
         self._current_name.set(self._input_values.get(FLOW_NAME, ""))
 
-    def __create_input_values(self, input_values: Optional[dict]) -> dict:
+    def __create_input_values(self, input_values: Optional[FlowDto]) -> dict:
         if input_values is not None:
-            return input_values
+            return {
+                FLOW_ID: input_values.flow_id,
+                FLOW_NAME: input_values.name,
+                START_SECTION: input_values.start_section,
+                END_SECTION: input_values.end_section,
+                DISTANCE: input_values.distance,
+            }
         return {
             FLOW_ID: "",
             FLOW_NAME: "",
@@ -176,14 +183,16 @@ class FrameConfigureFlow(FrameContent):
         if self._current_name.get() == "":
             raise InvalidFlowNameException("Please choose a flow name!")
 
-    def get_input_values(self) -> dict:
+    def get_input_values(self) -> FlowDto:
         self._check_sections()
         self._check_flow_name()
-        self._input_values[FLOW_NAME] = self._current_name.get()
-        self._input_values[START_SECTION] = self._get_start_section_id()
-        self._input_values[END_SECTION] = self._get_end_section_id()
-        self._input_values[DISTANCE] = self.__parse_distance(self.entry_distance.get())
-        return self._input_values
+        return FlowDto(
+            flow_id=self._input_values[FLOW_ID],
+            name=self._current_name.get(),
+            start_section=self._get_start_section_id(),
+            end_section=self._get_end_section_id(),
+            distance=self.__parse_distance(self.entry_distance.get()),
+        )
 
 
 class ToplevelFlows(ToplevelTemplate):
@@ -191,7 +200,7 @@ class ToplevelFlows(ToplevelTemplate):
         self,
         section_ids: ColumnResources,
         name_generator: FlowNameGenerator,
-        input_values: dict | None = None,
+        input_values: FlowDto | None = None,
         show_distance: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -214,7 +223,7 @@ class ToplevelFlows(ToplevelTemplate):
         self._input_values = self._frame_content.get_input_values()
         self._close()
 
-    def get_data(self) -> dict:
+    def get_data(self) -> FlowDto:
         self.wait_window()
         if self._canceled:
             raise CancelAddFlow()
