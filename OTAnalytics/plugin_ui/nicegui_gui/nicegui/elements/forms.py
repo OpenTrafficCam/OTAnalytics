@@ -332,6 +332,7 @@ class FormFieldInteger(FormField[Number, int]):
         validation: (
             Callable[..., str | None] | dict[str, Callable[..., bool]] | None
         ) = None,
+        on_value_change: Callable[[ValueChangeEventArguments], None] | None = None,
         props: list[str] | None = None,
         marker: str | None = None,
     ) -> None:
@@ -343,6 +344,7 @@ class FormFieldInteger(FormField[Number, int]):
         self._precision = 0
         self._step = step
         self._validation = validation
+        self._on_value_change = on_value_change
         self._props = props
         self._marker = marker
 
@@ -357,6 +359,8 @@ class FormFieldInteger(FormField[Number, int]):
             validation=self._validation,
             step=self._step,
         )
+        if self._on_value_change:
+            self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)
 
 
@@ -607,20 +611,28 @@ class FormFieldCheckbox(LazyInitializedElement[Checkbox]):
         self,
         label_text: str,
         initial_value: bool = False,
+        on_value_change: Callable[[ValueChangeEventArguments], None] | None = None,
         props: list[str] | None = None,
         marker: str | None = None,
     ):
         super().__init__()
         self._label_text = label_text
         self._initial_value = initial_value
+        self._on_value_change = on_value_change
         self._props = props
         self._marker = marker
+
+    def __internal_update(self, event: ValueChangeEventArguments) -> None:
+        if self._on_value_change:
+            self._on_value_change(event)
 
     def build(self) -> None:
         """Builds the UI form element."""
         self._instance = ui.checkbox(text=self._label_text, value=self._initial_value)
         if self._marker:
             self._instance.mark(self._marker)
+        if self._on_value_change:
+            self._instance.on_value_change(self._on_value_change)
 
     def set_value(self, value: bool) -> None:
         """Sets the value for the checkbox element.
