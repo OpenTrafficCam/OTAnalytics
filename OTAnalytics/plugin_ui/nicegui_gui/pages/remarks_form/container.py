@@ -24,13 +24,15 @@ class RemarkForm(AbstractFrameRemark):
         self._viewmodel.set_remark_frame(self)
 
     def build(self) -> None:
-        self.remark_textbox = ui.textarea(
-            label=self._resource_manager.get(RemarkKeys.REMARK_PLACEHOLDER)
-        )
+        ui.label(self._resource_manager.get(RemarkKeys.LABEL_REMARK_HEADER))
+        self._remark_label = ui.label()
+        self.load_remark()
 
     def load_remark(self) -> None:
-        self.remark_textbox.clear()
-        remark = self._resource_manager.get(RemarkKeys.REMARK_NO_COMMENT)
-        if self._viewmodel.get_remark():
-            remark = self._viewmodel.get_remark()
-        self.remark_textbox.set_value(remark)
+        self._remark_label.clear()
+        if remark := self._viewmodel.get_remark():
+            self._remark_label.set_text(remark)
+        else:
+            self._remark_label.set_text(
+                self._resource_manager.get(RemarkKeys.REMARK_NO_COMMENT)
+            )

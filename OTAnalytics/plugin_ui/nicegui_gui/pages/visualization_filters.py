@@ -18,8 +18,8 @@ class VisualizationFilters:
         remarks: RemarkForm,
         track_statistic: TrackStatisticForm,
     ) -> None:
-        self._visualization_filter = visualization_filter
         self._resource_manager = resource_manager
+        self._visualization_filter = visualization_filter
         self._remarks = remarks
         self._track_statistic = track_statistic
 

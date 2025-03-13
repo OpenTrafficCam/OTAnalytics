@@ -180,7 +180,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             self.resource_manager,
             self.visualization_filter_form,
             self.remarks_form,
-            self.track_statistic,
+            self.track_statistic_form,
         )
 
     @cached_property
@@ -188,7 +188,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return VisualizationLayers(self.resource_manager, self.layers_form)
 
     @cached_property
-    def track_statistic(self) -> TrackStatisticForm:
+    def track_statistic_form(self) -> TrackStatisticForm:
         return TrackStatisticForm(self.resource_manager, self.view_model)
 
     @cached_property
