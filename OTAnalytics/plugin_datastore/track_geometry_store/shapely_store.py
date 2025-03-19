@@ -72,7 +72,7 @@ def create_shapely_track(
             geometry.
 
     Returns:
-        BaseGeometry: the prepared shapely geometry.
+        GeometryCollection: the prepared shapely geometry.
     """
     if offset == BASE_GEOMETRY:
         geometry = LineString(
