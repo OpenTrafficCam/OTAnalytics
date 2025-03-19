@@ -4,8 +4,8 @@ import pytest
 
 from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.track_repository import TrackRepository
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
+    ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
@@ -27,7 +27,7 @@ from tests.utils.builders.track_builder import (
 
 @pytest.fixture
 def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
-    return PygeosTrackGeometryDataset.from_track_dataset
+    return ShapelyTrackGeometryDataset.from_track_dataset
 
 
 @pytest.fixture

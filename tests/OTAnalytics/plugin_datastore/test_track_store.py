@@ -19,8 +19,8 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrack,
     PythonTrackDataset,
 )
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
+    ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     COLUMNS,
@@ -119,7 +119,7 @@ class TestPandasTrackDataset:
             tracks.append(self.__build_track(str(i)))
 
         dataset = PandasTrackDataset.from_list(
-            tracks, PygeosTrackGeometryDataset.from_track_dataset
+            tracks, ShapelyTrackGeometryDataset.from_track_dataset
         )
         return dataset
 
@@ -160,7 +160,7 @@ class TestPandasTrackDataset:
 
         merged = dataset.add_all(
             PythonTrackDataset(
-                PygeosTrackGeometryDataset.from_track_dataset, {track.id: track}
+                ShapelyTrackGeometryDataset.from_track_dataset, {track.id: track}
             )
         )
 
@@ -172,7 +172,7 @@ class TestPandasTrackDataset:
         dataset = PandasTrackDataset(track_geometry_factory)
 
         merged = dataset.add_all(
-            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset)
+            PythonTrackDataset(ShapelyTrackGeometryDataset.from_track_dataset)
         )
 
         assert 0 == len(merged.as_list())
@@ -192,7 +192,7 @@ class TestPandasTrackDataset:
             PandasTrackDataset,
             dataset.add_all(
                 PythonTrackDataset(
-                    PygeosTrackGeometryDataset.from_track_dataset,
+                    ShapelyTrackGeometryDataset.from_track_dataset,
                     {second_track.id: second_track, third_track.id: third_track},
                 )
             ),

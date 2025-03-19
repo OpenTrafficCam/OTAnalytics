@@ -58,8 +58,8 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     FilteredPythonTrackDataset,
     PythonTrackDataset,
 )
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
+    ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     FilteredPandasTrackDataset,
@@ -108,7 +108,7 @@ def _fill_track_repository(
 
 class UseCaseProvider:
     GEOMETRY_FACTORY: TRACK_GEOMETRY_FACTORY = (
-        PygeosTrackGeometryDataset.from_track_dataset
+        ShapelyTrackGeometryDataset.from_track_dataset
     )
 
     @property
@@ -217,7 +217,7 @@ class UseCaseProvider:
     def provide_pandas_track_dataset(self) -> TrackDataset:
         return FilteredPandasTrackDataset(
             PandasTrackDataset.from_list(
-                [], PygeosTrackGeometryDataset.from_track_dataset
+                [], ShapelyTrackGeometryDataset.from_track_dataset
             ),
             self._include_classes,
             self._exclude_classes,
@@ -225,7 +225,7 @@ class UseCaseProvider:
 
     def provide_python_track_dataset(self) -> TrackDataset:
         return FilteredPythonTrackDataset(
-            PythonTrackDataset(PygeosTrackGeometryDataset.from_track_dataset),
+            PythonTrackDataset(ShapelyTrackGeometryDataset.from_track_dataset),
             self._include_classes,
             self._exclude_classes,
         )
@@ -236,12 +236,12 @@ class UseCaseProvider:
         return PythonDetectionParser(
             ByMaxConfidence(),
             track_repository,
-            PygeosTrackGeometryDataset.from_track_dataset,
+            ShapelyTrackGeometryDataset.from_track_dataset,
         )
 
     def provide_pandas_detection_parser(self) -> PandasDetectionParser:
         return PandasDetectionParser(
-            PandasByMaxConfidence(), PygeosTrackGeometryDataset.from_track_dataset
+            PandasByMaxConfidence(), ShapelyTrackGeometryDataset.from_track_dataset
         )
 
     def counting_specification(self, save_dir: Path) -> CountingSpecificationDto:
@@ -337,7 +337,7 @@ def python_track_parser(python_track_repository: TrackRepository) -> TrackParser
     detection_parser = PythonDetectionParser(
         ByMaxConfidence(),
         python_track_repository,
-        PygeosTrackGeometryDataset.from_track_dataset,
+        ShapelyTrackGeometryDataset.from_track_dataset,
     )
     return OttrkParser(detection_parser)
 
@@ -346,7 +346,7 @@ def python_track_parser(python_track_repository: TrackRepository) -> TrackParser
 def pandas_track_parser() -> TrackParser:
     calculator = PandasByMaxConfidence()
     detection_parser = PandasDetectionParser(
-        calculator, PygeosTrackGeometryDataset.from_track_dataset
+        calculator, ShapelyTrackGeometryDataset.from_track_dataset
     )
     return OttrkParser(detection_parser)
 

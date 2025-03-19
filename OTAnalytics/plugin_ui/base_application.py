@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import Sequence
 
-from OTAnalytics.adapter_ui.abstract_progressbar_popup import ProgressbarPopupBuilder
 from OTAnalytics.adapter_visualization.color_provider import (
     DEFAULT_COLOR_PALETTE,
     ColorPaletteProvider,
@@ -180,8 +179,8 @@ from OTAnalytics.domain.track import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
+    ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     FilteredPandasTrackDataset,
@@ -536,25 +535,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def file_state(self) -> FileState:
         return FileState()
 
-    @cached_property
-    def pulling_progressbar_builder(self) -> ProgressbarBuilder:
-        from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (
-            PullingProgressbarBuilder,
-        )
-
-        pulling_progressbar_builder = PullingProgressbarBuilder(
-            self.pulling_progressbar_popup_builder
-        )
-        return pulling_progressbar_builder
-
-    @cached_property
-    def pulling_progressbar_popup_builder(self) -> ProgressbarPopupBuilder:
-        from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (
-            PullingProgressbarPopupBuilder,
-        )
-
-        pulling_progressbar_popup_builder = PullingProgressbarPopupBuilder()
-        return pulling_progressbar_popup_builder
+    @property
+    @abstractmethod
+    def progressbar_builder(self) -> ProgressbarBuilder:
+        raise NotImplementedError
 
     @cached_property
     def videos_metadata(self) -> VideosMetadata:
@@ -591,7 +575,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.video_repository,
             self.video_parser,
             track_video_parser,
-            self.pulling_progressbar_builder,
+            self.progressbar_builder,
             self.remark_repository,
         )
 
@@ -600,7 +584,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return TrackRepository(
             FilteredPandasTrackDataset(
                 PandasTrackDataset.from_list(
-                    [], PygeosTrackGeometryDataset.from_track_dataset
+                    [], ShapelyTrackGeometryDataset.from_track_dataset
                 ),
                 self.run_config.include_classes,
                 self.run_config.exclude_classes,
@@ -611,7 +595,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         calculator = PandasByMaxConfidence()
         detection_parser = PandasDetectionParser(
             calculator,
-            PygeosTrackGeometryDataset.from_track_dataset,
+            ShapelyTrackGeometryDataset.from_track_dataset,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
         return OttrkParser(detection_parser)
@@ -626,7 +610,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             progressbar=TqdmBuilder(),
             track_dataset_factory=lambda tracks: PandasTrackDataset.from_list(
                 tracks,
-                PygeosTrackGeometryDataset.from_track_dataset,
+                ShapelyTrackGeometryDataset.from_track_dataset,
                 PandasByMaxConfidence(),
             ),
             chunk_size=self.run_config.cli_chunk_size,
@@ -674,7 +658,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.videos_metadata,
             self.section_state,
             self.color_palette_provider,
-            self.pulling_progressbar_builder,
+            self.progressbar_builder,
         )
 
     @cached_property
@@ -843,7 +827,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.track_file_repository,
             self.video_repository,
             self.track_to_video_repository,
-            self.pulling_progressbar_builder,
+            self.progressbar_builder,
             self.tracks_metadata,
             self.videos_metadata,
         )
@@ -930,7 +914,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
         tracks_as_dataframe_provider = TracksAsDataFrameProvider(
             get_all_tracks=self.get_all_tracks,
-            track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset,
+            track_geometry_factory=ShapelyTrackGeometryDataset.from_track_dataset,
         )
         detection_rate_strategy = DetectionRateByPercentile(
             percentile_value=DETECTION_RATE_PERCENTILE_VALUE

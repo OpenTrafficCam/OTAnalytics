@@ -1,4 +1,5 @@
-from typing import Any, Sequence
+from tkinter import Widget
+from typing import Any, Optional, Sequence
 
 from customtkinter import CTkLabel, CTkProgressBar, CTkToplevel
 
@@ -101,6 +102,12 @@ class PollingProgressbarPopup(ProgressbarPopupTemplate):
 
 
 class PullingProgressbarPopupBuilder(ProgressbarPopupBuilder):
+    def __init__(self) -> None:
+        self._master: Optional[Widget] = None
+
+    def add_widget(self, widget: Widget) -> None:
+        self._master = widget
+
     def build(self) -> AbstractPopupProgressbar:
         if not self._master:
             raise ProgressbarBuildError(
@@ -127,6 +134,12 @@ class PullingProgressbarPopupBuilder(ProgressbarPopupBuilder):
 
 
 class PollingProgressbarPopupBuilder(ProgressbarPopupBuilder):
+    def __init__(self) -> None:
+        self._master: Optional[Widget] = None
+
+    def add_widget(self, widget: Widget) -> None:
+        self._master = widget
+
     def build(self) -> PollingProgressbarPopup:
         if not self._master:
             raise ProgressbarBuildError(

@@ -2,6 +2,8 @@ from typing import Any
 
 from customtkinter import CTkButton, CTkLabel, CTkToplevel
 
+from OTAnalytics.adapter_ui.info_box import InfoBox
+from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     PADX,
     PADY,
@@ -10,7 +12,11 @@ from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
 )
 
 
-class InfoBox(CTkToplevel):
+class CtkInfoBox(CTkToplevel, InfoBox):
+    @property
+    def canceled(self) -> bool:
+        return self._canceled
+
     def __init__(
         self,
         message: str,
@@ -24,7 +30,7 @@ class InfoBox(CTkToplevel):
         self.message = message
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
         self.bind(tk_events.ESCAPE_KEY, self._on_cancel)
-        self.canceled = False
+        self._canceled = False
         self._initial_position = initial_position
         self._show_cancel = show_cancel
         self._get_widgets()
@@ -71,11 +77,11 @@ class InfoBox(CTkToplevel):
         self.update()
 
     def _on_cancel(self, event: Any = None) -> None:
-        self.canceled = True
+        self._canceled = True
         self.close(event)
 
 
-class MinimalInfoBox(CTkToplevel):
+class MinimalInfoBox(CTkToplevel, MessageBox):
     """InfoBox popup without title bar."""
 
     def __init__(

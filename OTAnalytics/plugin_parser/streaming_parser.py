@@ -16,8 +16,8 @@ from OTAnalytics.domain.track import (
     TrackId,
 )
 from OTAnalytics.domain.track_dataset import TrackDataset
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
+    ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
@@ -207,7 +207,7 @@ TrackDatasetFactory = Callable[[list[Track]], TrackDataset]
 def default_track_dataset_factory(tracks: list[Track]) -> TrackDataset:
     return PandasTrackDataset.from_list(
         tracks=tracks,
-        track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset,
+        track_geometry_factory=ShapelyTrackGeometryDataset.from_track_dataset,
         calculator=PandasByMaxConfidence(),
     )
 
@@ -235,7 +235,7 @@ class StreamOttrkParser(StreamTrackParser):
         track_dataset_factory (TrackDataSetFactory, optional):
             a factory to create a new track dataset from a list of Tracks.
             Defaults to PandasTrackDataset.from_list(tracks,
-            PygeosTrackGeometryDataset.from_track_dataset, PandasByMaxConfidence()).
+            ShapelyTrackGeometryDataset.from_track_dataset, PandasByMaxConfidence()).
         chunk_size (int, optional): defines the number of tracks to be collected,
             before yielding a TrackDataset containing at most that many Tracks.
             Defaults to 1.

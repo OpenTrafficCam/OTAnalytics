@@ -14,8 +14,8 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
 )
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
+    ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
@@ -94,7 +94,7 @@ class TestStreamOttrkParser:
         detection_parser = PythonDetectionParser(
             calculator,
             mocked_track_repository,
-            PygeosTrackGeometryDataset.from_track_dataset,
+            ShapelyTrackGeometryDataset.from_track_dataset,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
         return OttrkParser(detection_parser)
@@ -143,7 +143,7 @@ class TestStreamOttrkParser:
             progressbar=TqdmBuilder(),
             track_dataset_factory=lambda tracks: PandasTrackDataset.from_list(
                 tracks,
-                PygeosTrackGeometryDataset.from_track_dataset,
+                ShapelyTrackGeometryDataset.from_track_dataset,
                 PandasByMaxConfidence(),
             ),
             chunk_size=4,
@@ -222,7 +222,7 @@ class TestStreamOttrkParser:
 
         expected_dataset = PythonTrackDataset.from_list(
             [expected_track],
-            PygeosTrackGeometryDataset.from_track_dataset,
+            ShapelyTrackGeometryDataset.from_track_dataset,
         )
         assert_track_stream_equals_dataset(expected_dataset, parse_result)
 
@@ -333,7 +333,7 @@ class TestStreamDetectionParser:
 
         expected_sorted = PythonTrackDataset.from_list(
             [track_builder_setup_with_sample_data.build_track()],
-            PygeosTrackGeometryDataset.from_track_dataset,
+            ShapelyTrackGeometryDataset.from_track_dataset,
         )
         assert_track_list_equals_dataset(expected_sorted, result_sorted_input)
 

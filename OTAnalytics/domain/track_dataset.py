@@ -30,7 +30,19 @@ class IntersectionPoint:
 
     @property
     def lower_index(self) -> int:
-        return self.upper_index - 1
+        """
+        Returns the lower index based on the current upper index value, ensuring the
+        result is at least zero.
+
+        This property calculates the lower index by subtracting one from the
+        'upper_index' attribute. If the result is less than zero, it returns zero
+        instead, ensuring the index does not go negative.
+
+        Returns:
+            int: The lower index value computed as `upper_index - 1` or 0 if the result
+            would be negative.
+        """
+        return max(self.upper_index - 1, 0)
 
 
 class TrackSegmentDataset(ABC):

@@ -52,7 +52,7 @@ repos:
           - ijson==3.3.0
           - interrogate==1.7.0
           - isort==5.13.2
-          - matplotlib==3.9.0
+          - matplotlib==3.10.0
           - more-itertools==10.5.0
           - mypy==1.12.1
           - nicegui==2.11.0
@@ -60,7 +60,6 @@ repos:
           - pandas-stubs==2.2.3.241126
           - pandas==2.2.3
           - pre-commit==4.1.0
-          - pygeos==0.14
           - pytest-benchmark==5.1.0
           - pytest-cov==6.0.0
           - pytest-lazy-fixtures==1.1.2
