@@ -28,8 +28,8 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrack,
     PythonTrackDataset,
 )
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
+    ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     CachedPandasTrackProvider,
@@ -101,7 +101,7 @@ class TestPandasTrackProvider:
         track_repository = Mock(spec=TrackRepository)
         track_repository.get_all.return_value = PythonTrackDataset.from_list(
             [],
-            PygeosTrackGeometryDataset.from_track_dataset,
+            ShapelyTrackGeometryDataset.from_track_dataset,
         )
         filter_builder = Mock(FilterBuilder)
 

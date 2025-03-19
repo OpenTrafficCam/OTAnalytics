@@ -35,8 +35,8 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrack,
     PythonTrackDataset,
 )
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
+    ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_parser import dataformat_versions, ottrk_dataformat
 from OTAnalytics.plugin_parser.json_parser import write_json, write_json_bz2
@@ -200,7 +200,7 @@ class TestOttrkParser:
         detection_parser = PythonDetectionParser(
             calculator,
             mocked_track_repository,
-            PygeosTrackGeometryDataset.from_track_dataset,
+            ShapelyTrackGeometryDataset.from_track_dataset,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
         return OttrkParser(detection_parser)
@@ -240,7 +240,7 @@ class TestOttrkParser:
             parse_result.tracks,
             PythonTrackDataset.from_list(
                 [expected_track],
-                PygeosTrackGeometryDataset.from_track_dataset,
+                ShapelyTrackGeometryDataset.from_track_dataset,
             ),
         )
         assert (
@@ -279,7 +279,7 @@ class TestPythonDetectionParser:
         return PythonDetectionParser(
             mocked_classificator,
             mocked_track_repository,
-            PygeosTrackGeometryDataset.from_track_dataset,
+            ShapelyTrackGeometryDataset.from_track_dataset,
         )
 
     def test_parse_detections_output_has_same_order_as_input(
@@ -341,7 +341,7 @@ class TestPythonDetectionParser:
 
         expected_sorted = PythonTrackDataset.from_list(
             [track_builder_setup_with_sample_data.build_track()],
-            PygeosTrackGeometryDataset.from_track_dataset,
+            ShapelyTrackGeometryDataset.from_track_dataset,
         )
         assert_track_datasets_equal(result_sorted_input, expected_sorted)
         assert_track_datasets_equal(result_unsorted_input, expected_sorted)
@@ -383,7 +383,7 @@ class TestPythonDetectionParser:
         )
 
         expected_sorted = PythonTrackDataset.from_list(
-            [merged_track], PygeosTrackGeometryDataset.from_track_dataset
+            [merged_track], ShapelyTrackGeometryDataset.from_track_dataset
         )
 
         assert_track_datasets_equal(result_sorted_input, expected_sorted)
@@ -406,7 +406,7 @@ class TestPythonDetectionParser:
         parser = PythonDetectionParser(
             ByMaxConfidence(),
             mocked_track_repository,
-            PygeosTrackGeometryDataset.from_track_dataset,
+            ShapelyTrackGeometryDataset.from_track_dataset,
             track_length_limit,
         )
         detections: list[dict] = (

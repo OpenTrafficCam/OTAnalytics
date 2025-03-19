@@ -12,8 +12,8 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     FilteredPythonTrackDataset,
     PythonTrackDataset,
 )
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
+    ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     FilteredPandasTrackDataset,
@@ -40,7 +40,7 @@ IMPLEMENTATIONS = [PYTHON, PANDAS]
 
 class TrackDatasetProvider:
     GEOMETRY_FACTORY: TRACK_GEOMETRY_FACTORY = (
-        PygeosTrackGeometryDataset.from_track_dataset
+        ShapelyTrackGeometryDataset.from_track_dataset
     )
 
     def provide(self, dataset_type: str, tracks: list[Track]) -> TrackDataset:
@@ -56,7 +56,7 @@ class TrackDatasetProvider:
 
     def provide_python(self, tracks: list[Track]) -> PythonTrackDataset:
         return PythonTrackDataset.from_list(
-            tracks, PygeosTrackGeometryDataset.from_track_dataset
+            tracks, ShapelyTrackGeometryDataset.from_track_dataset
         )
 
     def provide_filtered(

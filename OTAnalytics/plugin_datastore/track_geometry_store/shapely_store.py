@@ -1,23 +1,23 @@
 from bisect import bisect
 from collections import defaultdict
+from functools import partial
 from itertools import chain
 from typing import Any, Iterable, Literal, Sequence
 
+from numpy import dtype, ndarray, object_
 from pandas import DataFrame, Series, concat
-from pygeos import (
-    Geometry,
+from shapely import (
     contains,
-    geometrycollections,
+    from_wkt,
     get_coordinates,
     intersection,
     intersects,
     is_empty,
     line_locate_point,
-    linestrings,
-    points,
-    polygons,
     prepare,
 )
+from shapely.geometry import GeometryCollection, LineString, Point, Polygon
+from shapely.geometry.base import BaseGeometry
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate, apply_offset
@@ -41,28 +41,30 @@ ORIENTATION_INDEX: Literal["index"] = "index"
 NDIGITS_DISTANCE = 5
 
 
-def line_sections_to_pygeos_multi(sections: Iterable[Section]) -> Geometry:
-    return geometrycollections([line_section_to_pygeos(s) for s in sections])
+def line_sections_to_shapely_multi(
+    sections: Iterable[Section],
+) -> ndarray[Any, dtype[object_]]:
+    return from_wkt([str(line_section_to_shapely(s)) for s in sections])
 
 
-def line_section_to_pygeos(section: Section) -> Geometry:
-    return linestrings([[(c.x, c.y) for c in section.get_coordinates()]])
+def line_section_to_shapely(section: Section) -> BaseGeometry:
+    return LineString([(c.x, c.y) for c in section.get_coordinates()])
 
 
-def area_sections_to_pygeos(sections: Iterable[Section]) -> list[Geometry]:
-    return [area_section_to_pygeos(s) for s in sections]
+def area_sections_to_shapely(sections: Iterable[Section]) -> list[BaseGeometry]:
+    return [area_section_to_shapely(s) for s in sections]
 
 
-def area_section_to_pygeos(section: Section) -> Geometry:
-    geometry = polygons([[(c.x, c.y) for c in section.get_coordinates()]])
+def area_section_to_shapely(section: Section) -> BaseGeometry:
+    geometry = Polygon([(c.x, c.y) for c in section.get_coordinates()])
     prepare(geometry)
     return geometry
 
 
-def create_pygeos_track(
+def create_shapely_track(
     track: Track, offset: RelativeOffsetCoordinate = BASE_GEOMETRY
-) -> Geometry:
-    """Creates a prepared pygeos LINESTRING for given track.
+) -> GeometryCollection:
+    """Creates a prepared shapely LINESTRING for given track.
 
     Args:
         track (Track): the track.
@@ -70,33 +72,33 @@ def create_pygeos_track(
             geometry.
 
     Returns:
-        Geometry: the prepared pygeos geometry.
+        BaseGeometry: the prepared shapely geometry.
     """
     if offset == BASE_GEOMETRY:
-        geometry = linestrings(
+        geometry = LineString(
             [(detection.x, detection.y) for detection in track.detections]
         )
     else:
-        geometry = linestrings(
+        geometry = LineString(
             [
                 apply_offset(detection.x, detection.y, detection.w, detection.h, offset)
                 for detection in track.detections
             ]
         )
     prepare(geometry)
-    return geometry
+    return GeometryCollection(geometry)
 
 
 class InvalidTrackGeometryDataset(Exception):
     pass
 
 
-def distance_on_track(point: Geometry, track_geom: Geometry) -> float:
+def distance_on_track(point: Point, track_geom: GeometryCollection) -> float:
     distance = line_locate_point(track_geom, point)
     return round(distance, NDIGITS_DISTANCE)
 
 
-class PygeosTrackGeometryDataset(TrackGeometryDataset):
+class ShapelyTrackGeometryDataset(TrackGeometryDataset):
     def __init__(
         self,
         offset: RelativeOffsetCoordinate,
@@ -133,20 +135,20 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         dataset: TrackDataset, offset: RelativeOffsetCoordinate
     ) -> TrackGeometryDataset:
         if len(dataset) == 0:
-            return PygeosTrackGeometryDataset(offset)
+            return ShapelyTrackGeometryDataset(offset)
         if isinstance(dataset, PandasTrackDataset):
-            return PygeosTrackGeometryDataset(
+            return ShapelyTrackGeometryDataset(
                 offset,
-                PygeosTrackGeometryDataset.__create_entries_from_dataframe(
+                ShapelyTrackGeometryDataset.__create_entries_from_dataframe(
                     dataset, offset
                 ),
             )
         track_geom_df = DataFrame.from_dict(
-            PygeosTrackGeometryDataset._create_entries(dataset, offset),
+            ShapelyTrackGeometryDataset._create_entries(dataset, offset),
             columns=COLUMNS,
             orient=ORIENTATION_INDEX,
         )
-        return PygeosTrackGeometryDataset(offset, track_geom_df)
+        return ShapelyTrackGeometryDataset(offset, track_geom_df)
 
     @staticmethod
     def _create_entries(
@@ -155,7 +157,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         """Create track geometry entries from given tracks.
 
         The resulting dictionary has following the structure:
-        {TRACK_ID: {GEOMETRY: Geometry, PROJECTION: list[float]}}
+        {TRACK_ID: {GEOMETRY: BaseGeometry, PROJECTION: list[float]}}
 
         Args:
             tracks (Iterable[Track]): the tracks to create the entries from.
@@ -171,10 +173,9 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
                 # Disregard single detection tracks
                 continue
             track_id = _track.id.id
-            geometry = create_pygeos_track(_track, offset)
+            geometry = create_shapely_track(_track, offset)
             projection = [
-                distance_on_track(points(p), geometry)
-                for p in get_coordinates(geometry)
+                distance_on_track(Point(p), geometry) for p in get_coordinates(geometry)
             ]
             entries[track_id] = {
                 GEOMETRY: geometry,
@@ -209,12 +210,12 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
     def add_all(self, tracks: Iterable[Track]) -> TrackGeometryDataset:
         if self.empty:
             if isinstance(tracks, PandasTrackDataset):
-                return PygeosTrackGeometryDataset(
+                return ShapelyTrackGeometryDataset(
                     self._offset,
                     self.__create_entries_from_dataframe(tracks, self.offset),
                 )
             new_entries = self._create_entries(tracks, self._offset)
-            return PygeosTrackGeometryDataset(
+            return ShapelyTrackGeometryDataset(
                 self._offset, DataFrame.from_dict(new_entries, orient=ORIENTATION_INDEX)
             )
         existing_entries = self.as_dict()
@@ -228,27 +229,25 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             existing_entries[track_id] = entry
         new_dataset = DataFrame.from_dict(existing_entries, orient=ORIENTATION_INDEX)
 
-        return PygeosTrackGeometryDataset(self._offset, new_dataset)
+        return ShapelyTrackGeometryDataset(self._offset, new_dataset)
 
     def remove(self, ids: Sequence[str]) -> TrackGeometryDataset:
         updated = self._dataset.drop(index=ids, errors="ignore")
-        return PygeosTrackGeometryDataset(self._offset, updated)
+        return ShapelyTrackGeometryDataset(self._offset, updated)
 
     def get_for(self, track_ids: list[str]) -> "TrackGeometryDataset":
         _ids = self._dataset.index.intersection(track_ids)
 
         filtered_df = self._dataset.loc[_ids]
-        return PygeosTrackGeometryDataset(self.offset, filtered_df)
+        return ShapelyTrackGeometryDataset(self.offset, filtered_df)
 
     def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
         intersecting_tracks = set()
-        section_geoms = line_sections_to_pygeos_multi(sections)
+        section_geoms = line_sections_to_shapely_multi(sections)
+        prepared_function = partial(calculate_intersects, section_geoms=section_geoms)
 
         self._dataset[INTERSECTS] = (
-            self._dataset[GEOMETRY]
-            .apply(lambda line: intersects(line, section_geoms))
-            .map(any)
-            .astype(bool)
+            self._dataset[GEOMETRY].apply(prepared_function).map(any).astype(bool)
         )
         track_ids = [
             TrackId(_id) for _id in self._dataset[self._dataset[INTERSECTS]].index
@@ -261,7 +260,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
         intersection_points = defaultdict(list)
-        section_geoms = line_sections_to_pygeos_multi(sections)
+        section_geoms = line_sections_to_shapely_multi(sections)
 
         self._dataset[INTERSECTIONS] = self._dataset[GEOMETRY].apply(
             lambda line: [
@@ -278,7 +277,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
                         r.name,  # the track id (track ids is used as df index)
                         _section_id,
                         r[GEOMETRY],
-                        points(p),
+                        Point(p),
                         r[PROJECTION],
                     )
                     for _section_id, ip in r[INTERSECTIONS]
@@ -297,8 +296,8 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         self,
         track_id: str,
         section_id: SectionId,
-        track_geom: Geometry,
-        point: Geometry,
+        track_geom: GeometryCollection,
+        point: Point,
         projection: Any,
     ) -> tuple[TrackId, SectionId, IntersectionPoint]:
         dist, upper_index = self.__get_distance_and_index(point, projection, track_geom)
@@ -317,7 +316,7 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
 
     @staticmethod
     def __get_distance_and_index(
-        point: Geometry, projection: Any, track_geom: Geometry
+        point: Point, projection: Any, track_geom: GeometryCollection
     ) -> tuple[float, int]:
         """
         Computes the distance along the track and identifies the corresponding index of
@@ -326,11 +325,11 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         projection index accordingly.
 
         Args:
-            point (Geometry): The geometry point whose distance along the track is to be
-                computed.
+            point (Point): The geometry point whose distance along the track is
+                to be computed.
             projection (Any): A list of pre-computed projection distances along the
                 track.
-            track_geom (Geometry): The geometry of the track used for distance
+            track_geom (GeometryCollection): The geometry of the track used for distance
                 computation.
 
         Returns:
@@ -353,11 +352,11 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
             defaultdict(list)
         )
         for _section in sections:
-            section_geom = area_section_to_pygeos(_section)
+            section_geom = area_section_to_shapely(_section)
 
             contains_masks = self._dataset[GEOMETRY].apply(
                 lambda line: [
-                    contains(section_geom, points(p))[0] for p in get_coordinates(line)
+                    contains(section_geom, Point(p)) for p in get_coordinates(line)
                 ]
             )
             tracks_contained = contains_masks[contains_masks.map(any)]
@@ -374,11 +373,15 @@ class PygeosTrackGeometryDataset(TrackGeometryDataset):
         return self._dataset[COLUMNS].to_dict(orient=ORIENTATION_INDEX)
 
     def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, PygeosTrackGeometryDataset):
+        if not isinstance(other, ShapelyTrackGeometryDataset):
             return False
         return self.offset == other.offset and self._dataset[COLUMNS].equals(
             other._dataset[COLUMNS]
         )
+
+
+def calculate_intersects(line: BaseGeometry, section_geoms: Any) -> bool:
+    return intersects(line, section_geoms)
 
 
 def calculate_all_projections(tracks: DataFrame) -> Series:
@@ -398,5 +401,5 @@ def calculate_all_projections(tracks: DataFrame) -> Series:
     return tracks.groupby(level=0, group_keys=True)["cum-distance"].agg(list)
 
 
-def convert_to_linestrings(coords: DataFrame) -> Geometry:
-    return linestrings(coords[track.X], coords[track.Y])
+def convert_to_linestrings(coords: DataFrame) -> Any:
+    return LineString(list(zip(coords[track.X], coords[track.Y])))

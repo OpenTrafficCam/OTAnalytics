@@ -22,8 +22,8 @@ from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
+    ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import PandasByMaxConfidence
 from OTAnalytics.plugin_parser.otconfig_parser import OtConfigFormatFixer
@@ -99,7 +99,7 @@ def tracks(ottrk_path: Path) -> list[Track]:
     calculator = PandasByMaxConfidence()
     detection_parser = PandasDetectionParser(
         calculator,
-        PygeosTrackGeometryDataset.from_track_dataset,
+        ShapelyTrackGeometryDataset.from_track_dataset,
         track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
     )
     return OttrkParser(detection_parser).parse(ottrk_path).tracks.as_list()
@@ -258,7 +258,7 @@ def all_tracks(
 
 @pytest.fixture
 def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
-    return PygeosTrackGeometryDataset.from_track_dataset
+    return ShapelyTrackGeometryDataset.from_track_dataset
 
 
 @pytest.fixture
