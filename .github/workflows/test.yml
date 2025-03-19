@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        py: ["3.11"]
+        py: ["3.12"]
       fail-fast: true
     runs-on: ${{ matrix.os }}
     steps:
