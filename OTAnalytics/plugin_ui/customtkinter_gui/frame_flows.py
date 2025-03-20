@@ -7,7 +7,12 @@ from OTAnalytics.adapter_ui.text_resources import ColumnResource, ColumnResource
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
-from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
+from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
+    PADX,
+    PADY,
+    STATE_DISABLED,
+    STICKY,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.treeview_template import TreeviewTemplate
 
 
@@ -99,6 +104,11 @@ class FrameFlows(AbstractCTkFrame):
 
     def get_multiple_items_buttons(self) -> list[CTkButton]:
         return self._multiple_items_buttons
+
+    def _set_enabled_buttons(self, buttons: list[CTkButton], enabled: bool) -> None:
+        super()._set_enabled_buttons(buttons, enabled)
+        if len(list(self._viewmodel.get_all_flows())) > 0:
+            self.button_generate.configure(state=STATE_DISABLED)
 
 
 COLUMN_FLOW = "Flow"
