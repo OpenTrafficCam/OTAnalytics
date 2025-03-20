@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from pandas import DataFrame
-from pygeos import get_coordinates, line_locate_point, points
 from pytest_benchmark.fixture import BenchmarkFixture
+from shapely import get_coordinates, line_locate_point, points
 
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
@@ -19,15 +19,15 @@ from OTAnalytics.domain.track_dataset import (
     TrackGeometryDataset,
 )
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     BASE_GEOMETRY,
     COLUMNS,
     GEOMETRY,
     NDIGITS_DISTANCE,
     PROJECTION,
     TRACK_ID,
-    PygeosTrackGeometryDataset,
-    create_pygeos_track,
+    ShapelyTrackGeometryDataset,
+    create_shapely_track,
     distance_on_track,
 )
 from OTAnalytics.plugin_datastore.track_store import (
@@ -59,16 +59,16 @@ def create_line_section(
 
 def create_geometry_dataset_from(
     tracks: Iterable[Track], offset: RelativeOffsetCoordinate
-) -> PygeosTrackGeometryDataset:
+) -> ShapelyTrackGeometryDataset:
     entries = []
     for track in tracks:
         _id = track.id.id
-        geometry = create_pygeos_track(track, offset)
+        geometry = create_shapely_track(track, offset)
         projection = [
             distance_on_track(points(p), geometry) for p in get_coordinates(geometry)
         ]
         entries.append((_id, geometry, projection))
-    return PygeosTrackGeometryDataset(
+    return ShapelyTrackGeometryDataset(
         offset,
         DataFrame.from_records(
             entries,
@@ -339,8 +339,8 @@ def not_intersecting_area_section() -> Section:
 def assert_track_geometry_dataset_equals(
     to_compare: TrackGeometryDataset, other: TrackGeometryDataset
 ) -> None:
-    assert isinstance(to_compare, PygeosTrackGeometryDataset)
-    assert isinstance(other, PygeosTrackGeometryDataset)
+    assert isinstance(to_compare, ShapelyTrackGeometryDataset)
+    assert isinstance(other, ShapelyTrackGeometryDataset)
     assert to_compare.offset == other.offset
     assert to_compare._dataset.equals(other._dataset)  # noqa
 
@@ -438,7 +438,7 @@ def test_distance_on_track(first_track: Track) -> None:
     """
     Fix https://openproject.platomo.de/projects/otanalytics/work_packages/6836/activity
     """
-    geometry = create_pygeos_track(first_track, BASE_GEOMETRY)
+    geometry = create_shapely_track(first_track, BASE_GEOMETRY)
     original = [
         line_locate_point(geometry, points(p)) for p in get_coordinates(geometry)
     ]
@@ -449,7 +449,7 @@ def test_distance_on_track(first_track: Track) -> None:
         assert abs(actual - expected) <= pow(10, -NDIGITS_DISTANCE)
 
 
-class TestPygeosTrackGeometryDataset:
+class TestShapelyTrackGeometryDataset:
     @pytest.fixture
     def simple_track(self) -> Track:
         first_detection = Mock()
@@ -472,10 +472,10 @@ class TestPygeosTrackGeometryDataset:
         self, simple_track: Track, offset: RelativeOffsetCoordinate
     ) -> None:
         track_dataset = create_track_dataset([simple_track])
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             dataset=track_dataset, offset=offset
         )
-        assert isinstance(geometry_dataset, PygeosTrackGeometryDataset)
+        assert isinstance(geometry_dataset, ShapelyTrackGeometryDataset)
 
         expected = create_geometry_dataset_from([simple_track], offset)
         assert_track_geometry_dataset_equals(geometry_dataset, expected)
@@ -485,7 +485,7 @@ class TestPygeosTrackGeometryDataset:
         self, first_track: Track, second_track: Track, offset: RelativeOffsetCoordinate
     ) -> None:
         track_dataset = create_track_dataset([])
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, offset
         )
         result = geometry_dataset.add_all([first_track, second_track])
@@ -497,7 +497,7 @@ class TestPygeosTrackGeometryDataset:
         self, first_track: Track, second_track: Track, offset: RelativeOffsetCoordinate
     ) -> None:
         track_dataset = create_track_dataset([first_track])
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, offset
         )
         result = geometry_dataset.add_all([second_track])
@@ -513,7 +513,7 @@ class TestPygeosTrackGeometryDataset:
         offset: RelativeOffsetCoordinate,
     ) -> None:
         track_dataset = create_track_dataset([first_track, second_track])
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, offset
         )
         result = geometry_dataset.add_all([first_track_merged])
@@ -527,7 +527,7 @@ class TestPygeosTrackGeometryDataset:
         self, first_track: Track, second_track: Track, offset: RelativeOffsetCoordinate
     ) -> None:
         track_dataset = create_track_dataset([first_track, second_track])
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, offset
         )
         result = geometry_dataset.remove([first_track.id.id])
@@ -538,16 +538,18 @@ class TestPygeosTrackGeometryDataset:
     def test_remove_from_empty_dataset(
         self, first_track: Track, offset: RelativeOffsetCoordinate
     ) -> None:
-        geometry_dataset = PygeosTrackGeometryDataset(offset)
+        geometry_dataset = ShapelyTrackGeometryDataset(offset)
         result = geometry_dataset.remove([first_track.id.id])
-        assert_track_geometry_dataset_equals(result, PygeosTrackGeometryDataset(offset))
+        assert_track_geometry_dataset_equals(
+            result, ShapelyTrackGeometryDataset(offset)
+        )
 
     @pytest.mark.parametrize("offset", [BASE_GEOMETRY, DEFAULT_TRACK_OFFSET])
     def test_remove_missing(
         self, first_track: Track, second_track: Track, offset: RelativeOffsetCoordinate
     ) -> None:
         track_dataset = create_track_dataset([first_track])
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, offset
         )
         result = geometry_dataset.remove([second_track.id.id])
@@ -576,7 +578,7 @@ class TestPygeosTrackGeometryDataset:
         track_dataset = create_track_dataset(
             [single_detection_track, not_intersecting_track, first_track, second_track]
         )
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, BASE_GEOMETRY
         )
         result = geometry_dataset.intersection_points(sections)
@@ -639,14 +641,14 @@ class TestPygeosTrackGeometryDataset:
         track_dataset = create_track_dataset(
             [single_detection_track, not_intersecting_track, first_track, second_track]
         )
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, BASE_GEOMETRY
         )
         result = geometry_dataset.intersecting_tracks(sections)
         assert result == {first_track.id, second_track.id}
 
     @patch(
-        "OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store."
+        "OTAnalytics.plugin_datastore.track_geometry_store.shapely_store."
         "distance_on_track"
     )
     @pytest.mark.parametrize(
@@ -684,7 +686,7 @@ class TestPygeosTrackGeometryDataset:
             first_section,
         ]
         track_dataset = create_track_dataset([first_track])
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, BASE_GEOMETRY
         )
         result = geometry_dataset.intersection_points(sections)
@@ -704,10 +706,10 @@ class TestPygeosTrackGeometryDataset:
     def test_as_dict(self, first_track: Track, second_track: Track) -> None:
         tracks = [first_track, second_track]
         track_dataset = create_track_dataset(tracks)
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, BASE_GEOMETRY
         )
-        assert isinstance(geometry_dataset, PygeosTrackGeometryDataset)
+        assert isinstance(geometry_dataset, ShapelyTrackGeometryDataset)
         result = geometry_dataset.as_dict()
         expected = (
             create_geometry_dataset_from(tracks, BASE_GEOMETRY)
@@ -717,23 +719,23 @@ class TestPygeosTrackGeometryDataset:
         assert result == expected
 
     def test_empty_on_empty_dataset(self) -> None:
-        geometry_dataset = PygeosTrackGeometryDataset(BASE_GEOMETRY)
+        geometry_dataset = ShapelyTrackGeometryDataset(BASE_GEOMETRY)
         assert geometry_dataset.empty
 
     def test_empty_on_filled_dataset(self, first_track: Track) -> None:
         track_dataset = create_track_dataset([first_track])
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, BASE_GEOMETRY
         )
-        assert isinstance(geometry_dataset, PygeosTrackGeometryDataset)
+        assert isinstance(geometry_dataset, ShapelyTrackGeometryDataset)
         assert not geometry_dataset.empty
 
     def test_get_track_ids(self, first_track: Track) -> None:
         track_dataset = create_track_dataset([first_track])
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, BASE_GEOMETRY
         )
-        assert isinstance(geometry_dataset, PygeosTrackGeometryDataset)
+        assert isinstance(geometry_dataset, ShapelyTrackGeometryDataset)
         assert geometry_dataset.track_ids == {first_track.id.id}
 
     def test_contained_by_sections(
@@ -741,7 +743,7 @@ class TestPygeosTrackGeometryDataset:
         contained_by_section_test_case: ContainedBySectionTestCase,
     ) -> None:
         track_dataset = create_track_dataset(contained_by_section_test_case.tracks)
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, BASE_GEOMETRY
         )
         result = geometry_dataset.contained_by_sections(
@@ -751,7 +753,7 @@ class TestPygeosTrackGeometryDataset:
 
     def test_get_for_existing(self, first_track: Track, second_track: Track) -> None:
         track_dataset = create_track_dataset([first_track, second_track])
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, BASE_GEOMETRY
         )
         result = geometry_dataset.get_for([first_track.id.id])
@@ -762,7 +764,7 @@ class TestPygeosTrackGeometryDataset:
         self, first_track: Track, second_track: Track
     ) -> None:
         track_dataset = create_track_dataset([first_track, second_track])
-        geometry_dataset = PygeosTrackGeometryDataset.from_track_dataset(
+        geometry_dataset = ShapelyTrackGeometryDataset.from_track_dataset(
             track_dataset, BASE_GEOMETRY
         )
         result = geometry_dataset.get_for(["not-existing-track"])
@@ -772,7 +774,7 @@ class TestPygeosTrackGeometryDataset:
     def test_add_invalid_track(
         self, single_detection_track_dataset: PandasTrackDataset
     ) -> None:
-        empty_dataset = PygeosTrackGeometryDataset(BASE_GEOMETRY)
+        empty_dataset = ShapelyTrackGeometryDataset(BASE_GEOMETRY)
         assert not empty_dataset.track_ids
 
         result = empty_dataset.add_all(single_detection_track_dataset)
@@ -780,15 +782,15 @@ class TestPygeosTrackGeometryDataset:
         assert result.empty
 
     def test_equals(self, first_track: Track, second_track: Track) -> None:
-        first_track_dataset: TrackGeometryDataset = PygeosTrackGeometryDataset(
+        first_track_dataset: TrackGeometryDataset = ShapelyTrackGeometryDataset(
             RelativeOffsetCoordinate(0, 0)
         ).add_all([first_track])
         first_track_dataset_different_offset: TrackGeometryDataset = (
-            PygeosTrackGeometryDataset(RelativeOffsetCoordinate(1, 1)).add_all(
+            ShapelyTrackGeometryDataset(RelativeOffsetCoordinate(1, 1)).add_all(
                 [first_track]
             )
         )
-        second_track_dataset: TrackGeometryDataset = PygeosTrackGeometryDataset(
+        second_track_dataset: TrackGeometryDataset = ShapelyTrackGeometryDataset(
             RelativeOffsetCoordinate(0, 0)
         ).add_all([second_track])
 

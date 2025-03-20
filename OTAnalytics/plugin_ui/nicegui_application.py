@@ -31,6 +31,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
     SvzMetadataForm,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import RemarkForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
     SectionsAndFlowForm,
 )
@@ -40,8 +41,14 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form im
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
     SectionsForm,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.track_statistics_form.container import (
+    TrackStatisticForm,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
     VisualizationFilters,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+    VisualizationFiltersForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import (
     VisualizationLayers,
@@ -103,6 +110,10 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         )
 
     @cached_property
+    def remarks_form(self) -> RemarkForm:
+        return RemarkForm(self.resource_manager, self.view_model)
+
+    @cached_property
     def sections_and_flow_form(self) -> SectionsAndFlowForm:
         return SectionsAndFlowForm(
             self.resource_manager,
@@ -160,12 +171,25 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return Workspace(self.resource_manager, self.canvas_and_files_form)
 
     @cached_property
+    def visualization_filter_form(self) -> VisualizationFiltersForm:
+        return VisualizationFiltersForm(self.resource_manager, self.view_model)
+
+    @cached_property
     def visualization_filters(self) -> VisualizationFilters:
-        return VisualizationFilters(self.resource_manager)
+        return VisualizationFilters(
+            self.resource_manager,
+            self.visualization_filter_form,
+            self.remarks_form,
+            self.track_statistic_form,
+        )
 
     @cached_property
     def visualization_layers(self) -> VisualizationLayers:
         return VisualizationLayers(self.resource_manager, self.layers_form)
+
+    @cached_property
+    def track_statistic_form(self) -> TrackStatisticForm:
+        return TrackStatisticForm(self.resource_manager, self.view_model)
 
     @cached_property
     def ui_factory(self) -> UiFactory:

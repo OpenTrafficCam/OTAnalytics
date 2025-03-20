@@ -235,8 +235,8 @@ class TestDatastore:
             plugin_data=plugin_data,
         )
 
-        section_repository.set_section_plugin_data.called_once_with(
-            section_id, plugin_data
+        section_repository.set_section_plugin_data.assert_called_once_with(
+            section_id=section_id, plugin_data=plugin_data
         )
 
     def test_update_section_plugin_data_with_existing_data(
@@ -278,8 +278,8 @@ class TestDatastore:
             plugin_data=new_plugin_data,
         )
 
-        section_repository.set_section_plugin_data.called_once_with(
-            section_id, new_plugin_data
+        section_repository.set_section_plugin_data.assert_called_once_with(
+            section_id=section_id, plugin_data=new_plugin_data
         )
 
 

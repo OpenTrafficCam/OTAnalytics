@@ -30,9 +30,7 @@ class ApplyCliCuts:
             ],
             key=lambda section: section.id.id,
         )
-        logger().info(
-            f"Track repository has size: { self._track_repository_size.get()}"
-        )
+        logger().info(f"Track repository has size: {self._track_repository_size.get()}")
         logger().info("Cut tracks with cutting sections...")
         if self._track_repository_size.get() == 0:
             logger().info("No tracks to cut")
