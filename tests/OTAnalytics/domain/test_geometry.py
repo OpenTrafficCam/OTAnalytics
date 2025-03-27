@@ -105,6 +105,9 @@ class TestCalculateDirectionVector:
     def test_calculate_direction_vector_with_zero_length_returns_zero_vector(
         self,
     ) -> None:
+        """
+        #Bug https://openproject.platomo.de/projects/001-opentrafficcam-live/work_packages/7660
+        """  # noqa
         actual = calculate_direction_vector(0, 0, 0, 0)
         expected = DirectionVector2D(0, 0)
         assert actual == expected
