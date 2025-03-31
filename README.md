@@ -26,7 +26,19 @@ The application offers multiple user interfaces:
 - Python 3.12 or higher
 - Dependencies listed in `requirements.txt`
 
-### Installation on Linux/macOS
+### Installation from GitHub Releases (Recommended)
+
+The easiest way to install OTAnalytics is to download the latest release from
+the [GitHub Releases page](https://github.com/OpenTrafficCam/OTAnalytics/releases).
+
+1. Go to the [OTAnalytics Releases page](https://github.com/OpenTrafficCam/OTAnalytics/releases)
+2. Download the latest release for your operating system
+3. Extract the downloaded archive
+4. Run the application using the instructions in the [Usage](#usage) section
+
+### Installation from Source (Linux/macOS)
+
+If you prefer to install from source:
 
 1. Clone the repository:
    ```bash
@@ -39,7 +51,9 @@ The application offers multiple user interfaces:
    ./install.sh
    ```
 
-### Installation on Windows
+### Installation from Source (Windows)
+
+If you prefer to install from source:
 
 1. Clone the repository:
    ```cmd
