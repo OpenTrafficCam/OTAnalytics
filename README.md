@@ -2,7 +2,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/OTAnalytics.svg)](https://pypi.org/p/OTAnalytics/)
 [![Tests](https://github.com/OpenTrafficCam/OTAnalytics/actions/workflows/test.yml/badge.svg?tag=latest)](https://github.com/OpenTrafficCam/OTAnalytics/actions/workflows/test.yml?query=tag%3Alatest)
-[![Coverage](https://img.shields.io/badge/coverage-report-yellow.svg)](https://github.com/OpenTrafficCam/OTAnalytics/releases/latest)
+[![Tests](https://github.com/OpenTrafficCam/OTAnalytics/actions/workflows/build-release.yml/badge.svg)](https://github.com/OpenTrafficCam/OTAnalytics/actions/workflows/build-release.yml)
 
 OTAnalytics is a core module of the [OpenTrafficCam framework](https://github.com/OpenTrafficCam) designed to perform
 traffic analysis on trajectories of road users tracked by [OTVision](https://github.com/OpenTrafficCam/OTVision) or
