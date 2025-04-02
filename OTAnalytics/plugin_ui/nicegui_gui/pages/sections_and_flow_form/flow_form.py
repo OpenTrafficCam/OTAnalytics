@@ -20,7 +20,7 @@ def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
 
     ]
 
-def map_to_ui(flows: Iterable[Flow]):
+def map_to_ui(flows: Iterable[Flow]) -> list:
     list_of_flows = []
     for flow in flows:
         list_of_flows.append(flow.to_dict())
@@ -47,7 +47,7 @@ class FlowForm(AbstractFrame, AbstractTreeviewInterface):
         self._view_model.set_flows_frame(self)
         self._view_model.set_treeview_flows(self)
 
-    def _select_flow(self, e):
+    def _select_flow(self, e) -> None:
         self._view_model.set_selected_flow_ids([e.selection[0]["id"]])
         self._view_model.refresh_items_on_canvas()
     def build(self) -> Self:
@@ -57,6 +57,7 @@ class FlowForm(AbstractFrame, AbstractTreeviewInterface):
             ui.button(self._resource_manager.get(FlowKeys.BUTTON_GENERATE), on_click=self.generate_flow)
         ui.button(self._resource_manager.get(FlowKeys.BUTTON_REMOVE), on_click=self.remove_flow)
         ui.button(self._resource_manager.get(FlowKeys.BUTTON_PROPERTIES), on_click=self.show_flow_properties)
+        return self
 
 
     def update(self, metadata: dict) -> None:

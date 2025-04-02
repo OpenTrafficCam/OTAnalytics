@@ -69,6 +69,50 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         ui.keyboard(on_key=self.handle_key)
         return self
 
+    def handle_key(self, e: KeyEventArguments) -> None:
+        if e.key == "Escape" and self._new_section:
+            coordinates: list[tuple[int, int]] = []
+            for circle in self._new_section_points:
+                coordinates.append((circle.x, circle.y))
+            self._new_section = False
+            if self._current_section:
+                def _get_metadata() -> dict:
+                    return self._viewmodel.get_section_metadata(
+                        title="name", initial_position=coordinates[0]
+                    )
+
+                self._viewmodel.add_new_section(coordinates=coordinates, is_area_section=self._new_area_section,
+                                                get_metadata=_get_metadata),
+            self._open_save_dialog()
+
+    def _open_save_dialog(self):
+        with ui.dialog() as self._dialog, ui.card():
+            self.name = ui.input()
+            ui.button("Close", on_click=lambda e: self._save_new_section(self.name.value))
+        self._dialog.open()
+
+    def _save_new_section(self, name: str) -> None:
+        self._dialog.close()
+        coordinates: list[tuple[int, int]] = []
+        for circle in self._new_section_points:
+            coordinates.append((circle.x, circle.y))
+
+        if self._current_section:
+            def _get_metadata() -> dict:
+                return self._viewmodel.get_section_metadata(
+                    title=name, initial_position=coordinates[0]
+                )
+
+            self._viewmodel.add_new_section(coordinates=coordinates, is_area_section=self._new_area_section,
+                                            get_metadata=_get_metadata),
+        self._viewmodel.refresh_items_on_canvas()
+
+    def draw_sections(self) -> None:
+        self._background_image.content = ""
+        self._background_image.content = self._sections.to_svg()
+        self._background_image.content += self._circles.to_svg()
+        self._viewmodel.refresh_items_on_canvas()
+
     def _on_pointer_down(self, e: events.MouseEventArguments):
         if self._new_section:
             self._new_section_points.append(Circle(x=int(e.image_x),  y=int(e.image_y), pointer_event="all", cursor="pointer", fill="orange", id="new_point"))

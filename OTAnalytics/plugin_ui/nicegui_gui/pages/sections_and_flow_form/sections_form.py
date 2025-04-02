@@ -17,8 +17,41 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
 
 COLUMN_NAME = "name"
 
+def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
+    return [
+        {
+            "name": COLUMN_NAME,
+            "label": resource_manager.get(SectionKeys.TABLE_COLUMN_NAME),
+            "field": "name",
+        },
 
-class SectionsForm(AbstractFrameSvzMetadata):
+    ]
+
+def map_to_ui(sections: Iterable[Section]):
+    list_of_sections = []
+    for section in sections:
+        list_of_sections.append(section.to_dict())
+    return list_of_sections
+
+class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
+    def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
+        pass
+
+    def update_selected_items(self, item_ids: list[str]) -> None:
+        pass
+
+    def update_items(self) -> None:
+        pass
+
+    def disable(self) -> None:
+        pass
+
+    def enable(self) -> None:
+        pass
+
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        pass
+
     def __init__(
         self,
         view_model: ViewModel,
@@ -40,9 +73,16 @@ class SectionsForm(AbstractFrameSvzMetadata):
         self._result: dict = {}
         self._introduce_to_viewmodel()
 
-    def introduce_to_viewmodel(self) -> None:
-        self._view_model.set_svz_metadata_frame(self)
+    def _introduce_to_viewmodel(self) -> None:
+        self._view_model.set_sections_frame(self)
+        self._view_model.set_treeview_sections(self)
+        self._view_model.set_video_frame(self)
+        self._view_model.set_video_control_frame(self)
 
+    def _select_section(self, e) -> None:
+        self._current_section = e.selection[0]
+        self._view_model.set_selected_section_ids(e.selection[0]["id"])
+        self._view_model.refresh_items_on_canvas()
     def build(self) -> Self:
         self._section_table.build()
         with ui.grid(rows=3):
