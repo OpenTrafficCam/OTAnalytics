@@ -45,6 +45,7 @@ the [GitHub Releases page](https://github.com/OpenTrafficCam/OTAnalytics/release
 If you prefer to install from source:
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/OpenTrafficCam/OTAnalytics.git
    cd OTAnalytics
@@ -60,6 +61,7 @@ If you prefer to install from source:
 If you prefer to install from source:
 
 1. Clone the repository:
+
    ```cmd
    git clone https://github.com/OpenTrafficCam/OTAnalytics.git
    cd OTAnalytics
