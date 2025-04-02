@@ -1,6 +1,7 @@
+import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Literal
+from typing import Iterable, Literal, Any
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
@@ -9,6 +10,7 @@ from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application import ui
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
@@ -94,7 +96,15 @@ class NiceGuiUiFactory(UiFactory):
         show_offset: bool,
         viewmodel: ViewModel,
     ) -> dict:
-        raise NotImplementedError
+        return asyncio.run(self._open_save_dialog())
+
+    async def _open_save_dialog(self) -> Any:
+        with ui.dialog() as self._dialog, ui.card():
+            self.name = ui.input()
+            ui.button('Yes', on_click=lambda: self._dialog.submit('Yes'))
+            ui.button('No', on_click=lambda: self._dialog.submit('No'))
+        result = await self._dialog
+        return result
 
     def configure_flow(
         self,

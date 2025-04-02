@@ -42,13 +42,30 @@ class ProjectKeys(ResourceKey):
 class SvzMetadataKeys(ResourceKey):
     LABEL_SVZ_METADATA_FORM_HEADER = "label-svz-metadata-form-header"
 
+class FlowKeys(ResourceKey):
+    TABLE_COLUMN_NAME = "table-flow-column-name"
+    BUTTON_ADD ="button-add"
+    BUTTON_GENERATE = "button-generate"
+    BUTTON_PROPERTIES = "button-properties"
+    BUTTON_REMOVE = "button-remove"
+
+class FlowAndSectionKeys(ResourceKey):
+    TAB_FLOW = "tab-flow"
+    TAB_SECTION = "tab-section"
 
 class AddTracksKeys(ResourceKey):
     BUTTON_ADD_TRACKS = "button-add-tracks"
 
-
+class SectionKeys(ResourceKey):
+    BUTTON_ADD_LINE = "button-add-line"
+    BUTTON_ADD_AREA = "button-add-area"
+    BUTTON_EDIT = "button-edit"
+    BUTTON_PROPERTIES = "button-properties"
+    BUTTON_REMOVE = "button-remove"
+    TABLE_COLUMN_NAME = "table-column-name"
+    
 class OffsetSliderKeys(ResourceKey):
-    BUTTON_UPDATE_OFFSET = "button-update-offset"
+    BUTTON_UPDATE_OFFSET = f"offset-slider-keys-button-update-offset"
 
 
 class RemarkKeys(ResourceKey):
@@ -105,6 +122,13 @@ DEFAULT_RESOURCE_MAP = {
     AnalysisKeys.BUTTON_TEXT_EXPORT_ROAD_USER_ASSIGNMENT: "Export road user assignments...",  # noqa
     AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS: "Export track statistics",
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
+    FlowAndSectionKeys.TAB_SECTION: "Section",
+    FlowAndSectionKeys.TAB_FLOW: "Flow",
+    FlowKeys.TABLE_COLUMN_NAME: "Flows",
+    FlowKeys.BUTTON_ADD: "Add",
+    FlowKeys.BUTTON_GENERATE: "Generate",
+    FlowKeys.BUTTON_REMOVE: "Remove",
+    FlowKeys.BUTTON_PROPERTIES: "Properties",
     GeneralKeys.LABEL_APPLY: "Apply",
     GeneralKeys.LABEL_RESET: "Reset",
     OffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
@@ -117,6 +141,12 @@ DEFAULT_RESOURCE_MAP = {
     ProjectKeys.LABEL_START_TIME: "Start time",
     RemarkKeys.LABEL_REMARK_HEADER: "Remark",
     RemarkKeys.REMARK_NO_COMMENT: "No Comment",
+    SectionKeys.BUTTON_ADD_AREA: "Add area...",
+    SectionKeys.BUTTON_ADD_LINE: "Add line...",
+    SectionKeys.BUTTON_EDIT: "Edit...",
+    SectionKeys.BUTTON_PROPERTIES: "Properties...",
+    SectionKeys.BUTTON_REMOVE: "Remove...",
+    SectionKeys.TABLE_COLUMN_NAME: "Sections",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
     TrackStatisticKeys.COLUMN_NAME: "Name",
     TrackStatisticKeys.COLUMN_NUMBER: "Number",

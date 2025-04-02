@@ -31,6 +31,7 @@ class NiceGuiButtonQuickSaveConfig(AbstractButtonQuickSaveConfig):
     ):
         self._text = text
         self._on_click = on_click
+        self._instance: ui.button | None = None
 
     def build(self) -> None:
         self._instance = ui.button(self._text, on_click=self._on_click)
@@ -43,10 +44,12 @@ class NiceGuiButtonQuickSaveConfig(AbstractButtonQuickSaveConfig):
         pass
 
     def enable(self) -> None:
-        self._instance.enable()
+        if self._instance:
+            self._instance.enable()
 
     def disable(self) -> None:
-        self._instance.disable()
+        if self._instance:
+            self._instance.disable()
 
 
 class ProjectForm(AbstractFrameProject):
@@ -74,6 +77,7 @@ class ProjectForm(AbstractFrameProject):
             marker_date=MARKER_START_DATE,
             marker_time=MARKER_START_TIME,
         )
+        self.open_project_button: ui.button | None = None
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
@@ -113,10 +117,12 @@ class ProjectForm(AbstractFrameProject):
 
     def set_enabled_general_buttons(self, enabled: bool) -> None:
         if enabled:
-            self.open_project_button.enable()
-            self.save_project_button.enable()
-            self._quick_save_button.enable()
+            if self.open_project_button:
+                self.open_project_button.enable()
+                self.save_project_button.enable()
+                self._quick_save_button.enable()
         else:
-            self.open_project_button.disable()
-            self.save_project_button.disable()
-            self._quick_save_button.disable()
+            if self.open_project_button:
+                self.open_project_button.disable()
+                self.save_project_button.disable()
+                self._quick_save_button.disable()

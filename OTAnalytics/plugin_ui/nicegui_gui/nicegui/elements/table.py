@@ -51,6 +51,8 @@ class CustomTable:
         observers: list[TableObserver] | None = None,
         pagination: dict | None = None,
         marker: str | None = None,
+        on_select_method: Callable[[Any], None] = None,
+        selection: str | None = None,
     ) -> None:
         self._columns = columns
         self._rows = rows
@@ -60,6 +62,8 @@ class CustomTable:
         self._body_slot = body_slot
         self._pagination = pagination
         self._marker = marker
+        self._on_select_method = on_select_method
+        self._selection = selection
         self._observers = []
         if observers:
             self._observers = observers
@@ -71,6 +75,8 @@ class CustomTable:
             rows=self._rows,
             title=self._title,
             pagination=self._pagination,
+            on_select=self._on_select_method,
+            selection=self._selection,
         ) as table:
             self.__table = table
             self._add_header_slot()

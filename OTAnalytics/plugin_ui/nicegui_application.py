@@ -80,7 +80,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
         )
-
+        self.preload_input_files.load(self.run_config)
         return NiceguiWebserver(
             page_builders=[main_page_builder],
             layout_components=NiceguiLayoutComponents(),
@@ -147,7 +147,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def section_form(self) -> SectionsForm:
-        return SectionsForm(self.view_model, self.resource_manager)
+        return SectionsForm(self.view_model, self.resource_manager, self.canvas_form)
 
     @cached_property
     def offset_slider_form(self) -> OffSetSliderForm:
