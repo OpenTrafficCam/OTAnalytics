@@ -28,7 +28,7 @@ The application offers multiple user interfaces:
 ### Requirements
 
 - Python 3.12 or higher
-- Dependencies listed in `requirements.txt`
+- Dependencies listed in [requirements.txt](requirements.txt)
 
 ### Installation from GitHub Releases (Recommended)
 
