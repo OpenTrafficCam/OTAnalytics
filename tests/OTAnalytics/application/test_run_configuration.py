@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -58,8 +59,12 @@ def flow_parser() -> Mock:
     return parser
 
 
+def fixed_datetime() -> datetime:
+    return datetime(2025, 1, 1, 12, 34, 56)
+
+
 def build_config(cli_args: CliArguments, otconfig: OtConfig | None) -> RunConfiguration:
-    return RunConfiguration(flow_parser(), cli_args, otconfig)
+    return RunConfiguration(flow_parser(), cli_args, otconfig, fixed_datetime)
 
 
 class TestRunConfiguration:
@@ -345,6 +350,33 @@ class TestRunConfiguration:
         analysis = Mock()
         cfg_log_file = Path("relpath/to/cfg_log_file.log")
         analysis.logfile = cfg_log_file
+        otconfig.analysis = analysis
+        assert build_config(cli_args, otconfig).log_file == Path(cli_log_file)
+        cli_args.log_file = None
+        assert (
+            build_config(cli_args, otconfig).log_file
+            == Path(cli_args.config_file).parent / cfg_log_file
+        )
+        assert build_config(cli_args, None).log_file == DEFAULT_LOG_FILE
+
+    def test_log_file_is_directory(
+        self, cli_args: Mock, otconfig: Mock, test_data_tmp_dir: Path
+    ) -> None:
+        """
+        https://openproject.platomo.de/wp/7631
+        """
+
+        cli_log_folder = test_data_tmp_dir / "path/to/cli_log_folder"
+        cli_log_folder.mkdir(parents=True)
+        cli_args.log_file = cli_log_folder
+        cli_args.config_file = "abspath/to/my_config.otconfig"
+        cli_log_file = Path(cli_log_folder) / "otanalytics-2025-01-01_12-34-56.log"
+
+        analysis = Mock()
+        cfg_log_folder = test_data_tmp_dir / "relpath/to/cfg_log_folder"
+        cfg_log_folder.mkdir(parents=True)
+        cfg_log_file = cfg_log_folder / "otanalytics-2025-01-01_12-34-56.log"
+        analysis.logfile = cfg_log_folder
         otconfig.analysis = analysis
         assert build_config(cli_args, otconfig).log_file == Path(cli_log_file)
         cli_args.log_file = None
