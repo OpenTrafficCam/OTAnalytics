@@ -14,7 +14,7 @@ OTAnalytics provides tools for analyzing traffic data, including:
 
 - Processing trajectory data of road users
 - Defining and analyzing traffic flows
-- Counting vehicles/road users crossing defined sections
+- Counting vehicles/road users assigned to flows
 - Generating event lists and statistics
 - Visualizing traffic data
 
@@ -114,7 +114,7 @@ OTAnalytics can be configured using:
 Example configuration options:
 
 - Specify track files for analysis
-- Define flow and section configurations using OTFlow files
+- Define flow and section configurations using otflow files
 - Configure export formats and counting intervals
 - Control parallelization with multiple processes
 - Include or exclude specific road user classes
@@ -123,11 +123,11 @@ Example configuration options:
 
 - **Track Analysis**: Process and analyze trajectory data from various sources
 - **Flow Definition**: Define and analyze traffic flows between sections
-- **Counting**: Count road users crossing defined sections with configurable time intervals
+- **Counting**: Count road users assgined to flows with configurable time intervals
 - **Event Detection**: Generate event lists when road users cross defined sections
 - **Visualization**: Visualize tracks, flows, and sections
 - **Export**: Export analysis results in various formats
-- **Filtering**: Filter tracks by road user class
+- **Filtering**: Filter tracks by road user class and time
 - **Parallelization**: Process data using multiple CPU cores
 
 ## Documentation
@@ -147,3 +147,8 @@ how to contribute to this project.
 ## License
 
 This software is licensed under the [GPL-3.0 License](LICENSE)
+
+## Contact
+
+- GitHub: [https://github.com/OpenTrafficCam](https://github.com/OpenTrafficCam)
+- Email: [team@opentrafficcam.org](mailto:team@opentrafficcam.org)
