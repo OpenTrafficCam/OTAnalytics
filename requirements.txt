@@ -1,4 +1,4 @@
-av==13.0.0
+av==14.3.0
 customtkinter==5.2.2
 fastapi==0.115.5
 ijson==3.3.0
