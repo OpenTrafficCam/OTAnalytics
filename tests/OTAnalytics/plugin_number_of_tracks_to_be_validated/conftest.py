@@ -1,7 +1,7 @@
 import pytest
 
+from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
 from OTAnalytics.domain.track import Track
-from OTAnalytics.plugin_number_of_tracks_to_be_validated.otc_classes import OtcClasses
 from tests.utils.builders.track_builder import create_track
 
 TRACK_PERFECT = "track-perfect"

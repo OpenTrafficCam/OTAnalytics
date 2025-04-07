@@ -1,40 +1,32 @@
 import random
 
+from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
+
 CLASS_CAR = "car"
-CLASS_CAR_TRAILER = "car_with_trailer"
-CLASS_MOTORCYCLIST = "motorcyclist"
 CLASS_PEDESTRIAN = "pedestrian"
 CLASS_TRUCK = "truck"
-CLASS_TRUCK_TRAILER = "truck_with_trailer"
-CLASS_TRUCK_SEMITRAILER = "truck_with_semitrailer"
 CLASS_BICYCLIST = "bicyclist"
 CLASS_BICYCLIST_TRAILER = "bicyclist_with_trailer"
 CLASS_CARGOBIKE = "cargobike_driver"
 CLASS_SCOOTER = "scooter_driver"
-CLASS_DELVAN = "delivery_van"
-CLASS_DELVAN_TRAILER = "delivery_van_with_trailer"
-CLASS_PRVAN = "private_van"
-CLASS_PRVAN_TRAILER = "private_van_with_trailer"
-CLASS_TRAIN = "train"
-CLASS_BUS = "bus"
 DEFAULT_COLOR_PALETTE: dict[str, str] = {
-    CLASS_CAR: "blue",
-    CLASS_CAR_TRAILER: "skyblue",
-    CLASS_MOTORCYCLIST: "orange",
-    CLASS_PEDESTRIAN: "salmon",
-    CLASS_TRUCK: "red",
-    CLASS_TRUCK_TRAILER: "purple",
-    CLASS_TRUCK_SEMITRAILER: "pink",
-    CLASS_BICYCLIST: "lime",
-    CLASS_BICYCLIST_TRAILER: "lime",
-    CLASS_CARGOBIKE: "green",
-    CLASS_SCOOTER: "white",
-    CLASS_DELVAN: "yellow",
-    CLASS_DELVAN_TRAILER: "yellow",
-    CLASS_PRVAN: "black",
-    CLASS_PRVAN_TRAILER: "black",
-    CLASS_TRAIN: "brown",
-    CLASS_BUS: "beige",
+    OtcClasses.CAR: "blue",
+    OtcClasses.CAR_WITH_TRAILER: "skyblue",
+    OtcClasses.MOTORCYCLIST: "orange",
+    OtcClasses.PEDESTRIAN: "salmon",
+    OtcClasses.TRUCK: "red",
+    OtcClasses.TRUCK_WITH_TRAILER: "purple",
+    OtcClasses.TRUCK_WITH_SEMITRAILER: "pink",
+    OtcClasses.BICYCLIST: "lime",
+    OtcClasses.BICYCLIST_WITH_TRAILER: "lime",
+    OtcClasses.CARGO_BIKE_DRIVER: "green",
+    OtcClasses.SCOOTER_DRIVER: "white",
+    OtcClasses.DELIVERY_VAN: "yellow",
+    OtcClasses.DELIVERY_VAN_WITH_TRAILER: "yellow",
+    OtcClasses.PRIVATE_VAN: "black",
+    OtcClasses.PRIVATE_VAN_WITH_TRAILER: "black",
+    OtcClasses.TRAIN: "brown",
+    OtcClasses.BUS: "beige",
 }
 
 

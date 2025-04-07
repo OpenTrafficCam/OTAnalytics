@@ -1,7 +1,5 @@
-from OTAnalytics.plugin_number_of_tracks_to_be_validated.otc_classes import OtcClasses
-from OTAnalytics.plugin_number_of_tracks_to_be_validated.tls8plus1_classes import (
-    Tls8plus1Classes,
-)
+from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
+from OTAnalytics.adapter_visualization.tls8plus1_classes import Tls8plus1Classes
 
 SVZ_RATE = "svz-rate"
 
