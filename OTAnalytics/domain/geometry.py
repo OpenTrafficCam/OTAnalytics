@@ -183,10 +183,7 @@ def calculate_direction_vector(
     # Calculate the magnitude of the vector
     magnitude = math.sqrt(dx**2 + dy**2)
     if magnitude == 0:
-        raise ValueError(
-            "Cannot normalize a zero-magnitude vector "
-            "(start and end points are identical)."
-        )
+        return DirectionVector2D(x1=0, x2=0)
 
     # Normalize the vector
     dx /= magnitude

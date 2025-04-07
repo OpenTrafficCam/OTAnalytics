@@ -179,8 +179,8 @@ from OTAnalytics.domain.track import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
-from OTAnalytics.plugin_datastore.track_geometry_store.pygeos_store import (
-    PygeosTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
+    ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     FilteredPandasTrackDataset,
@@ -584,7 +584,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return TrackRepository(
             FilteredPandasTrackDataset(
                 PandasTrackDataset.from_list(
-                    [], PygeosTrackGeometryDataset.from_track_dataset
+                    [], ShapelyTrackGeometryDataset.from_track_dataset
                 ),
                 self.run_config.include_classes,
                 self.run_config.exclude_classes,
@@ -595,7 +595,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         calculator = PandasByMaxConfidence()
         detection_parser = PandasDetectionParser(
             calculator,
-            PygeosTrackGeometryDataset.from_track_dataset,
+            ShapelyTrackGeometryDataset.from_track_dataset,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
         return OttrkParser(detection_parser)
@@ -610,7 +610,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             progressbar=TqdmBuilder(),
             track_dataset_factory=lambda tracks: PandasTrackDataset.from_list(
                 tracks,
-                PygeosTrackGeometryDataset.from_track_dataset,
+                ShapelyTrackGeometryDataset.from_track_dataset,
                 PandasByMaxConfidence(),
             ),
             chunk_size=self.run_config.cli_chunk_size,
@@ -914,7 +914,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
         tracks_as_dataframe_provider = TracksAsDataFrameProvider(
             get_all_tracks=self.get_all_tracks,
-            track_geometry_factory=PygeosTrackGeometryDataset.from_track_dataset,
+            track_geometry_factory=ShapelyTrackGeometryDataset.from_track_dataset,
         )
         detection_rate_strategy = DetectionRateByPercentile(
             percentile_value=DETECTION_RATE_PERCENTILE_VALUE

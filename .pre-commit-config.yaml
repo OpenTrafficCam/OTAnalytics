@@ -52,15 +52,14 @@ repos:
           - ijson==3.3.0
           - interrogate==1.7.0
           - isort==5.13.2
-          - matplotlib==3.9.0
+          - matplotlib==3.10.0
           - more-itertools==10.5.0
           - mypy==1.12.1
           - nicegui==2.11.0
-          - numpy==1.26.4
+          - numpy==2.1.1
           - pandas-stubs==2.2.3.241126
           - pandas==2.2.3
           - pre-commit==4.1.0
-          - pygeos==0.14
           - pytest-benchmark==5.1.0
           - pytest-cov==6.0.0
           - pytest-lazy-fixtures==1.1.2
@@ -90,3 +89,10 @@ repos:
     rev: v0.10.0
     hooks:
       - id: shellcheck
+  - repo: https://github.com/pecigonzalo/pre-commit-shfmt
+    rev: v2.2.0
+    hooks:
+      - id: shell-fmt-docker
+        args:
+          - -i
+          - "2"
