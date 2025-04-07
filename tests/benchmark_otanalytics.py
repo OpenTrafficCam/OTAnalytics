@@ -5,13 +5,7 @@ from typing import Callable, Iterable
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
 
-from OTAnalytics.adapter_visualization.color_provider import (
-    CLASS_BICYCLIST,
-    CLASS_BICYCLIST_TRAILER,
-    CLASS_CARGOBIKE,
-    CLASS_PEDESTRIAN,
-    CLASS_SCOOTER,
-)
+from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -82,12 +76,12 @@ PANDAS = "PANDAS"
 CURRENT_DATASET_TYPE = PANDAS
 
 EXCLUDE_FILTER = [
-    CLASS_PEDESTRIAN,
-    CLASS_BICYCLIST,
-    CLASS_BICYCLIST_TRAILER,
-    CLASS_CARGOBIKE,
-    CLASS_SCOOTER,
-    "other",
+    OtcClasses.PEDESTRIAN,
+    OtcClasses.BICYCLIST,
+    OtcClasses.BICYCLIST_WITH_TRAILER,
+    OtcClasses.CARGO_BIKE_DRIVER,
+    OtcClasses.SCOOTER_DRIVER,
+    OtcClasses.OTHER,
 ]
 
 
@@ -195,7 +189,9 @@ class UseCaseProvider:
         )
 
     def add_filters(
-        self, include_classes: list[str], exclude_classes: list[str]
+        self,
+        include_classes: list[str] | list[OtcClasses],
+        exclude_classes: list[str] | list[OtcClasses],
     ) -> None:
         self._include_classes = frozenset(include_classes)
         self._exclude_classes = frozenset(exclude_classes)

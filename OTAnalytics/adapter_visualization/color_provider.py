@@ -2,13 +2,6 @@ import random
 
 from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
 
-CLASS_CAR = "car"
-CLASS_PEDESTRIAN = "pedestrian"
-CLASS_TRUCK = "truck"
-CLASS_BICYCLIST = "bicyclist"
-CLASS_BICYCLIST_TRAILER = "bicyclist_with_trailer"
-CLASS_CARGOBIKE = "cargobike_driver"
-CLASS_SCOOTER = "scooter_driver"
 DEFAULT_COLOR_PALETTE: dict[str, str] = {
     OtcClasses.CAR: "blue",
     OtcClasses.CAR_WITH_TRAILER: "skyblue",

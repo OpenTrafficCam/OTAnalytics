@@ -5,13 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.adapter_visualization.color_provider import (
-    CLASS_BICYCLIST,
-    CLASS_CAR,
-    CLASS_CARGOBIKE,
-    CLASS_PEDESTRIAN,
-    CLASS_TRUCK,
-)
+from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
 from OTAnalytics.application.analysis.traffic_counting import (
     EventPair,
     RoadUserAssignment,
@@ -221,29 +215,35 @@ def closed_track() -> Track:
 
 @pytest.fixture
 def car_track() -> Track:
-    return create_track("1", [(1, 1), (2, 2)], 1, CLASS_CAR, confidences=[0.6, 0.8])
+    return create_track(
+        "1", [(1, 1), (2, 2)], 1, OtcClasses.CAR, confidences=[0.6, 0.8]
+    )
 
 
 @pytest.fixture
 def car_track_continuing() -> Track:
-    return create_track("1", [(3, 3), (4, 4), (5, 5)], 3, CLASS_TRUCK)
+    return create_track("1", [(3, 3), (4, 4), (5, 5)], 3, OtcClasses.TRUCK)
 
 
 @pytest.fixture
 def pedestrian_track() -> Track:
     return create_track(
-        "2", [(1, 1), (2, 2), (3, 3)], 1, CLASS_PEDESTRIAN, confidences=[0.9, 0.8, 0.7]
+        "2",
+        [(1, 1), (2, 2), (3, 3)],
+        1,
+        OtcClasses.PEDESTRIAN,
+        confidences=[0.9, 0.8, 0.7],
     )
 
 
 @pytest.fixture
 def bicycle_track() -> Track:
-    return create_track("3", [(1, 1), (2, 2), (3, 3)], 4, CLASS_BICYCLIST)
+    return create_track("3", [(1, 1), (2, 2), (3, 3)], 4, OtcClasses.BICYCLIST)
 
 
 @pytest.fixture
 def cargo_bike_track() -> Track:
-    return create_track("4", [(1, 1), (2, 2), (3, 3)], 4, CLASS_CARGOBIKE)
+    return create_track("4", [(1, 1), (2, 2), (3, 3)], 4, OtcClasses.CARGO_BIKE_DRIVER)
 
 
 @pytest.fixture

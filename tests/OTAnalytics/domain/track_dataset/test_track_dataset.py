@@ -4,12 +4,7 @@ from unittest.mock import Mock
 import pytest
 from _pytest.fixtures import FixtureRequest
 
-from OTAnalytics.adapter_visualization.color_provider import (
-    CLASS_BICYCLIST,
-    CLASS_CAR,
-    CLASS_CARGOBIKE,
-    CLASS_PEDESTRIAN,
-)
+from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import (
     FilteredTrackDataset,
@@ -32,10 +27,12 @@ class TestFilteredTrackDataset:
     def get_datasets(
         self,
         tracks: list[Track],
-        include_classes: list[str],
-        exclude_classes: list[str],
+        include_classes: list[str] | list[OtcClasses],
+        exclude_classes: list[str] | list[OtcClasses],
     ) -> dict[str, FilteredTrackDataset]:
         provider = TrackDatasetProvider()
+        include_classes = [str(cls) for cls in include_classes]
+        exclude_classes = [str(cls) for cls in exclude_classes]
         return {
             dataset_type: provider.provide_filtered(
                 dataset_type, tracks, include_classes, exclude_classes
@@ -58,8 +55,8 @@ class TestFilteredTrackDataset:
         return [track for track in tracks if track.classification in classes]
 
     def test_include_and_exclude_classes_properties(self) -> None:
-        include_classes = [CLASS_CARGOBIKE, CLASS_CAR]
-        exclude_classes = [CLASS_PEDESTRIAN, CLASS_BICYCLIST]
+        include_classes = [OtcClasses.CARGO_BIKE_DRIVER, OtcClasses.CAR]
+        exclude_classes = [OtcClasses.PEDESTRIAN, OtcClasses.BICYCLIST]
         filtered_datasets = self.get_datasets([], include_classes, exclude_classes)
         for filtered_dataset in filtered_datasets.values():
             assert filtered_dataset.include_classes == frozenset(include_classes)
@@ -67,7 +64,7 @@ class TestFilteredTrackDataset:
 
     def test_track_ids(self, cargo_bike_track: Track, bicycle_track: Track) -> None:
         filtered_datasets = self.get_datasets(
-            [cargo_bike_track, bicycle_track], [CLASS_BICYCLIST], []
+            [cargo_bike_track, bicycle_track], [OtcClasses.BICYCLIST], []
         )
         for filtered_dataset in filtered_datasets.values():
             assert filtered_dataset.track_ids == frozenset([bicycle_track.id])
@@ -76,7 +73,7 @@ class TestFilteredTrackDataset:
         self, car_track: Track, cargo_bike_track: Track
     ) -> None:
         filtered_datasets = self.get_datasets(
-            [cargo_bike_track, car_track], [CLASS_CARGOBIKE], []
+            [cargo_bike_track, car_track], [OtcClasses.CARGO_BIKE_DRIVER], []
         )
         for filtered_dataset in filtered_datasets.values():
             assert (
@@ -92,18 +89,27 @@ class TestFilteredTrackDataset:
         "include_classes,exclude_classes,expected",
         [
             (
-                [CLASS_PEDESTRIAN, CLASS_CARGOBIKE],
-                [CLASS_CARGOBIKE],
-                [CLASS_PEDESTRIAN, CLASS_CARGOBIKE],
+                [OtcClasses.PEDESTRIAN, OtcClasses.CARGO_BIKE_DRIVER],
+                [OtcClasses.CARGO_BIKE_DRIVER],
+                [OtcClasses.PEDESTRIAN, OtcClasses.CARGO_BIKE_DRIVER],
             ),
-            ([], [], [CLASS_CAR, CLASS_PEDESTRIAN, CLASS_BICYCLIST, CLASS_CARGOBIKE]),
             (
                 [],
-                [CLASS_PEDESTRIAN],
-                [CLASS_CAR, CLASS_BICYCLIST, CLASS_CARGOBIKE],
+                [],
+                [
+                    OtcClasses.CAR,
+                    OtcClasses.PEDESTRIAN,
+                    OtcClasses.BICYCLIST,
+                    OtcClasses.CARGO_BIKE_DRIVER,
+                ],
             ),
-            ([CLASS_PEDESTRIAN], [], [CLASS_PEDESTRIAN]),
-            ([CLASS_CAR], ["plane"], [CLASS_CAR]),
+            (
+                [],
+                [OtcClasses.PEDESTRIAN],
+                [OtcClasses.CAR, OtcClasses.BICYCLIST, OtcClasses.CARGO_BIKE_DRIVER],
+            ),
+            ([OtcClasses.PEDESTRIAN], [], [OtcClasses.PEDESTRIAN]),
+            ([OtcClasses.CAR], ["plane"], [OtcClasses.CAR]),
         ],
     )
     def test_classifications(
@@ -121,7 +127,7 @@ class TestFilteredTrackDataset:
             assert filtered_dataset.classifications == frozenset(expected)
 
     def test_empty(self, car_track: Track, bicycle_track: Track) -> None:
-        empty_filtered_datasets = self.get_datasets([], [CLASS_CAR], [])
+        empty_filtered_datasets = self.get_datasets([], [OtcClasses.CAR], [])
         for empty_filtered_dataset in empty_filtered_datasets.values():
             assert empty_filtered_dataset.empty
             filled_but_ignored_dataset = empty_filtered_dataset.add_all([bicycle_track])
@@ -144,7 +150,9 @@ class TestFilteredTrackDataset:
         bicycle_track: Track,
     ) -> None:
         filtered_datasets = self.get_datasets(
-            all_tracks, [CLASS_CARGOBIKE, CLASS_BICYCLIST], [CLASS_BICYCLIST]
+            all_tracks,
+            [OtcClasses.CARGO_BIKE_DRIVER, OtcClasses.BICYCLIST],
+            [OtcClasses.BICYCLIST],
         )
         for filtered_dataset in filtered_datasets.values():
             assert_track_dataset_has_tracks(
@@ -158,7 +166,7 @@ class TestFilteredTrackDataset:
         pedestrian_track: Track,
         cargo_bike_track: Track,
     ) -> None:
-        filtered_datasets = self.get_datasets(all_tracks, [], [CLASS_BICYCLIST])
+        filtered_datasets = self.get_datasets(all_tracks, [], [OtcClasses.BICYCLIST])
         for filtered_dataset in filtered_datasets.values():
             assert_track_dataset_has_tracks(
                 filtered_dataset, [car_track, pedestrian_track, cargo_bike_track]
@@ -173,7 +181,7 @@ class TestFilteredTrackDataset:
 
     def test_cache_with_include_filter(self, tracks: list[Track]) -> None:
         filtered_datasets = self.get_datasets(
-            tracks, [CLASS_BICYCLIST], [CLASS_CARGOBIKE]
+            tracks, [OtcClasses.BICYCLIST], [OtcClasses.CARGO_BIKE_DRIVER]
         )
         for filtered_dataset in filtered_datasets.values():
             filtered_result = filtered_dataset._filter()
@@ -181,7 +189,9 @@ class TestFilteredTrackDataset:
             assert filtered_result == cached_filtered_result
 
     def test_cache_with_exclude_filter(self, tracks: list[Track]) -> None:
-        filtered_datasets = self.get_datasets(tracks, [], [CLASS_CARGOBIKE])
+        filtered_datasets = self.get_datasets(
+            tracks, [], [OtcClasses.CARGO_BIKE_DRIVER]
+        )
         for filtered_dataset in filtered_datasets.values():
             filtered_result = filtered_dataset._filter()
             cached_filtered_result = filtered_dataset._filter()
@@ -189,7 +199,7 @@ class TestFilteredTrackDataset:
 
     def test_len(self, all_tracks: list[Track]) -> None:
         filtered_datasets = self.get_datasets(
-            all_tracks, [], [CLASS_CARGOBIKE, CLASS_BICYCLIST]
+            all_tracks, [], [OtcClasses.CARGO_BIKE_DRIVER, OtcClasses.BICYCLIST]
         )
         for filtered_dataset in filtered_datasets.values():
             assert len(filtered_dataset) == 2
@@ -200,7 +210,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [car_track, bicycle_track, cargo_bike_track],
             [],
-            [CLASS_CARGOBIKE, CLASS_BICYCLIST],
+            [OtcClasses.CARGO_BIKE_DRIVER, OtcClasses.BICYCLIST],
         )
         for filtered_dataset in filtered_datasets.values():
             result_car = filtered_dataset.get_for(car_track.id)
@@ -214,7 +224,7 @@ class TestFilteredTrackDataset:
         filtered_datasets = self.get_datasets(
             [car_track, bicycle_track],
             [],
-            [CLASS_BICYCLIST],
+            [OtcClasses.BICYCLIST],
         )
         for filtered_dataset in filtered_datasets.values():
             assert len(filtered_dataset) == 1
@@ -250,7 +260,7 @@ class TestFilteredTrackDataset:
         self, car_track: Track, bicycle_track: Track
     ) -> None:
         filtered_datasets = self.get_datasets(
-            [car_track, bicycle_track], [CLASS_CAR], []
+            [car_track, bicycle_track], [OtcClasses.CAR], []
         )
         for filtered_dataset in filtered_datasets.values():
             result_no_tracks = filtered_dataset.filter_by_min_detection_length(4)
@@ -263,8 +273,8 @@ class TestFilteredTrackDataset:
         "include_classes,exclude_classes,expected_track_fixture_name",
         [
             ([], [], ["car_track", "bicycle_track"]),
-            ([CLASS_CAR], [CLASS_CAR], ["car_track"]),
-            ([], [CLASS_CAR], ["bicycle_track"]),
+            ([OtcClasses.CAR], [OtcClasses.CAR], ["car_track"]),
+            ([], [OtcClasses.CAR], ["bicycle_track"]),
         ],
     )
     def test_get_first_segments(
@@ -295,8 +305,8 @@ class TestFilteredTrackDataset:
         "include_classes,exclude_classes,expected_track_fixture_name",
         [
             ([], [], ["car_track", "bicycle_track"]),
-            ([CLASS_CAR], [CLASS_CAR], ["car_track"]),
-            ([], [CLASS_CAR], ["bicycle_track"]),
+            ([OtcClasses.CAR], [OtcClasses.CAR], ["car_track"]),
+            ([], [OtcClasses.CAR], ["bicycle_track"]),
         ],
     )
     def test_get_last_segments(
