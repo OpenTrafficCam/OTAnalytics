@@ -9,4 +9,4 @@ class SectionResource:
     lines: dict[SectionId, Line]
 
     def to_svg(self) -> str:
-        return "\n".join(self.lines)
+        return "\n".join(line.to_svg() for line in self.lines.values())

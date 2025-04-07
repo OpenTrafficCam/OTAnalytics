@@ -682,7 +682,7 @@ class DummyViewModel(
     def set_video_frame(self, frame: AbstractFrame) -> None:
         self._frame_videos = frame
 
-    def set_sections_frame(self, frame: AbstractFrame) -> None:
+    def set_sections_frame(self, frame: AbstractSectionFrame) -> None:
         self._frame_sections = frame
         self._update_enabled_section_buttons()
 
@@ -1124,9 +1124,6 @@ class DummyViewModel(
 
     def get_all_flows(self) -> Iterable[Flow]:
         return self._application.get_all_flows()
-
-    def set_all_sections(self, sections: Iterable[dict]) -> None:
-        self._application.set_
 
     @action
     def add_flow(self) -> None:

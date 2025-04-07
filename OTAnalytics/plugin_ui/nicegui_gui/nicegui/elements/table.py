@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Literal
 
 from nicegui import ui
 from nicegui.elements.table import Table
@@ -51,8 +51,8 @@ class CustomTable:
         observers: list[TableObserver] | None = None,
         pagination: dict | None = None,
         marker: str | None = None,
-        on_select_method: Callable[[Any], None] = None,
-        selection: str | None = None,
+        on_select_method: Callable[[Any], None] | None = None,
+        selection: Literal["single", "multiple"] | None = None,
     ) -> None:
         self._columns = columns
         self._rows = rows
