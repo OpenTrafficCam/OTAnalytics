@@ -1,6 +1,7 @@
 import random
 
 from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
+from OTAnalytics.adapter_visualization.tls8plus1_classes import Tls8plus1Classes
 
 DEFAULT_COLOR_PALETTE: dict[str, str] = {
     OtcClasses.CAR: "blue",
@@ -20,6 +21,15 @@ DEFAULT_COLOR_PALETTE: dict[str, str] = {
     OtcClasses.PRIVATE_VAN_WITH_TRAILER: "black",
     OtcClasses.TRAIN: "brown",
     OtcClasses.BUS: "beige",
+    Tls8plus1Classes.CAR: "blue",
+    Tls8plus1Classes.CAR_WITH_TRAILER: "skyblue",
+    Tls8plus1Classes.MOTORCYCLIST: "orange",
+    Tls8plus1Classes.TRUCK: "red",
+    Tls8plus1Classes.TRUCK_WITH_TRAILER: "purple",
+    Tls8plus1Classes.TRUCK_WITH_SEMITRAILER: "pink",
+    Tls8plus1Classes.BICYCLIST: "lime",
+    Tls8plus1Classes.DELIVERY_VAN: "yellow",
+    Tls8plus1Classes.BUS: "beige",
 }
 
 
