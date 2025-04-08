@@ -45,7 +45,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_sections = self._current_sections
         self._introduce_to_viewmodel()
         self._current_section = None
-        self.current_point: Circle | None = None
+        self._current_point: Circle | None = None
         self.add_preview_image()
         self._new_section_points: list = []
         self._new_section_lines: list = []
@@ -195,7 +195,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._new_section:
             pass
         else:
-            self.current_point = Circle(
+            self._current_point = Circle(
                 x=e["image_x"],
                 y=e["image_y"],
                 id=e["element_id"],
@@ -204,12 +204,12 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             )
             self.draw_sections()
             if self._background_image:
-                if self.current_point:
-                    self._background_image.content += self.current_point.to_svg()
+                if self._current_point:
+                    self._background_image.content += self._current_point.to_svg()
 
     def on_mouse_move(self, e: Any) -> None:
-        if self.current_point:
-            self.current_point = Circle(
+        if self._current_point:
+            self._current_point = Circle(
                 x=e["image_x"],
                 y=e["image_y"],
                 pointer_event="all",
@@ -219,7 +219,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             )
             self.draw_sections()
             if self._background_image:
-                self._background_image.content += self.current_point.to_svg()
+                self._background_image.content += self._current_point.to_svg()
 
     def on_pointer_up(self, e: Any) -> None:
         if self._new_section:
@@ -269,8 +269,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def draw_current_point(self) -> None:
         if self._background_image:
-            if self.current_point:
-                self._background_image.content += self.current_point.to_svg()
+            if self._current_point:
+                self._background_image.content += self._current_point.to_svg()
 
     def draw_section(
         self,
@@ -312,7 +312,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             for line in list_of_lines:
                 self._lines.add(line)
                 self._background_image.content += line.to_svg()
-            if isinstance(self.current_point, Circle):
+            if self._current_point:
                 self.draw_current_point()
 
     def start_section_geometry_editor(
