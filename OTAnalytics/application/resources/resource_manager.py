@@ -42,19 +42,23 @@ class ProjectKeys(ResourceKey):
 class SvzMetadataKeys(ResourceKey):
     LABEL_SVZ_METADATA_FORM_HEADER = "label-svz-metadata-form-header"
 
+
 class FlowKeys(ResourceKey):
     TABLE_COLUMN_NAME = "table-flow-column-name"
-    BUTTON_ADD ="button-add"
+    BUTTON_ADD = "button-add"
     BUTTON_GENERATE = "button-generate"
     BUTTON_PROPERTIES = "button-properties"
     BUTTON_REMOVE = "button-remove"
+
 
 class FlowAndSectionKeys(ResourceKey):
     TAB_FLOW = "tab-flow"
     TAB_SECTION = "tab-section"
 
+
 class AddTracksKeys(ResourceKey):
     BUTTON_ADD_TRACKS = "button-add-tracks"
+
 
 class SectionKeys(ResourceKey):
     BUTTON_ADD_LINE = "button-add-line"
@@ -63,14 +67,19 @@ class SectionKeys(ResourceKey):
     BUTTON_PROPERTIES = "button-properties"
     BUTTON_REMOVE = "button-remove"
     TABLE_COLUMN_NAME = "table-column-name"
-    
+
+
 class OffsetSliderKeys(ResourceKey):
-    BUTTON_UPDATE_OFFSET = f"offset-slider-keys-button-update-offset"
+    BUTTON_UPDATE_OFFSET = "offset-slider-keys-button-update-offset"
 
 
 class RemarkKeys(ResourceKey):
     LABEL_REMARK_HEADER = "label-remark-header"
     REMARK_NO_COMMENT = "remark-no-comment"
+
+
+class HotKeys(ResourceKey):
+    SAVE_NEW_SECTION_HOTKEY = "save-new-section-hotkey"
 
 
 class VisualizationFiltersKeys(ResourceKey):
@@ -131,6 +140,7 @@ DEFAULT_RESOURCE_MAP = {
     FlowKeys.BUTTON_PROPERTIES: "Properties",
     GeneralKeys.LABEL_APPLY: "Apply",
     GeneralKeys.LABEL_RESET: "Reset",
+    HotKeys.SAVE_NEW_SECTION_HOTKEY: "Escape",
     OffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
     ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
     ProjectKeys.LABEL_PROJECT_NAME: "Project name",

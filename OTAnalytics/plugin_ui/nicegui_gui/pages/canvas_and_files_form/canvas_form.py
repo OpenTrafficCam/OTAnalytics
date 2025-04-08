@@ -12,6 +12,7 @@ from OTAnalytics.adapter_ui.flow_adapter import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
     CanvasKeys,
+    HotKeys,
     ResourceManager,
 )
 from OTAnalytics.domain.section import Section
@@ -91,7 +92,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         ui.notify(f"You chose {result}")
 
     def handle_key(self, e: KeyEventArguments) -> None:
-        if e.key == "Escape" and self._new_section:
+        if (
+            e.key == self._resource_manager.get(HotKeys.SAVE_NEW_SECTION_HOTKEY)
+            and self._new_section
+        ):
             coordinates: list[tuple[int, int]] = []
             for circle in self._new_section_points:
                 coordinates.append((circle.x, circle.y))
