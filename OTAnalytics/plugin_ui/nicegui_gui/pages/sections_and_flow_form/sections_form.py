@@ -52,24 +52,24 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
     def disable(self) -> None:
         if (
             self._button_add_line
-            and self._button_generate
+            and self._button_add_line
             and self._button_add_areas
             and self._button_remove
         ):
             self._button_add_line.disable()
-            self._button_generate.disable()
+            self._button_add_line.disable()
             self._button_add_areas.disable()
             self._button_remove.disable()
 
     def enable(self) -> None:
         if (
             self._button_add_line
-            and self._button_generate
+            and self._button_add_line
             and self._button_add_areas
             and self._button_remove
         ):
             self._button_add_line.enable()
-            self._button_generate.enable()
+            self._button_add_line.enable()
             self._button_add_areas.enable()
             self._button_remove.enable()
 
@@ -95,7 +95,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         self._button_edit: ui.button | None = None
         self._button_properties: ui.button | None = None
         self._button_add_areas: ui.button | None = None
-        self._button_generate: ui.button | None = None
+        self._button_add_line: ui.button | None = None
         self._button_remove: ui.button | None = None
         self._current_section: Section
         self._result: dict = {}
