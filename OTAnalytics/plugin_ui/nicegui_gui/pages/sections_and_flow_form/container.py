@@ -1,9 +1,8 @@
 from nicegui import ui
 
 from OTAnalytics.application.resources.resource_manager import (
-    ProjectKeys,
+    FlowAndSectionKeys,
     ResourceManager,
-    SvzMetadataKeys, FlowAndSectionKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
     SvzMetadataForm,
@@ -29,14 +28,8 @@ class SectionsAndFlowForm:
 
     def build(self) -> None:
         with ui.tabs().classes("w-full") as tabs:
-            one = ui.tab(
-                self._resource_manager.get(FlowAndSectionKeys.TAB_SECTION)
-            )
-            two = ui.tab(
-                self._resource_manager.get(
-                    FlowAndSectionKeys.TAB_FLOW
-                )
-            )
+            one = ui.tab(self._resource_manager.get(FlowAndSectionKeys.TAB_SECTION))
+            two = ui.tab(self._resource_manager.get(FlowAndSectionKeys.TAB_FLOW))
         with ui.tab_panels(tabs, value=one).classes("w-full"):
             with ui.tab_panel(one):
                 self.sections_form.build()
