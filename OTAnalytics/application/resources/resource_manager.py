@@ -39,6 +39,11 @@ class ProjectKeys(ResourceKey):
     LABEL_START_TIME = "label-start-time"
 
 
+class TrackFormKeys(ResourceKey):
+    TAB_ONE = "tab-one"
+    TAB_TWO = "tab-two"
+
+
 class SvzMetadataKeys(ResourceKey):
     LABEL_SVZ_METADATA_FORM_HEADER = "label-svz-metadata-form-header"
 
@@ -158,6 +163,8 @@ DEFAULT_RESOURCE_MAP = {
     SectionKeys.BUTTON_REMOVE: "Remove...",
     SectionKeys.TABLE_COLUMN_NAME: "Sections",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
+    TrackFormKeys.TAB_ONE: "Track",
+    TrackFormKeys.TAB_TWO: "Videos",
     TrackStatisticKeys.COLUMN_NAME: "Name",
     TrackStatisticKeys.COLUMN_NUMBER: "Number",
     TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER: "Track Statistics",

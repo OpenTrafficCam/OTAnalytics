@@ -1,9 +1,8 @@
 from nicegui import ui
 
 from OTAnalytics.application.resources.resource_manager import (
-    ProjectKeys,
     ResourceManager,
-    SvzMetadataKeys,
+    TrackFormKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
     AddTracksForm,
@@ -30,11 +29,11 @@ class TrackForm:
     def build(self) -> None:
         with ui.tabs().classes("w-full") as tabs:
             one = ui.tab(
-                self._resource_manager.get(ProjectKeys.LABEL_PROJECT_FORM_HEADER)
+                self._resource_manager.get(TrackFormKeys.TAB_ONE),
             )
             two = ui.tab(
                 self._resource_manager.get(
-                    SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER
+                    TrackFormKeys.TAB_TWO,
                 )
             )
         with ui.tab_panels(tabs, value=one).classes("w-full"):
