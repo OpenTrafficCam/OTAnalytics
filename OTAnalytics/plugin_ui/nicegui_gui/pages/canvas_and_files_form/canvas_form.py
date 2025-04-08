@@ -70,7 +70,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             ui.interactive_image(
                 "", on_mouse=self._on_pointer_down, events=["mousedown", "mouseup"]
             )
-            .classes("w-64")
             .on("svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args))
             .on("svg:pointermove", lambda e: self.on_pointer_move(e.args))
             .on("svg:pointerup", lambda e: self.on_pointer_up(e.args))
