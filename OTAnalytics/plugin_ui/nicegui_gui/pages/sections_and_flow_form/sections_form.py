@@ -50,10 +50,28 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         pass
 
     def disable(self) -> None:
-        pass
+        if (
+            self._button_add_line
+            and self._button_generate
+            and self._button_add_areas
+            and self._button_remove
+        ):
+            self._button_add_line.disable()
+            self._button_generate.disable()
+            self._button_add_areas.disable()
+            self._button_remove.disable()
 
     def enable(self) -> None:
-        pass
+        if (
+            self._button_add_line
+            and self._button_generate
+            and self._button_add_areas
+            and self._button_remove
+        ):
+            self._button_add_line.enable()
+            self._button_generate.enable()
+            self._button_add_areas.enable()
+            self._button_remove.enable()
 
     def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
         return 0, 0
@@ -102,7 +120,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_LINE),
                     on_click=self.add_new_line,
                 )  # Enter für bestätigen und escape
-                self._button_add_area = ui.button(
+                self._button_add_areas = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_AREA),
                     on_click=self.add_new_area,
                 )
@@ -201,8 +219,8 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         self._view_model.refresh_items_on_canvas()
 
     def get_add_buttons(self) -> list[Button]:
-        if self._button_add_line and self._button_add_area:
-            return [self._button_add_line, self._button_add_area]
+        if self._button_add_line and self._button_add_areas:
+            return [self._button_add_line, self._button_add_areas]
         return []
 
     def get_single_item_buttons(self) -> list[Button]:
