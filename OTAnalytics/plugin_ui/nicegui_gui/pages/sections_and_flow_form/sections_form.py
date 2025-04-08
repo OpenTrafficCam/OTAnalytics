@@ -76,6 +76,9 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         self._toggle = False
         self._button_edit: ui.button | None = None
         self._button_properties: ui.button | None = None
+        self._button_add_areas: ui.button | None = None
+        self._button_generate: ui.button | None = None
+        self._button_remove: ui.button | None = None
         self._current_section: Section
         self._result: dict = {}
         self._introduce_to_viewmodel()
@@ -95,11 +98,11 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         self._section_table.build()
         with ui.grid(rows=3):
             with ui.row():
-                ui.button(
+                self._button_add_line = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_LINE),
                     on_click=self.add_new_line,
                 )  # Enter für bestätigen und escape
-                ui.button(
+                self._button_add_area = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_AREA),
                     on_click=self.add_new_area,
                 )
@@ -113,7 +116,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
                     on_click=self.edit_properties,
                 )
             with ui.row():
-                ui.button(
+                self._button_remove = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_REMOVE),
                     on_click=self.remove_section,
                 )
@@ -198,13 +201,14 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         self._view_model.refresh_items_on_canvas()
 
     def get_add_buttons(self) -> list[Button]:
+        if self._button_add_line and self._button_add_area:
+            return [self._button_add_line, self._button_add_area]
         return []
 
     def get_single_item_buttons(self) -> list[Button]:
         if self._button_edit and self._button_properties:
             return [self._button_edit, self._button_properties]
-        else:
-            return []
+        return []
 
     def get_multiple_items_buttons(self) -> list[Button]:
         return []

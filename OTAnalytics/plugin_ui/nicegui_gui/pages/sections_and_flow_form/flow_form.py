@@ -1,12 +1,14 @@
 from typing import Iterable, Self
 
 from nicegui import ui
+from nicegui.elements.button import Button
 
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import FlowKeys, ResourceManager
 from OTAnalytics.domain.flow import Flow
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import CustomTable
 
 COLUMN_NAME = "name"
@@ -29,7 +31,7 @@ def map_to_ui(flows: Iterable[Flow]) -> list:
     return list_of_flows
 
 
-class FlowForm(AbstractFrame, AbstractTreeviewInterface):
+class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
     def __init__(
         self,
         view_model: ViewModel,
@@ -43,6 +45,10 @@ class FlowForm(AbstractFrame, AbstractTreeviewInterface):
             on_select_method=lambda e: self._select_flow(e.selection),
             selection="single",
         )
+        self._button_remove: ui.button | None = None
+        self._button_add: ui.button | None = None
+        self._button_generate: ui.button | None = None
+        self._button_properties: ui.button | None = None
         self._introduce_to_viewmodel()
 
     def _introduce_to_viewmodel(self) -> None:
@@ -56,18 +62,18 @@ class FlowForm(AbstractFrame, AbstractTreeviewInterface):
     def build(self) -> Self:
         self._flow_table.build()
         with ui.row():
-            ui.button(
+            self._button_add = ui.button(
                 self._resource_manager.get(FlowKeys.BUTTON_ADD), on_click=self.add_flow
             )
-            ui.button(
+            self._button_generate = ui.button(
                 self._resource_manager.get(FlowKeys.BUTTON_GENERATE),
                 on_click=self.generate_flow,
             )
-        ui.button(
+        self._button_remove = ui.button(
             self._resource_manager.get(FlowKeys.BUTTON_REMOVE),
             on_click=self.remove_flow,
         )
-        ui.button(
+        self._button_properties = ui.button(
             self._resource_manager.get(FlowKeys.BUTTON_PROPERTIES),
             on_click=self.show_flow_properties,
         )
@@ -112,10 +118,41 @@ class FlowForm(AbstractFrame, AbstractTreeviewInterface):
         pass
 
     def enable(self) -> None:
-        pass
+        if (
+            self._button_remove
+            and self._button_properties
+            and self._button_add
+            and self._button_generate
+        ):
+            self._button_remove.enable()
+            self._button_add.enable()
+            self._button_generate.enable()
+            self._button_properties.enable()
 
     def disable(self) -> None:
-        pass
+        if (
+            self._button_remove
+            and self._button_properties
+            and self._button_add
+            and self._button_generate
+        ):
+            self._button_remove.disable()
+            self._button_add.disable()
+            self._button_generate.disable()
+            self._button_properties.disable()
 
     def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
         return 0, 0
+
+    def get_add_buttons(self) -> list[Button]:
+        if self._button_add:
+            return [self._button_add]
+        return []
+
+    def get_single_item_buttons(self) -> list[Button]:
+        if self._button_remove and self._button_properties:
+            return [self._button_remove, self._button_properties]
+        return []
+
+    def get_multiple_items_buttons(self) -> list[Button]:
+        return []
