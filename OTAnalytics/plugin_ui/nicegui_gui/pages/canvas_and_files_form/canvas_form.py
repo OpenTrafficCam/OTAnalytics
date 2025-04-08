@@ -72,7 +72,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             )
             .classes("w-64")
             .on("svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args))
-            .on("svg:pointermove", lambda e: self.on_mouse_move(e.args))
+            .on("svg:pointermove", lambda e: self.on_pointer_move(e.args))
             .on("svg:pointerup", lambda e: self.on_pointer_up(e.args))
         )
         self._change_image()
@@ -211,7 +211,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 if self._current_point:
                     self._background_image.content += self._current_point.to_svg()
 
-    def on_mouse_move(self, e: Any) -> None:
+    def on_pointer_move(self, e: Any) -> None:
         if self._current_point:
             self._current_point = Circle(
                 x=e["image_x"],
