@@ -104,7 +104,6 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
     def _introduce_to_viewmodel(self) -> None:
         self._view_model.set_sections_frame(self)
         self._view_model.set_treeview_sections(self)
-        self._view_model.set_video_frame(self)
         self._view_model.set_video_control_frame(self)
 
     def _select_section(self, e: dict) -> None:
@@ -119,7 +118,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
                 self._button_add_line = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_LINE),
                     on_click=self.add_new_line,
-                )  # Enter für bestätigen und escape
+                )
                 self._button_add_areas = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_AREA),
                     on_click=self.add_new_area,
