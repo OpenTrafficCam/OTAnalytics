@@ -57,7 +57,7 @@ class AddVideoForm(ButtonForm):
         self._video_table.build()
         self._add_video_button = ui.button(
             self._resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS),
-            on_click=self._view_model.load_tracks(),
+            on_click=lambda _: self._view_model.load_tracks,
         )
         self._remove_video_button = ui.button(
             self._resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS),
