@@ -137,6 +137,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
                     self._resource_manager.get(SectionKeys.BUTTON_REMOVE),
                     on_click=self.remove_section,
                 )
+        self.update({})
         return self
 
     def update(self, metadata: dict) -> None:

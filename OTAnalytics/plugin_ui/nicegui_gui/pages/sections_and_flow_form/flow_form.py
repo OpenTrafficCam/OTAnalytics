@@ -77,6 +77,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             self._resource_manager.get(FlowKeys.BUTTON_PROPERTIES),
             on_click=self.show_flow_properties,
         )
+        self.update({})
         return self
 
     def update(self, metadata: dict) -> None:
