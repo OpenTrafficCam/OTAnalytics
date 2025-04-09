@@ -52,24 +52,24 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
     def disable(self) -> None:
         if (
             self._button_add_line
-            and self._button_generate
+            and self._button_add_line
             and self._button_add_areas
             and self._button_remove
         ):
             self._button_add_line.disable()
-            self._button_generate.disable()
+            self._button_add_line.disable()
             self._button_add_areas.disable()
             self._button_remove.disable()
 
     def enable(self) -> None:
         if (
             self._button_add_line
-            and self._button_generate
+            and self._button_add_line
             and self._button_add_areas
             and self._button_remove
         ):
             self._button_add_line.enable()
-            self._button_generate.enable()
+            self._button_add_line.enable()
             self._button_add_areas.enable()
             self._button_remove.enable()
 
@@ -96,7 +96,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         self._button_properties: ui.button | None = None
         self._button_add_line: ui.button | None = None
         self._button_add_areas: ui.button | None = None
-        self._button_generate: ui.button | None = None
+        self._button_add_line: ui.button | None = None
         self._button_remove: ui.button | None = None
         self._current_section: Section
         self._result: dict = {}
@@ -105,7 +105,6 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
     def _introduce_to_viewmodel(self) -> None:
         self._view_model.set_sections_frame(self)
         self._view_model.set_treeview_sections(self)
-        self._view_model.set_video_frame(self)
         self._view_model.set_video_control_frame(self)
 
     def _select_section(self, e: dict) -> None:
@@ -120,7 +119,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
                 self._button_add_line = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_LINE),
                     on_click=self.add_new_line,
-                )  # Enter für bestätigen und escape
+                )
                 self._button_add_areas = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_AREA),
                     on_click=self.add_new_area,

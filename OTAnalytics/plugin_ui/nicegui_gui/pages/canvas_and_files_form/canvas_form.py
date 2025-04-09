@@ -26,9 +26,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line_resources import LineRes
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.test_data_file import (  # noqa
-    TestData,
-)
 
 
 class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface):
@@ -42,7 +39,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._resource_manager = resource_manager
         self._background_image: Optional[InteractiveImage] = None
         self._current_image: Optional[Image.Image] = None
-        self._current_sections = TestData
+        self._current_sections = self._viewmodel.get_all_sections()
         self._new_sections = self._current_sections
         self._introduce_to_viewmodel()
         self._current_section = None

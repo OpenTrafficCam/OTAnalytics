@@ -65,6 +65,12 @@ class AddTracksKeys(ResourceKey):
     BUTTON_ADD_TRACKS = "button-add-tracks"
 
 
+class AddVideoKeys(ResourceKey):
+    BUTTON_ADD_VIDEOS = "button-add-videos"
+    BUTTON_REMOVE_VIDEOS = "button-remove-videos"
+    TABLE_NAME = "table-name"
+
+
 class SectionKeys(ResourceKey):
     BUTTON_ADD_LINE = "button-add-line"
     BUTTON_ADD_AREA = "button-add-area"
@@ -130,6 +136,9 @@ class WorkspaceKeys(ResourceKey):
 
 DEFAULT_RESOURCE_MAP = {
     AddTracksKeys.BUTTON_ADD_TRACKS: "Add tracks...",
+    AddVideoKeys.BUTTON_ADD_VIDEOS: "Add videos...",
+    AddVideoKeys.BUTTON_REMOVE_VIDEOS: "Remove videos...",
+    AddVideoKeys.TABLE_NAME: "Table name...",
     AnalysisKeys.LABEL_ANALYSIS: "Analysis",
     AnalysisKeys.BUTTON_TEXT_EXPORT_EVENT_LIST: "Export eventlist...",
     AnalysisKeys.BUTTON_TEXT_EXPORT_COUNTS: "Export counts...",
