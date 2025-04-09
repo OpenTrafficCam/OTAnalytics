@@ -5,7 +5,6 @@ from typing import Callable, Iterable
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
 
-from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -37,6 +36,7 @@ from OTAnalytics.application.use_cases.track_repository import (
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.section import (
     LineSection,
     Section,

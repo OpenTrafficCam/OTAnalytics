@@ -1,6 +1,6 @@
 import pytest
 
-from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
+from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.track import Track
 from tests.utils.builders.track_builder import create_track
 

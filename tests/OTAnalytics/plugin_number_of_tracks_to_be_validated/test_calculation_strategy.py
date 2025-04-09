@@ -1,7 +1,7 @@
 import pytest
 from pandas import DataFrame
 
-from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
+from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.track import TRACK_CLASSIFICATION, TRACK_ID, Track
 from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset

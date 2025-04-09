@@ -1,5 +1,5 @@
-from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
-from OTAnalytics.adapter_visualization.tls8plus1_classes import Tls8plus1Classes
+from OTAnalytics.domain.otc_classes import OtcClasses
+from OTAnalytics.domain.tls8plus1_classes import Tls8plus1Classes
 
 SVZ_RATE = "svz-rate"
 

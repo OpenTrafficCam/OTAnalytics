@@ -5,7 +5,6 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
 from OTAnalytics.application.analysis.traffic_counting import (
     EventPair,
     RoadUserAssignment,
@@ -13,6 +12,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY

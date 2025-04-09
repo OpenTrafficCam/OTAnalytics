@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import pytest
 from _pytest.fixtures import FixtureRequest
 
-from OTAnalytics.adapter_visualization.otc_classes import OtcClasses
+from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import (
     FilteredTrackDataset,
