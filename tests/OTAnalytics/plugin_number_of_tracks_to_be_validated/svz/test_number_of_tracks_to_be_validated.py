@@ -3,6 +3,7 @@ from unittest.mock import Mock
 import pytest
 from pandas import DataFrame
 
+from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.track import OCCURRENCE, TRACK_CLASSIFICATION, TRACK_ID, Track
 from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
@@ -12,7 +13,6 @@ from OTAnalytics.plugin_number_of_tracks_to_be_validated.calculation_strategy im
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.metric_rates_builder import (
     MetricRatesBuilder,
 )
-from OTAnalytics.plugin_number_of_tracks_to_be_validated.otc_classes import OtcClasses
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.metric_rates import (
     SVZ_CLASSIFICATION,
 )
