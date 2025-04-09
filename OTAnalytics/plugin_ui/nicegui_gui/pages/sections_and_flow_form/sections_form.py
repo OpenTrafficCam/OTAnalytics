@@ -94,6 +94,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         self._toggle = False
         self._button_edit: ui.button | None = None
         self._button_properties: ui.button | None = None
+        self._button_add_line: ui.button | None = None
         self._button_add_areas: ui.button | None = None
         self._button_generate: ui.button | None = None
         self._button_remove: ui.button | None = None
