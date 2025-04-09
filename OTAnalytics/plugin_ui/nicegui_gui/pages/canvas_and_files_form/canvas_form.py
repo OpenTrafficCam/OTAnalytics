@@ -73,6 +73,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         )
         self._change_image()
         ui.keyboard(on_key=self.handle_key)
+        self.load_sections()
         return self
 
     async def add_new_section(self, area_section: bool) -> None:
