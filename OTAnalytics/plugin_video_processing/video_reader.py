@@ -146,13 +146,42 @@ class PyAvVideoReader(VideoReader):
         raise ValueError(f"Frame {frame_to_read} does not exist in {video_path}")
 
     def _get_total_frames(self, video_stream: VideoStream, video_path: Path) -> int:
+        """
+        Calculates the total number of frames in a video by utilizing available metadata
+        or manually counting if necessary.
+
+        Args:
+            video_stream (VideoStream): The source video stream object that may include
+                frame count details.
+            video_path (Path): The file path of the video to derive metadata or for
+                manual frame counting.
+
+        Returns:
+            int: The total number of frames present in the video.
+        """
         if frames := video_stream.frames:
             return frames
         if metadata := self._videos_metadata.get_by_video_name(video_path.name):
             return metadata.number_of_frames
         return self._count_manually(video_path)
 
-    def _count_manually(self, video_file: Path) -> int:
+    @staticmethod
+    def _count_manually(video_file: Path) -> int:
+        """
+        Counts the total number of frames in a given video file manually.
+
+        This method manually calculates the number of frames in a video file by
+        decoding each frame using the `av` library. It iterates through all the frames
+        in the video stream and maintains a counter. The function might be useful in
+        cases where frame count metadata is unavailable or unreliable.
+
+        Args:
+            video_file (Path): The path to the video file for which the frame count is
+                to be determined.
+
+        Returns:
+            int: The total number of frames in the video file.
+        """
         # Todo we might update videos metadata here or when loading the video via
         #  `AddVideo`
         counter = 0
@@ -169,6 +198,21 @@ class PyAvVideoReader(VideoReader):
         framerate: Fraction,
         time_base: Fraction,
     ) -> bool:
+        """
+        Determines whether it is possible to look ahead in the video based on the given
+        frame and timing information.
+
+        Args:
+            video_path (Path): Path to the video file.
+            frame_to_read (int): Frame number to be read from the video.
+            framerate (Fraction): Frame rate of the video.
+            time_base (Fraction): Time base for timestamp calculations.
+
+        Returns:
+            bool: True if it's possible to look ahead to the given frame, False
+                otherwise.
+
+        """
         look_ahead_container = self.__get_clip(video_path.absolute())
         self._seek_to_nearest_frame(look_ahead_container, frame_to_read, framerate)
         look_ahead_frame = self._decode_frame(
