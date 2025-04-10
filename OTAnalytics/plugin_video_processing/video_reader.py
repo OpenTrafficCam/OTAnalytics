@@ -15,6 +15,7 @@ from OTAnalytics.application.state import VideosMetadata
 from OTAnalytics.domain.track import PilImage, TrackImage
 from OTAnalytics.domain.video import InvalidVideoError, VideoReader
 
+FIRST_FRAME = 0
 OFFSET = 1
 GRAYSCALE = "L"
 DISPLAYMATRIX = "DISPLAYMATRIX"
@@ -94,21 +95,131 @@ class PyAvVideoReader(VideoReader):
             video = container.streams.video[0]
             max_frames = self._get_total_frames(video, video_path)
             frame_to_read = min(frame_to_read, max_frames - OFFSET)
+            frame_to_read = max(frame_to_read, FIRST_FRAME)
             framerate = self.__get_fps(container, video_path)
             time_base = (
                 video.time_base if video.time_base else Fraction(av.time_base, 1)
             )
-            self._seek_to_nearest_frame(container, frame_to_read, framerate)
-            frame = self._decode_frame(container, frame_to_read, framerate, time_base)
+            frame = self._do_read_frame(
+                container, frame_to_read, framerate, time_base, video_path
+            )
             side_data = container.streams.video[0].side_data
         return av_to_image(frame, side_data)
 
+    def _do_read_frame(
+        self,
+        container: InputContainer,
+        frame_to_read: int,
+        framerate: Fraction,
+        time_base: Fraction,
+        video_path: Path,
+    ) -> VideoFrame:
+        """
+        Reads a specific video frame from a container.
+
+        This function attempts to read a specific frame from a video container based on
+        the given parameters. It first checks if the desired frame can be sought and,
+        if possible, seeks to that frame and decodes it. If direct seeking is not
+        possible, it iterates over the frames in the video until it finds the desired
+        one.
+
+        Args:
+            container (InputContainer): The container object holding video streams.
+            frame_to_read (int): The index of the frame to be read.
+            framerate (Fraction): The framerate of the video.
+            time_base (Fraction): The time base used for frame time calculation.
+            video_path (Path): The file path to the video.
+
+        Returns:
+            VideoFrame: The decoded video frame corresponding to the specified
+            `frame_to_read`.
+
+        Raises:
+            ValueError: If the specified frame index does not exist in the video file.
+        """
+        if self._can_look_ahead(video_path, frame_to_read, framerate, time_base):
+            self._seek_to_nearest_frame(container, frame_to_read, framerate)
+            return self._decode_frame(container, frame_to_read, framerate, time_base)
+        for index, frame in enumerate(container.decode(video=0)):
+            if index == frame_to_read:
+                return frame
+        raise ValueError(f"Frame {frame_to_read} does not exist in {video_path}")
+
     def _get_total_frames(self, video_stream: VideoStream, video_path: Path) -> int:
+        """
+        Calculates the total number of frames in a video by utilizing available metadata
+        or manually counting if necessary.
+
+        Args:
+            video_stream (VideoStream): The source video stream object that may include
+                frame count details.
+            video_path (Path): The file path of the video to derive metadata or for
+                manual frame counting.
+
+        Returns:
+            int: The total number of frames present in the video.
+        """
         if frames := video_stream.frames:
             return frames
         if metadata := self._videos_metadata.get_by_video_name(video_path.name):
             return metadata.number_of_frames
-        raise ValueError(f"Could not read total frames from {str(video_path)}")
+        return self._count_manually(video_path)
+
+    @staticmethod
+    def _count_manually(video_file: Path) -> int:
+        """
+        Counts the total number of frames in a given video file manually.
+
+        This method manually calculates the number of frames in a video file by
+        decoding each frame using the `av` library. It iterates through all the frames
+        in the video stream and maintains a counter. The function might be useful in
+        cases where frame count metadata is unavailable or unreliable.
+
+        Args:
+            video_file (Path): The path to the video file for which the frame count is
+                to be determined.
+
+        Returns:
+            int: The total number of frames in the video file.
+        """
+        # Todo we might update videos metadata here or when loading the video via
+        #  `AddVideo`
+        counter = 0
+        with av.open(str(video_file.absolute())) as container:
+            container.streams.video[0].thread_type = "AUTO"
+            for _ in container.decode(video=0):
+                counter += 1
+        return counter
+
+    def _can_look_ahead(
+        self,
+        video_path: Path,
+        frame_to_read: int,
+        framerate: Fraction,
+        time_base: Fraction,
+    ) -> bool:
+        """
+        Determines whether it is possible to look ahead in the video based on the given
+        frame and timing information.
+
+        Args:
+            video_path (Path): Path to the video file.
+            frame_to_read (int): Frame number to be read from the video.
+            framerate (Fraction): Frame rate of the video.
+            time_base (Fraction): Time base for timestamp calculations.
+
+        Returns:
+            bool: True if it's possible to look ahead to the given frame, False
+                otherwise.
+
+        """
+        look_ahead_container = self.__get_clip(video_path.absolute())
+        self._seek_to_nearest_frame(look_ahead_container, frame_to_read, framerate)
+        look_ahead_frame = self._decode_frame(
+            look_ahead_container, frame_to_read, framerate, time_base
+        )
+        sec_frame = round(framerate * look_ahead_frame.pts * time_base)
+        return sec_frame < frame_to_read
 
     def _decode_frame(
         self,
@@ -136,8 +247,9 @@ class PyAvVideoReader(VideoReader):
             frame = next(decode)
         return frame
 
+    @staticmethod
     def _seek_to_nearest_frame(
-        self, container: InputContainer, frame_to_read: int, framerate: Fraction
+        container: InputContainer, frame_to_read: int, framerate: Fraction
     ) -> None:
         """
         Seek to the closest (key)frame of the video, according to InputContainer#seek.
@@ -157,7 +269,9 @@ class PyAvVideoReader(VideoReader):
     @staticmethod
     def __get_clip(video_path: Path) -> InputContainer:
         try:
-            return av.open(str(video_path.absolute()))
+            container = av.open(str(video_path.absolute()))
+            container.streams.video[0].thread_type = "AUTO"
+            return container
         except IOError as e:
             raise InvalidVideoError(f"{str(video_path)} is not a valid video") from e
 
