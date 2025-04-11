@@ -219,7 +219,7 @@ class PyAvVideoReader(VideoReader):
             look_ahead_container, frame_to_read, framerate, time_base
         )
         sec_frame = round(framerate * look_ahead_frame.pts * time_base)
-        return sec_frame < frame_to_read
+        return sec_frame <= frame_to_read
 
     def _decode_frame(
         self,
