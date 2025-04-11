@@ -438,6 +438,7 @@ def parse_python_detection(
         _video_name=metadata_video[ottrk_format.FILENAME]
         + metadata_video[ottrk_format.FILETYPE],
         _input_file=input_file,
+        _finished=det_dict[ottrk_format.FINISHED],
     )
 
 

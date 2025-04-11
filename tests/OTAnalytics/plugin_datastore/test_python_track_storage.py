@@ -71,6 +71,7 @@ def valid_detection_dict() -> dict:
         "track-id": TrackId("1"),
         "video_name": "file.mp4",
         "input_file": "file.ottrk",
+        ottrk_format.FINISHED: False,
     }
 
 
@@ -91,6 +92,7 @@ def valid_detection(valid_detection_dict: dict) -> Detection:
         _track_id=valid_detection_dict[ottrk_format.TRACK_ID],
         _video_name=valid_detection_dict[VIDEO_NAME],
         _input_file=valid_detection_dict[INPUT_FILE],
+        _finished=valid_detection_dict[ottrk_format.FINISHED],
     )
 
 
@@ -161,6 +163,7 @@ class TestDetection:
                 _track_id=TrackId(str(track_id)),
                 _video_name="file.mp4",
                 _input_file="file.ottrk",
+                _finished=False,
             )
 
     def test_instantiation_with_valid_args(

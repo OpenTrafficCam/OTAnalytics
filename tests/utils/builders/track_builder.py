@@ -41,6 +41,7 @@ class TrackBuilder:
     video_name: str = DEFAULT_VIDEO_NAME
     input_file: str = DEFAULT_INPUT_FILE
     interpolated_detection: bool = False
+    finished: bool = False
 
     def __post_init__(self) -> None:
         self._detections: list[Detection] = []
@@ -59,6 +60,9 @@ class TrackBuilder:
 
     def set_video_name(self, video_name: str) -> None:
         self.video_name = video_name
+
+    def set_finished(self, is_finished: bool) -> None:
+        self.finished = is_finished
 
     def append_detection(self) -> None:
         self._detections.append(self.create_detection())
@@ -89,6 +93,7 @@ class TrackBuilder:
             _track_id=TrackId(self.track_id),
             _video_name=self.video_name,
             _input_file=self.input_file,
+            _finished=self.finished,
         )
 
     def add_track_id(self, id: str) -> Self:
@@ -261,22 +266,27 @@ def append_sample_data(
 ) -> TrackBuilder:
     track_builder.add_frame(frame_offset + 1)
     track_builder.add_microsecond(microsecond_offset + 1)
+    track_builder.set_finished(False)
     track_builder.append_detection()
 
     track_builder.add_frame(frame_offset + 2)
     track_builder.add_microsecond(microsecond_offset + 2)
+    track_builder.set_finished(False)
     track_builder.append_detection()
 
     track_builder.add_frame(frame_offset + 3)
     track_builder.add_microsecond(microsecond_offset + 3)
+    track_builder.set_finished(False)
     track_builder.append_detection()
 
     track_builder.add_frame(frame_offset + 4)
     track_builder.add_microsecond(microsecond_offset + 4)
+    track_builder.set_finished(False)
     track_builder.append_detection()
 
     track_builder.add_frame(frame_offset + 5)
     track_builder.add_microsecond(microsecond_offset + 5)
+    track_builder.set_finished(True)
     track_builder.append_detection()
 
     return track_builder

@@ -19,6 +19,7 @@ def assert_equal_detection_properties(actual: Detection, expected: Detection) ->
     assert expected.interpolated_detection == actual.interpolated_detection
     assert actual.track_id == expected.track_id
     assert actual.input_file == expected.input_file
+    assert actual.finished == expected.finished
 
 
 def assert_equal_track_properties(actual: Track, expected: Track) -> None:

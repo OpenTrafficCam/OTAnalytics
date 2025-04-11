@@ -20,6 +20,7 @@ INTERPOLATED_DETECTION: str = "interpolated_detection"
 TRACK_ID: str = "track_id"
 VIDEO_NAME: str = "video_name"
 INPUT_FILE: str = "input_file"
+FINISHED = "finished"
 
 
 @dataclass(frozen=True, order=True)
@@ -101,6 +102,11 @@ class Detection(ABC):
     def input_file(self) -> str:
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def finished(self) -> bool:
+        raise NotImplementedError
+
     def to_dict(self) -> dict:
         return {
             CLASSIFICATION: self.classification,
@@ -115,6 +121,7 @@ class Detection(ABC):
             TRACK_ID: self.track_id.id,
             VIDEO_NAME: self.video_name,
             INPUT_FILE: self.input_file,
+            FINISHED: self.finished,
         }
 
     def get_coordinate(self, offset: RelativeOffsetCoordinate | None) -> Coordinate:
@@ -192,6 +199,9 @@ class Track(ABC):
             datetime: the end time.
         """
         return self.last_detection.occurrence
+
+    def is_finished(self) -> bool:
+        return self.last_detection.finished
 
 
 @dataclass(frozen=True)
