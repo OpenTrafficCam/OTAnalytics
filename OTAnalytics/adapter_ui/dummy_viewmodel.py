@@ -18,6 +18,7 @@ from OTAnalytics.adapter_ui.abstract_frame_project import (
     AbstractFrameSvzMetadata,
 )
 from OTAnalytics.adapter_ui.abstract_frame_remark import AbstractFrameRemark
+from OTAnalytics.adapter_ui.abstract_frame_section import AbstractSectionFrame
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
@@ -216,7 +217,7 @@ class DummyViewModel(
         return self._frame_video_control
 
     @property
-    def frame_sections(self) -> AbstractFrame:
+    def frame_sections(self) -> AbstractSectionFrame:
         if self._frame_sections is None:
             raise MissingInjectedInstanceError("frame sections")
         return self._frame_sections
@@ -325,7 +326,7 @@ class DummyViewModel(
         self._frame_videos: Optional[AbstractFrame] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_video_control: Optional[AbstractFrame] = None
-        self._frame_sections: Optional[AbstractFrame] = None
+        self._frame_sections: Optional[AbstractSectionFrame] = None
         self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
         self._frame_analysis: Optional[AbstractFrame] = None
@@ -681,7 +682,7 @@ class DummyViewModel(
     def set_video_frame(self, frame: AbstractFrame) -> None:
         self._frame_videos = frame
 
-    def set_sections_frame(self, frame: AbstractFrame) -> None:
+    def set_sections_frame(self, frame: AbstractSectionFrame) -> None:
         self._frame_sections = frame
         self._update_enabled_section_buttons()
 
@@ -891,11 +892,11 @@ class DummyViewModel(
             section_offset = RELATIVE_SECTION_OFFSET
         return self._ui_factory.configure_section(
             title=title,
-            viewmodel=self,
             section_offset=section_offset,
             initial_position=initial_position,
             input_values=input_values,
             show_offset=self._show_offset(),
+            viewmodel=self,
         )
 
     def _show_offset(self) -> bool:
@@ -991,6 +992,10 @@ class DummyViewModel(
         )
         self.refresh_items_on_canvas()
         logger().info(f"Updated line_section Metadata: {updated_section_data}")
+
+    def update_section_data(self, data: dict) -> None:
+        section = self._flow_parser.parse_section(data)
+        self._application.update_section(section)
 
     def _set_section_data(self, id: SectionId, data: dict) -> None:
         section = self._flow_parser.parse_section(data)

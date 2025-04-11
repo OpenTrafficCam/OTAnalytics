@@ -1,6 +1,9 @@
+import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Literal
+from typing import Any, Iterable, Literal
+
+from nicegui import ui
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
@@ -94,7 +97,24 @@ class NiceGuiUiFactory(UiFactory):
         show_offset: bool,
         viewmodel: ViewModel,
     ) -> dict:
-        raise NotImplementedError
+        # return asyncio.run(self._open_save_dialog())
+        def create_dialog() -> ui.dialog:
+            with ui.dialog() as dialog, ui.card():
+                self.name = ui.input()
+                ui.button("Yes", on_click=lambda: dialog.submit({"yes": "Yes"}))
+                ui.button("No", on_click=lambda: dialog.submit("No"))
+            return dialog
+
+        async def show() -> Any:
+            return await create_dialog()
+
+        # result = asyncio.run(show())
+        # result = async_to_sync(show())
+        # result = ui.timer(0,show, once=True)
+        result: dict = {}
+        print(f"Result of async_to_sync is: {result}")
+
+        return result
 
     def configure_flow(
         self,
@@ -106,3 +126,8 @@ class NiceGuiUiFactory(UiFactory):
         show_distance: bool,
     ) -> FlowDto:
         raise NotImplementedError
+
+
+def async_to_sync(awaitable: Any) -> None:
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(awaitable)

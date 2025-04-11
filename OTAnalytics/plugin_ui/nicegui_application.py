@@ -12,6 +12,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import Tra
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.offset_slider_form import (
     OffSetSliderForm,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    AddVideoForm,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import AnalysisForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     CanvasForm,
@@ -80,7 +83,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
         )
-
+        self.preload_input_files.load(self.run_config)
         return NiceguiWebserver(
             page_builders=[main_page_builder],
             layout_components=NiceguiLayoutComponents(),
@@ -126,12 +129,17 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return TrackForm(
             self.resource_manager,
             self.add_track_form,
+            self.add_video_form,
             self.offset_slider_form,
         )
 
     @cached_property
     def add_track_form(self) -> AddTracksForm:
         return AddTracksForm(self.view_model, self.resource_manager)
+
+    @cached_property
+    def add_video_form(self) -> AddVideoForm:
+        return AddVideoForm(self.view_model, self.resource_manager)
 
     @cached_property
     def flow_form(self) -> FlowForm:
@@ -147,7 +155,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def section_form(self) -> SectionsForm:
-        return SectionsForm(self.view_model, self.resource_manager)
+        return SectionsForm(self.view_model, self.resource_manager, self.canvas_form)
 
     @cached_property
     def offset_slider_form(self) -> OffSetSliderForm:

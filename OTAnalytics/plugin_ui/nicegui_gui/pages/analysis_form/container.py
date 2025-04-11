@@ -3,6 +3,7 @@ from typing import Optional
 from nicegui import ui
 from nicegui.elements.button import Button
 
+from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
     AnalysisKeys,
@@ -14,7 +15,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form
 )
 
 
-class AnalysisForm(ButtonForm):
+class AnalysisForm(ButtonForm, AbstractFrame):
     def __init__(
         self,
         resource_manager: ResourceManager,
@@ -26,8 +27,9 @@ class AnalysisForm(ButtonForm):
         self._button_export_counts: Optional[Button] = None
         self._button_export_road_user_assignment: Optional[Button] = None
         self._button_export_track_statistics: Optional[Button] = None
+        self._introduce_to_viewmodel()
 
-    def introduce_to_viewmodel(self) -> None:
+    def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_analysis_frame(self)
 
     def build(self) -> None:

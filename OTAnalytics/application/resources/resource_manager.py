@@ -39,21 +39,58 @@ class ProjectKeys(ResourceKey):
     LABEL_START_TIME = "label-start-time"
 
 
+class TrackFormKeys(ResourceKey):
+    TAB_ONE = "tab-one"
+    TAB_TWO = "tab-two"
+
+
 class SvzMetadataKeys(ResourceKey):
     LABEL_SVZ_METADATA_FORM_HEADER = "label-svz-metadata-form-header"
+
+
+class FlowKeys(ResourceKey):
+    TABLE_COLUMN_NAME = "table-flow-column-name"
+    BUTTON_ADD = "button-add"
+    BUTTON_GENERATE = "button-generate"
+    BUTTON_PROPERTIES = "button-properties"
+    BUTTON_REMOVE = "button-remove"
+
+
+class FlowAndSectionKeys(ResourceKey):
+    TAB_FLOW = "tab-flow"
+    TAB_SECTION = "tab-section"
 
 
 class AddTracksKeys(ResourceKey):
     BUTTON_ADD_TRACKS = "button-add-tracks"
 
 
+class AddVideoKeys(ResourceKey):
+    BUTTON_ADD_VIDEOS = "button-add-videos"
+    BUTTON_REMOVE_VIDEOS = "button-remove-videos"
+    TABLE_NAME = "table-name"
+
+
+class SectionKeys(ResourceKey):
+    BUTTON_ADD_LINE = "button-add-line"
+    BUTTON_ADD_AREA = "button-add-area"
+    BUTTON_EDIT = "button-edit"
+    BUTTON_PROPERTIES = "button-properties"
+    BUTTON_REMOVE = "button-remove"
+    TABLE_COLUMN_NAME = "table-column-name"
+
+
 class OffsetSliderKeys(ResourceKey):
-    BUTTON_UPDATE_OFFSET = "button-update-offset"
+    BUTTON_UPDATE_OFFSET = "offset-slider-keys-button-update-offset"
 
 
 class RemarkKeys(ResourceKey):
     LABEL_REMARK_HEADER = "label-remark-header"
     REMARK_NO_COMMENT = "remark-no-comment"
+
+
+class HotKeys(ResourceKey):
+    SAVE_NEW_SECTION_HOTKEY = "save-new-section-hotkey"
 
 
 class VisualizationFiltersKeys(ResourceKey):
@@ -99,14 +136,25 @@ class WorkspaceKeys(ResourceKey):
 
 DEFAULT_RESOURCE_MAP = {
     AddTracksKeys.BUTTON_ADD_TRACKS: "Add tracks...",
+    AddVideoKeys.BUTTON_ADD_VIDEOS: "Add videos...",
+    AddVideoKeys.BUTTON_REMOVE_VIDEOS: "Remove videos...",
+    AddVideoKeys.TABLE_NAME: "Table name...",
     AnalysisKeys.LABEL_ANALYSIS: "Analysis",
     AnalysisKeys.BUTTON_TEXT_EXPORT_EVENT_LIST: "Export eventlist...",
     AnalysisKeys.BUTTON_TEXT_EXPORT_COUNTS: "Export counts...",
     AnalysisKeys.BUTTON_TEXT_EXPORT_ROAD_USER_ASSIGNMENT: "Export road user assignments...",  # noqa
     AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS: "Export track statistics",
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
+    FlowAndSectionKeys.TAB_SECTION: "Section",
+    FlowAndSectionKeys.TAB_FLOW: "Flow",
+    FlowKeys.TABLE_COLUMN_NAME: "Flows",
+    FlowKeys.BUTTON_ADD: "Add",
+    FlowKeys.BUTTON_GENERATE: "Generate",
+    FlowKeys.BUTTON_REMOVE: "Remove",
+    FlowKeys.BUTTON_PROPERTIES: "Properties",
     GeneralKeys.LABEL_APPLY: "Apply",
     GeneralKeys.LABEL_RESET: "Reset",
+    HotKeys.SAVE_NEW_SECTION_HOTKEY: "Escape",
     OffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
     ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
     ProjectKeys.LABEL_PROJECT_NAME: "Project name",
@@ -117,7 +165,15 @@ DEFAULT_RESOURCE_MAP = {
     ProjectKeys.LABEL_START_TIME: "Start time",
     RemarkKeys.LABEL_REMARK_HEADER: "Remark",
     RemarkKeys.REMARK_NO_COMMENT: "No Comment",
+    SectionKeys.BUTTON_ADD_AREA: "Add area...",
+    SectionKeys.BUTTON_ADD_LINE: "Add line...",
+    SectionKeys.BUTTON_EDIT: "Edit...",
+    SectionKeys.BUTTON_PROPERTIES: "Properties...",
+    SectionKeys.BUTTON_REMOVE: "Remove...",
+    SectionKeys.TABLE_COLUMN_NAME: "Sections",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
+    TrackFormKeys.TAB_ONE: "Track",
+    TrackFormKeys.TAB_TWO: "Videos",
     TrackStatisticKeys.COLUMN_NAME: "Name",
     TrackStatisticKeys.COLUMN_NUMBER: "Number",
     TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER: "Track Statistics",
