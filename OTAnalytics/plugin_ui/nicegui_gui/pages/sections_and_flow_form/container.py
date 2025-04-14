@@ -28,10 +28,12 @@ class SectionsAndFlowForm:
 
     def build(self) -> None:
         with ui.tabs().classes("w-full") as tabs:
-            one = ui.tab(self._resource_manager.get(FlowAndSectionKeys.TAB_SECTION))
-            two = ui.tab(self._resource_manager.get(FlowAndSectionKeys.TAB_FLOW))
-        with ui.tab_panels(tabs, value=one).classes("w-full"):
-            with ui.tab_panel(one):
+            section_tab = ui.tab(
+                self._resource_manager.get(FlowAndSectionKeys.TAB_SECTION)
+            )
+            flow_tab = ui.tab(self._resource_manager.get(FlowAndSectionKeys.TAB_FLOW))
+        with ui.tab_panels(tabs, value=section_tab).classes("w-full"):
+            with ui.tab_panel(section_tab):
                 self.sections_form.build()
-            with ui.tab_panel(two):
+            with ui.tab_panel(flow_tab):
                 self.flow_form.build()
