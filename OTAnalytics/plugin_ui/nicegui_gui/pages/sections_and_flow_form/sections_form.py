@@ -40,42 +40,6 @@ def map_to_ui(sections: Iterable[Section]) -> list:
 
 
 class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
-    def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
-        pass
-
-    def update_selected_items(self, item_ids: list[str]) -> None:
-        pass
-
-    def update_items(self) -> None:
-        pass
-
-    def disable(self) -> None:
-        if (
-            self._button_add_line
-            and self._button_add_line
-            and self._button_add_areas
-            and self._button_remove
-        ):
-            self._button_add_line.disable()
-            self._button_add_line.disable()
-            self._button_add_areas.disable()
-            self._button_remove.disable()
-
-    def enable(self) -> None:
-        if (
-            self._button_add_line
-            and self._button_add_line
-            and self._button_add_areas
-            and self._button_remove
-        ):
-            self._button_add_line.enable()
-            self._button_add_line.enable()
-            self._button_add_areas.enable()
-            self._button_remove.enable()
-
-    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
-        return 0, 0
-
     def __init__(
         self,
         view_model: ViewModel,
@@ -86,7 +50,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         self._resource_manager = resource_manager
         self._section_table = CustomTable(
             columns=create_columns(resource_manager),
-            rows=map_to_ui(self._view_model.get_all_sections()),
+            rows=[],
             on_select_method=lambda e: self._select_section(e.selection),
             selection="single",
         )
@@ -104,7 +68,6 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
     def _introduce_to_viewmodel(self) -> None:
         self._view_model.set_sections_frame(self)
         self._view_model.set_treeview_sections(self)
-        self._view_model.set_video_control_frame(self)
 
     def _select_section(self, e: dict) -> None:
         self._current_section = e[0]
@@ -230,3 +193,39 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
 
     def get_multiple_items_buttons(self) -> list[Button]:
         return []
+
+    def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
+        pass
+
+    def update_selected_items(self, item_ids: list[str]) -> None:
+        pass
+
+    def update_items(self) -> None:
+        pass
+
+    def disable(self) -> None:
+        if (
+            self._button_add_line
+            and self._button_add_line
+            and self._button_add_areas
+            and self._button_remove
+        ):
+            self._button_add_line.disable()
+            self._button_add_line.disable()
+            self._button_add_areas.disable()
+            self._button_remove.disable()
+
+    def enable(self) -> None:
+        if (
+            self._button_add_line
+            and self._button_add_line
+            and self._button_add_areas
+            and self._button_remove
+        ):
+            self._button_add_line.enable()
+            self._button_add_line.enable()
+            self._button_add_areas.enable()
+            self._button_remove.enable()
+
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        return 0, 0
