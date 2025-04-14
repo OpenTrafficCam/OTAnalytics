@@ -138,7 +138,7 @@ DEFAULT_RESOURCE_MAP = {
     AddTracksKeys.BUTTON_ADD_TRACKS: "Add tracks...",
     AddVideoKeys.BUTTON_ADD_VIDEOS: "Add videos...",
     AddVideoKeys.BUTTON_REMOVE_VIDEOS: "Remove videos...",
-    AddVideoKeys.TABLE_NAME: "Table name...",
+    AddVideoKeys.TABLE_NAME: "Video file",
     AnalysisKeys.LABEL_ANALYSIS: "Analysis",
     AnalysisKeys.BUTTON_TEXT_EXPORT_EVENT_LIST: "Export eventlist...",
     AnalysisKeys.BUTTON_TEXT_EXPORT_COUNTS: "Export counts...",
