@@ -41,6 +41,10 @@ class CustomTable:
             raise MissingInstanceError("Table has not been instantiated yet")
         return self.__table
 
+    @property
+    def _instantiated(self) -> bool:
+        return self.__table is not None
+
     def __init__(
         self,
         columns: List[dict],
@@ -112,4 +116,5 @@ class CustomTable:
         """
         self._rows.clear()
         self._rows.extend(rows)
-        self._table.update()
+        if self._instantiated:
+            self._table.update()
