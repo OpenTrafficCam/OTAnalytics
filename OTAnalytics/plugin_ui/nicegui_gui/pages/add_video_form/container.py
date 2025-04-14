@@ -1,5 +1,6 @@
 from typing import Iterable, Self
 
+from adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from nicegui import ui
 from nicegui.elements.button import Button
 
@@ -12,6 +13,7 @@ from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import CustomTable
 
+COLUMN_ID = "id"
 COLUMN_NAME = "name"
 
 
@@ -25,20 +27,27 @@ def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
     ]
 
 
+def map_video_to_ui(video: Video) -> dict:
+    return {
+        COLUMN_ID: str(video.get_path()),
+        COLUMN_NAME: str(video.get_path().name),
+    }
+
+
 def map_to_ui(videos: Iterable[Video]) -> list:
     list_of_videos = []
     for video in videos:
-        list_of_videos.append(str(video.get_path()))
+        list_of_videos.append(map_video_to_ui(video))
     return list_of_videos
 
 
-class AddVideoForm(ButtonForm):
+class AddVideoForm(ButtonForm, AbstractTreeviewInterface):
     def __init__(
         self,
-        view_model: ViewModel,
+        viewmodel: ViewModel,
         resource_manager: ResourceManager,
     ) -> None:
-        self._view_model = view_model
+        self._viewmodel = viewmodel
         self._resource_manager = resource_manager
         self._add_video_button: ui.button | None = None
         self._remove_video_button: ui.button | None = None
@@ -51,16 +60,18 @@ class AddVideoForm(ButtonForm):
         self.introduce_to_viewmodel()
 
     def _update_video_table(self) -> None:
-        self._video_table.update(map_to_ui(self._view_model.get_all_videos()))
+        if self._video_table:
+            self._video_table.update(map_to_ui(self._viewmodel.get_all_videos()))
 
     def introduce_to_viewmodel(self) -> None:
-        self._view_model.set_video_frame(self)
+        self._viewmodel.set_video_frame(self)
+        self._viewmodel.set_treeview_videos(self)
 
     def build(self) -> Self:
         self._video_table.build()
         self._add_video_button = ui.button(
             self._resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS),
-            on_click=lambda _: self._view_model.add_video(),
+            on_click=lambda _: self._viewmodel.add_video(),
         )
         self._remove_video_button = ui.button(
             self._resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS),
@@ -74,7 +85,31 @@ class AddVideoForm(ButtonForm):
         return []
 
     def _select_video(self, e: dict) -> None:
-        self._view_model.set_selected_videos(e[0])
+        if len(e) > 0:
+            self._viewmodel.set_selected_videos(e[0][COLUMN_ID])
+        else:
+            self._viewmodel.set_selected_videos([])
 
     def _remove_video(self) -> None:
-        self._view_model.remove_videos()
+        self._viewmodel.remove_videos()
+
+    def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
+        self._viewmodel.set_selected_videos(ids)
+
+    def disable(self) -> None:
+        pass
+
+    def enable(self) -> None:
+        pass
+
+    def update_items(self) -> None:
+        self._update_video_table()
+
+    def update_selected_items(self, item_ids: list[str]) -> None:
+        self._update_video_table()
+
+    def _introduce_to_viewmodel(self) -> None:
+        self.introduce_to_viewmodel()
+
+    def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
+        return 0, 0
