@@ -41,7 +41,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         self._resource_manager = resource_manager
         self._flow_table = CustomTable(
             columns=create_columns(resource_manager),
-            rows=map_to_ui(self._view_model.get_all_flows()),
+            rows=[],
             on_select_method=lambda e: self._select_flow(e.selection),
             selection="single",
         )
