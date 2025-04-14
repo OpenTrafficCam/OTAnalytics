@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Any, Callable, Optional, Self
 
 from nicegui import ui
+from nicegui.elements.button import Button
 from nicegui.events import ClickEventArguments, ValueChangeEventArguments
+from plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -52,7 +54,7 @@ class NiceGuiButtonQuickSaveConfig(AbstractButtonQuickSaveConfig):
             self._instance.disable()
 
 
-class ProjectForm(AbstractFrameProject):
+class ProjectForm(ButtonForm, AbstractFrameProject):
     def __init__(
         self,
         view_model: ViewModel,
@@ -60,6 +62,8 @@ class ProjectForm(AbstractFrameProject):
     ) -> None:
         self._view_model = view_model
         self._resource_manager = resource_manager
+        self.save_project_button: ui.button | None = None
+        self.open_project_button: ui.button | None = None
         self._quick_save_button = NiceGuiButtonQuickSaveConfig(
             self._resource_manager.get(ProjectKeys.LABEL_QUICK_SAVE),
             on_click=self._quick_save,
@@ -77,7 +81,6 @@ class ProjectForm(AbstractFrameProject):
             marker_date=MARKER_START_DATE,
             marker_time=MARKER_START_TIME,
         )
-        self.open_project_button: ui.button | None = None
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
@@ -115,14 +118,12 @@ class ProjectForm(AbstractFrameProject):
             if start_date:
                 self._start_date.set_value(start_date)
 
-    def set_enabled_general_buttons(self, enabled: bool) -> None:
-        if enabled:
-            if self.open_project_button:
-                self.open_project_button.enable()
-                self.save_project_button.enable()
-                self._quick_save_button.enable()
-        else:
-            if self.open_project_button:
-                self.open_project_button.disable()
-                self.save_project_button.disable()
-                self._quick_save_button.disable()
+    def get_general_buttons(self) -> list[Button]:
+        buttons = []
+        if self._quick_save_button._instance:
+            buttons.append(self._quick_save_button._instance)
+        if self.open_project_button:
+            buttons.append(self.open_project_button)
+        if self.save_project_button:
+            buttons.append(self.save_project_button)
+        return buttons
