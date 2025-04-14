@@ -8,7 +8,7 @@ class CircleResources:
     circles: dict[str, Circle]
 
     def to_svg(self) -> str:
-        return "\n".join(self.circles)
+        return "\n".join([circle.to_svg() for circle in self.circles.values()])
 
     def add(self, circle: Circle) -> None:
         self.circles[circle.id] = circle
