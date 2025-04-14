@@ -56,7 +56,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_frame_canvas(self)
         self._viewmodel.set_canvas(self)
-        self._viewmodel.set_treeview_videos(self)
         self._viewmodel.set_treeview_files(self)
 
     def add_preview_image(self) -> None:
