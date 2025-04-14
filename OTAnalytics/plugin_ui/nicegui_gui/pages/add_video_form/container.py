@@ -28,7 +28,7 @@ def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
 def map_to_ui(videos: Iterable[Video]) -> list:
     list_of_videos = []
     for video in videos:
-        list_of_videos.append(video.get_path())
+        list_of_videos.append(str(video.get_path()))
     return list_of_videos
 
 
@@ -44,11 +44,14 @@ class AddVideoForm(ButtonForm):
         self._remove_video_button: ui.button | None = None
         self._video_table = CustomTable(
             columns=create_columns(resource_manager),
-            rows=map_to_ui(self._view_model.get_all_videos()),
+            rows=[],
             on_select_method=lambda e: self._select_video(e.selection),
             selection="single",
         )
         self.introduce_to_viewmodel()
+
+    def _update_video_table(self) -> None:
+        self._video_table.update(map_to_ui(self._view_model.get_all_videos()))
 
     def introduce_to_viewmodel(self) -> None:
         self._view_model.set_video_frame(self)
@@ -57,11 +60,12 @@ class AddVideoForm(ButtonForm):
         self._video_table.build()
         self._add_video_button = ui.button(
             self._resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS),
-            on_click=lambda _: self._view_model.load_tracks,
+            on_click=lambda _: self._view_model.add_video(),
         )
         self._remove_video_button = ui.button(
             self._resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS),
         )
+        self._update_video_table()
         return self
 
     def get_general_buttons(self) -> list[Button]:
