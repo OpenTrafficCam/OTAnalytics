@@ -7,6 +7,8 @@ from nicegui.elements.table import Table
 HEADER_SLOT = "header"
 BODY_SLOT = "body"
 
+COLUMN_ID = "id"
+
 
 class MissingInstanceError(Exception):
     pass
@@ -118,3 +120,10 @@ class CustomTable:
         self._rows.extend(rows)
         if self._instantiated:
             self._table.update()
+
+    def select(self, item_ids: list[str]) -> None:
+        if self._instantiated:
+            self._table.selected = self._rows_to_select(item_ids)
+
+    def _rows_to_select(self, item_ids: list[str]) -> list[dict]:
+        return [row for row in self._rows if row[COLUMN_ID] in item_ids]
