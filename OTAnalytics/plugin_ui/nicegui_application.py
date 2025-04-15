@@ -145,7 +145,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def flow_form(self) -> FlowForm:
-        return FlowForm(self.view_model, self.resource_manager)
+        return FlowForm(self.view_model, self.flow_state, self.resource_manager)
 
     @cached_property
     def canvas_form(self) -> CanvasForm:

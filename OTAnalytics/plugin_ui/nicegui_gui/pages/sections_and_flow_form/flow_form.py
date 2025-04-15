@@ -7,18 +7,19 @@ from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import FlowKeys, ResourceManager
-from OTAnalytics.domain.flow import Flow
+from OTAnalytics.application.state import FlowState
+from OTAnalytics.domain.flow import FLOW_NAME, Flow
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import CustomTable
-
-COLUMN_ID = "id"
-COLUMN_NAME = "name"
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
+    COLUMN_ID,
+    CustomTable,
+)
 
 
 def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
     return [
         {
-            "name": COLUMN_NAME,
+            "name": FLOW_NAME,
             "label": resource_manager.get(FlowKeys.TABLE_COLUMN_NAME),
             "field": "name",
         },
@@ -35,10 +36,12 @@ def map_to_ui(flows: Iterable[Flow]) -> list:
 class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
     def __init__(
         self,
-        view_model: ViewModel,
+        viewmodel: ViewModel,
+        flow_state: FlowState,
         resource_manager: ResourceManager,
     ) -> None:
-        self._view_model = view_model
+        self._viewmodel = viewmodel
+        self._flow_state = flow_state
         self._resource_manager = resource_manager
         self._flow_table = CustomTable(
             columns=create_columns(resource_manager),
@@ -53,13 +56,13 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         self._introduce_to_viewmodel()
 
     def _introduce_to_viewmodel(self) -> None:
-        self._view_model.set_flows_frame(self)
-        self._view_model.set_treeview_flows(self)
+        self._viewmodel.set_flows_frame(self)
+        self._viewmodel.set_treeview_flows(self)
 
     def _select_flow(self, e: dict) -> None:
         flow_ids = [event[COLUMN_ID] for event in e]
-        self._view_model.set_selected_flow_ids(flow_ids)
-        self._view_model.refresh_items_on_canvas()
+        self._viewmodel.set_selected_flow_ids(flow_ids)
+        self._viewmodel.refresh_items_on_canvas()
 
     def build(self) -> Self:
         self._flow_table.build()
@@ -79,34 +82,31 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             self._resource_manager.get(FlowKeys.BUTTON_PROPERTIES),
             on_click=self.show_flow_properties,
         )
-        self.update({})
+        self.update_items()
         return self
 
-    def update(self, metadata: dict) -> None:
-        self._flow_table.update(map_to_ui(self._view_model.get_all_flows()))
-
     def add_flow(self) -> None:
-
-        self._flow_table.update(map_to_ui(self._view_model.get_all_flows()))
+        self._flow_table.update(map_to_ui(self._viewmodel.get_all_flows()))
 
     def generate_flow(self) -> None:
-        self._view_model.generate_flows()
+        self._viewmodel.generate_flows()
 
     def remove_flow(self) -> None:
-        self._view_model.remove_flows()
+        self._viewmodel.remove_flows()
 
     def show_flow_properties(self) -> None:
-        self._view_model.edit_selected_flow()
+        self._viewmodel.edit_selected_flow()
 
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
         pass
 
     def update_items(self) -> None:
-        pass
-        # self._flow_table.update(map_to_ui(self._view_model.get_all_flows()))
+        self._flow_table.update(map_to_ui(self._viewmodel.get_all_flows()))
+        selected_flows = [flow.id for flow in self._flow_state.selected_flows.get()]
+        self.update_selected_items(selected_flows)
 
     def update_selected_items(self, item_ids: list[str]) -> None:
-        pass
+        self._flow_table.select(item_ids)
 
     def enable(self) -> None:
         if (
@@ -141,9 +141,11 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         return []
 
     def get_single_item_buttons(self) -> list[Button]:
-        if self._button_remove and self._button_properties:
-            return [self._button_remove, self._button_properties]
+        if self._button_properties:
+            return [self._button_properties]
         return []
 
     def get_multiple_items_buttons(self) -> list[Button]:
+        if self._button_remove:
+            return [self._button_remove]
         return []

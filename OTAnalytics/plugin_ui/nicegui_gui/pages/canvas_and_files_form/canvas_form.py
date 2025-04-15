@@ -332,23 +332,15 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         arrow_style: dict | None = None,
         tags: list[str] | None = None,
     ) -> None:
-        base = start_refpt_calculator.coordinates_from_section(start_section)
-        x1, y1 = base[1]
-        x2, y2 = base[2]
-        xm = (x1 + x2) / 2
-        ym = (y1 + y2) / 2
-        base = end_refpt_calculator.coordinates_from_section(end_section)
-        x1, y1 = base[1]
-        x2, y2 = base[2]
-        xm2 = (x1 + x2) / 2
-        ym2 = (y1 + y2) / 2
+        start_x, start_y = start_refpt_calculator.get_reference_point(start_section)
+        end_x, end_y = end_refpt_calculator.get_reference_point(end_section)
         new_line = Line(
-            x1=int(xm),
-            x2=int(xm2),
-            y1=int(ym),
-            y2=int(ym2),
+            id=f"arrow-{start_section.id}-{end_section.id}",
+            x1=int(start_x),
+            x2=int(end_x),
+            y1=int(start_y),
+            y2=int(end_y),
             stroke="green",
-            id="new_line",
         )
         if self._background_image:
             self._background_image.content += new_line.to_svg()
