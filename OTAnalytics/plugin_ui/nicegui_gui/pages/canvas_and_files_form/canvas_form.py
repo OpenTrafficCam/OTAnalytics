@@ -356,7 +356,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self.draw_all()
 
     def delete_element(self, tag_or_id: str) -> None:
-        pass
+        self._flows.clear()
+        self._lines.clear()
+        self._sections.clear()
+        self._circles.clear()
 
     def start_section_builder(
         self,
