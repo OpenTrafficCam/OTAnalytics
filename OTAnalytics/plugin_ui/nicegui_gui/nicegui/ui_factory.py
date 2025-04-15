@@ -1,4 +1,5 @@
 import asyncio
+from abc import abstractmethod
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
@@ -61,7 +62,32 @@ MARKER_END_SECTION = "marker-end-section"
 MARKER_DISTANCE = "marker-distance"
 
 
-class EditFlowDialog(ui.dialog):
+class BaseDialog(ui.dialog):
+
+    def __init__(self, resource_manager: ResourceManager) -> None:
+        super().__init__()
+        self.resource_manager = resource_manager
+
+    async def build(self) -> DialogResult:
+        with ui.dialog() as dialog, ui.card():
+            await self.build_content()
+            with ui.row():
+                ui.button(
+                    self.resource_manager.get(GeneralKeys.LABEL_APPLY),
+                    on_click=lambda: dialog.submit(DialogResult.APPLY),
+                )
+                ui.button(
+                    self.resource_manager.get(GeneralKeys.LABEL_CANCEL),
+                    on_click=lambda: dialog.submit(DialogResult.CANCEL),
+                )
+            return await dialog
+
+    @abstractmethod
+    async def build_content(self) -> None:
+        raise NotImplementedError
+
+
+class EditFlowDialog(BaseDialog):
     def __init__(
         self,
         resource_manager: ResourceManager,
@@ -70,7 +96,7 @@ class EditFlowDialog(ui.dialog):
         input_values: FlowDto | None = None,
         show_distance: bool = True,
     ) -> None:
-        self._resource_manager = resource_manager
+        super().__init__(resource_manager)
         self._name_generator = name_generator
         self._input_values = input_values
         self._show_distance = show_distance
@@ -85,50 +111,41 @@ class EditFlowDialog(ui.dialog):
             section_ids.get_name_for(input_values.end_section) if input_values else None
         )
         self._name = FormFieldText(
-            label_text=resource_manager.get(EditFlowDialogKeys.LABEL_NAME),
+            label_text=self.resource_manager.get(EditFlowDialogKeys.LABEL_NAME),
             initial_value=name,
             on_value_change=self._update_name,
             marker=MARKER_NAME,
         )
         self._start_section = FormFieldSelect(
-            label_text=resource_manager.get(EditFlowDialogKeys.LABEL_START_SECTION),
+            label_text=self.resource_manager.get(
+                EditFlowDialogKeys.LABEL_START_SECTION
+            ),
             options=section_ids.names,
             initial_value=start_value,
             on_value_change=self._update_name,
             marker=MARKER_START_SECTION,
         )
         self._end_section = FormFieldSelect(
-            label_text=resource_manager.get(EditFlowDialogKeys.LABEL_END_SECTION),
+            label_text=self.resource_manager.get(EditFlowDialogKeys.LABEL_END_SECTION),
             options=section_ids.names,
             initial_value=end_value,
             on_value_change=self._update_name,
             marker=MARKER_END_SECTION,
         )
         self._distance = FormFieldOptionalFloat(
-            label_text=resource_manager.get(EditFlowDialogKeys.LABEL_DISTANCE),
+            label_text=self.resource_manager.get(EditFlowDialogKeys.LABEL_DISTANCE),
             initial_value=input_values.distance if input_values else None,
             min_value=0,
             validation=VALIDATION_NUMBER_POSITIVE,
             marker=MARKER_DISTANCE,
         )
 
-    async def build(self) -> Any:
-        with ui.dialog() as dialog, ui.card():
-            self._start_section.build()
-            self._end_section.build()
-            self._name.build()
-            self._distance.build()
-            with ui.row():
-                ui.button(
-                    self._resource_manager.get(GeneralKeys.LABEL_APPLY),
-                    on_click=lambda: dialog.submit(DialogResult.APPLY),
-                )
-                ui.button(
-                    self._resource_manager.get(GeneralKeys.LABEL_CANCEL),
-                    on_click=lambda: dialog.submit(DialogResult.CANCEL),
-                )
-            self._do_update_name()
-            return await dialog
+    async def build_content(self) -> None:
+        self._start_section.build()
+        self._end_section.build()
+        self._name.build()
+        self._distance.build()
+        self._do_update_name()
 
     def _update_name(self, value: ValueChangeEventArguments) -> None:
         self._do_update_name()
