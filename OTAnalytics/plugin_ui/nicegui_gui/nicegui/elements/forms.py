@@ -8,6 +8,7 @@ from nicegui.elements.checkbox import Checkbox
 from nicegui.elements.input import Input
 from nicegui.elements.mixins.validation_element import ValidationElement
 from nicegui.elements.number import Number
+from nicegui.elements.select import Select
 from nicegui.events import ValueChangeEventArguments
 
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
@@ -655,3 +656,61 @@ class FormFieldCheckbox(LazyInitializedElement[Checkbox]):
 
         """
         self.element.update()
+
+
+class FormFieldSelect(FormField[Select, str]):
+    """A class representing a select form field with updating capabilities.
+
+    Args:
+        label_text (str): The label for the select field.
+        options (list[str]): The values to be selected from.
+        initial_value (str): The initial value of the select field.
+        props (list[str] | None): props to be set for the select element.
+        marker (str | None): marker to be set for the select element.
+
+    """
+
+    @property
+    def value(self) -> str:
+        """Provides the current input of the form field
+
+        Returns:
+            int: The current input of the form field.
+        """
+        return self.element.value
+
+    @property
+    def props(self) -> list[str] | None:
+        return self._props
+
+    @property
+    def marker(self) -> str | None:
+        return self._marker
+
+    def __init__(
+        self,
+        label_text: str,
+        options: list[str],
+        initial_value: str | None = None,
+        on_value_change: Callable[[ValueChangeEventArguments], None] | None = None,
+        props: list[str] | None = None,
+        marker: str | None = None,
+    ) -> None:
+        super().__init__()
+        self._label_text = label_text
+        self._options = options
+        self._initial_value = initial_value
+        self._on_value_change = on_value_change
+        self._props = props
+        self._marker = marker
+
+    def build(self) -> None:
+        """Builds the UI form element."""
+        self._instance = ui.select(
+            label=self._label_text,
+            options=self._options,
+            value=self._initial_value if self._initial_value else self._options[0],
+        )
+        if self._on_value_change:
+            self._instance.on_value_change(self._on_value_change)
+        self._apply(self.element)
