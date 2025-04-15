@@ -12,7 +12,7 @@ from OTAnalytics.application.resources.resource_manager import (
 )
 from OTAnalytics.application.state import SectionState
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.section import NAME, Section
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
@@ -22,14 +22,12 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     CanvasForm,
 )
 
-COLUMN_SECTION_NAME = "name"
-
 
 def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
 
     return [
         {
-            "name": COLUMN_SECTION_NAME,
+            "name": NAME,
             "label": resource_manager.get(SectionKeys.TABLE_COLUMN_NAME),
             "field": "name",
         },
