@@ -11,6 +11,7 @@ from OTAnalytics.domain.flow import Flow
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import CustomTable
 
+COLUMN_ID = "id"
 COLUMN_NAME = "name"
 
 
@@ -56,7 +57,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         self._view_model.set_treeview_flows(self)
 
     def _select_flow(self, e: dict) -> None:
-        self._view_model.set_selected_flow_ids([e[0]["id"]])
+        flow_ids = [event[COLUMN_ID] for event in e]
+        self._view_model.set_selected_flow_ids(flow_ids)
         self._view_model.refresh_items_on_canvas()
 
     def build(self) -> Self:
