@@ -50,6 +50,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_section = False
         self._new_area_section = False
         self._sections: SectionResource = SectionResource({})
+        self._flows: LineResources = LineResources({})
         self._circles: CircleResources = CircleResources({})
         self._lines: LineResources = LineResources({})
 
@@ -138,12 +139,13 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             ),
         self._viewmodel.refresh_items_on_canvas()
 
-    def draw_sections(self) -> None:
+    def draw_all(self) -> None:
         if self._background_image:
             self._background_image.content = ""
             self._background_image.content = self._sections.to_svg()
+            self._background_image.content += self._lines.to_svg()
+            self._background_image.content += self._flows.to_svg()
             self._background_image.content += self._circles.to_svg()
-            self._viewmodel.refresh_items_on_canvas()
 
     def _on_pointer_down(self, e: events.MouseEventArguments) -> None:
         if self._new_section:
@@ -158,7 +160,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 )
             )
             self._new_section_lines = []
-            self.draw_sections()
+            self.draw_all()
             for point in self._new_section_points:
                 if self._background_image:
                     self._background_image.content += point.to_svg()
@@ -202,7 +204,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 fill="orange",
                 pointer_event="all",
             )
-            self.draw_sections()
+            self.draw_all()
             if self._background_image:
                 if self._current_point:
                     self._background_image.content += self._current_point.to_svg()
@@ -217,7 +219,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 fill="red",
                 radius=50,
             )
-            self.draw_sections()
+            self.draw_all()
             if self._background_image:
                 self._background_image.content += self._current_point.to_svg()
 
@@ -233,7 +235,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 fill="red",
             )
             self.current_point = None
-            self.draw_sections()
+            self.draw_all()
             if self._background_image:
                 self._background_image.content += self._new_point.to_svg()
 
@@ -287,33 +289,41 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         list_of_lines = []
         color = "green"
         pointer_event = ""
-        if self._background_image:
-            if is_selected_section:
-                color = "red"
-                pointer_event = "all"
-            for x, y in coordinates:
-                list_of_circle.append(
-                    Circle(x=x, y=y, id=id, fill=color, pointer_event=pointer_event)
+        if is_selected_section:
+            color = "red"
+            pointer_event = "all"
+        for index, coordinate in enumerate(coordinates):
+            x = coordinate[0]
+            y = coordinate[1]
+            list_of_circle.append(
+                Circle(
+                    x=x,
+                    y=y,
+                    id=f"{id}-{index}",
+                    fill=color,
+                    pointer_event=pointer_event,
                 )
-            for x in range(len(list_of_circle) - 1):
-                list_of_lines.append(
-                    Line(
-                        x1=list_of_circle[x].x,
-                        y1=list_of_circle[x].y,
-                        x2=list_of_circle[x + 1].x,
-                        y2=list_of_circle[x + 1].y,
-                        stroke=color,
-                        id=id,
-                    )
+            )
+        for index, circles in enumerate(zip(list_of_circle[:-1], list_of_circle[1:])):
+            circle_1 = circles[0]
+            circle_2 = circles[1]
+            list_of_lines.append(
+                Line(
+                    id=f"{id}-{index}",
+                    x1=circle_1.x,
+                    y1=circle_1.y,
+                    x2=circle_2.x,
+                    y2=circle_2.y,
+                    stroke=color,
                 )
-            for circle in list_of_circle:
-                self._circles.add(circle)
-                self._background_image.content += circle.to_svg()
-            for line in list_of_lines:
-                self._lines.add(line)
-                self._background_image.content += line.to_svg()
-            if self._current_point:
-                self.draw_current_point()
+            )
+        for circle in list_of_circle:
+            self._circles.add(circle)
+        for line in list_of_lines:
+            self._lines.add(line)
+        if self._current_point:
+            self.draw_current_point()
+        self.draw_all()
 
     def start_section_geometry_editor(
         self,
@@ -342,8 +352,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             y2=int(end_y),
             stroke="green",
         )
-        if self._background_image:
-            self._background_image.content += new_line.to_svg()
+        self._flows.add(new_line)
+        self.draw_all()
 
     def delete_element(self, tag_or_id: str) -> None:
         pass
