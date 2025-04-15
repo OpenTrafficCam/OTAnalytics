@@ -14,7 +14,10 @@ from OTAnalytics.application.state import SectionState
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import CustomTable
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
+    COLUMN_ID,
+    CustomTable,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     CanvasForm,
 )
@@ -77,7 +80,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
             self._viewmodel.set_selected_section_ids([])
         else:
             self._current_section = e[0]
-            self._viewmodel.set_selected_section_ids(e[0]["id"])
+            self._viewmodel.set_selected_section_ids(e[0][COLUMN_ID])
             self._viewmodel.refresh_items_on_canvas()
 
     def build(self) -> Self:
@@ -106,15 +109,8 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
                     self._resource_manager.get(SectionKeys.BUTTON_REMOVE),
                     on_click=self.remove_section,
                 )
-        self.update({})
+        self.update_items()
         return self
-
-    def update(self, metadata: dict) -> None:
-        self._section_table.update(map_to_ui(self._viewmodel.get_all_sections()))
-        selected_sections = [
-            section.id for section in self._section_state.selected_sections.get()
-        ]
-        self.update_selected_items(selected_sections)
 
     def add_new_line(self) -> None:
         if self._toggle:
@@ -212,7 +208,11 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         self._section_table.select(item_ids)
 
     def update_items(self) -> None:
-        pass
+        self._section_table.update(map_to_ui(self._viewmodel.get_all_sections()))
+        selected_sections = [
+            section.id for section in self._section_state.selected_sections.get()
+        ]
+        self.update_selected_items(selected_sections)
 
     def disable(self) -> None:
         if (
