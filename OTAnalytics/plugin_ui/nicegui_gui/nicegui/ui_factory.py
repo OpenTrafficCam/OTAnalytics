@@ -23,7 +23,10 @@ from OTAnalytics.application.resources.resource_manager import (
 )
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.dialog import BaseDialog, DialogResult
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+    BaseDialog,
+    DialogResult,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     FormFieldOptionalFloat,
     FormFieldSelect,
