@@ -139,7 +139,9 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def add_video_form(self) -> AddVideoForm:
-        return AddVideoForm(self.view_model, self.resource_manager)
+        return AddVideoForm(
+            self.view_model, self.track_view_state, self.resource_manager
+        )
 
     @cached_property
     def flow_form(self) -> FlowForm:
