@@ -1,7 +1,5 @@
 import asyncio
-from abc import abstractmethod
 from datetime import datetime
-from enum import StrEnum
 from pathlib import Path
 from typing import Any, Iterable, Literal
 
@@ -21,11 +19,11 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 from OTAnalytics.application.application import CancelAddFlow
 from OTAnalytics.application.resources.resource_manager import (
     EditFlowDialogKeys,
-    GeneralKeys,
     ResourceManager,
 )
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.dialog import BaseDialog, DialogResult
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     FormFieldOptionalFloat,
     FormFieldSelect,
@@ -51,40 +49,10 @@ class NiceGuiInfoBox(InfoBox):
         return False
 
 
-class DialogResult(StrEnum):
-    APPLY = "Apply"
-    CANCEL = "Cancel"
-
-
 MARKER_NAME = "marker-name"
 MARKER_START_SECTION = "marker-start-section"
 MARKER_END_SECTION = "marker-end-section"
 MARKER_DISTANCE = "marker-distance"
-
-
-class BaseDialog(ui.dialog):
-
-    def __init__(self, resource_manager: ResourceManager) -> None:
-        super().__init__()
-        self.resource_manager = resource_manager
-
-    async def build(self) -> DialogResult:
-        with ui.dialog() as dialog, ui.card():
-            await self.build_content()
-            with ui.row():
-                ui.button(
-                    self.resource_manager.get(GeneralKeys.LABEL_APPLY),
-                    on_click=lambda: dialog.submit(DialogResult.APPLY),
-                )
-                ui.button(
-                    self.resource_manager.get(GeneralKeys.LABEL_CANCEL),
-                    on_click=lambda: dialog.submit(DialogResult.CANCEL),
-                )
-            return await dialog
-
-    @abstractmethod
-    async def build_content(self) -> None:
-        raise NotImplementedError
 
 
 class EditFlowDialog(BaseDialog):
