@@ -98,18 +98,6 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
     def show_flow_properties(self) -> None:
         self._view_model.edit_selected_flow()
 
-    def set_enabled_general_buttons(self, enabled: bool) -> None:
-        pass
-
-    def set_enabled_change_multiple_items_buttons(self, enabled: bool) -> None:
-        pass
-
-    def set_enabled_change_single_item_buttons(self, enabled: bool) -> None:
-        pass
-
-    def set_enabled_add_buttons(self, enabled: bool) -> None:
-        pass
-
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
         pass
 
