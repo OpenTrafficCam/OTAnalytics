@@ -290,6 +290,79 @@ class FormFieldFloat(FormField[Number, float]):
         self._apply(self.element)
 
 
+class FormFieldOptionalFloat(FormField[Number, float | None]):
+    """A class representing a floating point form field with validation and updating
+    capabilities. It supports optional values.
+
+    Args:
+        label_text (float): The label for the input field.
+        initial_value (float): The initial value of the input. Defaults to None.
+        min_value (float): The minimum allowable value for the input. Defaults to None.
+        max_value (float): The maximum allowable value for the input. Defaults to None.
+        precision (int) : The number of decimal places to display. Defaults to 2.
+        validation(Callable[..., str | None] | dict[str, Callable[..., bool]] | None):
+            Validation functions to be applied on the element's data. Defaults to None.
+        props (list[str] | None): props to be set for the number element.
+        marker (str | None): marker to be set for the number element.
+    """
+
+    @property
+    def value(self) -> float | None:
+        """Provides the current input of the form field
+
+        Returns:
+            float: The current input of the form field.
+        """
+
+        return float(self.element.value)
+
+    @property
+    def props(self) -> list[str] | None:
+        return self._props
+
+    @property
+    def marker(self) -> str | None:
+        return self._marker
+
+    def __init__(
+        self,
+        label_text: str,
+        initial_value: float | None = None,
+        min_value: float | None = None,
+        max_value: float | None = None,
+        precision: int = 2,
+        step: float = 0.01,
+        validation: (
+            Callable[..., str | None] | dict[str, Callable[..., bool]] | None
+        ) = None,
+        props: list[str] | None = None,
+        marker: str | None = None,
+    ):
+        super().__init__()
+        self._label_text = label_text
+        self._initial_value = initial_value
+        self._min = min_value
+        self._max = max_value
+        self._precision = precision
+        self._step = step
+        self._validation = validation
+        self._props = props
+        self._marker = marker
+
+    def build(self) -> None:
+        """Builds the UI form element."""
+        self._instance = ui.number(
+            label=self._label_text,
+            value=self._initial_value,
+            min=self._min,
+            max=self._max,
+            precision=self._precision,
+            validation=self._validation,
+            step=self._step,
+        )
+        self._apply(self.element)
+
+
 class FormFieldInteger(FormField[Number, int]):
     """A class representing a integer form field with validation and updating
     capabilities.
