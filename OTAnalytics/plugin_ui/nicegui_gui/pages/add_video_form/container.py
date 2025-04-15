@@ -69,13 +69,12 @@ class AddVideoForm(ButtonForm, AbstractTreeviewInterface):
         self.introduce_to_viewmodel()
 
     def _update_video_table(self) -> None:
-        if self._video_table:
-            self._video_table.update(map_to_ui(self._viewmodel.get_all_videos()))
-            selected_video_ids = [
-                get_column_id_for(video)
-                for video in self._track_view_state.selected_videos.get()
-            ]
-            self.update_selected_items(selected_video_ids)
+        self._video_table.update(map_to_ui(self._viewmodel.get_all_videos()))
+        selected_video_ids = [
+            get_column_id_for(video)
+            for video in self._track_view_state.selected_videos.get()
+        ]
+        self.update_selected_items(selected_video_ids)
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_video_frame(self)
