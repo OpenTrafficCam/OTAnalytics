@@ -314,7 +314,7 @@ class FormFieldOptionalFloat(FormField[Number, float | None]):
             float: The current input of the form field.
         """
 
-        return float(self.element.value)
+        return float(self.element.value) if self.element.value else None
 
     @property
     def props(self) -> list[str] | None:
