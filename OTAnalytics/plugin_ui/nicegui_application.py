@@ -208,7 +208,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def ui_factory(self) -> UiFactory:
-        return NiceGuiUiFactory()
+        return NiceGuiUiFactory(self.resource_manager)
 
     @cached_property
     def progressbar_builder(self) -> ProgressbarBuilder:

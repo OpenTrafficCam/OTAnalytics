@@ -10,6 +10,7 @@ class ResourceKey(StrEnum):
 
 class GeneralKeys(ResourceKey):
     LABEL_APPLY = "label-apply"
+    LABEL_CANCEL = "label-cancel"
     LABEL_RESET = "label-reset"
 
 
@@ -59,6 +60,13 @@ class FlowKeys(ResourceKey):
 class FlowAndSectionKeys(ResourceKey):
     TAB_FLOW = "tab-flow"
     TAB_SECTION = "tab-section"
+
+
+class EditFlowDialogKeys(ResourceKey):
+    LABEL_NAME = "Name"
+    LABEL_START_SECTION = "Start section"
+    LABEL_END_SECTION = "End section"
+    LABEL_DISTANCE = "Distance [m]"
 
 
 class AddTracksKeys(ResourceKey):
@@ -152,8 +160,13 @@ DEFAULT_RESOURCE_MAP = {
     FlowKeys.BUTTON_GENERATE: "Generate",
     FlowKeys.BUTTON_REMOVE: "Remove",
     FlowKeys.BUTTON_PROPERTIES: "Properties",
+    EditFlowDialogKeys.LABEL_NAME: "Name",
+    EditFlowDialogKeys.LABEL_START_SECTION: "Start section",
+    EditFlowDialogKeys.LABEL_END_SECTION: "End section",
+    EditFlowDialogKeys.LABEL_DISTANCE: "Distance",
     GeneralKeys.LABEL_APPLY: "Apply",
     GeneralKeys.LABEL_RESET: "Reset",
+    GeneralKeys.LABEL_CANCEL: "Cancel",
     HotKeys.SAVE_NEW_SECTION_HOTKEY: "Escape",
     OffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
     ProjectKeys.LABEL_OPEN_PROJECT: "Open...",

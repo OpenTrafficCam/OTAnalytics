@@ -230,7 +230,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def add_flow(self) -> None:
+    async def add_flow(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -242,7 +242,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def edit_selected_flow(self) -> None:
+    async def edit_selected_flow(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

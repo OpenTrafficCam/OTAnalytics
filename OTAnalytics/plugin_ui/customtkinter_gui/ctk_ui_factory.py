@@ -159,7 +159,7 @@ class CtkUiFactory(UiFactory):
             show_offset=show_offset,
         ).get_metadata()
 
-    def configure_flow(
+    async def configure_flow(
         self,
         title: str,
         initial_position: tuple[int, int],

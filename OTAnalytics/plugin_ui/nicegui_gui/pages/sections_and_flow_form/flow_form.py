@@ -2,6 +2,7 @@ from typing import Iterable, Self
 
 from nicegui import ui
 from nicegui.elements.button import Button
+from nicegui.events import ClickEventArguments
 
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -85,8 +86,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         self.update_items()
         return self
 
-    def add_flow(self) -> None:
-        self._flow_table.update(map_to_ui(self._viewmodel.get_all_flows()))
+    async def add_flow(self, _: ClickEventArguments) -> None:
+        await self._viewmodel.add_flow()
 
     def generate_flow(self) -> None:
         self._viewmodel.generate_flows()
@@ -94,8 +95,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
     def remove_flow(self) -> None:
         self._viewmodel.remove_flows()
 
-    def show_flow_properties(self) -> None:
-        self._viewmodel.edit_selected_flow()
+    async def show_flow_properties(self) -> None:
+        await self._viewmodel.edit_selected_flow()
 
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
         pass

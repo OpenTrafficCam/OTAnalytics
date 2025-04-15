@@ -1126,14 +1126,14 @@ class DummyViewModel(
         return self._application.get_all_flows()
 
     @action
-    def add_flow(self) -> None:
+    async def add_flow(self) -> None:
         with contextlib.suppress(CancelAddFlow):
-            flow = self.__create_flow()
+            flow = await self.__create_flow()
             logger().info(f"Added new flow: {flow.id}")
             self.set_selected_flow_ids([flow.id.serialize()])
 
-    def __create_flow(self) -> Flow:
-        flow_data = self._show_flow_popup()
+    async def __create_flow(self) -> Flow:
+        flow_data = await self._show_flow_popup()
         flow_id = self._application.get_flow_id()
         name = flow_data.name
         new_from_section_id = SectionId(flow_data.start_section)
@@ -1149,7 +1149,7 @@ class DummyViewModel(
         self.__try_add_flow(flow)
         return flow
 
-    def _show_flow_popup(
+    async def _show_flow_popup(
         self,
         input_values: FlowDto | None = None,
         title: str = "Add flow",
@@ -1165,16 +1165,18 @@ class DummyViewModel(
         section_ids = ColumnResources(
             [self.__to_resource(section) for section in sections]
         )
-        return self.__create_flow_data(input_values, title, position, section_ids)
+        return await self.__create_flow_data(input_values, title, position, section_ids)
 
-    def __create_flow_data(
+    async def __create_flow_data(
         self,
         input_values: FlowDto | None,
         title: str,
         position: tuple[int, int],
         section_ids: ColumnResources,
     ) -> FlowDto:
-        flow_data = self.__get_flow_data(input_values, title, position, section_ids)
+        flow_data = await self.__get_flow_data(
+            input_values, title, position, section_ids
+        )
         while (not flow_data) or not (self.__is_flow_name_valid(flow_data)):
             new_entry_name = flow_data.name
             if (input_values is not None) and (new_entry_name == input_values.name):
@@ -1184,20 +1186,22 @@ class DummyViewModel(
                 initial_position=position,
             )
             flow_data = flow_data.derive_name("")
-            flow_data = self.__get_flow_data(flow_data, title, position, section_ids)
+            flow_data = await self.__get_flow_data(
+                flow_data, title, position, section_ids
+            )
         return flow_data
 
     def __is_flow_name_valid(self, flow_data: FlowDto) -> bool:
         return self._application.is_flow_name_valid(flow_data.name)
 
-    def __get_flow_data(
+    async def __get_flow_data(
         self,
         input_values: FlowDto | None,
         title: str,
         position: tuple[int, int],
         section_ids: ColumnResources,
     ) -> FlowDto:
-        return self._ui_factory.configure_flow(
+        return await self._ui_factory.configure_flow(
             title=title,
             initial_position=position,
             section_ids=section_ids,
@@ -1243,7 +1247,7 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     @action
-    def edit_selected_flow(self) -> None:
+    async def edit_selected_flow(self) -> None:
         with contextlib.suppress(CancelAddFlow):
             if flows := self._get_selected_flows():
                 if len(flows) != 1:
@@ -1251,14 +1255,14 @@ class DummyViewModel(
                         "Multiple flows selected. Unable to edit flow!"
                         "Please select only one flow."
                     )
-                self._edit_flow(flows[0])
+                await self._edit_flow(flows[0])
             else:
                 position = self.treeview_flows.get_position()
                 self._ui_factory.info_box(
                     message="Please select a flow to edit", initial_position=position
                 )
 
-    def _edit_flow(self, flow: Flow) -> None:
+    async def _edit_flow(self, flow: Flow) -> None:
         input_data = FlowDto(
             flow_id=flow.id.serialize(),
             name=flow.name,
@@ -1267,7 +1271,7 @@ class DummyViewModel(
             distance=flow.distance,
         )
 
-        if flow_data := self._show_flow_popup(
+        if flow_data := await self._show_flow_popup(
             input_values=input_data,
             title="Edit flow",
         ):

@@ -93,7 +93,7 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def configure_flow(
+    async def configure_flow(
         self,
         title: str,
         initial_position: tuple[int, int],
