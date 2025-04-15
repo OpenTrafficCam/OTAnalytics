@@ -4,7 +4,6 @@ from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.ui_factory import NiceGuiUiFactory
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
     AddTracksForm,
 )
@@ -60,6 +59,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_fo
     LayersForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
+from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
 
 
 class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
