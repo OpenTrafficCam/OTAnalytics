@@ -8,6 +8,9 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
 )
 
+MARKER_APPLY = "apply"
+MARKER_CANCEL = "cancel"
+
 
 class DialogResult(StrEnum):
     APPLY = "Apply"
@@ -24,14 +27,16 @@ class BaseDialog(ui.dialog):
         with ui.dialog() as dialog, ui.card():
             await self.build_content()
             with ui.row():
-                ui.button(
+                apply = ui.button(
                     self.resource_manager.get(GeneralKeys.LABEL_APPLY),
                     on_click=lambda: dialog.submit(DialogResult.APPLY),
                 )
-                ui.button(
+                cancel = ui.button(
                     self.resource_manager.get(GeneralKeys.LABEL_CANCEL),
                     on_click=lambda: dialog.submit(DialogResult.CANCEL),
                 )
+                apply.mark(MARKER_APPLY)
+                cancel.mark(MARKER_CANCEL)
             return await dialog
 
     @abstractmethod
