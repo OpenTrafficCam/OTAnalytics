@@ -12,3 +12,6 @@ class CircleResources:
 
     def add(self, circle: Circle) -> None:
         self.circles[circle.id] = circle
+
+    def clear(self) -> None:
+        self.circles.clear()

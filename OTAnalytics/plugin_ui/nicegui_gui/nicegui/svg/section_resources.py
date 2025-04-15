@@ -10,3 +10,6 @@ class SectionResource:
 
     def to_svg(self) -> str:
         return "\n".join(line.to_svg() for line in self.lines.values())
+
+    def clear(self) -> None:
+        self.lines.clear()

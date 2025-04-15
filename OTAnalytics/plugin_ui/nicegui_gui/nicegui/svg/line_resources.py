@@ -12,3 +12,6 @@ class LineResources:
 
     def add(self, line: Line) -> None:
         self.lines[line.id] = line
+
+    def clear(self) -> None:
+        self.lines.clear()
