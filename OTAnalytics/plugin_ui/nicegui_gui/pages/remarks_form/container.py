@@ -19,6 +19,7 @@ class RemarkForm(AbstractFrameRemark):
     ) -> None:
         self._resource_manager = resource_manager
         self._viewmodel = view_model
+        self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_remark_frame(self)
