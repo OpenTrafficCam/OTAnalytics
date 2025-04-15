@@ -10,6 +10,7 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     SectionKeys,
 )
+from OTAnalytics.application.state import SectionState
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
@@ -42,11 +43,13 @@ def map_to_ui(sections: Iterable[Section]) -> list:
 class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
     def __init__(
         self,
-        view_model: ViewModel,
+        viewmodel: ViewModel,
+        section_state: SectionState,
         resource_manager: ResourceManager,
         canvas_form: CanvasForm,
     ) -> None:
-        self._view_model = view_model
+        self._viewmodel = viewmodel
+        self._section_state = section_state
         self._resource_manager = resource_manager
         self._section_table = CustomTable(
             columns=create_columns(resource_manager),
@@ -66,13 +69,16 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         self._introduce_to_viewmodel()
 
     def _introduce_to_viewmodel(self) -> None:
-        self._view_model.set_sections_frame(self)
-        self._view_model.set_treeview_sections(self)
+        self._viewmodel.set_sections_frame(self)
+        self._viewmodel.set_treeview_sections(self)
 
     def _select_section(self, e: dict) -> None:
-        self._current_section = e[0]
-        self._view_model.set_selected_section_ids(e[0]["id"])
-        self._view_model.refresh_items_on_canvas()
+        if len(e) == 0:
+            self._viewmodel.set_selected_section_ids([])
+        else:
+            self._current_section = e[0]
+            self._viewmodel.set_selected_section_ids(e[0]["id"])
+            self._viewmodel.refresh_items_on_canvas()
 
     def build(self) -> Self:
         self._section_table.build()
@@ -104,15 +110,18 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         return self
 
     def update(self, metadata: dict) -> None:
-
-        self._section_table.update(map_to_ui(self._view_model.get_all_sections()))
+        self._section_table.update(map_to_ui(self._viewmodel.get_all_sections()))
+        selected_sections = [
+            section.id for section in self._section_state.selected_sections.get()
+        ]
+        self.update_selected_items(selected_sections)
 
     def add_new_line(self) -> None:
         if self._toggle:
             pass
         else:
-            self._section_table.update(map_to_ui(self._view_model.get_all_sections()))
-            self._view_model.refresh_items_on_canvas()
+            self._section_table.update(map_to_ui(self._viewmodel.get_all_sections()))
+            self._viewmodel.refresh_items_on_canvas()
             # self._canvas_form.add_new_section(area_section=False)
             self._toggle = True
 
@@ -137,7 +146,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
                 }
             }
             self._dialog.close()
-            self._view_model.edit_selected_section_metadata()
+            self._viewmodel.edit_selected_section_metadata()
 
         self._dialog = ui.dialog()
         with self._dialog, ui.card():
@@ -178,8 +187,8 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         return {}
 
     def remove_section(self) -> None:
-        self._view_model.remove_sections()
-        self._view_model.refresh_items_on_canvas()
+        self._viewmodel.remove_sections()
+        self._viewmodel.refresh_items_on_canvas()
 
     def get_add_buttons(self) -> list[Button]:
         if self._button_add_line and self._button_add_areas:
@@ -192,13 +201,15 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         return []
 
     def get_multiple_items_buttons(self) -> list[Button]:
+        if self._button_remove:
+            return [self._button_remove]
         return []
 
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
-        pass
+        self._viewmodel.set_selected_section_ids(ids)
 
     def update_selected_items(self, item_ids: list[str]) -> None:
-        pass
+        self._section_table.select(item_ids)
 
     def update_items(self) -> None:
         pass

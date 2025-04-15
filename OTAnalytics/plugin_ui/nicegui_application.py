@@ -157,7 +157,12 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def section_form(self) -> SectionsForm:
-        return SectionsForm(self.view_model, self.resource_manager, self.canvas_form)
+        return SectionsForm(
+            self.view_model,
+            self.section_state,
+            self.resource_manager,
+            self.canvas_form,
+        )
 
     @cached_property
     def offset_slider_form(self) -> OffSetSliderForm:
