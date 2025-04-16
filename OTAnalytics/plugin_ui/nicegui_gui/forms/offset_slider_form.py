@@ -17,11 +17,12 @@ class OffsetSliderForm:
     def __init__(
         self,
         resource_manager: ResourceManager,
+        initial_offset: RelativeOffsetCoordinate = RelativeOffsetCoordinate(0.5, 0.5),
         on_offset_change: Callable[[], None] | None = None,
     ) -> None:
         self._resource_manager = resource_manager
         self.on_offset_change = on_offset_change
-        self._initial_offset = RelativeOffsetCoordinate(0.5, 0.5)
+        self._initial_offset = initial_offset
         self.y_offset_slider: ui.slider | None = None
         self.x_offset_slider: ui.slider | None = None
 
