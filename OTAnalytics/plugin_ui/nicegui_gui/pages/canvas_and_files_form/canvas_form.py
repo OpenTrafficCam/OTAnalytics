@@ -27,6 +27,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
 
+CLICK = "click"
+
 
 class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface):
 
@@ -64,7 +66,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def build(self) -> Self:
         self._background_image = (
-            ui.interactive_image("", on_mouse=self._on_pointer_down, events=["click"])
+            ui.interactive_image("", on_mouse=self._on_pointer_down, events=[CLICK])
             .on("svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args))
             .on("svg:pointermove", lambda e: self.on_pointer_move(e.args))
             .on("svg:pointerup", lambda e: self.on_pointer_up(e.args))
