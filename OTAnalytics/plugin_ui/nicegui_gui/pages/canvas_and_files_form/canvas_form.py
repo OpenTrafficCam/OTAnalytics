@@ -76,21 +76,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self.load_sections()
         return self
 
-    async def add_new_section(self, area_section: bool) -> None:
-        if area_section:
-            self._new_area_section = True
-        with ui.dialog() as dialog, ui.card():
-            ui.input("Are you sure?")
-            with ui.row():
-                ui.button("Yes", on_click=lambda: dialog.submit("Yes"))
-                ui.button("No", on_click=lambda: dialog.submit("No"))
-
-        result = await dialog
-        ui.notify(f"You chose {result}")
-
     async def handle_key(self, e: KeyEventArguments) -> None:
         if (
-            e.key == self._resource_manager.get(HotKeys.SAVE_NEW_SECTION_HOTKEY)
+            e.key == self._resource_manager.get_hotkey(HotKeys.SAVE_NEW_SECTION_HOTKEY)
             and self._new_section
         ):
             coordinates: list[tuple[int, int]] = []

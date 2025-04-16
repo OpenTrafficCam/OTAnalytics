@@ -172,7 +172,6 @@ DEFAULT_RESOURCE_MAP = {
     GeneralKeys.LABEL_APPLY: "Apply",
     GeneralKeys.LABEL_RESET: "Reset",
     GeneralKeys.LABEL_CANCEL: "Cancel",
-    HotKeys.SAVE_NEW_SECTION_HOTKEY: "Escape",
     OffsetSliderKeys.LABEL_COORDINATE_X: "X:",
     OffsetSliderKeys.LABEL_COORDINATE_Y: "Y:",
     ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
@@ -225,6 +224,8 @@ DEFAULT_IMAGE_RESOURCE_MAP: dict[ResourceKey, str] = {
     CanvasKeys.IMAGE_DEFAULT: r"OTAnalytics/assets/OpenTrafficCam_800.png"
 }
 
+DEFAULT_HOTKEYS: dict[HotKeys, str] = {HotKeys.SAVE_NEW_SECTION_HOTKEY: "Escape"}
+
 
 class ResourceManager:
 
@@ -232,9 +233,11 @@ class ResourceManager:
         self,
         resources: dict[ResourceKey, str] = DEFAULT_RESOURCE_MAP,
         image_resources: dict[ResourceKey, str] = DEFAULT_IMAGE_RESOURCE_MAP,
+        hotkeys: dict[HotKeys, str] = DEFAULT_HOTKEYS,
     ) -> None:
         self._resources = resources
         self._image_resources = image_resources
+        self._hotkeys = hotkeys
 
     def get(self, key: ResourceKey) -> str:
         return self._resources.get(key, str(key))
@@ -243,6 +246,9 @@ class ResourceManager:
         if key in self._image_resources:
             return load_image(self._image_resources.get(key))
         return None
+
+    def get_hotkey(self, key: HotKeys) -> str | None:
+        return self._hotkeys.get(key)
 
 
 def load_image(src: str | None) -> Image.Image | None:
