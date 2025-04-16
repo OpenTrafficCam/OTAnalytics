@@ -19,6 +19,8 @@ class RemarkForm(AbstractFrameRemark):
     ) -> None:
         self._resource_manager = resource_manager
         self._viewmodel = view_model
+        self._remark_label: ui.label | None = None
+        self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_remark_frame(self)
@@ -29,6 +31,8 @@ class RemarkForm(AbstractFrameRemark):
         self.load_remark()
 
     def load_remark(self) -> None:
+        if not self._remark_label:
+            return
         self._remark_label.clear()
         if remark := self._viewmodel.get_remark():
             self._remark_label.set_text(remark)

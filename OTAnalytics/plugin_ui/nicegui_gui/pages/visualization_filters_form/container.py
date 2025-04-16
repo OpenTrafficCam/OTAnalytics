@@ -112,6 +112,12 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._filter_by_date: ui.checkbox
         self._filter_by_class: ui.checkbox
         self._filter_by_class_list: list = []
+        self._button_previous_second: ui.button | None = None
+        self._button_previous_frame: ui.button | None = None
+        self._button_previous_event: ui.button | None = None
+        self._button_next_second: ui.button | None = None
+        self._button_next_frame: ui.button | None = None
+        self._button_next_event: ui.button | None = None
         self._introduce_to_viewmodel()
         self._frames_to_skip = 0
         self._seconds_to_skip = 0
@@ -142,6 +148,7 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_filter_frame(self)
+        self._viewmodel.set_video_control_frame(self)
 
     def build(self) -> None:
         with ui.grid(columns=3):
@@ -295,11 +302,17 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         pass
 
     def get_general_buttons(self) -> list[Button]:
-        return [
-            self._button_previous_second,
-            self._button_previous_frame,
-            self._button_previous_event,
-            self._button_next_second,
-            self._button_next_frame,
-            self._button_next_event,
-        ]
+        buttons = []
+        if self._button_previous_second:
+            buttons.append(self._button_previous_second)
+        if self._button_previous_frame:
+            buttons.append(self._button_previous_frame)
+        if self._button_previous_event:
+            buttons.append(self._button_previous_event)
+        if self._button_next_second:
+            buttons.append(self._button_next_second)
+        if self._button_next_frame:
+            buttons.append(self._button_next_frame)
+        if self._button_next_event:
+            buttons.append(self._button_next_event)
+        return buttons

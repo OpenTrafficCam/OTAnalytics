@@ -1,3 +1,4 @@
+import asyncio
 import tkinter
 from abc import ABC, abstractmethod
 from typing import Optional
@@ -687,16 +688,18 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         self._coordinates = coordinates
         self._create_section()
 
-    def _get_metadata(self) -> dict:
+    async def _get_metadata(self) -> dict:
         toplevel_position = self._canvas.get_position()
-        return self._viewmodel.get_section_metadata(
+        return await self._viewmodel.get_section_metadata(
             title="Add section", initial_position=toplevel_position
         )
 
     def _create_section(self) -> None:
         coordinates = add_last_coordinate(self._is_area_section, self._coordinates)
-        self._viewmodel.add_new_section(
-            coordinates=coordinates,
-            is_area_section=self._is_area_section,
-            get_metadata=self._get_metadata,
+        asyncio.run(
+            self._viewmodel.add_new_section(
+                coordinates=coordinates,
+                is_area_section=self._is_area_section,
+                get_metadata=self._get_metadata,
+            )
         )

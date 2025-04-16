@@ -1,11 +1,13 @@
 from dataclasses import dataclass
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Literal
 
 from nicegui import ui
 from nicegui.elements.table import Table
 
 HEADER_SLOT = "header"
 BODY_SLOT = "body"
+
+COLUMN_ID = "id"
 
 
 class MissingInstanceError(Exception):
@@ -41,6 +43,10 @@ class CustomTable:
             raise MissingInstanceError("Table has not been instantiated yet")
         return self.__table
 
+    @property
+    def _instantiated(self) -> bool:
+        return self.__table is not None
+
     def __init__(
         self,
         columns: List[dict],
@@ -51,6 +57,8 @@ class CustomTable:
         observers: list[TableObserver] | None = None,
         pagination: dict | None = None,
         marker: str | None = None,
+        on_select_method: Callable[[Any], None] | None = None,
+        selection: Literal["single", "multiple"] | None = None,
     ) -> None:
         self._columns = columns
         self._rows = rows
@@ -60,6 +68,8 @@ class CustomTable:
         self._body_slot = body_slot
         self._pagination = pagination
         self._marker = marker
+        self._on_select_method = on_select_method
+        self._selection = selection
         self._observers = []
         if observers:
             self._observers = observers
@@ -71,6 +81,8 @@ class CustomTable:
             rows=self._rows,
             title=self._title,
             pagination=self._pagination,
+            on_select=self._on_select_method,
+            selection=self._selection,
         ) as table:
             self.__table = table
             self._add_header_slot()
@@ -106,4 +118,12 @@ class CustomTable:
         """
         self._rows.clear()
         self._rows.extend(rows)
-        self._table.update()
+        if self._instantiated:
+            self._table.update()
+
+    def select(self, item_ids: list[str]) -> None:
+        if self._instantiated:
+            self._table.selected = self._rows_to_select(item_ids)
+
+    def _rows_to_select(self, item_ids: list[str]) -> list[dict]:
+        return [row for row in self._rows if row[COLUMN_ID] in item_ids]

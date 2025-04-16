@@ -36,7 +36,10 @@ class LayersForm(AbstractFrameTrackPlotting):
             for layer in layer_group.layers:
                 ui.checkbox(
                     layer.get_name(),
-                    on_change=lambda event: layer.set_enabled(event.value),
+                    value=layer.is_enabled(),
+                    on_change=lambda event, current=layer: current.set_enabled(
+                        event.value
+                    ),
                 )
         return self
 

@@ -141,7 +141,7 @@ class CtkUiFactory(UiFactory):
             export_mode=OVERWRITE,
         )
 
-    def configure_section(
+    async def configure_section(
         self,
         title: str,
         section_offset: RelativeOffsetCoordinate,
@@ -159,7 +159,7 @@ class CtkUiFactory(UiFactory):
             show_offset=show_offset,
         ).get_metadata()
 
-    def configure_flow(
+    async def configure_flow(
         self,
         title: str,
         initial_position: tuple[int, int],
