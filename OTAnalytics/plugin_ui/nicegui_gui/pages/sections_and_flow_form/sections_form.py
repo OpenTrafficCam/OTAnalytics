@@ -63,7 +63,6 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
         self._button_add_areas: ui.button | None = None
         self._button_add_line: ui.button | None = None
         self._button_remove: ui.button | None = None
-        self._current_section: Section
         self._result: dict = {}
         self._introduce_to_viewmodel()
 
@@ -71,13 +70,9 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
         self._viewmodel.set_sections_frame(self)
         self._viewmodel.set_treeview_sections(self)
 
-    def _select_section(self, e: dict) -> None:
-        if len(e) == 0:
-            self._viewmodel.set_selected_section_ids([])
-        else:
-            self._current_section = e[0]
-            self._viewmodel.set_selected_section_ids(e[0][COLUMN_ID])
-            self._viewmodel.refresh_items_on_canvas()
+    def _select_section(self, events: dict) -> None:
+        selected_sections = [event[COLUMN_ID] for event in events]
+        self._viewmodel.set_selected_section_ids(selected_sections)
 
     def build(self) -> Self:
         self._section_table.build()
@@ -95,7 +90,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
                 self._button_edit = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_EDIT),
                     on_click=self._viewmodel.edit_section_geometry,
-                )  # Toggle Button
+                )
                 self._button_properties = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_PROPERTIES),
                     on_click=self._viewmodel.edit_selected_section_metadata,
