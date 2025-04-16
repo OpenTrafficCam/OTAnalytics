@@ -15,3 +15,6 @@ class Circle:
         return f"""<circle id="{self.id}"cx="{self.x}" cy="{self.y}" r="{self.radius}"
         fill="{self.fill}" pointer-events={self.pointer_event}
         cursor="{self.cursor}" />"""
+
+    def to_tuple(self) -> tuple[int, int]:
+        return self.x, self.y

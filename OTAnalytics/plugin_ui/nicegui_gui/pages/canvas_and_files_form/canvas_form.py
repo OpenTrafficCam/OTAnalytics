@@ -28,6 +28,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
 )
 
 CLICK = "click"
+POINTER_EVENT_ALL = "all"
+POINTER_EVENT_NONE = ""
 
 
 class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface):
@@ -81,50 +83,28 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             e.key == self._resource_manager.get_hotkey(HotKeys.SAVE_NEW_SECTION_HOTKEY)
             and self._new_section
         ):
-            coordinates: list[tuple[int, int]] = []
-            for circle in self._new_section_points:
-                coordinates.append((circle.x, circle.y))
-            self._new_section = False
-
+            coordinates = [circle.to_tuple() for circle in self._new_section_points]
+            self.__reset_editor()
             await self._viewmodel.add_new_section(
                 coordinates=coordinates,
                 is_area_section=self._new_area_section,
                 get_metadata=self.__get_metadata,
             )
 
+    def __reset_editor(self) -> None:
+        self._new_section = False
+        self._new_section_points = []
+        self._new_section_lines = []
+
     async def __get_metadata(self) -> dict:
-        title = "Edit Section" if self._current_section else "Add Section"
+        title = self._resource_manager.get(
+            CanvasKeys.LABEL_EDIT_SECTION
+            if self._current_section
+            else CanvasKeys.LABEL_ADD_SECTION
+        )
         return await self._viewmodel.get_section_metadata(
             title=title, initial_position=(0, 0)
         )
-
-    def _open_save_dialog(self) -> None:
-        with ui.dialog() as self._dialog, ui.card():
-            self.name = ui.input()
-            ui.button(
-                "Close", on_click=lambda e: self._save_new_section(self.name.value)
-            )
-        self._dialog.open()
-
-    async def _save_new_section(self, name: str) -> None:
-        self._dialog.close()
-        coordinates: list[tuple[int, int]] = []
-        for circle in self._new_section_points:
-            coordinates.append((circle.x, circle.y))
-
-        if self._current_section:
-            # TODO refactor, see self.__get_metadata
-            async def _get_metadata() -> dict:
-                return await self._viewmodel.get_section_metadata(
-                    title=name, initial_position=coordinates[0]
-                )
-
-            await self._viewmodel.add_new_section(
-                coordinates=coordinates,
-                is_area_section=self._new_area_section,
-                get_metadata=_get_metadata,
-            )
-        self._viewmodel.refresh_items_on_canvas()
 
     def draw_all(self) -> None:
         if self._background_image:
@@ -140,7 +120,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 Circle(
                     x=int(e.image_x),
                     y=int(e.image_y),
-                    pointer_event="all",
+                    pointer_event=POINTER_EVENT_ALL,
                     cursor="pointer",
                     fill="orange",
                     id="new_point",
@@ -189,7 +169,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 y=e["image_y"],
                 id=e["element_id"],
                 fill="orange",
-                pointer_event="all",
+                pointer_event=POINTER_EVENT_ALL,
             )
             self.draw_all()
             if self._background_image:
@@ -201,7 +181,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self._current_point = Circle(
                 x=e["image_x"],
                 y=e["image_y"],
-                pointer_event="all",
+                pointer_event=POINTER_EVENT_ALL,
                 id=e["element_id"],
                 fill="red",
                 radius=50,
@@ -217,7 +197,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self._new_point = Circle(
                 x=e["image_x"],
                 y=e["image_y"],
-                pointer_event="all",
+                pointer_event=POINTER_EVENT_ALL,
                 id=e["element_id"],
                 fill="red",
             )
@@ -247,13 +227,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._background_image:
             self._background_image.on_mouse(self.default_mouse_handler)
 
-    def add_new_area(self) -> None:
-        self._new_section = True
-        self._new_area_section = True
-        # TODO refactor check if mouse handler can be removed/replaced with pass-handler
-        # if self._background_image:
-        #     self._background_image.on_mouse(self._on_pointer_down)
-
     def default_mouse_handler(self) -> None:
         pass
 
@@ -276,10 +249,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         list_of_circle = []
         list_of_lines = []
         color = "green"
-        pointer_event = ""
+        pointer_event = POINTER_EVENT_NONE
         if is_selected_section:
             color = "red"
-            pointer_event = "all"
+            pointer_event = POINTER_EVENT_ALL
         for index, coordinate in enumerate(coordinates):
             x = coordinate[0]
             y = coordinate[1]
@@ -354,8 +327,11 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         is_area_section: bool = False,
         section: Optional[Section] = None,
     ) -> None:
-        # TODO start cofrect editor
-        self.add_new_area()
+        self._new_section = True
+        self._new_area_section = is_area_section
+        # TODO refactor check if mouse handler can be removed/replaced with pass-handler
+        # if self._background_image:
+        #     self._background_image.on_mouse(self._on_pointer_down)
 
     def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
         return 0, 0
