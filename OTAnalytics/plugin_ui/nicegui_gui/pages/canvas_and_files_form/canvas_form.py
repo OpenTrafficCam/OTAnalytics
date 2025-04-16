@@ -86,7 +86,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         result = await dialog
         ui.notify(f"You chose {result}")
 
-    def handle_key(self, e: KeyEventArguments) -> None:
+    async def handle_key(self, e: KeyEventArguments) -> None:
         if (
             e.key == self._resource_manager.get(HotKeys.SAVE_NEW_SECTION_HOTKEY)
             and self._new_section
@@ -96,11 +96,11 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 coordinates.append((circle.x, circle.y))
             self._new_section = False
 
-            self._viewmodel.add_new_section(
+            await self._viewmodel.add_new_section(
                 coordinates=coordinates,
                 is_area_section=self._new_area_section,
                 get_metadata=self.__get_metadata,
-            ),
+            )
 
     async def __get_metadata(self) -> dict:
         title = "Edit Section" if self._current_section else "Add Section"
@@ -133,7 +133,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 coordinates=coordinates,
                 is_area_section=self._new_area_section,
                 get_metadata=_get_metadata,
-            ),
+            )
         self._viewmodel.refresh_items_on_canvas()
 
     def draw_all(self) -> None:
