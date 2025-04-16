@@ -15,9 +15,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import Butto
 
 class OffsetSliderForm:
     @property
-    def offset(self) -> RelativeOffsetCoordinate | None:
+    def offset(self) -> RelativeOffsetCoordinate:
         if self.x_offset_slider is None or self.y_offset_slider is None:
-            return None
+            return self._initial_offset
         return RelativeOffsetCoordinate(
             x=self.x_offset_slider.value, y=self.y_offset_slider.value
         )
@@ -29,6 +29,7 @@ class OffsetSliderForm:
     ) -> None:
         self._resource_manager = resource_manager
         self.on_offset_change = on_offset_change
+        self._initial_offset = RelativeOffsetCoordinate(0.5, 0.5)
         self.y_offset_slider: ui.slider | None = None
         self.x_offset_slider: ui.slider | None = None
 
@@ -36,10 +37,14 @@ class OffsetSliderForm:
         with ui.grid(rows=2).style("width: 100%"):
             with ui.row(wrap=False):
                 ui.label("X:")
-                self.x_offset_slider = ui.slider(min=0, max=1, value=0.5, step=0.1)
+                self.x_offset_slider = ui.slider(
+                    min=0, max=1, value=self._initial_offset.x, step=0.1
+                )
             with ui.row(wrap=False):
                 ui.label("Y:")
-                self.y_offset_slider = ui.slider(min=0, max=1, value=0.5, step=0.1)
+                self.y_offset_slider = ui.slider(
+                    min=0, max=1, value=self._initial_offset.y, step=0.1
+                )
             if self.on_offset_change is not None:
                 self.x_offset_slider.on_value_change(self.on_offset_change)
                 self.y_offset_slider.on_value_change(self.on_offset_change)
