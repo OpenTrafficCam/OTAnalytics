@@ -88,6 +88,11 @@ class SectionKeys(ResourceKey):
     TABLE_COLUMN_NAME = "table-column-name"
 
 
+class OffsetSliderKeys(ResourceKey):
+    LABEL_COORDINATE_X = "label-coordinate-x"
+    LABEL_COORDINATE_Y = "label-coordinate-y"
+
+
 class VisualizationOffsetSliderKeys(ResourceKey):
     BUTTON_UPDATE_OFFSET = "offset-slider-keys-button-update-offset"
 
@@ -168,7 +173,8 @@ DEFAULT_RESOURCE_MAP = {
     GeneralKeys.LABEL_RESET: "Reset",
     GeneralKeys.LABEL_CANCEL: "Cancel",
     HotKeys.SAVE_NEW_SECTION_HOTKEY: "Escape",
-    VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
+    OffsetSliderKeys.LABEL_COORDINATE_X: "X:",
+    OffsetSliderKeys.LABEL_COORDINATE_Y: "Y:",
     ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
     ProjectKeys.LABEL_PROJECT_NAME: "Project name",
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
@@ -211,6 +217,7 @@ DEFAULT_RESOURCE_MAP = {
     VisualizationFiltersKeys.LABEL_END_DATE: "End date",
     VisualizationFiltersKeys.LABEL_END_TIME: "End time",
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
+    VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
     WorkspaceKeys.LABEL_WORKSPACE_FORM_HEADER: "Workspace",
 }
 

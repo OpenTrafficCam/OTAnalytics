@@ -6,6 +6,7 @@ from nicegui.elements.button import Button
 from OTAnalytics.adapter_ui.abstract_frame_offset import AbstractFrameOffset
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
+    OffsetSliderKeys,
     ResourceManager,
     VisualizationOffsetSliderKeys,
 )
@@ -36,12 +37,16 @@ class OffsetSliderForm:
     def build(self) -> None:
         with ui.grid(rows=2).style("width: 100%"):
             with ui.row(wrap=False):
-                ui.label("X:")
+                ui.label(
+                    self._resource_manager.get(OffsetSliderKeys.LABEL_COORDINATE_X)
+                )
                 self.x_offset_slider = ui.slider(
                     min=0, max=1, value=self._initial_offset.x, step=0.1
                 )
             with ui.row(wrap=False):
-                ui.label("Y:")
+                ui.label(
+                    self._resource_manager.get(OffsetSliderKeys.LABEL_COORDINATE_Y)
+                )
                 self.y_offset_slider = ui.slider(
                     min=0, max=1, value=self._initial_offset.y, step=0.1
                 )
