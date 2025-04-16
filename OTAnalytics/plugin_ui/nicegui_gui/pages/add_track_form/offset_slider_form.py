@@ -12,7 +12,7 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 
 
-class OffSetSliderForm(AbstractFrameOffset, ButtonForm):
+class VisualizationOffSetSliderForm(AbstractFrameOffset, ButtonForm):
     def __init__(
         self,
         view_model: ViewModel,

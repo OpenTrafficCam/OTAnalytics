@@ -8,7 +8,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form impo
     AddTracksForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.offset_slider_form import (
-    OffSetSliderForm,
+    VisualizationOffSetSliderForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     AddVideoForm,
@@ -24,7 +24,7 @@ class TrackForm:
         resource_manager: ResourceManager,
         add_tracks_form: AddTracksForm,
         add_videos_form: AddVideoForm,
-        offset_slider_form: OffSetSliderForm,
+        offset_slider_form: VisualizationOffSetSliderForm,
     ) -> None:
         self._resource_manager = resource_manager
         self.add_tracks_form = add_tracks_form
