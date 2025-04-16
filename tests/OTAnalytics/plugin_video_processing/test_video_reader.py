@@ -89,16 +89,19 @@ class TestPyAVVideoReader:
         actual = target._get_total_frames(given_video_stream, given_video_path)
         assert actual == expected
 
-    def test_get_total_frames_video_no_frame_info_available(self) -> None:
-        given_video_path = Path("some/path/to/video.mp4")
+    def test_get_total_frames_video_no_frame_info_available(
+        self, cyclist_video: Path
+    ) -> None:
+        given_video_path = cyclist_video
         given_video_stream = Mock()
         given_video_stream.frames = 0
         given_videos_metadata = Mock()
         given_videos_metadata.get_by_video_name.return_value = None
 
         target = PyAvVideoReader(given_videos_metadata)
-        with pytest.raises(ValueError):
-            target._get_total_frames(given_video_stream, given_video_path)
+        actual = target._get_total_frames(given_video_stream, given_video_path)
+
+        assert actual == 60
 
         given_videos_metadata.get_by_video_name.assert_called_once_with(
             given_video_path.name
