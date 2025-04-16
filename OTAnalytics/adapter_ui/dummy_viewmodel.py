@@ -18,7 +18,6 @@ from OTAnalytics.adapter_ui.abstract_frame_project import (
     AbstractFrameSvzMetadata,
 )
 from OTAnalytics.adapter_ui.abstract_frame_remark import AbstractFrameRemark
-from OTAnalytics.adapter_ui.abstract_frame_section import AbstractSectionFrame
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
@@ -217,7 +216,7 @@ class DummyViewModel(
         return self._frame_video_control
 
     @property
-    def frame_sections(self) -> AbstractSectionFrame:
+    def frame_sections(self) -> AbstractFrame:
         if self._frame_sections is None:
             raise MissingInjectedInstanceError("frame sections")
         return self._frame_sections
@@ -326,7 +325,7 @@ class DummyViewModel(
         self._frame_videos: Optional[AbstractFrame] = None
         self._frame_canvas: Optional[AbstractFrameCanvas] = None
         self._frame_video_control: Optional[AbstractFrame] = None
-        self._frame_sections: Optional[AbstractSectionFrame] = None
+        self._frame_sections: Optional[AbstractFrame] = None
         self._frame_flows: Optional[AbstractFrame] = None
         self._frame_filter: Optional[AbstractFrameFilter] = None
         self._frame_analysis: Optional[AbstractFrame] = None
@@ -682,7 +681,7 @@ class DummyViewModel(
     def set_video_frame(self, frame: AbstractFrame) -> None:
         self._frame_videos = frame
 
-    def set_sections_frame(self, frame: AbstractSectionFrame) -> None:
+    def set_sections_frame(self, frame: AbstractFrame) -> None:
         self._frame_sections = frame
         self._update_enabled_section_buttons()
 

@@ -16,7 +16,6 @@ from OTAnalytics.adapter_ui.abstract_frame_project import (
     AbstractFrameSvzMetadata,
 )
 from OTAnalytics.adapter_ui.abstract_frame_remark import AbstractFrameRemark
-from OTAnalytics.adapter_ui.abstract_frame_section import AbstractSectionFrame
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
@@ -74,7 +73,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def set_sections_frame(self, frame: AbstractSectionFrame) -> None:
+    def set_sections_frame(self, frame: AbstractFrame) -> None:
         pass
 
     @abstractmethod
