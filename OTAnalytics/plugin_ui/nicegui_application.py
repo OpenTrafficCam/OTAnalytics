@@ -8,7 +8,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form impo
     AddTracksForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import TrackForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.offset_slider_form import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.visualization_offset_slider_form import (  # noqa
     VisualizationOffSetSliderForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (

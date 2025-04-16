@@ -9,11 +9,9 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import (
     NoUniqueNameException,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.forms.offset_slider_form import OffsetSliderForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import FormFieldText
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.offset_slider_form import (
-    OffsetSliderForm,
-)
 
 MARKER_NAME = "marker-name"
 MARKER_START_SECTION = "marker-start-section"

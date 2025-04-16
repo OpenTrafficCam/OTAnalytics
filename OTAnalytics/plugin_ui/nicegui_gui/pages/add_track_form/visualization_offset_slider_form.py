@@ -1,4 +1,4 @@
-from typing import Callable, Self
+from typing import Self
 
 from nicegui import ui
 from nicegui.elements.button import Button
@@ -6,60 +6,12 @@ from nicegui.elements.button import Button
 from OTAnalytics.adapter_ui.abstract_frame_offset import AbstractFrameOffset
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    OffsetSliderKeys,
     ResourceManager,
     VisualizationOffsetSliderKeys,
 )
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.plugin_ui.nicegui_gui.forms.offset_slider_form import OffsetSliderForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
-
-
-class OffsetSliderForm:
-    @property
-    def offset(self) -> RelativeOffsetCoordinate:
-        if self.x_offset_slider is None or self.y_offset_slider is None:
-            return self._initial_offset
-        return RelativeOffsetCoordinate(
-            x=self.x_offset_slider.value, y=self.y_offset_slider.value
-        )
-
-    def __init__(
-        self,
-        resource_manager: ResourceManager,
-        on_offset_change: Callable[[], None] | None = None,
-    ) -> None:
-        self._resource_manager = resource_manager
-        self.on_offset_change = on_offset_change
-        self._initial_offset = RelativeOffsetCoordinate(0.5, 0.5)
-        self.y_offset_slider: ui.slider | None = None
-        self.x_offset_slider: ui.slider | None = None
-
-    def build(self) -> None:
-        with ui.grid(rows=2).style("width: 100%"):
-            with ui.row(wrap=False):
-                ui.label(
-                    self._resource_manager.get(OffsetSliderKeys.LABEL_COORDINATE_X)
-                )
-                self.x_offset_slider = ui.slider(
-                    min=0, max=1, value=self._initial_offset.x, step=0.1
-                )
-            with ui.row(wrap=False):
-                ui.label(
-                    self._resource_manager.get(OffsetSliderKeys.LABEL_COORDINATE_Y)
-                )
-                self.y_offset_slider = ui.slider(
-                    min=0, max=1, value=self._initial_offset.y, step=0.1
-                )
-            if self.on_offset_change is not None:
-                self.x_offset_slider.on_value_change(self.on_offset_change)
-                self.y_offset_slider.on_value_change(self.on_offset_change)
-
-    def set_offset(self, offset: RelativeOffsetCoordinate) -> None:
-        if self.y_offset_slider and self.x_offset_slider:
-            self.y_offset_slider.value = offset.y
-            self.x_offset_slider.value = offset.x
-            self.y_offset_slider.update()
-            self.x_offset_slider.update()
 
 
 class VisualizationOffSetSliderForm(AbstractFrameOffset, ButtonForm):
