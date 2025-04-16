@@ -6,8 +6,8 @@ from nicegui.elements.button import Button
 from OTAnalytics.adapter_ui.abstract_frame_offset import AbstractFrameOffset
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    OffsetSliderKeys,
     ResourceManager,
+    VisualizationOffsetSliderKeys,
 )
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
@@ -77,7 +77,9 @@ class VisualizationOffSetSliderForm(AbstractFrameOffset, ButtonForm):
     def build(self) -> Self:
         self._offset_slider_form.build()
         self.update_offset_button = ui.button(
-            self._resource_manager.get(OffsetSliderKeys.BUTTON_UPDATE_OFFSET),
+            self._resource_manager.get(
+                VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET
+            ),
             on_click=self._view_model.change_track_offset_to_section_offset,
         )
         return self

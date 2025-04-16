@@ -88,7 +88,7 @@ class SectionKeys(ResourceKey):
     TABLE_COLUMN_NAME = "table-column-name"
 
 
-class OffsetSliderKeys(ResourceKey):
+class VisualizationOffsetSliderKeys(ResourceKey):
     BUTTON_UPDATE_OFFSET = "offset-slider-keys-button-update-offset"
 
 
@@ -168,7 +168,7 @@ DEFAULT_RESOURCE_MAP = {
     GeneralKeys.LABEL_RESET: "Reset",
     GeneralKeys.LABEL_CANCEL: "Cancel",
     HotKeys.SAVE_NEW_SECTION_HOTKEY: "Escape",
-    OffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
+    VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
     ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
     ProjectKeys.LABEL_PROJECT_NAME: "Project name",
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
