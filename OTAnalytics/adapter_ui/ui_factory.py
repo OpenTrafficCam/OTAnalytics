@@ -81,7 +81,7 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def configure_section(
+    async def configure_section(
         self,
         title: str,
         section_offset: RelativeOffsetCoordinate,

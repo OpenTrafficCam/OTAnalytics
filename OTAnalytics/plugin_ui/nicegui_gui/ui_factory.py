@@ -3,8 +3,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Literal
 
-from nicegui import ui
-
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.info_box import InfoBox
@@ -20,6 +18,9 @@ from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import EditFlowDialog
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
+    EditSectionDialog,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import DialogResult
 
 
@@ -95,7 +96,7 @@ class NiceGuiUiFactory(UiFactory):
     ) -> CountingSpecificationDto:
         raise NotImplementedError
 
-    def configure_section(
+    async def configure_section(
         self,
         title: str,
         section_offset: RelativeOffsetCoordinate,
@@ -104,24 +105,18 @@ class NiceGuiUiFactory(UiFactory):
         show_offset: bool,
         viewmodel: ViewModel,
     ) -> dict:
-        # return asyncio.run(self._open_save_dialog())
-        def create_dialog() -> ui.dialog:
-            with ui.dialog() as dialog, ui.card():
-                self.name = ui.input()
-                ui.button("Yes", on_click=lambda: dialog.submit({"yes": "Yes"}))
-                ui.button("No", on_click=lambda: dialog.submit("No"))
-            return dialog
-
-        async def show() -> Any:
-            return await create_dialog()
-
-        # result = asyncio.run(show())
-        # result = async_to_sync(show())
-        # result = ui.timer(0,show, once=True)
-        result: dict = {}
-        print(f"Result of async_to_sync is: {result}")
-
-        return result
+        dialog = EditSectionDialog(
+            resource_manager=self._resource_manager,
+            viewmodel=viewmodel,
+            title=title,
+            section_offset=section_offset,
+            input_values=input_values,
+            show_offset=show_offset,
+        )
+        result = await dialog.build()
+        if result == DialogResult.APPLY:
+            return dialog.get_section()
+        raise CancelAddFlow()
 
     async def configure_flow(
         self,

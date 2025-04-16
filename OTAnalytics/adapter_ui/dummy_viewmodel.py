@@ -880,7 +880,7 @@ class DummyViewModel(
         self._start_action()
         self.canvas.start_section_builder(is_area_section=True)
 
-    def get_section_metadata(
+    async def get_section_metadata(
         self,
         title: str,
         initial_position: tuple[int, int],
@@ -890,7 +890,7 @@ class DummyViewModel(
             section_offset := self._application.track_view_state.track_offset.get()
         ):
             section_offset = RELATIVE_SECTION_OFFSET
-        return self._ui_factory.configure_section(
+        return await self._ui_factory.configure_section(
             title=title,
             section_offset=section_offset,
             initial_position=initial_position,
@@ -905,13 +905,13 @@ class DummyViewModel(
     def is_section_name_valid(self, section_name: str) -> bool:
         return self._application.is_section_name_valid(section_name)
 
-    def add_new_section(
+    async def add_new_section(
         self,
         coordinates: list[tuple[int, int]],
         is_area_section: bool,
         get_metadata: MetadataProvider,
     ) -> None:
-        section = self._add_new_section.add_new_section(
+        section = await self._add_new_section.add_new_section(
             coordinates=coordinates,
             is_area_section=is_area_section,
             get_metadata=get_metadata,
@@ -953,7 +953,7 @@ class DummyViewModel(
                     is_area_section=self._is_area_section(current_section),
                 )
 
-    def edit_selected_section_metadata(self) -> None:
+    async def edit_selected_section_metadata(self) -> None:
         if not (selected_section_ids := self.get_selected_section_ids()):
             position = self.treeview_sections.get_position()
             self._ui_factory.info_box(
@@ -968,20 +968,22 @@ class DummyViewModel(
 
         section_id = SectionId(selected_section_ids[0])
         if selected_section := self._application.get_section_for(section_id):
-            self._update_metadata(selected_section)
+            await self._update_metadata(selected_section)
             self.update_section_offset_button_state()
 
     @action
-    def _update_metadata(self, selected_section: Section) -> None:
+    async def _update_metadata(self, selected_section: Section) -> None:
         current_data = selected_section.to_dict()
         position = self.canvas.get_position()
         with contextlib.suppress(CancelAddSection):
-            self.__update_section_metadata(selected_section, current_data, position)
+            await self.__update_section_metadata(
+                selected_section, current_data, position
+            )
 
-    def __update_section_metadata(
+    async def __update_section_metadata(
         self, selected_section: Section, current_data: dict, position: tuple[int, int]
     ) -> None:
-        updated_section_data = self.get_section_metadata(
+        updated_section_data = await self.get_section_metadata(
             title="Edit section",
             initial_position=position,
             input_values=current_data,

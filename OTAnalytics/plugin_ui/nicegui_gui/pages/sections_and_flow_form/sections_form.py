@@ -111,13 +111,15 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         return self
 
     def add_new_line(self) -> None:
-        if self._toggle:
-            pass
-        else:
-            self._section_table.update(map_to_ui(self._viewmodel.get_all_sections()))
-            self._viewmodel.refresh_items_on_canvas()
-            # self._canvas_form.add_new_section(area_section=False)
-            self._toggle = True
+        self._viewmodel.add_line_section()
+        # TODO clean up
+        # if self._toggle:
+        #     pass
+        # else:
+        #     self._section_table.update(map_to_ui(self._viewmodel.get_all_sections()))
+        #     self._viewmodel.refresh_items_on_canvas()
+        # self._canvas_form.add_new_section(area_section=False)
+        #     self._toggle = True
 
     def add_new_area(self) -> None:
         # self._canvas_form.add_new_section(area_section=True)
@@ -130,7 +132,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
         self.open_dialog()
 
     def open_dialog(self) -> None:
-        def apply_changes() -> None:
+        async def apply_changes() -> None:
             self._result = self._current_section.to_dict()
             self._result["name"] = self._properties_name.value
             self._result["relative_offset_coordinates"] = {
@@ -140,7 +142,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface, AbstractSectionFrame):
                 }
             }
             self._dialog.close()
-            self._viewmodel.edit_selected_section_metadata()
+            await self._viewmodel.edit_selected_section_metadata()
 
         self._dialog = ui.dialog()
         with self._dialog, ui.card():
