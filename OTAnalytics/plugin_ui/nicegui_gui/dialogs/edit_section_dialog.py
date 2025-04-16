@@ -11,6 +11,9 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import (
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import FormFieldText
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.offset_slider_form import (
+    OffsetSliderForm,
+)
 
 MARKER_NAME = "marker-name"
 MARKER_START_SECTION = "marker-start-section"
@@ -40,23 +43,20 @@ class EditSectionDialog(BaseDialog):
             initial_value=name,
             marker=MARKER_NAME,
         )
-        # TODO add offset form
+        self._offset = OffsetSliderForm(self.resource_manager)
 
     async def build_content(self) -> None:
         self._name.build()
+        self._offset.build()
 
     def get_section(self) -> dict:
         self._check_section_name()
-        offset = RelativeOffsetCoordinate(x=0, y=0)
         return {
             NAME: self._name.value,
             RELATIVE_OFFSET_COORDINATES: {
-                EventType.SECTION_ENTER.serialize(): offset.to_dict()
+                EventType.SECTION_ENTER.serialize(): self._offset.offset.to_dict()
             },
         }
-        # self._input_values[RELATIVE_OFFSET_COORDINATES][
-        #     EventType.SECTION_ENTER.serialize()
-        # ] = self.frame_bbox_offset.get_relative_offset_coordintes()
 
     def _check_section_name(self) -> None:
         new_entry_name = self._name.value
