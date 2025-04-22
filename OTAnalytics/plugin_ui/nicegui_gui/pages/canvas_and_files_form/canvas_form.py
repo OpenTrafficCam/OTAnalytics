@@ -10,7 +10,6 @@ from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.flow_adapter import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.logger import logger
 from OTAnalytics.application.resources.resource_manager import (
     CanvasKeys,
     HotKeys,
@@ -29,9 +28,23 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
 
+NORMAL_COLOR = "green"
+SELECTED_COLOR = "red"
+EDIT_COLOR = "orange"
+MOVING_COLOR = "blue"
+MOVING_STROKE_WIDTH = 4
+MOVING_STROKE_OPACITY = 0.0
+
+
 CLICK = "click"
 POINTER_EVENT_ALL = "all"
 POINTER_EVENT_NONE = ""
+IMAGE_X = "image_x"
+IMAGE_Y = "image_y"
+ELEMENT_ID = "element_id"
+
+CURSOR = "pointer"
+NEW_SECTION_ID = "new-section-id"
 
 
 class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface):
@@ -98,7 +111,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                     get_metadata=self.__get_metadata,
                 )
             elif self._current_section:
-                logger().info(f"save: {e}")
                 metadata = self._current_section.to_dict()
                 coordinates = self._current_section_geometry()
                 self.__reset_editor()
@@ -148,19 +160,19 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             return ""
         section_id = f"{self._current_section.id.id}-edit"
         return Polyline(
-            id=section_id, points=self._current_section_geometry(), color="orange"
+            id=section_id, points=self._current_section_geometry(), color=EDIT_COLOR
         ).to_svg()
 
     def _on_pointer_down(self, e: events.MouseEventArguments) -> None:
         if self._new_section:
             self._new_section_points.append(
                 Circle(
-                    x=int(e.image_x),
-                    y=int(e.image_y),
+                    x=round(e.image_x),
+                    y=round(e.image_y),
                     pointer_event=POINTER_EVENT_ALL,
-                    cursor="pointer",
-                    fill="orange",
-                    id="new_point",
+                    cursor=CURSOR,
+                    fill=EDIT_COLOR,
+                    id=f"new_point-{len(self._new_section_points)}",
                 )
             )
             self._new_section_lines = []
@@ -176,8 +188,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                             y1=self._new_section_points[x].y,
                             x2=self._new_section_points[x + 1].x,
                             y2=self._new_section_points[x + 1].y,
-                            stroke="red",
-                            id="id",
+                            stroke=EDIT_COLOR,
+                            id=NEW_SECTION_ID,
                         )
                     )
             if self._new_area_section and len(self._new_section_lines) >= 2:
@@ -188,8 +200,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                         y1=self._new_section_points[0].y,
                         x2=self._new_section_points[last_line].x,
                         y2=self._new_section_points[last_line].y,
-                        stroke="red",
-                        id="id",
+                        stroke=EDIT_COLOR,
+                        id=NEW_SECTION_ID,
                     )
                 )
             if self._new_section_lines:
@@ -201,15 +213,14 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._new_section:
             pass
         elif self._current_section:
-            logger().info(f"down: {e}")
             self._current_point = Circle(
-                x=round(e["image_x"]),
-                y=round(e["image_y"]),
-                id=e["element_id"],
-                fill="orange",
-                stroke="blue",
-                stroke_width=4,
-                stroke_opacity=0.4,
+                x=round(e[IMAGE_X]),
+                y=round(e[IMAGE_Y]),
+                id=e[ELEMENT_ID],
+                fill=EDIT_COLOR,
+                stroke=MOVING_COLOR,
+                stroke_width=MOVING_STROKE_WIDTH,
+                stroke_opacity=MOVING_STROKE_OPACITY,
                 pointer_event=POINTER_EVENT_ALL,
             )
             self.draw_all()
@@ -217,11 +228,11 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def on_svg_pointer_move(self, e: Any) -> None:
         if self._current_section and self._current_point:
             self._current_point = Circle(
-                x=round(e["image_x"]),
-                y=round(e["image_y"]),
+                x=round(e[IMAGE_X]),
+                y=round(e[IMAGE_Y]),
                 pointer_event=POINTER_EVENT_ALL,
-                id=e["element_id"],
-                fill="orange",
+                id=e[ELEMENT_ID],
+                fill=EDIT_COLOR,
             )
             self._circles.add(
                 self._current_section.id.id,
@@ -233,15 +244,14 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._new_section:
             pass
         elif self._current_section and self._current_point:
-            logger().info(f"up: {e}")
             self._circles.add(
                 self._current_section.id.id,
                 Circle(
-                    x=round(e["image_x"]),
-                    y=round(e["image_y"]),
+                    x=round(e[IMAGE_X]),
+                    y=round(e[IMAGE_Y]),
                     pointer_event=POINTER_EVENT_ALL,
-                    id=e["element_id"],
-                    fill="orange",
+                    id=e[ELEMENT_ID],
+                    fill=EDIT_COLOR,
                 ),
             )
             self._current_point = None
@@ -288,10 +298,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         tags: list[str] | None = None,
     ) -> None:
         list_of_circle = []
-        color = "green"
+        color = NORMAL_COLOR
         pointer_event = POINTER_EVENT_NONE
         if is_selected_section:
-            color = "red"
+            color = SELECTED_COLOR
             pointer_event = POINTER_EVENT_ALL
         for index, coordinate in enumerate(coordinates):
             x = coordinate[0]
@@ -339,7 +349,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             x2=int(end_x),
             y1=int(start_y),
             y2=int(end_y),
-            stroke="green",
+            stroke=NORMAL_COLOR,
         )
         self._flows.add(new_line)
         self.draw_all()
