@@ -66,7 +66,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_point: Circle | None = None
         self.add_preview_image()
         self._new_section_points: list = []
-        self._new_section_lines: list = []
         self._new_section = False
         self._new_area_section = False
         self._sections: SectionResource = SectionResource({})
@@ -132,7 +131,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._current_section = None
         self._current_point = None
         self._new_section_points = []
-        self._new_section_lines = []
 
     async def __get_metadata(self) -> dict:
         title = self._resource_manager.get(
@@ -154,6 +152,40 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 self._background_image.content += self._current_point.to_svg()
             if self._new_point:
                 self._background_image.content += self._new_point.to_svg()
+            self.draw_new_section()
+
+    def draw_new_section(self) -> None:
+        new_section_lines = []
+        for point in self._new_section_points:
+            if self._background_image:
+                self._background_image.content += point.to_svg()
+        if len(self._new_section_points) >= 2:
+            for x in range(len(self._new_section_points) - 1):
+                new_section_lines.append(
+                    Line(
+                        x1=self._new_section_points[x].x,
+                        y1=self._new_section_points[x].y,
+                        x2=self._new_section_points[x + 1].x,
+                        y2=self._new_section_points[x + 1].y,
+                        stroke=EDIT_COLOR,
+                        id=NEW_SECTION_ID,
+                    )
+                )
+        if self._new_area_section and len(new_section_lines) >= 2:
+            last_line = len(new_section_lines) - 1
+            new_section_lines.append(
+                Line(
+                    x1=self._new_section_points[0].x,
+                    y1=self._new_section_points[0].y,
+                    x2=self._new_section_points[last_line].x,
+                    y2=self._new_section_points[last_line].y,
+                    stroke=EDIT_COLOR,
+                    id=NEW_SECTION_ID,
+                )
+            )
+        for line in new_section_lines:
+            if self._background_image:
+                self._background_image.content += line.to_svg()
 
     def _edit_geometry(self) -> str:
         if self._current_section is None:
@@ -175,39 +207,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                     id=f"new_point-{len(self._new_section_points)}",
                 )
             )
-            self._new_section_lines = []
             self.draw_all()
-            for point in self._new_section_points:
-                if self._background_image:
-                    self._background_image.content += point.to_svg()
-            if len(self._new_section_points) >= 2:
-                for x in range(len(self._new_section_points) - 1):
-                    self._new_section_lines.append(
-                        Line(
-                            x1=self._new_section_points[x].x,
-                            y1=self._new_section_points[x].y,
-                            x2=self._new_section_points[x + 1].x,
-                            y2=self._new_section_points[x + 1].y,
-                            stroke=EDIT_COLOR,
-                            id=NEW_SECTION_ID,
-                        )
-                    )
-            if self._new_area_section and len(self._new_section_lines) >= 2:
-                last_line = len(self._new_section_lines) - 1
-                self._new_section_lines.append(
-                    Line(
-                        x1=self._new_section_points[0].x,
-                        y1=self._new_section_points[0].y,
-                        x2=self._new_section_points[last_line].x,
-                        y2=self._new_section_points[last_line].y,
-                        stroke=EDIT_COLOR,
-                        id=NEW_SECTION_ID,
-                    )
-                )
-            if self._new_section_lines:
-                for line in self._new_section_lines:
-                    if self._background_image:
-                        self._background_image.content += line.to_svg()
 
     def on_svg_pointer_down(self, e: Any) -> None:
         if self._new_section:
