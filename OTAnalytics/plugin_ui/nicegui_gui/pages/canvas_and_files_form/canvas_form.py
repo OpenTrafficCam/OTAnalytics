@@ -5,11 +5,12 @@ from nicegui.elements.interactive_image import InteractiveImage
 from nicegui.events import KeyEventArguments
 from PIL import Image
 
-from OTAnalytics.adapter_ui.abstract_canvas import AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_canvas import TAG_SELECTED_SECTION, AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.flow_adapter import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.resources.resource_manager import (
     CanvasKeys,
     HotKeys,
@@ -48,6 +49,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._introduce_to_viewmodel()
         self._current_section = None
         self._current_point: Circle | None = None
+        self._new_point: Circle | None = None
         self.add_preview_image()
         self._new_section_points: list = []
         self._new_section_lines: list = []
@@ -70,8 +72,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._background_image = (
             ui.interactive_image("", on_mouse=self._on_pointer_down, events=[CLICK])
             .on("svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args))
-            .on("svg:pointermove", lambda e: self.on_pointer_move(e.args))
-            .on("svg:pointerup", lambda e: self.on_pointer_up(e.args))
+            .on("svg:pointermove", lambda e: self.on_svg_pointer_move(e.args))
+            .on("svg:pointerup", lambda e: self.on_svg_pointer_up(e.args))
         )
         self._change_image()
         ui.keyboard(on_key=self.handle_key)
@@ -108,11 +110,14 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def draw_all(self) -> None:
         if self._background_image:
-            self._background_image.content = ""
             self._background_image.content = self._sections.to_svg()
             self._background_image.content += self._lines.to_svg()
             self._background_image.content += self._flows.to_svg()
             self._background_image.content += self._circles.to_svg()
+            if self._current_point:
+                self._background_image.content += self._current_point.to_svg()
+            if self._new_point:
+                self._background_image.content += self._new_point.to_svg()
 
     def _on_pointer_down(self, e: events.MouseEventArguments) -> None:
         if self._new_section:
@@ -164,47 +169,47 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._new_section:
             pass
         else:
+            logger().info(f"down: {e}")
             self._current_point = Circle(
                 x=e["image_x"],
                 y=e["image_y"],
                 id=e["element_id"],
                 fill="orange",
+                stroke="blue",
+                stroke_width=4,
+                stroke_opacity=0.4,
                 pointer_event=POINTER_EVENT_ALL,
             )
             self.draw_all()
-            if self._background_image:
-                if self._current_point:
-                    self._background_image.content += self._current_point.to_svg()
 
-    def on_pointer_move(self, e: Any) -> None:
+    def on_svg_pointer_move(self, e: Any) -> None:
         if self._current_point:
+            logger().info(f"move: {e}")
             self._current_point = Circle(
                 x=e["image_x"],
                 y=e["image_y"],
                 pointer_event=POINTER_EVENT_ALL,
                 id=e["element_id"],
-                fill="red",
-                radius=50,
+                fill="orange",
             )
             self.draw_all()
-            if self._background_image:
-                self._background_image.content += self._current_point.to_svg()
 
-    def on_pointer_up(self, e: Any) -> None:
+    def on_svg_pointer_up(self, e: Any) -> None:
         if self._new_section:
             pass
         else:
-            self._new_point = Circle(
-                x=e["image_x"],
-                y=e["image_y"],
-                pointer_event=POINTER_EVENT_ALL,
-                id=e["element_id"],
-                fill="red",
+            logger().info(f"up: {e}")
+            self._circles.add(
+                Circle(
+                    x=e["image_x"],
+                    y=e["image_y"],
+                    pointer_event=POINTER_EVENT_ALL,
+                    id=e["element_id"],
+                    fill="red",
+                )
             )
             self.current_point = None
             self.draw_all()
-            if self._background_image:
-                self._background_image.content += self._new_point.to_svg()
 
     def update_background(self, image: TrackImage) -> None:
         self._current_image = image.as_image()
@@ -292,7 +297,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         hovered_knob_style: dict | None = None,
         is_area_section: bool = False,
     ) -> None:
-        pass
+        self.draw_all()
 
     def draw_arrow(
         self,
@@ -317,6 +322,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self.draw_all()
 
     def delete_element(self, tag_or_id: str) -> None:
+        if tag_or_id == TAG_SELECTED_SECTION:
+            return
         self._flows.clear()
         self._lines.clear()
         self._sections.clear()
