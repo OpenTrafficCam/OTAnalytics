@@ -1,4 +1,4 @@
-from typing import Any, Optional, Self
+from typing import Any, Iterable, Optional, Self
 
 from nicegui import events, ui
 from nicegui.elements.interactive_image import InteractiveImage
@@ -47,6 +47,10 @@ CURSOR = "pointer"
 NEW_SECTION_ID = "new-section-id"
 
 
+def circle_to_coordinates(circles: Iterable[Circle]) -> list[tuple[int, int]]:
+    return [circle.to_tuple() for circle in circles]
+
+
 class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface):
 
     def __init__(
@@ -65,7 +69,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._current_point: Circle | None = None
         self._new_point: Circle | None = None
         self.add_preview_image()
-        self._new_section_points: list = []
+        self._new_section_points: list[Circle] = []
         self._new_section = False
         self._new_area_section = False
         self._sections: SectionResource = SectionResource({})
@@ -124,7 +128,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._current_section is None:
             return []
         circles = self._circles.by_section.get(self._current_section.id.id, {})
-        return [circle.to_tuple() for circle in circles.values()]
+        return circle_to_coordinates(circles.values())
 
     def __reset_editor(self) -> None:
         self._new_section = False
@@ -155,35 +159,14 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self.draw_new_section()
 
     def draw_new_section(self) -> None:
-        new_section_lines = []
         for point in self._new_section_points:
             if self._background_image:
                 self._background_image.content += point.to_svg()
         if len(self._new_section_points) >= 2:
-            for x in range(len(self._new_section_points) - 1):
-                new_section_lines.append(
-                    Line(
-                        x1=self._new_section_points[x].x,
-                        y1=self._new_section_points[x].y,
-                        x2=self._new_section_points[x + 1].x,
-                        y2=self._new_section_points[x + 1].y,
-                        stroke=EDIT_COLOR,
-                        id=NEW_SECTION_ID,
-                    )
-                )
-        if self._new_area_section and len(new_section_lines) >= 2:
-            last_line = len(new_section_lines) - 1
-            new_section_lines.append(
-                Line(
-                    x1=self._new_section_points[0].x,
-                    y1=self._new_section_points[0].y,
-                    x2=self._new_section_points[last_line].x,
-                    y2=self._new_section_points[last_line].y,
-                    stroke=EDIT_COLOR,
-                    id=NEW_SECTION_ID,
-                )
-            )
-        for line in new_section_lines:
+            coordinates = circle_to_coordinates(self._new_section_points)
+            if self._new_area_section:
+                coordinates.append(coordinates[0])
+            line = Polyline(id=NEW_SECTION_ID, points=coordinates, color=EDIT_COLOR)
             if self._background_image:
                 self._background_image.content += line.to_svg()
 
