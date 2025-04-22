@@ -100,8 +100,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             elif self._current_section:
                 logger().info(f"save: {e}")
                 metadata = self._current_section.to_dict()
-                circles = self._circles.by_section.get(self._current_section.id.id, {})
-                coordinates = [circle.to_tuple() for circle in circles.values()]
+                coordinates = self._current_section_geometry()
                 self.__reset_editor()
                 self._viewmodel.update_section_coordinates(metadata, coordinates)
         if e.key == self._resource_manager.get_hotkey(
@@ -109,6 +108,12 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         ):
             self._viewmodel.cancel_action()
             self._viewmodel.refresh_items_on_canvas()
+
+    def _current_section_geometry(self) -> list[tuple[int, int]]:
+        if self._current_section is None:
+            return []
+        circles = self._circles.by_section.get(self._current_section.id.id, {})
+        return [circle.to_tuple() for circle in circles.values()]
 
     def __reset_editor(self) -> None:
         self._new_section = False
@@ -129,13 +134,22 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def draw_all(self) -> None:
         if self._background_image:
-            self._background_image.content = self._sections.to_svg()
+            self._background_image.content = self._edit_geometry()
+            self._background_image.content += self._sections.to_svg()
             self._background_image.content += self._flows.to_svg()
             self._background_image.content += self._circles.to_svg()
             if self._current_point:
                 self._background_image.content += self._current_point.to_svg()
             if self._new_point:
                 self._background_image.content += self._new_point.to_svg()
+
+    def _edit_geometry(self) -> str:
+        if self._current_section is None:
+            return ""
+        section_id = f"{self._current_section.id.id}-edit"
+        return Polyline(
+            id=section_id, points=self._current_section_geometry(), color="orange"
+        ).to_svg()
 
     def _on_pointer_down(self, e: events.MouseEventArguments) -> None:
         if self._new_section:
@@ -201,13 +215,17 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self.draw_all()
 
     def on_svg_pointer_move(self, e: Any) -> None:
-        if self._current_point:
+        if self._current_section and self._current_point:
             self._current_point = Circle(
                 x=round(e["image_x"]),
                 y=round(e["image_y"]),
                 pointer_event=POINTER_EVENT_ALL,
                 id=e["element_id"],
                 fill="orange",
+            )
+            self._circles.add(
+                self._current_section.id.id,
+                self._current_point,
             )
             self.draw_all()
 
@@ -223,7 +241,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                     y=round(e["image_y"]),
                     pointer_event=POINTER_EVENT_ALL,
                     id=e["element_id"],
-                    fill="red",
+                    fill="orange",
                 ),
             )
             self._current_point = None
