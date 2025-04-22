@@ -368,9 +368,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     ) -> None:
         self._new_section = True
         self._new_area_section = is_area_section
-        # TODO refactor check if mouse handler can be removed/replaced with pass-handler
-        # if self._background_image:
-        #     self._background_image.on_mouse(self._on_pointer_down)
 
     def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
         return 0, 0
