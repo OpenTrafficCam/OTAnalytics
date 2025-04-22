@@ -105,7 +105,8 @@ class RemarkKeys(ResourceKey):
 
 
 class HotKeys(ResourceKey):
-    SAVE_NEW_SECTION_HOTKEY = "save-new-section-hotkey"
+    SAVE_SECTION_HOTKEY = "save-section-hotkey"
+    CANCEL_SECTION_GEOMETRY_HOTKEY = "cancel-section-geometry-hotkey"
 
 
 class VisualizationFiltersKeys(ResourceKey):
@@ -228,7 +229,10 @@ DEFAULT_IMAGE_RESOURCE_MAP: dict[ResourceKey, str] = {
     CanvasKeys.IMAGE_DEFAULT: r"OTAnalytics/assets/OpenTrafficCam_800.png"
 }
 
-DEFAULT_HOTKEYS: dict[HotKeys, str] = {HotKeys.SAVE_NEW_SECTION_HOTKEY: "Escape"}
+DEFAULT_HOTKEYS: dict[HotKeys, str] = {
+    HotKeys.SAVE_SECTION_HOTKEY: "Enter",
+    HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY: "Escape",
+}
 
 
 class ResourceManager:

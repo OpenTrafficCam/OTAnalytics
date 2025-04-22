@@ -24,6 +24,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle_resources import (
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line_resources import LineResources
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
@@ -47,7 +48,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._current_sections = self._viewmodel.get_all_sections()
         self._new_sections = self._current_sections
         self._introduce_to_viewmodel()
-        self._current_section = None
+        self._current_section: Section | None = None
         self._current_point: Circle | None = None
         self._new_point: Circle | None = None
         self.add_preview_image()
@@ -58,7 +59,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._sections: SectionResource = SectionResource({})
         self._flows: LineResources = LineResources({})
         self._circles: CircleResources = CircleResources({})
-        self._lines: LineResources = LineResources({})
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_frame_canvas(self)
@@ -69,32 +69,51 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._current_image = self._resource_manager.get_image(CanvasKeys.IMAGE_DEFAULT)
 
     def build(self) -> Self:
-        self._background_image = (
-            ui.interactive_image("", on_mouse=self._on_pointer_down, events=[CLICK])
-            .on("svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args))
-            .on("svg:pointermove", lambda e: self.on_svg_pointer_move(e.args))
-            .on("svg:pointerup", lambda e: self.on_svg_pointer_up(e.args))
+        self._background_image = ui.interactive_image(
+            "", on_mouse=self._on_pointer_down, events=[CLICK]
         )
+        self._background_image.on(
+            "svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args)
+        )
+        self._background_image.on(
+            "svg:pointermove", lambda e: self.on_svg_pointer_move(e.args)
+        )
+        self._background_image.on(
+            "svg:pointerup", lambda e: self.on_svg_pointer_up(e.args)
+        )
+
         self._change_image()
         ui.keyboard(on_key=self.handle_key)
         self.load_sections()
         return self
 
     async def handle_key(self, e: KeyEventArguments) -> None:
-        if (
-            e.key == self._resource_manager.get_hotkey(HotKeys.SAVE_NEW_SECTION_HOTKEY)
-            and self._new_section
+        if e.key == self._resource_manager.get_hotkey(HotKeys.SAVE_SECTION_HOTKEY):
+            if self._new_section:
+                coordinates = [circle.to_tuple() for circle in self._new_section_points]
+                self.__reset_editor()
+                await self._viewmodel.add_new_section(
+                    coordinates=coordinates,
+                    is_area_section=self._new_area_section,
+                    get_metadata=self.__get_metadata,
+                )
+            elif self._current_section:
+                logger().info(f"save: {e}")
+                metadata = self._current_section.to_dict()
+                circles = self._circles.by_section.get(self._current_section.id.id, {})
+                coordinates = [circle.to_tuple() for circle in circles.values()]
+                self.__reset_editor()
+                self._viewmodel.update_section_coordinates(metadata, coordinates)
+        if e.key == self._resource_manager.get_hotkey(
+            HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY
         ):
-            coordinates = [circle.to_tuple() for circle in self._new_section_points]
-            self.__reset_editor()
-            await self._viewmodel.add_new_section(
-                coordinates=coordinates,
-                is_area_section=self._new_area_section,
-                get_metadata=self.__get_metadata,
-            )
+            self._viewmodel.cancel_action()
+            self._viewmodel.refresh_items_on_canvas()
 
     def __reset_editor(self) -> None:
         self._new_section = False
+        self._current_section = None
+        self._current_point = None
         self._new_section_points = []
         self._new_section_lines = []
 
@@ -111,7 +130,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def draw_all(self) -> None:
         if self._background_image:
             self._background_image.content = self._sections.to_svg()
-            self._background_image.content += self._lines.to_svg()
             self._background_image.content += self._flows.to_svg()
             self._background_image.content += self._circles.to_svg()
             if self._current_point:
@@ -168,11 +186,11 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def on_svg_pointer_down(self, e: Any) -> None:
         if self._new_section:
             pass
-        else:
+        elif self._current_section:
             logger().info(f"down: {e}")
             self._current_point = Circle(
-                x=e["image_x"],
-                y=e["image_y"],
+                x=round(e["image_x"]),
+                y=round(e["image_y"]),
                 id=e["element_id"],
                 fill="orange",
                 stroke="blue",
@@ -184,10 +202,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def on_svg_pointer_move(self, e: Any) -> None:
         if self._current_point:
-            logger().info(f"move: {e}")
             self._current_point = Circle(
-                x=e["image_x"],
-                y=e["image_y"],
+                x=round(e["image_x"]),
+                y=round(e["image_y"]),
                 pointer_event=POINTER_EVENT_ALL,
                 id=e["element_id"],
                 fill="orange",
@@ -197,18 +214,19 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def on_svg_pointer_up(self, e: Any) -> None:
         if self._new_section:
             pass
-        else:
+        elif self._current_section and self._current_point:
             logger().info(f"up: {e}")
             self._circles.add(
+                self._current_section.id.id,
                 Circle(
-                    x=e["image_x"],
-                    y=e["image_y"],
+                    x=round(e["image_x"]),
+                    y=round(e["image_y"]),
                     pointer_event=POINTER_EVENT_ALL,
                     id=e["element_id"],
                     fill="red",
-                )
+                ),
             )
-            self.current_point = None
+            self._current_point = None
             self.draw_all()
 
     def update_background(self, image: TrackImage) -> None:
@@ -252,7 +270,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         tags: list[str] | None = None,
     ) -> None:
         list_of_circle = []
-        list_of_lines = []
         color = "green"
         pointer_event = POINTER_EVENT_NONE
         if is_selected_section:
@@ -270,23 +287,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                     pointer_event=pointer_event,
                 )
             )
-        for index, circles in enumerate(zip(list_of_circle[:-1], list_of_circle[1:])):
-            circle_1 = circles[0]
-            circle_2 = circles[1]
-            list_of_lines.append(
-                Line(
-                    id=f"{id}-{index}",
-                    x1=circle_1.x,
-                    y1=circle_1.y,
-                    x2=circle_2.x,
-                    y2=circle_2.y,
-                    stroke=color,
-                )
-            )
         for circle in list_of_circle:
-            self._circles.add(circle)
-        for line in list_of_lines:
-            self._lines.add(line)
+            self._circles.add(id, circle)
+        polyline = Polyline(id, coordinates, color=color)
+        self._sections.add(id, polyline)
         if self._current_point:
             self.draw_current_point()
         self.draw_all()
@@ -297,6 +301,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         hovered_knob_style: dict | None = None,
         is_area_section: bool = False,
     ) -> None:
+        self._current_section = section
         self.draw_all()
 
     def draw_arrow(
@@ -325,7 +330,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if tag_or_id == TAG_SELECTED_SECTION:
             return
         self._flows.clear()
-        self._lines.clear()
         self._sections.clear()
         self._circles.clear()
 
