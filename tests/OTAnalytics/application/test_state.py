@@ -383,6 +383,20 @@ class TestVideosMetadata:
         actual = target.get_by_video_name(first_full_metadata.path)
         assert actual is None
 
+    def test_reset(
+        self, first_full_metadata: VideoMetadata, second_full_metadata: VideoMetadata
+    ) -> None:
+        target = VideosMetadata()
+        target.update(first_full_metadata)
+        target.update(second_full_metadata)
+
+        target.reset()
+
+        assert target.get_metadata_for(first_full_metadata.start) is None
+        assert target.get_by_video_name(second_full_metadata.path) is None
+        assert target.first_video_start is None
+        assert target.last_video_end is None
+
 
 class TestTracksMetadata:
     @pytest.fixture

@@ -276,6 +276,8 @@ class VideosMetadata:
         """
         if current in self._metadata_by_date:
             return self._metadata_by_date[current]
+        if len(self._metadata_by_date) == 0:
+            return None
         keys = list(self._metadata_by_date.keys())
         key = bisect.bisect_left(keys, current) - 1
         metadata = self._metadata_by_date[keys[key]]
@@ -312,6 +314,12 @@ class VideosMetadata:
         other.update(values)
 
         return other
+
+    def reset(self) -> None:
+        self._metadata_by_date = {}
+        self._metadata_by_name = {}
+        self._first_video_start = None
+        self._last_video_end = None
 
 
 class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
