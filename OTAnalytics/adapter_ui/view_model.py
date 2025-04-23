@@ -184,7 +184,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def get_section_metadata(
+    async def get_section_metadata(
         self, title: str, initial_position: tuple[int, int]
     ) -> dict:
         pass
@@ -200,7 +200,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def add_new_section(
+    async def add_new_section(
         self,
         coordinates: list[tuple[int, int]],
         is_area_section: bool,
@@ -213,7 +213,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def edit_selected_section_metadata(self) -> None:
+    async def edit_selected_section_metadata(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -229,7 +229,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def add_flow(self) -> None:
+    async def add_flow(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -241,7 +241,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def edit_selected_flow(self) -> None:
+    async def edit_selected_flow(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

@@ -4,13 +4,15 @@ from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.ui_factory import NiceGuiUiFactory
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
     AddTracksForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import TrackForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.offset_slider_form import (
-    OffSetSliderForm,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.visualization_offset_slider_form import (  # noqa
+    VisualizationOffSetSliderForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    AddVideoForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import AnalysisForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
@@ -57,6 +59,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_fo
     LayersForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
+from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
 
 
 class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
@@ -80,7 +83,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
         )
-
+        self.preload_input_files.load(self.run_config)
         return NiceguiWebserver(
             page_builders=[main_page_builder],
             layout_components=NiceguiLayoutComponents(),
@@ -126,7 +129,8 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return TrackForm(
             self.resource_manager,
             self.add_track_form,
-            self.offset_slider_form,
+            self.add_video_form,
+            self.visualization_offset_slider_form,
         )
 
     @cached_property
@@ -134,8 +138,14 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return AddTracksForm(self.view_model, self.resource_manager)
 
     @cached_property
+    def add_video_form(self) -> AddVideoForm:
+        return AddVideoForm(
+            self.view_model, self.track_view_state, self.resource_manager
+        )
+
+    @cached_property
     def flow_form(self) -> FlowForm:
-        return FlowForm(self.view_model, self.resource_manager)
+        return FlowForm(self.view_model, self.flow_state, self.resource_manager)
 
     @cached_property
     def canvas_form(self) -> CanvasForm:
@@ -147,11 +157,15 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def section_form(self) -> SectionsForm:
-        return SectionsForm(self.view_model, self.resource_manager)
+        return SectionsForm(
+            self.view_model,
+            self.section_state,
+            self.resource_manager,
+        )
 
     @cached_property
-    def offset_slider_form(self) -> OffSetSliderForm:
-        return OffSetSliderForm(self.view_model, self.resource_manager)
+    def visualization_offset_slider_form(self) -> VisualizationOffSetSliderForm:
+        return VisualizationOffSetSliderForm(self.view_model, self.resource_manager)
 
     @cached_property
     def project_form(self) -> ProjectForm:
@@ -193,7 +207,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def ui_factory(self) -> UiFactory:
-        return NiceGuiUiFactory()
+        return NiceGuiUiFactory(self.resource_manager)
 
     @cached_property
     def progressbar_builder(self) -> ProgressbarBuilder:

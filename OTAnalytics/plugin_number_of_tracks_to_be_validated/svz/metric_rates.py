@@ -1,4 +1,5 @@
-from OTAnalytics.plugin_number_of_tracks_to_be_validated.otc_classes import OtcClasses
+from OTAnalytics.domain.otc_classes import OtcClasses
+from OTAnalytics.domain.tls8plus1_classes import Tls8plus1Classes
 
 SVZ_RATE = "svz-rate"
 
@@ -20,4 +21,14 @@ SVZ_CLASSIFICATION = {
     OtcClasses.DELIVERY_VAN_WITH_TRAILER: {SVZ_RATE: 0.85},
     OtcClasses.TRUCK_WITH_SEMITRAILER: {SVZ_RATE: 0.85},
     OtcClasses.OTHER: {SVZ_RATE: 0.0},
+    Tls8plus1Classes.OTHER: {SVZ_RATE: 0.00},
+    Tls8plus1Classes.CAR: {SVZ_RATE: 0.90},
+    Tls8plus1Classes.BICYCLIST: {SVZ_RATE: 0.80},
+    Tls8plus1Classes.MOTORCYCLIST: {SVZ_RATE: 0.80},
+    Tls8plus1Classes.CAR_WITH_TRAILER: {SVZ_RATE: 0.80},
+    Tls8plus1Classes.TRUCK: {SVZ_RATE: 0.80},
+    Tls8plus1Classes.TRUCK_WITH_TRAILER: {SVZ_RATE: 0.85},
+    Tls8plus1Classes.TRUCK_WITH_SEMITRAILER: {SVZ_RATE: 0.85},
+    Tls8plus1Classes.BUS: {SVZ_RATE: 0.80},
+    Tls8plus1Classes.DELIVERY_VAN: {SVZ_RATE: 0.80},
 }

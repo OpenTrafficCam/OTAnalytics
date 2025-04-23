@@ -8,6 +8,7 @@ from nicegui.elements.checkbox import Checkbox
 from nicegui.elements.input import Input
 from nicegui.elements.mixins.validation_element import ValidationElement
 from nicegui.elements.number import Number
+from nicegui.elements.select import Select
 from nicegui.events import ValueChangeEventArguments
 
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
@@ -254,6 +255,79 @@ class FormFieldFloat(FormField[Number, float]):
         self,
         label_text: str,
         initial_value: float,
+        min_value: float | None = None,
+        max_value: float | None = None,
+        precision: int = 2,
+        step: float = 0.01,
+        validation: (
+            Callable[..., str | None] | dict[str, Callable[..., bool]] | None
+        ) = None,
+        props: list[str] | None = None,
+        marker: str | None = None,
+    ):
+        super().__init__()
+        self._label_text = label_text
+        self._initial_value = initial_value
+        self._min = min_value
+        self._max = max_value
+        self._precision = precision
+        self._step = step
+        self._validation = validation
+        self._props = props
+        self._marker = marker
+
+    def build(self) -> None:
+        """Builds the UI form element."""
+        self._instance = ui.number(
+            label=self._label_text,
+            value=self._initial_value,
+            min=self._min,
+            max=self._max,
+            precision=self._precision,
+            validation=self._validation,
+            step=self._step,
+        )
+        self._apply(self.element)
+
+
+class FormFieldOptionalFloat(FormField[Number, float | None]):
+    """A class representing a floating point form field with validation and updating
+    capabilities. It supports optional values.
+
+    Args:
+        label_text (float): The label for the input field.
+        initial_value (float): The initial value of the input. Defaults to None.
+        min_value (float): The minimum allowable value for the input. Defaults to None.
+        max_value (float): The maximum allowable value for the input. Defaults to None.
+        precision (int) : The number of decimal places to display. Defaults to 2.
+        validation(Callable[..., str | None] | dict[str, Callable[..., bool]] | None):
+            Validation functions to be applied on the element's data. Defaults to None.
+        props (list[str] | None): props to be set for the number element.
+        marker (str | None): marker to be set for the number element.
+    """
+
+    @property
+    def value(self) -> float | None:
+        """Provides the current input of the form field
+
+        Returns:
+            float: The current input of the form field.
+        """
+
+        return float(self.element.value) if self.element.value else None
+
+    @property
+    def props(self) -> list[str] | None:
+        return self._props
+
+    @property
+    def marker(self) -> str | None:
+        return self._marker
+
+    def __init__(
+        self,
+        label_text: str,
+        initial_value: float | None = None,
         min_value: float | None = None,
         max_value: float | None = None,
         precision: int = 2,
@@ -655,3 +729,61 @@ class FormFieldCheckbox(LazyInitializedElement[Checkbox]):
 
         """
         self.element.update()
+
+
+class FormFieldSelect(FormField[Select, str]):
+    """A class representing a select form field with updating capabilities.
+
+    Args:
+        label_text (str): The label for the select field.
+        options (list[str]): The values to be selected from.
+        initial_value (str): The initial value of the select field.
+        props (list[str] | None): props to be set for the select element.
+        marker (str | None): marker to be set for the select element.
+
+    """
+
+    @property
+    def value(self) -> str:
+        """Provides the current input of the form field
+
+        Returns:
+            int: The current input of the form field.
+        """
+        return self.element.value
+
+    @property
+    def props(self) -> list[str] | None:
+        return self._props
+
+    @property
+    def marker(self) -> str | None:
+        return self._marker
+
+    def __init__(
+        self,
+        label_text: str,
+        options: list[str],
+        initial_value: str | None = None,
+        on_value_change: Callable[[ValueChangeEventArguments], None] | None = None,
+        props: list[str] | None = None,
+        marker: str | None = None,
+    ) -> None:
+        super().__init__()
+        self._label_text = label_text
+        self._options = options
+        self._initial_value = initial_value
+        self._on_value_change = on_value_change
+        self._props = props
+        self._marker = marker
+
+    def build(self) -> None:
+        """Builds the UI form element."""
+        self._instance = ui.select(
+            label=self._label_text,
+            options=self._options,
+            value=self._initial_value if self._initial_value else self._options[0],
+        )
+        if self._on_value_change:
+            self._instance.on_value_change(self._on_value_change)
+        self._apply(self.element)

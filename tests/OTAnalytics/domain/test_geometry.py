@@ -97,9 +97,20 @@ class TestRelativeOffset:
         assert offset.y == 0
 
 
-def test_calculate_direction_vector() -> None:
-    result = calculate_direction_vector(0, 0, 1, 1)
-    assert result == DirectionVector2D(1 / math.sqrt(2), 1 / math.sqrt(2))
+class TestCalculateDirectionVector:
+    def test_calculate_direction_vector(self) -> None:
+        result = calculate_direction_vector(0, 0, 1, 1)
+        assert result == DirectionVector2D(1 / math.sqrt(2), 1 / math.sqrt(2))
+
+    def test_calculate_direction_vector_with_zero_length_returns_zero_vector(
+        self,
+    ) -> None:
+        """
+        #Bug https://openproject.platomo.de/projects/001-opentrafficcam-live/work_packages/7660
+        """  # noqa
+        actual = calculate_direction_vector(0, 0, 0, 0)
+        expected = DirectionVector2D(0, 0)
+        assert actual == expected
 
 
 def test_apply_offset() -> None:

@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -58,8 +59,12 @@ def flow_parser() -> Mock:
     return parser
 
 
+def fixed_datetime() -> datetime:
+    return datetime(2025, 1, 1, 12, 34, 56)
+
+
 def build_config(cli_args: CliArguments, otconfig: OtConfig | None) -> RunConfiguration:
-    return RunConfiguration(flow_parser(), cli_args, otconfig)
+    return RunConfiguration(flow_parser(), cli_args, otconfig, fixed_datetime)
 
 
 class TestRunConfiguration:
@@ -337,22 +342,79 @@ class TestRunConfiguration:
         assert build_config(cli_args, otconfig).num_processes == cfg_num_processes
         assert build_config(cli_args, None).num_processes == DEFAULT_NUM_PROCESSES
 
-    def test_log_file(self, cli_args: Mock, otconfig: Mock) -> None:
-        cli_log_file = "path/to/cli_log_file.log"
+    @pytest.mark.parametrize(
+        "cli_argument, config_entry, expected_file",
+        [
+            (
+                "path/to/cli_log_file.log",
+                "path/to/cfg_log_file.log",
+                "path/to/cli_log_file.log",
+            ),
+            (
+                None,
+                "path/to/cfg_log_file.log",
+                "path/to/cfg_log_file.log",
+            ),
+            (
+                "path/to/cli_log_folder",
+                "path/to/cfg_log_folder",
+                "path/to/cli_log_folder/otanalytics-2025-01-01_12-34-56.log",
+            ),
+            (
+                None,
+                "path/to/cfg_log_folder",
+                "path/to/cfg_log_folder/otanalytics-2025-01-01_12-34-56.log",
+            ),
+            (None, None, DEFAULT_LOG_FILE),
+        ],
+    )
+    def test_log_file(
+        self,
+        cli_argument: str | None,
+        config_entry: str | None,
+        expected_file: str,
+        cli_args: Mock,
+        test_data_tmp_dir: Path,
+    ) -> None:
+        """
+        https://openproject.platomo.de/wp/7631
+        """
+        self._set_cli_logfile(cli_args, cli_argument, test_data_tmp_dir)
+        otconfig = self._create_otconfig(config_entry, test_data_tmp_dir)
+
+        actual = build_config(cli_args, otconfig).log_file
+
+        expected = test_data_tmp_dir / expected_file
+        assert actual == expected
+
+    def _set_cli_logfile(
+        self, cli_args: Mock, cli_argument: str | None, test_data_tmp_dir: Path
+    ) -> None:
+        cli_log_file = test_data_tmp_dir / cli_argument if cli_argument else None
         cli_args.log_file = cli_log_file
         cli_args.config_file = "abspath/to/my_config.otconfig"
+        self.create_log_folder(cli_log_file)
 
+    def _create_otconfig(
+        self, config_entry: str | None, test_data_tmp_dir: Path
+    ) -> Mock | None:
+        if config_entry is None:
+            return None
+        cfg_log_file = test_data_tmp_dir / config_entry
+        self.create_log_folder(cfg_log_file)
+        otconfig = Mock()
         analysis = Mock()
-        cfg_log_file = Path("relpath/to/cfg_log_file.log")
         analysis.logfile = cfg_log_file
         otconfig.analysis = analysis
-        assert build_config(cli_args, otconfig).log_file == Path(cli_log_file)
-        cli_args.log_file = None
-        assert (
-            build_config(cli_args, otconfig).log_file
-            == Path(cli_args.config_file).parent / cfg_log_file
-        )
-        assert build_config(cli_args, None).log_file == DEFAULT_LOG_FILE
+        return otconfig
+
+    def create_log_folder(self, log_path: Path | None) -> None:
+        if log_path is None:
+            return
+        if log_path.suffix == ".log":
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            log_path.mkdir(parents=True, exist_ok=True)
 
     def test_log_file_overwrite(self, cli_args: Mock, otconfig: Mock) -> None:
         cli_args.logfile_overwrite = False
