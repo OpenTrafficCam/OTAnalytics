@@ -32,7 +32,7 @@ NORMAL_COLOR = "green"
 SELECTED_COLOR = "red"
 EDIT_COLOR = "orange"
 MOVING_COLOR = "blue"
-MOVING_STROKE_WIDTH = 4
+MOVING_STROKE_WIDTH = 400
 MOVING_STROKE_OPACITY = 0.0
 
 
@@ -216,6 +216,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 pointer_event=POINTER_EVENT_ALL,
                 id=e[ELEMENT_ID],
                 fill=EDIT_COLOR,
+                stroke=MOVING_COLOR,
+                stroke_width=MOVING_STROKE_WIDTH,
+                stroke_opacity=MOVING_STROKE_OPACITY,
             )
             self._circles.add(
                 self._current_section.id.id,
@@ -256,13 +259,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def load_sections(self) -> None:
         self._viewmodel.refresh_items_on_canvas()
-
-    def save_new_line(self) -> None:
-        if self._background_image:
-            self._background_image.on_mouse(self.default_mouse_handler)
-
-    def default_mouse_handler(self) -> None:
-        pass
 
     def draw_current_point(self) -> None:
         if self._background_image:
