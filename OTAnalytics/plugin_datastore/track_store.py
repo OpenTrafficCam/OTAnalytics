@@ -634,7 +634,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             ) from cause
 
 
-class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
+class FilteredByClassPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
     @property
     def include_classes(self) -> frozenset[str]:
         return self._include_classes
@@ -740,7 +740,7 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
         return self.wrap(dataset), original_track_ids
 
     def wrap(self, other: PandasTrackDataset) -> TrackDataset:
-        return FilteredPandasTrackDataset(
+        return FilteredByClassPandasTrackDataset(
             other, self.include_classes, self.exclude_classes
         )
 

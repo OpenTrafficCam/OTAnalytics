@@ -16,7 +16,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
-    FilteredPandasTrackDataset,
+    FilteredByClassPandasTrackDataset,
     PandasTrackDataset,
 )
 
@@ -82,8 +82,8 @@ class TrackDatasetProvider:
         tracks: list[Track],
         include_classes: list[str],
         exclude_classes: list[str],
-    ) -> FilteredPandasTrackDataset:
-        return FilteredPandasTrackDataset(
+    ) -> FilteredByClassPandasTrackDataset:
+        return FilteredByClassPandasTrackDataset(
             self.provide_pandas(tracks),
             frozenset(include_classes),
             frozenset(exclude_classes),
@@ -118,7 +118,7 @@ class TrackDatasetProvider:
         elif dataset_type == PANDAS:
             mock = Mock()
             return (
-                FilteredPandasTrackDataset(
+                FilteredByClassPandasTrackDataset(
                     mock, frozenset(include_classes), frozenset(exclude_classes)
                 ),
                 mock,
