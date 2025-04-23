@@ -51,6 +51,29 @@ def circle_to_coordinates(circles: Iterable[Circle]) -> list[tuple[int, int]]:
     return [circle.to_tuple() for circle in circles]
 
 
+def create_circle(e: dict, fill: str = NORMAL_COLOR) -> Circle:
+    return Circle(
+        x=round(e[IMAGE_X]),
+        y=round(e[IMAGE_Y]),
+        pointer_event=POINTER_EVENT_ALL,
+        id=e[ELEMENT_ID],
+        fill=fill,
+    )
+
+
+def create_moving_circle(e: dict, fill: str = NORMAL_COLOR) -> Circle:
+    return Circle(
+        x=round(e[IMAGE_X]),
+        y=round(e[IMAGE_Y]),
+        pointer_event=POINTER_EVENT_ALL,
+        id=e[ELEMENT_ID],
+        fill=fill,
+        stroke=MOVING_COLOR,
+        stroke_width=MOVING_STROKE_WIDTH,
+        stroke_opacity=MOVING_STROKE_OPACITY,
+    )
+
+
 class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface):
 
     def __init__(
@@ -196,34 +219,13 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._new_section:
             pass
         elif self._current_section:
-            self._current_point = Circle(
-                x=round(e[IMAGE_X]),
-                y=round(e[IMAGE_Y]),
-                id=e[ELEMENT_ID],
-                fill=EDIT_COLOR,
-                stroke=MOVING_COLOR,
-                stroke_width=MOVING_STROKE_WIDTH,
-                stroke_opacity=MOVING_STROKE_OPACITY,
-                pointer_event=POINTER_EVENT_ALL,
-            )
+            self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
             self.draw_all()
 
     def on_svg_pointer_move(self, e: Any) -> None:
         if self._current_section and self._current_point:
-            self._current_point = Circle(
-                x=round(e[IMAGE_X]),
-                y=round(e[IMAGE_Y]),
-                pointer_event=POINTER_EVENT_ALL,
-                id=e[ELEMENT_ID],
-                fill=EDIT_COLOR,
-                stroke=MOVING_COLOR,
-                stroke_width=MOVING_STROKE_WIDTH,
-                stroke_opacity=MOVING_STROKE_OPACITY,
-            )
-            self._circles.add(
-                self._current_section.id.id,
-                self._current_point,
-            )
+            self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
+            self._circles.add(self._current_section.id.id, self._current_point)
             self.draw_all()
 
     def on_svg_pointer_up(self, e: Any) -> None:
@@ -231,14 +233,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             pass
         elif self._current_section and self._current_point:
             self._circles.add(
-                self._current_section.id.id,
-                Circle(
-                    x=round(e[IMAGE_X]),
-                    y=round(e[IMAGE_Y]),
-                    pointer_event=POINTER_EVENT_ALL,
-                    id=e[ELEMENT_ID],
-                    fill=EDIT_COLOR,
-                ),
+                self._current_section.id.id, create_circle(e, fill=EDIT_COLOR)
             )
             self._current_point = None
             self.draw_all()
