@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Optional, Self
+from typing import Iterable, Optional, Self
 
 from nicegui import events, ui
 from nicegui.elements.interactive_image import InteractiveImage
@@ -215,20 +215,20 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             )
             self.draw_all()
 
-    def on_svg_pointer_down(self, e: Any) -> None:
+    def on_svg_pointer_down(self, e: dict) -> None:
         if self._new_section:
             pass
         elif self._current_section:
             self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
             self.draw_all()
 
-    def on_svg_pointer_move(self, e: Any) -> None:
+    def on_svg_pointer_move(self, e: dict) -> None:
         if self._current_section and self._current_point:
             self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
             self._circles.add(self._current_section.id.id, self._current_point)
             self.draw_all()
 
-    def on_svg_pointer_up(self, e: Any) -> None:
+    def on_svg_pointer_up(self, e: dict) -> None:
         if self._new_section:
             pass
         elif self._current_section and self._current_point:
