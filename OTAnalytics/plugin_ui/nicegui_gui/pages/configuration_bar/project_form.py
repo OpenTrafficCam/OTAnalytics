@@ -4,7 +4,6 @@ from typing import Any, Callable, Optional, Self
 from nicegui import ui
 from nicegui.elements.button import Button
 from nicegui.events import ClickEventArguments, ValueChangeEventArguments
-from plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -16,6 +15,7 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.style import COLOR_ORANGE
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     DateTimeForm,
     FormFieldText,

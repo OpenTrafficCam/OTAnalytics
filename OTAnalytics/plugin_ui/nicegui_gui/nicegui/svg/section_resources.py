@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 
 
 @dataclass

@@ -1,8 +1,12 @@
 from typing import Callable
 
-from application.resources.resource_manager import OffsetSliderKeys, ResourceManager
-from domain.geometry import RelativeOffsetCoordinate
 from nicegui import ui
+
+from OTAnalytics.application.resources.resource_manager import (
+    OffsetSliderKeys,
+    ResourceManager,
+)
+from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 
 
 class OffsetSliderForm:
