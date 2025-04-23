@@ -161,7 +161,6 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             self.view_model,
             self.section_state,
             self.resource_manager,
-            self.canvas_form,
         )
 
     @cached_property

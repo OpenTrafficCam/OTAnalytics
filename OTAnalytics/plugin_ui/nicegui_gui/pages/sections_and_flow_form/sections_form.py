@@ -16,9 +16,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
     CustomTable,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
-    CanvasForm,
-)
 
 
 def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
@@ -45,7 +42,6 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
         viewmodel: ViewModel,
         section_state: SectionState,
         resource_manager: ResourceManager,
-        canvas_form: CanvasForm,
     ) -> None:
         self._viewmodel = viewmodel
         self._section_state = section_state
@@ -56,7 +52,6 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
             on_select_method=lambda e: self._select_section(e.selection),
             selection="single",
         )
-        self._canvas_form = canvas_form
         self._toggle = False
         self._button_edit: ui.button | None = None
         self._button_properties: ui.button | None = None
