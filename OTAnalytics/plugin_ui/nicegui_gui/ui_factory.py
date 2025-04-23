@@ -1,6 +1,7 @@
+import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Literal
+from typing import Any, Iterable, Literal
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
@@ -12,8 +13,15 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
+from OTAnalytics.application.application import CancelAddFlow
+from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import EditFlowDialog
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
+    EditSectionDialog,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import DialogResult
 
 
 class NiceGuiMessageBox(MessageBox):
@@ -32,6 +40,9 @@ class NiceGuiInfoBox(InfoBox):
 
 
 class NiceGuiUiFactory(UiFactory):
+
+    def __init__(self, resource_manager: ResourceManager) -> None:
+        self._resource_manager = resource_manager
 
     def info_box(
         self, message: str, initial_position: tuple[int, int], show_cancel: bool = False
@@ -85,7 +96,7 @@ class NiceGuiUiFactory(UiFactory):
     ) -> CountingSpecificationDto:
         raise NotImplementedError
 
-    def configure_section(
+    async def configure_section(
         self,
         title: str,
         section_offset: RelativeOffsetCoordinate,
@@ -94,9 +105,20 @@ class NiceGuiUiFactory(UiFactory):
         show_offset: bool,
         viewmodel: ViewModel,
     ) -> dict:
-        raise NotImplementedError
+        dialog = EditSectionDialog(
+            resource_manager=self._resource_manager,
+            viewmodel=viewmodel,
+            title=title,
+            section_offset=section_offset,
+            input_values=input_values,
+            show_offset=show_offset,
+        )
+        result = await dialog.build()
+        if result == DialogResult.APPLY:
+            return dialog.get_section()
+        raise CancelAddFlow()
 
-    def configure_flow(
+    async def configure_flow(
         self,
         title: str,
         initial_position: tuple[int, int],
@@ -105,4 +127,19 @@ class NiceGuiUiFactory(UiFactory):
         name_generator: FlowNameGenerator,
         show_distance: bool,
     ) -> FlowDto:
-        raise NotImplementedError
+        dialog = EditFlowDialog(
+            resource_manager=self._resource_manager,
+            section_ids=section_ids,
+            name_generator=name_generator,
+            input_values=input_values,
+            show_distance=show_distance,
+        )
+        result = await dialog.build()
+        if result == DialogResult.APPLY:
+            return dialog.get_flow()
+        raise CancelAddFlow()
+
+
+def async_to_sync(awaitable: Any) -> None:
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(awaitable)
