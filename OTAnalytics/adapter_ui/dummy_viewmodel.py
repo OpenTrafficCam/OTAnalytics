@@ -994,10 +994,6 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
         logger().info(f"Updated line_section Metadata: {updated_section_data}")
 
-    def update_section_data(self, data: dict) -> None:
-        section = self._flow_parser.parse_section(data)
-        self._application.update_section(section)
-
     def _set_section_data(self, id: SectionId, data: dict) -> None:
         section = self._flow_parser.parse_section(data)
         self._application.update_section(section)
