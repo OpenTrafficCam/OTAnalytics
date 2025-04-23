@@ -670,8 +670,15 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
         return self.wrap(dataset), original_track_ids
 
     @abstractmethod
+    def _filter(self) -> PandasTrackDataset:
+        raise NotImplementedError
+
+    @abstractmethod
     def wrap(self, other: PandasTrackDataset) -> TrackDataset:
         raise NotImplementedError
+
+    def get_data(self) -> DataFrame:
+        return self._filter().get_data()
 
 
 class FilterByClassPandasTrackDataset(
@@ -759,9 +766,6 @@ class FilterByClassPandasTrackDataset(
         return FilterByClassPandasTrackDataset(
             other, self.include_classes, self.exclude_classes
         )
-
-    def get_data(self) -> DataFrame:
-        return self._filter().get_data()
 
 
 def _assign_track_classification(
