@@ -238,17 +238,7 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
 
-class FilterByClassTrackDataset(TrackDataset):
-    @property
-    @abstractmethod
-    def include_classes(self) -> frozenset[str]:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def exclude_classes(self) -> frozenset[str]:
-        raise NotImplementedError
-
+class FilteredTrackDataset(TrackDataset):
     @abstractmethod
     def _filter(self) -> TrackDataset:
         raise NotImplementedError
@@ -311,6 +301,18 @@ class FilterByClassTrackDataset(TrackDataset):
 
     def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
         return self._filter().get_max_confidences_for(track_ids)
+
+
+class FilterByClassTrackDataset(FilteredTrackDataset):
+    @property
+    @abstractmethod
+    def include_classes(self) -> frozenset[str]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def exclude_classes(self) -> frozenset[str]:
+        raise NotImplementedError
 
 
 class TrackGeometryDataset(ABC):

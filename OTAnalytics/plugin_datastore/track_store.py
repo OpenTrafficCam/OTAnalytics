@@ -28,6 +28,7 @@ from OTAnalytics.domain.track_dataset import (
     START_Y,
     TRACK_GEOMETRY_FACTORY,
     FilterByClassTrackDataset,
+    FilteredTrackDataset,
     IntersectionPoint,
     TrackDataset,
     TrackDoesNotExistError,
@@ -634,8 +635,47 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             ) from cause
 
 
+class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
+
+    def __init__(
+        self,
+        other: PandasTrackDataset,
+    ) -> None:
+        self._other = other
+
+    def add_all(self, other: Iterable[Track]) -> TrackDataset:
+        return self.wrap(self._other.add_all(other))
+
+    def remove(self, track_id: TrackId) -> "TrackDataset":
+        return self.wrap(self._other.remove(track_id))
+
+    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
+        return self.wrap(self._other.remove_multiple(track_ids))
+
+    def clear(self) -> "TrackDataset":
+        return self.wrap(self._other.clear())
+
+    def split(self, chunks: int) -> Sequence["TrackDataset"]:
+        return [self.wrap(dataset) for dataset in self._other.split(chunks)]
+
+    def calculate_geometries_for(
+        self, offsets: Iterable[RelativeOffsetCoordinate]
+    ) -> None:
+        self._other.calculate_geometries_for(offsets)
+
+    def cut_with_section(
+        self, section: Section, offset: RelativeOffsetCoordinate
+    ) -> tuple["TrackDataset", set[TrackId]]:
+        dataset, original_track_ids = self._other.cut_with_section(section, offset)
+        return self.wrap(dataset), original_track_ids
+
+    @abstractmethod
+    def wrap(self, other: PandasTrackDataset) -> TrackDataset:
+        raise NotImplementedError
+
+
 class FilterByClassPandasTrackDataset(
-    FilterByClassTrackDataset, PandasDataFrameProvider
+    FilteredPandasTrackDataset, FilterByClassTrackDataset, PandasDataFrameProvider
 ):
     @property
     def include_classes(self) -> frozenset[str]:
@@ -651,7 +691,7 @@ class FilterByClassPandasTrackDataset(
         include_classes: frozenset[str],
         exclude_classes: frozenset[str],
     ) -> None:
-        self._other = other
+        super().__init__(other)
         self._include_classes = include_classes
         self._exclude_classes = exclude_classes
         self._cache: PandasTrackDataset | None = None
@@ -714,32 +754,6 @@ class FilterByClassPandasTrackDataset(
             geometry_datasets=None,
             calculator=self._other.calculator,
         )
-
-    def add_all(self, other: Iterable[Track]) -> TrackDataset:
-        return self.wrap(self._other.add_all(other))
-
-    def remove(self, track_id: TrackId) -> "TrackDataset":
-        return self.wrap(self._other.remove(track_id))
-
-    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
-        return self.wrap(self._other.remove_multiple(track_ids))
-
-    def clear(self) -> "TrackDataset":
-        return self.wrap(self._other.clear())
-
-    def split(self, chunks: int) -> Sequence["TrackDataset"]:
-        return [self.wrap(dataset) for dataset in self._other.split(chunks)]
-
-    def calculate_geometries_for(
-        self, offsets: Iterable[RelativeOffsetCoordinate]
-    ) -> None:
-        self._other.calculate_geometries_for(offsets)
-
-    def cut_with_section(
-        self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["TrackDataset", set[TrackId]]:
-        dataset, original_track_ids = self._other.cut_with_section(section, offset)
-        return self.wrap(dataset), original_track_ids
 
     def wrap(self, other: PandasTrackDataset) -> TrackDataset:
         return FilterByClassPandasTrackDataset(
