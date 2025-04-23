@@ -27,7 +27,7 @@ from OTAnalytics.domain.track_dataset import (
     START_X,
     START_Y,
     TRACK_GEOMETRY_FACTORY,
-    FilteredTrackDataset,
+    FilterByClassTrackDataset,
     IntersectionPoint,
     TrackDataset,
     TrackDoesNotExistError,
@@ -634,7 +634,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             ) from cause
 
 
-class FilteredByClassPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
+class FilterByClassPandasTrackDataset(
+    FilterByClassTrackDataset, PandasDataFrameProvider
+):
     @property
     def include_classes(self) -> frozenset[str]:
         return self._include_classes
@@ -740,7 +742,7 @@ class FilteredByClassPandasTrackDataset(FilteredTrackDataset, PandasDataFramePro
         return self.wrap(dataset), original_track_ids
 
     def wrap(self, other: PandasTrackDataset) -> TrackDataset:
-        return FilteredByClassPandasTrackDataset(
+        return FilterByClassPandasTrackDataset(
             other, self.include_classes, self.exclude_classes
         )
 

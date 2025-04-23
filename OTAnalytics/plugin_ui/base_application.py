@@ -183,7 +183,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
-    FilteredByClassPandasTrackDataset,
+    FilterByClassPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
@@ -582,7 +582,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def track_repository(self) -> TrackRepository:
         return TrackRepository(
-            FilteredByClassPandasTrackDataset(
+            FilterByClassPandasTrackDataset(
                 PandasTrackDataset.from_list(
                     [], ShapelyTrackGeometryDataset.from_track_dataset
                 ),

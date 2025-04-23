@@ -238,7 +238,7 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
 
-class FilteredTrackDataset(TrackDataset):
+class FilterByClassTrackDataset(TrackDataset):
     @property
     @abstractmethod
     def include_classes(self) -> frozenset[str]:
