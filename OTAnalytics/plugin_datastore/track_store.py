@@ -768,6 +768,79 @@ class FilterByClassPandasTrackDataset(
         )
 
 
+class FilterByIdPandasTrackDataset(
+    FilteredPandasTrackDataset, FilteredTrackDataset, PandasDataFrameProvider
+):
+    """
+    Represents a dataset that filters tracks by specific track IDs.
+
+    This class provides functionality to filter a Pandas-based track dataset by a
+    list of track IDs. It utilizes caching to optimize repeated filtering operations,
+    manages dataset consistency, and ensures efficient geometry cache invalidation
+    for cases such as track removal.
+    """
+
+    def __init__(self, other: PandasTrackDataset, track_ids: list[str]) -> None:
+        super().__init__(other)
+        self._included_track_ids = track_ids
+        self._cache: PandasTrackDataset | None = None
+
+    def _filter(self) -> PandasTrackDataset:
+        """
+        Filters the track dataset based on included track IDs.
+
+        This method applies a filter on a dataset to include only the tracks
+        specified in `_included_track_ids`. If there are no specified track IDs,
+        it returns the original dataset (`_other`). It employs caching to store the
+        filtered dataset for future use.
+
+        Returns:
+            TrackDataset: The filtered dataset containing only the specified track IDs.
+                If no track IDs are provided, the original dataset is returned.
+        """
+        if not self._included_track_ids:
+            return self._other
+
+        if self._cache is not None:
+            return self._cache
+
+        if self._included_track_ids:
+            logger().info(
+                "Apply 'track-ids' filter to filter tracks: "
+                f"{self._included_track_ids}"
+            )
+            filtered_dataset = self._get_dataset_with(
+                track_ids=self._included_track_ids
+            )
+        else:
+            return self._other
+        self._cache = filtered_dataset
+        return filtered_dataset
+
+    def _get_dataset_with(self, track_ids: list[str]) -> PandasTrackDataset:
+        if self._other.empty:
+            return self._other
+        dataset = self._other.get_data()
+        filtered_df = get_rows_by_track_ids(dataset, track_ids)
+        # The pandas Index does not implement the Sequence interface, which causes
+        # compatibility issues with the PandasTrackDataset._remove_from_geometry method
+        # when trying to remove geometries for tracks that have been deleted.
+        # To address this, we invalidate the entire geometry cache rather than
+        # attempting selective removal.
+        # This approach is acceptable because track removal only occurs when
+        # cutting tracks, which is a rare use case.
+
+        return PandasTrackDataset(
+            track_geometry_factory=self._other.track_geometry_factory,
+            dataset=filtered_df,
+            geometry_datasets=None,
+            calculator=self._other.calculator,
+        )
+
+    def wrap(self, other: PandasTrackDataset) -> TrackDataset:
+        return FilterByIdPandasTrackDataset(other, self._included_track_ids)
+
+
 def _assign_track_classification(
     data: DataFrame, calculator: PandasTrackClassificationCalculator
 ) -> DataFrame:
@@ -821,3 +894,23 @@ def _sort_tracks(track_df: DataFrame) -> DataFrame:
 
 def create_empty_dataframe() -> DataFrame:
     return DataFrame(columns=COLUMNS).set_index(INDEX_NAMES)
+
+
+def get_rows_by_track_ids(dataframe: DataFrame, track_ids: list[str]) -> DataFrame:
+    """
+    Get all rows of a DataFrame corresponding to the given track_ids.
+
+    Args:
+        dataframe (DataFrame): DataFrame with track_ids in the index
+        track_ids (list[str]): List of track_ids to filter by
+
+    Returns:
+        DataFrame: Filtered DataFrame containing only rows with the specified track_ids
+    """
+    if dataframe.empty or not track_ids:
+        return create_empty_dataframe()
+
+    # Filter the DataFrame to include only rows with track_ids in the provided list
+    return dataframe.loc[
+        dataframe.index.get_level_values(LEVEL_TRACK_ID).isin(track_ids)
+    ]

@@ -25,6 +25,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
 from OTAnalytics.plugin_datastore.track_store import (
     COLUMNS,
     INDEX_NAMES,
+    FilterByIdPandasTrackDataset,
     PandasDetection,
     PandasTrack,
     PandasTrackDataset,
@@ -651,3 +652,40 @@ class TestPandasTrackDataset:
         assert actual.index.names == INDEX_NAMES
         assert INDEX_NAMES not in actual.columns.to_list()
         assert set(COLUMNS) - set(INDEX_NAMES) == set(actual.columns.to_list())
+
+
+class TestFilterByIdPandasTrackDataset:
+    def test_filter_by_id_all_included(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        expected = PandasTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        )
+        dataset = PandasTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        )
+        track_ids = [car_track.id.id, pedestrian_track.id.id]
+        target = FilterByIdPandasTrackDataset(dataset, track_ids)
+
+        assert_track_datasets_equal(target, expected)
+
+    def test_filter_by_id_one_matching(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+        bicycle_track: Track,
+    ) -> None:
+        expected = PandasTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        )
+        dataset = PandasTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        )
+        track_ids = [bicycle_track.id.id, pedestrian_track.id.id]
+        target = FilterByIdPandasTrackDataset(dataset, track_ids)
+
+        assert_track_datasets_equal(target, expected)
