@@ -682,7 +682,7 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
 
 
 class FilterByClassPandasTrackDataset(
-    FilteredPandasTrackDataset, FilterByClassTrackDataset, PandasDataFrameProvider
+    FilteredPandasTrackDataset, FilterByClassTrackDataset
 ):
     @property
     def include_classes(self) -> frozenset[str]:
@@ -768,9 +768,7 @@ class FilterByClassPandasTrackDataset(
         )
 
 
-class FilterByIdPandasTrackDataset(
-    FilteredPandasTrackDataset, FilteredTrackDataset, PandasDataFrameProvider
-):
+class FilterByIdPandasTrackDataset(FilteredPandasTrackDataset):
     """
     Represents a dataset that filters tracks by specific track IDs.
 
