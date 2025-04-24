@@ -469,7 +469,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             return 0
         return len(self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique())
 
-    def filter_by_min_detection_length(self, length: int) -> "PandasTrackDataset":
+    def filter_by_min_detection_length(self, length: int) -> TrackDataset:
         detection_counts_per_track: Series[int] = self._dataset.groupby(
             level=LEVEL_TRACK_ID
         )[track.FRAME].size()
@@ -637,7 +637,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             ) from cause
 
 
-class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
+class FilteredPandasTrackDataset(
+    FilteredTrackDataset, PandasTrackDataset, PandasDataFrameProvider
+):
 
     def __init__(
         self,
@@ -645,19 +647,19 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
     ) -> None:
         self._other = other
 
-    def add_all(self, other: Iterable[Track]) -> TrackDataset:
+    def add_all(self, other: Iterable[Track]) -> PandasTrackDataset:
         return self.wrap(self._other.add_all(other))
 
-    def remove(self, track_id: TrackId) -> "TrackDataset":
+    def remove(self, track_id: TrackId) -> PandasTrackDataset:
         return self.wrap(self._other.remove(track_id))
 
-    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
+    def remove_multiple(self, track_ids: set[TrackId]) -> PandasTrackDataset:
         return self.wrap(self._other.remove_multiple(track_ids))
 
-    def clear(self) -> "TrackDataset":
+    def clear(self) -> PandasTrackDataset:
         return self.wrap(self._other.clear())
 
-    def split(self, chunks: int) -> Sequence["TrackDataset"]:
+    def split(self, chunks: int) -> Sequence[PandasTrackDataset]:
         return [self.wrap(dataset) for dataset in self._other.split(chunks)]
 
     def calculate_geometries_for(
@@ -667,7 +669,7 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["TrackDataset", set[TrackId]]:
+    ) -> tuple[PandasTrackDataset, set[TrackId]]:
         dataset, original_track_ids = self._other.cut_with_section(section, offset)
         return self.wrap(dataset), original_track_ids
 
@@ -676,7 +678,7 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
         raise NotImplementedError
 
     @abstractmethod
-    def wrap(self, other: PandasTrackDataset) -> TrackDataset:
+    def wrap(self, other: PandasTrackDataset) -> PandasTrackDataset:
         raise NotImplementedError
 
     def get_data(self) -> DataFrame:
@@ -764,7 +766,7 @@ class FilterByClassPandasTrackDataset(
             calculator=self._other.calculator,
         )
 
-    def wrap(self, other: PandasTrackDataset) -> TrackDataset:
+    def wrap(self, other: PandasTrackDataset) -> PandasTrackDataset:
         return FilterByClassPandasTrackDataset(
             other, self.include_classes, self.exclude_classes
         )
@@ -837,7 +839,7 @@ class FilterByIdPandasTrackDataset(FilteredPandasTrackDataset):
             calculator=self._other.calculator,
         )
 
-    def wrap(self, other: PandasTrackDataset) -> TrackDataset:
+    def wrap(self, other: PandasTrackDataset) -> PandasTrackDataset:
         return FilterByIdPandasTrackDataset(other, self._included_track_ids)
 
 
@@ -890,7 +892,7 @@ class FilterLastNSegmentsPandasTrackDataset(FilteredPandasTrackDataset):
             calculator=self._other.calculator,
         )
 
-    def wrap(self, other: PandasTrackDataset) -> TrackDataset:
+    def wrap(self, other: PandasTrackDataset) -> PandasTrackDataset:
         return FilterLastNSegmentsPandasTrackDataset(other, self._n)
 
 
