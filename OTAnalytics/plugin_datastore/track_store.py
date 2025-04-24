@@ -37,6 +37,8 @@ from OTAnalytics.domain.track_dataset import (
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat
 
+RANK = "rank"
+
 
 class PandasDetection(Detection):
     def __init__(self, track_id: str, data: Series):
@@ -837,6 +839,76 @@ class FilterByIdPandasTrackDataset(FilteredPandasTrackDataset):
 
     def wrap(self, other: PandasTrackDataset) -> TrackDataset:
         return FilterByIdPandasTrackDataset(other, self._included_track_ids)
+
+
+class FilterLastNSegmentsPandasTrackDataset(FilteredPandasTrackDataset):
+    def __init__(self, other: PandasTrackDataset, n: int) -> None:
+        super().__init__(other)
+        self._n = n
+        self._cache: PandasTrackDataset | None = None
+
+    def _filter(self) -> PandasTrackDataset:
+        """
+        Filters the track dataset based on included track IDs.
+
+        This method applies a filter on a dataset to include only the tracks
+        specified in `_included_track_ids`. If there are no specified track IDs,
+        it returns the original dataset (`_other`). It employs caching to store the
+        filtered dataset for future use.
+
+        Returns:
+            TrackDataset: The filtered dataset containing only the specified track IDs.
+                If no track IDs are provided, the original dataset is returned.
+        """
+        if self._cache is not None:
+            return self._cache
+
+        logger().info(
+            f"Limit number of detections per track to last {self._n} of them."
+        )
+        filtered_dataset = self._get_dataset_with(last_n=self._n)
+        self._cache = filtered_dataset
+        return filtered_dataset
+
+    def _get_dataset_with(self, last_n: int) -> PandasTrackDataset:
+        if self._other.empty:
+            return self._other
+        dataset = self._other.get_data()
+        filtered_df = get_latest_occurrences(dataset, self._n)
+        # The pandas Index does not implement the Sequence interface, which causes
+        # compatibility issues with the PandasTrackDataset._remove_from_geometry method
+        # when trying to remove geometries for tracks that have been deleted.
+        # To address this, we invalidate the entire geometry cache rather than
+        # attempting selective removal.
+        # This approach is acceptable because track removal only occurs when
+        # cutting tracks, which is a rare use case.
+
+        return PandasTrackDataset(
+            track_geometry_factory=self._other.track_geometry_factory,
+            dataset=filtered_df,
+            geometry_datasets=None,
+            calculator=self._other.calculator,
+        )
+
+    def wrap(self, other: PandasTrackDataset) -> TrackDataset:
+        return FilterLastNSegmentsPandasTrackDataset(other, self._n)
+
+
+def get_latest_occurrences(df: DataFrame, last_n: int) -> DataFrame:
+    index_names = df.index.names
+    df.reset_index(inplace=True)
+    df[RANK] = df.groupby(track.TRACK_ID)[track.OCCURRENCE].rank(
+        method="first", ascending=False
+    )
+    result = df[df[RANK] <= last_n].drop(RANK, axis=1).reset_index(drop=True)
+    return result.set_index(index_names)
+
+
+def get_exactly_two_latest_occurrences_per_id(df: DataFrame, last_n: int) -> DataFrame:
+    counts = df.index.get_level_values(LEVEL_TRACK_ID).value_counts()
+    valid_ids = counts[counts >= 2].index
+    filtered_df = df[df[df.index.get_level_values(LEVEL_TRACK_ID)].isin(valid_ids)]
+    return get_latest_occurrences(filtered_df, last_n=last_n)
 
 
 def _assign_track_classification(
