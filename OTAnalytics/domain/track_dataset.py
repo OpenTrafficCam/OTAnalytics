@@ -290,7 +290,7 @@ class FilteredTrackDataset(TrackDataset):
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         return self._filter().contained_by_sections(sections, offset)
 
-    def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
+    def filter_by_min_detection_length(self, length: int) -> TrackDataset:
         return self._filter().filter_by_min_detection_length(length)
 
     def get_first_segments(self) -> TrackSegmentDataset:
