@@ -26,7 +26,7 @@ from OTAnalytics.plugin_datastore.track_store import (
     COLUMNS,
     INDEX_NAMES,
     FilterByIdPandasTrackDataset,
-    FilterLastNSegmentsPandasTrackDataset,
+    FilterLastNDetectionsPandasTrackDataset,
     PandasDetection,
     PandasTrack,
     PandasTrackDataset,
@@ -706,7 +706,7 @@ class TestFilterLastNSegmentsPandasTrackDataset:
         )
         last_n = 2
 
-        target = FilterLastNSegmentsPandasTrackDataset(
+        target = FilterLastNDetectionsPandasTrackDataset(
             PandasTrackDataset.from_list(
                 [car_track_continuing, pedestrian_track], track_geometry_factory
             ),

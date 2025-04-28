@@ -4,7 +4,7 @@ from OTAnalytics.application.use_cases.create_intersection_events import GetTrac
 from OTAnalytics.domain.track_dataset import TrackDataset
 from OTAnalytics.plugin_datastore.track_store import (
     FilterByIdPandasTrackDataset,
-    FilterLastNSegmentsPandasTrackDataset,
+    FilterLastNDetectionsPandasTrackDataset,
     PandasTrackDataset,
 )
 
@@ -32,6 +32,6 @@ class GetCurrentFrameTrackSegments:
             self._get_all_tracks.as_dataset()
         )
         other = FilterByIdPandasTrackDataset(all_tracks, track_ids=self._track_ids)
-        return FilterLastNSegmentsPandasTrackDataset(
+        return FilterLastNDetectionsPandasTrackDataset(
             other, NUMBER_OF_DETECTIONS_TO_FORM_SEGMENT
         )

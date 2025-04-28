@@ -843,7 +843,7 @@ class FilterByIdPandasTrackDataset(FilteredPandasTrackDataset):
         return FilterByIdPandasTrackDataset(other, self._included_track_ids)
 
 
-class FilterLastNSegmentsPandasTrackDataset(FilteredPandasTrackDataset):
+class FilterLastNDetectionsPandasTrackDataset(FilteredPandasTrackDataset):
     def __init__(self, other: PandasTrackDataset, n: int) -> None:
         super().__init__(other)
         self._n = n
@@ -893,7 +893,7 @@ class FilterLastNSegmentsPandasTrackDataset(FilteredPandasTrackDataset):
         )
 
     def wrap(self, other: PandasTrackDataset) -> PandasTrackDataset:
-        return FilterLastNSegmentsPandasTrackDataset(other, self._n)
+        return FilterLastNDetectionsPandasTrackDataset(other, self._n)
 
 
 def get_latest_occurrences(df: DataFrame, last_n: int) -> DataFrame:
