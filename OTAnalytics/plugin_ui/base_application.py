@@ -176,6 +176,7 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import TrackIdProvider
+from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
@@ -972,6 +973,14 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def resource_manager(self) -> ResourceManager:
         return ResourceManager()
+
+    @cached_property
+    def pandas_by_max_confidence(self) -> PandasByMaxConfidence:
+        return PandasByMaxConfidence()
+
+    @cached_property
+    def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
+        return ShapelyTrackGeometryDataset.from_track_dataset
 
 
 def create_format_fixer(
