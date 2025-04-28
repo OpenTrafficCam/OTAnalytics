@@ -38,7 +38,7 @@ OTAnalytics/
 - **Visualization**: Matplotlib, Seaborn
 - **Testing**: pytest, pytest-cov, pytest-benchmark
 - **Code Quality**: Black, Flake8, isort, mypy, pre-commit
-- **Build System**: Hatch
+- **Build Tool**: Hatch
 
 ## Development Setup
 
@@ -111,7 +111,7 @@ OTAnalytics/
 4. **Documentation**:
 
 - Add docstrings to all public classes and methods
-- Keep the README updated with new features
+- Keep the README.md updated with new features
 - Document complex algorithms and design decisions
 
 5. **Architecture**:
