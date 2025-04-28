@@ -85,7 +85,6 @@ class PythonDetection(Detection, DataclassValidation):
     _track_id: TrackId
     _video_name: str
     _input_file: str
-    _finished: bool
 
     @property
     def classification(self) -> str:
@@ -134,10 +133,6 @@ class PythonDetection(Detection, DataclassValidation):
     @property
     def input_file(self) -> str:
         return self._input_file
-
-    @property
-    def finished(self) -> bool:
-        return self._finished
 
     def _validate(self) -> None:
         self._validate_confidence_greater_equal_zero()
@@ -837,7 +832,6 @@ class SimpleCutTrackSegmentBuilder(TrackBuilder):
                     self._track_id,
                     detection.video_name,
                     detection.input_file,
-                    detection.finished,
                 )
             )
         return new_detections

@@ -76,7 +76,6 @@ class PandasDetectionParser(DetectionParser):
                 ottrk_format.OCCURRENCE: track.OCCURRENCE,
                 ottrk_format.INTERPOLATED_DETECTION: track.INTERPOLATED_DETECTION,
                 ottrk_format.TRACK_ID: track.TRACK_ID,
-                ottrk_format.FINISHED: track.FINISHED,
             },
             inplace=True,
         )
