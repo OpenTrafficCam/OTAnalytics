@@ -9,7 +9,7 @@ road users. It processes trajectory data, defines traffic flows, counts vehicles
 
 The project follows a clean architecture approach with clear separation of concerns:
 
-```
+```structure
 OTAnalytics/
 ├── OTAnalytics/              # Main package
 │   ├── domain/               # Domain models and business logic
