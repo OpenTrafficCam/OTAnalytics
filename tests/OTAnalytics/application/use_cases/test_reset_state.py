@@ -31,6 +31,13 @@ class TestResetState:
         target.reset()
 
         videos_metadata.reset.assert_called_once()
+        tracks_metadata.reset.assert_called_once()
+        track_view_state.reset.assert_called_once()
+        track_state.reset.assert_called_once()
+        section_state.reset.assert_called_once()
+        flow_state.reset.assert_called_once()
+        action_state.reset.assert_called_once()
+        file_state.reset.assert_called_once()
 
 
 @pytest.fixture
