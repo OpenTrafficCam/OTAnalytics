@@ -247,6 +247,11 @@ def cargo_bike_track() -> Track:
 
 
 @pytest.fixture
+def single_detection_track() -> Track:
+    return create_track("5", [(2, 2)], 1, OtcClasses.CAR, confidences=[0.8])
+
+
+@pytest.fixture
 def all_tracks(
     car_track: Track,
     pedestrian_track: Track,
