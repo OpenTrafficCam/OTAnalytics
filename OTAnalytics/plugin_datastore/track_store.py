@@ -992,3 +992,41 @@ def get_rows_by_track_ids(dataframe: DataFrame, track_ids: ListLike) -> DataFram
     return dataframe.loc[
         dataframe.index.get_level_values(LEVEL_TRACK_ID).isin(track_ids)
     ]
+
+
+class PandasTrackDatasetFactory:
+    """Factory class for creating PandasTrackDataset objects from TrackDataset objects.
+
+    Args:
+        track_geometry_factory (TRACK_GEOMETRY_FACTORY): used for creating track
+            geometries for the dataset.
+        calculator (PandasTrackClassificationCalculator): used for calculating the track
+            classification tracks.
+    """
+
+    def __init__(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        calculator: PandasTrackClassificationCalculator,
+    ) -> None:
+        self.track_geometry_factory = track_geometry_factory
+        self.calculator = calculator
+
+    def create(self, track_dataset: TrackDataset) -> PandasTrackDataset:
+        """
+        Creates an instance of PandasTrackDataset from a given TrackDataset.
+
+        Args:
+            track_dataset: the TrackDataset to create an instance of PandasTrackDataset.
+
+        Returns:
+            PandasTrackDataset: A Pandas-based implementation of the track dataset.
+        """
+        if isinstance(track_dataset, PandasTrackDataset):
+            return track_dataset
+        else:
+            return PandasTrackDataset.from_list(
+                track_dataset.as_list(),
+                self.track_geometry_factory,
+                self.calculator,
+            )

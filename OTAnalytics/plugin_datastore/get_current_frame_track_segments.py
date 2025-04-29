@@ -12,8 +12,7 @@ NUMBER_OF_DETECTIONS_TO_FORM_SEGMENT = 2
 
 
 class PandasTrackDatasetFactory(Protocol):
-    def from_dataset(self, other: TrackDataset) -> PandasTrackDataset:
-        raise NotImplementedError
+    def from_dataset(self, other: TrackDataset) -> PandasTrackDataset: ...
 
 
 class GetCurrentFrameTrackSegments:

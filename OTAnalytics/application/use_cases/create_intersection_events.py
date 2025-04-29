@@ -257,8 +257,7 @@ class RunCreateIntersectionEvents:
 
 
 class GetTracks(Protocol):
-    def as_dataset(self) -> TrackDataset:
-        raise NotImplementedError
+    def as_dataset(self) -> TrackDataset: ...
 
 
 class BatchedTracksRunIntersect(RunIntersect):
