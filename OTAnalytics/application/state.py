@@ -40,6 +40,8 @@ DEFAULT_WIDTH = 800
 DEFAULT_HEIGHT = 600
 DEFAULT_FILTER_DATE_ACTIVE = False
 DEFAULT_SKIP_TIME = SkipTime(1, 1)
+DEFAULT_SELECTED_SECTIONS: list[SectionId] = []
+DEFAULT_SELECTED_FLOWS: list[FlowId] = []
 
 
 class TrackState(TrackListObserver):
@@ -86,6 +88,9 @@ class TrackState(TrackListObserver):
         """
         track_to_select = next(iter(track_event.added)) if track_event.added else None
         self.select(track_to_select)
+
+    def reset(self) -> None:
+        self.selected_track = None
 
 
 class ObservableProperty(Generic[VALUE]):
@@ -373,7 +378,7 @@ class SectionState(SectionListObserver):
 
     def __init__(self, get_sections_by_id: GetSectionsById) -> None:
         self.selected_sections: ObservableProperty[list[SectionId]] = (
-            ObservableProperty[list]([])
+            ObservableProperty[list](DEFAULT_SELECTED_SECTIONS)
         )
         self._get_sections_by_id = get_sections_by_id
 
@@ -385,7 +390,7 @@ class SectionState(SectionListObserver):
             repository changes.
         """
         if not section_event.added:
-            self.selected_sections.set([])
+            self.selected_sections.set(DEFAULT_SELECTED_SECTIONS)
             return
 
         no_cutting_sections = [
@@ -396,7 +401,10 @@ class SectionState(SectionListObserver):
         if no_cutting_sections:
             self.selected_sections.set([no_cutting_sections[0].id])
         else:
-            self.selected_sections.set([])
+            self.selected_sections.set(DEFAULT_SELECTED_SECTIONS)
+
+    def reset(self) -> None:
+        self.selected_sections.set(DEFAULT_SELECTED_SECTIONS)
 
 
 class FlowState(FlowListObserver):
@@ -407,7 +415,7 @@ class FlowState(FlowListObserver):
     def __init__(self) -> None:
         self.selected_flows: ObservableProperty[list[FlowId]] = ObservableProperty[
             list
-        ]([])
+        ](DEFAULT_SELECTED_FLOWS)
 
     def notify_flows(self, flows: list[FlowId]) -> None:
         """
@@ -422,7 +430,10 @@ class FlowState(FlowListObserver):
         if flows:
             self.selected_flows.set([flows[0]])
         else:
-            self.selected_flows.set([])
+            self.selected_flows.set(DEFAULT_SELECTED_FLOWS)
+
+    def reset(self) -> None:
+        self.selected_flows.set(DEFAULT_SELECTED_FLOWS)
 
 
 class TrackImageUpdater(TrackListObserver, SectionListObserver):
@@ -680,6 +691,12 @@ class TracksMetadata(TrackListObserver):
 
         return other
 
+    def reset(self) -> None:
+        self._first_detection_occurrence.set(None)
+        self._last_detection_occurrence.set(None)
+        self._classifications.set(frozenset([]))
+        self._detection_classifications.set(frozenset([]))
+
 
 class ActionState:
     """
@@ -688,6 +705,9 @@ class ActionState:
 
     def __init__(self) -> None:
         self.action_running = ObservableProperty[bool](False)
+
+    def reset(self) -> None:
+        self.action_running.set(False)
 
 
 @dataclass
