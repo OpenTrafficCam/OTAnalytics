@@ -9,6 +9,7 @@ import numpy
 import pandas
 from more_itertools import batched
 from pandas import DataFrame, Index, MultiIndex, Series
+from pandas._typing import ListLike
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
@@ -38,6 +39,7 @@ from OTAnalytics.domain.track_dataset import (
 from OTAnalytics.plugin_parser import ottrk_dataformat
 
 RANK = "rank"
+MINIMUM_DETECTIONS = 2
 
 
 class PandasDetection(Detection):
@@ -868,15 +870,15 @@ class FilterLastNDetectionsPandasTrackDataset(FilteredPandasTrackDataset):
         logger().info(
             f"Limit number of detections per track to last {self._n} of them."
         )
-        filtered_dataset = self._get_dataset_with(last_n=self._n)
+        filtered_dataset = self._get_filtered_dataset()
         self._cache = filtered_dataset
         return filtered_dataset
 
-    def _get_dataset_with(self, last_n: int) -> PandasTrackDataset:
+    def _get_filtered_dataset(self) -> PandasTrackDataset:
         if self._other.empty:
             return self._other
         dataset = self._other.get_data()
-        filtered_df = get_latest_occurrences(dataset, self._n)
+        filtered_df = get_exactly_two_latest_occurrences_per_id(dataset, self._n)
         # The pandas Index does not implement the Sequence interface, which causes
         # compatibility issues with the PandasTrackDataset._remove_from_geometry method
         # when trying to remove geometries for tracks that have been deleted.
@@ -896,20 +898,24 @@ class FilterLastNDetectionsPandasTrackDataset(FilteredPandasTrackDataset):
         return FilterLastNDetectionsPandasTrackDataset(other, self._n)
 
 
-def get_latest_occurrences(df: DataFrame, last_n: int) -> DataFrame:
-    index_names = df.index.names
-    df.reset_index(inplace=True)
-    df[RANK] = df.groupby(track.TRACK_ID)[track.OCCURRENCE].rank(
+def get_latest_occurrences(dataframe: DataFrame, last_n: int) -> DataFrame:
+    index_names = dataframe.index.names
+    dataframe.reset_index(inplace=True)
+    dataframe[RANK] = dataframe.groupby(track.TRACK_ID)[track.OCCURRENCE].rank(
         method="first", ascending=False
     )
-    result = df[df[RANK] <= last_n].drop(RANK, axis=1).reset_index(drop=True)
+    result = (
+        dataframe[dataframe[RANK] <= last_n].drop(RANK, axis=1).reset_index(drop=True)
+    )
     return result.set_index(index_names)
 
 
-def get_exactly_two_latest_occurrences_per_id(df: DataFrame, last_n: int) -> DataFrame:
-    counts = df.index.get_level_values(LEVEL_TRACK_ID).value_counts()
-    valid_ids = counts[counts >= 2].index
-    filtered_df = df[df[df.index.get_level_values(LEVEL_TRACK_ID)].isin(valid_ids)]
+def get_exactly_two_latest_occurrences_per_id(
+    dataframe: DataFrame, last_n: int
+) -> DataFrame:
+    counts = dataframe.index.get_level_values(LEVEL_TRACK_ID).value_counts()
+    valid_ids = counts[counts >= MINIMUM_DETECTIONS].index
+    filtered_df = get_rows_by_track_ids(dataframe=dataframe, track_ids=valid_ids)
     return get_latest_occurrences(filtered_df, last_n=last_n)
 
 
@@ -968,7 +974,7 @@ def create_empty_dataframe() -> DataFrame:
     return DataFrame(columns=COLUMNS).set_index(INDEX_NAMES)
 
 
-def get_rows_by_track_ids(dataframe: DataFrame, track_ids: list[str]) -> DataFrame:
+def get_rows_by_track_ids(dataframe: DataFrame, track_ids: ListLike) -> DataFrame:
     """
     Get all rows of a DataFrame corresponding to the given track_ids.
 
@@ -979,7 +985,7 @@ def get_rows_by_track_ids(dataframe: DataFrame, track_ids: list[str]) -> DataFra
     Returns:
         DataFrame: Filtered DataFrame containing only rows with the specified track_ids
     """
-    if dataframe.empty or not track_ids:
+    if dataframe.empty or len(track_ids) == 0:
         return create_empty_dataframe()
 
     # Filter the DataFrame to include only rows with track_ids in the provided list

@@ -698,6 +698,7 @@ class TestFilterLastNSegmentsPandasTrackDataset:
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
         car_track_continuing: Track,
         pedestrian_track: Track,
+        single_detection_track: Track,
     ) -> None:
         expected_car_track = create_expected_track(car_track_continuing)
         expected_pedestrian_track = create_expected_track(pedestrian_track)
@@ -708,7 +709,8 @@ class TestFilterLastNSegmentsPandasTrackDataset:
 
         target = FilterLastNDetectionsPandasTrackDataset(
             PandasTrackDataset.from_list(
-                [car_track_continuing, pedestrian_track], track_geometry_factory
+                [car_track_continuing, pedestrian_track, single_detection_track],
+                track_geometry_factory,
             ),
             last_n,
         )
