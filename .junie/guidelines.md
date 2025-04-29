@@ -54,9 +54,8 @@ OTAnalytics/
 - Windows: `install_dev.cmd`
 
 3. **Set up pre-commit hooks**:
-   ```bash
-   pre-commit install
-   ```
+
+- Activate the virtual environment: `source venv/bin/activate`
 
 ## Running the Application
 
@@ -100,6 +99,9 @@ OTAnalytics/
 - Write tests for all new functionality
 - Use fixtures from conftest.py when possible
 - Use builders in tests/utils for test data creation
+- Use pytest as the main testing framework
+- Use unittest.mock as the mock object library
+- Tests are organized to mirror the application structure
 
 3. **Git Workflow**:
 
@@ -113,6 +115,7 @@ OTAnalytics/
 - Add docstrings to all public classes and methods
 - Keep the README.md updated with new features
 - Document complex algorithms and design decisions
+- Adhere to Google Style Python Docstrings
 
 5. **Architecture**:
 
