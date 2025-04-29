@@ -53,9 +53,10 @@ OTAnalytics/
 - Linux/macOS: `./install_dev.sh`
 - Windows: `install_dev.cmd`
 
-3. **Set up pre-commit hooks**:
 
-- Activate the virtual environment: `source venv/bin/activate`
+3. **Activate the virtual environment**:
+
+- `source venv/bin/activate`
 
 ## Running the Application
 
