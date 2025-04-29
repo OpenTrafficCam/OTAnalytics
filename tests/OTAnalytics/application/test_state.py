@@ -24,6 +24,7 @@ from OTAnalytics.application.state import (
 )
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
+from OTAnalytics.domain.flow import FlowId
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     Section,
@@ -93,6 +94,15 @@ class TestTrackState:
         state.notify_tracks(TrackRepositoryEvent(frozenset(), frozenset()))
 
         assert state.selected_track is None
+
+    def test_reset(self) -> None:
+        first_track = TrackId("1")
+        target = TrackState()
+        target.notify_tracks(TrackRepositoryEvent.create_added([first_track]))
+
+        target.reset()
+
+        assert target.selected_track is None
 
 
 class TestObservableProperty:
@@ -486,6 +496,21 @@ class TestTracksMetadata:
         tracks_metadata.update_detection_classes(frozenset(detection_classes))
         assert tracks_metadata.filtered_detection_classifications == frozenset(expected)
 
+    def test_reset(
+        self, first_full_metadata: VideoMetadata, second_full_metadata: VideoMetadata
+    ) -> None:
+        target = TracksMetadata(Mock())
+        classes = frozenset(["class 1", "class 2"])
+        target.update_detection_classes(classes)
+
+        target.reset()
+
+        assert target.first_detection_occurrence is None
+        assert target.last_detection_occurrence is None
+        assert target.classifications == frozenset([])
+        assert target.filtered_detection_classifications == frozenset([])
+        assert target.detection_classifications == frozenset([])
+
 
 class TestTrackViewState:
     def test_reset(self) -> None:
@@ -542,3 +567,38 @@ class TestConfigurationFile:
     def test_file_type_has_no_type(self) -> None:
         no_file_type = Path("path/to/no_file_type")
         assert ConfigurationFile(no_file_type, Mock()).file_type == ""
+
+
+class TestSectionState:
+    def test_reset(self, get_sections_by_id: Mock) -> None:
+        section_id = SectionId("1")
+        target = SectionState(get_sections_by_id)
+        target.notify_sections(SectionRepositoryEvent.create_added([section_id]))
+
+        target.reset()
+
+        assert target.selected_sections.get() == []
+
+    @pytest.fixture
+    def get_sections_by_id(self) -> Mock:
+        mock = Mock()
+        mock.side_effect = lambda section_ids: [
+            self.create_mock_section(section_id) for section_id in section_ids
+        ]
+        return mock
+
+    def create_mock_section(self, section_id: SectionId) -> Section:
+        mock = Mock(spec=Section)
+        mock.id = section_id
+        return mock
+
+
+class TestFlowState:
+    def test_reset(self) -> None:
+        flow_id = FlowId("1")
+        target = FlowState()
+        target.notify_flows([flow_id])
+
+        target.reset()
+
+        assert target.selected_flows.get() == []
