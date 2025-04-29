@@ -18,6 +18,7 @@ FRAME: str = "frame"
 OCCURRENCE: str = "occurrence"
 INTERPOLATED_DETECTION: str = "interpolated_detection"
 TRACK_ID: str = "track_id"
+ORIGINAL_TRACK_ID: str = "original_track_id"
 VIDEO_NAME: str = "video_name"
 INPUT_FILE: str = "input_file"
 
@@ -139,6 +140,11 @@ class Track(ABC):
     @property
     @abstractmethod
     def id(self) -> TrackId:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def original_id(self) -> TrackId:
         raise NotImplementedError
 
     @property

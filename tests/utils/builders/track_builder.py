@@ -46,7 +46,13 @@ class TrackBuilder:
         self._detections: list[Detection] = []
 
     def build_track(self) -> Track:
-        return PythonTrack(TrackId(self.track_id), self.track_class, self._detections)
+        track_id = TrackId(self.track_id)
+        return PythonTrack(
+            _id=track_id,
+            _original_id=track_id,
+            _classification=self.track_class,
+            _detections=self._detections,
+        )
 
     def build_detections(self) -> list[Detection]:
         return self._detections

@@ -120,6 +120,10 @@ class PandasTrack(Track):
         return TrackId(self._id)
 
     @property
+    def original_id(self) -> TrackId:
+        return TrackId(self._data[track.ORIGINAL_TRACK_ID].iloc[0])
+
+    @property
     def classification(self) -> str:
         return self._data[track.TRACK_CLASSIFICATION].iloc[0]
 
@@ -196,6 +200,7 @@ COLUMNS = [
     track.INPUT_FILE,
     track.TRACK_ID,
     track.TRACK_CLASSIFICATION,
+    track.ORIGINAL_TRACK_ID,
 ]
 DEFAULT_CLASSIFICATOR = PandasByMaxConfidence()
 INDEX_NAMES = [track.TRACK_ID, track.OCCURRENCE]
@@ -326,10 +331,11 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     ) -> "PandasTrackDataset":
         if tracks.empty:
             return PandasTrackDataset(track_geometry_factory)
-        classified_tracks = _assign_track_classification(tracks, calculator)
+        result = _assign_track_classification(tracks, calculator)
+        result = _assign_original_track_id(result)
         return PandasTrackDataset(
             track_geometry_factory,
-            classified_tracks,
+            result,
             geometry_datasets=geometry_dataset,
         )
 
@@ -754,6 +760,28 @@ def _assign_track_classification(
     dropped = _drop_track_classification(data)
     classification_per_track = calculator.calculate(dropped)
     return dropped.merge(classification_per_track, left_index=True, right_index=True)
+
+
+def _assign_original_track_id(track_df: DataFrame) -> DataFrame:
+    """
+    Assigns the original track ID to each row in the given DataFrame.
+
+    This function takes a DataFrame and assigns a new column named
+    `ORIGINAL_TRACK_ID`, which contains the original track ID value for
+    each row. The original track ID is retrieved from the index
+    level specified as `LEVEL_TRACK_ID`.
+
+    Args:
+        track_df (DataFrame): The input DataFrame containing data with a
+            multi-level index. One of the index levels is assumed to
+            represent track IDs.
+
+    Returns:
+        DataFrame: The updated DataFrame with an additional column named
+            `ORIGINAL_TRACK_ID` containing the original track IDs.
+    """
+    track_df[track.ORIGINAL_TRACK_ID] = track_df.index.get_level_values(LEVEL_TRACK_ID)
+    return track_df
 
 
 def _drop_track_classification(data: DataFrame) -> DataFrame:

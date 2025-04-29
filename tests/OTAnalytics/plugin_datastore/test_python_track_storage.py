@@ -186,24 +186,31 @@ class TestDetection:
 
 class TestTrack:
     def test_raise_error_on_empty_detections(self) -> None:
+        track_id = TrackId("1")
         with pytest.raises(TrackHasNoDetectionError):
             PythonTrack(
-                _id=TrackId("1"),
+                _original_id=track_id,
+                _id=track_id,
                 _classification="car",
                 _detections=[],
             )
 
     def test_no_error_on_single_detection(self, valid_detection: Detection) -> None:
+        track_id = TrackId("5")
         track = PythonTrack(
-            _id=TrackId("5"),
+            _original_id=track_id,
+            _id=track_id,
             _classification="car",
             _detections=[valid_detection],
         )
         assert track.detections == [valid_detection]
 
     def test_instantiation_with_valid_args(self, valid_detection: Detection) -> None:
+        track_id = TrackId("5")
+
         track = PythonTrack(
-            _id=TrackId("5"),
+            _original_id=track_id,
+            _id=track_id,
             _classification="car",
             _detections=[
                 valid_detection,
@@ -238,8 +245,10 @@ class TestTrack:
 
         end_detection = Mock(spec=Detection)
         end_detection.occurrence = end_time
+        track_id = TrackId("1")
         track = PythonTrack(
-            TrackId("1"),
+            track_id,
+            track_id,
             "car",
             [
                 start_detection,
@@ -265,7 +274,8 @@ class TestTrack:
             valid_detection,
             last,
         ]
-        track = PythonTrack(TrackId("1"), "car", detections)
+        track_id = TrackId("1")
+        track = PythonTrack(track_id, track_id, "car", detections)
         assert track.first_detection == first
         assert track.last_detection == last
 
@@ -370,6 +380,7 @@ class TestPythonTrackDataset:
             dataset.add_all([car_track_continuing, pedestrian_track]),
         )
         expected_merged_track = PythonTrack(
+            car_track.id,
             car_track.id,
             car_track_continuing.classification,
             car_track.detections + car_track_continuing.detections,

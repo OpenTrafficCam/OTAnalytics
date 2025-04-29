@@ -125,6 +125,7 @@ def create_track(track_number: int) -> Track:
     )
     return PythonTrack(
         track_id,
+        track_id,
         "car",
         [detection_1, detection_2, detection_3, detection_4, detection_5],
     )

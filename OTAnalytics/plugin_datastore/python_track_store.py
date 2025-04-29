@@ -173,6 +173,7 @@ class PythonTrack(Track, DataclassValidation):
         ValueError: if an empty detections list has been passed.
     """
 
+    _original_id: TrackId
     _id: TrackId
     _classification: str
     _detections: list[Detection]
@@ -180,6 +181,10 @@ class PythonTrack(Track, DataclassValidation):
     @property
     def id(self) -> TrackId:
         return self._id
+
+    @property
+    def original_id(self) -> TrackId:
+        return self._original_id
 
     @property
     def classification(self) -> str:
@@ -445,6 +450,7 @@ class PythonTrackDataset(TrackDataset):
             classification = self.calculator.calculate(all_detections)
             try:
                 current_track = PythonTrack(
+                    _original_id=track_id,
                     _id=track_id,
                     _classification=classification,
                     _detections=sort_dets_by_occurrence,
@@ -800,6 +806,7 @@ class SimpleCutTrackSegmentBuilder(TrackBuilder):
             )
         detections = self._build_detections()
         result = PythonTrack(
+            self._track_id,
             self._track_id,
             self._class_calculator.calculate(detections),
             detections,

@@ -453,6 +453,7 @@ def create_python_track(
         classification = track_classification_calculator.calculate(all_detections)
         try:
             current_track = PythonTrack(
+                _original_id=track_id,
                 _id=track_id,
                 _classification=classification,
                 _detections=sort_dets_by_occurrence,

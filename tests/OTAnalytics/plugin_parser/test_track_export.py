@@ -50,7 +50,9 @@ class TestCsvTrackExport:
         use_case.export(specification=specification)
 
         actual = pandas.read_csv(
-            actual_file, dtype={track.TRACK_ID: object}, parse_dates=[track.OCCURRENCE]
+            actual_file,
+            dtype={track.TRACK_ID: object, track.ORIGINAL_TRACK_ID: object},
+            parse_dates=[track.OCCURRENCE],
         )
         expected = set_column_order(track_dataset.get_data().reset_index())
         assert sorted(actual.columns.tolist()) == sorted(expected.columns.tolist())
