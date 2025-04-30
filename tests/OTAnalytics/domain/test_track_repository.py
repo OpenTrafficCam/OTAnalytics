@@ -185,6 +185,13 @@ class TestTrackRepository:
         repository = TrackRepository(dataset)
         assert repository.classifications == classifications
 
+    def test_revert_cuts_for(self) -> None:
+        original_ids = {"1"}
+        dataset = Mock()
+        target = TrackRepository(dataset)
+        target.revert_cuts_for(original_ids)
+        dataset.revert_cuts_for.assert_called_once_with(original_ids)
+
 
 class TestTrackFileRepository:
     @pytest.fixture

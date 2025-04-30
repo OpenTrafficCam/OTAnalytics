@@ -221,6 +221,24 @@ class TrackRepository:
     def __len__(self) -> int:
         return len(self._dataset)
 
+    def revert_cuts_for(self, original_ids: set[str]) -> None:
+        """
+        Reverts cuts in the dataset for the provided set of original IDs.
+
+        This function takes a set of identifiers corresponding to original items in
+        the dataset and reverses any cuts that were applied to these items. It ensures
+        that the dataset is restored to its state prior to any modifications involving
+        cuts for the specified IDs.
+
+        Args:
+            original_ids (set[str]): A set of strings representing the original IDs
+                of the items in the dataset for which the cuts need to be reverted.
+
+        Returns:
+            None
+        """
+        self._dataset = self._dataset.revert_cuts_for(original_ids)
+
 
 class TrackFileRepository:
     def __init__(self) -> None:
