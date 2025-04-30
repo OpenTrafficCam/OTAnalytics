@@ -176,6 +176,7 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import TrackIdProvider
+from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
@@ -183,9 +184,10 @@ from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
-    FilteredPandasTrackDataset,
+    FilterByClassPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
+    PandasTrackDatasetFactory,
 )
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
@@ -582,9 +584,11 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def track_repository(self) -> TrackRepository:
         return TrackRepository(
-            FilteredPandasTrackDataset(
+            FilterByClassPandasTrackDataset(
                 PandasTrackDataset.from_list(
-                    [], ShapelyTrackGeometryDataset.from_track_dataset
+                    [],
+                    self.track_geometry_factory,
+                    self.pandas_by_max_confidence,
                 ),
                 self.run_config.include_classes,
                 self.run_config.exclude_classes,
@@ -592,10 +596,9 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     def _create_track_parser(self) -> TrackParser:
-        calculator = PandasByMaxConfidence()
         detection_parser = PandasDetectionParser(
-            calculator,
-            ShapelyTrackGeometryDataset.from_track_dataset,
+            self.pandas_by_max_confidence,
+            self.track_geometry_factory,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
         return OttrkParser(detection_parser)
@@ -610,8 +613,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             progressbar=TqdmBuilder(),
             track_dataset_factory=lambda tracks: PandasTrackDataset.from_list(
                 tracks,
-                ShapelyTrackGeometryDataset.from_track_dataset,
-                PandasByMaxConfidence(),
+                self.track_geometry_factory,
+                self.pandas_by_max_confidence,
             ),
             chunk_size=self.run_config.cli_chunk_size,
         )
@@ -914,7 +917,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
         tracks_as_dataframe_provider = TracksAsDataFrameProvider(
             get_all_tracks=self.get_all_tracks,
-            track_geometry_factory=ShapelyTrackGeometryDataset.from_track_dataset,
+            track_geometry_factory=self.track_geometry_factory,
         )
         detection_rate_strategy = DetectionRateByPercentile(
             percentile_value=DETECTION_RATE_PERCENTILE_VALUE
@@ -972,6 +975,20 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def resource_manager(self) -> ResourceManager:
         return ResourceManager()
+
+    @cached_property
+    def pandas_track_dataset_factory(self) -> PandasTrackDatasetFactory:
+        return PandasTrackDatasetFactory(
+            self.track_geometry_factory, self.pandas_by_max_confidence
+        )
+
+    @cached_property
+    def pandas_by_max_confidence(self) -> PandasByMaxConfidence:
+        return PandasByMaxConfidence()
+
+    @cached_property
+    def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
+        return ShapelyTrackGeometryDataset.from_track_dataset
 
 
 def create_format_fixer(

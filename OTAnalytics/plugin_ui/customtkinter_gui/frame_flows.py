@@ -1,3 +1,4 @@
+import asyncio
 import tkinter
 from typing import Any
 
@@ -44,16 +45,14 @@ class FrameFlows(AbstractCTkFrame):
             master=self._frame_tree, command=self.treeview.yview
         )
         self.treeview.configure(yscrollcommand=self._treeview_scrollbar.set)
-        self.button_add = CTkButton(
-            master=self, text="Add", command=self._viewmodel.add_flow
-        )
+        self.button_add = CTkButton(master=self, text="Add", command=self._add_flow)
         self.button_generate = CTkButton(
             master=self, text="Generate", command=self._viewmodel.generate_flows
         )
         self.button_edit = CTkButton(
             master=self,
             text="Properties",
-            command=self._viewmodel.edit_selected_flow,
+            command=self._edit_selected_flow,
         )
         self.button_remove = CTkButton(
             master=self, text="Remove", command=self._viewmodel.remove_flows
@@ -73,6 +72,12 @@ class FrameFlows(AbstractCTkFrame):
         self.button_remove.grid(
             row=3, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
+
+    def _add_flow(self) -> None:
+        asyncio.run(self._viewmodel.add_flow())
+
+    def _edit_selected_flow(self) -> None:
+        asyncio.run(self._viewmodel.edit_selected_flow())
 
     def _set_button_state_categories(self) -> None:
         self._general_buttons: list[CTkButton] = []
@@ -135,7 +140,7 @@ class TreeviewFlows(TreeviewTemplate):
         self._viewmodel.set_selected_flow_ids(ids)
 
     def _on_double_click(self, event: Any) -> None:
-        self._viewmodel.edit_selected_flow()
+        asyncio.run(self._viewmodel.edit_selected_flow())
 
     def update_items(self) -> None:
         self.delete(*self.get_children())

@@ -255,16 +255,6 @@ class TrackDataset(ABC):
 
 
 class FilteredTrackDataset(TrackDataset):
-    @property
-    @abstractmethod
-    def include_classes(self) -> frozenset[str]:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def exclude_classes(self) -> frozenset[str]:
-        raise NotImplementedError
-
     @abstractmethod
     def _filter(self) -> TrackDataset:
         raise NotImplementedError
@@ -316,7 +306,7 @@ class FilteredTrackDataset(TrackDataset):
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         return self._filter().contained_by_sections(sections, offset)
 
-    def filter_by_min_detection_length(self, length: int) -> "TrackDataset":
+    def filter_by_min_detection_length(self, length: int) -> TrackDataset:
         return self._filter().filter_by_min_detection_length(length)
 
     def get_first_segments(self) -> TrackSegmentDataset:
@@ -327,6 +317,18 @@ class FilteredTrackDataset(TrackDataset):
 
     def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
         return self._filter().get_max_confidences_for(track_ids)
+
+
+class FilterByClassTrackDataset(FilteredTrackDataset):
+    @property
+    @abstractmethod
+    def include_classes(self) -> frozenset[str]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def exclude_classes(self) -> frozenset[str]:
+        raise NotImplementedError
 
 
 class TrackGeometryDataset(ABC):
