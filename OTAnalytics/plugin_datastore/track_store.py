@@ -332,7 +332,6 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         if tracks.empty:
             return PandasTrackDataset(track_geometry_factory)
         result = _assign_track_classification(tracks, calculator)
-        result = _assign_original_track_id(result)
         return PandasTrackDataset(
             track_geometry_factory,
             result,
@@ -639,6 +638,31 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
                 "Some tracks do not exists in dataset with given id"
             ) from cause
 
+    def revert_cut_for(self, original_track_ids: set[str]) -> "PandasTrackDataset":
+        if self._dataset.empty:
+            return self
+        ids_to_revert = self._get_existing_track_ids(original_track_ids)
+        result = self._dataset.reset_index()
+        mask_ids_to_revert = result[track.TRACK_ID].isin(ids_to_revert)
+        result.loc[mask_ids_to_revert, track.TRACK_ID] = result.loc[
+            mask_ids_to_revert, track.ORIGINAL_TRACK_ID
+        ]
+        result = result.set_index(INDEX_NAMES)
+        geometry_dataset = self._remove_from_geometry_dataset(ids_to_revert)
+        return PandasTrackDataset.from_dataframe(
+            result,
+            self.track_geometry_factory,
+            geometry_dataset=geometry_dataset,
+            calculator=self.calculator,
+        )
+
+    def _get_existing_track_ids(self, track_ids: set[str]) -> list[str]:
+        return list(
+            self._dataset.loc[
+                self._dataset[track.ORIGINAL_TRACK_ID].isin(track_ids)
+            ].index.unique(LEVEL_TRACK_ID)
+        )
+
 
 class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
     @property
@@ -753,6 +777,9 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
     def get_data(self) -> DataFrame:
         return self._filter().get_data()
 
+    def revert_cut_for(self, original_track_ids: set[str]) -> TrackDataset:
+        return self.wrap(self._other.revert_cut_for(original_track_ids))
+
 
 def _assign_track_classification(
     data: DataFrame, calculator: PandasTrackClassificationCalculator
@@ -760,28 +787,6 @@ def _assign_track_classification(
     dropped = _drop_track_classification(data)
     classification_per_track = calculator.calculate(dropped)
     return dropped.merge(classification_per_track, left_index=True, right_index=True)
-
-
-def _assign_original_track_id(track_df: DataFrame) -> DataFrame:
-    """
-    Assigns the original track ID to each row in the given DataFrame.
-
-    This function takes a DataFrame and assigns a new column named
-    `ORIGINAL_TRACK_ID`, which contains the original track ID value for
-    each row. The original track ID is retrieved from the index
-    level specified as `LEVEL_TRACK_ID`.
-
-    Args:
-        track_df (DataFrame): The input DataFrame containing data with a
-            multi-level index. One of the index levels is assumed to
-            represent track IDs.
-
-    Returns:
-        DataFrame: The updated DataFrame with an additional column named
-            `ORIGINAL_TRACK_ID` containing the original track IDs.
-    """
-    track_df[track.ORIGINAL_TRACK_ID] = track_df.index.get_level_values(LEVEL_TRACK_ID)
-    return track_df
 
 
 def _drop_track_classification(data: DataFrame) -> DataFrame:
@@ -805,7 +810,9 @@ def _convert_tracks(tracks: Iterable[Track]) -> DataFrame:
     prepared: list[dict] = []
     for current_track in list(tracks):
         for detection in current_track.detections:
-            prepared.append(detection.to_dict())
+            dto = detection.to_dict()
+            dto[track.ORIGINAL_TRACK_ID] = current_track.original_id.id
+            prepared.append(dto)
 
     if not prepared:
         return DataFrame(prepared)

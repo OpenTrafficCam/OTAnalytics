@@ -71,21 +71,27 @@ class TestPandasDetection:
 
 class TestPandasTrack:
     def test_properties(self) -> None:
+        expected = self.create_python_track()
+        actual = self.create_pandas_track(expected)
+
+        assert_equal_track_properties(actual, expected)
+
+    def create_python_track(self) -> Track:
         builder = TrackBuilder()
         builder.append_detection()
         builder.append_detection()
         builder.append_detection()
         builder.append_detection()
         builder.append_detection()
-        python_track = builder.build_track()
-        detections = [detection.to_dict() for detection in python_track.detections]
+        return builder.build_track()
+
+    def create_pandas_track(self, this: Track) -> PandasTrack:
+        detections = [detection.to_dict() for detection in this.detections]
         data = DataFrame(detections).set_index([track.OCCURRENCE]).sort_index()
         data[track.TRACK_CLASSIFICATION] = data[track.CLASSIFICATION]
+        data[track.ORIGINAL_TRACK_ID] = data[track.TRACK_ID]
         data = data.drop([track.TRACK_ID], axis=1)
-        track_id = python_track.id.id
-        pandas_track = PandasTrack(track_id, data)
-
-        assert_equal_track_properties(pandas_track, python_track)
+        return PandasTrack(_id=this.id.id, _data=data)
 
 
 class TestPandasTrackSegmentDataset:

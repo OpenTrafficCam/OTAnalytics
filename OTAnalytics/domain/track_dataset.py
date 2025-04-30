@@ -237,6 +237,22 @@ class TrackDataset(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def revert_cut_for(self, original_track_ids: set[str]) -> "TrackDataset":
+        """
+        Reverses the effects of track cutting operations for the specified original
+        track IDs.
+
+        Args:
+            original_track_ids (set[str]): Set of original track IDs to be restored from
+                their cut segments.
+
+        Returns:
+            TrackDataset: A new TrackDataset with the specified tracks restored to their
+                original state.
+        """
+        raise NotImplementedError
+
 
 class FilteredTrackDataset(TrackDataset):
     @property
