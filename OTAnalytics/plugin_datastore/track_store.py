@@ -638,7 +638,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
                 "Some tracks do not exists in dataset with given id"
             ) from cause
 
-    def revert_cut_for(self, original_track_ids: set[str]) -> "PandasTrackDataset":
+    def revert_cuts_for(self, original_track_ids: set[str]) -> "PandasTrackDataset":
         if self._dataset.empty:
             return self
         ids_to_revert = self._get_existing_track_ids(original_track_ids)
@@ -777,8 +777,8 @@ class FilteredPandasTrackDataset(FilteredTrackDataset, PandasDataFrameProvider):
     def get_data(self) -> DataFrame:
         return self._filter().get_data()
 
-    def revert_cut_for(self, original_track_ids: set[str]) -> TrackDataset:
-        return self.wrap(self._other.revert_cut_for(original_track_ids))
+    def revert_cuts_for(self, original_track_ids: set[str]) -> TrackDataset:
+        return self.wrap(self._other.revert_cuts_for(original_track_ids))
 
 
 def _assign_track_classification(

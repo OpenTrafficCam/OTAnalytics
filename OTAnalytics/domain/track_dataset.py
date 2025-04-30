@@ -238,7 +238,7 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def revert_cut_for(self, original_track_ids: set[str]) -> "TrackDataset":
+    def revert_cuts_for(self, original_track_ids: set[str]) -> "TrackDataset":
         """
         Reverses the effects of track cutting operations for the specified original
         track IDs.

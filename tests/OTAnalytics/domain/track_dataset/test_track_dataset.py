@@ -8,7 +8,7 @@ from tests.utils.builders.track_dataset_provider import (
 
 
 class TestTrackDataset:
-    def test_revert_cut_for(
+    def test_revert_cuts_for(
         self,
         first_track_segment_1: Track,
         first_track_segment_2: Track,
@@ -21,7 +21,7 @@ class TestTrackDataset:
         )
         for target in targets:
             assert len(target) == 4
-            actual = target.revert_cut_for(
+            actual = target.revert_cuts_for(
                 {first_track_segment_1.original_id.id, uncut_track.original_id.id}
             )
             assert len(actual) == 3
