@@ -672,14 +672,17 @@ class PythonTrackDataset(TrackDataset):
             result[track_id] = max_confidence
         return result
 
-    def revert_cuts_for(self, original_track_ids: set[str]) -> "PythonTrackDataset":
+    def revert_cuts_for(self, original_track_ids: set[TrackId]) -> "PythonTrackDataset":
         # NOTE: This implementation prioritizes maintainability over performance.
         # If performance becomes a concern in high-volume operations, consider
         # implementing a mapping cache of original track IDs to their derived segments.
+        converted_original_track_ids = [
+            original_id.id for original_id in original_track_ids
+        ]
         tracks_to_revert = defaultdict(list)
         track_ids_to_remove = set()
         for track in self._tracks.values():
-            if track.original_id.id in original_track_ids:
+            if track.original_id.id in converted_original_track_ids:
                 tracks_to_revert[track.original_id].append(track)
                 track_ids_to_remove.add(track.id)
 
@@ -840,7 +843,7 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
         dataset, original_track_ids = self._other.cut_with_section(section, offset)
         return self.wrap(dataset), original_track_ids
 
-    def revert_cuts_for(self, original_track_ids: set[str]) -> TrackDataset:
+    def revert_cuts_for(self, original_track_ids: set[TrackId]) -> TrackDataset:
         return self.wrap(self._other.revert_cuts_for(original_track_ids))
 
 

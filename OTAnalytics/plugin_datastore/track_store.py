@@ -643,7 +643,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
                 "Some tracks do not exists in dataset with given id"
             ) from cause
 
-    def revert_cuts_for(self, original_track_ids: set[str]) -> "PandasTrackDataset":
+    def revert_cuts_for(self, original_track_ids: set[TrackId]) -> "PandasTrackDataset":
         if self._dataset.empty:
             return self
         ids_to_revert = self._get_existing_track_ids(original_track_ids)
@@ -661,10 +661,11 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             calculator=self.calculator,
         )
 
-    def _get_existing_track_ids(self, track_ids: set[str]) -> list[str]:
+    def _get_existing_track_ids(self, track_ids: set[TrackId]) -> list[str]:
+        converted_ids = [track_id.id for track_id in track_ids]
         return list(
             self._dataset.loc[
-                self._dataset[track.ORIGINAL_TRACK_ID].isin(track_ids)
+                self._dataset[track.ORIGINAL_TRACK_ID].isin(converted_ids)
             ].index.unique(LEVEL_TRACK_ID)
         )
 
@@ -715,6 +716,9 @@ class FilteredPandasTrackDataset(
 
     def get_data(self) -> DataFrame:
         return self._filter().get_data()
+
+    def revert_cuts_for(self, original_track_ids: set[TrackId]) -> PandasTrackDataset:
+        return self.wrap(self._other.revert_cuts_for(original_track_ids))
 
 
 class FilterByClassPandasTrackDataset(
@@ -947,9 +951,6 @@ def get_exactly_two_latest_occurrences_per_id(
     valid_ids = counts[counts >= MINIMUM_DETECTIONS].index
     filtered_df = get_rows_by_track_ids(dataframe=dataframe, track_ids=valid_ids)
     return get_latest_occurrences(filtered_df, last_n=last_n)
-
-    def revert_cuts_for(self, original_track_ids: set[str]) -> TrackDataset:
-        return self.wrap(self._other.revert_cuts_for(original_track_ids))
 
 
 def _assign_track_classification(

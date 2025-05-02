@@ -186,7 +186,7 @@ class TestTrackRepository:
         assert repository.classifications == classifications
 
     def test_revert_cuts_for(self) -> None:
-        original_ids = {"1"}
+        original_ids = {TrackId("1")}
         dataset = Mock()
         target = TrackRepository(dataset)
         target.revert_cuts_for(original_ids)
