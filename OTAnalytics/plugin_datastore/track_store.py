@@ -643,7 +643,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
                 "Some tracks do not exists in dataset with given id"
             ) from cause
 
-    def revert_cuts_for(self, original_track_ids: set[TrackId]) -> "PandasTrackDataset":
+    def revert_cuts_for(
+        self, original_track_ids: frozenset[TrackId]
+    ) -> "PandasTrackDataset":
         if self._dataset.empty:
             return self
         ids_to_revert = self._get_existing_track_ids(original_track_ids)
@@ -661,7 +663,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             calculator=self.calculator,
         )
 
-    def _get_existing_track_ids(self, track_ids: set[TrackId]) -> list[str]:
+    def _get_existing_track_ids(self, track_ids: frozenset[TrackId]) -> list[str]:
         converted_ids = [track_id.id for track_id in track_ids]
         return list(
             self._dataset.loc[
@@ -717,7 +719,9 @@ class FilteredPandasTrackDataset(
     def get_data(self) -> DataFrame:
         return self._filter().get_data()
 
-    def revert_cuts_for(self, original_track_ids: set[TrackId]) -> PandasTrackDataset:
+    def revert_cuts_for(
+        self, original_track_ids: frozenset[TrackId]
+    ) -> PandasTrackDataset:
         return self.wrap(self._other.revert_cuts_for(original_track_ids))
 
 

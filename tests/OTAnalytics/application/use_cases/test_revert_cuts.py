@@ -8,7 +8,7 @@ from OTAnalytics.domain.track import TrackId
 
 class TestRevertCuts:
     def test_revert(self, track_repository: Mock) -> None:
-        original_ids = {TrackId("1"), TrackId("2")}
+        original_ids = frozenset([TrackId("1"), TrackId("2")])
         target = RevertCuts(track_repository)
         target.revert(original_ids)
 

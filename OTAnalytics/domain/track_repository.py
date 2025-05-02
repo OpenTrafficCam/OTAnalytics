@@ -221,7 +221,7 @@ class TrackRepository:
     def __len__(self) -> int:
         return len(self._dataset)
 
-    def revert_cuts_for(self, original_ids: set[TrackId]) -> None:
+    def revert_cuts_for(self, original_ids: frozenset[TrackId]) -> None:
         """
         Reverts cuts in the dataset for the provided set of original IDs.
 
@@ -231,11 +231,10 @@ class TrackRepository:
         cuts for the specified IDs.
 
         Args:
-            original_ids (set[TrackId]): A set of strings representing the original IDs
-                of the items in the dataset for which the cuts need to be reverted.
+            original_ids (frozenset[TrackId]): A set of strings representing the
+                original IDs of the items in the dataset for which the cuts need to be
+                reverted.
 
-        Returns:
-            None
         """
         self._dataset = self._dataset.revert_cuts_for(original_ids)
 

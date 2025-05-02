@@ -22,7 +22,7 @@ class TestTrackDataset:
         for target in targets:
             assert len(target) == 4
             actual = target.revert_cuts_for(
-                {first_track_segment_1.original_id, uncut_track.original_id}
+                frozenset([first_track_segment_1.original_id, uncut_track.original_id])
             )
             assert len(actual) == 3
             actual_first_track = actual.get_for(first_track_segment_1.original_id)
