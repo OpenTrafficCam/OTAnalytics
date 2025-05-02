@@ -179,6 +179,10 @@ from OTAnalytics.domain.track import TrackIdProvider
 from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_datastore.pandas_track_dataset_factory import (
+    PandasTrackDatasetFactory,
+    TypeCheckingPandasTrackDatasetFactory,
+)
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
@@ -187,7 +191,6 @@ from OTAnalytics.plugin_datastore.track_store import (
     FilterByClassPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
-    PandasTrackDatasetFactory,
 )
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
@@ -978,7 +981,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def pandas_track_dataset_factory(self) -> PandasTrackDatasetFactory:
-        return PandasTrackDatasetFactory(
+        return TypeCheckingPandasTrackDatasetFactory(
             self.track_geometry_factory, self.pandas_by_max_confidence
         )
 
