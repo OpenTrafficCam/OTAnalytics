@@ -319,8 +319,6 @@ def create_track(
 
     if original_id is None:
         original_id = track_id
-    else:
-        original_id = original_id
 
     track_builder = TrackBuilder()
     track_builder.add_track_id(track_id)
