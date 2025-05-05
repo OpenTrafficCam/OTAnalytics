@@ -7,7 +7,7 @@ from _pytest.fixtures import FixtureRequest
 from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset import (
-    FilteredTrackDataset,
+    FilterByClassTrackDataset,
     TrackDoesNotExistError,
 )
 from tests.utils.assertions import (
@@ -29,7 +29,7 @@ class TestFilteredTrackDataset:
         tracks: list[Track],
         include_classes: list[str] | list[OtcClasses],
         exclude_classes: list[str] | list[OtcClasses],
-    ) -> dict[str, FilteredTrackDataset]:
+    ) -> dict[str, FilterByClassTrackDataset]:
         provider = TrackDatasetProvider()
         include_classes = [str(cls) for cls in include_classes]
         exclude_classes = [str(cls) for cls in exclude_classes]
@@ -42,7 +42,7 @@ class TestFilteredTrackDataset:
 
     def get_mocked_datasets(
         self, include_classes: list[str], exclude_classes: list[str]
-    ) -> list[tuple[FilteredTrackDataset, Mock]]:
+    ) -> list[tuple[FilterByClassTrackDataset, Mock]]:
         provider = TrackDatasetProvider()
         return [
             provider.provide_filtered_mock(
@@ -421,7 +421,7 @@ class TestFilteredTrackDataset:
             )
             assert original_track_ids == track_ids
             assert result_dataset.track_ids == cut_dataset.track_ids
-            assert isinstance(result_dataset, FilteredTrackDataset)
+            assert isinstance(result_dataset, FilterByClassTrackDataset)
             assert result_dataset.include_classes == frozenset()
             assert result_dataset.exclude_classes == frozenset()
             mock_other.cut_with_section.assert_called_once_with(section, offset)
