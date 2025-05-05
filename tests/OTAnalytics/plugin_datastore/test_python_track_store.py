@@ -40,7 +40,7 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrackDataset,
     PythonTrackSegment,
     PythonTrackSegmentDataset,
-    SimpleCutTrackSegmentBuilder,
+    SimpleCutTrackPartBuilder,
     create_segment_for,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
@@ -707,7 +707,7 @@ class TestSimpleCutTrackSegmentBuilder:
 
         class_calculator = Mock(spec=TrackClassificationCalculator)
         class_calculator.calculate.return_value = classification
-        track_builder = SimpleCutTrackSegmentBuilder(class_calculator)
+        track_builder = SimpleCutTrackPartBuilder(class_calculator)
 
         assert track_builder._track_id is None
         assert track_builder._detections == []

@@ -579,16 +579,16 @@ class TestPandasTrackDataset:
             expected_tracks,
             expected_original_track_ids,
         ) = cutting_section_test_case
-        # expected_dataset = PandasTrackDataset.from_list(
-        #     expected_tracks, track_geometry_factory
-        # )
+        expected_dataset = PandasTrackDataset.from_list(
+            expected_tracks, track_geometry_factory
+        )
 
         dataset = PandasTrackDataset.from_list(input_tracks, track_geometry_factory)
         cut_track_dataset, original_track_ids = dataset.cut_with_section(
             cutting_section, RelativeOffsetCoordinate(0, 0)
         )
         assert original_track_ids == expected_original_track_ids
-        # assert_track_datasets_equal(cut_track_dataset, expected_dataset)
+        assert_track_datasets_equal(cut_track_dataset, expected_dataset)
 
     def test_cut_with_section_no_tracks(
         self, track_geometry_factory: TRACK_GEOMETRY_FACTORY

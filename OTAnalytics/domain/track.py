@@ -332,6 +332,15 @@ class TrackBuilder(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def add_original_id(self, original_track_id: TrackId) -> None:
+        """Add the original id of the track to be built.
+
+        Args:
+            original_track_id (TrackId): the id.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def build(self) -> Track:
         """Build a track with the configured settings.
 

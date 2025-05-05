@@ -270,27 +270,51 @@ def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
 def cutting_section_test_case() -> (
     tuple[LineSection, list[Track], list[Track], set[TrackId]]
 ):
+    track_id_1 = "1"
+    track_id_2 = "2"
+    track_id_3 = "3"
+
     first_track = create_track(
-        "1",
-        [(1, 1), (2, 1), (3, 1), (4, 1), (4, 2), (3, 2), (2, 2), (1, 2)],
+        track_id=track_id_1,
+        original_id=track_id_1,
+        coord=[(1, 1), (2, 1), (3, 1), (4, 1), (4, 2), (3, 2), (2, 2), (1, 2)],
         start_second=1,
     )
     expected_first_track_1 = create_track(
-        "1_0",
-        [
+        track_id="1_0",
+        original_id=track_id_1,
+        coord=[
             (1, 1),
             (2, 1),
         ],
-        1,
+        start_second=1,
     )
-    expected_first_track_2 = create_track("1_1", [(3, 1), (4, 1), (4, 2), (3, 2)], 3)
-    expected_first_track_3 = create_track("1_2", [(2, 2), (1, 2)], 7)
+    expected_first_track_2 = create_track(
+        track_id="1_1",
+        original_id=track_id_1,
+        coord=[(3, 1), (4, 1), (4, 2), (3, 2)],
+        start_second=3,
+    )
+    expected_first_track_3 = create_track(
+        track_id="1_2", original_id=track_id_1, coord=[(2, 2), (1, 2)], start_second=7
+    )
 
-    second_track = create_track("2", [(1, 1), (2, 1), (3, 1)], 1)
-    expected_second_track_1 = create_track("2_0", [(1, 1), (2, 1)], 1)
-    expected_second_track_2 = create_track("2_1", [(3, 1)], 3)
+    second_track = create_track(
+        track_id=track_id_2, coord=[(1, 1), (2, 1), (3, 1)], start_second=1
+    )
+    expected_second_track_1 = create_track(
+        track_id="2_0", original_id=track_id_2, coord=[(1, 1), (2, 1)], start_second=1
+    )
+    expected_second_track_2 = create_track(
+        track_id="2_1", original_id=track_id_2, coord=[(3, 1)], start_second=3
+    )
 
-    third_track = create_track("3", [(10, 10), (20, 10)], 10)
+    third_track = create_track(
+        track_id=track_id_3,
+        original_id=track_id_3,
+        coord=[(10, 10), (20, 10)],
+        start_second=10,
+    )
 
     _id = "#cut_1"
     cutting_section = LineSection(
