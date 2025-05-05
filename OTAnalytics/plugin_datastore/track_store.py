@@ -16,7 +16,7 @@ from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
-from OTAnalytics.domain.track_dataset import (
+from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
     END_OCCURRENCE,
     END_VIDEO_NAME,

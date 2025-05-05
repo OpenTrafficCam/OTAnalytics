@@ -6,7 +6,7 @@ from _pytest.fixtures import FixtureRequest
 
 from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import (
+from OTAnalytics.domain.track_dataset.track_dataset import (
     FilterByClassTrackDataset,
     TrackDoesNotExistError,
 )

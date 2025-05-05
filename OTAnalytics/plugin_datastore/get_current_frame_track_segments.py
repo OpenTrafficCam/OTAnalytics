@@ -1,5 +1,5 @@
 from OTAnalytics.application.use_cases.create_intersection_events import GetTracks
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.plugin_datastore.pandas_track_dataset_factory import (
     PandasTrackDatasetFactory,
 )

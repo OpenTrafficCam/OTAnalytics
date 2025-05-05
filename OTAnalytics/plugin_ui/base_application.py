@@ -176,7 +176,7 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import TrackIdProvider
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_datastore.pandas_track_dataset_factory import (

@@ -15,7 +15,7 @@ from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )

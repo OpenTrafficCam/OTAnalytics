@@ -11,7 +11,7 @@ from OTAnalytics.application.use_cases.track_export import (
     TrackFileFormat,
 )
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_parser.track_export import CsvTrackExport, set_column_order

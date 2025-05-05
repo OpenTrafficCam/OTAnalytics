@@ -1,6 +1,9 @@
 from typing import Protocol
 
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    TRACK_GEOMETRY_FACTORY,
+    TrackDataset,
+)
 from OTAnalytics.plugin_datastore.track_store import (
     PandasTrackClassificationCalculator,
     PandasTrackDataset,

@@ -9,7 +9,7 @@ from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import (
+from OTAnalytics.domain.track_dataset.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
     TrackDataset,
     TrackDoesNotExistError,

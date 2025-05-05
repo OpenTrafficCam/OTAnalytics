@@ -3,7 +3,7 @@ from typing import Iterable
 from unittest.mock import Mock
 
 from OTAnalytics.domain.track import Detection, Track
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 
 
 def assert_equal_detection_properties(actual: Detection, expected: Detection) -> None:

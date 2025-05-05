@@ -1,5 +1,5 @@
 from OTAnalytics.domain.track import Track
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from tests.utils.assertions import assert_equal_track_properties
 from tests.utils.builders.track_dataset_provider import (
     IMPLEMENTATIONS,

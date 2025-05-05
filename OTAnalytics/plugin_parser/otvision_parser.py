@@ -34,7 +34,10 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackImage,
 )
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    TRACK_GEOMETRY_FACTORY,
+    TrackDataset,
+)
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import (
     PATH,

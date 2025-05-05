@@ -2,7 +2,7 @@ from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.tracks_as_dataframe_provider import (  # noqa
     TracksAsDataFrameProvider,
