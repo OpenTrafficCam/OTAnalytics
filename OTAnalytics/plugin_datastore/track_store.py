@@ -7,6 +7,10 @@ from typing import Any, Callable, Generator, Iterable, Iterator, Optional, Seque
 
 import numpy
 import pandas
+from domain.track_dataset.filtered_track_dataset import (
+    FilterByClassTrackDataset,
+    FilteredTrackDataset,
+)
 from more_itertools import batched
 from pandas import DataFrame, Index, MultiIndex, Series
 from pandas._typing import ListLike
@@ -28,8 +32,6 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     START_X,
     START_Y,
     TRACK_GEOMETRY_FACTORY,
-    FilterByClassTrackDataset,
-    FilteredTrackDataset,
     IntersectionPoint,
     TrackDataset,
     TrackDoesNotExistError,
