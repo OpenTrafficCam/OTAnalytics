@@ -6,8 +6,8 @@ from tests.utils.builders.track_dataset_provider import TrackDatasetProvider
 
 FIRST_TRACK_ID = TrackId("1")
 SECOND_TRACK_ID = TrackId("2")
-FIRST_TRACK_SEGMENT_1_COORD = [(1, 1), (2, 1)]
-FIRST_TRACK_SEGMENT_2_COORD = [(3, 1), (4, 1)]
+FIRST_TRACK_PART_1_COORD = [(1, 1), (2, 1)]
+FIRST_TRACK_PART_2_COORD = [(3, 1), (4, 1)]
 
 
 @pytest.fixture
@@ -16,21 +16,21 @@ def track_dataset_provider() -> TrackDatasetProvider:
 
 
 @pytest.fixture
-def first_track_segment_1() -> Track:
+def first_track_part_1() -> Track:
     return create_track(
         track_id="1_1",
         original_id=FIRST_TRACK_ID.id,
-        coord=FIRST_TRACK_SEGMENT_1_COORD,
+        coord=FIRST_TRACK_PART_1_COORD,
         start_second=1,
     )
 
 
 @pytest.fixture
-def first_track_segment_2() -> Track:
+def first_track_part_2() -> Track:
     return create_track(
         track_id="1_2",
         original_id=FIRST_TRACK_ID.id,
-        coord=FIRST_TRACK_SEGMENT_2_COORD,
+        coord=FIRST_TRACK_PART_2_COORD,
         start_second=3,
     )
 
@@ -45,11 +45,9 @@ def uncut_track() -> Track:
 
 
 @pytest.fixture
-def expected_first_track(
-    first_track_segment_1: Track, first_track_segment_2: Track
-) -> Track:
+def expected_first_track(first_track_part_1: Track, first_track_part_2: Track) -> Track:
     return create_track(
         track_id=FIRST_TRACK_ID.id,
-        coord=FIRST_TRACK_SEGMENT_1_COORD + FIRST_TRACK_SEGMENT_2_COORD,
+        coord=FIRST_TRACK_PART_1_COORD + FIRST_TRACK_PART_2_COORD,
         start_second=1,
     )
