@@ -3,10 +3,12 @@ from unittest.mock import Mock
 
 import pytest
 from _pytest.fixtures import FixtureRequest
-from domain.track_dataset.filtered_track_dataset import FilterByClassTrackDataset
 
 from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
+    FilterByClassTrackDataset,
+)
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDoesNotExistError
 from tests.utils.assertions import (
     assert_equal_track_properties,

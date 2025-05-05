@@ -4,7 +4,6 @@ from datetime import datetime
 from math import ceil
 from typing import Callable, Iterable, Optional, Sequence
 
-from domain.track_dataset.filtered_track_dataset import FilterByClassTrackDataset
 from more_itertools import batched
 
 from OTAnalytics.application.logger import logger
@@ -21,6 +20,9 @@ from OTAnalytics.domain.track import (
     TrackClassificationCalculator,
     TrackHasNoDetectionError,
     TrackId,
+)
+from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
+    FilterByClassTrackDataset,
 )
 from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
