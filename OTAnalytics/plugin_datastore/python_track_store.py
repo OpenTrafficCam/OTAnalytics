@@ -689,8 +689,8 @@ class PythonTrackDataset(TrackDataset):
                 track_ids_to_remove.add(track.id)
 
         reverted_tracks = []
-        for original_id, track_segments in tracks_to_revert.items():
-            reverted_tracks.append(self.__revert_cut_for(original_id, track_segments))
+        for original_id, track_part in tracks_to_revert.items():
+            reverted_tracks.append(self.__revert_cut_for(original_id, track_part))
 
         result = self.remove_multiple(track_ids_to_remove)
         return result.add_all(reverted_tracks)
@@ -727,11 +727,11 @@ class PythonTrackDataset(TrackDataset):
         )
 
     def __revert_cut_for(
-        self, original_id: TrackId, track_segments: list[Track]
+        self, original_id: TrackId, track_parts: list[Track]
     ) -> PythonTrack:
         detections = []
-        for segment in track_segments:
-            detections.extend(segment.detections)
+        for part in track_parts:
+            detections.extend(part.detections)
 
         return self._create_original_track(original_id, detections)
 
