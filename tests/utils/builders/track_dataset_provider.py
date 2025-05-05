@@ -2,9 +2,11 @@ from typing import Literal
 from unittest.mock import Mock
 
 from OTAnalytics.domain.track import Track
-from OTAnalytics.domain.track_dataset import (
-    TRACK_GEOMETRY_FACTORY,
+from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
     FilterByClassTrackDataset,
+)
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    TRACK_GEOMETRY_FACTORY,
     TrackDataset,
     TrackGeometryDataset,
 )

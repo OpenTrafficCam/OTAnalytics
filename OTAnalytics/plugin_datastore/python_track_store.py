@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
@@ -20,7 +21,10 @@ from OTAnalytics.domain.track import (
     TrackHasNoDetectionError,
     TrackId,
 )
-from OTAnalytics.domain.track_dataset import (
+from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
+    FilterByClassTrackDataset,
+)
+from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
     END_OCCURRENCE,
     END_VIDEO_NAME,
@@ -32,7 +36,6 @@ from OTAnalytics.domain.track_dataset import (
     START_X,
     START_Y,
     TRACK_GEOMETRY_FACTORY,
-    FilterByClassTrackDataset,
     IntersectionPoint,
     TrackDataset,
     TrackDoesNotExistError,
@@ -173,6 +176,7 @@ class PythonTrack(Track, DataclassValidation):
         ValueError: if an empty detections list has been passed.
     """
 
+    _original_id: TrackId
     _id: TrackId
     _classification: str
     _detections: list[Detection]
@@ -180,6 +184,10 @@ class PythonTrack(Track, DataclassValidation):
     @property
     def id(self) -> TrackId:
         return self._id
+
+    @property
+    def original_id(self) -> TrackId:
+        return self._original_id
 
     @property
     def classification(self) -> str:
@@ -328,40 +336,46 @@ def cut_track_with_section(
     section_geometry = shapely_mapper.map_coordinates_to_line_string(
         section.get_coordinates()
     )
-    cut_track_segments: list[Track] = []
-    track_builder = SimpleCutTrackSegmentBuilder()
+    cut_track_parts: list[Track] = []
+    track_builder = SimpleCutTrackPartBuilder()
     for current_detection, next_detection in zip(
         track_to_cut.detections[0:-1], track_to_cut.detections[1:]
     ):
         current_coordinate = current_detection.get_coordinate(offset)
         next_coordinate = next_detection.get_coordinate(offset)
-        track_segment_geometry = shapely_mapper.map_domain_coordinates_to_line_string(
+        track_part_geometry = shapely_mapper.map_domain_coordinates_to_line_string(
             [current_coordinate, next_coordinate]
         )
-        if track_segment_geometry.intersects(section_geometry):
-            new_track_segment = build_track(
+        if track_part_geometry.intersects(section_geometry):
+            new_track_part = build_track(
                 track_builder,
-                f"{track_to_cut.id.id}_{len(cut_track_segments)}",
-                current_detection,
+                track_id=f"{track_to_cut.id.id}_{len(cut_track_parts)}",
+                original_track_id=track_to_cut.original_id,
+                detection=current_detection,
             )
-            cut_track_segments.append(new_track_segment)
+            cut_track_parts.append(new_track_part)
         else:
             track_builder.add_detection(current_detection)
 
-    new_track_segment = build_track(
+    new_track_part = build_track(
         track_builder,
-        f"{track_to_cut.id.id}_{len(cut_track_segments)}",
-        track_to_cut.last_detection,
+        track_id=f"{track_to_cut.id.id}_{len(cut_track_parts)}",
+        original_track_id=track_to_cut.original_id,
+        detection=track_to_cut.last_detection,
     )
-    cut_track_segments.append(new_track_segment)
+    cut_track_parts.append(new_track_part)
 
-    return cut_track_segments
+    return cut_track_parts
 
 
 def build_track(
-    track_builder: TrackBuilder, track_id: str, detection: Detection
+    track_builder: TrackBuilder,
+    track_id: str,
+    original_track_id: TrackId,
+    detection: Detection,
 ) -> Track:
     track_builder.add_id(track_id)
+    track_builder.add_original_id(original_track_id)
     track_builder.add_detection(detection)
     return track_builder.build()
 
@@ -439,15 +453,11 @@ class PythonTrackDataset(TrackDataset):
         for track_id, other_track in other.items():
             existing_detections = self._get_existing_detections(track_id)
             all_detections = existing_detections + other_track.detections
-            sort_dets_by_occurrence = sorted(
-                all_detections, key=lambda det: det.occurrence
-            )
-            classification = self.calculator.calculate(all_detections)
             try:
-                current_track = PythonTrack(
-                    _id=track_id,
-                    _classification=classification,
-                    _detections=sort_dets_by_occurrence,
+                current_track = self._create_track(
+                    track_id=track_id,
+                    original_id=other_track.original_id,
+                    detections=all_detections,
                 )
                 merged_tracks[current_track.id] = current_track
             except TrackHasNoDetectionError as build_error:
@@ -456,6 +466,18 @@ class PythonTrackDataset(TrackDataset):
         updated_geometry_dataset = self._add_to_geometry_dataset(merged_tracks.values())
         return PythonTrackDataset(
             self.track_geometry_factory, merged, updated_geometry_dataset
+        )
+
+    def _create_track(
+        self, track_id: TrackId, original_id: TrackId, detections: list[Detection]
+    ) -> PythonTrack:
+        sort_dets_by_occurrence = sorted(detections, key=lambda det: det.occurrence)
+        classification = self.calculator.calculate(detections)
+        return PythonTrack(
+            _original_id=original_id,
+            _id=track_id,
+            _classification=classification,
+            _detections=sort_dets_by_occurrence,
         )
 
     def _add_to_geometry_dataset(
@@ -658,6 +680,69 @@ class PythonTrackDataset(TrackDataset):
             result[track_id] = max_confidence
         return result
 
+    def revert_cuts_for(
+        self, original_track_ids: frozenset[TrackId]
+    ) -> "PythonTrackDataset":
+        # NOTE: This implementation prioritizes maintainability over performance.
+        # If performance becomes a concern in high-volume operations, consider
+        # implementing a mapping cache of original track IDs to their derived segments.
+        converted_original_track_ids = [
+            original_id.id for original_id in original_track_ids
+        ]
+        tracks_to_revert = defaultdict(list)
+        track_ids_to_remove = set()
+        for track in self._tracks.values():
+            if track.original_id.id in converted_original_track_ids:
+                tracks_to_revert[track.original_id].append(track)
+                track_ids_to_remove.add(track.id)
+
+        reverted_tracks = []
+        for original_id, track_part in tracks_to_revert.items():
+            reverted_tracks.append(self.__revert_cut_for(original_id, track_part))
+
+        result = self.remove_multiple(track_ids_to_remove)
+        return result.add_all(reverted_tracks)
+
+    def _create_original_track(
+        self, original_id: TrackId, detections: list[Detection]
+    ) -> PythonTrack:
+        original_detections = [
+            self._create_original_detection(detection, original_id)
+            for detection in detections
+        ]
+        return self._create_track(
+            track_id=original_id,
+            original_id=original_id,
+            detections=original_detections,
+        )
+
+    def _create_original_detection(
+        self, detection: Detection, original_id: TrackId
+    ) -> Detection:
+        return PythonDetection(
+            _classification=detection.classification,
+            _confidence=detection.confidence,
+            _x=detection.x,
+            _y=detection.y,
+            _w=detection.w,
+            _h=detection.h,
+            _frame=detection.frame,
+            _occurrence=detection.occurrence,
+            _interpolated_detection=detection.interpolated_detection,
+            _track_id=original_id,
+            _video_name=detection.video_name,
+            _input_file=detection.input_file,
+        )
+
+    def __revert_cut_for(
+        self, original_id: TrackId, track_parts: list[Track]
+    ) -> PythonTrack:
+        detections = []
+        for part in track_parts:
+            detections.extend(part.detections)
+
+        return self._create_original_track(original_id, detections)
+
 
 class FilteredPythonTrackDataset(FilterByClassTrackDataset):
     @property
@@ -768,8 +853,11 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
         dataset, original_track_ids = self._other.cut_with_section(section, offset)
         return self.wrap(dataset), original_track_ids
 
+    def revert_cuts_for(self, original_track_ids: frozenset[TrackId]) -> TrackDataset:
+        return self.wrap(self._other.revert_cuts_for(original_track_ids))
 
-class SimpleCutTrackSegmentBuilder(TrackBuilder):
+
+class SimpleCutTrackPartBuilder(TrackBuilder):
     """Build tracks that have been cut with a cutting section.
 
     The builder will be reset after a successful build of a track.
@@ -779,16 +867,28 @@ class SimpleCutTrackSegmentBuilder(TrackBuilder):
             the max class of a track.
     """
 
+    @property
+    def original_id(self) -> TrackId:
+        if self._original_id:
+            return self._original_id
+        if self._track_id:
+            return self._track_id
+        raise TrackBuilderError("Track builder setup error occurred. TrackId not set.")
+
     def __init__(
         self, class_calculator: TrackClassificationCalculator = ByMaxConfidence()
     ) -> None:
         self._track_id: TrackId | None = None
+        self._original_id: TrackId | None = None
         self._detections: list[Detection] = []
 
         self._class_calculator = class_calculator
 
     def add_id(self, track_id: str) -> None:
         self._track_id = TrackId(track_id)
+
+    def add_original_id(self, original_track_id: TrackId) -> None:
+        self._original_id = original_track_id
 
     def add_detection(self, detection: Detection) -> None:
         self._detections.append(detection)
@@ -800,9 +900,10 @@ class SimpleCutTrackSegmentBuilder(TrackBuilder):
             )
         detections = self._build_detections()
         result = PythonTrack(
-            self._track_id,
-            self._class_calculator.calculate(detections),
-            detections,
+            _original_id=self.original_id,
+            _id=self._track_id,
+            _classification=self._class_calculator.calculate(detections),
+            _detections=detections,
         )
         self.reset()
         return result

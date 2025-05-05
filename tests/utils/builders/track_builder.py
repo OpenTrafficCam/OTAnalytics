@@ -23,6 +23,7 @@ class TrackBuilder:
     otdet_version = "1.2"
     ottrk_version = "1.1"
     track_id: str = "1"
+    original_id: str | None = None
     track_class: str = "car"
     detection_class: str = "car"
     confidence: float = 0.5
@@ -46,7 +47,19 @@ class TrackBuilder:
         self._detections: list[Detection] = []
 
     def build_track(self) -> Track:
-        return PythonTrack(TrackId(self.track_id), self.track_class, self._detections)
+        track_id = TrackId(self.track_id)
+        return PythonTrack(
+            _id=track_id,
+            _original_id=self.create_original_id(),
+            _classification=self.track_class,
+            _detections=self._detections,
+        )
+
+    def create_original_id(self) -> TrackId:
+        if self.original_id is None:
+            return TrackId(self.track_id)
+
+        return TrackId(self.original_id)
 
     def build_detections(self) -> list[Detection]:
         return self._detections
@@ -150,6 +163,10 @@ class TrackBuilder:
 
     def add_input_file(self, input_file: str) -> Self:
         self.input_file = input_file
+        return self
+
+    def add_original_id(self, original_id: str) -> Self:
+        self.original_id = original_id
         return self
 
     def get_metadata(self) -> dict:
@@ -289,6 +306,7 @@ def create_track(
     track_class: str = "car",
     detection_classes: list[str] | None = None,
     confidences: list[float] | None = None,
+    original_id: str | None = None,
 ) -> Track:
     if detection_classes:
         if len(detection_classes) != len(coord):
@@ -298,8 +316,13 @@ def create_track(
     if confidences:
         if len(confidences) != len(coord):
             raise ValueError("Track coordinates must match length of confidences.")
+
+    if original_id is None:
+        original_id = track_id
+
     track_builder = TrackBuilder()
     track_builder.add_track_id(track_id)
+    track_builder.add_original_id(original_id)
     track_builder.add_track_class(track_class)
 
     current_second = start_second

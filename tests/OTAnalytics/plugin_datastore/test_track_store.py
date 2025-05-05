@@ -9,7 +9,7 @@ from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import (
+from OTAnalytics.domain.track_dataset.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
     TrackDataset,
     TrackDoesNotExistError,
@@ -73,20 +73,27 @@ class TestPandasDetection:
 
 class TestPandasTrack:
     def test_properties(self) -> None:
+        expected = self.create_python_track()
+        actual = self.create_pandas_track(expected)
+
+        assert_equal_track_properties(actual, expected)
+
+    def create_python_track(self) -> Track:
         builder = TrackBuilder()
         builder.append_detection()
         builder.append_detection()
         builder.append_detection()
         builder.append_detection()
         builder.append_detection()
-        python_track = builder.build_track()
-        detections = [detection.to_dict() for detection in python_track.detections]
+        return builder.build_track()
+
+    def create_pandas_track(self, this: Track) -> PandasTrack:
+        detections = [detection.to_dict() for detection in this.detections]
         data = DataFrame(detections).set_index([track.OCCURRENCE]).sort_index()
         data[track.TRACK_CLASSIFICATION] = data[track.CLASSIFICATION]
+        data[track.ORIGINAL_TRACK_ID] = data[track.TRACK_ID]
         data = data.drop([track.TRACK_ID], axis=1)
-        pandas_track = PandasTrack(python_track.id.id, data)
-
-        assert_equal_track_properties(pandas_track, python_track)
+        return PandasTrack(_id=this.id.id, _data=data)
 
 
 class TestPandasTrackSegmentDataset:
@@ -251,6 +258,7 @@ class TestPandasTrackDataset:
             PandasTrackDataset, dataset.add_all([car_track, pedestrian_track])
         )
         expected_merged_track = PythonTrack(
+            car_track.id,
             car_track.id,
             car_track_continuing.classification,
             car_track.detections + car_track_continuing.detections,
@@ -720,5 +728,10 @@ class TestFilterLastNSegmentsPandasTrackDataset:
 
 def create_expected_track(track: Track) -> PythonTrack:
     car_detections = track.detections[-2:]
-    expected_car_track = PythonTrack(track.id, track.classification, car_detections)
+    expected_car_track = PythonTrack(
+        _original_id=track.id,
+        _id=track.id,
+        _classification=track.classification,
+        _detections=car_detections,
+    )
     return expected_car_track

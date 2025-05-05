@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, Mock, PropertyMock, call
 import pytest
 
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import (
     TrackFileRepository,
     TrackListObserver,
@@ -184,6 +184,13 @@ class TestTrackRepository:
         dataset.classifications = classifications
         repository = TrackRepository(dataset)
         assert repository.classifications == classifications
+
+    def test_revert_cuts_for(self) -> None:
+        original_ids = frozenset([TrackId("1")])
+        dataset = Mock()
+        target = TrackRepository(dataset)
+        target.revert_cuts_for(original_ids)
+        dataset.revert_cuts_for.assert_called_once_with(original_ids)
 
 
 class TestTrackFileRepository:

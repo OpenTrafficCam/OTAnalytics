@@ -3,7 +3,7 @@ from pandas import DataFrame
 
 from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.track import TRACK_CLASSIFICATION, TRACK_ID, Track
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.calculation_strategy import (
     DETECTION_RATE,
