@@ -7,7 +7,7 @@ from typing import Iterable, Optional
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 
 
 @dataclass(frozen=True)
@@ -220,6 +220,23 @@ class TrackRepository:
 
     def __len__(self) -> int:
         return len(self._dataset)
+
+    def revert_cuts_for(self, original_ids: frozenset[TrackId]) -> None:
+        """
+        Reverts cuts in the dataset for the provided set of original IDs.
+
+        This function takes a set of identifiers corresponding to original items in
+        the dataset and reverses any cuts that were applied to these items. It ensures
+        that the dataset is restored to its state prior to any modifications involving
+        cuts for the specified IDs.
+
+        Args:
+            original_ids (frozenset[TrackId]): A set of strings representing the
+                original IDs of the items in the dataset for which the cuts need to be
+                reverted.
+
+        """
+        self._dataset = self._dataset.revert_cuts_for(original_ids)
 
 
 class TrackFileRepository:

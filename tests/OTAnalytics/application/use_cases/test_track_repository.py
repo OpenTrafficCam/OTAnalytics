@@ -18,7 +18,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     TrackRepositorySize,
 )
 from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 
 

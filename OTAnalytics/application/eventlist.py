@@ -8,7 +8,7 @@ from OTAnalytics.domain.event import (
     ImproperFormattedFilename,
 )
 from OTAnalytics.domain.geometry import ImageCoordinate, calculate_direction_vector
-from OTAnalytics.domain.track_dataset import (
+from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
     END_OCCURRENCE,
     END_VIDEO_NAME,

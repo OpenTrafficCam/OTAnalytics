@@ -43,7 +43,10 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionRepository,
 )
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    TRACK_GEOMETRY_FACTORY,
+    TrackDataset,
+)
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
@@ -56,7 +59,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
-    FilteredPandasTrackDataset,
+    FilterByClassPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
@@ -211,7 +214,7 @@ class UseCaseProvider:
         return repository, detection_metadata
 
     def provide_pandas_track_dataset(self) -> TrackDataset:
-        return FilteredPandasTrackDataset(
+        return FilterByClassPandasTrackDataset(
             PandasTrackDataset.from_list(
                 [], ShapelyTrackGeometryDataset.from_track_dataset
             ),

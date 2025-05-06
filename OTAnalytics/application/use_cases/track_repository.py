@@ -3,7 +3,7 @@ from typing import Iterable
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import (
     RemoveMultipleTracksError,
     TrackFileRepository,
