@@ -49,6 +49,14 @@ class TrackFormKeys(ResourceKey):
 
 class SvzMetadataKeys(ResourceKey):
     LABEL_SVZ_METADATA_FORM_HEADER = "label-svz-metadata-form-header"
+    LABEL_TK_NUMBER = "label-tk-number"
+    LABEL_COUNTING_LOCATION_NUMBER = "label-counting-location-number"
+    LABEL_DIRECTION_DESCRIPTION = "label-direction-description"
+    LABEL_HAS_BICYCLE_LANE = "label-has-bicycle-lane"
+    LABEL_IS_BICYCLE_COUNTING = "label-is-bicycle-counting"
+    LABEL_REMARK = "label-remark"
+    LABEL_X_COORDINATE = "label-x-coordinate"
+    LABEL_Y_COORDINATE = "label-y-coordinate"
 
 
 class FlowKeys(ResourceKey):
@@ -195,6 +203,14 @@ DEFAULT_RESOURCE_MAP = {
     SectionKeys.BUTTON_REMOVE: "Remove...",
     SectionKeys.TABLE_COLUMN_NAME: "Sections",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
+    SvzMetadataKeys.LABEL_TK_NUMBER: "Tk number",
+    SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER: "Counting location number",
+    SvzMetadataKeys.LABEL_DIRECTION_DESCRIPTION: "Direction",
+    SvzMetadataKeys.LABEL_HAS_BICYCLE_LANE: "Has bicycle lane",
+    SvzMetadataKeys.LABEL_IS_BICYCLE_COUNTING: "Is bicycle counting",
+    SvzMetadataKeys.LABEL_REMARK: "Remark",
+    SvzMetadataKeys.LABEL_X_COORDINATE: "X coordinate",
+    SvzMetadataKeys.LABEL_Y_COORDINATE: "Y coordinate",
     TrackFormKeys.TAB_ONE: "Track",
     TrackFormKeys.TAB_TWO: "Videos",
     TrackStatisticKeys.COLUMN_NAME: "Name",
