@@ -73,6 +73,7 @@ repos:
           - types-pillow
           - types-requests
           - types-seaborn
+          - types-selenium
           - types-shapely
           - types-tqdm
           - types-ujson
@@ -96,4 +97,4 @@ repos:
       - id: shell-fmt-docker
         args:
           - -i
-          - "2"
+          - '2'
