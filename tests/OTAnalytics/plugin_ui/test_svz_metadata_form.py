@@ -24,8 +24,8 @@ from OTAnalytics.application.resources.resource_manager import (
     SvzMetadataKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.svz_metadata_form.svz_metadata_form import (  # noqa
-    HAS_BICYCLE_LANE_MARKER,
-    TK_NUMBER_MARKER,
+    MARKER_HAS_BICYCLE_LANE,
+    MARKER_TK_NUMBER,
     SvzMetadataForm,
 )
 
@@ -165,7 +165,7 @@ class TestSVZMetadataFormUI:
         await user.open(ENDPOINT_NAME)
 
         # Enter text in the TK Number field
-        user.find(marker=TK_NUMBER_MARKER).type(TK_NUMBER_VALUE)
+        user.find(marker=MARKER_TK_NUMBER).type(TK_NUMBER_VALUE)
 
         # Verify that the viewmodel was updated
         viewmodel.update_svz_metadata.assert_called_once()
@@ -185,7 +185,7 @@ class TestSVZMetadataFormUI:
         await user.open(ENDPOINT_NAME)
 
         # Check the Has Bicycle Lane checkbox
-        user.find(marker=HAS_BICYCLE_LANE_MARKER).click()
+        user.find(marker=MARKER_HAS_BICYCLE_LANE).click()
 
         # Verify that the viewmodel was updated
         viewmodel.update_svz_metadata.assert_called()
@@ -247,8 +247,8 @@ class TestSVZMetadataFormUI:
             assert svz_metadata_form._coordinate_y.value == COORDINATE_Y_VALUE
 
         # Now change a field and verify the viewmodel is updated
-        user.find(marker=TK_NUMBER_MARKER).clear()
-        user.find(marker=TK_NUMBER_MARKER).type(TEST_NAME_INPUT)
+        user.find(marker=MARKER_TK_NUMBER).clear()
+        user.find(marker=MARKER_TK_NUMBER).type(TEST_NAME_INPUT)
 
         # Verify that the viewmodel was updated with the new value
         viewmodel.update_svz_metadata.assert_called()

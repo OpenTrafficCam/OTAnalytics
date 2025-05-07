@@ -29,17 +29,17 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     FormFieldText,
 )
 
-TK_NUMBER_MARKER = "tk_number"
-COUNTING_LOCATION_NUMBER_MARKER = "counting_location_number"
-DIRECTION_SELECT_MARKER = "direction_select"
-DIRECTION_DESCRIPTION_MARKER = "direction_description"
-HAS_BICYCLE_LANE_MARKER = "has_bicycle_lane"
-IS_BICYCLE_COUNTING_MARKER = "is_bicycle_counting"
-COUNTING_DAY_SELECT_MARKER = "counting_day_select"
-WEATHER_TYPE_SELECT_MARKER = "weather_type_select"
-REMARK_MARKER = "remark"
-COORDINATE_X_MARKER = "coordinate_x"
-COORDINATE_Y_MARKER = "coordinate_y"
+MARKER_TK_NUMBER = "marker-tk-number"
+MARKER_COUNTING_LOCATION_NUMBER = "marker-counting-location-number"
+MARKER_DIRECTION_SELECT = "marker-direction-select"
+MARKER_DIRECTION_DESCRIPTION = "marker-direction-description"
+MARKER_HAS_BICYCLE_LANE = "marker-has-bicycle-lane"
+MARKER_IS_BICYCLE_COUNTING = "marker-is-bicycle-counting"
+MARKER_COUNTING_DAY_SELECT = "marker-counting-day-select"
+MARKER_WEATHER_TYPE_SELECT = "marker-weather-type_select"
+MARKER_REMARK = "marker-remark"
+MARKER_COORDINATE_X = "marker-coordinate-x"
+MARKER_COORDINATE_Y = "marker-coordinate-y"
 
 
 class SvzMetadataForm(AbstractFrameSvzMetadata, ABC):
@@ -55,14 +55,14 @@ class SvzMetadataForm(AbstractFrameSvzMetadata, ABC):
         self._tk_number: FormFieldText = FormFieldText(
             label_text=self._resource_manager.get(SvzMetadataKeys.LABEL_TK_NUMBER),
             on_value_change=self._update_metadata,
-            marker=TK_NUMBER_MARKER,
+            marker=MARKER_TK_NUMBER,
         )
         self._counting_location_number = FormFieldText(
             label_text=self._resource_manager.get(
                 SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER
             ),
             on_value_change=self._update_metadata,
-            marker=COUNTING_LOCATION_NUMBER_MARKER,
+            marker=MARKER_COUNTING_LOCATION_NUMBER,
         )
         self._direction_select = FormFieldSelect(
             label_text=self._resource_manager.get(
@@ -70,28 +70,28 @@ class SvzMetadataForm(AbstractFrameSvzMetadata, ABC):
             ),
             options=self._directions.names,
             on_value_change=self._update_metadata,
-            marker=DIRECTION_SELECT_MARKER,
+            marker=MARKER_DIRECTION_SELECT,
         )
         self._direction_description = FormFieldText(
             label_text=self._resource_manager.get(
                 SvzMetadataKeys.LABEL_DIRECTION_DESCRIPTION
             ),
             on_value_change=self._update_metadata,
-            marker=DIRECTION_DESCRIPTION_MARKER,
+            marker=MARKER_DIRECTION_DESCRIPTION,
         )
         self._has_bicycle_lane = FormFieldCheckbox(
             label_text=self._resource_manager.get(
                 SvzMetadataKeys.LABEL_HAS_BICYCLE_LANE
             ),
             on_value_change=self._update_metadata,
-            marker=HAS_BICYCLE_LANE_MARKER,
+            marker=MARKER_HAS_BICYCLE_LANE,
         )
         self._is_bicycle_counting = FormFieldCheckbox(
             label_text=self._resource_manager.get(
                 SvzMetadataKeys.LABEL_IS_BICYCLE_COUNTING
             ),
             on_value_change=self._update_metadata,
-            marker=IS_BICYCLE_COUNTING_MARKER,
+            marker=MARKER_IS_BICYCLE_COUNTING,
         )
         self._counting_day_select = FormFieldSelect(
             label_text=self._resource_manager.get(
@@ -99,28 +99,28 @@ class SvzMetadataForm(AbstractFrameSvzMetadata, ABC):
             ),
             options=self._counting_day_types.names,
             on_value_change=self._update_metadata,
-            marker=COUNTING_DAY_SELECT_MARKER,
+            marker=MARKER_COUNTING_DAY_SELECT,
         )
         self._weather_type_select = FormFieldSelect(
             label_text=self._resource_manager.get(SvzMetadataKeys.LABEL_WEATHER),
             options=self._weather_types.names,
             on_value_change=self._update_metadata,
-            marker=WEATHER_TYPE_SELECT_MARKER,
+            marker=MARKER_WEATHER_TYPE_SELECT,
         )
         self._remark = FormFieldText(
             label_text=self._resource_manager.get(SvzMetadataKeys.LABEL_REMARK),
             on_value_change=self._update_metadata,
-            marker=REMARK_MARKER,
+            marker=MARKER_REMARK,
         )
         self._coordinate_x = FormFieldText(
             label_text=self._resource_manager.get(SvzMetadataKeys.LABEL_X_COORDINATE),
             on_value_change=self._update_metadata,
-            marker=COORDINATE_X_MARKER,
+            marker=MARKER_COORDINATE_X,
         )
         self._coordinate_y = FormFieldText(
             label_text=self._resource_manager.get(SvzMetadataKeys.LABEL_Y_COORDINATE),
             on_value_change=self._update_metadata,
-            marker=COORDINATE_Y_MARKER,
+            marker=MARKER_COORDINATE_Y,
         )
 
     def introduce_to_viewmodel(self) -> None:
