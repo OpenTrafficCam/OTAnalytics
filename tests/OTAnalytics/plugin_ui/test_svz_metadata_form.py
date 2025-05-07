@@ -35,15 +35,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.svz_metadata_form.svz_metadata_form
     SvzMetadataForm,
 )
 
-TK_NUMBER_TEST_NAME = "TK Number"
-COUNTING_LOCATION_NUMBER_TEST_NAME = "Counting Location Number"
-DIRECTION_DESCRIPTION_TEST_NAME = "Direction Description"
-HAS_BICYCLE_LANE_TEST_NAME = "Has Bicycle Lane"
-IS_BICYCLE_COUNTING_TEST_NAME = "Is Bicycle Counting"
-REMARK_TEST_NAME = "Remark"
-COORDINATES = "Coordinates"
-COORDINATE_X_TEST_NAME = "Coordinate X"
-COORDINATE_Y_TEST_NAME = "Coordinate Y"
 # Constants for testing
 TK_NUMBER_VALUE = "TK123"
 COUNTING_LOCATION_NUMBER_VALUE = "CL456"
