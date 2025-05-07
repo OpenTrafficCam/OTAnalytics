@@ -155,6 +155,7 @@ class TrackStatisticKeys(ResourceKey):
 
 
 class VisualizationLayersKeys(ResourceKey):
+    BUTTON_UPDATE_FLOW_HIGHLIGHTING = "button-update-flow-highlighting"
     LABEL_VISUALIZATION_LAYERS_FORM_HEADER = "label-visualization-layers-form-header"
 
 
@@ -244,6 +245,7 @@ DEFAULT_RESOURCE_MAP = {
     VisualizationFiltersKeys.LABEL_START_TIME: "Start time",
     VisualizationFiltersKeys.LABEL_END_DATE: "End date",
     VisualizationFiltersKeys.LABEL_END_TIME: "End time",
+    VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING: "Update flow highlighting",
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
     VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
     WorkspaceKeys.LABEL_WORKSPACE_FORM_HEADER: "Workspace",
