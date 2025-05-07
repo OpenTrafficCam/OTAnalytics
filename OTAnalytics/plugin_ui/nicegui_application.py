@@ -30,9 +30,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import 
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     ProjectForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import RemarkForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
     SectionsAndFlowForm,
