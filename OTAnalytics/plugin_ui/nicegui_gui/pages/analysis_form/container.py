@@ -9,9 +9,7 @@ from OTAnalytics.application.resources.resource_manager import (
     AnalysisKeys,
     ResourceManager,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import (  # noqa
-    ButtonForm,
-)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 
 
 class AnalysisForm(ButtonForm, AbstractFrame):
