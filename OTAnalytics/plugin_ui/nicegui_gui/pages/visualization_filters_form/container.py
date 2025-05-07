@@ -22,9 +22,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     FormFieldCheckbox,
     FormFieldInteger,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
 
 MARKER_FILTER_BY_DATE_CHECKBOX = "marker-filter-by-date-checkbox"
 

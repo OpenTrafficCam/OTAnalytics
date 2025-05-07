@@ -13,9 +13,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.visualization_offset
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     AddVideoForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
 
 
 class TrackForm:

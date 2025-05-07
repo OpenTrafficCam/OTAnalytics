@@ -8,9 +8,6 @@ from OTAnalytics.application.resources.resource_manager import (
 )
 from OTAnalytics.application.use_cases.track_statistics import TrackStatistics
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import CustomTable
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
 
 COLUMN_NAME = "name"
 COLUMN_NUMBER = "number"

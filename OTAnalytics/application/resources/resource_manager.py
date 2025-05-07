@@ -49,6 +49,18 @@ class TrackFormKeys(ResourceKey):
 
 class SvzMetadataKeys(ResourceKey):
     LABEL_SVZ_METADATA_FORM_HEADER = "label-svz-metadata-form-header"
+    LABEL_TK_NUMBER = "label-tk-number"
+    LABEL_COUNTING_LOCATION_NUMBER = "label-counting-location-number"
+    LABEL_COUNTING_SELECTION = "label-counting-selection"
+    LABEL_DIRECTION_DESCRIPTION = "label-direction-description"
+    LABEL_HAS_BICYCLE_LANE = "label-has-bicycle-lane"
+    LABEL_IS_BICYCLE_COUNTING = "label-is-bicycle-counting"
+    LABEL_COUNTING_DAY_SELECT = "label-counting-day-select"
+    LABEL_WEATHER = "label-weather"
+    LABEL_REMARK = "label-remark"
+    LABEL_COORDINATES = "label-coordinates"
+    LABEL_X_COORDINATE = "label-x-coordinate"
+    LABEL_Y_COORDINATE = "label-y-coordinate"
 
 
 class FlowKeys(ResourceKey):
@@ -196,6 +208,18 @@ DEFAULT_RESOURCE_MAP = {
     SectionKeys.BUTTON_REMOVE: "Remove...",
     SectionKeys.TABLE_COLUMN_NAME: "Sections",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
+    SvzMetadataKeys.LABEL_TK_NUMBER: "TK-Nummer",
+    SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER: "Zählstellennummer",
+    SvzMetadataKeys.LABEL_DIRECTION_DESCRIPTION: "Ausrichtung",
+    SvzMetadataKeys.LABEL_COUNTING_SELECTION: "Zählrichtung (Name aus ZV)",
+    SvzMetadataKeys.LABEL_HAS_BICYCLE_LANE: "Seitlicher Radweg vorhanden",
+    SvzMetadataKeys.LABEL_IS_BICYCLE_COUNTING: "Fahrradzählung",
+    SvzMetadataKeys.LABEL_COUNTING_DAY_SELECT: "Kategorie Zähltag",
+    SvzMetadataKeys.LABEL_WEATHER: "Wetter",
+    SvzMetadataKeys.LABEL_REMARK: "Bemerkung",
+    SvzMetadataKeys.LABEL_COORDINATES: "Geokoordinate",
+    SvzMetadataKeys.LABEL_X_COORDINATE: "X Koordinate",
+    SvzMetadataKeys.LABEL_Y_COORDINATE: "Y Koordinate",
     TrackFormKeys.TAB_ONE: "Track",
     TrackFormKeys.TAB_TWO: "Videos",
     TrackStatisticKeys.COLUMN_NAME: "Name",
