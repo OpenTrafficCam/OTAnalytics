@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional, Self, Sequence
 
+from application.logger import logger
+from application.resources.resource_manager import VisualizationLayersKeys
 from nicegui import ui
 
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
@@ -18,11 +20,11 @@ MARKER_START_TIME = "marker-start-time"
 class LayersForm(AbstractFrameTrackPlotting):
     def __init__(
         self,
-        view_model: ViewModel,
+        viewmodel: ViewModel,
         resource_manager: ResourceManager,
         layers: Sequence[LayerGroup],
     ) -> None:
-        self._view_model = view_model
+        self._viewmodel = viewmodel
         self._resource_manager = resource_manager
         self.introduce_to_viewmodel()
         self._layers = layers
@@ -41,7 +43,17 @@ class LayersForm(AbstractFrameTrackPlotting):
                         event.value
                     ),
                 )
+        ui.button(
+            self._resource_manager.get(
+                VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING
+            ),
+            on_click=self._create_events,
+        )
         return self
+
+    def _create_events(self) -> None:
+        logger().info("Creating events")
+        self._viewmodel.create_events()
 
     def update(self, name: str, start_date: Optional[datetime]) -> None:
         pass
