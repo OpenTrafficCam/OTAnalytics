@@ -110,11 +110,6 @@ def viewmodel() -> Mock:
 
 
 @pytest.fixture
-def resource_manager() -> ResourceManager:
-    return ResourceManager()
-
-
-@pytest.fixture
 def svz_metadata_form(
     viewmodel: ViewModel, resource_manager: ResourceManager
 ) -> SvzMetadataForm:
