@@ -44,7 +44,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_for
     SectionsForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.svz_metadata_form.svz_metadata_form import (  # noqa
-    SVZMetadataForm,
+    SvzMetadataForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.track_statistics_form.container import (
     TrackStatisticForm,
@@ -180,8 +180,8 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return LayersForm(self.view_model, self.resource_manager, layer_groups)
 
     @cached_property
-    def svz_metadata_form(self) -> SVZMetadataForm:
-        return SVZMetadataForm(self.view_model, self.resource_manager)
+    def svz_metadata_form(self) -> SvzMetadataForm:
+        return SvzMetadataForm(self.view_model, self.resource_manager)
 
     @cached_property
     def workspace(self) -> Workspace:

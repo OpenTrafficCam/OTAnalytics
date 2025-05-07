@@ -2,6 +2,7 @@ from abc import ABC
 from typing import Self
 
 from nicegui import ui
+from nicegui.events import ValueChangeEventArguments
 
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameSvzMetadata
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -22,9 +23,26 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     SvzMetadataKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
+    FormFieldCheckbox,
+    FormFieldSelect,
+    FormFieldText,
+)
+
+TK_NUMBER_MARKER = "tk_number"
+COUNTING_LOCATION_NUMBER_MARKER = "counting_location_number"
+DIRECTION_SELECT_MARKER = "direction_select"
+DIRECTION_DESCRIPTION_MARKER = "direction_description"
+HAS_BICYCLE_LANE_MARKER = "has_bicycle_lane"
+IS_BICYCLE_COUNTING_MARKER = "is_bicycle_counting"
+COUNTING_DAY_SELECT_MARKER = "counting_day_select"
+WEATHER_TYPE_SELECT_MARKER = "weather_type_select"
+REMARK_MARKER = "remark"
+COORDINATE_X_MARKER = "coordinate_x"
+COORDINATE_Y_MARKER = "coordinate_y"
 
 
-class SVZMetadataForm(AbstractFrameSvzMetadata, ABC):
+class SvzMetadataForm(AbstractFrameSvzMetadata, ABC):
 
     def __init__(self, viewmodel: ViewModel, resource_manager: ResourceManager) -> None:
         self._viewmodel = viewmodel
@@ -34,17 +52,76 @@ class SVZMetadataForm(AbstractFrameSvzMetadata, ABC):
         self._weather_types = self._viewmodel.get_weather_types()
         self.introduce_to_viewmodel()
 
-        self._tk_number: ui.input | None = None
-        self._counting_location_number: ui.input | None = None
-        self._direction_select: ui.select | None = None
-        self._direction_description: ui.input | None = None
-        self._has_bicycle_lane: ui.checkbox | None = None
-        self._is_bicycle_counting: ui.checkbox | None = None
-        self._counting_day_select: ui.select | None = None
-        self._weather_type_select: ui.select | None = None
-        self._remark: ui.input | None = None
-        self._coordinate_x: ui.input | None = None
-        self._coordinate_y: ui.input | None = None
+        self._tk_number: FormFieldText = FormFieldText(
+            label_text=self._resource_manager.get(SvzMetadataKeys.LABEL_TK_NUMBER),
+            on_value_change=self._update_metadata,
+            marker=TK_NUMBER_MARKER,
+        )
+        self._counting_location_number = FormFieldText(
+            label_text=self._resource_manager.get(
+                SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER
+            ),
+            on_value_change=self._update_metadata,
+            marker=COUNTING_LOCATION_NUMBER_MARKER,
+        )
+        self._direction_select = FormFieldSelect(
+            label_text=self._resource_manager.get(
+                SvzMetadataKeys.LABEL_COUNTING_SELECTION
+            ),
+            options=self._directions.names,
+            on_value_change=self._update_metadata,
+            marker=DIRECTION_SELECT_MARKER,
+        )
+        self._direction_description = FormFieldText(
+            label_text=self._resource_manager.get(
+                SvzMetadataKeys.LABEL_DIRECTION_DESCRIPTION
+            ),
+            on_value_change=self._update_metadata,
+            marker=DIRECTION_DESCRIPTION_MARKER,
+        )
+        self._has_bicycle_lane = FormFieldCheckbox(
+            label_text=self._resource_manager.get(
+                SvzMetadataKeys.LABEL_HAS_BICYCLE_LANE
+            ),
+            on_value_change=self._update_metadata,
+            marker=HAS_BICYCLE_LANE_MARKER,
+        )
+        self._is_bicycle_counting = FormFieldCheckbox(
+            label_text=self._resource_manager.get(
+                SvzMetadataKeys.LABEL_IS_BICYCLE_COUNTING
+            ),
+            on_value_change=self._update_metadata,
+            marker=IS_BICYCLE_COUNTING_MARKER,
+        )
+        self._counting_day_select = FormFieldSelect(
+            label_text=self._resource_manager.get(
+                SvzMetadataKeys.LABEL_COUNTING_DAY_SELECT
+            ),
+            options=self._counting_day_types.names,
+            on_value_change=self._update_metadata,
+            marker=COUNTING_DAY_SELECT_MARKER,
+        )
+        self._weather_type_select = FormFieldSelect(
+            label_text=self._resource_manager.get(SvzMetadataKeys.LABEL_WEATHER),
+            options=self._weather_types.names,
+            on_value_change=self._update_metadata,
+            marker=WEATHER_TYPE_SELECT_MARKER,
+        )
+        self._remark = FormFieldText(
+            label_text=self._resource_manager.get(SvzMetadataKeys.LABEL_REMARK),
+            on_value_change=self._update_metadata,
+            marker=REMARK_MARKER,
+        )
+        self._coordinate_x = FormFieldText(
+            label_text=self._resource_manager.get(SvzMetadataKeys.LABEL_X_COORDINATE),
+            on_value_change=self._update_metadata,
+            marker=COORDINATE_X_MARKER,
+        )
+        self._coordinate_y = FormFieldText(
+            label_text=self._resource_manager.get(SvzMetadataKeys.LABEL_Y_COORDINATE),
+            on_value_change=self._update_metadata,
+            marker=COORDINATE_Y_MARKER,
+        )
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_svz_metadata_frame(self)
@@ -52,71 +129,43 @@ class SVZMetadataForm(AbstractFrameSvzMetadata, ABC):
     def update(self, metadata: dict) -> None:
         if metadata:
             if TK_NUMBER in metadata and self._tk_number:
-                self._tk_number.value = metadata[TK_NUMBER]
+                self._tk_number.set_value(metadata[TK_NUMBER])
             if COUNTING_LOCATION_NUMBER in metadata and self._counting_location_number:
-                self._counting_location_number.value = metadata[
-                    COUNTING_LOCATION_NUMBER
-                ]
+                self._counting_location_number.set_value(
+                    metadata[COUNTING_LOCATION_NUMBER]
+                )
             if DIRECTION in metadata and self._direction_select:
-                self._direction_select.value = metadata[DIRECTION]
+                self._direction_select.set_value(metadata[DIRECTION])
             if DIRECTION_DESCRIPTION in metadata and self._direction_description:
-                self._direction_description.value = metadata[DIRECTION_DESCRIPTION]
+                self._direction_description.set_value(metadata[DIRECTION_DESCRIPTION])
             if HAS_BICYCLE_LANE in metadata and self._has_bicycle_lane:
-                self._has_bicycle_lane.value = metadata[HAS_BICYCLE_LANE]
+                self._has_bicycle_lane.set_value(metadata[HAS_BICYCLE_LANE])
             if IS_BICYCLE_COUNTING in metadata and self._is_bicycle_counting:
-                self._is_bicycle_counting.value = metadata[IS_BICYCLE_COUNTING]
+                self._is_bicycle_counting.set_value(metadata[IS_BICYCLE_COUNTING])
             if COUNTING_DAY in metadata and self._counting_day_select:
-                self._counting_day_select.value = metadata[COUNTING_DAY]
+                self._counting_day_select.set_value(metadata[COUNTING_DAY])
             if WEATHER in metadata and self._weather_type_select:
-                self._weather_type_select.value = metadata[WEATHER]
+                self._weather_type_select.set_value(metadata[WEATHER])
             if REMARK in metadata and self._remark:
-                self._remark.value = metadata[REMARK]
+                self._remark.set_value(metadata[REMARK])
             if COORDINATE_X in metadata and self._coordinate_x:
-                self._coordinate_x.value = metadata[COORDINATE_X]
+                self._coordinate_x.set_value(metadata[COORDINATE_X])
             if COORDINATE_Y in metadata and self._coordinate_y:
-                self._coordinate_y.value = metadata[COORDINATE_Y]
+                self._coordinate_y.set_value(metadata[COORDINATE_Y])
 
     def build(self) -> Self:
-        self._tk_number = ui.input(
-            label=self._resource_manager.get(SvzMetadataKeys.LABEL_TK_NUMBER),
-            on_change=self._update_metadata,
-        )
-        self._counting_location_number = ui.input(
-            label=self._resource_manager.get(
-                SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER
-            ),
-            on_change=self._update_metadata,
-        )
-        self._direction_select = ui.select(self._directions.names)
-        self._direction_description = ui.input(
-            label=self._resource_manager.get(
-                SvzMetadataKeys.LABEL_DIRECTION_DESCRIPTION
-            ),
-            on_change=self._update_metadata,
-        )
-        self._has_bicycle_lane = ui.checkbox(
-            self._resource_manager.get(SvzMetadataKeys.LABEL_HAS_BICYCLE_LANE),
-            on_change=self._update_metadata,
-        )
-        self._is_bicycle_counting = ui.checkbox(
-            self._resource_manager.get(SvzMetadataKeys.LABEL_IS_BICYCLE_COUNTING),
-            on_change=self._update_metadata,
-        )
-        self._counting_day_select = ui.select(self._counting_day_types.names)
-        self._weather_type_select = ui.select(self._weather_types.names)
-        self._remark = ui.input(
-            label=self._resource_manager.get(SvzMetadataKeys.LABEL_REMARK),
-            on_change=self._update_metadata,
-        )
-        ui.label("Geeokoordinate")
-        self._coordinate_x = ui.input(
-            label=self._resource_manager.get(SvzMetadataKeys.LABEL_X_COORDINATE),
-            on_change=self._update_metadata,
-        )
-        self._coordinate_y = ui.input(
-            label=self._resource_manager.get(SvzMetadataKeys.LABEL_Y_COORDINATE),
-            on_change=self._update_metadata,
-        )
+        self._tk_number.build()
+        self._counting_location_number.build()
+        self._direction_select.build()
+        self._direction_description.build()
+        self._has_bicycle_lane.build()
+        self._is_bicycle_counting.build()
+        self._counting_day_select.build()
+        self._weather_type_select.build()
+        self._remark.build()
+        ui.label(self._resource_manager.get(SvzMetadataKeys.LABEL_COORDINATES))
+        self._coordinate_x.build()
+        self._coordinate_y.build()
 
         return self
 
@@ -159,5 +208,5 @@ class SVZMetadataForm(AbstractFrameSvzMetadata, ABC):
             COORDINATE_Y: self._coordinate_y.value if self._coordinate_y else None,
         }
 
-    def _update_metadata(self) -> None:
+    def _update_metadata(self, event: ValueChangeEventArguments) -> None:
         self._viewmodel.update_svz_metadata(self._build_metadata())

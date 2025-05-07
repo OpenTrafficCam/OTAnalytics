@@ -24,7 +24,9 @@ from OTAnalytics.application.resources.resource_manager import (
     SvzMetadataKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.svz_metadata_form.svz_metadata_form import (  # noqa
-    SVZMetadataForm,
+    HAS_BICYCLE_LANE_MARKER,
+    TK_NUMBER_MARKER,
+    SvzMetadataForm,
 )
 
 TK_NUMBER_TEST_NAME = "TK Number"
@@ -33,6 +35,7 @@ DIRECTION_DESCRIPTION_TEST_NAME = "Direction Description"
 HAS_BICYCLE_LANE_TEST_NAME = "Has Bicycle Lane"
 IS_BICYCLE_COUNTING_TEST_NAME = "Is Bicycle Counting"
 REMARK_TEST_NAME = "Remark"
+COORDINATES = "Coordinates"
 COORDINATE_X_TEST_NAME = "Coordinate X"
 COORDINATE_Y_TEST_NAME = "Coordinate Y"
 # Constants for testing
@@ -43,7 +46,7 @@ DIRECTION_DESCRIPTION_VALUE = "Northbound"
 REMARK_VALUE = "Test remark"
 COORDINATE_X_VALUE = "123.45"
 COORDINATE_Y_VALUE = "678.90"
-
+TEST_NAME_INPUT = "NewTK456"
 ENDPOINT_NAME = "/test-svz-metadata"
 
 
@@ -110,6 +113,7 @@ def resource_manager() -> Mock:
         SvzMetadataKeys.LABEL_HAS_BICYCLE_LANE: HAS_BICYCLE_LANE_TEST_NAME,
         SvzMetadataKeys.LABEL_IS_BICYCLE_COUNTING: IS_BICYCLE_COUNTING_TEST_NAME,
         SvzMetadataKeys.LABEL_REMARK: REMARK_TEST_NAME,
+        SvzMetadataKeys.LABEL_COORDINATES: COORDINATES,
         SvzMetadataKeys.LABEL_X_COORDINATE: COORDINATE_X_TEST_NAME,
         SvzMetadataKeys.LABEL_Y_COORDINATE: COORDINATE_Y_TEST_NAME,
     }.get(key, f"Resource for {key}")
@@ -119,15 +123,15 @@ def resource_manager() -> Mock:
 @pytest.fixture
 def svz_metadata_form(
     viewmodel: ViewModel, resource_manager: ResourceManager
-) -> SVZMetadataForm:
-    return SVZMetadataForm(viewmodel, resource_manager)
+) -> SvzMetadataForm:
+    return SvzMetadataForm(viewmodel, resource_manager)
 
 
 class TestSVZMetadataFormUI:
 
     @pytest.mark.asyncio
     async def test_form_build_up(
-        self, user: User, svz_metadata_form: SVZMetadataForm
+        self, user: User, svz_metadata_form: SvzMetadataForm
     ) -> None:
         """Test that the form builds correctly and displays all fields."""
 
@@ -144,13 +148,13 @@ class TestSVZMetadataFormUI:
         await user.should_see(HAS_BICYCLE_LANE_TEST_NAME)
         await user.should_see(IS_BICYCLE_COUNTING_TEST_NAME)
         await user.should_see(REMARK_TEST_NAME)
-        await user.should_see("Geeokoordinate")
+        await user.should_see(COORDINATES)
         await user.should_see(COORDINATE_X_TEST_NAME)
         await user.should_see(COORDINATE_Y_TEST_NAME)
 
     @pytest.mark.asyncio
     async def test_input_field_updates_viewmodel(
-        self, user: User, svz_metadata_form: SVZMetadataForm, viewmodel: Mock
+        self, user: User, svz_metadata_form: SvzMetadataForm, viewmodel: Mock
     ) -> None:
         """Test that entering text in an input field updates the viewmodel."""
 
@@ -161,7 +165,7 @@ class TestSVZMetadataFormUI:
         await user.open(ENDPOINT_NAME)
 
         # Enter text in the TK Number field
-        user.find(TK_NUMBER_TEST_NAME).type(TK_NUMBER_VALUE)
+        user.find(marker=TK_NUMBER_MARKER).type(TK_NUMBER_VALUE)
 
         # Verify that the viewmodel was updated
         viewmodel.update_svz_metadata.assert_called_once()
@@ -170,7 +174,7 @@ class TestSVZMetadataFormUI:
 
     @pytest.mark.asyncio
     async def test_checkbox_updates_viewmodel(
-        self, user: User, svz_metadata_form: SVZMetadataForm, viewmodel: Mock
+        self, user: User, svz_metadata_form: SvzMetadataForm, viewmodel: Mock
     ) -> None:
         """Test that checking a checkbox updates the viewmodel."""
 
@@ -181,7 +185,7 @@ class TestSVZMetadataFormUI:
         await user.open(ENDPOINT_NAME)
 
         # Check the Has Bicycle Lane checkbox
-        user.find(HAS_BICYCLE_LANE_TEST_NAME).click()
+        user.find(marker=HAS_BICYCLE_LANE_MARKER).click()
 
         # Verify that the viewmodel was updated
         viewmodel.update_svz_metadata.assert_called()
@@ -190,7 +194,7 @@ class TestSVZMetadataFormUI:
 
     @pytest.mark.asyncio
     async def test_update_from_metadata(
-        self, user: User, svz_metadata_form: SVZMetadataForm, viewmodel: Mock
+        self, user: User, svz_metadata_form: SvzMetadataForm, viewmodel: Mock
     ) -> None:
         """Test that the form updates correctly when metadata is provided."""
 
@@ -243,13 +247,13 @@ class TestSVZMetadataFormUI:
             assert svz_metadata_form._coordinate_y.value == COORDINATE_Y_VALUE
 
         # Now change a field and verify the viewmodel is updated
-        user.find(TK_NUMBER_TEST_NAME).clear()
-        user.find(TK_NUMBER_TEST_NAME).type("NewTK456")
+        user.find(marker=TK_NUMBER_MARKER).clear()
+        user.find(marker=TK_NUMBER_MARKER).type(TEST_NAME_INPUT)
 
         # Verify that the viewmodel was updated with the new value
         viewmodel.update_svz_metadata.assert_called()
         updated_metadata = viewmodel.update_svz_metadata.call_args[0][0]
-        assert updated_metadata[TK_NUMBER] == "NewTK456"
+        assert updated_metadata[TK_NUMBER] == TEST_NAME_INPUT
         # Other values should remain the same
         assert (
             updated_metadata[COUNTING_LOCATION_NUMBER] == COUNTING_LOCATION_NUMBER_VALUE
