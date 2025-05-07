@@ -24,7 +24,13 @@ from OTAnalytics.application.resources.resource_manager import (
     SvzMetadataKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.svz_metadata_form.svz_metadata_form import (  # noqa
+    MARKER_COORDINATE_X,
+    MARKER_COORDINATE_Y,
+    MARKER_COUNTING_LOCATION_NUMBER,
+    MARKER_DIRECTION_DESCRIPTION,
     MARKER_HAS_BICYCLE_LANE,
+    MARKER_IS_BICYCLE_COUNTING,
+    MARKER_REMARK,
     MARKER_TK_NUMBER,
     SvzMetadataForm,
 )
@@ -104,20 +110,8 @@ def viewmodel() -> Mock:
 
 
 @pytest.fixture
-def resource_manager() -> Mock:
-    resource_manager = Mock(spec=ResourceManager)
-    resource_manager.get.side_effect = lambda key: {
-        SvzMetadataKeys.LABEL_TK_NUMBER: TK_NUMBER_TEST_NAME,
-        SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER: COUNTING_LOCATION_NUMBER_TEST_NAME,  # noqa
-        SvzMetadataKeys.LABEL_DIRECTION_DESCRIPTION: DIRECTION_DESCRIPTION_TEST_NAME,
-        SvzMetadataKeys.LABEL_HAS_BICYCLE_LANE: HAS_BICYCLE_LANE_TEST_NAME,
-        SvzMetadataKeys.LABEL_IS_BICYCLE_COUNTING: IS_BICYCLE_COUNTING_TEST_NAME,
-        SvzMetadataKeys.LABEL_REMARK: REMARK_TEST_NAME,
-        SvzMetadataKeys.LABEL_COORDINATES: COORDINATES,
-        SvzMetadataKeys.LABEL_X_COORDINATE: COORDINATE_X_TEST_NAME,
-        SvzMetadataKeys.LABEL_Y_COORDINATE: COORDINATE_Y_TEST_NAME,
-    }.get(key, f"Resource for {key}")
-    return resource_manager
+def resource_manager() -> ResourceManager:
+    return ResourceManager()
 
 
 @pytest.fixture
@@ -131,7 +125,10 @@ class TestSVZMetadataFormUI:
 
     @pytest.mark.asyncio
     async def test_form_build_up(
-        self, user: User, svz_metadata_form: SvzMetadataForm
+        self,
+        user: User,
+        svz_metadata_form: SvzMetadataForm,
+        resource_manager: ResourceManager,
     ) -> None:
         """Test that the form builds correctly and displays all fields."""
 
@@ -142,15 +139,15 @@ class TestSVZMetadataFormUI:
         await user.open(ENDPOINT_NAME)
 
         # Check that all form elements are visible
-        await user.should_see(TK_NUMBER_TEST_NAME)
-        await user.should_see(COUNTING_LOCATION_NUMBER_TEST_NAME)
-        await user.should_see(DIRECTION_DESCRIPTION_TEST_NAME)
-        await user.should_see(HAS_BICYCLE_LANE_TEST_NAME)
-        await user.should_see(IS_BICYCLE_COUNTING_TEST_NAME)
-        await user.should_see(REMARK_TEST_NAME)
-        await user.should_see(COORDINATES)
-        await user.should_see(COORDINATE_X_TEST_NAME)
-        await user.should_see(COORDINATE_Y_TEST_NAME)
+        await user.should_see(marker=MARKER_TK_NUMBER)
+        await user.should_see(marker=MARKER_COUNTING_LOCATION_NUMBER)
+        await user.should_see(marker=MARKER_DIRECTION_DESCRIPTION)
+        await user.should_see(marker=MARKER_HAS_BICYCLE_LANE)
+        await user.should_see(marker=MARKER_IS_BICYCLE_COUNTING)
+        await user.should_see(marker=MARKER_REMARK)
+        await user.should_see(resource_manager.get(SvzMetadataKeys.LABEL_COORDINATES))
+        await user.should_see(marker=MARKER_COORDINATE_X)
+        await user.should_see(marker=MARKER_COORDINATE_Y)
 
     @pytest.mark.asyncio
     async def test_input_field_updates_viewmodel(
