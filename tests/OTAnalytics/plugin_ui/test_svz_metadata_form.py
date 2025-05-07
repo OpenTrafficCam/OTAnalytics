@@ -107,7 +107,7 @@ def svz_metadata_form(
     return SvzMetadataForm(viewmodel, resource_manager)
 
 
-class TestSVZMetadataFormUI:
+class TestSvzMetadataForm:
 
     @pytest.mark.asyncio
     async def test_form_build_up(
