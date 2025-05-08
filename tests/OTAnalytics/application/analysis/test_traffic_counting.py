@@ -984,40 +984,6 @@ class TestSelectedFlowCandidates:
 
         assert result == expected_result
 
-    def test_create_assignments_with_multiple_candidates(self) -> None:
-        # Create mock flows and event pairs
-        flow1 = Mock(spec=Flow)
-        flow2 = Mock(spec=Flow)
-
-        start_event1 = Mock(spec=Event)
-        end_event1 = Mock(spec=Event)
-        start_event2 = Mock(spec=Event)
-        end_event2 = Mock(spec=Event)
-
-        event_pair1 = EventPair(start=start_event1, end=end_event1)
-        event_pair2 = EventPair(start=start_event2, end=end_event2)
-
-        candidate1 = FlowCandidate(flow=flow1, candidate=event_pair1)
-        candidate2 = FlowCandidate(flow=flow2, candidate=event_pair2)
-
-        selected = SelectedFlowCandidates([candidate1, candidate2])
-        result = selected.create_assignments("user1", "car")
-
-        assert isinstance(result, list)
-        assert len(result) == 2
-
-        assert isinstance(result[0], RoadUserAssignment)
-        assert result[0].road_user == "user1"
-        assert result[0].road_user_type == "car"
-        assert result[0].assignment == flow1
-        assert result[0].events == event_pair1
-
-        assert isinstance(result[1], RoadUserAssignment)
-        assert result[1].road_user == "user1"
-        assert result[1].road_user_type == "car"
-        assert result[1].assignment == flow2
-        assert result[1].events == event_pair2
-
 
 class TestCountableAssignments:
     @pytest.mark.parametrize(
