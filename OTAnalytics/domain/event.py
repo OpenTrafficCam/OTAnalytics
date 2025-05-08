@@ -394,7 +394,9 @@ class EventRepository:
         self, subject: Subject[EventRepositoryEvent] = Subject[EventRepositoryEvent]()
     ) -> None:
         self._subject = subject
-        self._events: dict[SectionId, list[Event]] = defaultdict(list)
+        self._events: dict[SectionId, dict[str, list[Event]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
         self._non_section_events = list[Event]()
 
     def register_observer(self, observer: OBSERVER[EventRepositoryEvent]) -> None:
@@ -412,8 +414,8 @@ class EventRepository:
             event (Event): the event to add
         """
         self.__do_add(event)
-        self.__discard_duplicates()
-        self.__sort()
+        self.__discard_duplicates([event])
+        self.__sort([event])
         self._subject.notify(EventRepositoryEvent([event], []))
 
     def __do_add(self, event: Event) -> None:
@@ -421,15 +423,21 @@ class EventRepository:
         Internal add method that does not notify observers.
         """
         if event.section_id:
-            self._events[event.section_id].append(event)
+            self._events[event.section_id][event.road_user_id].append(event)
         else:
             self._non_section_events.append(event)
 
-    def __discard_duplicates(self) -> None:
+    def __discard_duplicates(self, change_events: Iterable[Event]) -> None:
         """Discard duplicate events in repository."""
         self._non_section_events = self.__remove_duplicates(self._non_section_events)
-        for section_id, events in self._events.items():
-            self._events[section_id] = self.__remove_duplicates(events)
+
+        for event in change_events:
+            if section_id := event.section_id:
+                if track_dict := self._events.get(section_id):
+                    if events := track_dict.get(event.road_user_id):
+                        track_dict[event.road_user_id] = self.__remove_duplicates(
+                            events
+                        )
 
     def __remove_duplicates(self, events: Iterable[Event]) -> list[Event]:
         """Discard duplicate events while retaining insertion order."""
@@ -452,19 +460,24 @@ class EventRepository:
         for event in events:
             self.__do_add(event)
         for section in sections:
-            self._events.setdefault(section, [])
-        self.__discard_duplicates()
-        self.__sort()
+            self._events.setdefault(section, dict())
+        self.__discard_duplicates(events)
+        self.__sort(events)
         self._subject.notify(EventRepositoryEvent(events, []))
 
     @staticmethod
     def comparator(event: Event) -> datetime:
         return event.occurrence
 
-    def __sort(self) -> None:
+    def __sort(self, change_events: Iterable[Event]) -> None:
         self._non_section_events = sorted(self._non_section_events, key=self.comparator)
-        for section_id, events in self._events.items():
-            self._events[section_id] = sorted(events, key=self.comparator)
+        for event in change_events:
+            if section_id := event.section_id:
+                if track_dict := self._events.get(section_id):
+                    if events := track_dict.get(event.road_user_id):
+                        self._events[section_id][event.road_user_id] = sorted(
+                            events, key=self.comparator
+                        )
 
     def get_all(self) -> Iterable[Event]:
         """Get all events stored in the repository.
@@ -472,11 +485,13 @@ class EventRepository:
         Returns:
             Iterable[Event]: the events
         """
-        return list(
-            itertools.chain.from_iterable(
-                [self._non_section_events, *self._events.values()]
-            )
+        section_events = (
+            event
+            for events_by_section in self._events.values()
+            for events_by_id in events_by_section.values()
+            for event in events_by_id
         )
+        return list(itertools.chain(self._non_section_events, section_events))
 
     def clear(self) -> None:
         """
@@ -484,7 +499,7 @@ class EventRepository:
         """
         if self._events or self._non_section_events:  # also clear non section events
             removed = list(self.get_all())
-            self._events = defaultdict(list)
+            self._events = defaultdict(lambda: defaultdict(list))
             self._non_section_events = list[Event]()
             self._subject.notify(EventRepositoryEvent([], removed))
 
@@ -563,8 +578,14 @@ class EventRepository:
 
     def __create_event_list(self, sections: Sequence[SectionId]) -> Iterable[Event]:
         if sections:
-            event_lists = [self._events[section] for section in sections]
-            return list(itertools.chain.from_iterable(event_lists))
+            return list(
+                (
+                    event
+                    for section in sections
+                    for events_by_id in self._events[section].values()
+                    for event in events_by_id
+                )
+            )
         return self.get_all()
 
     @staticmethod
