@@ -22,11 +22,14 @@ from OTAnalytics.application.analysis.traffic_counting import (
     ExportTrafficCounting,
     FillEmptyCount,
     FilterBySectionEnterEvent,
+    FlowSelection,
+    MaxDurationFlowSelection,
     ModeTagger,
     MultiTag,
     RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignments,
+    SelectedFlowCandidates,
     SimpleRoadUserAssigner,
     SingleTag,
     Tag,
@@ -709,6 +712,32 @@ class TestSimpleRoadUserAssigner:
         result = analysis.assign(events, flows)
 
         assert result == expected_result
+
+    def test_with_custom_flow_selection(
+        self, first_section_event: Event, second_section_event: Event, first_flow: Flow
+    ) -> None:
+        events = [first_section_event, second_section_event]
+        flows = [first_flow]
+        flow_selection = self._create_flow_selection()
+        target = self._create_target(flow_selection)
+
+        target.assign(events, flows)
+
+        flow_selection.select_flows.assert_called()
+
+    def _create_flow_selection(self) -> Mock:
+        flow_selection = Mock(spec=FlowSelection)
+        selected_candidates = SelectedFlowCandidates([])
+        flow_selection.select_flows.return_value = selected_candidates
+        return flow_selection
+
+    def _create_target(self, flow_selection: Mock) -> RoadUserAssigner:
+        return SimpleRoadUserAssigner(flow_selection=flow_selection)
+
+    def test_default_flow_selection(self) -> None:
+        target = SimpleRoadUserAssigner()
+
+        assert isinstance(target._flow_selection, MaxDurationFlowSelection)
 
 
 def create_counting_test_cases() -> list[tuple]:
