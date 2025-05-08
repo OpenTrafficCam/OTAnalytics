@@ -625,6 +625,78 @@ class EventRepository:
             )
         return self.get_all()
 
+    def remove_events_by_road_user_id(self, road_user_ids: Iterable[str]) -> None:
+        """
+        Removes events associated with the specified road user IDs.
+
+        This method iterates through the provided iterable of road user IDs to delete
+        both non-section and section events related to each ID. After removal, it
+        notifies the subscribers with the updated information about the removed events.
+
+        Args:
+            road_user_ids: An iterable of strings representing the IDs of road users
+                whose events are to be removed.
+
+        Returns:
+            None
+        """
+        removed = []
+        for road_user_id in road_user_ids:
+            removed.extend(
+                self.__remove_non_section_events_by_road_user_id(road_user_id)
+            )
+            removed.extend(self.__remove_section_events_by_road_user_id(road_user_id))
+
+        self._subject.notify((EventRepositoryEvent([], removed)))
+
+    def __remove_section_events_by_road_user_id(self, road_user_id: str) -> list[Event]:
+        """
+        Removes all events associated with a specific road user ID from the internal
+        event tracking structure.
+
+        This method iterates through the internal events dictionary, identifies and
+        removes entries corresponding to the given road user ID. Any removed events
+        associated with the specified ID are collected and returned as a list.
+
+        Args:
+            road_user_id (str): The unique identifier of the road user whose events
+                should be removed.
+
+        Returns:
+            list[Event]: A list of Event objects that were associated with the given
+                road user ID and have been removed.
+        """
+        removed = []
+        for track_dict in self._events.values():
+            if track_dict.get(road_user_id) is not None:
+                removed.extend(track_dict[road_user_id])
+                del track_dict[road_user_id]
+        return removed
+
+    def __remove_non_section_events_by_road_user_id(
+        self, road_user_id: str
+    ) -> list[Event]:
+        """
+        Removes non-section events associated with a specific road user ID.
+
+        This method retrieves and removes any non-section events linked to the given
+        road user ID from an internal data structure. The removed events are returned
+        as a list.
+
+        Args:
+            road_user_id (str): The identifier for the road user whose non-section
+                events are to be removed.
+
+        Returns:
+            list[Event]: A list of removed non-section events associated with the
+                provided road user ID.
+        """
+        removed = []
+        if non_section_events := self._non_section_events.get(road_user_id):
+            removed.extend(non_section_events)
+            del self._non_section_events[road_user_id]
+        return removed
+
     @staticmethod
     def __create_type_filter(
         event_types: Sequence[EventType],

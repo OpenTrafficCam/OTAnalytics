@@ -35,6 +35,8 @@ from tests.utils.builders import event_builder
 
 SECTION_ID_1 = SectionId("section 1")
 SECTION_ID_2 = SectionId("section 2")
+ROAD_USER_ID_1 = "road_user_1"
+ROAD_USER_ID_2 = "road_user_2"
 
 EVENT_OCCURRENCE = datetime(2022, 1, 1, 0, 0, 0, 0)
 INTERPOLATED_EVENT_OCCURRENCE = datetime(2022, 12, 31, 23, 59, 59, 0)
@@ -315,6 +317,7 @@ def enter_scene_event_1() -> Event:
         .clean_section_id()
         .add_event_type(EventType.ENTER_SCENE.value)
         .add_second(1)
+        .add_road_user_id(ROAD_USER_ID_1)
         .build_section_event()
     )
 
@@ -325,6 +328,7 @@ def event_1_section_1() -> Event:
         .add_section_id(SECTION_ID_1.id)
         .add_event_type(EventType.SECTION_ENTER.value)
         .add_second(1)
+        .add_road_user_id(ROAD_USER_ID_1)
         .build_section_event()
     )
 
@@ -335,6 +339,7 @@ def event_1_section_2() -> Event:
         .add_section_id(SECTION_ID_2.id)
         .add_event_type(EventType.SECTION_ENTER.value)
         .add_second(2)
+        .add_road_user_id(ROAD_USER_ID_1)
         .build_section_event()
     )
 
@@ -345,6 +350,7 @@ def event_2_section_1() -> Event:
         .add_section_id(SECTION_ID_1.id)
         .add_event_type(EventType.SECTION_LEAVE.value)
         .add_second(3)
+        .add_road_user_id(ROAD_USER_ID_1)
         .build_section_event()
     )
 
@@ -355,6 +361,29 @@ def event_2_section_2() -> Event:
         .add_section_id(SECTION_ID_2.id)
         .add_event_type(EventType.SECTION_LEAVE.value)
         .add_second(4)
+        .add_road_user_id(ROAD_USER_ID_1)
+        .build_section_event()
+    )
+
+
+def event_3_section_1_road_user_2() -> Event:
+    return (
+        event_builder.EventBuilder()
+        .add_section_id(SECTION_ID_1.id)
+        .add_event_type(EventType.SECTION_ENTER.value)
+        .add_second(1)
+        .add_road_user_id(ROAD_USER_ID_2)
+        .build_section_event()
+    )
+
+
+def event_3_section_2_road_user_2() -> Event:
+    return (
+        event_builder.EventBuilder()
+        .add_section_id(SECTION_ID_2.id)
+        .add_event_type(EventType.SECTION_LEAVE.value)
+        .add_second(2)
+        .add_road_user_id(ROAD_USER_ID_2)
         .build_section_event()
     )
 
@@ -707,3 +736,23 @@ class TestEventRepository:
         )
 
         assert actual_events == expected_events
+
+    def test_remove_events_by_road_user_id(self) -> None:
+        target = EventRepository()
+        target.add_all(
+            [
+                event_1_section_1(),
+                event_2_section_2(),
+                event_3_section_1_road_user_2(),
+                event_3_section_2_road_user_2(),
+                enter_scene_event_1(),
+            ]
+        )
+
+        target.remove_events_by_road_user_id([ROAD_USER_ID_1])
+        actual = list(target.get_all())
+
+        assert actual == [
+            event_3_section_1_road_user_2(),
+            event_3_section_2_road_user_2(),
+        ]
