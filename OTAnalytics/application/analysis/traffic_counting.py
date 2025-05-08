@@ -669,6 +669,18 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
     Class to assign tracks to flows.
     """
 
+    def __init__(
+        self, flow_selection: FlowSelection = MaxDurationFlowSelection()
+    ) -> None:
+        """
+        Initialize the SimpleRoadUserAssigner with a flow selection strategy.
+
+        Args:
+            flow_selection (FlowSelection, optional): strategy for selecting flows.
+                Defaults to MaxDurationFlowSelection.
+        """
+        self._flow_selection = flow_selection
+
     def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
         """
         Assign each track to exactly one flow.
@@ -733,7 +745,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         events_by_road_user: dict[tuple[str, str], list[Event]],
     ) -> RoadUserAssignments:
         """
-        Assign each user to exactly one flow.
+        Assign each user to flows based on the flow selection strategy.
 
         Args:
             flows (dict[tuple[SectionId, SectionId], list[Flow]]): flows by start and
@@ -741,20 +753,16 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             events_by_road_user (dict[str, list[Event]]): events by road user
 
         Returns:
-            dict[str, FlowId]: assignment of flow to road user
+            RoadUserAssignments: group of RoadUserAssignment objects
         """
         assignments: list[RoadUserAssignment] = []
         for road_user, events in events_by_road_user.items():
             if candidate_flows := self.__create_candidates(flows, events):
-                current = self.__select_flow(candidate_flows)
-                assignments.append(
-                    RoadUserAssignment(
-                        road_user=road_user[0],
-                        road_user_type=road_user[1],
-                        assignment=current.flow,
-                        events=current.candidate,
-                    )
+                selected_flows = self._flow_selection.select_flows(candidate_flows)
+                user_assignments = selected_flows.create_assignments(
+                    road_user_id=road_user[0], road_user_type=road_user[1]
                 )
+                assignments.extend(user_assignments)
         return RoadUserAssignments(assignments)
 
     def __create_candidates(
@@ -831,17 +839,6 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
                         )
                         candidate_flows.append(candidate_flow)
         return candidate_flows
-
-    def __select_flow(self, candidate_flows: list[FlowCandidate]) -> FlowCandidate:
-        """
-        Select the best matching flow for the user. Best match is defined as the flow
-        with the largest distance by time.
-        Args:
-            candidate_flows (list[FlowCandidate]): flow candidates to select from
-        Returns:
-            Flow: best matching flow candidate
-        """
-        return max(candidate_flows, key=lambda current: current.duration())
 
 
 class TaggerFactory(ABC):
