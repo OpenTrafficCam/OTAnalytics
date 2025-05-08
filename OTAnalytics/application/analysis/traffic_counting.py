@@ -335,6 +335,83 @@ class RoadUserAssignment:
     events: EventPair
 
 
+@dataclass
+class SelectedFlowCandidates:
+    """
+    Container for selected flow candidates.
+    """
+
+    candidates: list[FlowCandidate]
+
+    def create_assignments(
+        self, road_user_id: str, road_user_type: str
+    ) -> list[RoadUserAssignment]:
+        """
+        Create RoadUserAssignment objects from the selected flow candidates.
+
+        Args:
+            road_user_id (str): ID of the road user
+            road_user_type (str): type of the road user
+
+        Returns:
+            list[RoadUserAssignment]: list of RoadUserAssignment objects
+        """
+        return [
+            RoadUserAssignment(
+                road_user=road_user_id,
+                road_user_type=road_user_type,
+                assignment=candidate.flow,
+                events=candidate.candidate,
+            )
+            for candidate in self.candidates
+        ]
+
+
+class FlowSelection(ABC):
+    """
+    Interface for flow selection strategies.
+    """
+
+    @abstractmethod
+    def select_flows(
+        self, candidate_flows: list[FlowCandidate]
+    ) -> SelectedFlowCandidates:
+        """
+        Select flows from the given candidates based on a specific strategy.
+
+        Args:
+            candidate_flows (list[FlowCandidate]): flow candidates to select from
+
+        Returns:
+            SelectedFlowCandidates: selected flow candidates
+        """
+        raise NotImplementedError
+
+
+class MaxDurationFlowSelection(FlowSelection):
+    """
+    Flow selection strategy that selects the flow candidate with the largest duration.
+    """
+
+    def select_flows(
+        self, candidate_flows: list[FlowCandidate]
+    ) -> SelectedFlowCandidates:
+        """
+        Select the flow candidate with the largest duration.
+
+        Args:
+            candidate_flows (list[FlowCandidate]): flow candidates to select from
+
+        Returns:
+            SelectedFlowCandidates: selected flow candidate with the largest duration
+        """
+        if not candidate_flows:
+            return SelectedFlowCandidates([])
+
+        max_candidate = max(candidate_flows, key=lambda current: current.duration())
+        return SelectedFlowCandidates([max_candidate])
+
+
 class Tagger(ABC):
     """
     Interface to split road user assignments into groups, e.g. by mode.
