@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Iterable, Optional, Sequence
+from typing import Callable, Iterable, Iterator, Optional, Sequence
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
@@ -397,7 +397,7 @@ class EventRepository:
         self._events: dict[SectionId, dict[str, list[Event]]] = defaultdict(
             lambda: defaultdict(list)
         )
-        self._non_section_events = list[Event]()
+        self._non_section_events: dict[str, list[Event]] = defaultdict(list)
 
     def register_observer(self, observer: OBSERVER[EventRepositoryEvent]) -> None:
         """Register observer to listen to repository changes.
@@ -425,19 +425,31 @@ class EventRepository:
         if event.section_id:
             self._events[event.section_id][event.road_user_id].append(event)
         else:
-            self._non_section_events.append(event)
+            self._non_section_events[event.road_user_id].append(event)
 
     def __discard_duplicates(self, change_events: Iterable[Event]) -> None:
         """Discard duplicate events in repository."""
-        self._non_section_events = self.__remove_duplicates(self._non_section_events)
 
         for event in change_events:
             if section_id := event.section_id:
-                if track_dict := self._events.get(section_id):
-                    if events := track_dict.get(event.road_user_id):
-                        track_dict[event.road_user_id] = self.__remove_duplicates(
-                            events
-                        )
+                self.__discard_section_event_duplicates_for(
+                    event.road_user_id, section_id
+                )
+            else:
+                self.__discard_non_section_event_duplicates_for(event.road_user_id)
+
+    def __discard_section_event_duplicates_for(
+        self, road_user_id: str, section_id: SectionId
+    ) -> None:
+        """Discard duplicate section events in repository."""
+        if track_dict := self._events.get(section_id):
+            if events := track_dict.get(road_user_id):
+                track_dict[road_user_id] = self.__remove_duplicates(events)
+
+    def __discard_non_section_event_duplicates_for(self, road_user_id: str) -> None:
+        """Discard duplicate non section events in repository."""
+        if events := self._non_section_events.get(road_user_id):
+            self._non_section_events[road_user_id] = self.__remove_duplicates(events)
 
     def __remove_duplicates(self, events: Iterable[Event]) -> list[Event]:
         """Discard duplicate events while retaining insertion order."""
@@ -470,14 +482,24 @@ class EventRepository:
         return event.occurrence
 
     def __sort(self, change_events: Iterable[Event]) -> None:
-        self._non_section_events = sorted(self._non_section_events, key=self.comparator)
         for event in change_events:
             if section_id := event.section_id:
-                if track_dict := self._events.get(section_id):
-                    if events := track_dict.get(event.road_user_id):
-                        self._events[section_id][event.road_user_id] = sorted(
-                            events, key=self.comparator
-                        )
+                self.__sort_section_events_for(event.road_user_id, section_id)
+            else:
+                self.__sort_non_section_events_for(event.road_user_id)
+
+    def __sort_section_events_for(
+        self, road_user_id: str, section_id: SectionId
+    ) -> None:
+        if track_dict := self._events.get(section_id):
+            if events := track_dict.get(road_user_id):
+                self._events[section_id][road_user_id] = sorted(
+                    events, key=self.comparator
+                )
+
+    def __sort_non_section_events_for(self, road_user_id: str) -> None:
+        if events := self._non_section_events.get(road_user_id, []):
+            self._non_section_events[road_user_id] = sorted(events, key=self.comparator)
 
     def get_all(self) -> Iterable[Event]:
         """Get all events stored in the repository.
@@ -485,13 +507,28 @@ class EventRepository:
         Returns:
             Iterable[Event]: the events
         """
-        section_events = (
+
+        return list(
+            itertools.chain(
+                self.get_non_section_events_iterator(),
+                self.get_section_events_iterator(),
+            )
+        )
+
+    def get_section_events_iterator(self) -> Iterator[Event]:
+        return (
             event
             for events_by_section in self._events.values()
             for events_by_id in events_by_section.values()
             for event in events_by_id
         )
-        return list(itertools.chain(self._non_section_events, section_events))
+
+    def get_non_section_events_iterator(self) -> Iterator[Event]:
+        return (
+            event
+            for track_dict in self._non_section_events.values()
+            for event in track_dict
+        )
 
     def clear(self) -> None:
         """
@@ -500,7 +537,7 @@ class EventRepository:
         if self._events or self._non_section_events:  # also clear non section events
             removed = list(self.get_all())
             self._events = defaultdict(lambda: defaultdict(list))
-            self._non_section_events = list[Event]()
+            self._non_section_events = defaultdict(list)
             self._subject.notify(EventRepositoryEvent([], removed))
 
     def remove(self, sections: list[SectionId]) -> None:
