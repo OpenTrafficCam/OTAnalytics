@@ -218,6 +218,15 @@ class TrackViewState:
         self.skip_time.set(DEFAULT_SKIP_TIME)
 
 
+class LiveImage:
+    """
+    This state represents the current live image from the video stream.
+    """
+
+    def __init__(self) -> None:
+        self.image = ObservableOptionalProperty[TrackImage]()
+
+
 class TrackImageSizeUpdater:
     """
     This class listens to track changes and updates the width and height of the view
