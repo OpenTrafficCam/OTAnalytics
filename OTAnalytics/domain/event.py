@@ -625,7 +625,7 @@ class EventRepository:
             )
         return self.get_all()
 
-    def remove_events_by_road_user_id(self, road_user_ids: Iterable[str]) -> None:
+    def remove_events_by_road_user_ids(self, road_user_ids: Iterable[str]) -> None:
         """
         Removes events associated with the specified road user IDs.
 

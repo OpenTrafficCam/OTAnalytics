@@ -2,7 +2,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearAllEvents
+from OTAnalytics.application.use_cases.event_repository import (
+    AddEvents,
+    ClearAllEvents,
+    RemoveEventsByRoadUserId,
+)
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.section import SectionId, SectionRepositoryEvent
 
@@ -48,3 +52,15 @@ class TestClearAllEvents:
         )
 
         repository.remove.assert_called_once_with([section_1])
+
+
+class TestRemoveEventsByRoadUserId:
+    def test_remove_multiple(self) -> None:
+        given_event_repository = Mock(spec=EventRepository)
+        given_road_user_ids = ["1", "2"]
+        target = RemoveEventsByRoadUserId(given_event_repository)
+        target.remove_multiple(given_road_user_ids)
+
+        given_event_repository.remove_events_by_road_user_ids.assert_called_once_with(
+            given_road_user_ids
+        )

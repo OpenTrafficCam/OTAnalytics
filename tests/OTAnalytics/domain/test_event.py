@@ -737,7 +737,7 @@ class TestEventRepository:
 
         assert actual_events == expected_events
 
-    def test_remove_events_by_road_user_id(self) -> None:
+    def test_remove_events_by_road_user_ids(self) -> None:
         target = EventRepository()
         target.add_all(
             [
@@ -749,7 +749,7 @@ class TestEventRepository:
             ]
         )
 
-        target.remove_events_by_road_user_id([ROAD_USER_ID_1])
+        target.remove_events_by_road_user_ids([ROAD_USER_ID_1])
         actual = list(target.get_all())
 
         assert actual == [
