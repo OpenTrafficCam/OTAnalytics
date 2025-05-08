@@ -732,6 +732,63 @@ class TestCaseBuilder:
 
         return candidates, expected_result
 
+    def build_select_flow_candidates_test_cases(
+        self,
+    ) -> list[tuple[str, str, list[FlowCandidate], list[RoadUserAssignment]]]:
+        return [
+            self.__create_single_candidate_assignment(),
+        ]
+
+    def __create_single_candidate_assignment(
+        self,
+    ) -> tuple[str, str, list[FlowCandidate], list[RoadUserAssignment]]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_north = create_event(self.first_track, self.north_section_id, 1)
+        track_classification = "car"
+        south_north = Mock(spec=Flow)
+        south_north_pair = EventPair(first_south, first_north)
+        candidate = FlowCandidate(flow=south_north, candidate=south_north_pair)
+        expected_result = [
+            RoadUserAssignment(
+                road_user_type=track_classification,
+                road_user=self.first_track.id,
+                assignment=south_north,
+                events=south_north_pair,
+            )
+        ]
+        return self.first_track.id, track_classification, [candidate], expected_result
+
+    def __create_multiple_candidate_assignment(
+        self,
+    ) -> tuple[str, str, list[FlowCandidate], list[RoadUserAssignment]]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_north = create_event(self.first_track, self.north_section_id, 1)
+        first_east = create_event(self.first_track, self.east_section_id, 2)
+        track_classification = "car"
+        south_north = Mock(spec=Flow)
+        south_north_pair = EventPair(first_south, first_north)
+        south_east = Mock(spec=Flow)
+        south_east_pair = EventPair(first_south, first_east)
+        south_north_candidate = FlowCandidate(
+            flow=south_north, candidate=south_north_pair
+        )
+        south_east_candidate = FlowCandidate(flow=south_east, candidate=south_east_pair)
+        south_north_assignment = RoadUserAssignment(
+            road_user_type=track_classification,
+            road_user=self.first_track.id,
+            assignment=south_north,
+            events=south_north_pair,
+        )
+        south_east_assignment = RoadUserAssignment(
+            road_user_type=track_classification,
+            road_user=self.first_track.id,
+            assignment=south_east,
+            events=south_east_pair,
+        )
+        candidates = [south_north_candidate, south_east_candidate]
+        expected_result = [south_north_assignment, south_east_assignment]
+        return self.first_track.id, track_classification, candidates, expected_result
+
 
 def create_assignment_test_cases() -> (
     list[tuple[list[Event], list[Flow], RoadUserAssignments]]
@@ -899,6 +956,67 @@ class TestMaxDurationFlowSelection:
         assert isinstance(result, SelectedFlowCandidates)
         assert len(result.candidates) == 1
         assert result.candidates[0] == expected_result
+
+
+class TestSelectedFlowCandidates:
+    def test_create_assignments_with_empty_list(self) -> None:
+        """Test that creating assignments from an empty list returns an empty list."""
+        selected = SelectedFlowCandidates([])
+        result = selected.create_assignments("user1", "car")
+
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+    @pytest.mark.parametrize(
+        "road_user_id, road_user_type, candidates, expected_result",
+        TestCaseBuilder().build_select_flow_candidates_test_cases(),
+    )
+    def test_create_assignments(
+        self,
+        road_user_id: str,
+        road_user_type: str,
+        candidates: list[FlowCandidate],
+        expected_result: list[RoadUserAssignment],
+    ) -> None:
+        target = SelectedFlowCandidates(candidates)
+
+        result = target.create_assignments(road_user_id, road_user_type)
+
+        assert result == expected_result
+
+    def test_create_assignments_with_multiple_candidates(self) -> None:
+        # Create mock flows and event pairs
+        flow1 = Mock(spec=Flow)
+        flow2 = Mock(spec=Flow)
+
+        start_event1 = Mock(spec=Event)
+        end_event1 = Mock(spec=Event)
+        start_event2 = Mock(spec=Event)
+        end_event2 = Mock(spec=Event)
+
+        event_pair1 = EventPair(start=start_event1, end=end_event1)
+        event_pair2 = EventPair(start=start_event2, end=end_event2)
+
+        candidate1 = FlowCandidate(flow=flow1, candidate=event_pair1)
+        candidate2 = FlowCandidate(flow=flow2, candidate=event_pair2)
+
+        selected = SelectedFlowCandidates([candidate1, candidate2])
+        result = selected.create_assignments("user1", "car")
+
+        assert isinstance(result, list)
+        assert len(result) == 2
+
+        assert isinstance(result[0], RoadUserAssignment)
+        assert result[0].road_user == "user1"
+        assert result[0].road_user_type == "car"
+        assert result[0].assignment == flow1
+        assert result[0].events == event_pair1
+
+        assert isinstance(result[1], RoadUserAssignment)
+        assert result[1].road_user == "user1"
+        assert result[1].road_user_type == "car"
+        assert result[1].assignment == flow2
+        assert result[1].events == event_pair2
 
 
 class TestCountableAssignments:
