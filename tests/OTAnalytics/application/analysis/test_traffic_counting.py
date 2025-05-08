@@ -22,6 +22,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     ExportTrafficCounting,
     FillEmptyCount,
     FilterBySectionEnterEvent,
+    FlowCandidate,
     FlowSelection,
     MaxDurationFlowSelection,
     ModeTagger,
@@ -673,6 +674,64 @@ class TestCaseBuilder:
             ),
         ]
 
+    def build_max_duration_test_cases(
+        self,
+    ) -> list[tuple[list[FlowCandidate], FlowCandidate]]:
+        return [
+            self.__create_same_duration_candidates(),
+            self.__create_same_duration_candidates(),
+        ]
+
+    def __create_different_duration_candidates(
+        self,
+    ) -> tuple[list[FlowCandidate], FlowCandidate]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_north = create_event(self.first_track, self.north_section_id, 1)
+        first_east = create_event(self.first_track, self.east_section_id, 2)
+
+        south_east = Mock(spec=Flow)
+        south_north = Mock(spec=Flow)
+        candidates = []
+        first_candidate = FlowCandidate(
+            flow=south_east, candidate=EventPair(first_south, first_east)
+        )
+        second_candidate = FlowCandidate(
+            flow=south_north, candidate=EventPair(first_south, first_north)
+        )
+        candidates.append(first_candidate)
+        candidates.append(second_candidate)
+        expected_result = first_candidate
+
+        return candidates, expected_result
+
+    def __create_same_duration_candidates(
+        self,
+    ) -> tuple[list[FlowCandidate], FlowCandidate]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_north = create_event(self.first_track, self.north_section_id, 1)
+        first_west = create_event(self.first_track, self.west_section_id, 2)
+        first_east = create_event(self.first_track, self.east_section_id, 3)
+
+        south_north = Mock(spec=Flow)
+        north_west = Mock(spec=Flow)
+        west_east = Mock(spec=Flow)
+        candidates = []
+        first_candidate = FlowCandidate(
+            flow=south_north, candidate=EventPair(first_south, first_north)
+        )
+        second_candidate = FlowCandidate(
+            flow=north_west, candidate=EventPair(first_north, first_west)
+        )
+        third_candidate = FlowCandidate(
+            flow=west_east, candidate=EventPair(first_west, first_east)
+        )
+        candidates.append(first_candidate)
+        candidates.append(second_candidate)
+        candidates.append(third_candidate)
+        expected_result = first_candidate
+
+        return candidates, expected_result
+
 
 def create_assignment_test_cases() -> (
     list[tuple[list[Event], list[Flow], RoadUserAssignments]]
@@ -812,6 +871,34 @@ class TestCombinedTagger:
         group_name = tagger.create_tag(assignment)
 
         assert group_name == MultiTag(frozenset([first_id, second_id]))
+
+
+class TestMaxDurationFlowSelection:
+    def test_select_flows_with_empty_list(self) -> None:
+        target = self._create_target()
+        result = target.select_flows([])
+
+        assert isinstance(result, SelectedFlowCandidates)
+        assert result.candidates == []
+
+    def _create_target(self) -> MaxDurationFlowSelection:
+        return MaxDurationFlowSelection()
+
+    @pytest.mark.parametrize(
+        "candidates, expected_result", TestCaseBuilder().build_max_duration_test_cases()
+    )
+    def test_select_flows(
+        self,
+        candidates: list[FlowCandidate],
+        expected_result: FlowCandidate,
+    ) -> None:
+        target = self._create_target()
+
+        result = target.select_flows(candidates)
+
+        assert isinstance(result, SelectedFlowCandidates)
+        assert len(result.candidates) == 1
+        assert result.candidates[0] == expected_result
 
 
 class TestCountableAssignments:
