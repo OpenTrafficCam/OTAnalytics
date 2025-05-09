@@ -27,6 +27,9 @@ LEVEL_START_TIME = "start time"
 LEVEL_END_TIME = "end time"
 UNCLASSIFIED = "unclassified"
 
+RoadUserId = str
+RoadUserType = str
+
 
 @dataclass(frozen=True)
 class EventPair:
@@ -726,9 +729,11 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             events (Iterable[Event]): events of a road user
 
         Returns:
-            dict[int, list[Event]]: events grouped by user
+            dict[tuple[RoadUserId, RoadUserType], list[Event]]: events grouped by user
         """
-        events_by_road_user: dict[tuple[str, str], list[Event]] = defaultdict(list)
+        events_by_road_user: dict[tuple[RoadUserId, RoadUserType], list[Event]] = (
+            defaultdict(list)
+        )
         sorted_events = sorted(
             events, key=lambda _event: _event.interpolated_occurrence
         )
