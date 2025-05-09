@@ -761,11 +761,11 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             RoadUserAssignments: group of RoadUserAssignment objects
         """
         assignments: list[RoadUserAssignment] = []
-        for road_user, events in events_by_road_user.items():
+        for (road_user_id, road_user_type), events in events_by_road_user.items():
             if candidate_flows := self.__create_candidates(flows, events):
                 selected_flows = self._flow_selection.select_flows(candidate_flows)
                 user_assignments = selected_flows.create_assignments(
-                    road_user_id=road_user[0], road_user_type=road_user[1]
+                    road_user_id=road_user_id, road_user_type=road_user_type
                 )
                 assignments.extend(user_assignments)
         return RoadUserAssignments(assignments)
