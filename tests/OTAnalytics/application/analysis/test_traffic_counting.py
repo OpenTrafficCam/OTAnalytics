@@ -836,7 +836,13 @@ class TestSimpleRoadUserAssigner:
 
         target.assign(events, flows)
 
-        flow_selection.select_flows.assert_called()
+        flow_selection.select_flows.assert_called_once_with(
+            [
+                FlowCandidate(
+                    first_flow, EventPair(first_section_event, second_section_event)
+                )
+            ]
+        )
 
     def _create_flow_selection(self) -> Mock:
         flow_selection = Mock(spec=FlowSelection)
