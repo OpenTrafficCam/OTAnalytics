@@ -1,16 +1,18 @@
 from datetime import datetime
 from typing import Optional, Self, Sequence
 
-from application.logger import logger
-from application.resources.resource_manager import VisualizationLayersKeys
 from nicegui import ui
 
 from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import LayerGroup
-from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.application.resources.resource_manager import (
+    ResourceManager,
+    VisualizationLayersKeys,
+)
 
 MARKER_PROJECT_NAME = "marker-project-name"
 MARKER_START_DATE = "marker-start-date"
