@@ -699,15 +699,13 @@ class TestCaseBuilder:
 
         south_north = Mock(spec=Flow)
         north_west = Mock(spec=Flow)
-        candidates = []
         first_candidate = FlowCandidate(
             flow=south_north, candidate=EventPair(first_south, first_north)
         )
         second_candidate = FlowCandidate(
             flow=north_west, candidate=EventPair(first_north, first_west)
         )
-        candidates.append(first_candidate)
-        candidates.append(second_candidate)
+        candidates = [first_candidate, second_candidate]
 
         return candidates, candidates
 
