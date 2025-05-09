@@ -679,7 +679,7 @@ class TestCaseBuilder:
     ) -> list[tuple[list[FlowCandidate], FlowCandidate]]:
         return [
             self.__create_same_duration_candidates(),
-            self.__create_same_duration_candidates(),
+            self.__create_different_duration_candidates(),
         ]
 
     def __create_different_duration_candidates(
@@ -734,6 +734,7 @@ class TestCaseBuilder:
     ) -> list[tuple[str, str, list[FlowCandidate], list[RoadUserAssignment]]]:
         return [
             self.__create_single_candidate_assignment(),
+            self.__create_multiple_candidate_assignment(),
         ]
 
     def __create_single_candidate_assignment(
