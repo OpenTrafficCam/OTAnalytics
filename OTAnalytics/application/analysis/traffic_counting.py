@@ -415,6 +415,26 @@ class MaxDurationFlowSelection(FlowSelection):
         return SelectedFlowCandidates([max_candidate])
 
 
+class AllFlowsSelection(FlowSelection):
+    """
+    Flow selection strategy that selects all flow candidates.
+    """
+
+    def select_flows(
+        self, candidate_flows: list[FlowCandidate]
+    ) -> SelectedFlowCandidates:
+        """
+        Select all flow candidates.
+
+        Args:
+            candidate_flows (list[FlowCandidate]): flow candidates to select from
+
+        Returns:
+            SelectedFlowCandidates: all flow candidates
+        """
+        return SelectedFlowCandidates(candidate_flows)
+
+
 class Tagger(ABC):
     """
     Interface to split road user assignments into groups, e.g. by mode.

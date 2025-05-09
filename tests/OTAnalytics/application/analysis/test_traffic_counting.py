@@ -11,6 +11,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_START_TIME,
     LEVEL_TO_SECTION,
     AddSectionInformation,
+    AllFlowsSelection,
     CombinedTagger,
     Count,
     CountableAssignments,
@@ -682,6 +683,32 @@ class TestCaseBuilder:
             self.__create_different_duration_candidates(),
         ]
 
+    def build_all_flows_test_cases(
+        self,
+    ) -> list[tuple[list[FlowCandidate], list[FlowCandidate]]]:
+        return [
+            self.__create_all_flows_candidates(),
+        ]
+
+    def __create_all_flows_candidates(
+        self,
+    ) -> tuple[list[FlowCandidate], list[FlowCandidate]]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_north = create_event(self.first_track, self.north_section_id, 1)
+        first_west = create_event(self.first_track, self.west_section_id, 2)
+
+        south_north = Mock(spec=Flow)
+        north_west = Mock(spec=Flow)
+        first_candidate = FlowCandidate(
+            flow=south_north, candidate=EventPair(first_south, first_north)
+        )
+        second_candidate = FlowCandidate(
+            flow=north_west, candidate=EventPair(first_north, first_west)
+        )
+        candidates = [first_candidate, second_candidate]
+
+        return candidates, candidates
+
     def __create_different_duration_candidates(
         self,
     ) -> tuple[list[FlowCandidate], FlowCandidate]:
@@ -960,6 +987,34 @@ class TestMaxDurationFlowSelection:
         assert isinstance(result, SelectedFlowCandidates)
         assert len(result.candidates) == 1
         assert result.candidates[0] == expected_result
+
+
+class TestAllFlowsSelection:
+    def test_select_flows_with_empty_list(self) -> None:
+        target = self._create_target()
+        result = target.select_flows([])
+
+        assert isinstance(result, SelectedFlowCandidates)
+        assert result.candidates == []
+
+    def _create_target(self) -> AllFlowsSelection:
+        return AllFlowsSelection()
+
+    @pytest.mark.parametrize(
+        "candidates, expected_result", TestCaseBuilder().build_all_flows_test_cases()
+    )
+    def test_select_flows(
+        self,
+        candidates: list[FlowCandidate],
+        expected_result: list[FlowCandidate],
+    ) -> None:
+        target = self._create_target()
+
+        result = target.select_flows(candidates)
+
+        assert isinstance(result, SelectedFlowCandidates)
+        assert len(result.candidates) == len(expected_result)
+        assert result.candidates == expected_result
 
 
 class TestSelectedFlowCandidates:
