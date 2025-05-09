@@ -742,7 +742,6 @@ class TestCaseBuilder:
         south_north = Mock(spec=Flow)
         north_west = Mock(spec=Flow)
         west_east = Mock(spec=Flow)
-        candidates = []
         first_candidate = FlowCandidate(
             flow=south_north, candidate=EventPair(first_south, first_north)
         )
@@ -752,9 +751,7 @@ class TestCaseBuilder:
         third_candidate = FlowCandidate(
             flow=west_east, candidate=EventPair(first_west, first_east)
         )
-        candidates.append(first_candidate)
-        candidates.append(second_candidate)
-        candidates.append(third_candidate)
+        candidates = [first_candidate, second_candidate, third_candidate]
         expected_result = first_candidate
 
         return candidates, expected_result
@@ -866,7 +863,13 @@ class TestSimpleRoadUserAssigner:
 
         target.assign(events, flows)
 
-        flow_selection.select_flows.assert_called()
+        flow_selection.select_flows.assert_called_once_with(
+            [
+                FlowCandidate(
+                    first_flow, EventPair(first_section_event, second_section_event)
+                )
+            ]
+        )
 
     def _create_flow_selection(self) -> Mock:
         flow_selection = Mock(spec=FlowSelection)

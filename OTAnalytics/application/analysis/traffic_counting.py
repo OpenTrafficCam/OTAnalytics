@@ -27,6 +27,9 @@ LEVEL_START_TIME = "start time"
 LEVEL_END_TIME = "end time"
 UNCLASSIFIED = "unclassified"
 
+RoadUserId = str
+RoadUserType = str
+
 
 @dataclass(frozen=True)
 class EventPair:
@@ -746,9 +749,11 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             events (Iterable[Event]): events of a road user
 
         Returns:
-            dict[int, list[Event]]: events grouped by user
+            dict[tuple[RoadUserId, RoadUserType], list[Event]]: events grouped by user
         """
-        events_by_road_user: dict[tuple[str, str], list[Event]] = defaultdict(list)
+        events_by_road_user: dict[tuple[RoadUserId, RoadUserType], list[Event]] = (
+            defaultdict(list)
+        )
         sorted_events = sorted(
             events, key=lambda _event: _event.interpolated_occurrence
         )
@@ -776,11 +781,11 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             RoadUserAssignments: group of RoadUserAssignment objects
         """
         assignments: list[RoadUserAssignment] = []
-        for road_user, events in events_by_road_user.items():
+        for (road_user_id, road_user_type), events in events_by_road_user.items():
             if candidate_flows := self.__create_candidates(flows, events):
                 selected_flows = self._flow_selection.select_flows(candidate_flows)
                 user_assignments = selected_flows.create_assignments(
-                    road_user_id=road_user[0], road_user_type=road_user[1]
+                    road_user_id=road_user_id, road_user_type=road_user_type
                 )
                 assignments.extend(user_assignments)
         return RoadUserAssignments(assignments)
