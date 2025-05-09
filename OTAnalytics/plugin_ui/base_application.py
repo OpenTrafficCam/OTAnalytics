@@ -80,6 +80,7 @@ from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearAllEvents,
     GetAllEnterSectionEvents,
+    RemoveEventsByRoadUserId,
 )
 from OTAnalytics.application.use_cases.filter_visualization import (
     CreateDefaultFilter,
@@ -992,6 +993,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
         return ShapelyTrackGeometryDataset.from_track_dataset
+
+    @cached_property
+    def remove_events_by_road_user_id(self) -> RemoveEventsByRoadUserId:
+        return RemoveEventsByRoadUserId(self.event_repository)
 
 
 def create_format_fixer(
