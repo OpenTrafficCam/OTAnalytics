@@ -6,9 +6,6 @@ from OTAnalytics.application.resources.resource_manager import (
     RemarkKeys,
     ResourceManager,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
 
 
 class RemarkForm(AbstractFrameRemark):

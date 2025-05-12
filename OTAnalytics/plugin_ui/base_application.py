@@ -37,11 +37,12 @@ from OTAnalytics.application.state import (
     FlowState,
     SectionState,
     SelectedVideoUpdate,
+    TrackImageSizeUpdater,
     TrackImageUpdater,
-    TrackPropertiesUpdater,
     TracksMetadata,
     TrackState,
     TrackViewState,
+    VideoImageSizeUpdater,
     VideosMetadata,
 )
 from OTAnalytics.application.ui.frame_control import (
@@ -517,8 +518,12 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     @cached_property
-    def track_properties_updater(self) -> TrackPropertiesUpdater:
-        return TrackPropertiesUpdater(self.datastore, self.track_view_state)
+    def video_image_size_updater(self) -> VideoImageSizeUpdater:
+        return VideoImageSizeUpdater(self.track_image_size_updater)
+
+    @cached_property
+    def track_image_size_updater(self) -> TrackImageSizeUpdater:
+        return TrackImageSizeUpdater(self.track_view_state)
 
     @cached_property
     def clear_all_intersections(self) -> ClearAllIntersections:

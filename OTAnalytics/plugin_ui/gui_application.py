@@ -37,7 +37,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.clear_all_intersections.on_section_changed
         )
         self.track_view_state.selected_videos.register(
-            self.track_properties_updater.notify_videos
+            self.video_image_size_updater.notify_videos
         )
         self.track_view_state.selected_videos.register(
             self.track_image_updater.notify_video

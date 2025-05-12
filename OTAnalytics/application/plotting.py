@@ -6,6 +6,7 @@ from typing import Any, Callable, Generic, Iterable, Optional, Sequence, TypeVar
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.state import (
+    LiveImage,
     ObservableOptionalProperty,
     ObservableProperty,
     Plotter,
@@ -144,6 +145,16 @@ class TrackBackgroundPlotter(Plotter):
             logger().debug(f"Background plotter frame number: {frame_number}")
             return videos[0].get_frame(frame_number)
         return None
+
+
+class LiveImagePlotter(Plotter):
+    """Plot the current live image."""
+
+    def __init__(self, live_image_state: LiveImage) -> None:
+        self._live_image_state = live_image_state
+
+    def plot(self) -> Optional[TrackImage]:
+        return self._live_image_state.image.get()
 
 
 class CachedPlotter(Plotter):

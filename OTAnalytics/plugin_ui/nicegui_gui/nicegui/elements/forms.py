@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from typing import Callable, Generic, Optional, TypeVar
 
 from nicegui import ui
@@ -14,6 +14,12 @@ from nicegui.events import ValueChangeEventArguments
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     MissingInstanceError,
 )
+
+YEAR_MONTH_DAY_FORMAT = "%Y-%m-%d"
+DAY_MONTH_YEAR_FORMAT = "%d.%m.%Y"
+
+HOUR_MINUTE_FORMAT = "%H:%M"
+HOUR_MINUTE_SECOND_FORMAT = f"{HOUR_MINUTE_FORMAT}:%S"
 
 T = TypeVar("T")
 
@@ -449,7 +455,10 @@ class FormFieldDate(FormField[Input, Optional[date]]):
         if self.element and self.element.value:
             if isinstance(self.element.value, date):
                 return self.element.value
-            return datetime.strptime(self.element.value, "%Y-%m-%d").date()
+            return parse_datetime(
+                self.element.value,
+                formats=[YEAR_MONTH_DAY_FORMAT, DAY_MONTH_YEAR_FORMAT],
+            ).date()
         return None
 
     @property
@@ -505,8 +514,17 @@ class FormFieldDate(FormField[Input, Optional[date]]):
     @staticmethod
     def __format(value: date | None) -> str:
         if value:
-            return value.strftime("%Y-%m-%d")
+            return value.strftime(DAY_MONTH_YEAR_FORMAT)
         return ""
+
+
+def parse_datetime(value: str, formats: list[str]) -> datetime:
+    for format in formats:
+        try:
+            return datetime.strptime(value, format).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    raise ValueError(f"Could not parse datetime from {value}")
 
 
 class FormFieldTime(FormField[Input, Optional[time]]):
@@ -520,7 +538,10 @@ class FormFieldTime(FormField[Input, Optional[time]]):
         if self.element and self.element.value:
             if isinstance(self.element.value, time):
                 return self.element.value
-            return datetime.strptime(self.element.value, "%H:%M").time()
+            return parse_datetime(
+                self.element.value,
+                formats=[HOUR_MINUTE_SECOND_FORMAT, HOUR_MINUTE_FORMAT],
+            ).time()
         return None
 
     @property
@@ -602,7 +623,7 @@ class DateTimeForm:
         start_date = self._start_date.value
         start_time = self._start_time.value
         if start_date and start_time:
-            return datetime.combine(start_date, start_time)
+            return datetime.combine(start_date, start_time, tzinfo=timezone.utc)
         return None
 
     def set_value(self, value: datetime | None) -> None:
