@@ -4,9 +4,6 @@ from OTAnalytics.application.resources.resource_manager import (
     FlowAndSectionKeys,
     ResourceManager,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     FlowForm,
 )

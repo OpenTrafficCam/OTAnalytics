@@ -5,9 +5,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.files_form import (
     FilesForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
 
 
 class CanvasAndFilesForm:
