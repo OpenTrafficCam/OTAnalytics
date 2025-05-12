@@ -7,6 +7,7 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepositoryEvent,
 )
+from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 
@@ -80,7 +81,7 @@ class RemoveEventsByRoadUserId:
     def __init__(self, event_repository: EventRepository) -> None:
         self._event_repository = event_repository
 
-    def remove_multiple(self, road_user_ids: Iterable[str]) -> None:
+    def remove_multiple(self, road_user_ids: Iterable[TrackId]) -> None:
         """
         Removes multiple road user events associated with the given road user IDs.
 
@@ -88,7 +89,7 @@ class RemoveEventsByRoadUserId:
         associated with the provided road user IDs.
 
         Args:
-            road_user_ids (Iterable[str]): A collection of road user IDs whose
+            road_user_ids (Iterable[TrackId]): A collection of road user IDs whose
                 events should be removed.
         """
         self._event_repository.remove_events_by_road_user_ids(road_user_ids)

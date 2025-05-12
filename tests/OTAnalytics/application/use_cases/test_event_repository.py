@@ -9,6 +9,7 @@ from OTAnalytics.application.use_cases.event_repository import (
 )
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.section import SectionId, SectionRepositoryEvent
+from OTAnalytics.domain.track import TrackId
 
 
 @pytest.fixture
@@ -57,7 +58,7 @@ class TestClearAllEvents:
 class TestRemoveEventsByRoadUserId:
     def test_remove_multiple(self) -> None:
         given_event_repository = Mock(spec=EventRepository)
-        given_road_user_ids = ["1", "2"]
+        given_road_user_ids = [TrackId("1"), TrackId("2")]
         target = RemoveEventsByRoadUserId(given_event_repository)
         target.remove_multiple(given_road_user_ids)
 

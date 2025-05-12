@@ -10,7 +10,7 @@ from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import Detection
+from OTAnalytics.domain.track import Detection, TrackId
 from OTAnalytics.domain.types import EventType
 
 EVENT_LIST = "event_list"
@@ -625,7 +625,7 @@ class EventRepository:
             )
         return self.get_all()
 
-    def remove_events_by_road_user_ids(self, road_user_ids: Iterable[str]) -> None:
+    def remove_events_by_road_user_ids(self, road_user_ids: Iterable[TrackId]) -> None:
         """
         Removes events associated with the specified road user IDs.
 
@@ -643,9 +643,11 @@ class EventRepository:
         removed = []
         for road_user_id in road_user_ids:
             removed.extend(
-                self.__remove_non_section_events_by_road_user_id(road_user_id)
+                self.__remove_non_section_events_by_road_user_id(road_user_id.id)
             )
-            removed.extend(self.__remove_section_events_by_road_user_id(road_user_id))
+            removed.extend(
+                self.__remove_section_events_by_road_user_id(road_user_id.id)
+            )
 
         self._subject.notify((EventRepositoryEvent([], removed)))
 
