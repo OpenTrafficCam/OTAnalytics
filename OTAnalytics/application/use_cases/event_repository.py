@@ -66,7 +66,7 @@ class GetAllEnterSectionEvents:
         return self._event_repository.get(event_types=[EventType.SECTION_ENTER])
 
 
-class RemoveEventsByRoadUserId:
+class RemoveEventsByRoadUserId(TrackListObserver):
     """
     Use case to handle the removal of events associated with specific road user IDs.
 
@@ -93,3 +93,6 @@ class RemoveEventsByRoadUserId:
                 events should be removed.
         """
         self._event_repository.remove_events_by_road_user_ids(road_user_ids)
+
+    def notify_tracks(self, event: TrackRepositoryEvent) -> None:
+        self.remove_multiple(event.removed)

@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -10,6 +10,7 @@ from OTAnalytics.application.use_cases.event_repository import (
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.section import SectionId, SectionRepositoryEvent
 from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track_repository import TrackRepositoryEvent
 
 
 @pytest.fixture
@@ -65,3 +66,17 @@ class TestRemoveEventsByRoadUserId:
         given_event_repository.remove_events_by_road_user_ids.assert_called_once_with(
             given_road_user_ids
         )
+
+    @patch(
+        (
+            "OTAnalytics.application.use_cases.event_repository."
+            "RemoveEventsByRoadUserId.remove_multiple"
+        )
+    )
+    def test_notify_tracks(self, mock_remove_multiple: Mock) -> None:
+        given_event = TrackRepositoryEvent(added=Mock(), removed=Mock())
+
+        target = RemoveEventsByRoadUserId(Mock())
+        target.notify_tracks(given_event)
+
+        mock_remove_multiple.assert_called_once_with(given_event.removed)
