@@ -238,7 +238,9 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def revert_cuts_for(self, original_track_ids: frozenset[TrackId]) -> "TrackDataset":
+    def revert_cuts_for(
+        self, original_track_ids: frozenset[TrackId]
+    ) -> tuple["TrackDataset", frozenset[TrackId], frozenset[TrackId]]:
         """
         Reverses the effects of track cutting operations for the specified original
         track IDs.
@@ -248,8 +250,11 @@ class TrackDataset(ABC):
                 restored from their cut segments.
 
         Returns:
-            TrackDataset: A new TrackDataset with the specified tracks restored to their
-                original state.
+            tuple[TrackDataset, frozenset[TrackId], frozenset[TrackId]:
+                1. A new dataset where the specified tracks have been reverted to their
+                    original IDs (uncut state).
+                2. The reverted track IDs.
+                3. The cut track IDs that were removed during the reversion process.
         """
         raise NotImplementedError
 

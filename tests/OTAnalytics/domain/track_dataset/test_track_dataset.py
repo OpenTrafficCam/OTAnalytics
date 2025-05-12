@@ -21,13 +21,17 @@ class TestTrackDataset:
         )
         for target in targets:
             assert len(target) == 4
-            actual = target.revert_cuts_for(
+            actual_dataset, reverted_ids, removed_ids = target.revert_cuts_for(
                 frozenset([first_track_part_1.original_id, uncut_track.original_id])
             )
-            assert len(actual) == 3
-            actual_first_track = actual.get_for(first_track_part_1.original_id)
-            actual_uncut_track = actual.get_for(uncut_track.original_id)
-            actual_bicycle_track = actual.get_for(bicycle_track.id)
+            assert reverted_ids == frozenset([first_track_part_1.original_id])
+            assert removed_ids == frozenset(
+                [first_track_part_1.id, first_track_part_2.id]
+            )
+            assert len(actual_dataset) == 3
+            actual_first_track = actual_dataset.get_for(first_track_part_1.original_id)
+            actual_uncut_track = actual_dataset.get_for(uncut_track.original_id)
+            actual_bicycle_track = actual_dataset.get_for(bicycle_track.id)
             assert actual_first_track is not None
             assert actual_uncut_track is not None
             assert actual_bicycle_track is not None

@@ -682,17 +682,18 @@ class PythonTrackDataset(TrackDataset):
 
     def revert_cuts_for(
         self, original_track_ids: frozenset[TrackId]
-    ) -> "PythonTrackDataset":
+    ) -> tuple["PythonTrackDataset", frozenset[TrackId], frozenset[TrackId]]:
         # NOTE: This implementation prioritizes maintainability over performance.
         # If performance becomes a concern in high-volume operations, consider
         # implementing a mapping cache of original track IDs to their derived segments.
-        converted_original_track_ids = [
-            original_id.id for original_id in original_track_ids
-        ]
+
+        # converted_original_track_ids = [
+        #     original_id.id for original_id in original_track_ids
+        # ]
         tracks_to_revert = defaultdict(list)
         track_ids_to_remove = set()
         for track in self._tracks.values():
-            if track.original_id.id in converted_original_track_ids:
+            if not track_is_original(track) and track.original_id in original_track_ids:
                 tracks_to_revert[track.original_id].append(track)
                 track_ids_to_remove.add(track.id)
 
@@ -701,7 +702,13 @@ class PythonTrackDataset(TrackDataset):
             reverted_tracks.append(self.__revert_cut_for(original_id, track_part))
 
         result = self.remove_multiple(track_ids_to_remove)
-        return result.add_all(reverted_tracks)
+        reverted_track_ids = frozenset((track.id for track in reverted_tracks))
+
+        return (
+            result.add_all(reverted_tracks),
+            reverted_track_ids,
+            frozenset(track_ids_to_remove),
+        )
 
     def _create_original_track(
         self, original_id: TrackId, detections: list[Detection]
@@ -853,8 +860,13 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
         dataset, original_track_ids = self._other.cut_with_section(section, offset)
         return self.wrap(dataset), original_track_ids
 
-    def revert_cuts_for(self, original_track_ids: frozenset[TrackId]) -> TrackDataset:
-        return self.wrap(self._other.revert_cuts_for(original_track_ids))
+    def revert_cuts_for(
+        self, original_track_ids: frozenset[TrackId]
+    ) -> tuple[TrackDataset, frozenset[TrackId], frozenset[TrackId]]:
+        reverted_dataset, reverted_ids, cut_ids = self._other.revert_cuts_for(
+            original_track_ids
+        )
+        return self.wrap(reverted_dataset), reverted_ids, cut_ids
 
 
 class SimpleCutTrackPartBuilder(TrackBuilder):
@@ -936,3 +948,7 @@ class SimpleCutTrackPartBuilder(TrackBuilder):
                 )
             )
         return new_detections
+
+
+def track_is_original(actual: Track) -> bool:
+    return actual.id == actual.original_id

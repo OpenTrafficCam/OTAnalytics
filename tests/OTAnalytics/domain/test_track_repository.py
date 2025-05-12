@@ -186,11 +186,23 @@ class TestTrackRepository:
         assert repository.classifications == classifications
 
     def test_revert_cuts_for(self) -> None:
-        original_ids = frozenset([TrackId("1")])
+        original_id = TrackId("original-1")
+        cut_id_1 = TrackId("cut-1")
+        cut_id_2 = TrackId("cut-2")
+        original_ids = frozenset([original_id])
+        reverted_ids = frozenset([cut_id_1, cut_id_2])
+        cut_ids = frozenset([cut_id_1, cut_id_2])
+
+        observer = Mock()
         dataset = Mock()
+        dataset.revert_cuts_for.return_value = (dataset, reverted_ids, cut_ids)
         target = TrackRepository(dataset)
+        target.register_tracks_observer(observer)
         target.revert_cuts_for(original_ids)
         dataset.revert_cuts_for.assert_called_once_with(original_ids)
+        observer.notify_tracks.assert_called_once_with(
+            TrackRepositoryEvent(added=reverted_ids, removed=cut_ids)
+        )
 
 
 class TestTrackFileRepository:
