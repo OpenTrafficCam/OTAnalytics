@@ -5,7 +5,7 @@ from tests.utils.builders.track_builder import create_track
 from tests.utils.builders.track_dataset_provider import TrackDatasetProvider
 
 FIRST_TRACK_ID = TrackId("1")
-SECOND_TRACK_ID = TrackId("2")
+UNCUT_TRACK_ID = TrackId("uncut-2")
 FIRST_TRACK_PART_1_COORD = [(1, 1), (2, 1)]
 FIRST_TRACK_PART_2_COORD = [(3, 1), (4, 1)]
 
@@ -38,7 +38,7 @@ def first_track_part_2() -> Track:
 @pytest.fixture
 def uncut_track() -> Track:
     return create_track(
-        track_id=SECOND_TRACK_ID.id,
+        track_id=UNCUT_TRACK_ID.id,
         coord=[(1, 2), (2, 2)],
         start_second=1,
     )
