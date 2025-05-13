@@ -670,8 +670,8 @@ class EventRepository:
         """
         removed = []
         for track_dict in self._events.values():
-            if track_dict.get(road_user_id) is not None:
-                removed.extend(track_dict[road_user_id])
+            if ids_to_remove := track_dict.get(road_user_id):
+                removed.extend(ids_to_remove)
                 del track_dict[road_user_id]
         return removed
 
