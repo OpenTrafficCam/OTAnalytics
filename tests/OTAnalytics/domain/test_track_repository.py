@@ -211,8 +211,12 @@ class TestTrackRepository:
         given_observer = Mock()
         given_dataset = Mock()
         updated_dataset = Mock()
+        removed_ids = frozenset([TrackId("actual-1")])
 
-        given_dataset.remove_by_original_ids.return_value = updated_dataset
+        given_dataset.remove_by_original_ids.return_value = (
+            updated_dataset,
+            removed_ids,
+        )
 
         target = TrackRepository(given_dataset)
         target.register_tracks_observer(given_observer)
@@ -220,7 +224,7 @@ class TestTrackRepository:
 
         assert target._dataset == updated_dataset
         given_observer.notify_tracks.assert_called_once_with(
-            TrackRepositoryEvent.create_removed(given_ids_to_remove)
+            TrackRepositoryEvent.create_removed(removed_ids)
         )
 
 

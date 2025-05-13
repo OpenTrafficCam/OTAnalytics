@@ -261,7 +261,7 @@ class TrackDataset(ABC):
     @abstractmethod
     def remove_by_original_ids(
         self, original_ids: frozenset[TrackId]
-    ) -> "TrackDataset":
+    ) -> tuple["TrackDataset", frozenset[TrackId]]:
         """
         Remove tracks with the specified original IDs and return a new dataset.
 
@@ -269,7 +269,10 @@ class TrackDataset(ABC):
             original_ids (frozenset[TrackId]): The original IDs of tracks to remove
 
         Returns:
-            PandasTrackDataset: A new dataset without the specified tracks
+            tuple[TrackDataset, frozenset[TrackId]]:
+                1. A new dataset without the specified tracks
+                2. The set of actual track IDs that were removed during the removal
+                    process.
         """
         raise NotImplementedError
 

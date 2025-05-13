@@ -749,22 +749,25 @@ class PythonTrackDataset(TrackDataset):
 
     def remove_by_original_ids(
         self, original_ids: frozenset[TrackId]
-    ) -> "PythonTrackDataset":
+    ) -> tuple["PythonTrackDataset", frozenset[TrackId]]:
         updated_dataset = self._tracks.copy()
-        actual_ids = [
-            track.id
-            for track in updated_dataset.values()
-            if track.original_id in original_ids
-        ]
+        actual_ids = frozenset(
+            (
+                track.id
+                for track in updated_dataset.values()
+                if track.original_id in original_ids
+            )
+        )
 
         for actual_id in actual_ids:
             del updated_dataset[actual_id]
 
         updated_geometry_datasets = self._remove_from_geometry_datasets(actual_ids)
 
-        return PythonTrackDataset(
+        updated_track_dataset = PythonTrackDataset(
             self.track_geometry_factory, updated_dataset, updated_geometry_datasets
         )
+        return updated_track_dataset, actual_ids
 
 
 class FilteredPythonTrackDataset(FilterByClassTrackDataset):
@@ -886,8 +889,9 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
 
     def remove_by_original_ids(
         self, original_ids: frozenset[TrackId]
-    ) -> "TrackDataset":
-        return self.wrap(self._other.remove_by_original_ids(original_ids))
+    ) -> tuple["TrackDataset", frozenset[TrackId]]:
+        updated_dataset, removed_ids = self._other.remove_by_original_ids(original_ids)
+        return self.wrap(updated_dataset), removed_ids
 
 
 class SimpleCutTrackPartBuilder(TrackBuilder):

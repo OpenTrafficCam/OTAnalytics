@@ -257,8 +257,11 @@ class TrackRepository:
         Args:
             original_ids (frozenset[TrackId]): original IDs of the tracks to be removed.
         """
-        self._dataset = self._dataset.remove_by_original_ids(original_ids)
-        self.observers.notify(TrackRepositoryEvent.create_removed(original_ids))
+        updated_dataset, removed_ids = self._dataset.remove_by_original_ids(
+            original_ids
+        )
+        self._dataset = updated_dataset
+        self.observers.notify(TrackRepositoryEvent.create_removed(removed_ids))
 
 
 class TrackFileRepository:

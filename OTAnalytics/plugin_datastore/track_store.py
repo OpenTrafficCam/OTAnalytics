@@ -664,14 +664,14 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             geometry_dataset=geometry_dataset,
             calculator=self.calculator,
         )
-        cut_ids = frozenset((TrackId(_id) for _id in ids_to_revert))
+        removed_ids = to_domain_ids(ids_to_revert)
         reverted_ids = frozenset(
             TrackId(_id) for _id in col_reverted_track_ids.unique()
         )
         return (
             reverted_track_dataset,
             reverted_ids,
-            cut_ids,
+            removed_ids,
         )
 
     def _get_existing_cut_track_ids(self, track_ids: frozenset[TrackId]) -> list[str]:
@@ -686,13 +686,13 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             list[str]: unique track IDs from the dataset that are found in the provided
             set of track IDs and have undergone cutting operations.
         """
-        converted_ids = [track_id.id for track_id in track_ids]
+        raw_ids = to_raw_ids(track_ids)
 
         mask_cut_tracks = (
             self._dataset.index.get_level_values(LEVEL_TRACK_ID)
             != self._dataset[track.ORIGINAL_TRACK_ID]
         )
-        mask_existing_ids = self._dataset[track.ORIGINAL_TRACK_ID].isin(converted_ids)
+        mask_existing_ids = self._dataset[track.ORIGINAL_TRACK_ID].isin(raw_ids)
 
         return list(
             self._dataset.loc[mask_cut_tracks & mask_existing_ids].index.unique(
@@ -702,12 +702,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
     def remove_by_original_ids(
         self, original_ids: frozenset[TrackId]
-    ) -> "PandasTrackDataset":
-        converted_original_ids = {original_id.id for original_id in original_ids}
+    ) -> tuple["PandasTrackDataset", frozenset[TrackId]]:
+        raw_ids = to_raw_ids(original_ids)
 
-        mask_remove = self._dataset[track.ORIGINAL_TRACK_ID].isin(
-            converted_original_ids
-        )
+        mask_remove = self._dataset[track.ORIGINAL_TRACK_ID].isin(raw_ids)
         ids_to_remove = list(
             self._dataset.loc[mask_remove]
             .index.get_level_values(LEVEL_TRACK_ID)
@@ -716,12 +714,23 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         filtered_dataset = self._dataset.loc[~mask_remove]
         updated_geometry_dataset = self._remove_from_geometry_dataset(ids_to_remove)
 
-        return PandasTrackDataset(
+        updated_track_dataset = PandasTrackDataset(
             dataset=filtered_dataset,
             calculator=self.calculator,
             track_geometry_factory=self.track_geometry_factory,
             geometry_datasets=updated_geometry_dataset,
         )
+        removed_track_ids = to_domain_ids(ids_to_remove)
+
+        return updated_track_dataset, removed_track_ids
+
+
+def to_raw_ids(track_ids: Iterable[TrackId]) -> frozenset[str]:
+    return frozenset((track_id.id for track_id in track_ids))
+
+
+def to_domain_ids(raw_ids: Iterable[str]) -> frozenset[TrackId]:
+    return frozenset((TrackId(raw_id) for raw_id in raw_ids))
 
 
 class FilteredPandasTrackDataset(
@@ -781,8 +790,9 @@ class FilteredPandasTrackDataset(
 
     def remove_by_original_ids(
         self, original_ids: frozenset[TrackId]
-    ) -> "PandasTrackDataset":
-        return self.wrap(self._other.remove_by_original_ids(original_ids))
+    ) -> tuple["PandasTrackDataset", frozenset[TrackId]]:
+        updated_dataset, removed_ids = self._other.remove_by_original_ids(original_ids)
+        return self.wrap(updated_dataset), removed_ids
 
 
 class FilterByClassPandasTrackDataset(
