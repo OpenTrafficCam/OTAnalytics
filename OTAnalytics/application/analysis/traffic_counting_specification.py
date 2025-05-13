@@ -25,6 +25,7 @@ class CountingSpecificationDto:
     output_format: str
     output_file: str
     export_mode: ExportMode
+    count_all_events: bool = False
 
 
 @dataclass(frozen=True)

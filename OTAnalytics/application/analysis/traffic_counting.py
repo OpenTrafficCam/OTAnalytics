@@ -896,6 +896,67 @@ def create_export_specification(
     return ExportSpecificationDto(counting_specification, flow_dtos)
 
 
+class TrafficCounting:
+    """
+    Use case to produce traffic counts.
+    """
+
+    def __init__(
+        self,
+        event_repository: EventRepository,
+        flow_repository: FlowRepository,
+        get_sections_by_id: GetSectionsById,
+        create_events: CreateEvents,
+        assigner: RoadUserAssigner,
+        tagger_factory: TaggerFactory,
+    ):
+        self._event_repository = event_repository
+        self._flow_repository = flow_repository
+        self._get_sections_by_id = get_sections_by_id
+        self._create_events = create_events
+        self._assigner = assigner
+        self._tagger_factory = tagger_factory
+
+    def count(self, specification: CountingSpecificationDto) -> Count:
+        """
+        Produce traffic counts based on the currently available events and flows.
+
+        Args:
+            specification (CountingSpecificationDto): specification of the export
+        """
+        if self._event_repository.is_empty():
+            self._create_events()
+
+        if specification.count_all_events:
+            events = self._event_repository.get_all()
+        else:
+            events = self._event_repository.get(
+                start_date=specification.start,
+                end_date=specification.end,
+            )
+
+        flows = self.get_flows()
+        assigned_flows = self._assigner.assign(events, flows)
+        tagger = self._tagger_factory.create_tagger(specification)
+        tagged_assignments = assigned_flows.tag(tagger)
+        return tagged_assignments.count(flows)
+
+    def get_flows(self) -> list[Flow]:
+        return self._flow_repository.get_all()
+
+    def with_tagger_factory(
+        self, new_tagger_factory: TaggerFactory
+    ) -> "TrafficCounting":
+        return TrafficCounting(
+            self._event_repository,
+            self._flow_repository,
+            self._get_sections_by_id,
+            self._create_events,
+            self._assigner,
+            new_tagger_factory,
+        )
+
+
 class ExportTrafficCounting(ExportCounts):
     """
     Use case to export traffic counting.
@@ -911,12 +972,15 @@ class ExportTrafficCounting(ExportCounts):
         tagger_factory: TaggerFactory,
         exporter_factory: ExporterFactory,
     ) -> None:
-        self._event_repository = event_repository
-        self._flow_repository = flow_repository
-        self._get_sections_by_id = get_sections_by_id
-        self._create_events = create_events
-        self._assigner = assigner
-        self._tagger_factory = tagger_factory
+        self._traffic_counting = TrafficCounting(
+            event_repository,
+            flow_repository,
+            get_sections_by_id,
+            create_events,
+            assigner,
+            tagger_factory,
+        )
+
         self._exporter_factory = exporter_factory
 
     def export(self, specification: CountingSpecificationDto) -> None:
@@ -926,19 +990,12 @@ class ExportTrafficCounting(ExportCounts):
         Args:
             specification (CountingSpecificationDto): specification of the export
         """
-        if self._event_repository.is_empty():
-            self._create_events()
-        events = self._event_repository.get(
-            start_date=specification.start,
-            end_date=specification.end,
-        )
-        flows = self._flow_repository.get_all()
-        assigned_flows = self._assigner.assign(events, flows)
-        tagger = self._tagger_factory.create_tagger(specification)
-        tagged_assignments = assigned_flows.tag(tagger)
-        counts = tagged_assignments.count(flows)
+        counts = self._traffic_counting.count(specification)
+        print(counts.to_dict())
+
+        flows = self._traffic_counting.get_flows()
         export_specification = create_export_specification(
-            flows, specification, self._get_sections_by_id
+            flows, specification, self._traffic_counting._get_sections_by_id
         )
         exporter = self._exporter_factory.create_exporter(export_specification)
         exporter.export(counts, specification.export_mode)
