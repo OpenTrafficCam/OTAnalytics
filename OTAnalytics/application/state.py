@@ -5,6 +5,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Generic, Optional
 
+from plugin_ui.visualization.counts.counts_plotter import CountsImage
+
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.playback import SkipTime
@@ -206,6 +208,8 @@ class TrackViewState:
         ](default=[])
         self.skip_time = ObservableProperty[SkipTime](DEFAULT_SKIP_TIME)
 
+        self.count_plots = ObservableProperty[list[CountsImage]](default=[])
+
     def reset(self) -> None:
         """Reset to default settings."""
         self.selected_videos.set([])
@@ -216,6 +220,8 @@ class TrackViewState:
         self.filter_date_active.set(DEFAULT_FILTER_DATE_ACTIVE)
         self.track_offset.set(DEFAULT_TRACK_OFFSET)
         self.skip_time.set(DEFAULT_SKIP_TIME)
+
+        self.count_plots.set([])
 
 
 class TrackPropertiesUpdater:
