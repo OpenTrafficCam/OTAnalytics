@@ -258,6 +258,21 @@ class TrackDataset(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def remove_by_original_ids(
+        self, original_ids: frozenset[TrackId]
+    ) -> "TrackDataset":
+        """
+        Remove tracks with the specified original IDs and return a new dataset.
+
+        Args:
+            original_ids (frozenset[TrackId]): The original IDs of tracks to remove
+
+        Returns:
+            PandasTrackDataset: A new dataset without the specified tracks
+        """
+        raise NotImplementedError
+
 
 class TrackGeometryDataset(ABC):
     """Dataset containing track geometries.

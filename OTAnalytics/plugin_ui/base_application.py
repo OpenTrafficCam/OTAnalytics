@@ -155,6 +155,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTracks,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
+    RemoveTracksByOriginalIds,
     TrackRepositorySize,
 )
 from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
@@ -1002,6 +1003,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def remove_events_by_road_user_id(self) -> RemoveEventsByRoadUserId:
         return RemoveEventsByRoadUserId(self.event_repository)
+
+    @cached_property
+    def remove_tracks_by_original_ids(self) -> RemoveTracksByOriginalIds:
+        return RemoveTracksByOriginalIds(self.track_repository)
 
 
 def create_format_fixer(

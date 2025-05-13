@@ -204,6 +204,23 @@ class TestTrackRepository:
             TrackRepositoryEvent(added=reverted_ids, removed=cut_ids)
         )
 
+    def test_remove_by_original_ids(self) -> None:
+        given_ids_to_remove = frozenset([TrackId("original-1"), TrackId("original-2")])
+        given_observer = Mock()
+        given_dataset = Mock()
+        updated_dataset = Mock()
+
+        given_dataset.remove_by_original_ids.return_value = updated_dataset
+
+        target = TrackRepository(given_dataset)
+        target.register_tracks_observer(given_observer)
+        target.remove_by_original_ids(given_ids_to_remove)
+
+        assert target._dataset == updated_dataset
+        given_observer.notify_tracks.assert_called_once_with(
+            TrackRepositoryEvent.create_removed(given_ids_to_remove)
+        )
+
 
 class TestTrackFileRepository:
     @pytest.fixture

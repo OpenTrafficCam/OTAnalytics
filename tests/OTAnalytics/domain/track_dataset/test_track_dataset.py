@@ -39,6 +39,20 @@ class TestTrackDataset:
             assert_equal_track_properties(actual_uncut_track, uncut_track)
             assert_equal_track_properties(actual_bicycle_track, bicycle_track)
 
+    def test_remove_by_original_ids(
+        self, first_track_part_1: Track, first_track_part_2: Track, uncut_track: Track
+    ) -> None:
+        targets = create_track_datasets(
+            [first_track_part_1, first_track_part_2, uncut_track]
+        )
+        for target in targets:
+            assert len(target) == 3
+            actual_dataset = target.remove_by_original_ids(
+                frozenset([first_track_part_1.original_id])
+            )
+            assert actual_dataset.track_ids == frozenset([uncut_track.id])
+            assert len(actual_dataset) == 1
+
 
 def create_track_datasets(tracks: list[Track]) -> list[TrackDataset]:
     provider = TrackDatasetProvider()

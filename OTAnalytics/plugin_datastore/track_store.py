@@ -700,6 +700,29 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             )
         )
 
+    def remove_by_original_ids(
+        self, original_ids: frozenset[TrackId]
+    ) -> "PandasTrackDataset":
+        converted_original_ids = {original_id.id for original_id in original_ids}
+
+        mask_remove = self._dataset[track.ORIGINAL_TRACK_ID].isin(
+            converted_original_ids
+        )
+        ids_to_remove = list(
+            self._dataset.loc[mask_remove]
+            .index.get_level_values(LEVEL_TRACK_ID)
+            .unique()
+        )
+        filtered_dataset = self._dataset.loc[~mask_remove]
+        updated_geometry_dataset = self._remove_from_geometry_dataset(ids_to_remove)
+
+        return PandasTrackDataset(
+            dataset=filtered_dataset,
+            calculator=self.calculator,
+            track_geometry_factory=self.track_geometry_factory,
+            geometry_datasets=updated_geometry_dataset,
+        )
+
 
 class FilteredPandasTrackDataset(
     FilteredTrackDataset, PandasTrackDataset, PandasDataFrameProvider
@@ -755,6 +778,11 @@ class FilteredPandasTrackDataset(
             original_track_ids
         )
         return self.wrap(reverted_dataset), reverted_ids, cut_ids
+
+    def remove_by_original_ids(
+        self, original_ids: frozenset[TrackId]
+    ) -> "PandasTrackDataset":
+        return self.wrap(self._other.remove_by_original_ids(original_ids))
 
 
 class FilterByClassPandasTrackDataset(
