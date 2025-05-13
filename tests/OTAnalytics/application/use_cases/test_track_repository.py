@@ -241,5 +241,3 @@ class TestRemoveTracksByOriginalIds:
         given_track_repository.remove_by_original_ids.assert_called_once_with(
             given_original_ids
         )
-
-        pass
