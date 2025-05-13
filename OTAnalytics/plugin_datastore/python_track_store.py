@@ -687,9 +687,6 @@ class PythonTrackDataset(TrackDataset):
         # If performance becomes a concern in high-volume operations, consider
         # implementing a mapping cache of original track IDs to their derived segments.
 
-        # converted_original_track_ids = [
-        #     original_id.id for original_id in original_track_ids
-        # ]
         tracks_to_revert = defaultdict(list)
         track_ids_to_remove = set()
         for track in self._tracks.values():
