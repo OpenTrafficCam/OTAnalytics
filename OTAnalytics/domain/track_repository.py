@@ -223,20 +223,45 @@ class TrackRepository:
 
     def revert_cuts_for(self, original_ids: frozenset[TrackId]) -> None:
         """
-        Reverts cuts in the dataset for the provided set of original IDs.
+        Reverts cuts for tracks associated with the provided original track IDs.
 
-        This function takes a set of identifiers corresponding to original items in
-        the dataset and reverses any cuts that were applied to these items. It ensures
-        that the dataset is restored to its state prior to any modifications involving
-        cuts for the specified IDs.
+        This method finds any cut tracks derived from the original track IDs and
+        restores them to their original state. It replaces cut track IDs with their
+        original track IDs in the dataset, removing the cut versions.
+
+        The method operates on the current dataset without modification if either:
+        - The dataset is empty
+        - None of the provided original track IDs have associated cut tracks
+
+        Observers registered with the repository will be notified of both removed tracks
+        (the cut versions) and new/updated tracks (the reverted original tracks).
 
         Args:
-            original_ids (frozenset[TrackId]): A set of strings representing the
-                original IDs of the items in the dataset for which the cuts need to be
-                reverted.
-
+            original_ids (frozenset[TrackId]): track IDs representing the
+                original tracks for which cuts should be reverted.
         """
-        self._dataset = self._dataset.revert_cuts_for(original_ids)
+
+        reverted_dataset, reverted_ids, cut_track_ids = self._dataset.revert_cuts_for(
+            original_ids
+        )
+        self._dataset = reverted_dataset
+        self.observers.notify(
+            TrackRepositoryEvent(added=reverted_ids, removed=cut_track_ids)
+        )
+
+    def remove_by_original_ids(self, original_ids: frozenset[TrackId]) -> None:
+        """
+        Removes tracks from the repository based on their original IDs and notifies
+        observers of the removal event.
+
+        Args:
+            original_ids (frozenset[TrackId]): original IDs of the tracks to be removed.
+        """
+        updated_dataset, removed_ids = self._dataset.remove_by_original_ids(
+            original_ids
+        )
+        self._dataset = updated_dataset
+        self.observers.notify(TrackRepositoryEvent.create_removed(removed_ids))
 
 
 class TrackFileRepository:
