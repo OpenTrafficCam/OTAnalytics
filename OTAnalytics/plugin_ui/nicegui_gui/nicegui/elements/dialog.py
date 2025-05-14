@@ -17,13 +17,16 @@ class DialogResult(StrEnum):
     CANCEL = "Cancel"
 
 
-class BaseDialog(ui.dialog):
+class BaseDialog:
+
+    @property
+    async def result(self) -> DialogResult:
+        return await self.build()
 
     def __init__(self, resource_manager: ResourceManager) -> None:
-        super().__init__()
         self.resource_manager = resource_manager
 
-    async def build(self) -> DialogResult:
+    def build(self) -> ui.dialog:
         with ui.dialog() as dialog, ui.card():
             self.build_content()
             with ui.row():
@@ -37,7 +40,7 @@ class BaseDialog(ui.dialog):
                 )
                 apply.mark(MARKER_APPLY)
                 cancel.mark(MARKER_CANCEL)
-            return await dialog
+            return dialog
 
     @abstractmethod
     def build_content(self) -> None:
