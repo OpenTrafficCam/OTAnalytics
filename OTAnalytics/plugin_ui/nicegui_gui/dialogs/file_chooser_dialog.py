@@ -63,7 +63,7 @@ class FileChooserDialog(BaseDialog):
             on_value_change=self._update_directory,
         )
 
-    async def build_content(self) -> None:
+    def build_content(self) -> None:
         """Build the dialog content."""
         ui.label(self._title).classes("text-xl")
 

@@ -102,7 +102,7 @@ class ExportCountsDialog(BaseDialog):
             initial_value=suggested_filename,
         )
 
-    async def build_content(self) -> None:
+    def build_content(self) -> None:
         """Build the dialog content."""
         ui.label(self.resource_manager.get(GeneralKeys.LABEL_EXPORT_COUNTS)).classes(
             "text-xl"
