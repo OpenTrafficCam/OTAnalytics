@@ -8,8 +8,14 @@ from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE, ExportMode
-from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.application.resources.resource_manager import (
+    GeneralKeys,
+    ResourceManager,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.export_counts_dialog import (
+    MARKER_DIRECTORY,
+    MARKER_FILENAME,
+    MARKER_INTERVAL,
     ExportCountsDialog,
 )
 
@@ -22,13 +28,6 @@ TEST_EXPORT_FORMATS = {"CSV": "csv", "Excel": "xlsx"}
 TEST_INTERVAL = 15
 TEST_OUTPUT_FILE = "/test/directory/test_file.csv"
 ENDPOINT_NAME = "/test-export-counts-dialog"
-
-
-@pytest.fixture
-def resource_manager() -> Mock:
-    resource_manager = MagicMock(spec=ResourceManager)
-    resource_manager.get.return_value = "Test Label"
-    return resource_manager
 
 
 @pytest.fixture
@@ -58,17 +57,18 @@ class TestExportCountsDialog:
         user: User,
         export_counts_dialog: ExportCountsDialog,
         resource_manager: ResourceManager,
+        viewmodel: Mock,
     ) -> None:
-        """Test that the dialog builds correctly and displays all elements."""
-
         @ui.page(ENDPOINT_NAME)
-        async def page() -> None:
-            await export_counts_dialog.build()
+        def page() -> None:
+            dialog = export_counts_dialog.build()
+            ui.button("Open a dialog", on_click=dialog.open)
 
         await user.open(ENDPOINT_NAME)
 
         # Check that all elements are visible
-        await user.should_see("Test Label")  # From resource_manager.get()
+        await user.should_see("Open a dialog")
+        await user.should_see(marker=MARKER_FILENAME)  # From resource_manager.get()
 
     @pytest.mark.asyncio
     async def test_get_specification(
@@ -77,24 +77,20 @@ class TestExportCountsDialog:
         """Test that get_specification returns the correct specification."""
 
         @ui.page(ENDPOINT_NAME)
-        async def page() -> None:
-            await export_counts_dialog.build()
+        def page() -> None:
+            dialog = export_counts_dialog.build()
+            ui.button("Open a dialog", on_click=dialog.open)
 
         await user.open(ENDPOINT_NAME)
 
-        # Set the directory and filename fields
-        export_counts_dialog._directory_field.set_value(
-            str(Path(TEST_OUTPUT_FILE).parent)
-        )
-        export_counts_dialog._filename_field.set_value(Path(TEST_OUTPUT_FILE).name)
+        user.find("Open a dialog").click()
+        user.find(MARKER_DIRECTORY).type(str(Path(TEST_OUTPUT_FILE).parent))
+        user.find(MARKER_FILENAME).type(Path(TEST_OUTPUT_FILE).name)
+        user.find(MARKER_INTERVAL).type(str(TEST_INTERVAL))
+        user.find(GeneralKeys.LABEL_APPLY).click()
 
-        # Set the interval
-        export_counts_dialog._interval.set_value(TEST_INTERVAL)
-
-        # Get the specification
         specification = export_counts_dialog.get_specification()
 
-        # Verify that the specification is correct
         assert specification.start == TEST_START
         assert specification.end == TEST_END
         assert specification.interval_in_minutes == TEST_INTERVAL
