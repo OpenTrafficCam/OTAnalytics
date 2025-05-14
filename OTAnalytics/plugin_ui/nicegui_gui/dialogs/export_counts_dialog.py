@@ -25,6 +25,14 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     FormFieldText,
 )
 
+MARKER_START_DATE = "marker-start-date"
+MARKER_START_TIME = "marker-start-time"
+MARKER_END_DATE = "marker-end-date"
+MARKER_END_TIME = "marker-end-time"
+MARKER_DIRECTORY = "marker-directory"
+MARKER_FILENAME = "marker-filename"
+MARKER_INTERVAL = "marker-interval"
+
 
 class ExportCountsDialog(BaseDialog):
     """Dialog for configuring export counts.
@@ -64,24 +72,30 @@ class ExportCountsDialog(BaseDialog):
             label_date_text=self.resource_manager.get(GeneralKeys.LABEL_START_DATE),
             label_time_text=self.resource_manager.get(GeneralKeys.LABEL_START_TIME),
             initial_value=start,
+            marker_date=MARKER_START_DATE,
+            marker_time=MARKER_START_TIME,
         )
 
         self._end_datetime = DateTimeForm(
             label_date_text=self.resource_manager.get(GeneralKeys.LABEL_END_DATE),
             label_time_text=self.resource_manager.get(GeneralKeys.LABEL_END_TIME),
             initial_value=end,
+            marker_date=MARKER_END_DATE,
+            marker_time=MARKER_END_TIME,
         )
 
         self._interval = FormFieldInteger(
             label_text=self.resource_manager.get(GeneralKeys.LABEL_INTERVAL_MINUTES),
             initial_value=15,  # Default interval of 15 minutes
             min_value=1,
+            marker=MARKER_INTERVAL,
         )
 
         self._directory_field = FormFieldText(
             label_text=self.resource_manager.get(GeneralKeys.LABEL_DIRECTORY),
             initial_value=str(Path.home()),
             on_value_change=self._update_directory,
+            marker=MARKER_DIRECTORY,
         )
 
         self._initial_dir = Path.home()
@@ -100,6 +114,7 @@ class ExportCountsDialog(BaseDialog):
         self._filename_field = FormFieldText(
             label_text=self.resource_manager.get(GeneralKeys.LABEL_FILENAME),
             initial_value=suggested_filename,
+            marker=MARKER_FILENAME,
         )
 
     def build_content(self) -> None:
