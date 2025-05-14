@@ -85,7 +85,7 @@ class CtkUiFactory(UiFactory):
             initialdir=initialdir,
         )
 
-    def configure_export_file(
+    async def configure_export_file(
         self,
         title: str,
         export_format_extensions: dict[str, str],
@@ -108,7 +108,7 @@ class CtkUiFactory(UiFactory):
         export_format = export_config[toplevel_export_file.EXPORT_FORMAT]
         return ExportFileDto(file=file, export_format=export_format)
 
-    def configure_export_counts(
+    async def configure_export_counts(
         self,
         start: datetime | None,
         end: datetime | None,

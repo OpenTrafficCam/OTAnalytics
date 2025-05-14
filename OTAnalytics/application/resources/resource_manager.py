@@ -12,6 +12,22 @@ class GeneralKeys(ResourceKey):
     LABEL_APPLY = "label-apply"
     LABEL_CANCEL = "label-cancel"
     LABEL_RESET = "label-reset"
+    LABEL_FORMAT = "label-format"
+    LABEL_FILENAME = "label-filename"
+    LABEL_DIRECTORY = "label-directory"
+    LABEL_BROWSE = "label-browse"
+    LABEL_INTERVAL_MINUTES = "label-interval-minutes"
+    LABEL_MODES = "label-modes"
+    LABEL_OUTPUT_FILE = "label-output-file"
+    LABEL_EXPORT_COUNTS = "label-export-counts"
+    LABEL_TIME_RANGE = "label-time-range"
+    LABEL_EXPORT_OPTIONS = "label-export-options"
+    LABEL_EXPORT_MODE = "label-export-mode"
+    LABEL_SELECT_OUTPUT_FILE = "label-select-output-file"
+    LABEL_START_DATE = "label-start-date"
+    LABEL_START_TIME = "label-start-time"
+    LABEL_END_DATE = "label-end-date"
+    LABEL_END_TIME = "label-end-time"
 
 
 class CanvasKeys(ResourceKey):
@@ -190,6 +206,22 @@ DEFAULT_RESOURCE_MAP = {
     GeneralKeys.LABEL_APPLY: "Apply",
     GeneralKeys.LABEL_RESET: "Reset",
     GeneralKeys.LABEL_CANCEL: "Cancel",
+    GeneralKeys.LABEL_FORMAT: "Format",
+    GeneralKeys.LABEL_FILENAME: "Filename",
+    GeneralKeys.LABEL_DIRECTORY: "Directory",
+    GeneralKeys.LABEL_BROWSE: "Browse",
+    GeneralKeys.LABEL_INTERVAL_MINUTES: "Interval (minutes)",
+    GeneralKeys.LABEL_MODES: "Modes",
+    GeneralKeys.LABEL_OUTPUT_FILE: "Output File",
+    GeneralKeys.LABEL_EXPORT_COUNTS: "Export Counts",
+    GeneralKeys.LABEL_TIME_RANGE: "Time Range",
+    GeneralKeys.LABEL_EXPORT_OPTIONS: "Export Options",
+    GeneralKeys.LABEL_EXPORT_MODE: "Export Mode",
+    GeneralKeys.LABEL_SELECT_OUTPUT_FILE: "Select Output File",
+    GeneralKeys.LABEL_START_DATE: "Start date",
+    GeneralKeys.LABEL_START_TIME: "Start time",
+    GeneralKeys.LABEL_END_DATE: "End date",
+    GeneralKeys.LABEL_END_TIME: "End time",
     OffsetSliderKeys.LABEL_COORDINATE_X: "X:",
     OffsetSliderKeys.LABEL_COORDINATE_Y: "Y:",
     ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
@@ -197,8 +229,9 @@ DEFAULT_RESOURCE_MAP = {
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
     ProjectKeys.LABEL_QUICK_SAVE: "Save",
     ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
-    ProjectKeys.LABEL_START_DATE: "Start date",
-    ProjectKeys.LABEL_START_TIME: "Start time",
+    ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
+    ProjectKeys.LABEL_QUICK_SAVE: "Save",
+    ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
     RemarkKeys.LABEL_REMARK_HEADER: "Remark",
     RemarkKeys.REMARK_NO_COMMENT: "No Comment",
     SectionKeys.BUTTON_ADD_AREA: "Add area...",
@@ -241,10 +274,6 @@ DEFAULT_RESOURCE_MAP = {
     VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM: "From",
     VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE: "Last detection occurrence",  # noqa
     VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE: "First detection occurrence",  # noqa
-    VisualizationFiltersKeys.LABEL_START_DATE: "Start date",
-    VisualizationFiltersKeys.LABEL_START_TIME: "Start time",
-    VisualizationFiltersKeys.LABEL_END_DATE: "End date",
-    VisualizationFiltersKeys.LABEL_END_TIME: "End time",
     VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING: "Update flow highlighting",
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
     VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",

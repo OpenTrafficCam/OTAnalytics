@@ -257,7 +257,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def export_events(self) -> None:
+    async def export_events(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -349,7 +349,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def export_counts(self) -> None:
+    async def export_counts(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -423,7 +423,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def export_road_user_assignments(self) -> None:
+    async def export_road_user_assignments(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -455,7 +455,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def export_track_statistics(self) -> None:
+    async def export_track_statistics(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

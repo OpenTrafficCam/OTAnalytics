@@ -1304,13 +1304,13 @@ class DummyViewModel(
         self._application.save_events(Path(file))
         logger().info(f"Eventlist file saved to '{file}'")
 
-    def export_events(self) -> None:
+    async def export_events(self) -> None:
         export_format_extensions: dict[str, str] = {
             key: exporter.get_extension()
             for key, exporter in self._event_list_export_formats.items()
         }
         try:
-            event_list_exporter, file = self._configure_event_exporter(
+            event_list_exporter, file = await self._configure_event_exporter(
                 export_format_extensions
             )
             self._application.export_events(Path(file), event_list_exporter)
@@ -1320,10 +1320,10 @@ class DummyViewModel(
         except CancelExportFile:
             logger().info("User canceled configuration of export")
 
-    def _configure_event_exporter(
+    async def _configure_event_exporter(
         self, export_format_extensions: dict[str, str]
     ) -> tuple[EventListExporter, Path]:
-        export_config = self._ui_factory.configure_export_file(
+        export_config = await self._ui_factory.configure_export_file(
             title="Export events",
             export_format_extensions=export_format_extensions,
             initial_file_stem=CONTEXT_FILE_TYPE_EVENTS,
@@ -1499,7 +1499,7 @@ class DummyViewModel(
         self._application.disable_filter_track_by_class()
         self.frame_filter.disable_filter_by_class_button()
 
-    def export_counts(self) -> None:
+    async def export_counts(self) -> None:
         if len(self._application.get_all_flows()) == 0:
             self._ui_factory.info_box(
                 message=(
@@ -1521,7 +1521,7 @@ class DummyViewModel(
             self._application._tracks_metadata.filtered_detection_classifications
         )
         try:
-            export_specification = self._ui_factory.configure_export_counts(
+            export_specification = await self._ui_factory.configure_export_counts(
                 start=start,
                 end=end,
                 default_format=default_format,
@@ -1602,14 +1602,10 @@ class DummyViewModel(
     ) -> None:
         self._button_quick_save_config = button_quick_save_config
 
-    def export_road_user_assignments(self) -> None:
+    async def export_road_user_assignments(self) -> None:
         if len(self._application.get_all_flows()) == 0:
             self._ui_factory.info_box(
-                message=(
-                    "Counting needs at least one flow.\n"
-                    "There is no flow configured.\n"
-                    "Please create a flow."
-                ),
+                message=("There is no flow configured.\n" "Please create a flow."),
                 initial_position=self.get_position(),
             )
             return
@@ -1619,7 +1615,7 @@ class DummyViewModel(
         }
 
         try:
-            export_config = self._ui_factory.configure_export_file(
+            export_config = await self._ui_factory.configure_export_file(
                 title="Export road user assignments",
                 export_format_extensions=export_formats,
                 initial_file_stem="road_user_assignments",
@@ -1714,7 +1710,7 @@ class DummyViewModel(
     def get_tracks_assigned_to_each_flow(self) -> dict[FlowId, int]:
         return self._application.number_of_tracks_assigned_to_each_flow()
 
-    def export_track_statistics(self) -> None:
+    async def export_track_statistics(self) -> None:
         if self._application.get_track_repository_size() == 0:
             self._ui_factory.info_box(
                 message=(
@@ -1730,7 +1726,7 @@ class DummyViewModel(
         }
 
         try:
-            export_config = self._ui_factory.configure_export_file(
+            export_config = await self._ui_factory.configure_export_file(
                 title="Export track statistics",
                 export_format_extensions=export_formats,
                 initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
