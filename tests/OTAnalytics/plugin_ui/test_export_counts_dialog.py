@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
@@ -15,13 +15,12 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.export_counts_dialog import (
     MARKER_DIRECTORY,
     MARKER_FILENAME,
-    MARKER_INTERVAL,
     ExportCountsDialog,
 )
 
 # Constants for testing
-TEST_START = datetime(2023, 1, 1, 0, 0, 0)
-TEST_END = datetime(2023, 1, 2, 0, 0, 0)
+TEST_START = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+TEST_END = datetime(2023, 1, 2, 0, 0, 0, tzinfo=timezone.utc)
 TEST_DEFAULT_FORMAT = "CSV"
 TEST_MODES = ExportMode.values()
 TEST_EXPORT_FORMATS = {"CSV": "csv", "Excel": "xlsx"}
@@ -70,7 +69,10 @@ class TestExportCountsDialog:
 
     @pytest.mark.asyncio
     async def test_get_specification(
-        self, user: User, export_counts_dialog: ExportCountsDialog
+        self,
+        user: User,
+        export_counts_dialog: ExportCountsDialog,
+        resource_manager: ResourceManager,
     ) -> None:
         """Test that get_specification returns the correct specification."""
 
@@ -82,14 +84,12 @@ class TestExportCountsDialog:
 
         user.find(MARKER_DIRECTORY).type(str(Path(TEST_OUTPUT_FILE).parent))
         user.find(MARKER_FILENAME).type(Path(TEST_OUTPUT_FILE).name)
-        user.find(MARKER_INTERVAL).type(str(TEST_INTERVAL))
-        user.find(GeneralKeys.LABEL_APPLY).click()
+        user.find(resource_manager.get(GeneralKeys.LABEL_APPLY)).click()
 
         specification = export_counts_dialog.get_specification()
 
         assert specification.start == TEST_START
         assert specification.end == TEST_END
-        assert specification.interval_in_minutes == TEST_INTERVAL
         assert specification.output_format == TEST_DEFAULT_FORMAT
         assert specification.output_file == TEST_OUTPUT_FILE
         assert specification.export_mode == OVERWRITE
