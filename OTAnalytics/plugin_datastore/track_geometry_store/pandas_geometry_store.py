@@ -1,5 +1,7 @@
 from pandas import DataFrame
 
+from OTAnalytics.domain.geometry import Polygon
+
 # Column names for track points
 TRACK_ID = "track-id"
 OCCURRENCE = "occurrence"
@@ -318,5 +320,56 @@ def find_line_intersections(
             valid_intersection_mask, INTERSECTION_Y
         ]
         result_df.loc[valid_intersection_mask, INTERSECTION_LINE_ID] = line_id
+
+    return result_df
+
+
+def check_polygon_intersections(
+    segments_df: DataFrame,
+    polygon: Polygon,
+) -> DataFrame:
+    """
+    Check if track segments intersect with a polygon.
+
+    A polygon consists of a set of lines. This function checks if each track segment
+    intersects with any of the lines in the polygon.
+
+    Args:
+        segments_df (DataFrame): DataFrame with track segments (output of
+            create_track_segments)
+        polygon (Polygon): The polygon to check intersections with
+
+    Returns:
+        DataFrame: The input DataFrame with an additional column "intersects-polygon"
+            indicating if the segment intersects with the polygon
+    """
+    if segments_df.empty:
+        return segments_df
+
+    # Create a copy to avoid modifying the original DataFrame
+    result_df = segments_df.copy()
+
+    # Initialize the intersects-polygon column to False
+    result_df["intersects-polygon"] = False
+
+    # Get the coordinates of the polygon
+    polygon_coordinates = polygon.coordinates
+
+    # Check intersections with each line segment of the polygon
+    for i in range(len(polygon_coordinates) - 1):
+        # Get the start and end points of the current line segment
+        start_x = polygon_coordinates[i].x
+        start_y = polygon_coordinates[i].y
+        end_x = polygon_coordinates[i + 1].x
+        end_y = polygon_coordinates[i + 1].y
+
+        # Check which segments intersect with the current line segment
+        intersects_df = check_line_intersections(
+            result_df, start_x, start_y, end_x, end_y
+        )
+
+        # Update the result DataFrame
+        if intersects_df[INTERSECTS].any():
+            result_df.loc[intersects_df[INTERSECTS], "intersects-polygon"] = True
 
     return result_df

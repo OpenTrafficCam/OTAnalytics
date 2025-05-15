@@ -4,6 +4,7 @@ import pandas as pd
 from pandas import DataFrame
 from pytest import approx
 
+from OTAnalytics.domain.geometry import Coordinate, Polygon
 from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store import (
     END_OCCURRENCE,
     END_X,
@@ -19,6 +20,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store imp
     TRACK_ID,
     X,
     Y,
+    check_polygon_intersections,
     create_track_segments,
     find_line_intersections,
 )
@@ -75,10 +77,10 @@ def test_find_line_intersections_with_intersections() -> None:
     # Create test data
     segments_data = {
         TRACK_ID: ["track1", "track2"],
-        START_X: [10.0, 100.0],
-        START_Y: [10.0, 150.0],
-        END_X: [20.0, 110.0],
-        END_Y: [20.0, 160.0],
+        START_X: [15.0, 100.0],
+        START_Y: [0.0, 150.0],
+        END_X: [15.0, 110.0],
+        END_Y: [30.0, 160.0],
         START_OCCURRENCE: [
             datetime(2023, 1, 1, 10, 0, 0),
             datetime(2023, 1, 1, 10, 0, 0),
@@ -120,10 +122,10 @@ def test_find_line_intersections_multiple_intersections() -> None:
     # Create test data
     segments_data = {
         TRACK_ID: ["track1", "track2", "track3"],
-        START_X: [10.0, 100.0, 30.0],
-        START_Y: [10.0, 10.0, 30.0],
-        END_X: [20.0, 110.0, 40.0],
-        END_Y: [20.0, 20.0, 40.0],
+        START_X: [20.0, 100.0, 30.0],
+        START_Y: [10.0, 10.0, 40.0],
+        END_X: [10.0, 110.0, 40.0],
+        END_Y: [20.0, 20.0, 30.0],
         START_OCCURRENCE: [
             datetime(2023, 1, 1, 10, 0, 0),
             datetime(2023, 1, 1, 10, 0, 0),
@@ -252,3 +254,102 @@ def test_create_track_segments_multiple_tracks() -> None:
     assert track2_segment[START_Y] == 150.0
     assert track2_segment[END_X] == 110.0
     assert track2_segment[END_Y] == 160.0
+
+
+def test_check_polygon_intersections_empty_df() -> None:
+    """Test that an empty DataFrame returns an empty DataFrame."""
+    df = DataFrame()
+    polygon = Polygon(
+        [
+            Coordinate(0.0, 0.0),
+            Coordinate(10.0, 0.0),
+            Coordinate(10.0, 10.0),
+            Coordinate(0.0, 10.0),
+            Coordinate(0.0, 0.0),
+        ]
+    )
+    result = check_polygon_intersections(df, polygon)
+    assert result.empty
+
+
+def test_check_polygon_intersections_no_intersections() -> None:
+    """Test with segments that don't intersect with the polygon."""
+    # Create test data
+    segments_data = {
+        TRACK_ID: ["track1", "track2"],
+        START_X: [20.0, 100.0],
+        START_Y: [20.0, 150.0],
+        END_X: [30.0, 110.0],
+        END_Y: [30.0, 160.0],
+        START_OCCURRENCE: [
+            datetime(2023, 1, 1, 10, 0, 0),
+            datetime(2023, 1, 1, 10, 0, 0),
+        ],
+        END_OCCURRENCE: [
+            datetime(2023, 1, 1, 10, 0, 1),
+            datetime(2023, 1, 1, 10, 0, 1),
+        ],
+    }
+    segments_df = DataFrame(segments_data)
+
+    # Create a polygon that doesn't intersect with any segment
+    polygon = Polygon(
+        [
+            Coordinate(0.0, 0.0),
+            Coordinate(10.0, 0.0),
+            Coordinate(10.0, 10.0),
+            Coordinate(0.0, 10.0),
+            Coordinate(0.0, 0.0),
+        ]
+    )
+
+    # Check intersections
+    result = check_polygon_intersections(segments_df, polygon)
+
+    # Check that no segments intersect with the polygon
+    assert not result["intersects-polygon"].any()
+
+
+def test_check_polygon_intersections_with_intersections() -> None:
+    """Test with segments that intersect with the polygon."""
+    # Create test data
+    segments_data = {
+        TRACK_ID: ["track1", "track2", "track3"],
+        START_X: [5.0, 100.0, 0.0],
+        START_Y: [5.0, 150.0, 5.0],
+        END_X: [15.0, 110.0, 25.0],
+        END_Y: [15.0, 160.0, 15.0],
+        START_OCCURRENCE: [
+            datetime(2023, 1, 1, 10, 0, 0),
+            datetime(2023, 1, 1, 10, 0, 0),
+            datetime(2023, 1, 1, 10, 0, 0),
+        ],
+        END_OCCURRENCE: [
+            datetime(2023, 1, 1, 10, 0, 1),
+            datetime(2023, 1, 1, 10, 0, 1),
+            datetime(2023, 1, 1, 10, 0, 1),
+        ],
+    }
+    segments_df = DataFrame(segments_data)
+
+    # Create a polygon that intersects with the first and third segments
+    polygon = Polygon(
+        [
+            Coordinate(0.0, 0.0),
+            Coordinate(10.0, 0.0),
+            Coordinate(10.0, 10.0),
+            Coordinate(0.0, 10.0),
+            Coordinate(0.0, 0.0),
+        ]
+    )
+
+    # Check intersections
+    result = check_polygon_intersections(segments_df, polygon)
+
+    # Check that the first and third segments intersect with the polygon
+    assert result.iloc[0]["intersects-polygon"]
+    assert not result.iloc[1]["intersects-polygon"]
+    assert result.iloc[2]["intersects-polygon"]
+
+    # Check the count of intersecting segments
+    assert result["intersects-polygon"].sum() == 2
