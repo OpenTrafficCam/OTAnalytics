@@ -61,13 +61,11 @@ class TestExportCountsDialog:
     ) -> None:
         @ui.page(ENDPOINT_NAME)
         def page() -> None:
-            dialog = export_counts_dialog.build()
-            ui.button("Open a dialog", on_click=dialog.open)
+            export_counts_dialog.build().open()
 
         await user.open(ENDPOINT_NAME)
 
         # Check that all elements are visible
-        await user.should_see("Open a dialog")
         await user.should_see(marker=MARKER_FILENAME)  # From resource_manager.get()
 
     @pytest.mark.asyncio
@@ -78,12 +76,10 @@ class TestExportCountsDialog:
 
         @ui.page(ENDPOINT_NAME)
         def page() -> None:
-            dialog = export_counts_dialog.build()
-            ui.button("Open a dialog", on_click=dialog.open)
+            export_counts_dialog.build().open()
 
         await user.open(ENDPOINT_NAME)
 
-        user.find("Open a dialog").click()
         user.find(MARKER_DIRECTORY).type(str(Path(TEST_OUTPUT_FILE).parent))
         user.find(MARKER_FILENAME).type(Path(TEST_OUTPUT_FILE).name)
         user.find(MARKER_INTERVAL).type(str(TEST_INTERVAL))
