@@ -20,6 +20,12 @@ INTERSECTION_X = "intersection_x"
 INTERSECTION_Y = "intersection_y"
 INTERSECTION_LINE_ID = "intersection_line_id"
 
+# Column names for intersection parameters
+DENOMINATOR = "denominator"
+NON_PARALLEL = "non_parallel"
+UA = "ua"
+UB = "ub"
+
 
 def create_track_segments(df: DataFrame) -> DataFrame:
     """
@@ -65,6 +71,192 @@ def create_track_segments(df: DataFrame) -> DataFrame:
     return segments
 
 
+def calculate_intersection_parameters(
+    segments_df: DataFrame,
+    line_x1: float,
+    line_y1: float,
+    line_x2: float,
+    line_y2: float,
+) -> DataFrame:
+    """
+    Calculate parameters needed for line intersection calculations.
+
+    Args:
+        segments_df (DataFrame): DataFrame with track segments
+        line_x1 (float): X-coordinate of the line's start point
+        line_y1 (float): Y-coordinate of the line's start point
+        line_x2 (float): X-coordinate of the line's end point
+        line_y2 (float): Y-coordinate of the line's end point
+
+    Returns:
+        DataFrame: A DataFrame containing the following columns:
+            - DENOMINATOR: Denominator values for intersection calculations
+            - NON_PARALLEL: Boolean mask for non-parallel segments
+            - UA: Parameter ua for intersection point calculation
+            - UB: Parameter ub for intersection point calculation
+    """
+    # Initialize result DataFrame
+    result_df = DataFrame(index=segments_df.index)
+
+    # Calculate denominator for all segments at once
+    result_df[DENOMINATOR] = (line_y2 - line_y1) * (
+        segments_df[END_X] - segments_df[START_X]
+    ) - (line_x2 - line_x1) * (segments_df[END_Y] - segments_df[START_Y])
+
+    # Filter out segments where lines are parallel (denominator == 0)
+    result_df[NON_PARALLEL] = result_df[DENOMINATOR] != 0
+
+    # Initialize ua and ub columns
+    result_df[UA] = None
+    result_df[UB] = None
+
+    if result_df[NON_PARALLEL].any():
+        # Calculate the parameters for the intersection points
+        ua_values = (
+            (line_x2 - line_x1) * (segments_df[START_Y] - line_y1)
+            - (line_y2 - line_y1) * (segments_df[START_X] - line_x1)
+        ) / result_df[DENOMINATOR]
+
+        ub_values = (
+            (segments_df[END_X] - segments_df[START_X])
+            * (segments_df[START_Y] - line_y1)
+            - (segments_df[END_Y] - segments_df[START_Y])
+            * (segments_df[START_X] - line_x1)
+        ) / result_df[DENOMINATOR]
+
+        # Update ua and ub columns for non-parallel segments
+        result_df.loc[result_df[NON_PARALLEL], UA] = ua_values[result_df[NON_PARALLEL]]
+        result_df.loc[result_df[NON_PARALLEL], UB] = ub_values[result_df[NON_PARALLEL]]
+
+    return result_df
+
+
+def check_line_intersections(
+    segments_df: DataFrame,
+    line_x1: float,
+    line_y1: float,
+    line_x2: float,
+    line_y2: float,
+) -> DataFrame:
+    """
+    Check if track segments intersect with a line.
+
+    Args:
+        segments_df (DataFrame): DataFrame with track segments
+        line_x1 (float): X-coordinate of the line's start point
+        line_y1 (float): Y-coordinate of the line's start point
+        line_x2 (float): X-coordinate of the line's end point
+        line_y2 (float): Y-coordinate of the line's end point
+
+    Returns:
+        DataFrame: Boolean mask indicating which segments intersect with the line
+    """
+    if segments_df.empty:
+        return segments_df
+
+    # Calculate intersection parameters
+    params_df = calculate_intersection_parameters(
+        segments_df, line_x1, line_y1, line_x2, line_y2
+    )
+
+    # If all segments are parallel or ua/ub couldn't be calculated
+    if (
+        not params_df[NON_PARALLEL].any()
+        or params_df[UA].isna().all()
+        or params_df[UB].isna().all()
+    ):
+        return DataFrame(index=segments_df.index, data=False, columns=[INTERSECTS])
+
+    # Create a mask for valid intersections (intersection point is on both line
+    # segments)
+    valid_intersection_mask = (
+        (0 <= params_df[UA])
+        & (params_df[UA] <= 1)
+        & (0 <= params_df[UB])
+        & (params_df[UB] <= 1)
+        & params_df[NON_PARALLEL]
+    )
+
+    # Create a DataFrame with the intersection results
+    intersects_df = DataFrame(index=segments_df.index, data=False, columns=[INTERSECTS])
+    intersects_df.loc[valid_intersection_mask, INTERSECTS] = True
+
+    return intersects_df
+
+
+def calculate_intersection_points(
+    segments_df: DataFrame,
+    line_x1: float,
+    line_y1: float,
+    line_x2: float,
+    line_y2: float,
+) -> DataFrame:
+    """
+    Calculate intersection points between track segments and a line.
+
+    Args:
+        segments_df (DataFrame): DataFrame with track segments
+        line_x1 (float): X-coordinate of the line's start point
+        line_y1 (float): Y-coordinate of the line's start point
+        line_x2 (float): X-coordinate of the line's end point
+        line_y2 (float): Y-coordinate of the line's end point
+
+    Returns:
+        DataFrame: DataFrame with columns INTERSECTION_X and INTERSECTION_Y containing
+                  the coordinates of intersection points
+    """
+    if segments_df.empty:
+        return DataFrame(
+            index=segments_df.index, columns=[INTERSECTION_X, INTERSECTION_Y]
+        )
+
+    # Calculate intersection parameters
+    params_df = calculate_intersection_parameters(
+        segments_df, line_x1, line_y1, line_x2, line_y2
+    )
+
+    # Initialize DataFrame for intersection coordinates
+    intersection_df = DataFrame(
+        index=segments_df.index, columns=[INTERSECTION_X, INTERSECTION_Y]
+    )
+
+    # If all segments are parallel or ua/ub couldn't be calculated
+    if (
+        not params_df[NON_PARALLEL].any()
+        or params_df[UA].isna().all()
+        or params_df[UB].isna().all()
+    ):
+        return intersection_df
+
+    # Create a mask for valid intersections
+    valid_intersection_mask = (
+        (0 <= params_df[UA])
+        & (params_df[UA] <= 1)
+        & (0 <= params_df[UB])
+        & (params_df[UB] <= 1)
+        & params_df[NON_PARALLEL]
+    )
+
+    if valid_intersection_mask.any():
+        # Calculate the intersection points for valid intersections
+        intersection_x = segments_df[START_X] + params_df[UA] * (
+            segments_df[END_X] - segments_df[START_X]
+        )
+        intersection_y = segments_df[START_Y] + params_df[UA] * (
+            segments_df[END_Y] - segments_df[START_Y]
+        )
+
+        # Update the result DataFrame with intersection coordinates
+        intersection_df.loc[valid_intersection_mask, INTERSECTION_X] = intersection_x[
+            valid_intersection_mask
+        ]
+        intersection_df.loc[valid_intersection_mask, INTERSECTION_Y] = intersection_y[
+            valid_intersection_mask
+        ]
+
+    return intersection_df
+
+
 def find_line_intersections(
     segments_df: DataFrame,
     line_id: str,
@@ -106,54 +298,25 @@ def find_line_intersections(
     result_df[INTERSECTION_Y] = None
     result_df[INTERSECTION_LINE_ID] = None
 
-    # Define line segment coordinates
-    line_x1, line_y1 = start_x, start_y
-    line_x2, line_y2 = end_x, end_y
+    # Check which segments intersect with the line
+    intersects_df = check_line_intersections(result_df, start_x, start_y, end_x, end_y)
 
-    # Calculate intersection using line segment intersection formula
-    # First, calculate the denominator for all segments at once
-    denominator = (line_y2 - line_y1) * (result_df[END_X] - result_df[START_X]) - (
-        line_x2 - line_x1
-    ) * (result_df[END_Y] - result_df[START_Y])
-
-    # Filter out segments where lines are parallel (denominator == 0)
-    non_parallel_mask = denominator != 0
-
-    if non_parallel_mask.any():
-        # Calculate the parameters for the intersection points
-        ua = (
-            (line_x2 - line_x1) * (result_df[START_Y] - line_y1)
-            - (line_y2 - line_y1) * (result_df[START_X] - line_x1)
-        ) / denominator
-
-        ub = (
-            (result_df[END_X] - result_df[START_X]) * (result_df[START_Y] - line_y1)
-            - (result_df[END_Y] - result_df[START_Y]) * (result_df[START_X] - line_x1)
-        ) / denominator
-
-        # Create a mask for valid intersections (intersection point is on both line
-        # segments)
-        valid_intersection_mask = (
-            (0 <= ua) & (ua <= 1) & (0 <= ub) & (ub <= 1) & non_parallel_mask
+    # If there are any intersections
+    if intersects_df[INTERSECTS].any():
+        # Calculate intersection points
+        intersection_df = calculate_intersection_points(
+            result_df, start_x, start_y, end_x, end_y
         )
 
-        if valid_intersection_mask.any():
-            # Calculate the intersection points for valid intersections
-            intersection_x = result_df[START_X] + ua * (
-                result_df[END_X] - result_df[START_X]
-            )
-            intersection_y = result_df[START_Y] + ua * (
-                result_df[END_Y] - result_df[START_Y]
-            )
-
-            # Update the result DataFrame with intersection information
-            result_df.loc[valid_intersection_mask, INTERSECTS] = True
-            result_df.loc[valid_intersection_mask, INTERSECTION_X] = intersection_x[
-                valid_intersection_mask
-            ]
-            result_df.loc[valid_intersection_mask, INTERSECTION_Y] = intersection_y[
-                valid_intersection_mask
-            ]
-            result_df.loc[valid_intersection_mask, INTERSECTION_LINE_ID] = line_id
+        # Update the result DataFrame with intersection information
+        valid_intersection_mask = intersects_df[INTERSECTS]
+        result_df.loc[valid_intersection_mask, INTERSECTS] = True
+        result_df.loc[valid_intersection_mask, INTERSECTION_X] = intersection_df.loc[
+            valid_intersection_mask, INTERSECTION_X
+        ]
+        result_df.loc[valid_intersection_mask, INTERSECTION_Y] = intersection_df.loc[
+            valid_intersection_mask, INTERSECTION_Y
+        ]
+        result_df.loc[valid_intersection_mask, INTERSECTION_LINE_ID] = line_id
 
     return result_df
