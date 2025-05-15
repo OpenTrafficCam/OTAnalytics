@@ -73,7 +73,7 @@ class NiceGuiUiFactory(UiFactory):
             initial_file_stem="",
         )
 
-        result = async_to_sync(dialog.build())
+        result = async_to_sync(dialog.result)
         if result == DialogResult.APPLY:
             return str(dialog.get_file_path())
         return ""
@@ -111,7 +111,7 @@ class NiceGuiUiFactory(UiFactory):
             initial_dir=initialdir,
         )
 
-        result = async_to_sync(dialog.build())
+        result = async_to_sync(dialog.result)
         if result == DialogResult.APPLY:
             return dialog.get_file_path()
         return Path("")
@@ -130,7 +130,7 @@ class NiceGuiUiFactory(UiFactory):
             initial_file_stem=initial_file_stem,
         )
 
-        result = await dialog.build()
+        result = await dialog.result
         if result == DialogResult.APPLY:
             return ExportFileDto(
                 file=dialog.get_file_path(),
@@ -157,7 +157,7 @@ class NiceGuiUiFactory(UiFactory):
             export_formats=export_formats,
         )
 
-        result = await dialog.build()
+        result = await dialog.result
         if result == DialogResult.APPLY:
             return dialog.get_specification()
         raise CancelAddFlow()
@@ -179,7 +179,7 @@ class NiceGuiUiFactory(UiFactory):
             input_values=input_values,
             show_offset=show_offset,
         )
-        result = await dialog.build()
+        result = await dialog.result
         if result == DialogResult.APPLY:
             return dialog.get_section()
         raise CancelAddFlow()
@@ -200,7 +200,7 @@ class NiceGuiUiFactory(UiFactory):
             input_values=input_values,
             show_distance=show_distance,
         )
-        result = await dialog.build()
+        result = await dialog.result
         if result == DialogResult.APPLY:
             return dialog.get_flow()
         raise CancelAddFlow()
