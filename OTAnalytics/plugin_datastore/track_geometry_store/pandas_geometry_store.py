@@ -1,5 +1,25 @@
 from pandas import DataFrame
 
+# Column names for track points
+TRACK_ID = "track-id"
+OCCURRENCE = "occurrence"
+X = "x"
+Y = "y"
+
+# Column names for track segments
+START_OCCURRENCE = "start-occurrence"
+END_OCCURRENCE = "end-occurrence"
+START_X = "start-x"
+START_Y = "start-y"
+END_X = "end-x"
+END_Y = "end-y"
+
+# Column names for intersections
+INTERSECTS = "intersects"
+INTERSECTION_X = "intersection_x"
+INTERSECTION_Y = "intersection_y"
+INTERSECTION_LINE_ID = "intersection_line_id"
+
 
 def create_track_segments(df: DataFrame) -> DataFrame:
     """
@@ -8,11 +28,11 @@ def create_track_segments(df: DataFrame) -> DataFrame:
     A track segment connects two consecutive points of a track.
 
     Args:
-        df (DataFrame): DataFrame with columns 'track-id', 'occurrence', 'x', 'y'
+        df (DataFrame): DataFrame with columns TRACK_ID, OCCURRENCE, X, Y
 
     Returns:
-        DataFrame: DataFrame with columns 'track-id', 'start-occurrence', 'end-occurrence',
-                  'start-x', 'start-y', 'end-x', 'end-y'
+        DataFrame: DataFrame with columns TRACK_ID, START_OCCURRENCE, END_OCCURRENCE,
+                  START_X, START_Y, END_X, END_Y
     """
     if df.empty:
         return DataFrame()
@@ -21,20 +41,20 @@ def create_track_segments(df: DataFrame) -> DataFrame:
     data = df.copy()
 
     # Ensure the DataFrame is sorted by track-id and occurrence
-    data = data.sort_values(by=['track-id', 'occurrence'])
+    data = data.sort_values(by=[TRACK_ID, OCCURRENCE])
 
     # Group by track-id to create segments
-    grouped = data.groupby('track-id')
+    grouped = data.groupby(TRACK_ID)
 
     # Create a new DataFrame with shifted values to get start and end points
     segments = DataFrame()
-    segments['track-id'] = data['track-id']
-    segments['end-occurrence'] = data['occurrence']
-    segments['end-x'] = data['x']
-    segments['end-y'] = data['y']
-    segments['start-occurrence'] = grouped['occurrence'].shift(1)
-    segments['start-x'] = grouped['x'].shift(1)
-    segments['start-y'] = grouped['y'].shift(1)
+    segments[TRACK_ID] = data[TRACK_ID]
+    segments[END_OCCURRENCE] = data[OCCURRENCE]
+    segments[END_X] = data[X]
+    segments[END_Y] = data[Y]
+    segments[START_OCCURRENCE] = grouped[OCCURRENCE].shift(1)
+    segments[START_X] = grouped[X].shift(1)
+    segments[START_Y] = grouped[Y].shift(1)
 
     # Remove rows where start values are NaN (first point of each track)
     segments = segments.dropna()
@@ -45,13 +65,20 @@ def create_track_segments(df: DataFrame) -> DataFrame:
     return segments
 
 
-def find_line_intersections(segments_df: DataFrame, line_id: str, start_x: float, start_y: float, 
-                           end_x: float, end_y: float) -> DataFrame:
+def find_line_intersections(
+    segments_df: DataFrame,
+    line_id: str,
+    start_x: float,
+    start_y: float,
+    end_x: float,
+    end_y: float,
+) -> DataFrame:
     """
     Find intersection points between track segments and a line.
 
     Args:
-        segments_df (DataFrame): DataFrame with track segments (output of create_track_segments)
+        segments_df (DataFrame): DataFrame with track segments (output of
+            create_track_segments)
         line_id (str): ID of the line
         start_x (float): X-coordinate of the line's start point
         start_y (float): Y-coordinate of the line's start point
@@ -59,11 +86,13 @@ def find_line_intersections(segments_df: DataFrame, line_id: str, start_x: float
         end_y (float): Y-coordinate of the line's end point
 
     Returns:
-        DataFrame: The input DataFrame with additional columns for intersection information:
-                  - 'intersects': Boolean indicating if the segment intersects with the line
-                  - 'intersection_x': X-coordinate of the intersection point (if any)
-                  - 'intersection_y': Y-coordinate of the intersection point (if any)
-                  - 'intersection_line_id': ID of the intersecting line
+        DataFrame: The input DataFrame with additional columns for intersection
+            information:
+                  - INTERSECTS: Boolean indicating if the segment intersects with the
+                        line
+                  - INTERSECTION_X: X-coordinate of the intersection point (if any)
+                  - INTERSECTION_Y: Y-coordinate of the intersection point (if any)
+                  - INTERSECTION_LINE_ID: ID of the intersecting line
     """
     if segments_df.empty:
         return segments_df
@@ -72,10 +101,10 @@ def find_line_intersections(segments_df: DataFrame, line_id: str, start_x: float
     result_df = segments_df.copy()
 
     # Initialize new columns
-    result_df['intersects'] = False
-    result_df['intersection_x'] = None
-    result_df['intersection_y'] = None
-    result_df['intersection_line_id'] = None
+    result_df[INTERSECTS] = False
+    result_df[INTERSECTION_X] = None
+    result_df[INTERSECTION_Y] = None
+    result_df[INTERSECTION_LINE_ID] = None
 
     # Define line segment coordinates
     line_x1, line_y1 = start_x, start_y
@@ -83,32 +112,48 @@ def find_line_intersections(segments_df: DataFrame, line_id: str, start_x: float
 
     # Calculate intersection using line segment intersection formula
     # First, calculate the denominator for all segments at once
-    denominator = ((line_y2 - line_y1) * (result_df['end-x'] - result_df['start-x']) - 
-                   (line_x2 - line_x1) * (result_df['end-y'] - result_df['start-y']))
+    denominator = (line_y2 - line_y1) * (result_df[END_X] - result_df[START_X]) - (
+        line_x2 - line_x1
+    ) * (result_df[END_Y] - result_df[START_Y])
 
     # Filter out segments where lines are parallel (denominator == 0)
     non_parallel_mask = denominator != 0
 
     if non_parallel_mask.any():
         # Calculate the parameters for the intersection points
-        ua = ((line_x2 - line_x1) * (result_df['start-y'] - line_y1) - 
-              (line_y2 - line_y1) * (result_df['start-x'] - line_x1)) / denominator
+        ua = (
+            (line_x2 - line_x1) * (result_df[START_Y] - line_y1)
+            - (line_y2 - line_y1) * (result_df[START_X] - line_x1)
+        ) / denominator
 
-        ub = ((result_df['end-x'] - result_df['start-x']) * (result_df['start-y'] - line_y1) - 
-              (result_df['end-y'] - result_df['start-y']) * (result_df['start-x'] - line_x1)) / denominator
+        ub = (
+            (result_df[END_X] - result_df[START_X]) * (result_df[START_Y] - line_y1)
+            - (result_df[END_Y] - result_df[START_Y]) * (result_df[START_X] - line_x1)
+        ) / denominator
 
-        # Create a mask for valid intersections (intersection point is on both line segments)
-        valid_intersection_mask = (0 <= ua) & (ua <= 1) & (0 <= ub) & (ub <= 1) & non_parallel_mask
+        # Create a mask for valid intersections (intersection point is on both line
+        # segments)
+        valid_intersection_mask = (
+            (0 <= ua) & (ua <= 1) & (0 <= ub) & (ub <= 1) & non_parallel_mask
+        )
 
         if valid_intersection_mask.any():
             # Calculate the intersection points for valid intersections
-            intersection_x = result_df['start-x'] + ua * (result_df['end-x'] - result_df['start-x'])
-            intersection_y = result_df['start-y'] + ua * (result_df['end-y'] - result_df['start-y'])
+            intersection_x = result_df[START_X] + ua * (
+                result_df[END_X] - result_df[START_X]
+            )
+            intersection_y = result_df[START_Y] + ua * (
+                result_df[END_Y] - result_df[START_Y]
+            )
 
             # Update the result DataFrame with intersection information
-            result_df.loc[valid_intersection_mask, 'intersects'] = True
-            result_df.loc[valid_intersection_mask, 'intersection_x'] = intersection_x[valid_intersection_mask]
-            result_df.loc[valid_intersection_mask, 'intersection_y'] = intersection_y[valid_intersection_mask]
-            result_df.loc[valid_intersection_mask, 'intersection_line_id'] = line_id
+            result_df.loc[valid_intersection_mask, INTERSECTS] = True
+            result_df.loc[valid_intersection_mask, INTERSECTION_X] = intersection_x[
+                valid_intersection_mask
+            ]
+            result_df.loc[valid_intersection_mask, INTERSECTION_Y] = intersection_y[
+                valid_intersection_mask
+            ]
+            result_df.loc[valid_intersection_mask, INTERSECTION_LINE_ID] = line_id
 
     return result_df
