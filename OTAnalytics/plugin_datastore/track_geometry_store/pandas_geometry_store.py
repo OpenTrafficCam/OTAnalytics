@@ -21,6 +21,7 @@ INTERSECTS = "intersects"
 INTERSECTION_X = "intersection_x"
 INTERSECTION_Y = "intersection_y"
 INTERSECTION_LINE_ID = "intersection_line_id"
+INTERSECTS_POLYGON = "intersects-polygon"
 
 # Column names for intersection parameters
 DENOMINATOR = "denominator"
@@ -340,7 +341,7 @@ def check_polygon_intersections(
         polygon (Polygon): The polygon to check intersections with
 
     Returns:
-        DataFrame: The input DataFrame with an additional column "intersects-polygon"
+        DataFrame: The input DataFrame with an additional column INTERSECTS_POLYGON
             indicating if the segment intersects with the polygon
     """
     if segments_df.empty:
@@ -350,7 +351,7 @@ def check_polygon_intersections(
     result_df = segments_df.copy()
 
     # Initialize the intersects-polygon column to False
-    result_df["intersects-polygon"] = False
+    result_df[INTERSECTS_POLYGON] = False
 
     # Get the coordinates of the polygon
     polygon_coordinates = polygon.coordinates
@@ -370,6 +371,6 @@ def check_polygon_intersections(
 
         # Update the result DataFrame
         if intersects_df[INTERSECTS].any():
-            result_df.loc[intersects_df[INTERSECTS], "intersects-polygon"] = True
+            result_df.loc[intersects_df[INTERSECTS], INTERSECTS_POLYGON] = True
 
     return result_df

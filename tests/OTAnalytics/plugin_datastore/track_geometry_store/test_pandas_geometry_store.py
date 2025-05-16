@@ -13,6 +13,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store imp
     INTERSECTION_X,
     INTERSECTION_Y,
     INTERSECTS,
+    INTERSECTS_POLYGON,
     OCCURRENCE,
     START_OCCURRENCE,
     START_X,
@@ -307,7 +308,7 @@ def test_check_polygon_intersections_no_intersections() -> None:
     result = check_polygon_intersections(segments_df, polygon)
 
     # Check that no segments intersect with the polygon
-    assert not result["intersects-polygon"].any()
+    assert not result[INTERSECTS_POLYGON].any()
 
 
 def test_check_polygon_intersections_with_intersections() -> None:
@@ -347,9 +348,9 @@ def test_check_polygon_intersections_with_intersections() -> None:
     result = check_polygon_intersections(segments_df, polygon)
 
     # Check that the first and third segments intersect with the polygon
-    assert result.iloc[0]["intersects-polygon"]
-    assert not result.iloc[1]["intersects-polygon"]
-    assert result.iloc[2]["intersects-polygon"]
+    assert result.iloc[0][INTERSECTS_POLYGON]
+    assert not result.iloc[1][INTERSECTS_POLYGON]
+    assert result.iloc[2][INTERSECTS_POLYGON]
 
     # Check the count of intersecting segments
-    assert result["intersects-polygon"].sum() == 2
+    assert result[INTERSECTS_POLYGON].sum() == 2
