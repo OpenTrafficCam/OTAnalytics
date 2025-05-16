@@ -1,6 +1,17 @@
+from dataclasses import dataclass
+from typing import Any, Iterable, Sequence
+
 from pandas import DataFrame
 
-from OTAnalytics.domain.geometry import Polygon
+from OTAnalytics.domain.common import DataclassValidation
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.section import Section, SectionId
+from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    IntersectionPoint,
+    TrackDataset,
+    TrackGeometryDataset,
+)
 
 # Column names for track points
 TRACK_ID = "track-id"
@@ -28,6 +39,30 @@ DENOMINATOR = "denominator"
 NON_PARALLEL = "non_parallel"
 UA = "ua"
 UB = "ub"
+
+
+@dataclass(frozen=True)
+class Polygon(DataclassValidation):
+    """A polygon is made up of line segments which form a closed polygonal chain.
+
+    Args:
+        coordinates (list[Coordinate]): the coordinates defining the polygon
+
+    Raises:
+        ValueError: if coordinates defining the polygon is less than 4
+        ValueError: if coordinates do not define a closed polygonal chain
+    """
+
+    coordinates: list[Coordinate]
+
+    def _validate(self) -> None:
+        if len(self.coordinates) < 2:
+            raise ValueError(
+                (
+                    "Number of coordinates to define a valid polygon must be "
+                    f"greater equal two, but is {len(self.coordinates)}"
+                )
+            )
 
 
 def create_track_segments(df: DataFrame) -> DataFrame:
@@ -374,3 +409,59 @@ def check_polygon_intersections(
             result_df.loc[intersects_df[INTERSECTS], INTERSECTS_POLYGON] = True
 
     return result_df
+
+
+class PandasTrackGeometryDataset(TrackGeometryDataset):
+    @property
+    def track_ids(self) -> set[str]:
+        # TODO Junie implement
+        raise NotImplementedError
+
+    @property
+    def offset(self) -> RelativeOffsetCoordinate:
+        # TODO Do not implement
+        raise NotImplementedError
+
+    @property
+    def empty(self) -> bool:
+        # TODO Junie implement
+        raise NotImplementedError
+
+    @staticmethod
+    def from_track_dataset(
+        dataset: TrackDataset, offset: RelativeOffsetCoordinate
+    ) -> "TrackGeometryDataset":
+        # TODO Do not implement
+        raise NotImplementedError
+
+    def add_all(self, tracks: Iterable[Track]) -> "TrackGeometryDataset":
+        # TODO Do not implement
+        raise NotImplementedError
+
+    def remove(self, ids: Sequence[str]) -> "TrackGeometryDataset":
+        # TODO Do not implement
+        raise NotImplementedError
+
+    def get_for(self, track_ids: list[str]) -> "TrackGeometryDataset":
+        # TODO Do not implement
+        raise NotImplementedError
+
+    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+        # TODO Junie implement
+        raise NotImplementedError
+
+    def intersection_points(
+        self, sections: list[Section]
+    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
+        # TODO Junie implement
+        raise NotImplementedError
+
+    def contained_by_sections(
+        self, sections: list[Section]
+    ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
+        # TODO Do not implement
+        raise NotImplementedError
+
+    def __eq__(self, other: Any) -> bool:
+        # TODO Junie implement
+        raise NotImplementedError

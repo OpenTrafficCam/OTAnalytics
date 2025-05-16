@@ -4,7 +4,7 @@ import pandas as pd
 from pandas import DataFrame
 from pytest import approx
 
-from OTAnalytics.domain.geometry import Coordinate, Polygon
+from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store import (
     END_OCCURRENCE,
     END_X,
@@ -19,6 +19,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store imp
     START_X,
     START_Y,
     TRACK_ID,
+    Polygon,
     X,
     Y,
     check_polygon_intersections,
