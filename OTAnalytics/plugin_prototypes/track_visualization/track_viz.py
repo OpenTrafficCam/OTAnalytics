@@ -17,8 +17,8 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import (
     DynamicLayersPlotter,
     EntityPlotterFactory,
-    GetCurrentFrame,
     GetCurrentVideoPath,
+    GetFrameNumber,
 )
 from OTAnalytics.application.state import (
     FlowState,
@@ -624,7 +624,7 @@ class FilterByFrame(PandasDataFrameProvider):
     def __init__(
         self,
         data_provider: PandasDataFrameProvider,
-        current_frame: GetCurrentFrame,
+        current_frame: GetFrameNumber,
     ) -> None:
         self._data_provider = data_provider
         self._current_frame = current_frame
@@ -633,7 +633,7 @@ class FilterByFrame(PandasDataFrameProvider):
         track_df = self._data_provider.get_data()
         if track_df.empty:
             return track_df
-        current_frame = self._current_frame.get_frame_number() + FRAME_OFFSET
+        current_frame = self._current_frame.get_frame_number()
         logger().debug(f"BBox plotter filter frame number: {current_frame}")
         return track_df[track_df[track.FRAME] == current_frame]
 
