@@ -307,7 +307,22 @@ class GetCurrentVideoPath:
         return None
 
 
-class GetCurrentFrame:
+class GetFrameNumber(ABC):
+    @abstractmethod
+    def get_frame_number(self) -> int:
+        raise NotImplementedError
+
+
+class ConstantOffsetFrameNumber(GetFrameNumber):
+    def __init__(self, other: GetFrameNumber, offset: int) -> None:
+        self._other = other
+        self._offset = offset
+
+    def get_frame_number(self) -> int:
+        return self._other.get_frame_number() + self._offset
+
+
+class GetCurrentFrame(GetFrameNumber):
     """
     This use case provides the currently visible frame. It uses the current filters
     end date to retrieve the corresponding frame.

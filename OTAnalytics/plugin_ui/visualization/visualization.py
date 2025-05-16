@@ -10,6 +10,7 @@ from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.plotting import (
     CachedPlotter,
+    ConstantOffsetFrameNumber,
     GetCurrentFrame,
     GetCurrentVideoPath,
     LayerGroup,
@@ -47,6 +48,7 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
 )
 from OTAnalytics.plugin_prototypes.event_visualization import PandasEventProvider
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    FRAME_OFFSET,
     EventToFlowResolver,
     FilterByClassification,
     FilterByFrame,
@@ -928,7 +930,7 @@ class VisualizationBuilder:
                         self._get_data_provider_class_filter(),
                         self._get_current_video,
                     ),
-                    self._get_current_frame,
+                    ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
                 ),
                 self._color_palette_provider,
                 self._track_view_state,
@@ -946,7 +948,7 @@ class VisualizationBuilder:
                         self._get_data_provider_class_filter_with_offset(),
                         self._get_current_video,
                     ),
-                    self._get_current_frame,
+                    ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_BOUNDING_BOX,
@@ -963,7 +965,7 @@ class VisualizationBuilder:
                         self._get_event_data_provider_class_filter(),
                         self._get_current_video,
                     ),
-                    self._get_current_frame,
+                    ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_BOUNDING_BOX,
