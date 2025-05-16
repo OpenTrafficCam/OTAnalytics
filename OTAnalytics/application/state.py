@@ -225,6 +225,7 @@ class LiveImage:
 
     def __init__(self) -> None:
         self.image = ObservableOptionalProperty[TrackImage]()
+        self.frame_number = ObservableOptionalProperty[int]()
 
 
 class TrackImageSizeUpdater:
