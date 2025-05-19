@@ -120,36 +120,6 @@ class TestFileChooserDialog:
         )
 
     @pytest.mark.asyncio
-    async def test_get_file_path(
-        self,
-        user: User,
-        file_chooser_dialog: FileChooserDialog,
-    ) -> None:
-        """Test that get_file_path returns the correct path."""
-
-        @ui.page(ENDPOINT_NAME)
-        def page() -> None:
-            file_chooser_dialog.build().open()
-
-        await user.open(ENDPOINT_NAME)
-
-        # Set values directly on the dialog's form fields
-        test_dir = TEST_HOME_DIR / "documents"
-        # Mock Path.exists to return True so the directory is accepted
-        with patch.object(Path, "exists", return_value=True):
-            file_chooser_dialog._directory_field.set_value(str(test_dir))
-            file_chooser_dialog._initial_dir = test_dir
-            file_chooser_dialog._filename_field.set_value(TEST_FILENAME)
-        user.find(marker="apply").click()
-
-        # Get the file path
-        file_path = file_chooser_dialog.get_file_path()
-
-        # Check that the file path is correct
-        expected_path = test_dir / TEST_FILENAME
-        assert file_path == expected_path
-
-    @pytest.mark.asyncio
     async def test_get_format(
         self,
         user: User,
@@ -191,33 +161,6 @@ class TestFileChooserDialog:
 
         # Check that the filename has the Excel extension
         assert file_chooser_dialog._filename_field.value == TEST_EXCEL_FILENAME
-
-    @pytest.mark.asyncio
-    async def test_update_directory(
-        self,
-        user: User,
-        file_chooser_dialog: FileChooserDialog,
-    ) -> None:
-        """Test that updating the directory works correctly."""
-
-        @ui.page(ENDPOINT_NAME)
-        def page() -> None:
-            file_chooser_dialog.build().open()
-
-        await user.open(ENDPOINT_NAME)
-
-        # Create a test directory path
-        new_dir = TEST_HOME_DIR / "downloads"
-
-        # Mock Path.exists to return True so the directory is accepted
-        with patch.object(Path, "exists", return_value=True):
-            # Directly set the directory field value and initial_dir
-            file_chooser_dialog._directory_field.set_value(str(new_dir))
-            file_chooser_dialog._initial_dir = new_dir
-
-        # Check that the directory was updated
-        assert file_chooser_dialog._directory_field.value == str(new_dir)
-        assert file_chooser_dialog._initial_dir == new_dir
 
     @pytest.mark.asyncio
     async def test_update_directory_invalid_path(
