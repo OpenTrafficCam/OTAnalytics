@@ -115,8 +115,12 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
     def update(self, name: str, start_date: Optional[datetime]) -> None:
         if self._project_name._instance:
             self._project_name.set_value(name)
-            if start_date:
-                self._start_date.set_value(start_date)
+        if (
+            start_date
+            and hasattr(self._start_date, "_start_date")
+            and self._start_date._start_date._instance
+        ):
+            self._start_date.set_value(start_date)
 
     def get_general_buttons(self) -> list[Button]:
         buttons = []

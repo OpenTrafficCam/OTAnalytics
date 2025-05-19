@@ -215,7 +215,7 @@ class FormFieldText(FormField[Input, str]):
             self._label_text,
             value=self._initial_value,
             validation=self._validation,
-        )
+        ).classes("w-full")
         if self._on_value_change:
             self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)
@@ -292,7 +292,7 @@ class FormFieldFloat(FormField[Number, float]):
             precision=self._precision,
             validation=self._validation,
             step=self._step,
-        )
+        ).classes("w-full")
         self._apply(self.element)
 
 
@@ -365,7 +365,7 @@ class FormFieldOptionalFloat(FormField[Number, float | None]):
             precision=self._precision,
             validation=self._validation,
             step=self._step,
-        )
+        ).classes("w-full")
         self._apply(self.element)
 
 
@@ -438,7 +438,7 @@ class FormFieldInteger(FormField[Number, int]):
             precision=self._precision,
             validation=self._validation,
             step=self._step,
-        )
+        ).classes("w-full")
         if self._on_value_change:
             self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)
@@ -804,7 +804,7 @@ class FormFieldSelect(FormField[Select, str]):
             label=self._label_text,
             options=self._options,
             value=self._initial_value if self._initial_value else self._options[0],
-        )
+        ).classes("w-full")
         if self._on_value_change:
             self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)
