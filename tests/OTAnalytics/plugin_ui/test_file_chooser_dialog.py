@@ -34,13 +34,15 @@ def file_chooser_dialog(resource_manager: Mock) -> FileChooserDialog:
 
 @pytest.fixture
 def file_chooser_dialog_with_dir(resource_manager: Mock) -> FileChooserDialog:
-    return FileChooserDialog(
-        resource_manager=resource_manager,
-        title=TEST_TITLE,
-        file_extensions=TEST_FILE_EXTENSIONS,
-        initial_file_stem=TEST_INITIAL_FILE_STEM,
-        initial_dir=TEST_DIRECTORY,
-    )
+    # Mock Path.exists to return True so the directory is accepted
+    with patch.object(Path, "exists", return_value=True):
+        return FileChooserDialog(
+            resource_manager=resource_manager,
+            title=TEST_TITLE,
+            file_extensions=TEST_FILE_EXTENSIONS,
+            initial_file_stem=TEST_INITIAL_FILE_STEM,
+            initial_dir=TEST_DIRECTORY,
+        )
 
 
 class TestFileChooserDialog:
@@ -133,8 +135,11 @@ class TestFileChooserDialog:
 
         # Set values directly on the dialog's form fields
         test_dir = TEST_HOME_DIR / "documents"
-        file_chooser_dialog._directory_field.set_value(str(test_dir))
-        file_chooser_dialog._filename_field.set_value(TEST_FILENAME)
+        # Mock Path.exists to return True so the directory is accepted
+        with patch.object(Path, "exists", return_value=True):
+            file_chooser_dialog._directory_field.set_value(str(test_dir))
+            file_chooser_dialog._initial_dir = test_dir
+            file_chooser_dialog._filename_field.set_value(TEST_FILENAME)
         user.find(marker="apply").click()
 
         # Get the file path
@@ -204,9 +209,11 @@ class TestFileChooserDialog:
         # Create a test directory path
         new_dir = TEST_HOME_DIR / "downloads"
 
-        # Directly set the directory field value and initial_dir
-        file_chooser_dialog._directory_field.set_value(str(new_dir))
-        file_chooser_dialog._initial_dir = new_dir
+        # Mock Path.exists to return True so the directory is accepted
+        with patch.object(Path, "exists", return_value=True):
+            # Directly set the directory field value and initial_dir
+            file_chooser_dialog._directory_field.set_value(str(new_dir))
+            file_chooser_dialog._initial_dir = new_dir
 
         # Check that the directory was updated
         assert file_chooser_dialog._directory_field.value == str(new_dir)
