@@ -6,8 +6,12 @@ from pandas import DataFrame
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
 from OTAnalytics.domain.track import TrackId
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    TRACK_GEOMETRY_FACTORY,
+    TrackDataset,
+)
 from OTAnalytics.plugin_datastore.track_store import (
+    LEVEL_TRACK_ID,
     PandasTrackClassificationCalculator,
     PandasTrackDataset,
 )
@@ -119,7 +123,30 @@ class PandasDetectionParser(DetectionParser):
             .set_index([track.TRACK_ID, track.OCCURRENCE])
         )
         tracks_to_remain.index.names = [track.TRACK_ID, track.OCCURRENCE]
+        tracks_to_remain = _assign_original_track_id(tracks_to_remain)
         tracks_to_remain = tracks_to_remain.sort_index()
         return PandasTrackDataset.from_dataframe(
             tracks_to_remain, self._track_geometry_factory, calculator=self._calculator
         )
+
+
+def _assign_original_track_id(track_df: DataFrame) -> DataFrame:
+    """
+    Assigns the original track ID to each row in the given DataFrame.
+
+    This function takes a DataFrame and assigns a new column named
+    `ORIGINAL_TRACK_ID`, which contains the original track ID value for
+    each row. The original track ID is retrieved from the index
+    level specified as `LEVEL_TRACK_ID`.
+
+    Args:
+        track_df (DataFrame): The input DataFrame containing data with a
+            multi-level index. One of the index levels is assumed to
+            represent track IDs.
+
+    Returns:
+        DataFrame: The updated DataFrame with an additional column named
+            `ORIGINAL_TRACK_ID` containing the original track IDs.
+    """
+    track_df[track.ORIGINAL_TRACK_ID] = track_df.index.get_level_values(LEVEL_TRACK_ID)
+    return track_df

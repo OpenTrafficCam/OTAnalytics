@@ -43,7 +43,10 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionRepository,
 )
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    TRACK_GEOMETRY_FACTORY,
+    TrackDataset,
+)
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter

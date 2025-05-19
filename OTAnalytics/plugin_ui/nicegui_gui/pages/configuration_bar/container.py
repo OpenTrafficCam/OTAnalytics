@@ -10,11 +10,11 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import Anal
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     ProjectForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
     SectionsAndFlowForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.svz_metadata_form.svz_metadata_form import (  # noqa
+    SvzMetadataForm,
 )
 
 

@@ -12,7 +12,7 @@ from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import (
+from OTAnalytics.domain.track_dataset.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
     IntersectionPoint,
     TrackDataset,

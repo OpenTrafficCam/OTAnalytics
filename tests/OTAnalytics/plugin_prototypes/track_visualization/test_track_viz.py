@@ -205,7 +205,7 @@ class TestCachedPandasTrackProvider:
                 "video_name.ottrk",
             ),
         ]
-        return PythonTrack(t_id, "car", detections)
+        return PythonTrack(t_id, t_id, "car", detections)
 
     def set_up_provider(
         self, init_tracks: list[Track], query_tracks: list[Track]

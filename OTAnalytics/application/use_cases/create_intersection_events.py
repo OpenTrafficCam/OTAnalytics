@@ -15,7 +15,7 @@ from OTAnalytics.domain.geometry import (
 )
 from OTAnalytics.domain.intersect import Intersector, IntersectParallelizationStrategy
 from OTAnalytics.domain.section import Area, LineSection, Section
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.types import EventType
 
 

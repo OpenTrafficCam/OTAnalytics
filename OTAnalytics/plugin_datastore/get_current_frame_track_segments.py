@@ -1,18 +1,14 @@
-from typing import Protocol
-
 from OTAnalytics.application.use_cases.create_intersection_events import GetTracks
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
+from OTAnalytics.plugin_datastore.pandas_track_dataset_factory import (
+    PandasTrackDatasetFactory,
+)
 from OTAnalytics.plugin_datastore.track_store import (
     FilterByIdPandasTrackDataset,
     FilterLastNDetectionsPandasTrackDataset,
-    PandasTrackDataset,
 )
 
 NUMBER_OF_DETECTIONS_TO_FORM_SEGMENT = 2
-
-
-class PandasTrackDatasetFactory(Protocol):
-    def from_dataset(self, other: TrackDataset) -> PandasTrackDataset: ...
 
 
 class GetCurrentFrameTrackSegments:

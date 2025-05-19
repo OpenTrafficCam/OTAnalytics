@@ -10,9 +10,6 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
 
 
 class AnalysisForm(ButtonForm, AbstractFrame):

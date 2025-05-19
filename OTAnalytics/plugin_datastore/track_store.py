@@ -16,7 +16,11 @@ from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
-from OTAnalytics.domain.track_dataset import (
+from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
+    FilterByClassTrackDataset,
+    FilteredTrackDataset,
+)
+from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
     END_OCCURRENCE,
     END_VIDEO_NAME,
@@ -28,8 +32,6 @@ from OTAnalytics.domain.track_dataset import (
     START_X,
     START_Y,
     TRACK_GEOMETRY_FACTORY,
-    FilterByClassTrackDataset,
-    FilteredTrackDataset,
     IntersectionPoint,
     TrackDataset,
     TrackDoesNotExistError,
@@ -125,6 +127,10 @@ class PandasTrack(Track):
         return TrackId(self._id)
 
     @property
+    def original_id(self) -> TrackId:
+        return TrackId(self._data[track.ORIGINAL_TRACK_ID].iloc[0])
+
+    @property
     def classification(self) -> str:
         return self._data[track.TRACK_CLASSIFICATION].iloc[0]
 
@@ -201,6 +207,7 @@ COLUMNS = [
     track.INPUT_FILE,
     track.TRACK_ID,
     track.TRACK_CLASSIFICATION,
+    track.ORIGINAL_TRACK_ID,
 ]
 DEFAULT_CLASSIFICATOR = PandasByMaxConfidence()
 INDEX_NAMES = [track.TRACK_ID, track.OCCURRENCE]
@@ -331,10 +338,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     ) -> "PandasTrackDataset":
         if tracks.empty:
             return PandasTrackDataset(track_geometry_factory)
-        classified_tracks = _assign_track_classification(tracks, calculator)
+        result = _assign_track_classification(tracks, calculator)
         return PandasTrackDataset(
             track_geometry_factory,
-            classified_tracks,
+            result,
             geometry_datasets=geometry_dataset,
         )
 
@@ -638,6 +645,93 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
                 "Some tracks do not exists in dataset with given id"
             ) from cause
 
+    def revert_cuts_for(
+        self, original_track_ids: frozenset[TrackId]
+    ) -> tuple["PandasTrackDataset", frozenset[TrackId], frozenset[TrackId]]:
+        if self._dataset.empty:
+            return self, frozenset(), frozenset()
+        ids_to_revert = self._get_existing_cut_track_ids(original_track_ids)
+        result = self._dataset.reset_index()
+        mask_ids_to_revert = result[track.TRACK_ID].isin(ids_to_revert)
+        col_reverted_track_ids = result.loc[mask_ids_to_revert, track.ORIGINAL_TRACK_ID]
+        result.loc[mask_ids_to_revert, track.TRACK_ID] = col_reverted_track_ids
+        result = result.set_index(INDEX_NAMES)
+        geometry_dataset = self._remove_from_geometry_dataset(ids_to_revert)
+
+        reverted_track_dataset = PandasTrackDataset.from_dataframe(
+            result,
+            self.track_geometry_factory,
+            geometry_dataset=geometry_dataset,
+            calculator=self.calculator,
+        )
+        removed_ids = to_domain_ids(ids_to_revert)
+        reverted_ids = frozenset(
+            TrackId(_id) for _id in col_reverted_track_ids.unique()
+        )
+        return (
+            reverted_track_dataset,
+            reverted_ids,
+            removed_ids,
+        )
+
+    def _get_existing_cut_track_ids(self, track_ids: frozenset[TrackId]) -> list[str]:
+        """
+        Retrieves a list of unique track IDs from the dataset that exist in the provided
+        set of track IDs and that also have undergone cutting operations.
+
+        Args:
+            track_ids (frozenset[TrackId]): track IDs to be checked against the dataset.
+
+        Returns:
+            list[str]: unique track IDs from the dataset that are found in the provided
+            set of track IDs and have undergone cutting operations.
+        """
+        raw_ids = to_raw_ids(track_ids)
+
+        mask_cut_tracks = (
+            self._dataset.index.get_level_values(LEVEL_TRACK_ID)
+            != self._dataset[track.ORIGINAL_TRACK_ID]
+        )
+        mask_existing_ids = self._dataset[track.ORIGINAL_TRACK_ID].isin(raw_ids)
+
+        return list(
+            self._dataset.loc[mask_cut_tracks & mask_existing_ids].index.unique(
+                LEVEL_TRACK_ID
+            )
+        )
+
+    def remove_by_original_ids(
+        self, original_ids: frozenset[TrackId]
+    ) -> tuple["PandasTrackDataset", frozenset[TrackId]]:
+        raw_ids = to_raw_ids(original_ids)
+
+        mask_remove = self._dataset[track.ORIGINAL_TRACK_ID].isin(raw_ids)
+        ids_to_remove = list(
+            self._dataset.loc[mask_remove]
+            .index.get_level_values(LEVEL_TRACK_ID)
+            .unique()
+        )
+        filtered_dataset = self._dataset.loc[~mask_remove]
+        updated_geometry_dataset = self._remove_from_geometry_dataset(ids_to_remove)
+
+        updated_track_dataset = PandasTrackDataset(
+            dataset=filtered_dataset,
+            calculator=self.calculator,
+            track_geometry_factory=self.track_geometry_factory,
+            geometry_datasets=updated_geometry_dataset,
+        )
+        removed_track_ids = to_domain_ids(ids_to_remove)
+
+        return updated_track_dataset, removed_track_ids
+
+
+def to_raw_ids(track_ids: Iterable[TrackId]) -> frozenset[str]:
+    return frozenset((track_id.id for track_id in track_ids))
+
+
+def to_domain_ids(raw_ids: Iterable[str]) -> frozenset[TrackId]:
+    return frozenset((TrackId(raw_id) for raw_id in raw_ids))
+
 
 class FilteredPandasTrackDataset(
     FilteredTrackDataset, PandasTrackDataset, PandasDataFrameProvider
@@ -685,6 +779,20 @@ class FilteredPandasTrackDataset(
 
     def get_data(self) -> DataFrame:
         return self._filter().get_data()
+
+    def revert_cuts_for(
+        self, original_track_ids: frozenset[TrackId]
+    ) -> tuple[PandasTrackDataset, frozenset[TrackId], frozenset[TrackId]]:
+        reverted_dataset, reverted_ids, cut_ids = self._other.revert_cuts_for(
+            original_track_ids
+        )
+        return self.wrap(reverted_dataset), reverted_ids, cut_ids
+
+    def remove_by_original_ids(
+        self, original_ids: frozenset[TrackId]
+    ) -> tuple["PandasTrackDataset", frozenset[TrackId]]:
+        updated_dataset, removed_ids = self._other.remove_by_original_ids(original_ids)
+        return self.wrap(updated_dataset), removed_ids
 
 
 class FilterByClassPandasTrackDataset(
@@ -948,7 +1056,9 @@ def _convert_tracks(tracks: Iterable[Track]) -> DataFrame:
     prepared: list[dict] = []
     for current_track in list(tracks):
         for detection in current_track.detections:
-            prepared.append(detection.to_dict())
+            dto = detection.to_dict()
+            dto[track.ORIGINAL_TRACK_ID] = current_track.original_id.id
+            prepared.append(dto)
 
     if not prepared:
         return DataFrame(prepared)
@@ -992,41 +1102,3 @@ def get_rows_by_track_ids(dataframe: DataFrame, track_ids: ListLike) -> DataFram
     return dataframe.loc[
         dataframe.index.get_level_values(LEVEL_TRACK_ID).isin(track_ids)
     ]
-
-
-class PandasTrackDatasetFactory:
-    """Factory class for creating PandasTrackDataset objects from TrackDataset objects.
-
-    Args:
-        track_geometry_factory (TRACK_GEOMETRY_FACTORY): used for creating track
-            geometries for the dataset.
-        calculator (PandasTrackClassificationCalculator): used for calculating the track
-            classification tracks.
-    """
-
-    def __init__(
-        self,
-        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
-        calculator: PandasTrackClassificationCalculator,
-    ) -> None:
-        self.track_geometry_factory = track_geometry_factory
-        self.calculator = calculator
-
-    def create(self, track_dataset: TrackDataset) -> PandasTrackDataset:
-        """
-        Creates an instance of PandasTrackDataset from a given TrackDataset.
-
-        Args:
-            track_dataset: the TrackDataset to create an instance of PandasTrackDataset.
-
-        Returns:
-            PandasTrackDataset: A Pandas-based implementation of the track dataset.
-        """
-        if isinstance(track_dataset, PandasTrackDataset):
-            return track_dataset
-        else:
-            return PandasTrackDataset.from_list(
-                track_dataset.as_list(),
-                self.track_geometry_factory,
-                self.calculator,
-            )

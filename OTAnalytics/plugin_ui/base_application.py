@@ -37,11 +37,12 @@ from OTAnalytics.application.state import (
     FlowState,
     SectionState,
     SelectedVideoUpdate,
+    TrackImageSizeUpdater,
     TrackImageUpdater,
-    TrackPropertiesUpdater,
     TracksMetadata,
     TrackState,
     TrackViewState,
+    VideoImageSizeUpdater,
     VideosMetadata,
 )
 from OTAnalytics.application.ui.frame_control import (
@@ -80,6 +81,7 @@ from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearAllEvents,
     GetAllEnterSectionEvents,
+    RemoveEventsByRoadUserId,
 )
 from OTAnalytics.application.use_cases.filter_visualization import (
     CreateDefaultFilter,
@@ -153,6 +155,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTracks,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
+    RemoveTracksByOriginalIds,
     TrackRepositorySize,
 )
 from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
@@ -176,9 +179,13 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import TrackIdProvider
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_datastore.pandas_track_dataset_factory import (
+    PandasTrackDatasetFactory,
+    TypeCheckingPandasTrackDatasetFactory,
+)
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
@@ -187,7 +194,6 @@ from OTAnalytics.plugin_datastore.track_store import (
     FilterByClassPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
-    PandasTrackDatasetFactory,
 )
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
@@ -514,8 +520,12 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     @cached_property
-    def track_properties_updater(self) -> TrackPropertiesUpdater:
-        return TrackPropertiesUpdater(self.datastore, self.track_view_state)
+    def video_image_size_updater(self) -> VideoImageSizeUpdater:
+        return VideoImageSizeUpdater(self.track_image_size_updater)
+
+    @cached_property
+    def track_image_size_updater(self) -> TrackImageSizeUpdater:
+        return TrackImageSizeUpdater(self.track_view_state)
 
     @cached_property
     def clear_all_intersections(self) -> ClearAllIntersections:
@@ -978,7 +988,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def pandas_track_dataset_factory(self) -> PandasTrackDatasetFactory:
-        return PandasTrackDatasetFactory(
+        return TypeCheckingPandasTrackDatasetFactory(
             self.track_geometry_factory, self.pandas_by_max_confidence
         )
 
@@ -989,6 +999,14 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
         return ShapelyTrackGeometryDataset.from_track_dataset
+
+    @cached_property
+    def remove_events_by_road_user_id(self) -> RemoveEventsByRoadUserId:
+        return RemoveEventsByRoadUserId(self.event_repository)
+
+    @cached_property
+    def remove_tracks_by_original_ids(self) -> RemoveTracksByOriginalIds:
+        return RemoveTracksByOriginalIds(self.track_repository)
 
 
 def create_format_fixer(
