@@ -35,6 +35,8 @@ from tests.utils.builders import event_builder
 
 SECTION_ID_1 = SectionId("section 1")
 SECTION_ID_2 = SectionId("section 2")
+ROAD_USER_ID_1 = TrackId("road_user_1")
+ROAD_USER_ID_2 = TrackId("road_user_2")
 
 EVENT_OCCURRENCE = datetime(2022, 1, 1, 0, 0, 0, 0)
 INTERPOLATED_EVENT_OCCURRENCE = datetime(2022, 12, 31, 23, 59, 59, 0)
@@ -315,6 +317,7 @@ def enter_scene_event_1() -> Event:
         .clean_section_id()
         .add_event_type(EventType.ENTER_SCENE.value)
         .add_second(1)
+        .add_road_user_id(ROAD_USER_ID_1.id)
         .build_section_event()
     )
 
@@ -325,6 +328,7 @@ def event_1_section_1() -> Event:
         .add_section_id(SECTION_ID_1.id)
         .add_event_type(EventType.SECTION_ENTER.value)
         .add_second(1)
+        .add_road_user_id(ROAD_USER_ID_1.id)
         .build_section_event()
     )
 
@@ -335,6 +339,7 @@ def event_1_section_2() -> Event:
         .add_section_id(SECTION_ID_2.id)
         .add_event_type(EventType.SECTION_ENTER.value)
         .add_second(2)
+        .add_road_user_id(ROAD_USER_ID_1.id)
         .build_section_event()
     )
 
@@ -345,6 +350,7 @@ def event_2_section_1() -> Event:
         .add_section_id(SECTION_ID_1.id)
         .add_event_type(EventType.SECTION_LEAVE.value)
         .add_second(3)
+        .add_road_user_id(ROAD_USER_ID_1.id)
         .build_section_event()
     )
 
@@ -355,6 +361,29 @@ def event_2_section_2() -> Event:
         .add_section_id(SECTION_ID_2.id)
         .add_event_type(EventType.SECTION_LEAVE.value)
         .add_second(4)
+        .add_road_user_id(ROAD_USER_ID_1.id)
+        .build_section_event()
+    )
+
+
+def event_3_section_1_road_user_2() -> Event:
+    return (
+        event_builder.EventBuilder()
+        .add_section_id(SECTION_ID_1.id)
+        .add_event_type(EventType.SECTION_ENTER.value)
+        .add_second(1)
+        .add_road_user_id(ROAD_USER_ID_2.id)
+        .build_section_event()
+    )
+
+
+def event_3_section_2_road_user_2() -> Event:
+    return (
+        event_builder.EventBuilder()
+        .add_section_id(SECTION_ID_2.id)
+        .add_event_type(EventType.SECTION_LEAVE.value)
+        .add_second(2)
+        .add_road_user_id(ROAD_USER_ID_2.id)
         .build_section_event()
     )
 
@@ -419,15 +448,15 @@ class TestEventRepository:
         subject.notify.assert_called_with(EventRepositoryEvent([event_1_1], []))
 
     def test_add_all(self) -> None:
-        first_event = Mock()
-        second_event = Mock()
+        first_event = event_1_section_1()
+        second_event = event_1_section_2()
         subject = Mock()
         repository = EventRepository(subject)
 
         repository.add_all([first_event, second_event])
+        actual = list(repository.get_all())
+        assert actual == [first_event, second_event]
 
-        assert first_event in repository.get_all()
-        assert second_event in repository.get_all()
         subject.notify.assert_called_with(
             EventRepositoryEvent([first_event, second_event], [])
         )
@@ -487,39 +516,43 @@ class TestEventRepository:
         assert not missing_sections
 
     def test_clear(self) -> None:
-        first_event = Mock()
-        first_event.section_id = SectionId("1")
-        second_event = Mock()
-        second_event.section_id = SectionId("2")
-        non_section_event = Mock()
-        non_section_event.section_id = None
-
         subject = Mock()
         repository = EventRepository(subject)
 
-        repository.add_all([first_event, second_event, non_section_event])
+        repository.add_all(
+            [
+                event_1_section_1(),
+                event_1_section_2(),
+                event_2_section_1(),
+                enter_scene_event_1(),
+            ]
+        )
         repository.clear()
 
         assert not list(repository.get_all())
         subject.notify.assert_called_with(
-            EventRepositoryEvent([], [non_section_event, first_event, second_event])
+            EventRepositoryEvent(
+                [],
+                [
+                    enter_scene_event_1(),
+                    event_1_section_1(),
+                    event_2_section_1(),
+                    event_1_section_2(),
+                ],
+            )
         )
 
     def test_remove(self) -> None:
-        section_1 = SectionId("1")
-        section_2 = SectionId("2")
-        first_event = Mock()
-        first_event.section_id = section_1
-        second_event = Mock()
-        second_event.section_id = section_2
         subject = Mock()
         repository = EventRepository(subject)
 
-        repository.add_all([first_event, second_event])
-        repository.remove([section_1])
+        repository.add_all([event_1_section_1(), event_1_section_2()])
+        repository.remove([SECTION_ID_1])
 
-        assert [second_event] == list(repository.get_all())
-        subject.notify.assert_called_with(EventRepositoryEvent([], [first_event]))
+        assert [event_1_section_2()] == list(repository.get_all())
+        subject.notify.assert_called_with(
+            EventRepositoryEvent([], [event_1_section_1()])
+        )
 
     def test_remove_section_without_events(self) -> None:
         section_1 = SectionId("1")
@@ -543,12 +576,12 @@ class TestEventRepository:
 
     def test_get_all(self) -> None:
         repository = EventRepository()
-        first_event = Mock()
-        second_event = Mock()
+        first_event = event_1_section_1()
+        second_event = event_2_section_2()
         repository.add_all([first_event, second_event])
-        all_events = repository.get_all()
-        assert all_events == [first_event, second_event]
-        assert all_events  # ensure all events can not be exhausted
+        actual = repository.get_all()
+        assert actual == [first_event, second_event]
+        assert actual  # ensure all events can not be exhausted
 
     @pytest.mark.parametrize(
         "input_event,expected_event,sections",
@@ -703,3 +736,23 @@ class TestEventRepository:
         )
 
         assert actual_events == expected_events
+
+    def test_remove_events_by_road_user_ids(self) -> None:
+        target = EventRepository()
+        target.add_all(
+            [
+                event_1_section_1(),
+                event_2_section_2(),
+                event_3_section_1_road_user_2(),
+                event_3_section_2_road_user_2(),
+                enter_scene_event_1(),
+            ]
+        )
+
+        target.remove_events_by_road_user_ids([ROAD_USER_ID_1])
+        actual = list(target.get_all())
+
+        assert actual == [
+            event_3_section_1_road_user_2(),
+            event_3_section_2_road_user_2(),
+        ]

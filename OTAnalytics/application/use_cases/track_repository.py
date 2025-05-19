@@ -203,3 +203,26 @@ class TrackRepositorySize:
 
         """
         return len(self._track_repository)
+
+
+class RemoveTracksByOriginalIds:
+    """
+    Handles the removal of tracks from a repository using their original IDs.
+
+    Args:
+        track_repository: The repository instance that provides access to track
+            data.
+    """
+
+    def __init__(self, track_repository: TrackRepository) -> None:
+        self._track_repository = track_repository
+
+    def remove(self, original_ids: frozenset[TrackId]) -> None:
+        """
+        Removes tracks from the track repository using their original IDs.
+
+        Args:
+            original_ids (frozenset[TrackId]): The original track IDs representing
+                the tracks to be removed.
+        """
+        self._track_repository.remove_by_original_ids(original_ids)

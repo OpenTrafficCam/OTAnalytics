@@ -7,6 +7,7 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepositoryEvent,
 )
+from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 
@@ -63,3 +64,35 @@ class GetAllEnterSectionEvents:
 
     def get(self) -> Iterable[Event]:
         return self._event_repository.get(event_types=[EventType.SECTION_ENTER])
+
+
+class RemoveEventsByRoadUserId(TrackListObserver):
+    """
+    Use case to handle the removal of events associated with specific road user IDs.
+
+    This class is responsible for interacting with an `EventRepository` to manage
+    the deletion of events that are linked to one or multiple road user IDs.
+
+    Args:
+        event_repository (EventRepository): The repository instance that implements data
+            access operations for events.
+    """
+
+    def __init__(self, event_repository: EventRepository) -> None:
+        self._event_repository = event_repository
+
+    def remove_multiple(self, road_user_ids: Iterable[TrackId]) -> None:
+        """
+        Removes multiple road user events associated with the given road user IDs.
+
+        This method interacts with the event repository to remove all events
+        associated with the provided road user IDs.
+
+        Args:
+            road_user_ids (Iterable[TrackId]): A collection of road user IDs whose
+                events should be removed.
+        """
+        self._event_repository.remove_events_by_road_user_ids(road_user_ids)
+
+    def notify_tracks(self, event: TrackRepositoryEvent) -> None:
+        self.remove_multiple(event.removed)
