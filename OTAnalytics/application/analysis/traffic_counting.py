@@ -1,8 +1,13 @@
+import re
+import unicodedata
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from os.path import join
 from typing import Callable, Iterable, Optional
+
+from PIL.Image import Image
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -925,7 +930,10 @@ class TrafficCounting:
             specification (CountingSpecificationDto): specification of the export
         """
         if self._event_repository.is_empty():
-            self._create_events()
+            # todo for testing count plotters only,
+            # todo undo later when adding custom plotter trigger
+            #    self._create_events()
+            return CountByFlow(result=dict())
 
         if specification.count_all_events:
             events = self._event_repository.get_all()
@@ -979,7 +987,7 @@ class ExportTrafficCounting(ExportCounts):
             create_events,
             assigner,
             tagger_factory,
-        )
+        )  # TODO accept traffic counting as only constructor arg (+exporter_factory)
 
         self._exporter_factory = exporter_factory
 
@@ -1008,3 +1016,45 @@ class ExportTrafficCounting(ExportCounts):
             Iterable[ExportFormat]: supported export formats
         """
         return self._exporter_factory.get_supported_formats()
+
+
+@dataclass(frozen=True)
+class CountsImage:
+    """
+    Represents an image with a counts plot.
+    """
+
+    image: Image
+    width: int
+    height: int
+    name: str
+    timestamp: datetime
+
+    def save(self, path: str) -> None:
+        time = self.timestamp.strftime("%d_%m_%Y__%H_%M_%S")
+        self.image.save(join(path, f"counts_plot_{self.safe_filename()}_{time}.png"))
+
+    def safe_filename(self, max_length: int = 255, replacement: str = "_") -> str:
+        """Create a string from image name that can be used as filename.
+        Use ascii only and replace illegal characters (/:*?"<>|),
+        whitespaces and linebreaks.
+        Remove sequences of replacement char and truncate to max_length.
+
+        Args:
+            max_length (int, optional): length for truncating resulting file name.
+                Defaults to 255.
+            replacement (str, optional): character to replace illegal characters
+                in image name. Defaults to "_".
+
+        Returns:
+            str: string safe to use as filename
+        """
+        safe = (
+            unicodedata.normalize("NFKD", self.name).encode("ascii", "ignore").decode()
+        )
+        safe = re.sub(r'[<>:"/\\|?*\n\r\t]', replacement, safe)
+        safe = re.sub(r"\s+", replacement, safe)
+        safe = re.sub(rf"{re.escape(replacement)}+", replacement, safe)
+        safe = safe.strip(replacement)
+        # Truncate to max length (preserving file extension if needed)
+        return safe[:max_length]

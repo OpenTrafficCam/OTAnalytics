@@ -5,8 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Generic, Optional
 
-from plugin_ui.visualization.counts.counts_plotter import CountsImage
-
+from OTAnalytics.application.analysis.traffic_counting import CountsImage
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.playback import SkipTime
