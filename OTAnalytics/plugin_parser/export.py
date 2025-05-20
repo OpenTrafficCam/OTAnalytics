@@ -77,7 +77,7 @@ def count_dict_to_dataframe(count_dict: dict[Tag, int]) -> DataFrame:
 
     # set column order
     dataframe = dataframe[
-        DESIRED_COLUMNS_ORDER
+        [col for col in DESIRED_COLUMNS_ORDER if col in dataframe.columns]
         + [col for col in dataframe.columns if col not in DESIRED_COLUMNS_ORDER]
     ]
     dataframe = dataframe.sort_values(
