@@ -1,4 +1,4 @@
-from typing import Iterable, Self
+from typing import Any, Iterable, Self
 
 from nicegui import ui
 from nicegui.elements.button import Button
@@ -16,6 +16,10 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
     CustomTable,
 )
+
+BUTTON_WIDTH = "width: 47%"
+BASIC_WIDTH = "width: 100%"
+MARKER_SECTION_TABLE = "marker-section-table"
 
 
 def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
@@ -51,6 +55,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
             rows=[],
             on_select_method=lambda e: self._select_section(e.selection),
             selection="single",
+            marker=MARKER_SECTION_TABLE,
         )
         self._toggle = False
         self._button_edit: ui.button | None = None
@@ -65,36 +70,36 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
         self._viewmodel.set_sections_frame(self)
         self._viewmodel.set_treeview_sections(self)
 
-    def _select_section(self, events: dict) -> None:
+    def _select_section(self, events: list[dict[str, Any]]) -> None:
         selected_sections = [event[COLUMN_ID] for event in events]
         self._viewmodel.set_selected_section_ids(selected_sections)
 
     def build(self) -> Self:
         self._section_table.build()
-        with ui.grid(rows=3):
-            with ui.row():
+        with ui.grid(rows=3).style(BASIC_WIDTH):
+            with ui.row().style(BASIC_WIDTH):
                 self._button_add_line = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_LINE),
                     on_click=self._viewmodel.add_line_section,
-                )
+                ).style(BUTTON_WIDTH)
                 self._button_add_areas = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_AREA),
                     on_click=self._viewmodel.add_area_section,
-                )
-            with ui.row():
+                ).style(BUTTON_WIDTH)
+            with ui.row().style(BASIC_WIDTH):
                 self._button_edit = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_EDIT),
                     on_click=self._viewmodel.edit_section_geometry,
-                )
+                ).style(BUTTON_WIDTH)
                 self._button_properties = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_PROPERTIES),
                     on_click=self._viewmodel.edit_selected_section_metadata,
-                )
-            with ui.row():
+                ).style(BUTTON_WIDTH)
+            with ui.row().style(BASIC_WIDTH):
                 self._button_remove = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_REMOVE),
                     on_click=self._viewmodel.remove_sections,
-                )
+                ).style(BASIC_WIDTH)
         self.update_items()
         return self
 

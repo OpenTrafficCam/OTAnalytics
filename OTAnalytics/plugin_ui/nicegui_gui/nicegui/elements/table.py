@@ -85,6 +85,7 @@ class CustomTable:
             selection=self._selection,
         ) as table:
             self.__table = table
+            table.style("width: 100%")
             self._add_header_slot()
             self._add_body_slot()
             self._register_callback()
