@@ -114,19 +114,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         for group in layer_groups:
             group.register(self.track_image_updater.notify_layers)
 
-        # configure observers for count plotters
-        self.event_repository.register_observer(
-            lambda _: self.update_count_plots.update()
-        )
-        self.tracks_metadata._detection_classifications.register(
-            lambda _: self.update_count_plots.update()
-        )
-        self.track_view_state.view_width.register(
-            lambda _: self.update_count_plots.update()
-        )
-        self.track_view_state.view_height.register(
-            lambda _: self.update_count_plots.update()
-        )
+        # configure observers for count plot saver
         self.track_view_state.count_plots.register(self.save_count_plots.save)
 
     @cached_property
@@ -182,6 +170,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.number_of_tracks_assigned_to_each_flow,
             self.export_track_statistics,
             self.get_current_remark,
+            self.update_count_plots,
         )
 
     @cached_property

@@ -930,10 +930,7 @@ class TrafficCounting:
             specification (CountingSpecificationDto): specification of the export
         """
         if self._event_repository.is_empty():
-            # todo for testing count plotters only,
-            # todo undo later when adding custom plotter trigger
-            #    self._create_events()
-            return CountByFlow(result=dict())
+            self._create_events()
 
         if specification.count_all_events:
             events = self._event_repository.get_all()

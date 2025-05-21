@@ -1292,6 +1292,10 @@ class DummyViewModel(
             initial_position=self.get_position(),
         )
         self._application.create_events()
+
+        # TODO find appropriate place to trigger update of plots
+        self._application.update_count_plots()
+
         self.notify_flows(self.get_all_flow_ids())
         start_msg_popup.update_message(message="Creating events completed")
         sleep(1)
