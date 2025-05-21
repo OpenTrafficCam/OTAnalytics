@@ -1,21 +1,12 @@
-from application.state import TrackViewState
-from plugin_ui.visualization.counts.counts_plotter import (
-    CountsPlotter,
-    MultipleCountsPlotters,
-)
+from OTAnalytics.application.state import TrackViewState
+from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import CountsPlotter
 
 
 class CountPlotsUpdater:
 
-    def __init__(self, state: TrackViewState, *plotters: CountsPlotter) -> None:
+    def __init__(self, state: TrackViewState, plotter: CountsPlotter) -> None:
         self._state = state
-
-        if len(plotters) > 1:
-            self._plotter = MultipleCountsPlotters(list(plotters))
-        elif len(plotters) == 1:
-            self._plotter = plotters[0]
-        else:
-            raise ValueError("No CountsPlotter given in var arg: plotters")
+        self._plotter = plotter
 
     def __call__(self) -> None:
         self.update()

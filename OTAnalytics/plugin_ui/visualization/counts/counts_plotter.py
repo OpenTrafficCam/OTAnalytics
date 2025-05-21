@@ -2,42 +2,32 @@ import io
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from os.path import join
-from typing import Callable
+from typing import Any, Callable
 
-# from adapter_visualization.color_provider import ColorPaletteProvider
-from application.analysis.traffic_counting import (
-    Count,
-    SimpleTaggerFactory,
-    TrafficCounting,
-)
-from application.analysis.traffic_counting_specification import CountingSpecificationDto
-from application.export_formats.export_mode import OVERWRITE
-from application.state import TracksMetadata
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from mpl_toolkits.axes_grid1 import Divider, Size
+from matplotlib.pyplot import close, subplots
+from pandas import DataFrame, MultiIndex, to_datetime
 from PIL import Image as ImageModule
 from PIL.Image import Image
 
+from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
+from OTAnalytics.application.analysis.traffic_counting import (
+    LEVEL_CLASSIFICATION,
+    LEVEL_FLOW,
+    LEVEL_START_TIME,
+    Count,
+    CountsImage,
+    TrafficCounting,
+)
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+)
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.state import TracksMetadata
+from OTAnalytics.plugin_parser.export import count_dict_to_dataframe
+
 DPI = 100
-
-
-@dataclass(frozen=True)
-class CountsImage:
-    """
-    Represents an image with a counts plot.
-    """
-
-    image: Image
-    width: int
-    height: int
-    name: str
-    timestamp: datetime
-
-    def save(self, path: str) -> None:
-        time = self.timestamp.strftime("%d_%m_%Y__%H_%M_%S")
-        self.save(join(path, f"counts_plot_{self.name}_{time}.png"))
 
 
 class CountsPlotter(ABC):
@@ -49,7 +39,9 @@ class CountsPlotter(ABC):
     def plot(self, width: int, height: int) -> list[CountsImage]:
         specification = self.get_counting_specification()
         count = self._traffic_counting.count(specification)
-        return self.plot_counts(count, width, height)
+        plots = self.plot_counts(count, width, height)
+
+        return plots
 
     @abstractmethod
     def get_counting_specification(self) -> CountingSpecificationDto:
@@ -63,9 +55,6 @@ class CountsPlotter(ABC):
         height: int,
     ) -> list[CountsImage]:
         pass
-
-
-AXES_CONSUMER = Callable[[Axes], None]
 
 
 class MultipleCountsPlotters(CountsPlotter):
@@ -82,6 +71,13 @@ class MultipleCountsPlotters(CountsPlotter):
             + "they should be defined per contained plotter!"
         )
 
+    def get_counting_specification(self) -> CountingSpecificationDto:
+        raise NotImplementedError(
+            "get_counting_specification should not be called on "
+            + "MultipleCountsPlotters, they should be defined "
+            + "per contained plotter!"
+        )
+
     def plot(self, width: int, height: int) -> list[CountsImage]:
         result = []
         for plotter in self._plotters:
@@ -89,106 +85,43 @@ class MultipleCountsPlotters(CountsPlotter):
         return result
 
 
-class MatplotlibCountsPlotter(CountsPlotter):
-
-    def __init__(self, traffic_counting: TrafficCounting):
-        super().__init__(traffic_counting)
-        self._styler = MatplotlibPlotStyler()
-
-    def plot_counts(self, count: Count, width: int, height: int) -> list[CountsImage]:
-        result = []
-        timestamp = datetime.now()
-
-        for name, plotter in self.create_axes_plotters(count):
-            pil = self._styler.apply_plotter(width, height, plotter)
-            image = CountsImage(pil, width, height, name, timestamp)
-            result.append(image)
-
-        return result
-
-    @abstractmethod
-    def create_axes_plotters(self, count: Count) -> list[tuple[str, AXES_CONSUMER]]:
-        pass
+FIGURE_CONSUMER = Callable[[Any, Figure, Axes], None]
 
 
-class MatplotlibPlotStyler:
+@dataclass(frozen=True)
+class FigurePlotter:
+    key: Any
+    name: str
+    plotter: FIGURE_CONSUMER
+
+    def __call__(self, figure: Figure, axes: Axes) -> None:
+        self.plotter(self.key, figure, axes)
+
+
+class MatplotlibCountPlotStyler:
     """
     A utility class for creating and styling matplotlib Figures/Axes.
     """
 
-    def apply_plotter(
-        self,
-        width: int,
-        height: int,
-        plotter: AXES_CONSUMER,
-    ) -> Image:
+    def apply_plotter(self, plotter: FigurePlotter, width: int, height: int) -> Image:
+        fig, ax = self.setup_fig_ax(width, height)
+        plotter(fig, ax)
+        self.style_count_plot_axes(plotter.name, fig, ax)
+        return self.convert_to_image(fig)
+
+    def setup_fig_ax(self, width: int, height: int) -> tuple[Figure, Axes]:
         image_width = width / DPI
         image_height = height / DPI
-        figure = self._create_figure(width=image_width, height=image_height)
-        axes = self._create_axes(image_width, image_height, figure)
-        plotter(axes)
-        self._style_axes(width, height, axes)
-        return self.convert_to_image(figure)
 
-    def _create_axes(self, width: float, height: float, figure: Figure) -> Axes:
-        """
-        Create axes to plot on.
+        return subplots(figsize=(image_width, image_height), dpi=DPI)
 
-        Args:
-            width (int): width of the axes
-            height (int): height of the axes
-            figure (Figure): figure object to add the axis to
-
-        Returns:
-            Axes: axes object with the given width and height
-        """
-        # The first items are for padding and the second items are for the axes.
-        # sizes are in inch.
-        horizontal = [Size.Fixed(0.0), Size.Fixed(width)]
-        vertical = [Size.Fixed(0.0), Size.Fixed(height)]
-
-        divider = Divider(
-            fig=figure,
-            pos=(0, 0, 1, 1),
-            horizontal=horizontal,
-            vertical=vertical,
-            aspect=False,
-        )
-        # The width and height of the rectangle are ignored.
-        return figure.add_axes(
-            divider.get_position(), axes_locator=divider.new_locator(nx=1, ny=1)
-        )
-
-    def _style_axes(self, width: int, height: int, axes: Axes) -> None:
-        """
-        Style axes object to show the image and tracks correctly.
-
-        Args:
-            width (int): width of the axes
-            height (int): height of the axes
-            axes (Axes): axes object to be styled
-        """
-        axes.set(
-            xlabel="",
-            ylabel="",
-            xticklabels=[],
-            yticklabels=[],
-        )
-        axes.set_ylim(0, height)
-        axes.set_xlim(0, width)
-        axes.patch.set_alpha(0.0)
-        axes.invert_yaxis()
-
-    def _create_figure(self, width: float, height: float) -> Figure:
-        """
-        Create figure to be plotted on.
-
-        Returns:
-            Figure: figure to be plotted on
-        """
-        figure = Figure(figsize=(width, height), dpi=DPI)
-        figure.patch.set_alpha(0.0)
-        return figure
+    def style_count_plot_axes(self, title: str, figure: Figure, axes: Axes) -> None:
+        axes.set_title(title)
+        axes.set_xlabel("Time")
+        axes.set_ylabel("Count")
+        axes.legend()
+        axes.grid(True)
+        figure.autofmt_xdate()  # Rotate x-axis labels if needed
 
     def convert_to_image(self, figure: Figure) -> Image:
         """
@@ -203,37 +136,175 @@ class MatplotlibPlotStyler:
         # Convert to PIL Image
         buf = io.BytesIO()
         buf.seek(0)
+        figure.savefig(buf, format="png", dpi=DPI)
         image = ImageModule.open(buf).convert("RGBA")
 
         buf.close()
+        close(figure)
         return image
 
 
-class FlowByModeCountPlotter(MatplotlibCountsPlotter):
+class MatplotlibCountsPlotter(CountsPlotter):
 
     def __init__(
         self,
-        traffic_counting: TrafficCounting,  # TODO: color_provider: ColorPaletteProvider
+        traffic_counting: TrafficCounting,
+        styler: MatplotlibCountPlotStyler = MatplotlibCountPlotStyler(),
+    ):
+        super().__init__(traffic_counting)
+        self._styler = styler
+
+    def plot_counts(self, count: Count, width: int, height: int) -> list[CountsImage]:
+        dataframe = self._prepare_dataframe(count)
+        if dataframe.empty:
+            return []
+
+        result = []
+        timestamp = datetime.now()
+
+        for plotter in self.create_figure_plotters(dataframe):
+            pil = self._styler.apply_plotter(plotter, width, height)
+            image = CountsImage(pil, width, height, plotter.name, timestamp)
+            result.append(image)
+
+        return result
+
+    @abstractmethod
+    def _prepare_dataframe(self, count: Count) -> DataFrame:
+        pass
+
+    @abstractmethod
+    def create_figure_plotters(self, dataframe: DataFrame) -> list[FigurePlotter]:
+        pass
+
+
+class FlowAndClassOverTimeCountPlotter(MatplotlibCountsPlotter):
+    def __init__(
+        self,
+        traffic_counting: TrafficCounting,
+        color_provider: ColorPaletteProvider,
         tracks_metadata: TracksMetadata,
-    ) -> None:
-        super().__init__(traffic_counting.with_tagger_factory(SimpleTaggerFactory()))
+        styler: MatplotlibCountPlotStyler = MatplotlibCountPlotStyler(),
+    ):
+        super().__init__(traffic_counting, styler)
         self._metadata = tracks_metadata
-
-    def get_name(self) -> str:
-        return f"counts plotter for modes {self._metadata.detection_classifications}"
-
-    def create_axes_plotters(self, count: Count) -> list[tuple[str, AXES_CONSUMER]]:
-        print("count values", count.to_dict())
-        return []
+        self._color_provider = color_provider
 
     def get_counting_specification(self) -> CountingSpecificationDto:
         return CountingSpecificationDto(
             start=datetime.min,
             end=datetime.max,
             count_all_events=True,
-            interval_in_minutes=15,
-            modes=self._metadata.detection_classifications,  # todo how to get modes
+            interval_in_minutes=5,
+            modes=list(self._metadata.detection_classifications),
             output_file="none",
             output_format="png",
             export_mode=OVERWRITE,
         )
+
+    def _prepare_dataframe(self, count: Count) -> DataFrame:
+        count_dict = count.to_dict()
+        dataframe = count_dict_to_dataframe(count_dict)
+
+        if dataframe.empty:
+            return dataframe
+
+        dataframe[LEVEL_START_TIME] = to_datetime(
+            dataframe[LEVEL_START_TIME], format="%Y-%m-%d %H:%M:%S"
+        )
+        dataframe = dataframe.sort_values(LEVEL_START_TIME)
+
+        # Build full combination index (flow x start time x classification)
+        all_flows = dataframe[LEVEL_FLOW].unique()
+        all_times = dataframe[LEVEL_START_TIME].unique()
+        all_classes = dataframe[LEVEL_CLASSIFICATION].unique()
+        multi_index = [LEVEL_FLOW, LEVEL_START_TIME, LEVEL_CLASSIFICATION]
+        full_index = MultiIndex.from_product(
+            [all_flows, all_times, all_classes],
+            names=multi_index,
+        )
+
+        # Set index and reindex full DataFrame
+        dataframe = dataframe.set_index(multi_index)
+        dataframe = dataframe.reindex(full_index, fill_value=0).reset_index()
+
+        return dataframe
+
+
+class FlowByClassCountPlotter(FlowAndClassOverTimeCountPlotter):
+
+    def create_figure_plotters(self, dataframe: DataFrame) -> list[FigurePlotter]:
+        flows = list(dataframe[LEVEL_FLOW].unique())
+
+        results = []
+        for flow in flows:
+            results.append(
+                FigurePlotter(
+                    key=flow,
+                    name=f"counts of flow {flow} by class over time",
+                    plotter=lambda f, fig, ax: self.plot_flow_by_mode(
+                        dataframe, f, fig, ax
+                    ),
+                )
+            )
+        return results
+
+    def plot_flow_by_mode(
+        self, dataframe: DataFrame, flow: str, figure: Figure, axes: Axes
+    ) -> None:
+        flow_df = dataframe[dataframe[LEVEL_FLOW] == flow]
+        color_palette = self._color_provider.get()
+
+        for classification in flow_df[LEVEL_CLASSIFICATION].unique():
+            class_df = flow_df[flow_df[LEVEL_CLASSIFICATION] == classification]
+            class_df = class_df.sort_values(LEVEL_START_TIME)
+
+            axes.plot(
+                class_df[LEVEL_START_TIME],
+                class_df["count"],
+                label=classification,
+                color=color_palette.get(classification, "black"),
+                marker="x",
+            )
+
+
+class ClassByFlowCountPlotter(FlowAndClassOverTimeCountPlotter):
+
+    def create_figure_plotters(self, dataframe: DataFrame) -> list[FigurePlotter]:
+        classifications = list(dataframe[LEVEL_CLASSIFICATION].unique())
+        flows: list[str] = list(dataframe[LEVEL_FLOW].unique())
+
+        color_palette = self._color_provider.get()
+        new_flows = frozenset([flow for flow in flows if flow not in color_palette])
+        self._color_provider.update(new_flows)
+
+        results = []
+        for cls in classifications:
+            results.append(
+                FigurePlotter(
+                    key=cls,
+                    name=f"counts of class {cls} by flow over time",
+                    plotter=lambda c, fig, ax: self.plot_class_by_flow(
+                        dataframe, c, fig, ax
+                    ),
+                )
+            )
+        return results
+
+    def plot_class_by_flow(
+        self, dataframe: DataFrame, cls: str, figure: Figure, axes: Axes
+    ) -> None:
+        class_df = dataframe[dataframe[LEVEL_CLASSIFICATION] == cls]
+        color_palette = self._color_provider.get()
+
+        for flow in class_df[LEVEL_FLOW].unique():
+            flow_df = class_df[class_df[LEVEL_FLOW] == flow]
+            flow_df = flow_df.sort_values(LEVEL_START_TIME)
+
+            axes.plot(
+                flow_df[LEVEL_START_TIME],
+                flow_df["count"],
+                label=flow,
+                color=color_palette.get(flow, "black"),
+                marker="x",
+            )

@@ -114,6 +114,20 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         for group in layer_groups:
             group.register(self.track_image_updater.notify_layers)
 
+        # configure observers for count plotters
+        self.event_repository.register_observer(
+            lambda _: self.update_count_plots.update()
+        )
+        self.tracks_metadata._detection_classifications.register(
+            lambda _: self.update_count_plots.update()
+        )
+        self.track_view_state.view_width.register(
+            lambda _: self.update_count_plots.update()
+        )
+        self.track_view_state.view_height.register(
+            lambda _: self.update_count_plots.update()
+        )
+
     @cached_property
     def view_model(self) -> ViewModel:
         return DummyViewModel(

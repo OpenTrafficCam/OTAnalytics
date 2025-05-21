@@ -16,6 +16,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     RoadUserAssigner,
     SimpleRoadUserAssigner,
     SimpleTaggerFactory,
+    TrafficCounting,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
@@ -163,6 +164,7 @@ from OTAnalytics.application.use_cases.track_statistics_export import (
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
 )
+from OTAnalytics.application.use_cases.update_count_plots import CountPlotsUpdater
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import (
     AddAllVideos,
@@ -255,6 +257,12 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
+from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
+    ClassByFlowCountPlotter,
+    CountsPlotter,
+    FlowByClassCountPlotter,
+    MultipleCountsPlotters,
+)
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
@@ -992,6 +1000,39 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
         return ShapelyTrackGeometryDataset.from_track_dataset
+
+    @cached_property
+    def traffic_counting(self) -> TrafficCounting:
+        return TrafficCounting(
+            self.event_repository,
+            self.flow_repository,
+            self.get_sections_by_id,
+            self.create_events,
+            self.road_user_assigner,
+            SimpleTaggerFactory(),
+        )
+
+    @cached_property
+    def update_count_plots(self) -> CountPlotsUpdater:
+        return CountPlotsUpdater(self.track_view_state, self.count_plotter)
+
+    @cached_property
+    def count_plotter(self) -> CountsPlotter:
+        return MultipleCountsPlotters(
+            self.traffic_counting,
+            plotters=[
+                FlowByClassCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                ),
+                ClassByFlowCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                ),
+            ],
+        )
 
 
 def create_format_fixer(
