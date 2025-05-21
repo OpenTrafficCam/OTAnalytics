@@ -262,9 +262,9 @@ from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
     ClassByFlowCountPlotter,
-    CountsPlotter,
+    CountPlotter,
     FlowByClassCountPlotter,
-    MultipleCountsPlotters,
+    MultipleCountPlotters,
 )
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
@@ -1024,8 +1024,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return CountPlotSaver(path="results")  # TODO configure directory for plots
 
     @cached_property
-    def count_plotter(self) -> CountsPlotter:
-        return MultipleCountsPlotters(
+    def count_plotter(self) -> CountPlotter:
+        return MultipleCountPlotters(
             self.traffic_counting,
             plotters=[
                 FlowByClassCountPlotter(

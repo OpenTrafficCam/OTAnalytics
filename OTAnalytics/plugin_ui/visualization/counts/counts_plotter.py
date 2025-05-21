@@ -17,7 +17,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_FLOW,
     LEVEL_START_TIME,
     Count,
-    CountsImage,
+    CountImage,
     TrafficCounting,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
@@ -30,55 +30,96 @@ from OTAnalytics.plugin_parser.export import count_dict_to_dataframe
 DPI = 100
 
 
-class CountsPlotter(ABC):
-    "Abstract counts plotter"
+class CountPlotter(ABC):
+    """
+    Abstract base class for plotting count data.
+
+    This class defines the interface for all count plotters in the system.
+    It provides the basic structure for retrieving counting specifications,
+    performing counts, and plotting the results.
+
+    Attributes:
+        _traffic_counting: The traffic counting service.
+    """
 
     def __init__(self, traffic_counting: TrafficCounting) -> None:
         self._traffic_counting = traffic_counting
 
-    def plot(self, width: int, height: int) -> list[CountsImage]:
+    def plot(self, width: int, height: int) -> list[CountImage]:
         specification = self.get_counting_specification()
         count = self._traffic_counting.count(specification)
-        plots = self.plot_counts(count, width, height)
+        plots = self.plot_count(count, width, height)
 
         return plots
 
     @abstractmethod
     def get_counting_specification(self) -> CountingSpecificationDto:
+        """
+        Get the specification for counting traffic.
+
+        This method should be implemented by subclasses to define the parameters
+        for traffic counting.
+
+        Returns:
+            CountingSpecificationDto: the counting parameters.
+        """
         pass
 
     @abstractmethod
-    def plot_counts(
+    def plot_count(
         self,
         count: Count,
         width: int,
         height: int,
-    ) -> list[CountsImage]:
+    ) -> list[CountImage]:
+        """
+        Plot the count data into visual representations.
+
+        This method should be implemented by subclasses to transform count data
+        into visual plots according to the specific visualization strategy.
+
+        Args:
+            count (Count): The count data to be plotted.
+            width (int): The width of the resulting image in pixels.
+            height (int): The height of the resulting image in pixels.
+
+        Returns:
+            list[CountImage]: A list of count images generated from the count data.
+        """
         pass
 
 
-class MultipleCountsPlotters(CountsPlotter):
+class MultipleCountPlotters(CountPlotter):
+    """
+    A composite plotter that contains and manages multiple CountPlotter instances.
 
-    def __init__(
-        self, traffic_counting: TrafficCounting, plotters: list[CountsPlotter]
-    ):
+    This class implements the Composite pattern, allowing multiple plotters to be
+    treated as a single plotter. It delegates plotting operations to its contained
+    plotters and aggregates their results.
+
+    Attributes:
+        _traffic_counting: The traffic counting service.
+        _plotters: A list of CountPlotter instances that this composite manages.
+    """
+
+    def __init__(self, traffic_counting: TrafficCounting, plotters: list[CountPlotter]):
         super().__init__(traffic_counting)
         self._plotters = plotters
 
-    def plot_counts(self, count: Count, width: int, height: int) -> list[CountsImage]:
+    def plot_count(self, count: Count, width: int, height: int) -> list[CountImage]:
         raise NotImplementedError(
-            "plot_counts should not be called on MultipleCountsPlotters, "
+            "plot_count should not be called on MultipleCountPlotters, "
             + "they should be defined per contained plotter!"
         )
 
     def get_counting_specification(self) -> CountingSpecificationDto:
         raise NotImplementedError(
             "get_counting_specification should not be called on "
-            + "MultipleCountsPlotters, they should be defined "
+            + "MultipleCountPlotters, they should be defined "
             + "per contained plotter!"
         )
 
-    def plot(self, width: int, height: int) -> list[CountsImage]:
+    def plot(self, width: int, height: int) -> list[CountImage]:
         result = []
         for plotter in self._plotters:
             result += plotter.plot(width, height)
@@ -90,6 +131,18 @@ FIGURE_CONSUMER = Callable[[Any, Figure, Axes], None]
 
 @dataclass(frozen=True)
 class FigurePlotter:
+    """
+    A dataclass that encapsulates the details needed to plot a figure.
+
+    It holds the key, name, and plotter function needed to create
+    a specific figure.
+
+    Attributes:
+        key: An identifier for the figure, e.g., a flow or classification string.
+        name: The display name for the figure, used as the plot title.
+        plotter: A callable that takes a key, figure, and axes and plots data.
+    """
+
     key: Any
     name: str
     plotter: FIGURE_CONSUMER
@@ -144,7 +197,18 @@ class MatplotlibCountPlotStyler:
         return image
 
 
-class MatplotlibCountsPlotter(CountsPlotter):
+class MatplotlibCountPlotter(CountPlotter):
+    """
+    An abstract implementation of CountPlotter that uses matplotlib for plotting.
+
+    This class provides common functionality for matplotlib-based plotters,
+    including dataframe preparation and figure creation. Concrete subclasses
+    must implement the _prepare_dataframe and create_figure_plotters methods.
+
+    Attributes:
+        _traffic_counting: The traffic counting service.
+        _styler: A MatplotlibCountPlotStyler instance used to style the plots.
+    """
 
     def __init__(
         self,
@@ -154,7 +218,7 @@ class MatplotlibCountsPlotter(CountsPlotter):
         super().__init__(traffic_counting)
         self._styler = styler
 
-    def plot_counts(self, count: Count, width: int, height: int) -> list[CountsImage]:
+    def plot_count(self, count: Count, width: int, height: int) -> list[CountImage]:
         dataframe = self._prepare_dataframe(count)
         if dataframe.empty:
             return []
@@ -164,21 +228,55 @@ class MatplotlibCountsPlotter(CountsPlotter):
 
         for plotter in self.create_figure_plotters(dataframe):
             pil = self._styler.apply_plotter(plotter, width, height)
-            image = CountsImage(pil, width, height, plotter.name, timestamp)
+            image = CountImage(pil, width, height, plotter.name, timestamp)
             result.append(image)
 
         return result
 
     @abstractmethod
     def _prepare_dataframe(self, count: Count) -> DataFrame:
+        """
+        Prepare a DataFrame from the count data for plotting.
+
+        Args:
+            count (Count): The raw count data to be transformed.
+
+        Returns:
+            DataFrame: A pandas DataFrame structured for plotting.
+        """
         pass
 
     @abstractmethod
     def create_figure_plotters(self, dataframe: DataFrame) -> list[FigurePlotter]:
+        """
+        Create a list of figure plotters from the prepared DataFrame.
+        These are lazy plotting functions that can be executed
+        as soon as figure/axes have been created.
+
+        Args:
+            dataframe (DataFrame): The prepared DataFrame containing the count data.
+
+        Returns:
+            list[FigurePlotter]: A list of plotters to add data to figures.
+        """
         pass
 
 
-class FlowAndClassOverTimeCountPlotter(MatplotlibCountsPlotter):
+class FlowAndClassOverTimeCountPlotter(MatplotlibCountPlotter):
+    """
+    A plotter for visualizing flow and classification counts over time.
+
+    This class provides the base functionality for plotting count data
+    with respect to flows and classifications over time. It prepares the
+    dataframe with the necessary structure and handles time-based sorting.
+
+    Attributes:
+        _traffic_counting: The traffic counting service.
+        _styler: A MatplotlibCountPlotStyler instance used to style the plots.
+        _metadata: Metadata about the tracks being analyzed.
+        _color_provider: Provider for color palettes used in the plots.
+    """
+
     def __init__(
         self,
         traffic_counting: TrafficCounting,
@@ -232,6 +330,18 @@ class FlowAndClassOverTimeCountPlotter(MatplotlibCountsPlotter):
 
 
 class FlowByClassCountPlotter(FlowAndClassOverTimeCountPlotter):
+    """
+    A plotter that creates separate plots for each flow, showing different
+    classifications of that flow over time. Each classification
+    is represented by a different line in the plot.
+    The colors of each classification are obtained from the color palette.
+
+    Attributes:
+        _traffic_counting: The traffic counting service.
+        _styler: A MatplotlibCountPlotStyler instance used to style the plots.
+        _metadata: Metadata about the tracks being analyzed.
+        _color_provider: Provider for color palettes used in the plots.
+    """
 
     def create_figure_plotters(self, dataframe: DataFrame) -> list[FigurePlotter]:
         flows = list(dataframe[LEVEL_FLOW].unique())
@@ -269,6 +379,21 @@ class FlowByClassCountPlotter(FlowAndClassOverTimeCountPlotter):
 
 
 class ClassByFlowCountPlotter(FlowAndClassOverTimeCountPlotter):
+    """
+    A plotter that creates separate plots for each classification, showing different
+    flows of that classification over time. Each flow is represented
+    by a different line in the plot.
+
+    The colors for each unique flow string are randomly generated upon the first
+    encounter and reused afterward.
+    This ensures a consistent color scheme for all plots.
+
+    Attributes:
+        _traffic_counting: The traffic counting service.
+        _styler: A MatplotlibCountPlotStyler instance used to style the plots.
+        _metadata: Metadata about the tracks being analyzed.
+        _color_provider: Provider for color palettes used in the plots.
+    """
 
     def create_figure_plotters(self, dataframe: DataFrame) -> list[FigurePlotter]:
         classifications = list(dataframe[LEVEL_CLASSIFICATION].unique())

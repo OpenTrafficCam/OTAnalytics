@@ -1016,7 +1016,7 @@ class ExportTrafficCounting(ExportCounts):
 
 
 @dataclass(frozen=True)
-class CountsImage:
+class CountImage:
     """
     Represents an image with a counts plot.
     """
