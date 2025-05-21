@@ -100,7 +100,7 @@ class TestExportCountsDialog:
             assert specification.start == TEST_START
             assert specification.end == TEST_END
             assert specification.output_format == TEST_DEFAULT_FORMAT
-            assert specification.output_file == TEST_OUTPUT_FILE
+            assert Path(specification.output_file) == Path(TEST_OUTPUT_FILE)
             assert specification.export_mode == OVERWRITE
             assert specification.interval_in_minutes == TEST_INTERVAL
 
@@ -142,7 +142,7 @@ class TestExportCountsDialog:
             specification = export_counts_dialog.get_specification()
 
             assert specification.output_format == "Excel"
-            assert specification.output_file == TEST_EXCEL_OUTPUT_FILE
+            assert Path(specification.output_file) == Path(TEST_EXCEL_OUTPUT_FILE)
 
     @pytest.mark.asyncio
     async def test_validation_error_empty_filename(
