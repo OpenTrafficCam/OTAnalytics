@@ -127,6 +127,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.track_view_state.view_height.register(
             lambda _: self.update_count_plots.update()
         )
+        self.track_view_state.count_plots.register(self.save_count_plots.save)
 
     @cached_property
     def view_model(self) -> ViewModel:

@@ -1,3 +1,4 @@
+from OTAnalytics.application.analysis.traffic_counting import CountsImage
 from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import CountsPlotter
 
@@ -17,3 +18,16 @@ class CountPlotsUpdater:
         plots = self._plotter.plot(width, height)
 
         self._state.count_plots.set(plots)
+
+
+class CountPlotSaver:
+
+    def __init__(self, path: str):
+        self._path = path
+
+    def __call__(self, plots: list[CountsImage]) -> None:
+        self.save(plots)
+
+    def save(self, plots: list[CountsImage]) -> None:
+        for plot in plots:
+            plot.save(self._path)
