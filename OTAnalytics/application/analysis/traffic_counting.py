@@ -996,7 +996,6 @@ class ExportTrafficCounting(ExportCounts):
             specification (CountingSpecificationDto): specification of the export
         """
         counts = self._traffic_counting.count(specification)
-        print(counts.to_dict())
 
         flows = self._traffic_counting.get_flows()
         export_specification = create_export_specification(
