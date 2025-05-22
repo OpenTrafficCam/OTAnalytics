@@ -1032,11 +1032,13 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                     self.traffic_counting,
                     self.color_palette_provider,
                     self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
                 ),
                 ClassByFlowCountPlotter(
                     self.traffic_counting,
                     self.color_palette_provider,
                     self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
                 ),
             ],
         )

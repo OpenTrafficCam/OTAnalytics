@@ -282,18 +282,20 @@ class FlowAndClassOverTimeCountPlotter(MatplotlibCountPlotter):
         traffic_counting: TrafficCounting,
         color_provider: ColorPaletteProvider,
         tracks_metadata: TracksMetadata,
+        interval_in_minutes: int = 5,
         styler: MatplotlibCountPlotStyler = MatplotlibCountPlotStyler(),
     ):
         super().__init__(traffic_counting, styler)
         self._metadata = tracks_metadata
         self._color_provider = color_provider
+        self._interval_in_minutes = interval_in_minutes
 
     def get_counting_specification(self) -> CountingSpecificationDto:
         return CountingSpecificationDto(
             start=datetime.min,
             end=datetime.max,
             count_all_events=True,
-            interval_in_minutes=5,
+            interval_in_minutes=self._interval_in_minutes,
             modes=list(self._metadata.detection_classifications),
             output_file="none",
             output_format="png",
