@@ -56,7 +56,9 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     FilterByOccurrence,
     FilterByVideo,
     FlowLayerPlotter,
+    MatplotlibPlotterImplementation,
     MatplotlibTrackPlotter,
+    NonLegendTrackGeometryPlotter,
     PandasDataFrameProvider,
     PandasTrackProvider,
     PandasTracksOffsetProvider,
@@ -163,6 +165,26 @@ class TracksNotAssignedToSelection(PandasDataFrameProvider):
                 self._track_repository,
             ),
         ).get_data()
+
+
+def create_track_geometry_plotter(
+    pandas_data_provider: PandasDataFrameProvider,
+    color_palette_provider: ColorPaletteProvider,
+    alpha: float,
+    enable_legend: bool,
+) -> MatplotlibPlotterImplementation:
+    if enable_legend:
+        return TrackGeometryPlotter(
+            pandas_data_provider,
+            color_palette_provider,
+            alpha=alpha,
+            enable_legend=enable_legend,
+        )
+    return NonLegendTrackGeometryPlotter(
+        pandas_data_provider,
+        color_palette_provider,
+        alpha=alpha,
+    )
 
 
 class VisualizationBuilder:
@@ -696,11 +718,8 @@ class VisualizationBuilder:
         enable_legend: bool,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
-            TrackGeometryPlotter(
-                pandas_data_provider,
-                color_palette_provider,
-                alpha=alpha,
-                enable_legend=enable_legend,
+            create_track_geometry_plotter(
+                pandas_data_provider, color_palette_provider, alpha, enable_legend
             ),
         )
         return PlotterPrototype(self._track_view_state, track_plotter)

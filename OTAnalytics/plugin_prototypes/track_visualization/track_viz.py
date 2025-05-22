@@ -6,6 +6,7 @@ import pandas
 import seaborn
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
 from matplotlib.ticker import NullFormatter, NullLocator
@@ -63,6 +64,9 @@ FRAME_OFFSET = 1
 
 ENCODING = "UTF-8"
 DPI = 100
+
+X_1 = "x1"
+Y_1 = "y1"
 
 
 class EventToFlowResolver:
@@ -540,6 +544,52 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             # Need to manually remove it, if legend exists.
             if existing_legend := axes.legend_:
                 existing_legend.remove()
+
+
+class NonLegendTrackGeometryPlotter(MatplotlibPlotterImplementation):
+    """Plot geometry of tracks."""
+
+    def __init__(
+        self,
+        data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float = 0.5,
+    ) -> None:
+        self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
+        self._alpha = alpha
+
+    def plot(self, axes: Axes) -> None:
+        data = self._data_provider.get_data()
+        if not data.empty:
+            self._plot_dataframe(data, axes)
+
+    def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
+        """
+        Plot given tracks on the given axes with the given transparency (alpha)
+
+        Args:
+            track_df (DataFrame): tracks to plot
+            axes (Axes): axes to plot on
+        """
+        for classification in track_df[track.TRACK_CLASSIFICATION].unique():
+            data = track_df.loc[
+                track_df[track.TRACK_CLASSIFICATION] == classification
+            ].copy()
+            first_detections = data.groupby(level=track.TRACK_ID, group_keys=True)
+            data.loc[:, X_1] = first_detections[track.X].shift(1)
+            data.loc[:, Y_1] = first_detections[track.Y].shift(1)
+            df = data.reset_index()
+            lines = numpy.column_stack(
+                [df[[X_1, Y_1]].values, df[[track.X, track.Y]].values]
+            )
+            segments = lines.reshape(-1, 2, 2)
+            lc = LineCollection(
+                segments,
+                colors=self._color_palette_provider.get().get(classification, "black"),
+                alpha=self._alpha,
+            )
+            axes.add_collection(lc)
 
 
 def scatter(data: DataFrame, axes: Axes, marker: str) -> None:
