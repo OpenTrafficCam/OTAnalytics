@@ -66,9 +66,6 @@ ENCODING = "UTF-8"
 DPI = 100
 LINEWIDTH = 0.6
 
-X_1 = "x1"
-Y_1 = "y1"
-
 
 class EventToFlowResolver:
     def __init__(self, flow_repository: FlowRepository) -> None:
@@ -574,16 +571,17 @@ class NonLegendTrackGeometryPlotter(MatplotlibPlotterImplementation):
             axes (Axes): axes to plot on
         """
         for classification in track_df[track.TRACK_CLASSIFICATION].unique():
-            data = track_df.loc[
-                track_df[track.TRACK_CLASSIFICATION] == classification
-            ].copy()
+            data = track_df.loc[track_df[track.TRACK_CLASSIFICATION] == classification]
             grouped = data.groupby(level=track.TRACK_ID, group_keys=True)
-            data.loc[:, X_1] = grouped[track.X].shift(1)
-            data.loc[:, Y_1] = grouped[track.Y].shift(1)
-            df = data.reset_index()
             lines = numpy.column_stack(
-                [df[[X_1, Y_1]].values, df[[track.X, track.Y]].values]
+                [
+                    grouped[track.X].shift(1).values,  # previous X
+                    grouped[track.Y].shift(1).values,  # previous Y
+                    data[track.X].values,  # current X
+                    data[track.Y].values,  # current Y
+                ]
             )
+
             segments = lines.reshape(-1, 2, 2)
             lc = LineCollection(
                 segments.tolist(),
