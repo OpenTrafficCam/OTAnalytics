@@ -65,6 +65,7 @@ repos:
           - pytest-cov==6.0.0
           - pytest-lazy-fixtures==1.1.2
           - pytest==8.3.4
+          - pywebview==5.4
           - starlette==0.41.2
           - twine==6.1.0
           - types-PyYAML
