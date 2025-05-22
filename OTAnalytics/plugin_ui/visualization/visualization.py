@@ -175,12 +175,16 @@ class VisualizationBuilder:
         section_state: SectionState,
         color_palette_provider: ColorPaletteProvider,
         pulling_progressbar_builder: ProgressbarBuilder,
+        enable_single_legend: bool = True,
+        enable_multi_legend: bool = False,
     ) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
         self._section_state = section_state
         self._color_palette_provider = color_palette_provider
         self._pulling_progressbar_builder = pulling_progressbar_builder
+        self._enable_single_legend = enable_single_legend
+        self._enable_multi_legend = enable_multi_legend
         self._track_repository = datastore._track_repository
         self._section_repository = datastore._section_repository
         self._flow_repository = datastore._flow_repository
@@ -356,7 +360,7 @@ class VisualizationBuilder:
             self._get_data_provider_all_filters_with_offset(),
             self._color_palette_provider,
             alpha=ALPHA_ALL_TRACKS_PLOTTER,
-            enable_legend=True,
+            enable_legend=self._enable_single_legend,
         )
         all_tracks_plotter = self._wrap_plotter_with_cache(track_geometry_plotter)
         return all_tracks_plotter
@@ -367,7 +371,7 @@ class VisualizationBuilder:
                 self._get_tracks_intersecting_sections_filter(),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_TRACKS_INTERSECTING_SECTIONS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             self._section_state,
         )
@@ -378,7 +382,7 @@ class VisualizationBuilder:
                 self._get_tracks_not_intersecting_selected_sections_filter(),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_TRACKS_NOT_INTERSECTING_SECTIONS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             self._section_state,
         )
@@ -393,7 +397,7 @@ class VisualizationBuilder:
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_START_END_POINTS_INTERSECTING_SECTIONS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             self._section_state,
         )
@@ -412,7 +416,7 @@ class VisualizationBuilder:
                 section_filter,
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_START_END_POINTS_NOT_INTERSECTING_SECTIONS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             self._section_state,
         )
@@ -459,7 +463,7 @@ class VisualizationBuilder:
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_START_END_POINTS_ASSIGNED_TO_FLOWS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             flow_state,
         )
@@ -480,7 +484,7 @@ class VisualizationBuilder:
                 flows_filter,
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_START_END_POINTS_NOT_ASSIGNED_TO_FLOWS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             [],
         )
@@ -499,7 +503,7 @@ class VisualizationBuilder:
             ),
             self._color_palette_provider,
             alpha=ALPHA_HIGHLIGHT_START_END_POINTS,
-            enable_legend=False,
+            enable_legend=self._enable_multi_legend,
         )
         start_end_point_plotter = self._wrap_plotter_with_cache(
             track_start_end_point_plotter
@@ -517,7 +521,7 @@ class VisualizationBuilder:
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_TRACKS_ASSIGNED_TO_FLOWS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             flow_state,
         )
@@ -538,7 +542,7 @@ class VisualizationBuilder:
                 flows_filter,
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_TRACKS_NOT_ASSIGNED_TO_FLOWS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             [],
         )
