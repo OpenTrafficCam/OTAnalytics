@@ -542,6 +542,10 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
                 existing_legend.remove()
 
 
+def scatter(data: DataFrame, axes: Axes, marker: str) -> None:
+    axes.scatter(data[track.X], data[track.Y], c=data["color"], marker=marker, s=15)
+
+
 class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
     """Plot start and end points of tracks"""
 
@@ -570,28 +574,23 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot start and end points of
             axes (Axes): axes to plot on
         """
+        color_palette = self._color_palette_provider.get()
+        color_df = DataFrame(
+            {
+                track.TRACK_CLASSIFICATION: list(color_palette.keys()),
+                "color": list(color_palette.values()),
+            }
+        )
+        track_df = track_df.reset_index().merge(
+            color_df,
+            left_on=track.TRACK_CLASSIFICATION,
+            right_on=track.TRACK_CLASSIFICATION,
+            how="left",
+        )
         track_df_start = track_df.groupby(track.TRACK_ID).first().reset_index()
-        track_df_start["type"] = "start"
-
         track_df_end = track_df.groupby(track.TRACK_ID).last().reset_index()
-        track_df_end["type"] = "end"
-
-        track_df_start_end = pandas.concat([track_df_start, track_df_end]).sort_values(
-            [track.TRACK_ID, track.FRAME]
-        )
-
-        seaborn.scatterplot(
-            x="x",
-            y="y",
-            hue=track.TRACK_CLASSIFICATION,
-            data=track_df_start_end,
-            style="type",
-            markers={"start": ">", "end": "s"},
-            legend=self._enable_legend,
-            s=15,
-            ax=axes,
-            palette=self._color_palette_provider.get(),
-        )
+        scatter(track_df_start, axes, ">")
+        scatter(track_df_end, axes, "s")
 
 
 class FilterByVideo(PandasDataFrameProvider):
