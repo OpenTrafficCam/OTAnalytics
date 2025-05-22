@@ -64,6 +64,7 @@ FRAME_OFFSET = 1
 
 ENCODING = "UTF-8"
 DPI = 100
+LINEWIDTH = 0.6
 
 X_1 = "x1"
 Y_1 = "y1"
@@ -529,7 +530,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             hue=track.TRACK_CLASSIFICATION,
             data=track_df,
             units=track.TRACK_ID,
-            linewidth=0.6,
+            linewidth=LINEWIDTH,
             estimator=None,
             sort=False,
             alpha=self._alpha,
@@ -587,6 +588,7 @@ class NonLegendTrackGeometryPlotter(MatplotlibPlotterImplementation):
             lc = LineCollection(
                 segments.tolist(),
                 colors=self._color_palette_provider.get().get(classification, "black"),
+                linewidth=LINEWIDTH,
                 alpha=self._alpha,
             )
             axes.add_collection(lc)
