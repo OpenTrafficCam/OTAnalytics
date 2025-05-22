@@ -223,25 +223,44 @@ class TrackViewState:
         self.count_plots.set([])
 
 
-class TrackPropertiesUpdater:
+class LiveImage:
+    """
+    This state represents the current live image from the video stream.
+    """
+
+    def __init__(self) -> None:
+        self.image = ObservableOptionalProperty[TrackImage]()
+        self.frame_number = ObservableOptionalProperty[int]()
+
+
+class TrackImageSizeUpdater:
     """
     This class listens to track changes and updates the width and height of the view
     state.
     """
 
-    def __init__(
-        self,
-        datastore: Datastore,
-        track_view_state: TrackViewState,
-    ) -> None:
-        self._datastore = datastore
+    def __init__(self, track_view_state: TrackViewState) -> None:
         self._track_view_state = track_view_state
+
+    def notify(self, image: TrackImage) -> None:
+        if image:
+            self._track_view_state.view_width.set(image.width())
+            self._track_view_state.view_height.set(image.height())
+
+
+class VideoImageSizeUpdater:
+    """
+    This class listens to track changes and updates the width and height of the view
+    state.
+    """
+
+    def __init__(self, updater: TrackImageSizeUpdater) -> None:
+        self._updater = updater
 
     def notify_videos(self, video: list[Video]) -> None:
         if video:
             image = video[0].get_frame(0)
-            self._track_view_state.view_width.set(image.width())
-            self._track_view_state.view_height.set(image.height())
+            self._updater.notify(image)
 
 
 class Plotter(ABC):
@@ -472,7 +491,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             video (list[Video]): list of changed video ids
         """
-        self._update_image()
+        self.update_image()
 
     def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """
@@ -481,7 +500,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             track_event (list[TrackId]): list of changed track ids
         """
-        self._update_image()
+        self.update_image()
 
     def _notify_track_offset(self, offset: Optional[RelativeOffsetCoordinate]) -> None:
         """
@@ -490,7 +509,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             offset (Optional[RelativeOffsetCoordinate]): current value
         """
-        self._update()
+        self.update_image()
 
     def _notify_filter_element(self, _: FilterElement) -> None:
         """
@@ -499,7 +518,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             _ (FilterElement): current filter element
         """
-        self._update()
+        self.update_image()
 
     def _notify_section_selection(self, _: list[SectionId]) -> None:
         """Will update the image according to changes of the selected section.
@@ -507,19 +526,19 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             _ (list[SectionId]): current selected section
         """
-        self._update()
+        self.update_image()
 
     def notify_section_changed(self, _: SectionId) -> None:
-        self._update()
+        self.update_image()
 
     def notify_sections(self, section_event: SectionRepositoryEvent) -> None:
-        self._update()
+        self.update_image()
 
     def notify_events(self, _: EventRepositoryEvent) -> None:
-        self._update()
+        self.update_image()
 
     def _notify_flow_changed(self, _: list[FlowId]) -> None:
-        self._update()
+        self.update_image()
 
     def notify_layers(self, _: bool) -> None:
         """Will update the image
@@ -527,15 +546,9 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             _ (bool): whether layer is enabled or disabled.
         """
-        self._update()
+        self.update_image()
 
-    def _update(self) -> None:
-        """
-        Update the image if at least one track is available.
-        """
-        self._update_image()
-
-    def _update_image(self) -> None:
+    def update_image(self) -> None:
         """
         Updates the current background image with or without tracks and sections.
         """

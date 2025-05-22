@@ -30,9 +30,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import 
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     ProjectForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import RemarkForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
     SectionsAndFlowForm,
@@ -42,6 +39,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form im
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
     SectionsForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.svz_metadata_form.svz_metadata_form import (  # noqa
+    SvzMetadataForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.track_statistics_form.container import (
     TrackStatisticForm,
@@ -66,8 +66,8 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     def start_ui(self) -> None:
         from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
-        from OTAnalytics.plugin_ui.nicegui_gui.nicegui.nicegui_webserver import (
-            NiceguiWebserver,
+        from OTAnalytics.plugin_ui.nicegui_gui.nicegui.nicegui_desktop import (
+            NiceguiDesktop,
         )
         from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.nicegui_layout_components import (  # noqa
             NiceguiLayoutComponents,
@@ -84,11 +84,9 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             visualization_layers=self.visualization_layers,
         )
         self.preload_input_files.load(self.run_config)
-        return NiceguiWebserver(
+        return NiceguiDesktop(
             page_builders=[main_page_builder],
             layout_components=NiceguiLayoutComponents(),
-            hostname="localhost",
-            port=5000,
         ).run()
 
     @cached_property
