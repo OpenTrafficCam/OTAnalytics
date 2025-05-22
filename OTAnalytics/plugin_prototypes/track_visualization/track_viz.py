@@ -576,16 +576,16 @@ class NonLegendTrackGeometryPlotter(MatplotlibPlotterImplementation):
             data = track_df.loc[
                 track_df[track.TRACK_CLASSIFICATION] == classification
             ].copy()
-            first_detections = data.groupby(level=track.TRACK_ID, group_keys=True)
-            data.loc[:, X_1] = first_detections[track.X].shift(1)
-            data.loc[:, Y_1] = first_detections[track.Y].shift(1)
+            grouped = data.groupby(level=track.TRACK_ID, group_keys=True)
+            data.loc[:, X_1] = grouped[track.X].shift(1)
+            data.loc[:, Y_1] = grouped[track.Y].shift(1)
             df = data.reset_index()
             lines = numpy.column_stack(
                 [df[[X_1, Y_1]].values, df[[track.X, track.Y]].values]
             )
             segments = lines.reshape(-1, 2, 2)
             lc = LineCollection(
-                segments,
+                segments.tolist(),
                 colors=self._color_palette_provider.get().get(classification, "black"),
                 alpha=self._alpha,
             )
