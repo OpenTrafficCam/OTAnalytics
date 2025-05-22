@@ -8,6 +8,7 @@ from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
+from matplotlib.ticker import NullFormatter, NullLocator
 from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
 from PIL import Image
@@ -790,9 +791,18 @@ class MatplotlibTrackPlotter(TrackPlotter):
             aspect=False,
         )
         # The width and height of the rectangle are ignored.
-        return figure.add_axes(
+        axes = figure.add_axes(
             divider.get_position(), axes_locator=divider.new_locator(nx=1, ny=1)
         )
+        axes.xaxis.set_major_locator(NullLocator())
+        axes.xaxis.set_minor_locator(NullLocator())
+        axes.yaxis.set_major_locator(NullLocator())
+        axes.yaxis.set_minor_locator(NullLocator())
+        axes.xaxis.set_major_formatter(NullFormatter())
+        axes.xaxis.set_minor_formatter(NullFormatter())
+        axes.yaxis.set_major_formatter(NullFormatter())
+        axes.yaxis.set_minor_formatter(NullFormatter())
+        return axes
 
     def _style_axes(self, width: int, height: int, axes: Axes) -> None:
         """
@@ -809,6 +819,8 @@ class MatplotlibTrackPlotter(TrackPlotter):
             xticklabels=[],
             yticklabels=[],
         )
+        axes.get_xaxis().set_visible(False)
+        axes.get_yaxis().set_visible(False)
         axes.set_ylim(0, height)
         axes.set_xlim(0, width)
         axes.patch.set_alpha(0.0)
