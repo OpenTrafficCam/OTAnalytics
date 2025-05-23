@@ -267,6 +267,8 @@ from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
     ClassByFlowCountPlotter,
     CountPlotter,
     FlowByClassCountPlotter,
+    MatplotlibCountBarPlotStyler,
+    MatplotlibCountLinePlotStyler,
     MultipleCountPlotters,
 )
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
@@ -1048,12 +1050,30 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                     self.color_palette_provider,
                     self.tracks_metadata,
                     interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountLinePlotStyler(legend=True),
                 ),
                 ClassByFlowCountPlotter(
                     self.traffic_counting,
                     self.color_palette_provider,
                     self.tracks_metadata,
                     interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountLinePlotStyler(legend=True),
+                ),
+                FlowByClassCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountBarPlotStyler(legend=True),
+                ),
+                ClassByFlowCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountBarPlotStyler(
+                        legend=True, ascending_trace_sum=True
+                    ),
                 ),
             ],
         )
