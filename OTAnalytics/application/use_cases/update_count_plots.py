@@ -14,7 +14,7 @@ class CountPlotsUpdater:
 
     def update(self) -> None:
         width = self._state.view_width.get()
-        height = self._state.view_width.get()
+        height = self._state.view_height.get()
         plots = self._plotter.plot(width, height)
 
         self._state.count_plots.set(plots)

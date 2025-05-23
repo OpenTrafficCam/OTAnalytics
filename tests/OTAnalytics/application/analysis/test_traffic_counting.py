@@ -1061,7 +1061,14 @@ class TestCountableAssignments:
 
 
 class TestTrafficCounting:
-    def test_count_traffic(self) -> None:
+    @pytest.mark.parametrize("count_all_events", [False, True])
+    def test_count_traffic(self, count_all_events: bool) -> None:
+        """Test traffic counting with different count_all_events settings.
+
+        Args:
+            count_all_events: count all events or only within the time range.
+        """
+        # Setup test environment
         event_repository = Mock(spec=EventRepository)
         flow_repository = Mock(spec=FlowRepository)
         get_sections_by_ids = Mock(spec=GetSectionsById)
@@ -1077,6 +1084,8 @@ class TestTrafficCounting:
         assignments = Mock(spec=RoadUserAssignments)
         tagged_assignments = Mock(spec=TaggedAssignments)
         counts = Mock(spec=Count)
+
+        # Configure mocks
         event_repository.get_all.return_value = events
         flow_repository.get_all.return_value = flows
         get_sections_by_ids.return_value = []
@@ -1085,6 +1094,8 @@ class TestTrafficCounting:
         assignments.tag.return_value = tagged_assignments
         tagged_assignments.count.return_value = counts
         exporter_factory.create_exporter.return_value = exporter
+
+        # Create specification
         start = datetime(2023, 1, 1, 0, 0, 0)
         end = datetime(2023, 1, 1, 0, 15, 0)
         counting_specification = CountingSpecificationDto(
@@ -1095,10 +1106,13 @@ class TestTrafficCounting:
             output_format="csv",
             output_file="counts.csv",
             export_mode=OVERWRITE,
+            count_all_events=count_all_events,
         )
+
         export_specification = create_export_specification(
             flows, counting_specification, get_sections_by_ids
         )
+
         use_case = ExportTrafficCounting(
             event_repository,
             flow_repository,
@@ -1109,14 +1123,24 @@ class TestTrafficCounting:
             exporter_factory,
         )
 
+        # Execute the use case
         use_case.export(counting_specification)
 
-        event_repository.get.assert_called_once_with(start_date=start, end_date=end)
+        # Verify common assertions
         flow_repository.get_all.assert_called()
         create_events.assert_called_once()
-        road_user_assigner.assign.assert_called_once()
         tagger_factory.create_tagger.assert_called_once_with(counting_specification)
         assignments.tag.assert_called_once_with(tagger)
         tagged_assignments.count.assert_called_once_with(flows)
         exporter_factory.create_exporter.assert_called_once_with(export_specification)
         exporter.export.assert_called_once_with(counts, OVERWRITE)
+
+        # Verify assertions specific to count_all_events setting
+        if count_all_events:
+            event_repository.get_all.assert_called_once()
+            event_repository.get.assert_not_called()
+            road_user_assigner.assign.assert_called_once_with(events, flows)
+        else:
+            event_repository.get_all.assert_not_called()
+            event_repository.get.assert_called_once_with(start_date=start, end_date=end)
+            road_user_assigner.assign.assert_called_once()
