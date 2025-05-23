@@ -16,6 +16,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     RoadUserAssigner,
     SimpleRoadUserAssigner,
     SimpleTaggerFactory,
+    TrafficCounting,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
@@ -166,6 +167,10 @@ from OTAnalytics.application.use_cases.track_statistics_export import (
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
 )
+from OTAnalytics.application.use_cases.update_count_plots import (
+    CountPlotSaver,
+    CountPlotsUpdater,
+)
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import (
     AddAllVideos,
@@ -258,6 +263,14 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
+from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
+    ClassByFlowCountPlotter,
+    CountPlotter,
+    FlowByClassCountPlotter,
+    MatplotlibCountBarPlotStyler,
+    MatplotlibCountLinePlotStyler,
+    MultipleCountPlotters,
+)
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
@@ -1007,6 +1020,65 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def remove_tracks_by_original_ids(self) -> RemoveTracksByOriginalIds:
         return RemoveTracksByOriginalIds(self.track_repository)
+
+    @cached_property
+    def traffic_counting(self) -> TrafficCounting:
+        return TrafficCounting(
+            self.event_repository,
+            self.flow_repository,
+            self.get_sections_by_id,
+            self.create_events,
+            self.road_user_assigner,
+            SimpleTaggerFactory(),
+        )
+
+    @cached_property
+    def update_count_plots(self) -> CountPlotsUpdater:
+        return CountPlotsUpdater(self.track_view_state, self.count_plotter)
+
+    @cached_property
+    def save_count_plots(self) -> CountPlotSaver:
+        return CountPlotSaver(path="results")  # TODO configure directory for plots
+
+    @cached_property
+    def count_plotter(self) -> CountPlotter:
+        return MultipleCountPlotters(
+            self.traffic_counting,
+            plotters=[
+                FlowByClassCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountLinePlotStyler(legend=True),
+                ),
+                ClassByFlowCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountLinePlotStyler(legend=True),
+                ),
+                FlowByClassCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountBarPlotStyler(
+                        legend=True, time_interval_min=5
+                    ),
+                ),
+                ClassByFlowCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountBarPlotStyler(
+                        legend=True, ascending_trace_sum=True, time_interval_min=5
+                    ),
+                ),
+            ],
+        )
 
 
 def create_format_fixer(
