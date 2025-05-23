@@ -1064,7 +1064,9 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                     self.color_palette_provider,
                     self.tracks_metadata,
                     interval_in_minutes=5,  # TODO configure interval
-                    styler=MatplotlibCountBarPlotStyler(legend=True),
+                    styler=MatplotlibCountBarPlotStyler(
+                        legend=True, time_interval_min=5
+                    ),
                 ),
                 ClassByFlowCountPlotter(
                     self.traffic_counting,
@@ -1072,7 +1074,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                     self.tracks_metadata,
                     interval_in_minutes=5,  # TODO configure interval
                     styler=MatplotlibCountBarPlotStyler(
-                        legend=True, ascending_trace_sum=True
+                        legend=True, ascending_trace_sum=True, time_interval_min=5
                     ),
                 ),
             ],

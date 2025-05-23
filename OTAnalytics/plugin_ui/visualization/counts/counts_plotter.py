@@ -213,13 +213,19 @@ class MatplotlibCountLinePlotStyler(MatplotlibCountPlotStyler):
 
 
 class MatplotlibCountBarPlotStyler(MatplotlibCountPlotStyler):
-    def __init__(self, legend: bool = False, ascending_trace_sum: bool = False) -> None:
+    def __init__(
+        self,
+        time_interval_min: int,
+        legend: bool = False,
+        ascending_trace_sum: bool = False,
+    ) -> None:
         super().__init__("_bars", legend)
         self._ascending_trace_sum = ascending_trace_sum
+        self._time_interval = time_interval_min
 
     def _plot(self, data: FigureData, figure: Figure, axes: Axes) -> None:
 
-        width: Any = timedelta(minutes=3)
+        width: Any = timedelta(minutes=int(round(self._time_interval * 0.6)))
 
         bottom = list(data.traces[0].data[data.y].map(lambda _: 0))
         for trace in sorted(
