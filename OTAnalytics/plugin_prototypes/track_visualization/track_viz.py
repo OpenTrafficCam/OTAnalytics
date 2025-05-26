@@ -64,7 +64,10 @@ FRAME_OFFSET = 1
 
 ENCODING = "UTF-8"
 DPI = 100
-LINEWIDTH = 0.6
+COLOR = "color"
+LINEWIDTH_TRACK = 0.6
+TRACK_START_SYMBOL = ">"
+TRACK_END_SYMBOL = "s"
 
 
 class EventToFlowResolver:
@@ -522,12 +525,12 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             axes (Axes): axes to plot on
         """
         seaborn.lineplot(
-            x="x",
-            y="y",
+            x=track.X,
+            y=track.Y,
             hue=track.TRACK_CLASSIFICATION,
             data=track_df,
             units=track.TRACK_ID,
-            linewidth=LINEWIDTH,
+            linewidth=LINEWIDTH_TRACK,
             estimator=None,
             sort=False,
             alpha=self._alpha,
@@ -586,14 +589,14 @@ class NonLegendTrackGeometryPlotter(MatplotlibPlotterImplementation):
             lc = LineCollection(
                 segments.tolist(),
                 colors=self._color_palette_provider.get().get(classification, "black"),
-                linewidth=LINEWIDTH,
+                linewidth=LINEWIDTH_TRACK,
                 alpha=self._alpha,
             )
             axes.add_collection(lc)
 
 
 def scatter(data: DataFrame, axes: Axes, marker: str) -> None:
-    axes.scatter(data[track.X], data[track.Y], c=data["color"], marker=marker, s=15)
+    axes.scatter(data[track.X], data[track.Y], c=data[COLOR], marker=marker, s=15)
 
 
 class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
@@ -628,19 +631,18 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
         color_df = DataFrame(
             {
                 track.TRACK_CLASSIFICATION: list(color_palette.keys()),
-                "color": list(color_palette.values()),
+                COLOR: list(color_palette.values()),
             }
         )
         track_df = track_df.reset_index().merge(
             color_df,
-            left_on=track.TRACK_CLASSIFICATION,
-            right_on=track.TRACK_CLASSIFICATION,
+            on=track.TRACK_CLASSIFICATION,
             how="left",
         )
         track_df_start = track_df.groupby(track.TRACK_ID).first().reset_index()
         track_df_end = track_df.groupby(track.TRACK_ID).last().reset_index()
-        scatter(track_df_start, axes, ">")
-        scatter(track_df_end, axes, "s")
+        scatter(track_df_start, axes, TRACK_START_SYMBOL)
+        scatter(track_df_end, axes, TRACK_END_SYMBOL)
 
 
 class FilterByVideo(PandasDataFrameProvider):
