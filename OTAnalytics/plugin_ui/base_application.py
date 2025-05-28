@@ -32,7 +32,10 @@ from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
 from OTAnalytics.application.resources.resource_manager import ResourceManager
-from OTAnalytics.application.run_configuration import RunConfiguration
+from OTAnalytics.application.run_configuration import (
+    RunConfiguration,
+    RunConfigurationError,
+)
 from OTAnalytics.application.state import (
     ActionState,
     FileState,
@@ -1034,10 +1037,12 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def save_count_plots(self) -> CountPlotSaver:
-        self.run_config.save_dir
-        return CountPlotSaver(
-            path=Path("results")
-        )  # TODO configure directory for plots
+        try:
+            save_dir = self.run_config.save_dir
+        except RunConfigurationError:
+            save_dir = Path.cwd()
+
+        return CountPlotSaver(path=save_dir / "results")
 
     @cached_property
     def count_plotter(self) -> CountPlotter:
