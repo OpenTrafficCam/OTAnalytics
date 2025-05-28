@@ -1062,6 +1062,9 @@ class TrafficCounting:
             new_tagger_factory,
         )
 
+    def provide_get_sections_by_id(self) -> GetSectionsById:
+        return self._get_sections_by_id
+
 
 class ExportTrafficCounting(ExportCounts):
     """
@@ -1070,23 +1073,10 @@ class ExportTrafficCounting(ExportCounts):
 
     def __init__(
         self,
-        event_repository: EventRepository,
-        flow_repository: FlowRepository,
-        get_sections_by_id: GetSectionsById,
-        create_events: CreateEvents,
-        assigner: RoadUserAssigner,
-        tagger_factory: TaggerFactory,
+        traffic_counting: TrafficCounting,
         exporter_factory: ExporterFactory,
     ) -> None:
-        self._traffic_counting = TrafficCounting(
-            event_repository,
-            flow_repository,
-            get_sections_by_id,
-            create_events,
-            assigner,
-            tagger_factory,
-        )  # TODO accept traffic counting as only constructor arg (+exporter_factory)
-
+        self._traffic_counting = traffic_counting
         self._exporter_factory = exporter_factory
 
     def export(self, specification: CountingSpecificationDto) -> None:
@@ -1100,7 +1090,7 @@ class ExportTrafficCounting(ExportCounts):
 
         flows = self._traffic_counting.get_flows()
         export_specification = create_export_specification(
-            flows, specification, self._traffic_counting._get_sections_by_id
+            flows, specification, self._traffic_counting.provide_get_sections_by_id()
         )
         exporter = self._exporter_factory.create_exporter(export_specification)
         exporter.export(counts, specification.export_mode)

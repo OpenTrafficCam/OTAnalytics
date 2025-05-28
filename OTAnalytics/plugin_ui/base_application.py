@@ -752,12 +752,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def export_counts(self) -> ExportCounts:
         return ExportTrafficCounting(
-            self.event_repository,
-            self.flow_repository,
-            self.get_sections_by_id,
-            self.create_events,
-            self.road_user_assigner,
-            SimpleTaggerFactory(),
+            self.traffic_counting,
             CachedExporterFactory(
                 FillZerosExporterFactory(
                     AddSectionInformationExporterFactory(SimpleExporterFactory())
