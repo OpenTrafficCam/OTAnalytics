@@ -307,7 +307,7 @@ class MatplotlibCountPlotter(CountPlotter):
         pass
 
 
-class FlowAndClassOverTimeCountPlotter(MatplotlibCountPlotter):
+class FlowAndClassOverTimeCountPlotter(MatplotlibCountPlotter, ABC):
     """
     A plotter for visualizing flow and classification counts over time.
 
@@ -315,12 +315,12 @@ class FlowAndClassOverTimeCountPlotter(MatplotlibCountPlotter):
     with respect to flows and classifications over time. It prepares the
     dataframe with the necessary structure and handles time-based sorting.
 
-    Attributes:
-        _traffic_counting: The traffic counting service.
-        _color_provider: Provider for color palettes used in the plots.
-        _metadata: Metadata about the tracks being analyzed.
-        _interval_in_minutes: The interval in minutes for which to plot counts.
-        _styler: A MatplotlibCountPlotStyler instance used to style the plots.
+    Args:
+        traffic_counting: The traffic counting service.
+        color_provider: Provider for color palettes used in the plots.
+        tracks_metadata: Metadata about the tracks being analyzed.
+        interval_in_minutes: The interval in minutes for which to plot counts.
+        styler: A MatplotlibCountPlotStyler instance used to style the plots.
     """
 
     def __init__(
