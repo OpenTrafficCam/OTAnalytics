@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from os.path import join
+from pathlib import Path
 from typing import Callable, Iterable, Optional
 
 from PIL.Image import Image
@@ -23,6 +23,8 @@ from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.types import EventType
+
+DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 
 LEVEL_FROM_SECTION = "from section"
 LEVEL_TO_SECTION = "to section"
@@ -1125,18 +1127,22 @@ class CountImage:
     name: str
     timestamp: datetime
 
-    def save(self, path: str) -> None:
-        time = self.timestamp.strftime("%d_%m_%Y__%H_%M_%S")
-        self.image.save(join(path, f"counts_plot_{self.safe_filename()}_{time}.png"))
+    def save(self, save_dir: Path) -> None:
+        time = self.timestamp.strftime(DATETIME_FORMAT)
+
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        self.image.save(save_dir / f"counts_plot_{self.safe_filename()}_{time}.png")
 
     def safe_filename(self, max_length: int = 255, replacement: str = "_") -> str:
-        """Create a string from image name that can be used as filename.
+        """Create a string from the image name that can be used as the filename.
+
         Use ascii only and replace illegal characters (/:*?"<>|),
         whitespaces and linebreaks.
         Remove sequences of replacement char and truncate to max_length.
 
         Args:
-            max_length (int, optional): length for truncating resulting file name.
+            max_length (int, optional): length for truncating the resulting file name.
                 Defaults to 255.
             replacement (str, optional): character to replace illegal characters
                 in image name. Defaults to "_".

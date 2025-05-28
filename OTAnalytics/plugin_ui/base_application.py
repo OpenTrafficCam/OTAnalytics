@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
+from pathlib import Path
 from typing import Sequence
 
 from OTAnalytics.adapter_visualization.color_provider import (
@@ -1038,7 +1039,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def save_count_plots(self) -> CountPlotSaver:
-        return CountPlotSaver(path="results")  # TODO configure directory for plots
+        self.run_config.save_dir
+        return CountPlotSaver(
+            path=Path("results")
+        )  # TODO configure directory for plots
 
     @cached_property
     def count_plotter(self) -> CountPlotter:

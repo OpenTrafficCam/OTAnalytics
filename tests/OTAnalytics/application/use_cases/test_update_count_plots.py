@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import Mock, call, patch
 
 import pytest
@@ -86,7 +87,7 @@ class TestCountPlotSaver:
     def test_save(self, mock_save: Mock, count_image: CountImage) -> None:
         """Test that save method calls save on each plot."""
         # Setup
-        path = "test/path"
+        path = Path("test/path")
         plots = [count_image, count_image]  # Two identical plots for testing
         saver = CountPlotSaver(path)
 
@@ -101,7 +102,7 @@ class TestCountPlotSaver:
     def test_call_invokes_save(self, mock_save: Mock, count_image: CountImage) -> None:
         """Test that calling the saver invokes the save method."""
         # Setup
-        path = "test/path"
+        path = Path("test/path")
         plots = [count_image]
         saver = CountPlotSaver(path)
 
