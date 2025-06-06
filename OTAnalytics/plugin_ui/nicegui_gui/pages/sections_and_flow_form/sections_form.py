@@ -20,6 +20,11 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
 BUTTON_WIDTH = "width: 47%"
 BASIC_WIDTH = "width: 100%"
 MARKER_SECTION_TABLE = "marker-section-table"
+MARKER_BUTTON_ADD_LINE = "marker-button-add-line"
+MARKER_BUTTON_ADD_AREA = "marker-button-add-area"
+MARKER_BUTTON_EDIT = "marker-button-edit"
+MARKER_BUTTON_PROPERTIES = "marker-button-properties"
+MARKER_BUTTON_REMOVE = "marker-button-remove"
 
 
 def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
@@ -82,24 +87,33 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_LINE),
                     on_click=self._viewmodel.add_line_section,
                 ).style(BUTTON_WIDTH)
+                self._button_add_line.mark(MARKER_BUTTON_ADD_LINE)
+
                 self._button_add_areas = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_AREA),
                     on_click=self._viewmodel.add_area_section,
                 ).style(BUTTON_WIDTH)
+                self._button_add_areas.mark(MARKER_BUTTON_ADD_AREA)
+
             with ui.row().style(BASIC_WIDTH):
                 self._button_edit = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_EDIT),
                     on_click=self._viewmodel.edit_section_geometry,
                 ).style(BUTTON_WIDTH)
+                self._button_edit.mark(MARKER_BUTTON_EDIT)
+
                 self._button_properties = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_PROPERTIES),
                     on_click=self._viewmodel.edit_selected_section_metadata,
                 ).style(BUTTON_WIDTH)
+                self._button_properties.mark(MARKER_BUTTON_PROPERTIES)
+
             with ui.row().style(BASIC_WIDTH):
                 self._button_remove = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_REMOVE),
                     on_click=self._viewmodel.remove_sections,
                 ).style(BASIC_WIDTH)
+                self._button_remove.mark(MARKER_BUTTON_REMOVE)
         self.update_items()
         return self
 

@@ -6,9 +6,13 @@ from nicegui import ui
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.resources.resource_manager import FlowKeys, ResourceManager
+from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.state import FlowState
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
+    MARKER_BUTTON_ADD,
+    MARKER_BUTTON_GENERATE,
+    MARKER_BUTTON_PROPERTIES,
+    MARKER_BUTTON_REMOVE,
     MARKER_FLOW_TABLE,
     FlowForm,
 )
@@ -80,10 +84,10 @@ class TestFlowForm:
         await user.open(ENDPOINT_NAME)
 
         # Check that all buttons are visible
-        await user.should_see(resource_manager.get(FlowKeys.BUTTON_ADD))
-        await user.should_see(resource_manager.get(FlowKeys.BUTTON_GENERATE))
-        await user.should_see(resource_manager.get(FlowKeys.BUTTON_REMOVE))
-        await user.should_see(resource_manager.get(FlowKeys.BUTTON_PROPERTIES))
+        await user.should_see(marker=MARKER_BUTTON_ADD)
+        await user.should_see(marker=MARKER_BUTTON_GENERATE)
+        await user.should_see(marker=MARKER_BUTTON_REMOVE)
+        await user.should_see(marker=MARKER_BUTTON_PROPERTIES)
 
         # Just check that all buttons are visible, skip checking the table for now
         # The table is built, but we can't easily check its contents in this test
@@ -151,12 +155,8 @@ class TestFlowForm:
         await user.should_see(marker=MARKER_FLOW_TABLE)
 
         # Verify that the flows are in the table's rows
-        assert any(
-            row.get("name") == FLOW_NAME_1 for row in flow_form._flow_table._rows
-        )
-        assert any(
-            row.get("name") == FLOW_NAME_2 for row in flow_form._flow_table._rows
-        )
+        names = [row.get("name") for row in flow_form._flow_table._rows]
+        assert names == [FLOW_NAME_1, FLOW_NAME_2]
 
         # Change the flows returned by the viewmodel
         new_flow = MockFlow("flow-3", "New Flow")
@@ -166,4 +166,4 @@ class TestFlowForm:
         flow_form.update_items()
 
         # Verify that the new flow is in the table's rows
-        assert any(row.get("name") == "New Flow" for row in flow_form._flow_table._rows)
+        assert names == [FLOW_NAME_1, FLOW_NAME_2]

@@ -6,12 +6,14 @@ from nicegui import ui
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.resources.resource_manager import (
-    ResourceManager,
-    SectionKeys,
-)
+from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.state import SectionState
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
+    MARKER_BUTTON_ADD_AREA,
+    MARKER_BUTTON_ADD_LINE,
+    MARKER_BUTTON_EDIT,
+    MARKER_BUTTON_PROPERTIES,
+    MARKER_BUTTON_REMOVE,
     MARKER_SECTION_TABLE,
     SectionsForm,
 )
@@ -83,11 +85,11 @@ class TestSectionsForm:
         await user.open(ENDPOINT_NAME)
 
         # Check that all buttons are visible
-        await user.should_see(resource_manager.get(SectionKeys.BUTTON_ADD_LINE))
-        await user.should_see(resource_manager.get(SectionKeys.BUTTON_ADD_AREA))
-        await user.should_see(resource_manager.get(SectionKeys.BUTTON_EDIT))
-        await user.should_see(resource_manager.get(SectionKeys.BUTTON_PROPERTIES))
-        await user.should_see(resource_manager.get(SectionKeys.BUTTON_REMOVE))
+        await user.should_see(marker=MARKER_BUTTON_ADD_LINE)
+        await user.should_see(marker=MARKER_BUTTON_ADD_AREA)
+        await user.should_see(marker=MARKER_BUTTON_EDIT)
+        await user.should_see(marker=MARKER_BUTTON_PROPERTIES)
+        await user.should_see(marker=MARKER_BUTTON_REMOVE)
 
     @pytest.mark.asyncio
     async def test_add_line_section_button_calls_viewmodel(
@@ -106,7 +108,7 @@ class TestSectionsForm:
         await user.open(ENDPOINT_NAME)
 
         # Click the add line section button
-        user.find(resource_manager.get(SectionKeys.BUTTON_ADD_LINE)).click()
+        user.find(marker=MARKER_BUTTON_ADD_LINE).click()
 
         # Verify that the viewmodel method was called
         viewmodel.add_line_section.assert_called_once()
@@ -128,7 +130,7 @@ class TestSectionsForm:
         await user.open(ENDPOINT_NAME)
 
         # Click the add area section button
-        user.find(resource_manager.get(SectionKeys.BUTTON_ADD_AREA)).click()
+        user.find(marker=MARKER_BUTTON_ADD_AREA).click()
 
         # Verify that the viewmodel method was called
         viewmodel.add_area_section.assert_called_once()
@@ -150,7 +152,7 @@ class TestSectionsForm:
         await user.open(ENDPOINT_NAME)
 
         # Click the edit section button
-        user.find(resource_manager.get(SectionKeys.BUTTON_EDIT)).click()
+        user.find(marker=MARKER_BUTTON_EDIT).click()
 
         # Verify that the viewmodel method was called
         viewmodel.edit_section_geometry.assert_called_once()
@@ -172,7 +174,7 @@ class TestSectionsForm:
         await user.open(ENDPOINT_NAME)
 
         # Click the properties button
-        user.find(resource_manager.get(SectionKeys.BUTTON_PROPERTIES)).click()
+        user.find(marker=MARKER_BUTTON_PROPERTIES).click()
 
         # Verify that the viewmodel method was called
         viewmodel.edit_selected_section_metadata.assert_called_once()
@@ -194,7 +196,7 @@ class TestSectionsForm:
         await user.open(ENDPOINT_NAME)
 
         # Click the remove section button
-        user.find(resource_manager.get(SectionKeys.BUTTON_REMOVE)).click()
+        user.find(marker=MARKER_BUTTON_REMOVE).click()
 
         # Verify that the viewmodel method was called
         viewmodel.remove_sections.assert_called_once()
@@ -245,7 +247,9 @@ class TestSectionsForm:
         await user.open(ENDPOINT_NAME)
 
         # Directly call the _select_section method with a mock selection event
-        sections_form._select_section([{"id": SECTION_ID_1}])
+        sections_form._select_section(
+            [{"id": SECTION_ID_1}]
+        )  # TODO Refaktor Table tests
 
         # Verify that the viewmodel method was called with the correct section ID
         viewmodel.set_selected_section_ids.assert_called()

@@ -16,9 +16,13 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     CustomTable,
 )
 
-BUTTON_WIDTH = "width: 47%"
+BUTTON_WIDTH = "max-width: 45%; width: 100%"
 BASIC_WIDTH = "width: 100%"
 MARKER_FLOW_TABLE = "marker-flow-table"
+MARKER_BUTTON_ADD = "marker-button-add"
+MARKER_BUTTON_GENERATE = "marker-button-generate"
+MARKER_BUTTON_REMOVE = "marker-button-remove"
+MARKER_BUTTON_PROPERTIES = "marker-button-properties"
 
 
 def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
@@ -76,18 +80,24 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             self._button_add = ui.button(
                 self._resource_manager.get(FlowKeys.BUTTON_ADD), on_click=self.add_flow
             ).style(BUTTON_WIDTH)
+            self._button_add.mark(MARKER_BUTTON_ADD)
             self._button_generate = ui.button(
                 self._resource_manager.get(FlowKeys.BUTTON_GENERATE),
                 on_click=self.generate_flow,
             ).style(BUTTON_WIDTH)
-        self._button_remove = ui.button(
-            self._resource_manager.get(FlowKeys.BUTTON_REMOVE),
-            on_click=self.remove_flow,
-        ).style(BASIC_WIDTH)
-        self._button_properties = ui.button(
-            self._resource_manager.get(FlowKeys.BUTTON_PROPERTIES),
-            on_click=self.show_flow_properties,
-        ).style(BASIC_WIDTH)
+            self._button_generate.mark(MARKER_BUTTON_GENERATE)
+
+        with ui.row().style(BASIC_WIDTH):
+            self._button_remove = ui.button(
+                self._resource_manager.get(FlowKeys.BUTTON_REMOVE),
+                on_click=self.remove_flow,
+            ).style(BUTTON_WIDTH)
+            self._button_remove.mark(MARKER_BUTTON_REMOVE)
+            self._button_properties = ui.button(
+                self._resource_manager.get(FlowKeys.BUTTON_PROPERTIES),
+                on_click=self.show_flow_properties,
+            ).style(BUTTON_WIDTH)
+            self._button_properties.mark(MARKER_BUTTON_PROPERTIES)
         self.update_items()
         return self
 
