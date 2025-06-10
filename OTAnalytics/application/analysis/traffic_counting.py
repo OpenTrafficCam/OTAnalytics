@@ -1,8 +1,13 @@
+import re
+import unicodedata
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Callable, Iterable, Optional
+
+from PIL.Image import Image
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -18,6 +23,8 @@ from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.types import EventType
+
+DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 
 LEVEL_FROM_SECTION = "from section"
 LEVEL_TO_SECTION = "to section"
@@ -995,9 +1002,9 @@ def create_export_specification(
     return ExportSpecificationDto(counting_specification, flow_dtos)
 
 
-class ExportTrafficCounting(ExportCounts):
+class TrafficCounting:
     """
-    Use case to export traffic counting.
+    Use case to produce traffic counts.
     """
 
     def __init__(
@@ -1008,14 +1015,70 @@ class ExportTrafficCounting(ExportCounts):
         create_events: CreateEvents,
         assigner: RoadUserAssigner,
         tagger_factory: TaggerFactory,
-        exporter_factory: ExporterFactory,
-    ) -> None:
+        enable_event_creation: bool = True,
+    ):
         self._event_repository = event_repository
         self._flow_repository = flow_repository
         self._get_sections_by_id = get_sections_by_id
         self._create_events = create_events
         self._assigner = assigner
         self._tagger_factory = tagger_factory
+        self._enable_event_creation = enable_event_creation
+
+    def count(self, specification: CountingSpecificationDto) -> Count:
+        """
+        Produce traffic counts based on the currently available events and flows.
+
+        Args:
+            specification (CountingSpecificationDto): specification of the export
+        """
+        if self._enable_event_creation and self._event_repository.is_empty():
+            self._create_events()
+
+        if specification.count_all_events:
+            events = self._event_repository.get_all()
+        else:
+            events = self._event_repository.get(
+                start_date=specification.start,
+                end_date=specification.end,
+            )
+
+        flows = self.get_flows()
+        assigned_flows = self._assigner.assign(events, flows)
+        tagger = self._tagger_factory.create_tagger(specification)
+        tagged_assignments = assigned_flows.tag(tagger)
+        return tagged_assignments.count(flows)
+
+    def get_flows(self) -> list[Flow]:
+        return self._flow_repository.get_all()
+
+    def with_tagger_factory(
+        self, new_tagger_factory: TaggerFactory
+    ) -> "TrafficCounting":
+        return TrafficCounting(
+            self._event_repository,
+            self._flow_repository,
+            self._get_sections_by_id,
+            self._create_events,
+            self._assigner,
+            new_tagger_factory,
+        )
+
+    def provide_get_sections_by_id(self) -> GetSectionsById:
+        return self._get_sections_by_id
+
+
+class ExportTrafficCounting(ExportCounts):
+    """
+    Use case to export traffic counting.
+    """
+
+    def __init__(
+        self,
+        traffic_counting: TrafficCounting,
+        exporter_factory: ExporterFactory,
+    ) -> None:
+        self._traffic_counting = traffic_counting
         self._exporter_factory = exporter_factory
 
     def export(self, specification: CountingSpecificationDto) -> None:
@@ -1025,19 +1088,11 @@ class ExportTrafficCounting(ExportCounts):
         Args:
             specification (CountingSpecificationDto): specification of the export
         """
-        if self._event_repository.is_empty():
-            self._create_events()
-        events = self._event_repository.get(
-            start_date=specification.start,
-            end_date=specification.end,
-        )
-        flows = self._flow_repository.get_all()
-        assigned_flows = self._assigner.assign(events, flows)
-        tagger = self._tagger_factory.create_tagger(specification)
-        tagged_assignments = assigned_flows.tag(tagger)
-        counts = tagged_assignments.count(flows)
+        counts = self._traffic_counting.count(specification)
+
+        flows = self._traffic_counting.get_flows()
         export_specification = create_export_specification(
-            flows, specification, self._get_sections_by_id
+            flows, specification, self._traffic_counting.provide_get_sections_by_id()
         )
         exporter = self._exporter_factory.create_exporter(export_specification)
         exporter.export(counts, specification.export_mode)
@@ -1050,3 +1105,49 @@ class ExportTrafficCounting(ExportCounts):
             Iterable[ExportFormat]: supported export formats
         """
         return self._exporter_factory.get_supported_formats()
+
+
+@dataclass(frozen=True)
+class CountImage:
+    """
+    Represents an image with a counts plot.
+    """
+
+    image: Image
+    width: int
+    height: int
+    name: str
+    timestamp: datetime
+
+    def save(self, save_dir: Path) -> None:
+        time = self.timestamp.strftime(DATETIME_FORMAT)
+
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        self.image.save(save_dir / f"counts_plot_{self.safe_filename()}_{time}.png")
+
+    def safe_filename(self, max_length: int = 255, replacement: str = "_") -> str:
+        """Create a string from the image name that can be used as the filename.
+
+        Use ascii only and replace illegal characters (/:*?"<>|),
+        whitespaces and linebreaks.
+        Remove sequences of replacement char and truncate to max_length.
+
+        Args:
+            max_length (int, optional): length for truncating the resulting file name.
+                Defaults to 255.
+            replacement (str, optional): character to replace illegal characters
+                in image name. Defaults to "_".
+
+        Returns:
+            str: string safe to use as filename
+        """
+        safe = (
+            unicodedata.normalize("NFKD", self.name).encode("ascii", "ignore").decode()
+        )
+        safe = re.sub(r'[<>:"/\\|?*\n\r\t]', replacement, safe)
+        safe = re.sub(r"\s+", replacement, safe)
+        safe = re.sub(rf"{re.escape(replacement)}+", replacement, safe)
+        safe = safe.strip(replacement)
+        # Truncate to max length (preserving file extension if needed)
+        return safe[:max_length]

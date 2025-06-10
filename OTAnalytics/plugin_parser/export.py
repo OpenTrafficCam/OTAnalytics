@@ -37,6 +37,54 @@ END_TIME = "end occurrence time"
 DATE_FORMAT = "%Y-%m-%d"
 TIME_FORMAT = "%H:%M:%S"
 
+DESIRED_COLUMNS_ORDER = [
+    LEVEL_START_TIME,
+    START_DATE,
+    START_TIME,
+    LEVEL_END_TIME,
+    END_DATE,
+    END_TIME,
+    LEVEL_CLASSIFICATION,
+    LEVEL_FLOW,
+    LEVEL_FROM_SECTION,
+    LEVEL_TO_SECTION,
+]
+
+
+def count_to_dataframe(count: Count) -> DataFrame:
+    return count_dict_to_dataframe(count.to_dict())
+
+
+def count_dict_to_dataframe(count_dict: dict[Tag, int]) -> DataFrame:
+    # setup dataframe
+    indexed: list[dict] = []
+    for tag, value in count_dict.items():
+        result_dict: dict = tag.as_dict()
+        result_dict["count"] = value
+        indexed.append(result_dict)
+    dataframe = DataFrame(indexed)
+
+    if dataframe.empty:
+        return dataframe
+
+    # add detailed date time columns
+    start_occurrence = to_datetime(dataframe[LEVEL_START_TIME])
+    end_occurrence = to_datetime(dataframe[LEVEL_END_TIME])
+    dataframe[START_DATE] = start_occurrence.dt.strftime(DATE_FORMAT)
+    dataframe[START_TIME] = start_occurrence.dt.strftime(TIME_FORMAT)
+    dataframe[END_DATE] = end_occurrence.dt.strftime(DATE_FORMAT)
+    dataframe[END_TIME] = end_occurrence.dt.strftime(TIME_FORMAT)
+
+    # set column order
+    dataframe = dataframe[
+        [col for col in DESIRED_COLUMNS_ORDER if col in dataframe.columns]
+        + [col for col in dataframe.columns if col not in DESIRED_COLUMNS_ORDER]
+    ]
+    dataframe = dataframe.sort_values(
+        by=[LEVEL_START_TIME, LEVEL_END_TIME, LEVEL_CLASSIFICATION]
+    )
+    return dataframe
+
 
 class CsvExport(Exporter):
     """
@@ -59,60 +107,15 @@ class CsvExport(Exporter):
             self._counts[tag] += value
 
         if export_mode.is_final_write():
-            dataframe = self.__create_data_frame(self._counts)
+            dataframe = count_dict_to_dataframe(self._counts)
             if dataframe.empty:
                 logger().info("Nothing to count.")
                 return
-            dataframe = self._add_detailed_date_time_columns(dataframe)
-            dataframe = self._set_column_order(dataframe)
-            dataframe = dataframe.sort_values(
-                by=[LEVEL_START_TIME, LEVEL_END_TIME, LEVEL_CLASSIFICATION]
-            )
 
             dataframe.to_csv(self.__create_path(), index=False)
             logger().info(f"Counts saved at {self._output_file}")
 
             self._counts.clear()
-
-    def _add_detailed_date_time_columns(self, df: DataFrame) -> DataFrame:
-        start_occurrence = to_datetime(df[LEVEL_START_TIME])
-        end_occurrence = to_datetime(df[LEVEL_END_TIME])
-
-        df[START_DATE] = start_occurrence.dt.strftime(DATE_FORMAT)
-        df[START_TIME] = start_occurrence.dt.strftime(TIME_FORMAT)
-        df[END_DATE] = end_occurrence.dt.strftime(DATE_FORMAT)
-        df[END_TIME] = end_occurrence.dt.strftime(TIME_FORMAT)
-        return df
-
-    @staticmethod
-    def _set_column_order(dataframe: DataFrame) -> DataFrame:
-        desired_columns_order = [
-            LEVEL_START_TIME,
-            START_DATE,
-            START_TIME,
-            LEVEL_END_TIME,
-            END_DATE,
-            END_TIME,
-            LEVEL_CLASSIFICATION,
-            LEVEL_FLOW,
-            LEVEL_FROM_SECTION,
-            LEVEL_TO_SECTION,
-        ]
-        dataframe = dataframe[
-            desired_columns_order
-            + [col for col in dataframe.columns if col not in desired_columns_order]
-        ]
-
-        return dataframe
-
-    @staticmethod
-    def __create_data_frame(transformed: dict) -> DataFrame:
-        indexed: list[dict] = []
-        for key, value in transformed.items():
-            result_dict: dict = key.as_dict()
-            result_dict["count"] = value
-            indexed.append(result_dict)
-        return DataFrame(indexed)
 
     def __create_path(self) -> Path:
         fixed_file_ending = (
