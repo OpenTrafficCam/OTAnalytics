@@ -472,7 +472,7 @@ class EventRepository:
         for event in events:
             self.__do_add(event)
         for section in sections:
-            self._events.setdefault(section, dict())
+            self._events[section]
         self.__discard_duplicates(events)
         self.__sort(events)
         self._subject.notify(EventRepositoryEvent(events, []))

@@ -282,6 +282,14 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def empty(self) -> bool:
         return self._dataset.empty
 
+    @property
+    def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
+        return self._track_geometry_factory
+
+    @property
+    def calculator(self) -> PandasTrackClassificationCalculator:
+        return self._calculator
+
     def __init__(
         self,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
@@ -296,8 +304,8 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         else:
             self._dataset = create_empty_dataframe()
 
-        self.calculator = calculator
-        self.track_geometry_factory = track_geometry_factory
+        self._calculator = calculator
+        self._track_geometry_factory = track_geometry_factory
         if geometry_datasets is None:
             self._geometry_datasets = dict[
                 RelativeOffsetCoordinate, TrackGeometryDataset
@@ -737,10 +745,15 @@ class FilteredPandasTrackDataset(
     FilteredTrackDataset, PandasTrackDataset, PandasDataFrameProvider
 ):
 
-    def __init__(
-        self,
-        other: PandasTrackDataset,
-    ) -> None:
+    @property
+    def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
+        return self._other.track_geometry_factory
+
+    @property
+    def calculator(self) -> PandasTrackClassificationCalculator:
+        return self._other.calculator
+
+    def __init__(self, other: PandasTrackDataset) -> None:
         self._other = other
 
     def add_all(self, other: Iterable[Track]) -> PandasTrackDataset:
