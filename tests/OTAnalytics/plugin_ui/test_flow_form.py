@@ -109,7 +109,7 @@ class TestFlowForm:
         await user.open(ENDPOINT_NAME)
 
         # Directly call the generate_flow method
-        flow_form.generate_flow()
+        user.find(marker=MARKER_BUTTON_GENERATE).click()
 
         # Verify that the viewmodel method was called
         viewmodel.generate_flows.assert_called_once()
@@ -131,7 +131,7 @@ class TestFlowForm:
         await user.open(ENDPOINT_NAME)
 
         # Directly call the remove_flow method
-        flow_form.remove_flow()
+        user.find(marker=MARKER_BUTTON_REMOVE).click()
 
         # Verify that the viewmodel method was called
         viewmodel.remove_flows.assert_called_once()
