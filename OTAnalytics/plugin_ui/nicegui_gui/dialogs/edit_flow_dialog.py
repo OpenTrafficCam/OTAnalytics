@@ -76,7 +76,7 @@ class EditFlowDialog(BaseDialog):
             marker=MARKER_DISTANCE,
         )
 
-    async def build_content(self) -> None:
+    def build_content(self) -> None:
         self._start_section.build()
         self._end_section.build()
         self._name.build()

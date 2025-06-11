@@ -43,7 +43,7 @@ class EditSectionDialog(BaseDialog):
         )
         self._offset = OffsetSliderForm(self.resource_manager)
 
-    async def build_content(self) -> None:
+    def build_content(self) -> None:
         self._name.build()
         self._offset.build()
 
