@@ -39,6 +39,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Tagger,
     TaggerFactory,
     TimeslotTagger,
+    TrafficCounting,
     create_export_specification,
     create_timeslot_tag,
 )
@@ -1061,7 +1062,14 @@ class TestCountableAssignments:
 
 
 class TestTrafficCounting:
-    def test_count_traffic(self) -> None:
+    @pytest.mark.parametrize("count_all_events", [False, True])
+    def test_count_traffic(self, count_all_events: bool) -> None:
+        """Test traffic counting with different count_all_events settings.
+
+        Args:
+            count_all_events: count all events or only within the time range.
+        """
+        # Setup test environment
         event_repository = Mock(spec=EventRepository)
         flow_repository = Mock(spec=FlowRepository)
         get_sections_by_ids = Mock(spec=GetSectionsById)
@@ -1069,22 +1077,24 @@ class TestTrafficCounting:
         road_user_assigner = Mock(spec=RoadUserAssigner)
         tagger_factory = Mock(spec=TaggerFactory)
         tagger = Mock(spec=Tagger)
-        exporter_factory = Mock(spec=ExporterFactory)
-        exporter = Mock(spec=Exporter)
         events: list[Event] = []
         flows: list[Flow] = []
         modes: list[str] = []
         assignments = Mock(spec=RoadUserAssignments)
         tagged_assignments = Mock(spec=TaggedAssignments)
         counts = Mock(spec=Count)
+
+        # Configure mocks
         event_repository.get_all.return_value = events
+        event_repository.is_empty.return_value = True
         flow_repository.get_all.return_value = flows
         get_sections_by_ids.return_value = []
         road_user_assigner.assign.return_value = assignments
         tagger_factory.create_tagger.return_value = tagger
         assignments.tag.return_value = tagged_assignments
         tagged_assignments.count.return_value = counts
-        exporter_factory.create_exporter.return_value = exporter
+
+        # Create specification
         start = datetime(2023, 1, 1, 0, 0, 0)
         end = datetime(2023, 1, 1, 0, 15, 0)
         counting_specification = CountingSpecificationDto(
@@ -1095,28 +1105,88 @@ class TestTrafficCounting:
             output_format="csv",
             output_file="counts.csv",
             export_mode=OVERWRITE,
+            count_all_events=count_all_events,
         )
-        export_specification = create_export_specification(
-            flows, counting_specification, get_sections_by_ids
-        )
-        use_case = ExportTrafficCounting(
+
+        target = TrafficCounting(
             event_repository,
             flow_repository,
             get_sections_by_ids,
             create_events,
             road_user_assigner,
             tagger_factory,
-            exporter_factory,
         )
 
-        use_case.export(counting_specification)
+        # Execute the use case
+        actual = target.count(counting_specification)
 
-        event_repository.get.assert_called_once_with(start_date=start, end_date=end)
-        flow_repository.get_all.assert_called_once()
+        # Verify common assertions
+        assert actual == counts
+        flow_repository.get_all.assert_called()
         create_events.assert_called_once()
-        road_user_assigner.assign.assert_called_once()
         tagger_factory.create_tagger.assert_called_once_with(counting_specification)
         assignments.tag.assert_called_once_with(tagger)
         tagged_assignments.count.assert_called_once_with(flows)
+
+        # Verify assertions specific to count_all_events setting
+        if count_all_events:
+            event_repository.get_all.assert_called_once()
+            event_repository.get.assert_not_called()
+            road_user_assigner.assign.assert_called_once_with(events, flows)
+        else:
+            event_repository.get_all.assert_not_called()
+            event_repository.get.assert_called_once_with(start_date=start, end_date=end)
+            road_user_assigner.assign.assert_called_once()
+
+
+class TestExportTrafficCounting:
+    def test_count_traffic(self) -> None:
+        """Test traffic counting with different count_all_events settings."""
+        # Setup test environment
+        traffic_counting = Mock(spec=TrafficCounting)
+        get_sections_by_id = Mock(spec=GetSectionsById)
+        exporter_factory = Mock(spec=ExporterFactory)
+        exporter = Mock(spec=Exporter)
+        flows: list[Flow] = []
+        modes: list[str] = []
+        counts = Mock(spec=Count)
+
+        # Configure mocks
+        traffic_counting.get_flows.return_value = flows
+        traffic_counting.count.return_value = counts
+        traffic_counting.provide_get_sections_by_id.return_value = get_sections_by_id
+        exporter_factory.create_exporter.return_value = exporter
+
+        # Create specification
+        start = datetime(2023, 1, 1, 0, 0, 0)
+        end = datetime(2023, 1, 1, 0, 15, 0)
+        counting_specification = CountingSpecificationDto(
+            start=start,
+            end=end,
+            interval_in_minutes=15,
+            modes=modes,
+            output_format="csv",
+            output_file="counts.csv",
+            export_mode=OVERWRITE,
+            count_all_events=True,
+        )
+
+        export_specification = create_export_specification(
+            flows, counting_specification, get_sections_by_id
+        )
+
+        target = ExportTrafficCounting(
+            traffic_counting,
+            exporter_factory,
+        )
+
+        # Execute the use case
+        target.export(counting_specification)
+
+        # Verify common assertions
+        traffic_counting.count.assert_called_once_with(counting_specification)
+        traffic_counting.get_flows.assert_called_once()
+        traffic_counting.provide_get_sections_by_id.assert_called_once()
+
         exporter_factory.create_exporter.assert_called_once_with(export_specification)
         exporter.export.assert_called_once_with(counts, OVERWRITE)

@@ -12,6 +12,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     FilterBySectionEnterEvent,
     SimpleRoadUserAssigner,
     SimpleTaggerFactory,
+    TrafficCounting,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -431,13 +432,16 @@ class TestOTAnalyticsCli:
             clear_all_events, create_intersection_events, create_scene_events
         )
         assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
-        export_counts = ExportTrafficCounting(
+        traffic_counting = TrafficCounting(
             event_repository,
             flow_repository,
             GetSectionsById(section_repository),
             create_events,
             assigner,
             SimpleTaggerFactory(),
+        )
+        export_counts = ExportTrafficCounting(
+            traffic_counting,
             FillZerosExporterFactory(
                 AddSectionInformationExporterFactory(SimpleExporterFactory())
             ),
@@ -526,13 +530,16 @@ class TestOTAnalyticsCli:
             clear_all_events, create_intersection_events, create_scene_events
         )
         assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
-        export_counts = ExportTrafficCounting(
+        traffic_counting = TrafficCounting(
             event_repository,
             flow_repository,
             GetSectionsById(section_repository),
             create_events,
             assigner,
             SimpleTaggerFactory(),
+        )
+        export_counts = ExportTrafficCounting(
+            traffic_counting,
             FillZerosExporterFactory(
                 AddSectionInformationExporterFactory(SimpleExporterFactory())
             ),
