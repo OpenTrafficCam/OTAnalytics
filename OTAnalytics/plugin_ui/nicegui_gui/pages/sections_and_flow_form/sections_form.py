@@ -17,7 +17,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     CustomTable,
 )
 
-BUTTON_WIDTH = "width: 47%"
+BUTTON_WIDTH = "max-width: 45%; width: 100%"
 BASIC_WIDTH = "width: 100%"
 MARKER_SECTION_TABLE = "marker-section-table"
 MARKER_BUTTON_ADD_LINE = "marker-button-add-line"
