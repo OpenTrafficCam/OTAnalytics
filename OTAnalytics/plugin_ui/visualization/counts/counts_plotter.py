@@ -231,7 +231,7 @@ class MatplotlibCountBarPlotStyler(MatplotlibCountPlotStyler):
         for trace in sorted(
             data.traces,
             key=lambda x: x.data[data.y].sum(),
-            reverse=self._ascending_trace_sum,
+            reverse=not self._ascending_trace_sum,
         ):
             axes.bar(
                 x=trace.data[data.x],
