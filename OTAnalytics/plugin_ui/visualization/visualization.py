@@ -10,6 +10,7 @@ from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.plotting import (
     CachedPlotter,
+    ConstantOffsetFrameNumber,
     GetCurrentFrame,
     GetCurrentVideoPath,
     LayerGroup,
@@ -47,6 +48,7 @@ from OTAnalytics.plugin_intersect.simple_intersect import (
 )
 from OTAnalytics.plugin_prototypes.event_visualization import PandasEventProvider
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    FRAME_OFFSET,
     EventToFlowResolver,
     FilterByClassification,
     FilterByFrame,
@@ -54,7 +56,9 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     FilterByOccurrence,
     FilterByVideo,
     FlowLayerPlotter,
+    MatplotlibPlotterImplementation,
     MatplotlibTrackPlotter,
+    NonLegendTrackGeometryPlotter,
     PandasDataFrameProvider,
     PandasTrackProvider,
     PandasTracksOffsetProvider,
@@ -163,6 +167,26 @@ class TracksNotAssignedToSelection(PandasDataFrameProvider):
         ).get_data()
 
 
+def create_track_geometry_plotter(
+    pandas_data_provider: PandasDataFrameProvider,
+    color_palette_provider: ColorPaletteProvider,
+    alpha: float,
+    enable_legend: bool,
+) -> MatplotlibPlotterImplementation:
+    if enable_legend:
+        return TrackGeometryPlotter(
+            pandas_data_provider,
+            color_palette_provider,
+            alpha=alpha,
+            enable_legend=enable_legend,
+        )
+    return NonLegendTrackGeometryPlotter(
+        pandas_data_provider,
+        color_palette_provider,
+        alpha=alpha,
+    )
+
+
 class VisualizationBuilder:
     def __init__(
         self,
@@ -173,12 +197,16 @@ class VisualizationBuilder:
         section_state: SectionState,
         color_palette_provider: ColorPaletteProvider,
         pulling_progressbar_builder: ProgressbarBuilder,
+        enable_single_legend: bool = True,
+        enable_multi_legend: bool = False,
     ) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
         self._section_state = section_state
         self._color_palette_provider = color_palette_provider
         self._pulling_progressbar_builder = pulling_progressbar_builder
+        self._enable_single_legend = enable_single_legend
+        self._enable_multi_legend = enable_multi_legend
         self._track_repository = datastore._track_repository
         self._section_repository = datastore._section_repository
         self._flow_repository = datastore._flow_repository
@@ -354,7 +382,7 @@ class VisualizationBuilder:
             self._get_data_provider_all_filters_with_offset(),
             self._color_palette_provider,
             alpha=ALPHA_ALL_TRACKS_PLOTTER,
-            enable_legend=True,
+            enable_legend=self._enable_single_legend,
         )
         all_tracks_plotter = self._wrap_plotter_with_cache(track_geometry_plotter)
         return all_tracks_plotter
@@ -365,7 +393,7 @@ class VisualizationBuilder:
                 self._get_tracks_intersecting_sections_filter(),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_TRACKS_INTERSECTING_SECTIONS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             self._section_state,
         )
@@ -376,7 +404,7 @@ class VisualizationBuilder:
                 self._get_tracks_not_intersecting_selected_sections_filter(),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_TRACKS_NOT_INTERSECTING_SECTIONS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             self._section_state,
         )
@@ -391,7 +419,7 @@ class VisualizationBuilder:
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_START_END_POINTS_INTERSECTING_SECTIONS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             self._section_state,
         )
@@ -410,7 +438,7 @@ class VisualizationBuilder:
                 section_filter,
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_START_END_POINTS_NOT_INTERSECTING_SECTIONS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             self._section_state,
         )
@@ -457,7 +485,7 @@ class VisualizationBuilder:
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_START_END_POINTS_ASSIGNED_TO_FLOWS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             flow_state,
         )
@@ -478,7 +506,7 @@ class VisualizationBuilder:
                 flows_filter,
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_START_END_POINTS_NOT_ASSIGNED_TO_FLOWS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             [],
         )
@@ -497,7 +525,7 @@ class VisualizationBuilder:
             ),
             self._color_palette_provider,
             alpha=ALPHA_HIGHLIGHT_START_END_POINTS,
-            enable_legend=False,
+            enable_legend=self._enable_multi_legend,
         )
         start_end_point_plotter = self._wrap_plotter_with_cache(
             track_start_end_point_plotter
@@ -515,7 +543,7 @@ class VisualizationBuilder:
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_TRACKS_ASSIGNED_TO_FLOWS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             flow_state,
         )
@@ -536,7 +564,7 @@ class VisualizationBuilder:
                 flows_filter,
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_TRACKS_NOT_ASSIGNED_TO_FLOWS,
-                enable_legend=False,
+                enable_legend=self._enable_multi_legend,
             ),
             [],
         )
@@ -690,11 +718,8 @@ class VisualizationBuilder:
         enable_legend: bool,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
-            TrackGeometryPlotter(
-                pandas_data_provider,
-                color_palette_provider,
-                alpha=alpha,
-                enable_legend=enable_legend,
+            create_track_geometry_plotter(
+                pandas_data_provider, color_palette_provider, alpha, enable_legend
             ),
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
@@ -928,7 +953,7 @@ class VisualizationBuilder:
                         self._get_data_provider_class_filter(),
                         self._get_current_video,
                     ),
-                    self._get_current_frame,
+                    ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
                 ),
                 self._color_palette_provider,
                 self._track_view_state,
@@ -946,7 +971,7 @@ class VisualizationBuilder:
                         self._get_data_provider_class_filter_with_offset(),
                         self._get_current_video,
                     ),
-                    self._get_current_frame,
+                    ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_BOUNDING_BOX,
@@ -963,7 +988,7 @@ class VisualizationBuilder:
                         self._get_event_data_provider_class_filter(),
                         self._get_current_video,
                     ),
-                    self._get_current_frame,
+                    ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_BOUNDING_BOX,
