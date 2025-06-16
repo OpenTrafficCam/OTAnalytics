@@ -15,6 +15,10 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.export_counts_dialog import (
     MARKER_INTERVAL,
     ExportCountsDialog,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+    MARKER_APPLY,
+    MARKER_CANCEL,
+)
 
 # Constants for testing
 TEST_START = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
@@ -69,8 +73,8 @@ class TestExportCountsDialog:
         await user.should_see(marker=MARKER_FILENAME)
         await user.should_see(marker=MARKER_DIRECTORY)
         await user.should_see(marker=MARKER_INTERVAL)
-        await user.should_see(marker="apply")
-        await user.should_see(marker="cancel")
+        await user.should_see(marker=MARKER_APPLY)
+        await user.should_see(marker=MARKER_CANCEL)
 
     @pytest.mark.asyncio
     async def test_get_specification(
@@ -89,7 +93,7 @@ class TestExportCountsDialog:
 
         user.find(MARKER_DIRECTORY).type(str(Path(TEST_OUTPUT_FILE).parent))
         user.find(MARKER_FILENAME).type(Path(TEST_OUTPUT_FILE).name)
-        user.find(marker="apply").click()
+        user.find(marker=MARKER_APPLY).click()
 
         # Patch the get_file_path method to return the expected path
         with patch.object(
@@ -131,7 +135,7 @@ class TestExportCountsDialog:
 
         user.find(MARKER_DIRECTORY).type(str(Path(TEST_EXCEL_OUTPUT_FILE).parent))
         user.find(MARKER_FILENAME).type(Path(TEST_EXCEL_OUTPUT_FILE).name)
-        user.find(marker="apply").click()
+        user.find(marker=MARKER_APPLY).click()
 
         # Patch the get_file_path method to return the expected path
         with patch.object(
@@ -161,7 +165,7 @@ class TestExportCountsDialog:
         # Set directory but leave filename empty
         user.find(MARKER_DIRECTORY).type(str(Path(TEST_OUTPUT_FILE).parent))
         user.find(MARKER_FILENAME).clear()
-        user.find(marker="apply").click()
+        user.find(marker=MARKER_APPLY).click()
 
         # Verify that get_specification raises a ValueError
         with pytest.raises(ValueError, match="No output file selected"):
@@ -195,7 +199,7 @@ class TestExportCountsDialog:
         # Set directory and filename but leave dates empty
         user.find(MARKER_DIRECTORY).type(str(Path(TEST_OUTPUT_FILE).parent))
         user.find(MARKER_FILENAME).type(Path(TEST_OUTPUT_FILE).name)
-        user.find(marker="apply").click()
+        user.find(marker=MARKER_APPLY).click()
 
         # Verify that get_specification raises a ValueError
         with pytest.raises(ValueError, match="Start and end times must be specified"):

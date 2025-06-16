@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Literal
+from typing import Any, Callable, Iterable, Literal
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
@@ -27,6 +27,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.export_counts_dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
     FileChooserDialog,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import DialogResult
 
 
@@ -204,6 +205,32 @@ class NiceGuiUiFactory(UiFactory):
         if result == DialogResult.APPLY:
             return dialog.get_flow()
         raise CancelAddFlow()
+
+
+async def select_output_directory(
+    directory: Path, set_directory_callback: Callable[[str], None]
+) -> None:
+    """Open a dialog to browse for a directory.
+
+    Args:
+        directory: The current directory path
+        set_directory_callback: Callback function to set the directory value
+    """
+    # Use LocalFilePicker to browse for a directory
+    picker = LocalFilePicker(
+        directory=directory,
+        show_hidden_files=False,
+        show_only_directories=True,
+    )
+    result = await picker
+    if result and result[0]:
+        # If the selected path is a directory, use it directly
+        # Otherwise, use its parent directory
+        selected_path = result[0]
+        if selected_path.is_dir():
+            set_directory_callback(str(selected_path))
+        else:
+            set_directory_callback(str(selected_path.parent))
 
 
 def async_to_sync(awaitable: Any) -> Any:

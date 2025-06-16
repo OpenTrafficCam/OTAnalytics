@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from nicegui import ui
@@ -7,7 +7,14 @@ from nicegui.testing import User
 
 from OTAnalytics.application.resources.resource_manager import GeneralKeys
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+    MARKER_DIRECTORY,
+    MARKER_FILENAME,
+    MARKER_FORMAT,
     FileChooserDialog,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+    MARKER_APPLY,
+    MARKER_CANCEL,
 )
 
 # Constants for testing
@@ -73,8 +80,8 @@ class TestFileChooserDialog:
         await user.should_see(
             file_chooser_dialog.resource_manager.get(GeneralKeys.LABEL_BROWSE)
         )
-        await user.should_see(marker="apply")
-        await user.should_see(marker="cancel")
+        await user.should_see(marker=MARKER_APPLY)
+        await user.should_see(marker=MARKER_CANCEL)
 
     @pytest.mark.asyncio
     async def test_initial_values(
@@ -153,11 +160,12 @@ class TestFileChooserDialog:
 
         await user.open(ENDPOINT_NAME)
 
-        # Set the format to Excel
-        file_chooser_dialog._format_field.set_value("Excel")
+        # Set the format to Excel using the user fixture
+        user.find(marker=MARKER_FORMAT).click()
+        user.find("Excel").click()
 
-        # Manually set the filename to include the Excel extension
-        file_chooser_dialog._filename_field.set_value(TEST_EXCEL_FILENAME)
+        # Manually set the filename to include the Excel extension using the user fixture # noqa
+        user.find(marker=MARKER_FILENAME).clear().type(TEST_EXCEL_FILENAME)
 
         # Check that the filename has the Excel extension
         assert file_chooser_dialog._filename_field.value == TEST_EXCEL_FILENAME
@@ -181,8 +189,10 @@ class TestFileChooserDialog:
 
         # Try to update with an invalid directory
         with patch.object(Path, "exists", return_value=False):
-            # Simulate the on_value_change event with an invalid path
-            file_chooser_dialog._update_directory(MagicMock(value="/invalid/path"))
+            # Use the user fixture to set an invalid path
+            user.find(marker=MARKER_DIRECTORY).clear().type("/invalid/path")
+            # Trigger the on_value_change event by clicking elsewhere
+            user.find(marker=MARKER_FILENAME).click()
 
         # Check that the directory was reverted to the initial directory
         assert file_chooser_dialog._directory_field.value == str(initial_dir)

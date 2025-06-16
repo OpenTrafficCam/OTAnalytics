@@ -14,6 +14,10 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_START_SECTION,
     EditFlowDialog,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+    MARKER_APPLY,
+    MARKER_CANCEL,
+)
 
 # Constants for testing
 TEST_FLOW_NAME = "Test Flow"
@@ -94,8 +98,8 @@ class TestEditFlowDialog:
         await user.should_see(marker=MARKER_START_SECTION)
         await user.should_see(marker=MARKER_END_SECTION)
         await user.should_see(marker=MARKER_DISTANCE)
-        await user.should_see(marker="apply")
-        await user.should_see(marker="cancel")
+        await user.should_see(marker=MARKER_APPLY)
+        await user.should_see(marker=MARKER_CANCEL)
 
     @pytest.mark.asyncio
     async def test_dialog_with_input_values(
@@ -131,12 +135,14 @@ class TestEditFlowDialog:
 
         await user.open(ENDPOINT_NAME)
 
-        # Set values directly on the dialog's form fields
-        edit_flow_dialog._name.set_value(TEST_FLOW_NAME)
-        edit_flow_dialog._start_section.set_value(TEST_START_SECTION)
-        edit_flow_dialog._end_section.set_value(TEST_END_SECTION)
-        edit_flow_dialog._distance.set_value(TEST_DISTANCE)
-        user.find(marker="apply").click()
+        # Set values using the user fixture
+        user.find(marker=MARKER_NAME).clear().type(TEST_FLOW_NAME)
+        user.find(marker=MARKER_START_SECTION).click()
+        user.find(TEST_START_SECTION).click()
+        user.find(marker=MARKER_END_SECTION).click()
+        user.find(TEST_END_SECTION).click()
+        user.find(marker=MARKER_DISTANCE).clear().type(str(TEST_DISTANCE))
+        user.find(marker=MARKER_APPLY).click()
 
         # Get the flow
         flow = edit_flow_dialog.get_flow()
@@ -187,9 +193,11 @@ class TestEditFlowDialog:
 
         await user.open(ENDPOINT_NAME)
 
-        # Set start and end sections directly on the dialog's form fields
-        edit_flow_dialog._start_section.set_value(TEST_START_SECTION)
-        edit_flow_dialog._end_section.set_value(TEST_END_SECTION)
+        # Set start and end sections using the user fixture
+        user.find(marker=MARKER_START_SECTION).click()
+        user.find(TEST_START_SECTION).click()
+        user.find(marker=MARKER_END_SECTION).click()
+        user.find(TEST_END_SECTION).click()
 
         # Check that name_generator was called with the correct arguments
         name_generator.generate_from_string.assert_called_with(

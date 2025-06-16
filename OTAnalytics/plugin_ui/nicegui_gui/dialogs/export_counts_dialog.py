@@ -17,13 +17,13 @@ from OTAnalytics.application.resources.resource_manager import (
     GeneralKeys,
     ResourceManager,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     DateTimeForm,
     FormFieldInteger,
     FormFieldText,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import select_output_directory
 
 MARKER_START_DATE = "marker-start-date"
 MARKER_START_TIME = "marker-start-time"
@@ -49,6 +49,7 @@ class ExportCountsDialog(BaseDialog):
         default_format: str,
         modes: list,
         export_formats: dict[str, str],
+        initial_dir: Path = Path.home(),
     ) -> None:
         """Initialize the export counts dialog.
 
@@ -60,6 +61,8 @@ class ExportCountsDialog(BaseDialog):
             default_format: The default export format
             modes: The available export modes
             export_formats: A dictionary mapping format names to file extensions
+            initial_dir: The initial directory for file selection,
+            defaults to user's home directory
         """
         super().__init__(resource_manager)
         self._viewmodel = viewmodel
@@ -93,18 +96,16 @@ class ExportCountsDialog(BaseDialog):
 
         self._directory_field = FormFieldText(
             label_text=self.resource_manager.get(GeneralKeys.LABEL_DIRECTORY),
-            initial_value=str(Path.home()),
+            initial_value=str(initial_dir),
             on_value_change=self._update_directory,
             marker=MARKER_DIRECTORY,
         )
 
-        self._initial_dir = Path.home()
+        self._initial_dir = initial_dir
 
         # Generate a suggested filename
         extension = self._export_formats[self._default_format].lstrip(".")
-        context_file_type = (
-            f"{CONTEXT_FILE_TYPE_COUNTS}_{15}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"
-        )
+        context_file_type = f"{CONTEXT_FILE_TYPE_COUNTS}_{self._interval.value}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"  # noqa
         suggested_path = self._viewmodel.get_save_path_suggestion(
             extension, context_file_type
         )
@@ -160,21 +161,10 @@ class ExportCountsDialog(BaseDialog):
 
     async def _select_output_file(self) -> None:
         """Open a dialog to browse for a directory."""
-        # Use LocalFilePicker to browse for a directory
-        picker = LocalFilePicker(
+        await select_output_directory(
             directory=Path(self._directory_field.value),
-            show_hidden_files=False,
-            show_only_directories=True,
+            set_directory_callback=self._directory_field.set_value,
         )
-        result = await picker
-        if result and result[0]:
-            # If the selected path is a directory, use it directly
-            # Otherwise, use its parent directory
-            selected_path = result[0]
-            if selected_path.is_dir():
-                self._directory_field.set_value(str(selected_path))
-            else:
-                self._directory_field.set_value(str(selected_path.parent))
 
     def get_file_path(self) -> Path:
         """Get the selected file path."""

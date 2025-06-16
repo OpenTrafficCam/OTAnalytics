@@ -15,6 +15,10 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
     MARKER_NAME,
     EditSectionDialog,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+    MARKER_APPLY,
+    MARKER_CANCEL,
+)
 
 # Constants for testing
 TEST_SECTION_NAME = "Test Section"
@@ -94,8 +98,8 @@ class TestEditSectionDialog:
 
         # Check that all elements are visible
         await user.should_see(marker=MARKER_NAME)
-        await user.should_see(marker="apply")
-        await user.should_see(marker="cancel")
+        await user.should_see(marker=MARKER_APPLY)
+        await user.should_see(marker=MARKER_CANCEL)
 
     @pytest.mark.asyncio
     async def test_dialog_with_input_values(
@@ -131,7 +135,7 @@ class TestEditSectionDialog:
 
         # Set values
         user.find(MARKER_NAME).type(TEST_SECTION_NAME)
-        user.find(marker="apply").click()
+        user.find(marker=MARKER_APPLY).click()
 
         # Get the section
         section = edit_section_dialog.get_section()
@@ -186,7 +190,7 @@ class TestEditSectionDialog:
         # Set a name that will fail validation
         viewmodel.is_section_name_valid.return_value = False
         user.find(MARKER_NAME).type("Duplicate Name")
-        user.find(marker="apply").click()
+        user.find(marker=MARKER_APPLY).click()
 
         # Verify that get_section raises a NoUniqueNameException
         with pytest.raises(NoUniqueNameException):

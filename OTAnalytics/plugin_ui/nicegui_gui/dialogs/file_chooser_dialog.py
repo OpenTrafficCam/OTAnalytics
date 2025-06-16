@@ -7,7 +7,6 @@ from OTAnalytics.application.resources.resource_manager import (
     GeneralKeys,
     ResourceManager,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     FormFieldSelect,
@@ -16,6 +15,11 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     MissingInstanceError,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import select_output_directory
+
+MARKER_FORMAT = "marker-format"
+MARKER_FILENAME = "marker-filename"
+MARKER_DIRECTORY = "marker-directory"
 
 
 class FileChooserDialog(BaseDialog):
@@ -50,17 +54,20 @@ class FileChooserDialog(BaseDialog):
             options=list(file_extensions.keys()),
             initial_value=list(file_extensions.keys())[0] if file_extensions else None,
             on_value_change=self._update_file_extension,
+            marker=MARKER_FORMAT,
         )
 
         self._filename_field = FormFieldText(
             label_text=self.resource_manager.get(GeneralKeys.LABEL_FILENAME),
             initial_value=f"{initial_file_stem}{self._get_extension_for_current_format()}",  # noqa
+            marker=MARKER_FILENAME,
         )
 
         self._directory_field = FormFieldText(
             label_text=self.resource_manager.get(GeneralKeys.LABEL_DIRECTORY),
             initial_value=str(initial_dir),
             on_value_change=self._update_directory,
+            marker=MARKER_DIRECTORY,
         )
 
     def build_content(self) -> None:
@@ -111,21 +118,10 @@ class FileChooserDialog(BaseDialog):
 
     async def _browse_directory(self) -> None:
         """Open a dialog to browse for a directory."""
-        # Use LocalFilePicker to browse for a directory
-        picker = LocalFilePicker(
+        await select_output_directory(
             directory=Path(self._directory_field.value),
-            show_hidden_files=False,
-            show_only_directories=True,
+            set_directory_callback=self._directory_field.set_value,
         )
-        result = await picker
-        if result and result[0]:
-            # If the selected path is a directory, use it directly
-            # Otherwise, use its parent directory
-            selected_path = result[0]
-            if selected_path.is_dir():
-                self._directory_field.set_value(str(selected_path))
-            else:
-                self._directory_field.set_value(str(selected_path.parent))
 
     def get_file_path(self) -> Path:
         """Get the selected file path."""
