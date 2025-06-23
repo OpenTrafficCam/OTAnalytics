@@ -113,6 +113,14 @@ class ObservableProperty(Generic[VALUE]):
         """
         self._subject.register(observer)
 
+    def unregister(self, observer: Callable[[VALUE], None]) -> None:
+        """
+        Stop listening to property changes.
+        Args:
+            observer (Observer[VALUE]): observer to be removed
+        """
+        self._subject.unregister(observer)
+
     def set(self, value: VALUE) -> None:
         """
         Change the current value of the property
