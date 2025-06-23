@@ -26,6 +26,10 @@ class Subject(Generic[VALUE]):
         new_observers.append(observer)
         self._observers = list(dict.fromkeys(new_observers))
 
+    def unregister(self, observer: OBSERVER) -> None:
+        """Stop listening to changes of subject."""
+        self._observers.remove(observer)
+
     def notify(self, value: VALUE) -> None:
         """Notifies observers about the list of tracks.
 
