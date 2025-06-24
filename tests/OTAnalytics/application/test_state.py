@@ -118,6 +118,11 @@ class TestObservableProperty:
         state.set(changed_filter_element)
         state.set(changed_filter_element)
 
+        state.unregister(observer)
+
+        state.set(changed_filter_element)
+
+        assert observer.call_count == 1
         assert observer.call_args_list == [
             call(changed_filter_element),
         ]
@@ -182,6 +187,11 @@ class TestOptionalObservableProperty:
         state.set(section_south.id)
         state.set(section_south.id)
 
+        state.unregister(observer)
+        state.set(section_north.id)
+        state.set(section_south.id)
+
+        assert observer.call_count == 2
         assert observer.call_args_list == [
             call(section_north.id),
             call(section_south.id),
