@@ -141,7 +141,13 @@ class TestEditFlowDialog:
         user.find(TEST_START_SECTION).click()
         user.find(marker=MARKER_END_SECTION).click()
         user.find(TEST_END_SECTION).click()
-        user.find(marker=MARKER_DISTANCE).clear().type(str(TEST_DISTANCE))
+
+        # Set distance value
+        # Note: We can't use user.find(marker=MARKER_DISTANCE).clear().type() here
+        # ui.number elements don't support these methods in the testing framework.
+        # Instead, we set the value directly on the dialog instance.
+        edit_flow_dialog._distance.set_value(TEST_DISTANCE)
+
         user.find(marker=MARKER_APPLY).click()
 
         # Get the flow

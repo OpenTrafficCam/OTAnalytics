@@ -105,7 +105,9 @@ class ExportCountsDialog(BaseDialog):
 
         # Generate a suggested filename
         extension = self._export_formats[self._default_format].lstrip(".")
-        context_file_type = f"{CONTEXT_FILE_TYPE_COUNTS}_{self._interval.value}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"  # noqa
+        # Use the initial value directly instead of accessing self._interval.value
+        interval_value = self._interval._initial_value
+        context_file_type = f"{CONTEXT_FILE_TYPE_COUNTS}_{interval_value}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"  # noqa
         suggested_path = self._viewmodel.get_save_path_suggestion(
             extension, context_file_type
         )
