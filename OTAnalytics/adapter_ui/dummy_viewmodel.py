@@ -547,8 +547,8 @@ class DummyViewModel(
         self.treeview_videos.update_selected_items(current_paths)
         self._update_enabled_video_buttons()
 
-    def add_video(self) -> None:
-        track_files = self._ui_factory.askopenfilenames(
+    async def add_video(self) -> None:
+        track_files = await self._ui_factory.askopenfilenames(
             title="Load video files",
             filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
         )
@@ -592,9 +592,9 @@ class DummyViewModel(
         project = self._application._datastore.project
         self.frame_project.update(name=project.name, start_date=project.start_date)
 
-    def save_otconfig(self) -> None:
+    async def save_otconfig(self) -> None:
         suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
-        configuration_file = self._ui_factory.ask_for_save_file_path(
+        configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")],
             defaultextension=f".{OTCONFIG_FILE_TYPE}",
@@ -640,9 +640,9 @@ class DummyViewModel(
             initial_position=self.treeview_sections.get_position(),
         )
 
-    def load_otconfig(self) -> None:
+    async def load_otconfig(self) -> None:
         otconfig_file = Path(
-            self._ui_factory.askopenfilename(
+            await self._ui_factory.askopenfilename(
                 title="Load configuration file",
                 filetypes=[
                     (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
@@ -775,8 +775,8 @@ class DummyViewModel(
         ]
 
     @action
-    def load_tracks(self) -> None:
-        track_files = self._ui_factory.askopenfilenames(
+    async def load_tracks(self) -> None:
+        track_files = await self._ui_factory.askopenfilenames(
             title="Load track files", filetypes=[("tracks file", "*.ottrk")]
         )
         if not track_files:
@@ -785,16 +785,16 @@ class DummyViewModel(
         track_paths = [Path(file) for file in track_files]
         self._application.add_tracks_of_files(track_files=track_paths)
 
-    def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
+    async def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
         configuration_file = Path(
-            self._ui_factory.askopenfilename(
+            await self._ui_factory.askopenfilename(
                 title="Load sections file",
                 filetypes=[
                     (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
                     (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
                 ],
-                defaultextension=f".{OTFLOW_FILE_TYPE}",
+                defaultextension=f".{OTCONFIG_FILE_TYPE}",
             )
         )
         if not configuration_file.stem:
@@ -827,9 +827,9 @@ class DummyViewModel(
         self.set_selected_flow_ids([])
         self.refresh_items_on_canvas()
 
-    def save_configuration(self) -> None:
+    async def save_configuration(self) -> None:
         suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
-        configuration_file = self._ui_factory.ask_for_save_file_path(
+        configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
                 (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
@@ -848,11 +848,11 @@ class DummyViewModel(
         else:
             raise ValueError("Configuration file to save has unknown file extension")
 
-    def quick_save_configuration(self) -> None:
+    async def quick_save_configuration(self) -> None:
         try:
             self._application.quick_save_configuration()
         except NoExistingFileToSave:
-            self.save_configuration()
+            await self.save_configuration()
 
     def _save_otflow(self, otflow_file: Path) -> None:
         logger().info(f"Sections file to save: {otflow_file}")

@@ -15,7 +15,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     MissingInstanceError,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import select_output_directory
 
 MARKER_FORMAT = "marker-format"
 MARKER_FILENAME = "marker-filename"
@@ -95,10 +94,14 @@ class FileChooserDialog(BaseDialog):
 
     def _get_extension_for_current_format(self) -> str:
         """Get the file extension for the currently selected format."""
+        if not self._file_extensions:
+            return ""
         try:
             selected_format = self._format_field.value
         except MissingInstanceError:
             # If _format_field hasn't been built yet, use the first format
+            if not self._file_extensions:
+                return ""
             selected_format = list(self._file_extensions.keys())[0]
         return self._file_extensions[selected_format]
 
@@ -117,11 +120,28 @@ class FileChooserDialog(BaseDialog):
             self._directory_field.set_value(str(self._initial_dir))
 
     async def _browse_directory(self) -> None:
-        """Open a dialog to browse for a directory."""
-        await select_output_directory(
-            directory=Path(self._directory_field.value),
-            set_directory_callback=self._directory_field.set_value,
+        """Open a dialog to browse for a directory or file."""
+        from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import (
+            LocalFilePicker,
         )
+
+        # Use LocalFilePicker to browse for a file or directory
+        picker = LocalFilePicker(
+            directory=Path(self._directory_field.value),
+            show_hidden_files=False,
+            show_files_only_of_type=None,  # Show all files
+            show_only_directories=False,
+        )
+        result = await picker
+        if result and result[0]:
+            selected_path = result[0]
+            if selected_path.is_dir():
+                # If a directory was selected, update the directory field
+                self._directory_field.set_value(str(selected_path))
+            else:
+                # If a file was selected, update both directory and filename fields
+                self._directory_field.set_value(str(selected_path.parent))
+                self._filename_field.set_value(selected_path.name)
 
     def get_file_path(self) -> Path:
         """Get the selected file path."""
@@ -129,4 +149,6 @@ class FileChooserDialog(BaseDialog):
 
     def get_format(self) -> str:
         """Get the selected format."""
+        if not self._file_extensions:
+            return ""
         return self._format_field.value

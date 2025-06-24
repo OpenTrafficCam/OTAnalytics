@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Literal
+from typing import Any, Iterable, Literal
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
@@ -27,7 +27,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.export_counts_dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
     FileChooserDialog,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import DialogResult
 
 
@@ -61,7 +60,7 @@ class NiceGuiUiFactory(UiFactory):
     ) -> MessageBox:
         return NiceGuiMessageBox()
 
-    def askopenfilename(
+    async def askopenfilename(
         self, title: str, filetypes: list[tuple[str, str]], defaultextension: str
     ) -> str:
         # Convert filetypes to the format expected by FileChooserDialog
@@ -74,26 +73,33 @@ class NiceGuiUiFactory(UiFactory):
             initial_file_stem="",
         )
 
-        result = async_to_sync(dialog.result)
+        result = await dialog.result
         if result == DialogResult.APPLY:
             return str(dialog.get_file_path())
         return ""
 
-    def askopenfilenames(
+    async def askopenfilenames(
         self,
         title: str,
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
     ) -> Literal[""] | tuple[str, ...]:
         # For now, we'll just support selecting a single file
         # In a real implementation, this would allow selecting multiple files
-        file_path = self.askopenfilename(
-            title, [(desc, ext) for desc, ext in filetypes if isinstance(ext, str)], ""
-        )
+        # Convert list/tuple of extensions to individual (desc, ext) pairs
+        converted_filetypes = []
+        for desc, ext in filetypes:
+            if isinstance(ext, str):
+                converted_filetypes.append((desc, ext))
+            elif isinstance(ext, (list, tuple)) and ext:
+                # Use the first extension from the list/tuple
+                converted_filetypes.append((desc, ext[0]))
+
+        file_path = await self.askopenfilename(title, converted_filetypes, "")
         if file_path:
             return (file_path,)
         return ""
 
-    def ask_for_save_file_path(
+    async def ask_for_save_file_path(
         self,
         title: str,
         filetypes: list[tuple[str, str]],
@@ -112,7 +118,7 @@ class NiceGuiUiFactory(UiFactory):
             initial_dir=initialdir,
         )
 
-        result = async_to_sync(dialog.result)
+        result = await dialog.result
         if result == DialogResult.APPLY:
             return dialog.get_file_path()
         return Path("")
@@ -205,32 +211,6 @@ class NiceGuiUiFactory(UiFactory):
         if result == DialogResult.APPLY:
             return dialog.get_flow()
         raise CancelAddFlow()
-
-
-async def select_output_directory(
-    directory: Path, set_directory_callback: Callable[[str], None]
-) -> None:
-    """Open a dialog to browse for a directory.
-
-    Args:
-        directory: The current directory path
-        set_directory_callback: Callback function to set the directory value
-    """
-    # Use LocalFilePicker to browse for a directory
-    picker = LocalFilePicker(
-        directory=directory,
-        show_hidden_files=False,
-        show_only_directories=True,
-    )
-    result = await picker
-    if result and result[0]:
-        # If the selected path is a directory, use it directly
-        # Otherwise, use its parent directory
-        selected_path = result[0]
-        if selected_path.is_dir():
-            set_directory_callback(str(selected_path))
-        else:
-            set_directory_callback(str(selected_path.parent))
 
 
 def async_to_sync(awaitable: Any) -> Any:

@@ -17,13 +17,13 @@ from OTAnalytics.application.resources.resource_manager import (
     GeneralKeys,
     ResourceManager,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.file_utils import select_output_directory
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     DateTimeForm,
     FormFieldInteger,
     FormFieldText,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import select_output_directory
 
 MARKER_START_DATE = "marker-start-date"
 MARKER_START_TIME = "marker-start-time"

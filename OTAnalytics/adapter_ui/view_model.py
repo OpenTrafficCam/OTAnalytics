@@ -108,15 +108,15 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def load_otconfig(self) -> None:
+    async def load_otconfig(self) -> None:
         pass
 
     @abstractmethod
-    def save_otconfig(self) -> None:
+    async def save_otconfig(self) -> None:
         pass
 
     @abstractmethod
-    def add_video(self) -> None:
+    async def add_video(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -156,15 +156,15 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def load_configuration(self) -> None:
+    async def load_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def save_configuration(self) -> None:
+    async def save_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def quick_save_configuration(self) -> None:
+    async def quick_save_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
