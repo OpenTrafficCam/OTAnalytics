@@ -16,7 +16,7 @@ class Subject(Generic[VALUE]):
         self._observers: list[OBSERVER] = []
 
     def register(self, observer: OBSERVER) -> None:
-        """Listen to changes of subject.
+        """Listen to changes of the subject.
 
         Args:
             observer (OBSERVER): the observer to be registered. This must be a
@@ -27,7 +27,11 @@ class Subject(Generic[VALUE]):
         self._observers = list(dict.fromkeys(new_observers))
 
     def unregister(self, observer: OBSERVER) -> None:
-        """Stop listening to changes of subject."""
+        """Stop listening to changes of the subject.
+
+        Args:
+            observer (OBSERVER): the observer to be unregistered.
+        """
         self._observers.remove(observer)
 
     def notify(self, value: VALUE) -> None:

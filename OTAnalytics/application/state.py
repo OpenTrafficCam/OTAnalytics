@@ -116,6 +116,7 @@ class ObservableProperty(Generic[VALUE]):
     def unregister(self, observer: Callable[[VALUE], None]) -> None:
         """
         Stop listening to property changes.
+
         Args:
             observer (Observer[VALUE]): observer to be removed
         """
