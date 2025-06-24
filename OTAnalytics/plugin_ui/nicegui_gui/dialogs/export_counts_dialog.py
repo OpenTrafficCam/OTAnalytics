@@ -105,8 +105,9 @@ class ExportCountsDialog(BaseDialog):
 
         # Generate a suggested filename
         extension = self._export_formats[self._default_format].lstrip(".")
-        # Use the initial value directly instead of accessing self._interval.value
-        interval_value = self._interval._initial_value
+        # Use the initial value directly (15) instead of accessing self._interval.value
+        # This avoids MissingInstanceError when the form field hasn't been built yet
+        interval_value = 15  # Default interval value from FormFieldInteger constructor
         context_file_type = f"{CONTEXT_FILE_TYPE_COUNTS}_{interval_value}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"  # noqa
         suggested_path = self._viewmodel.get_save_path_suggestion(
             extension, context_file_type
