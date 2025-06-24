@@ -443,6 +443,10 @@ class FormFieldInteger(FormField[Number, int]):
             self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)
 
+    @property
+    def initial_value(self) -> int | None:
+        return self._initial_value
+
 
 class FormFieldDate(FormField[Input, Optional[date]]):
 
