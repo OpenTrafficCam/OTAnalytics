@@ -1015,6 +1015,7 @@ class TrafficCounting:
         create_events: CreateEvents,
         assigner: RoadUserAssigner,
         tagger_factory: TaggerFactory,
+        enable_event_creation: bool = True,
     ):
         self._event_repository = event_repository
         self._flow_repository = flow_repository
@@ -1022,6 +1023,7 @@ class TrafficCounting:
         self._create_events = create_events
         self._assigner = assigner
         self._tagger_factory = tagger_factory
+        self._enable_event_creation = enable_event_creation
 
     def count(self, specification: CountingSpecificationDto) -> Count:
         """
@@ -1030,7 +1032,7 @@ class TrafficCounting:
         Args:
             specification (CountingSpecificationDto): specification of the export
         """
-        if self._event_repository.is_empty():
+        if self._enable_event_creation and self._event_repository.is_empty():
             self._create_events()
 
         if specification.count_all_events:
