@@ -65,7 +65,7 @@ from OTAnalytics.application.config import (
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
-from OTAnalytics.application.export_formats.export_mode import INITIAL_MERGE, OVERWRITE
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
@@ -1741,7 +1741,7 @@ class DummyViewModel(
             export_format = export_config.export_format
 
             export_specification = TrackStatisticsExportSpecification(
-                save_path, export_format, INITIAL_MERGE
+                save_path, export_format, OVERWRITE
             )
             self._application.export_track_statistics(export_specification)
             logger().info(f"Exporting track statistics to {save_path}")
