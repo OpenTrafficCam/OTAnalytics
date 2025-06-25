@@ -1,10 +1,10 @@
 av==13.0.0
 customtkinter==5.2.2
-fastapi==0.115.5
+fastapi==0.115.13
 ijson==3.3.0
 matplotlib==3.10.0
-more-itertools==10.7.0
-nicegui==2.11.0
+more-itertools==10.5.0
+nicegui==2.20.0
 numpy==2.1.1
 openpyxl==3.1.5
 pandas==2.2.3
@@ -12,7 +12,7 @@ pillow==11.1.0
 requests==2.32.4
 seaborn==0.13.2
 shapely==2.0.7
-starlette==0.41.2
+starlette==0.45.3
 tqdm==4.67.1
 ujson==5.10.0
 uvicorn==0.32.1

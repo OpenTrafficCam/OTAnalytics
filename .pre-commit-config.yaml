@@ -47,15 +47,15 @@ repos:
           - av==13.0.0
           - black==25.1.0
           - customtkinter==5.2.2
-          - fastapi==0.115.5
+          - fastapi==0.115.13
           - hatch-requirements-txt==0.4.1
           - ijson==3.3.0
           - interrogate==1.7.0
           - isort==6.0.1
           - matplotlib==3.10.0
-          - more-itertools==10.7.0
+          - more-itertools==10.5.0
           - mypy==1.16.1
-          - nicegui==2.11.0
+          - nicegui==2.20.0
           - numpy==2.1.1
           - pandas-stubs==2.2.3.241126
           - pandas==2.2.3
@@ -65,7 +65,7 @@ repos:
           - pytest-cov==6.0.0
           - pytest-lazy-fixtures==1.1.2
           - pytest==8.3.4
-          - starlette==0.41.2
+          - starlette==0.45.3
           - twine==6.1.0
           - types-PyYAML
           - types-flake8
@@ -97,4 +97,4 @@ repos:
       - id: shell-fmt-docker
         args:
           - -i
-          - "2"
+          - '2'
