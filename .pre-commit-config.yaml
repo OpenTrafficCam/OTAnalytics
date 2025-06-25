@@ -51,7 +51,7 @@ repos:
           - hatch-requirements-txt==0.4.1
           - ijson==3.3.0
           - interrogate==1.7.0
-          - isort==5.13.2
+          - isort==6.0.1
           - matplotlib==3.10.0
           - more-itertools==10.5.0
           - mypy==1.16.1
