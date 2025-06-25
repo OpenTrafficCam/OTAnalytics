@@ -45,7 +45,7 @@ repos:
         entry: mypy OTAnalytics tests --config-file=pyproject.toml
         additional_dependencies:
           - av==13.0.0
-          - black==24.8.0
+          - black==25.1.0
           - customtkinter==5.2.2
           - fastapi==0.115.5
           - hatch-requirements-txt==0.4.1
@@ -53,7 +53,7 @@ repos:
           - interrogate==1.7.0
           - isort==6.0.1
           - matplotlib==3.10.0
-          - more-itertools==10.5.0
+          - more-itertools==10.7.0
           - mypy==1.16.1
           - nicegui==2.11.0
           - numpy==2.1.1
