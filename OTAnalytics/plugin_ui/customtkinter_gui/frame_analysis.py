@@ -1,3 +1,4 @@
+import asyncio
 import tkinter
 from typing import Any
 
@@ -48,21 +49,35 @@ class FrameAnalysis(AbstractCTkFrame):
         self.button_export_eventlist = CTkButton(
             master=self,
             text="Export eventlist ...",
-            command=self._viewmodel.export_events,
+            command=self.export_events,
         )
         self.button_export_counts = CTkButton(
-            master=self, text="Export counts ...", command=self._viewmodel.export_counts
+            master=self,
+            text="Export counts ...",
+            command=self.export_counts,
         )
         self.button_export_road_user_assignments = CTkButton(
             master=self,
             text="Export road user assignments ...",
-            command=self._viewmodel.export_road_user_assignments,
+            command=self.export_road_user_assignments,
         )
         self.button_export_track_statistics = CTkButton(
             master=self,
             text="Export track statistics ...",
-            command=self._viewmodel.export_track_statistics,
+            command=self.export_track_statistics,
         )
+
+    def export_events(self) -> None:
+        asyncio.run(self._viewmodel.export_events())
+
+    def export_counts(self) -> None:
+        asyncio.run(self._viewmodel.export_counts())
+
+    def export_road_user_assignments(self) -> None:
+        asyncio.run(self._viewmodel.export_road_user_assignments())
+
+    def export_track_statistics(self) -> None:
+        asyncio.run(self._viewmodel.export_track_statistics())
 
     def _place_widgets(self) -> None:
         self.button_export_eventlist.grid(
