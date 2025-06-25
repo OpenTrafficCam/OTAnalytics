@@ -26,7 +26,6 @@ class BaseDialog:
     def __init__(self, resource_manager: ResourceManager) -> None:
         self.resource_manager = resource_manager
 
-
     def build(self) -> ui.dialog:
         with ui.dialog() as dialog, ui.card().classes("w-96"):
             self.build_content()
