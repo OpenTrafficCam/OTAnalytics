@@ -585,7 +585,9 @@ class FormFieldTime(FormField[Input, Optional[time]]):
         ).style("max-width: 40%")
         with self._instance:
             with ui.menu().props("no-parent-event") as menu:
-                with ui.time(self.initial_value_text).bind_value(self._instance):
+                with ui.time(self.initial_value_text, mask="HH:mm:ss").bind_value(
+                    self._instance
+                ):
                     with ui.row().classes("justify-end"):
                         ui.button("Close", on_click=menu.close).props("flat")
             with self._instance.add_slot("append"):
@@ -597,7 +599,7 @@ class FormFieldTime(FormField[Input, Optional[time]]):
     @staticmethod
     def __format(value: time | None) -> str:
         if value:
-            return value.strftime("%H:%M")
+            return value.strftime("%H:%M:%S")
         return ""
 
 
