@@ -7,6 +7,7 @@ from OTAnalytics.application.resources.resource_manager import (
     FileChooserDialogKeys,
     ResourceManager,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     FormFieldSelect,
@@ -121,10 +122,6 @@ class FileChooserDialog(BaseDialog):
 
     async def _browse_directory(self) -> None:
         """Open a dialog to browse for a directory or file."""
-        from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import (
-            LocalFilePicker,
-        )
-
         # Use LocalFilePicker to browse for a file or directory
         picker = LocalFilePicker(
             directory=Path(self._directory_field.value),
