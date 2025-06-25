@@ -4,7 +4,7 @@ from typing import Any
 from nicegui import ui
 
 from OTAnalytics.application.resources.resource_manager import (
-    GeneralKeys,
+    FileChooserDialogKeys,
     ResourceManager,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
@@ -49,7 +49,7 @@ class FileChooserDialog(BaseDialog):
 
         # Create form fields
         self._format_field = FormFieldSelect(
-            label_text=self.resource_manager.get(GeneralKeys.LABEL_FORMAT),
+            label_text=self.resource_manager.get(FileChooserDialogKeys.LABEL_FORMAT),
             options=list(file_extensions.keys()),
             initial_value=list(file_extensions.keys())[0] if file_extensions else None,
             on_value_change=self._update_file_extension,
@@ -57,13 +57,13 @@ class FileChooserDialog(BaseDialog):
         )
 
         self._filename_field = FormFieldText(
-            label_text=self.resource_manager.get(GeneralKeys.LABEL_FILENAME),
+            label_text=self.resource_manager.get(FileChooserDialogKeys.LABEL_FILENAME),
             initial_value=f"{initial_file_stem}{self._get_extension_for_current_format()}",  # noqa
             marker=MARKER_FILENAME,
         )
 
         self._directory_field = FormFieldText(
-            label_text=self.resource_manager.get(GeneralKeys.LABEL_DIRECTORY),
+            label_text=self.resource_manager.get(FileChooserDialogKeys.LABEL_DIRECTORY),
             initial_value=str(initial_dir),
             on_value_change=self._update_directory,
             marker=MARKER_DIRECTORY,
@@ -80,7 +80,7 @@ class FileChooserDialog(BaseDialog):
 
             with ui.row():
                 ui.button(
-                    self.resource_manager.get(GeneralKeys.LABEL_BROWSE),
+                    self.resource_manager.get(FileChooserDialogKeys.LABEL_BROWSE),
                     on_click=self._browse_directory,
                 )
 

@@ -14,7 +14,8 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.resources.resource_manager import (
-    GeneralKeys,
+    ExportCountsDialogKeys,
+    FileChooserDialogKeys,
     ResourceManager,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.file_utils import select_output_directory
@@ -72,30 +73,40 @@ class ExportCountsDialog(BaseDialog):
 
         # Create form fields
         self._start_datetime = DateTimeForm(
-            label_date_text=self.resource_manager.get(GeneralKeys.LABEL_START_DATE),
-            label_time_text=self.resource_manager.get(GeneralKeys.LABEL_START_TIME),
+            label_date_text=self.resource_manager.get(
+                ExportCountsDialogKeys.LABEL_START_DATE
+            ),
+            label_time_text=self.resource_manager.get(
+                ExportCountsDialogKeys.LABEL_START_TIME
+            ),
             initial_value=start,
             marker_date=MARKER_START_DATE,
             marker_time=MARKER_START_TIME,
         )
 
         self._end_datetime = DateTimeForm(
-            label_date_text=self.resource_manager.get(GeneralKeys.LABEL_END_DATE),
-            label_time_text=self.resource_manager.get(GeneralKeys.LABEL_END_TIME),
+            label_date_text=self.resource_manager.get(
+                ExportCountsDialogKeys.LABEL_END_DATE
+            ),
+            label_time_text=self.resource_manager.get(
+                ExportCountsDialogKeys.LABEL_END_TIME
+            ),
             initial_value=end,
             marker_date=MARKER_END_DATE,
             marker_time=MARKER_END_TIME,
         )
 
         self._interval = FormFieldInteger(
-            label_text=self.resource_manager.get(GeneralKeys.LABEL_INTERVAL_MINUTES),
+            label_text=self.resource_manager.get(
+                ExportCountsDialogKeys.LABEL_INTERVAL_MINUTES
+            ),
             initial_value=15,  # Default interval of 15 minutes
             min_value=1,
             marker=MARKER_INTERVAL,
         )
 
         self._directory_field = FormFieldText(
-            label_text=self.resource_manager.get(GeneralKeys.LABEL_DIRECTORY),
+            label_text=self.resource_manager.get(FileChooserDialogKeys.LABEL_DIRECTORY),
             initial_value=str(initial_dir),
             on_value_change=self._update_directory,
             marker=MARKER_DIRECTORY,
@@ -114,35 +125,35 @@ class ExportCountsDialog(BaseDialog):
         suggested_filename = f"{suggested_stem}.{extension}"
 
         self._filename_field = FormFieldText(
-            label_text=self.resource_manager.get(GeneralKeys.LABEL_FILENAME),
+            label_text=self.resource_manager.get(FileChooserDialogKeys.LABEL_FILENAME),
             initial_value=suggested_filename,
             marker=MARKER_FILENAME,
         )
 
     def build_content(self) -> None:
         """Build the dialog content."""
-        ui.label(self.resource_manager.get(GeneralKeys.LABEL_EXPORT_COUNTS)).classes(
-            "text-xl"
-        )
+        ui.label(
+            self.resource_manager.get(ExportCountsDialogKeys.LABEL_EXPORT_COUNTS)
+        ).classes("text-xl")
 
         with ui.column().classes("w-full"):
             # Time range section
-            ui.label(self.resource_manager.get(GeneralKeys.LABEL_TIME_RANGE)).classes(
-                "text-lg"
-            )
+            ui.label(
+                self.resource_manager.get(ExportCountsDialogKeys.LABEL_TIME_RANGE)
+            ).classes("text-lg")
             self._start_datetime.build()
             self._end_datetime.build()
             self._interval.build()
 
             # Output file section
-            ui.label(self.resource_manager.get(GeneralKeys.LABEL_OUTPUT_FILE)).classes(
-                "text-lg"
-            )
+            ui.label(
+                self.resource_manager.get(ExportCountsDialogKeys.LABEL_OUTPUT_FILE)
+            ).classes("text-lg")
             self._directory_field.build()
             self._filename_field.build()
             with ui.row():
                 ui.button(
-                    self.resource_manager.get(GeneralKeys.LABEL_BROWSE),
+                    self.resource_manager.get(FileChooserDialogKeys.LABEL_BROWSE),
                     on_click=self._select_output_file,
                 )
 

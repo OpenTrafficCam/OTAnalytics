@@ -5,7 +5,7 @@ import pytest
 from nicegui import ui
 from nicegui.testing import User
 
-from OTAnalytics.application.resources.resource_manager import GeneralKeys
+from OTAnalytics.application.resources.resource_manager import FileChooserDialogKeys
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
     MARKER_DIRECTORY,
     MARKER_FILENAME,
@@ -69,16 +69,20 @@ class TestFileChooserDialog:
 
         # Check that all elements are visible
         await user.should_see(
-            file_chooser_dialog.resource_manager.get(GeneralKeys.LABEL_FORMAT)
+            file_chooser_dialog.resource_manager.get(FileChooserDialogKeys.LABEL_FORMAT)
         )
         await user.should_see(
-            file_chooser_dialog.resource_manager.get(GeneralKeys.LABEL_FILENAME)
+            file_chooser_dialog.resource_manager.get(
+                FileChooserDialogKeys.LABEL_FILENAME
+            )
         )
         await user.should_see(
-            file_chooser_dialog.resource_manager.get(GeneralKeys.LABEL_DIRECTORY)
+            file_chooser_dialog.resource_manager.get(
+                FileChooserDialogKeys.LABEL_DIRECTORY
+            )
         )
         await user.should_see(
-            file_chooser_dialog.resource_manager.get(GeneralKeys.LABEL_BROWSE)
+            file_chooser_dialog.resource_manager.get(FileChooserDialogKeys.LABEL_BROWSE)
         )
         await user.should_see(marker=MARKER_APPLY)
         await user.should_see(marker=MARKER_CANCEL)
@@ -213,5 +217,5 @@ class TestFileChooserDialog:
 
         # Check that the browse button is present
         await user.should_see(
-            file_chooser_dialog.resource_manager.get(GeneralKeys.LABEL_BROWSE)
+            file_chooser_dialog.resource_manager.get(FileChooserDialogKeys.LABEL_BROWSE)
         )
