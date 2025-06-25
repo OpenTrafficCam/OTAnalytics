@@ -1,7 +1,7 @@
 from pandas import DataFrame
 
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.track_store import (
     DEFAULT_CLASSIFICATOR,
     PandasDataFrameProvider,

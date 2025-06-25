@@ -9,7 +9,7 @@ from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import (
+from OTAnalytics.domain.track_dataset.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
     TrackDataset,
     TrackDoesNotExistError,
@@ -25,6 +25,8 @@ from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
 from OTAnalytics.plugin_datastore.track_store import (
     COLUMNS,
     INDEX_NAMES,
+    FilterByIdPandasTrackDataset,
+    FilterLastNDetectionsPandasTrackDataset,
     PandasDetection,
     PandasTrack,
     PandasTrackDataset,
@@ -71,20 +73,27 @@ class TestPandasDetection:
 
 class TestPandasTrack:
     def test_properties(self) -> None:
+        expected = self.create_python_track()
+        actual = self.create_pandas_track(expected)
+
+        assert_equal_track_properties(actual, expected)
+
+    def create_python_track(self) -> Track:
         builder = TrackBuilder()
         builder.append_detection()
         builder.append_detection()
         builder.append_detection()
         builder.append_detection()
         builder.append_detection()
-        python_track = builder.build_track()
-        detections = [detection.to_dict() for detection in python_track.detections]
+        return builder.build_track()
+
+    def create_pandas_track(self, this: Track) -> PandasTrack:
+        detections = [detection.to_dict() for detection in this.detections]
         data = DataFrame(detections).set_index([track.OCCURRENCE]).sort_index()
         data[track.TRACK_CLASSIFICATION] = data[track.CLASSIFICATION]
+        data[track.ORIGINAL_TRACK_ID] = data[track.TRACK_ID]
         data = data.drop([track.TRACK_ID], axis=1)
-        pandas_track = PandasTrack(python_track.id.id, data)
-
-        assert_equal_track_properties(pandas_track, python_track)
+        return PandasTrack(_id=this.id.id, _data=data)
 
 
 class TestPandasTrackSegmentDataset:
@@ -249,6 +258,7 @@ class TestPandasTrackDataset:
             PandasTrackDataset, dataset.add_all([car_track, pedestrian_track])
         )
         expected_merged_track = PythonTrack(
+            car_track.id,
             car_track.id,
             car_track_continuing.classification,
             car_track.detections + car_track_continuing.detections,
@@ -651,3 +661,77 @@ class TestPandasTrackDataset:
         assert actual.index.names == INDEX_NAMES
         assert INDEX_NAMES not in actual.columns.to_list()
         assert set(COLUMNS) - set(INDEX_NAMES) == set(actual.columns.to_list())
+
+
+class TestFilterByIdPandasTrackDataset:
+    def test_filter_by_id_all_included(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        expected = PandasTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        )
+        dataset = PandasTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        )
+        track_ids = [car_track.id.id, pedestrian_track.id.id]
+        target = FilterByIdPandasTrackDataset(dataset, track_ids)
+
+        assert_track_datasets_equal(target, expected)
+
+    def test_filter_by_id_one_matching(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+        bicycle_track: Track,
+    ) -> None:
+        expected = PandasTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        )
+        dataset = PandasTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        )
+        track_ids = [bicycle_track.id.id, pedestrian_track.id.id]
+        target = FilterByIdPandasTrackDataset(dataset, track_ids)
+
+        assert_track_datasets_equal(target, expected)
+
+
+class TestFilterLastNSegmentsPandasTrackDataset:
+    def test_filter_last_n_segments_all_included(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        car_track_continuing: Track,
+        pedestrian_track: Track,
+        single_detection_track: Track,
+    ) -> None:
+        expected_car_track = create_expected_track(car_track_continuing)
+        expected_pedestrian_track = create_expected_track(pedestrian_track)
+        expected = PandasTrackDataset.from_list(
+            [expected_car_track, expected_pedestrian_track], track_geometry_factory
+        )
+        last_n = 2
+
+        target = FilterLastNDetectionsPandasTrackDataset(
+            PandasTrackDataset.from_list(
+                [car_track_continuing, pedestrian_track, single_detection_track],
+                track_geometry_factory,
+            ),
+            last_n,
+        )
+
+        assert_track_datasets_equal(target, expected)
+
+
+def create_expected_track(track: Track) -> PythonTrack:
+    car_detections = track.detections[-2:]
+    expected_car_track = PythonTrack(
+        _original_id=track.id,
+        _id=track.id,
+        _classification=track.classification,
+        _detections=car_detections,
+    )
+    return expected_car_track

@@ -7,7 +7,7 @@ from typing import Iterable, Optional
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 
 
 @dataclass(frozen=True)
@@ -220,6 +220,48 @@ class TrackRepository:
 
     def __len__(self) -> int:
         return len(self._dataset)
+
+    def revert_cuts_for(self, original_ids: frozenset[TrackId]) -> None:
+        """
+        Reverts cuts for tracks associated with the provided original track IDs.
+
+        This method finds any cut tracks derived from the original track IDs and
+        restores them to their original state. It replaces cut track IDs with their
+        original track IDs in the dataset, removing the cut versions.
+
+        The method operates on the current dataset without modification if either:
+        - The dataset is empty
+        - None of the provided original track IDs have associated cut tracks
+
+        Observers registered with the repository will be notified of both removed tracks
+        (the cut versions) and new/updated tracks (the reverted original tracks).
+
+        Args:
+            original_ids (frozenset[TrackId]): track IDs representing the
+                original tracks for which cuts should be reverted.
+        """
+
+        reverted_dataset, reverted_ids, cut_track_ids = self._dataset.revert_cuts_for(
+            original_ids
+        )
+        self._dataset = reverted_dataset
+        self.observers.notify(
+            TrackRepositoryEvent(added=reverted_ids, removed=cut_track_ids)
+        )
+
+    def remove_by_original_ids(self, original_ids: frozenset[TrackId]) -> None:
+        """
+        Removes tracks from the repository based on their original IDs and notifies
+        observers of the removal event.
+
+        Args:
+            original_ids (frozenset[TrackId]): original IDs of the tracks to be removed.
+        """
+        updated_dataset, removed_ids = self._dataset.remove_by_original_ids(
+            original_ids
+        )
+        self._dataset = updated_dataset
+        self.observers.notify(TrackRepositoryEvent.create_removed(removed_ids))
 
 
 class TrackFileRepository:

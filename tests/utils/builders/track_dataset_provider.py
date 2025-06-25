@@ -2,9 +2,11 @@ from typing import Literal
 from unittest.mock import Mock
 
 from OTAnalytics.domain.track import Track
-from OTAnalytics.domain.track_dataset import (
+from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
+    FilterByClassTrackDataset,
+)
+from OTAnalytics.domain.track_dataset.track_dataset import (
     TRACK_GEOMETRY_FACTORY,
-    FilteredTrackDataset,
     TrackDataset,
     TrackGeometryDataset,
 )
@@ -16,7 +18,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
-    FilteredPandasTrackDataset,
+    FilterByClassPandasTrackDataset,
     PandasTrackDataset,
 )
 
@@ -65,7 +67,7 @@ class TrackDatasetProvider:
         tracks: list[Track],
         include_classes: list[str],
         exclude_classes: list[str],
-    ) -> FilteredTrackDataset:
+    ) -> FilterByClassTrackDataset:
         if dataset_type == PYTHON:
             return self.provide_filtered_python(
                 tracks, include_classes, exclude_classes
@@ -82,8 +84,8 @@ class TrackDatasetProvider:
         tracks: list[Track],
         include_classes: list[str],
         exclude_classes: list[str],
-    ) -> FilteredPandasTrackDataset:
-        return FilteredPandasTrackDataset(
+    ) -> FilterByClassPandasTrackDataset:
+        return FilterByClassPandasTrackDataset(
             self.provide_pandas(tracks),
             frozenset(include_classes),
             frozenset(exclude_classes),
@@ -106,7 +108,7 @@ class TrackDatasetProvider:
         dataset_type: str,
         include_classes: list[str],
         exclude_classes: list[str],
-    ) -> tuple[FilteredTrackDataset, Mock]:
+    ) -> tuple[FilterByClassTrackDataset, Mock]:
         if dataset_type == PYTHON:
             mock = Mock()
             return (
@@ -118,7 +120,7 @@ class TrackDatasetProvider:
         elif dataset_type == PANDAS:
             mock = Mock()
             return (
-                FilteredPandasTrackDataset(
+                FilterByClassPandasTrackDataset(
                     mock, frozenset(include_classes), frozenset(exclude_classes)
                 ),
                 mock,

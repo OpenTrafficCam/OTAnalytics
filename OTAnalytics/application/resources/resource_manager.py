@@ -10,10 +10,17 @@ class ResourceKey(StrEnum):
 
 class GeneralKeys(ResourceKey):
     LABEL_APPLY = "label-apply"
+    LABEL_CANCEL = "label-cancel"
     LABEL_RESET = "label-reset"
+    LABEL_MODES = "label-modes"
+    LABEL_EXPORT_OPTIONS = "label-export-options"
+    LABEL_EXPORT_MODE = "label-export-mode"
+    LABEL_SELECT_OUTPUT_FILE = "label-select-output-file"
 
 
 class CanvasKeys(ResourceKey):
+    LABEL_ADD_SECTION = "label-add-section"
+    LABEL_EDIT_SECTION = "label-edit-section"
     IMAGE_DEFAULT = "image-default"
 
 
@@ -39,21 +46,101 @@ class ProjectKeys(ResourceKey):
     LABEL_START_TIME = "label-start-time"
 
 
+class TrackFormKeys(ResourceKey):
+    TAB_ONE = "tab-one"
+    TAB_TWO = "tab-two"
+
+
 class SvzMetadataKeys(ResourceKey):
     LABEL_SVZ_METADATA_FORM_HEADER = "label-svz-metadata-form-header"
+    LABEL_TK_NUMBER = "label-tk-number"
+    LABEL_COUNTING_LOCATION_NUMBER = "label-counting-location-number"
+    LABEL_COUNTING_SELECTION = "label-counting-selection"
+    LABEL_DIRECTION_DESCRIPTION = "label-direction-description"
+    LABEL_HAS_BICYCLE_LANE = "label-has-bicycle-lane"
+    LABEL_IS_BICYCLE_COUNTING = "label-is-bicycle-counting"
+    LABEL_COUNTING_DAY_SELECT = "label-counting-day-select"
+    LABEL_WEATHER = "label-weather"
+    LABEL_REMARK = "label-remark"
+    LABEL_COORDINATES = "label-coordinates"
+    LABEL_X_COORDINATE = "label-x-coordinate"
+    LABEL_Y_COORDINATE = "label-y-coordinate"
+
+
+class FlowKeys(ResourceKey):
+    TABLE_COLUMN_NAME = "table-flow-column-name"
+    BUTTON_ADD = "button-add"
+    BUTTON_GENERATE = "button-generate"
+    BUTTON_PROPERTIES = "button-properties"
+    BUTTON_REMOVE = "button-remove"
+
+
+class FlowAndSectionKeys(ResourceKey):
+    TAB_FLOW = "tab-flow"
+    TAB_SECTION = "tab-section"
+
+
+class EditFlowDialogKeys(ResourceKey):
+    LABEL_NAME = "Name"
+    LABEL_START_SECTION = "Start section"
+    LABEL_END_SECTION = "End section"
+    LABEL_DISTANCE = "Distance [m]"
+
+
+class ExportCountsDialogKeys(ResourceKey):
+    LABEL_EXPORT_COUNTS = "label-export-counts"
+    LABEL_TIME_RANGE = "label-time-range"
+    LABEL_START_DATE = "label-start-date"
+    LABEL_START_TIME = "label-start-time"
+    LABEL_END_DATE = "label-end-date"
+    LABEL_END_TIME = "label-end-time"
+    LABEL_INTERVAL_MINUTES = "label-interval-minutes"
+    LABEL_OUTPUT_FILE = "label-output-file"
+
+
+class FileChooserDialogKeys(ResourceKey):
+    LABEL_FORMAT = "label-format"
+    LABEL_FILENAME = "label-filename"
+    LABEL_DIRECTORY = "label-directory"
+    LABEL_BROWSE = "label-browse"
 
 
 class AddTracksKeys(ResourceKey):
     BUTTON_ADD_TRACKS = "button-add-tracks"
 
 
+class AddVideoKeys(ResourceKey):
+    BUTTON_ADD_VIDEOS = "button-add-videos"
+    BUTTON_REMOVE_VIDEOS = "button-remove-videos"
+    TABLE_NAME = "table-name"
+
+
+class SectionKeys(ResourceKey):
+    BUTTON_ADD_LINE = "button-add-line"
+    BUTTON_ADD_AREA = "button-add-area"
+    BUTTON_EDIT = "button-edit"
+    BUTTON_PROPERTIES = "button-properties"
+    BUTTON_REMOVE = "button-remove"
+    TABLE_COLUMN_NAME = "table-column-name"
+
+
 class OffsetSliderKeys(ResourceKey):
-    BUTTON_UPDATE_OFFSET = "button-update-offset"
+    LABEL_COORDINATE_X = "label-coordinate-x"
+    LABEL_COORDINATE_Y = "label-coordinate-y"
+
+
+class VisualizationOffsetSliderKeys(ResourceKey):
+    BUTTON_UPDATE_OFFSET = "offset-slider-keys-button-update-offset"
 
 
 class RemarkKeys(ResourceKey):
     LABEL_REMARK_HEADER = "label-remark-header"
     REMARK_NO_COMMENT = "remark-no-comment"
+
+
+class HotKeys(ResourceKey):
+    SAVE_SECTION_HOTKEY = "save-section-hotkey"
+    CANCEL_SECTION_GEOMETRY_HOTKEY = "cancel-section-geometry-hotkey"
 
 
 class VisualizationFiltersKeys(ResourceKey):
@@ -90,6 +177,7 @@ class TrackStatisticKeys(ResourceKey):
 
 
 class VisualizationLayersKeys(ResourceKey):
+    BUTTON_UPDATE_FLOW_HIGHLIGHTING = "button-update-flow-highlighting"
     LABEL_VISUALIZATION_LAYERS_FORM_HEADER = "label-visualization-layers-form-header"
 
 
@@ -99,25 +187,80 @@ class WorkspaceKeys(ResourceKey):
 
 DEFAULT_RESOURCE_MAP = {
     AddTracksKeys.BUTTON_ADD_TRACKS: "Add tracks...",
+    AddVideoKeys.BUTTON_ADD_VIDEOS: "Add videos...",
+    AddVideoKeys.BUTTON_REMOVE_VIDEOS: "Remove videos...",
+    AddVideoKeys.TABLE_NAME: "Video file",
     AnalysisKeys.LABEL_ANALYSIS: "Analysis",
     AnalysisKeys.BUTTON_TEXT_EXPORT_EVENT_LIST: "Export eventlist...",
     AnalysisKeys.BUTTON_TEXT_EXPORT_COUNTS: "Export counts...",
     AnalysisKeys.BUTTON_TEXT_EXPORT_ROAD_USER_ASSIGNMENT: "Export road user assignments...",  # noqa
     AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS: "Export track statistics",
+    CanvasKeys.LABEL_ADD_SECTION: "Add section",
+    CanvasKeys.LABEL_EDIT_SECTION: "Edit section",
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
+    FlowAndSectionKeys.TAB_SECTION: "Section",
+    FlowAndSectionKeys.TAB_FLOW: "Flow",
+    FlowKeys.TABLE_COLUMN_NAME: "Flows",
+    FlowKeys.BUTTON_ADD: "Add",
+    FlowKeys.BUTTON_GENERATE: "Generate",
+    FlowKeys.BUTTON_REMOVE: "Remove",
+    FlowKeys.BUTTON_PROPERTIES: "Properties",
+    EditFlowDialogKeys.LABEL_NAME: "Name",
+    EditFlowDialogKeys.LABEL_START_SECTION: "Start section",
+    EditFlowDialogKeys.LABEL_END_SECTION: "End section",
+    EditFlowDialogKeys.LABEL_DISTANCE: "Distance",
     GeneralKeys.LABEL_APPLY: "Apply",
     GeneralKeys.LABEL_RESET: "Reset",
-    OffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
+    GeneralKeys.LABEL_CANCEL: "Cancel",
+    GeneralKeys.LABEL_MODES: "Modes",
+    GeneralKeys.LABEL_EXPORT_OPTIONS: "Export Options",
+    GeneralKeys.LABEL_EXPORT_MODE: "Export Mode",
+    GeneralKeys.LABEL_SELECT_OUTPUT_FILE: "Select Output File",
+    FileChooserDialogKeys.LABEL_FORMAT: "Format",
+    FileChooserDialogKeys.LABEL_FILENAME: "Filename",
+    FileChooserDialogKeys.LABEL_DIRECTORY: "Directory",
+    FileChooserDialogKeys.LABEL_BROWSE: "Browse",
+    ExportCountsDialogKeys.LABEL_INTERVAL_MINUTES: "Interval (minutes)",
+    ExportCountsDialogKeys.LABEL_OUTPUT_FILE: "Output File",
+    ExportCountsDialogKeys.LABEL_EXPORT_COUNTS: "Export Counts",
+    ExportCountsDialogKeys.LABEL_TIME_RANGE: "Time Range",
+    ExportCountsDialogKeys.LABEL_START_DATE: "Start date",
+    ExportCountsDialogKeys.LABEL_START_TIME: "Start time",
+    ExportCountsDialogKeys.LABEL_END_DATE: "End date",
+    ExportCountsDialogKeys.LABEL_END_TIME: "End time",
+    OffsetSliderKeys.LABEL_COORDINATE_X: "X:",
+    OffsetSliderKeys.LABEL_COORDINATE_Y: "Y:",
     ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
     ProjectKeys.LABEL_PROJECT_NAME: "Project name",
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
     ProjectKeys.LABEL_QUICK_SAVE: "Save",
     ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
-    ProjectKeys.LABEL_START_DATE: "Start date",
-    ProjectKeys.LABEL_START_TIME: "Start time",
+    ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
+    ProjectKeys.LABEL_QUICK_SAVE: "Save",
+    ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
     RemarkKeys.LABEL_REMARK_HEADER: "Remark",
     RemarkKeys.REMARK_NO_COMMENT: "No Comment",
+    SectionKeys.BUTTON_ADD_AREA: "Add area...",
+    SectionKeys.BUTTON_ADD_LINE: "Add line...",
+    SectionKeys.BUTTON_EDIT: "Edit...",
+    SectionKeys.BUTTON_PROPERTIES: "Properties...",
+    SectionKeys.BUTTON_REMOVE: "Remove...",
+    SectionKeys.TABLE_COLUMN_NAME: "Sections",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
+    SvzMetadataKeys.LABEL_TK_NUMBER: "TK-Nummer",
+    SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER: "Zählstellennummer",
+    SvzMetadataKeys.LABEL_DIRECTION_DESCRIPTION: "Ausrichtung",
+    SvzMetadataKeys.LABEL_COUNTING_SELECTION: "Zählrichtung (Name aus ZV)",
+    SvzMetadataKeys.LABEL_HAS_BICYCLE_LANE: "Seitlicher Radweg vorhanden",
+    SvzMetadataKeys.LABEL_IS_BICYCLE_COUNTING: "Fahrradzählung",
+    SvzMetadataKeys.LABEL_COUNTING_DAY_SELECT: "Kategorie Zähltag",
+    SvzMetadataKeys.LABEL_WEATHER: "Wetter",
+    SvzMetadataKeys.LABEL_REMARK: "Bemerkung",
+    SvzMetadataKeys.LABEL_COORDINATES: "Geokoordinate",
+    SvzMetadataKeys.LABEL_X_COORDINATE: "X Koordinate",
+    SvzMetadataKeys.LABEL_Y_COORDINATE: "Y Koordinate",
+    TrackFormKeys.TAB_ONE: "Track",
+    TrackFormKeys.TAB_TWO: "Videos",
     TrackStatisticKeys.COLUMN_NAME: "Name",
     TrackStatisticKeys.COLUMN_NUMBER: "Number",
     TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER: "Track Statistics",
@@ -137,16 +280,19 @@ DEFAULT_RESOURCE_MAP = {
     VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM: "From",
     VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE: "Last detection occurrence",  # noqa
     VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE: "First detection occurrence",  # noqa
-    VisualizationFiltersKeys.LABEL_START_DATE: "Start date",
-    VisualizationFiltersKeys.LABEL_START_TIME: "Start time",
-    VisualizationFiltersKeys.LABEL_END_DATE: "End date",
-    VisualizationFiltersKeys.LABEL_END_TIME: "End time",
+    VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING: "Update flow highlighting",
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
+    VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
     WorkspaceKeys.LABEL_WORKSPACE_FORM_HEADER: "Workspace",
 }
 
 DEFAULT_IMAGE_RESOURCE_MAP: dict[ResourceKey, str] = {
     CanvasKeys.IMAGE_DEFAULT: r"OTAnalytics/assets/OpenTrafficCam_800.png"
+}
+
+DEFAULT_HOTKEYS: dict[HotKeys, str] = {
+    HotKeys.SAVE_SECTION_HOTKEY: "Enter",
+    HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY: "Escape",
 }
 
 
@@ -156,9 +302,11 @@ class ResourceManager:
         self,
         resources: dict[ResourceKey, str] = DEFAULT_RESOURCE_MAP,
         image_resources: dict[ResourceKey, str] = DEFAULT_IMAGE_RESOURCE_MAP,
+        hotkeys: dict[HotKeys, str] = DEFAULT_HOTKEYS,
     ) -> None:
         self._resources = resources
         self._image_resources = image_resources
+        self._hotkeys = hotkeys
 
     def get(self, key: ResourceKey) -> str:
         return self._resources.get(key, str(key))
@@ -167,6 +315,9 @@ class ResourceManager:
         if key in self._image_resources:
             return load_image(self._image_resources.get(key))
         return None
+
+    def get_hotkey(self, key: HotKeys) -> str | None:
+        return self._hotkeys.get(key)
 
 
 def load_image(src: str | None) -> Image.Image | None:

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from pandas import DataFrame
 
 from OTAnalytics.domain.track import TRACK_CLASSIFICATION, TRACK_ID, Detection, Track
-from OTAnalytics.domain.track_dataset import (
+from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
     END_OCCURRENCE,
     END_VIDEO_NAME,

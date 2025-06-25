@@ -15,7 +15,7 @@ from OTAnalytics.domain.track import (
     TrackClassificationCalculator,
     TrackId,
 )
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )

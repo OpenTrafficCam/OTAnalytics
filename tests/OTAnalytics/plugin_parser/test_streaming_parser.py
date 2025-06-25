@@ -7,7 +7,7 @@ import pytest
 
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.domain.track import Track, TrackClassificationCalculator, TrackId
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.python_track_store import (

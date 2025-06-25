@@ -375,7 +375,7 @@ class TestPythonDetectionParser:
         mocked_track_repository.get_for.return_value = existing_track
         all_detections = deserialized_detections + existing_track.detections
         merged_track = PythonTrack(
-            existing_track.id, merged_classification, all_detections
+            existing_track.id, existing_track.id, merged_classification, all_detections
         )
 
         result_sorted_input = parser.parse_tracks(

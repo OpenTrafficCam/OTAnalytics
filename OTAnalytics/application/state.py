@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Generic, Optional
 
+from OTAnalytics.application.analysis.traffic_counting import CountImage
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.playback import SkipTime
@@ -40,6 +41,8 @@ DEFAULT_WIDTH = 800
 DEFAULT_HEIGHT = 600
 DEFAULT_FILTER_DATE_ACTIVE = False
 DEFAULT_SKIP_TIME = SkipTime(1, 1)
+DEFAULT_SELECTED_SECTIONS: list[SectionId] = []
+DEFAULT_SELECTED_FLOWS: list[FlowId] = []
 
 
 class TrackState(TrackListObserver):
@@ -87,6 +90,9 @@ class TrackState(TrackListObserver):
         track_to_select = next(iter(track_event.added)) if track_event.added else None
         self.select(track_to_select)
 
+    def reset(self) -> None:
+        self.selected_track = None
+
 
 class ObservableProperty(Generic[VALUE]):
     """
@@ -106,6 +112,15 @@ class ObservableProperty(Generic[VALUE]):
             observer (Observer[VALUE]): observer to be notified about changes
         """
         self._subject.register(observer)
+
+    def unregister(self, observer: Callable[[VALUE], None]) -> None:
+        """
+        Stop listening to property changes.
+
+        Args:
+            observer (Observer[VALUE]): observer to be removed
+        """
+        self._subject.unregister(observer)
 
     def set(self, value: VALUE) -> None:
         """
@@ -146,6 +161,14 @@ class ObservableOptionalProperty(Generic[VALUE]):
             observer (Observer[VALUE]): observer to be notified about changes
         """
         self._subject.register(observer)
+
+    def unregister(self, observer: Callable[[Optional[VALUE]], None]) -> None:
+        """
+        Stop listening to property changes.
+        Args:
+            observer (Observer[VALUE]): observer to be removed
+        """
+        self._subject.unregister(observer)
 
     def set(self, value: Optional[VALUE]) -> None:
         """
@@ -201,6 +224,8 @@ class TrackViewState:
         ](default=[])
         self.skip_time = ObservableProperty[SkipTime](DEFAULT_SKIP_TIME)
 
+        self.count_plots = ObservableProperty[list[CountImage]](default=[])
+
     def reset(self) -> None:
         """Reset to default settings."""
         self.selected_videos.set([])
@@ -212,26 +237,47 @@ class TrackViewState:
         self.track_offset.set(DEFAULT_TRACK_OFFSET)
         self.skip_time.set(DEFAULT_SKIP_TIME)
 
+        self.count_plots.set([])
 
-class TrackPropertiesUpdater:
+
+class LiveImage:
+    """
+    This state represents the current live image from the video stream.
+    """
+
+    def __init__(self) -> None:
+        self.image = ObservableOptionalProperty[TrackImage]()
+        self.frame_number = ObservableOptionalProperty[int]()
+
+
+class TrackImageSizeUpdater:
     """
     This class listens to track changes and updates the width and height of the view
     state.
     """
 
-    def __init__(
-        self,
-        datastore: Datastore,
-        track_view_state: TrackViewState,
-    ) -> None:
-        self._datastore = datastore
+    def __init__(self, track_view_state: TrackViewState) -> None:
         self._track_view_state = track_view_state
+
+    def notify(self, image: TrackImage) -> None:
+        if image:
+            self._track_view_state.view_width.set(image.width())
+            self._track_view_state.view_height.set(image.height())
+
+
+class VideoImageSizeUpdater:
+    """
+    This class listens to track changes and updates the width and height of the view
+    state.
+    """
+
+    def __init__(self, updater: TrackImageSizeUpdater) -> None:
+        self._updater = updater
 
     def notify_videos(self, video: list[Video]) -> None:
         if video:
             image = video[0].get_frame(0)
-            self._track_view_state.view_width.set(image.width())
-            self._track_view_state.view_height.set(image.height())
+            self._updater.notify(image)
 
 
 class Plotter(ABC):
@@ -276,6 +322,8 @@ class VideosMetadata:
         """
         if current in self._metadata_by_date:
             return self._metadata_by_date[current]
+        if len(self._metadata_by_date) == 0:
+            return None
         keys = list(self._metadata_by_date.keys())
         key = bisect.bisect_left(keys, current) - 1
         metadata = self._metadata_by_date[keys[key]]
@@ -312,6 +360,12 @@ class VideosMetadata:
         other.update(values)
 
         return other
+
+    def reset(self) -> None:
+        self._metadata_by_date = {}
+        self._metadata_by_name = {}
+        self._first_video_start = None
+        self._last_video_end = None
 
 
 class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
@@ -365,7 +419,7 @@ class SectionState(SectionListObserver):
 
     def __init__(self, get_sections_by_id: GetSectionsById) -> None:
         self.selected_sections: ObservableProperty[list[SectionId]] = (
-            ObservableProperty[list]([])
+            ObservableProperty[list](DEFAULT_SELECTED_SECTIONS)
         )
         self._get_sections_by_id = get_sections_by_id
 
@@ -377,7 +431,7 @@ class SectionState(SectionListObserver):
             repository changes.
         """
         if not section_event.added:
-            self.selected_sections.set([])
+            self.selected_sections.set(DEFAULT_SELECTED_SECTIONS)
             return
 
         no_cutting_sections = [
@@ -388,7 +442,10 @@ class SectionState(SectionListObserver):
         if no_cutting_sections:
             self.selected_sections.set([no_cutting_sections[0].id])
         else:
-            self.selected_sections.set([])
+            self.selected_sections.set(DEFAULT_SELECTED_SECTIONS)
+
+    def reset(self) -> None:
+        self.selected_sections.set(DEFAULT_SELECTED_SECTIONS)
 
 
 class FlowState(FlowListObserver):
@@ -399,7 +456,7 @@ class FlowState(FlowListObserver):
     def __init__(self) -> None:
         self.selected_flows: ObservableProperty[list[FlowId]] = ObservableProperty[
             list
-        ]([])
+        ](DEFAULT_SELECTED_FLOWS)
 
     def notify_flows(self, flows: list[FlowId]) -> None:
         """
@@ -414,7 +471,10 @@ class FlowState(FlowListObserver):
         if flows:
             self.selected_flows.set([flows[0]])
         else:
-            self.selected_flows.set([])
+            self.selected_flows.set(DEFAULT_SELECTED_FLOWS)
+
+    def reset(self) -> None:
+        self.selected_flows.set(DEFAULT_SELECTED_FLOWS)
 
 
 class TrackImageUpdater(TrackListObserver, SectionListObserver):
@@ -448,7 +508,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             video (list[Video]): list of changed video ids
         """
-        self._update_image()
+        self.update_image()
 
     def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         """
@@ -457,7 +517,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             track_event (list[TrackId]): list of changed track ids
         """
-        self._update_image()
+        self.update_image()
 
     def _notify_track_offset(self, offset: Optional[RelativeOffsetCoordinate]) -> None:
         """
@@ -466,7 +526,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             offset (Optional[RelativeOffsetCoordinate]): current value
         """
-        self._update()
+        self.update_image()
 
     def _notify_filter_element(self, _: FilterElement) -> None:
         """
@@ -475,7 +535,7 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             _ (FilterElement): current filter element
         """
-        self._update()
+        self.update_image()
 
     def _notify_section_selection(self, _: list[SectionId]) -> None:
         """Will update the image according to changes of the selected section.
@@ -483,19 +543,19 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             _ (list[SectionId]): current selected section
         """
-        self._update()
+        self.update_image()
 
     def notify_section_changed(self, _: SectionId) -> None:
-        self._update()
+        self.update_image()
 
     def notify_sections(self, section_event: SectionRepositoryEvent) -> None:
-        self._update()
+        self.update_image()
 
     def notify_events(self, _: EventRepositoryEvent) -> None:
-        self._update()
+        self.update_image()
 
     def _notify_flow_changed(self, _: list[FlowId]) -> None:
-        self._update()
+        self.update_image()
 
     def notify_layers(self, _: bool) -> None:
         """Will update the image
@@ -503,15 +563,9 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             _ (bool): whether layer is enabled or disabled.
         """
-        self._update()
+        self.update_image()
 
-    def _update(self) -> None:
-        """
-        Update the image if at least one track is available.
-        """
-        self._update_image()
-
-    def _update_image(self) -> None:
+    def update_image(self) -> None:
         """
         Updates the current background image with or without tracks and sections.
         """
@@ -672,6 +726,12 @@ class TracksMetadata(TrackListObserver):
 
         return other
 
+    def reset(self) -> None:
+        self._first_detection_occurrence.set(None)
+        self._last_detection_occurrence.set(None)
+        self._classifications.set(frozenset([]))
+        self._detection_classifications.set(frozenset([]))
+
 
 class ActionState:
     """
@@ -680,6 +740,9 @@ class ActionState:
 
     def __init__(self) -> None:
         self.action_running = ObservableProperty[bool](False)
+
+    def reset(self) -> None:
+        self.action_running.set(False)
 
 
 @dataclass

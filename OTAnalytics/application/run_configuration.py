@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -16,21 +17,29 @@ from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
 
+DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
+
 
 class RunConfigurationError(Exception):
     pass
 
 
 class RunConfiguration(OtConfigDefaultValueProvider):
+    @property
+    def _current_time(self) -> str:
+        return self._current_time_provider().strftime(DATETIME_FORMAT)
+
     def __init__(
         self,
         flow_parser: FlowParser,
         cli_args: CliArguments,
         otconfig: OtConfig | None = None,
+        current_time_provider: Callable[[], datetime] = datetime.now,
     ) -> None:
         self._flow_parser = flow_parser
         self._cli_args = cli_args
         self._otconfig = otconfig
+        self._current_time_provider = current_time_provider
         self._set_sections_and_flows()
 
     def _set_sections_and_flows(self) -> None:
@@ -159,11 +168,16 @@ class RunConfiguration(OtConfigDefaultValueProvider):
     @property
     def log_file(self) -> Path:
         if self._cli_args.log_file:
-            return Path(self._cli_args.log_file)
+            return self._ensure_is_file(Path(self._cli_args.log_file))
         if self._otconfig and self._cli_args.config_file:
             base_dir = Path(self._cli_args.config_file).parent
-            return base_dir / self._otconfig.analysis.logfile
+            return self._ensure_is_file(base_dir / self._otconfig.analysis.logfile)
         return DEFAULT_LOG_FILE
+
+    def _ensure_is_file(self, path: Path) -> Path:
+        if path.is_dir() or path.suffix != ".log":
+            return path / f"otanalytics-{self._current_time}.log"
+        return path
 
     @property
     def logfile_overwrite(self) -> bool:

@@ -1,8 +1,13 @@
+import re
+import unicodedata
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Callable, Iterable, Optional
+
+from PIL.Image import Image
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -19,6 +24,8 @@ from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.types import EventType
 
+DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
+
 LEVEL_FROM_SECTION = "from section"
 LEVEL_TO_SECTION = "to section"
 LEVEL_FLOW = "flow"
@@ -26,6 +33,9 @@ LEVEL_CLASSIFICATION = "classification"
 LEVEL_START_TIME = "start time"
 LEVEL_END_TIME = "end time"
 UNCLASSIFIED = "unclassified"
+
+RoadUserId = str
+RoadUserType = str
 
 
 @dataclass(frozen=True)
@@ -335,6 +345,103 @@ class RoadUserAssignment:
     events: EventPair
 
 
+@dataclass
+class SelectedFlowCandidates:
+    """
+    Container for selected flow candidates.
+    """
+
+    candidates: list[FlowCandidate]
+
+    def create_assignments(
+        self, road_user_id: str, road_user_type: str
+    ) -> list[RoadUserAssignment]:
+        """
+        Create RoadUserAssignment objects from the selected flow candidates.
+
+        Args:
+            road_user_id (str): ID of the road user
+            road_user_type (str): type of the road user
+
+        Returns:
+            list[RoadUserAssignment]: list of RoadUserAssignment objects
+        """
+        return [
+            RoadUserAssignment(
+                road_user=road_user_id,
+                road_user_type=road_user_type,
+                assignment=candidate.flow,
+                events=candidate.candidate,
+            )
+            for candidate in self.candidates
+        ]
+
+
+class FlowSelection(ABC):
+    """
+    Interface for flow selection strategies.
+    """
+
+    @abstractmethod
+    def select_flows(
+        self, candidate_flows: list[FlowCandidate]
+    ) -> SelectedFlowCandidates:
+        """
+        Select flows from the given candidates based on a specific strategy.
+
+        Args:
+            candidate_flows (list[FlowCandidate]): flow candidates to select from
+
+        Returns:
+            SelectedFlowCandidates: selected flow candidates
+        """
+        raise NotImplementedError
+
+
+class MaxDurationFlowSelection(FlowSelection):
+    """
+    Flow selection strategy that selects the flow candidate with the largest duration.
+    """
+
+    def select_flows(
+        self, candidate_flows: list[FlowCandidate]
+    ) -> SelectedFlowCandidates:
+        """
+        Select the flow candidate with the largest duration.
+
+        Args:
+            candidate_flows (list[FlowCandidate]): flow candidates to select from
+
+        Returns:
+            SelectedFlowCandidates: selected flow candidate with the largest duration
+        """
+        if not candidate_flows:
+            return SelectedFlowCandidates([])
+
+        max_candidate = max(candidate_flows, key=lambda current: current.duration())
+        return SelectedFlowCandidates([max_candidate])
+
+
+class AllFlowsSelection(FlowSelection):
+    """
+    Flow selection strategy that selects all flow candidates.
+    """
+
+    def select_flows(
+        self, candidate_flows: list[FlowCandidate]
+    ) -> SelectedFlowCandidates:
+        """
+        Select all flow candidates.
+
+        Args:
+            candidate_flows (list[FlowCandidate]): flow candidates to select from
+
+        Returns:
+            SelectedFlowCandidates: all flow candidates
+        """
+        return SelectedFlowCandidates(candidate_flows)
+
+
 class Tagger(ABC):
     """
     Interface to split road user assignments into groups, e.g. by mode.
@@ -592,6 +699,18 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
     Class to assign tracks to flows.
     """
 
+    def __init__(
+        self, flow_selection: FlowSelection = MaxDurationFlowSelection()
+    ) -> None:
+        """
+        Initialize the SimpleRoadUserAssigner with a flow selection strategy.
+
+        Args:
+            flow_selection (FlowSelection, optional): strategy for selecting flows.
+                Defaults to MaxDurationFlowSelection.
+        """
+        self._flow_selection = flow_selection
+
     def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
         """
         Assign each track to exactly one flow.
@@ -637,9 +756,11 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             events (Iterable[Event]): events of a road user
 
         Returns:
-            dict[int, list[Event]]: events grouped by user
+            dict[tuple[RoadUserId, RoadUserType], list[Event]]: events grouped by user
         """
-        events_by_road_user: dict[tuple[str, str], list[Event]] = defaultdict(list)
+        events_by_road_user: dict[tuple[RoadUserId, RoadUserType], list[Event]] = (
+            defaultdict(list)
+        )
         sorted_events = sorted(
             events, key=lambda _event: _event.interpolated_occurrence
         )
@@ -656,7 +777,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         events_by_road_user: dict[tuple[str, str], list[Event]],
     ) -> RoadUserAssignments:
         """
-        Assign each user to exactly one flow.
+        Assign each user to flows based on the flow selection strategy.
 
         Args:
             flows (dict[tuple[SectionId, SectionId], list[Flow]]): flows by start and
@@ -664,20 +785,16 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             events_by_road_user (dict[str, list[Event]]): events by road user
 
         Returns:
-            dict[str, FlowId]: assignment of flow to road user
+            RoadUserAssignments: group of RoadUserAssignment objects
         """
         assignments: list[RoadUserAssignment] = []
-        for road_user, events in events_by_road_user.items():
+        for (road_user_id, road_user_type), events in events_by_road_user.items():
             if candidate_flows := self.__create_candidates(flows, events):
-                current = self.__select_flow(candidate_flows)
-                assignments.append(
-                    RoadUserAssignment(
-                        road_user=road_user[0],
-                        road_user_type=road_user[1],
-                        assignment=current.flow,
-                        events=current.candidate,
-                    )
+                selected_flows = self._flow_selection.select_flows(candidate_flows)
+                user_assignments = selected_flows.create_assignments(
+                    road_user_id=road_user_id, road_user_type=road_user_type
                 )
+                assignments.extend(user_assignments)
         return RoadUserAssignments(assignments)
 
     def __create_candidates(
@@ -754,17 +871,6 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
                         )
                         candidate_flows.append(candidate_flow)
         return candidate_flows
-
-    def __select_flow(self, candidate_flows: list[FlowCandidate]) -> FlowCandidate:
-        """
-        Select the best matching flow for the user. Best match is defined as the flow
-        with the largest distance by time.
-        Args:
-            candidate_flows (list[FlowCandidate]): flow candidates to select from
-        Returns:
-            Flow: best matching flow candidate
-        """
-        return max(candidate_flows, key=lambda current: current.duration())
 
 
 class TaggerFactory(ABC):
@@ -896,9 +1002,9 @@ def create_export_specification(
     return ExportSpecificationDto(counting_specification, flow_dtos)
 
 
-class ExportTrafficCounting(ExportCounts):
+class TrafficCounting:
     """
-    Use case to export traffic counting.
+    Use case to produce traffic counts.
     """
 
     def __init__(
@@ -909,14 +1015,70 @@ class ExportTrafficCounting(ExportCounts):
         create_events: CreateEvents,
         assigner: RoadUserAssigner,
         tagger_factory: TaggerFactory,
-        exporter_factory: ExporterFactory,
-    ) -> None:
+        enable_event_creation: bool = True,
+    ):
         self._event_repository = event_repository
         self._flow_repository = flow_repository
         self._get_sections_by_id = get_sections_by_id
         self._create_events = create_events
         self._assigner = assigner
         self._tagger_factory = tagger_factory
+        self._enable_event_creation = enable_event_creation
+
+    def count(self, specification: CountingSpecificationDto) -> Count:
+        """
+        Produce traffic counts based on the currently available events and flows.
+
+        Args:
+            specification (CountingSpecificationDto): specification of the export
+        """
+        if self._enable_event_creation and self._event_repository.is_empty():
+            self._create_events()
+
+        if specification.count_all_events:
+            events = self._event_repository.get_all()
+        else:
+            events = self._event_repository.get(
+                start_date=specification.start,
+                end_date=specification.end,
+            )
+
+        flows = self.get_flows()
+        assigned_flows = self._assigner.assign(events, flows)
+        tagger = self._tagger_factory.create_tagger(specification)
+        tagged_assignments = assigned_flows.tag(tagger)
+        return tagged_assignments.count(flows)
+
+    def get_flows(self) -> list[Flow]:
+        return self._flow_repository.get_all()
+
+    def with_tagger_factory(
+        self, new_tagger_factory: TaggerFactory
+    ) -> "TrafficCounting":
+        return TrafficCounting(
+            self._event_repository,
+            self._flow_repository,
+            self._get_sections_by_id,
+            self._create_events,
+            self._assigner,
+            new_tagger_factory,
+        )
+
+    def provide_get_sections_by_id(self) -> GetSectionsById:
+        return self._get_sections_by_id
+
+
+class ExportTrafficCounting(ExportCounts):
+    """
+    Use case to export traffic counting.
+    """
+
+    def __init__(
+        self,
+        traffic_counting: TrafficCounting,
+        exporter_factory: ExporterFactory,
+    ) -> None:
+        self._traffic_counting = traffic_counting
         self._exporter_factory = exporter_factory
 
     def export(self, specification: CountingSpecificationDto) -> None:
@@ -926,19 +1088,11 @@ class ExportTrafficCounting(ExportCounts):
         Args:
             specification (CountingSpecificationDto): specification of the export
         """
-        if self._event_repository.is_empty():
-            self._create_events()
-        events = self._event_repository.get(
-            start_date=specification.start,
-            end_date=specification.end,
-        )
-        flows = self._flow_repository.get_all()
-        assigned_flows = self._assigner.assign(events, flows)
-        tagger = self._tagger_factory.create_tagger(specification)
-        tagged_assignments = assigned_flows.tag(tagger)
-        counts = tagged_assignments.count(flows)
+        counts = self._traffic_counting.count(specification)
+
+        flows = self._traffic_counting.get_flows()
         export_specification = create_export_specification(
-            flows, specification, self._get_sections_by_id
+            flows, specification, self._traffic_counting.provide_get_sections_by_id()
         )
         exporter = self._exporter_factory.create_exporter(export_specification)
         exporter.export(counts, specification.export_mode)
@@ -951,3 +1105,49 @@ class ExportTrafficCounting(ExportCounts):
             Iterable[ExportFormat]: supported export formats
         """
         return self._exporter_factory.get_supported_formats()
+
+
+@dataclass(frozen=True)
+class CountImage:
+    """
+    Represents an image with a counts plot.
+    """
+
+    image: Image
+    width: int
+    height: int
+    name: str
+    timestamp: datetime
+
+    def save(self, save_dir: Path) -> None:
+        time = self.timestamp.strftime(DATETIME_FORMAT)
+
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        self.image.save(save_dir / f"counts_plot_{self.safe_filename()}_{time}.png")
+
+    def safe_filename(self, max_length: int = 255, replacement: str = "_") -> str:
+        """Create a string from the image name that can be used as the filename.
+
+        Use ascii only and replace illegal characters (/:*?"<>|),
+        whitespaces and linebreaks.
+        Remove sequences of replacement char and truncate to max_length.
+
+        Args:
+            max_length (int, optional): length for truncating the resulting file name.
+                Defaults to 255.
+            replacement (str, optional): character to replace illegal characters
+                in image name. Defaults to "_".
+
+        Returns:
+            str: string safe to use as filename
+        """
+        safe = (
+            unicodedata.normalize("NFKD", self.name).encode("ascii", "ignore").decode()
+        )
+        safe = re.sub(r'[<>:"/\\|?*\n\r\t]', replacement, safe)
+        safe = re.sub(r"\s+", replacement, safe)
+        safe = re.sub(rf"{re.escape(replacement)}+", replacement, safe)
+        safe = safe.strip(replacement)
+        # Truncate to max length (preserving file extension if needed)
+        return safe[:max_length]

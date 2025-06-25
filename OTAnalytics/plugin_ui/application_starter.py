@@ -33,7 +33,7 @@ class ApplicationStarter:
     @log_processing_time(description="overall")
     def start(self) -> None:
         self._setup_logger(
-            Path(self.run_config.log_file),
+            self.run_config.log_file,
             self.run_config.logfile_overwrite,
             self.run_config.debug,
         )
