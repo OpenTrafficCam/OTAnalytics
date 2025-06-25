@@ -55,15 +55,16 @@ class ExportCountsDialog(BaseDialog):
         """Initialize the export counts dialog.
 
         Args:
-            resource_manager: The resource manager for localization
-            viewmodel: The view model
-            start: The start datetime
-            end: The end datetime
-            default_format: The default export format
-            modes: The available export modes
-            export_formats: A dictionary mapping format names to file extensions
-            initial_dir: The initial directory for file selection,
-            defaults to user's home directory
+            resource_manager (ResourceManager): The resource manager for localization
+            viewmodel (ViewModel): The view model
+            start (datetime | None): The start datetime
+            end (datetime | None): The end datetime
+            default_format (str): The default export format
+            modes (list): The available export modes
+            export_formats (dict[str, str]): A dictionary mapping format names to file
+                extensions
+            initial_dir (Path): The initial directory for file selection, defaults to
+                user's home directory
         """
         super().__init__(resource_manager)
         self._viewmodel = viewmodel
