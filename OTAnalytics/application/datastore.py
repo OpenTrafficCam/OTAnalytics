@@ -27,7 +27,7 @@ from OTAnalytics.domain.section import (
     SectionRepository,
 )
 from OTAnalytics.domain.track import TrackId, TrackImage
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import (
     TrackFileRepository,
     TrackListObserver,

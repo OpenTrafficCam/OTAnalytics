@@ -108,15 +108,15 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def load_otconfig(self) -> None:
+    async def load_otconfig(self) -> None:
         pass
 
     @abstractmethod
-    def save_otconfig(self) -> None:
+    async def save_otconfig(self) -> None:
         pass
 
     @abstractmethod
-    def add_video(self) -> None:
+    async def add_video(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -156,15 +156,15 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def load_configuration(self) -> None:
+    async def load_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def save_configuration(self) -> None:
+    async def save_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def quick_save_configuration(self) -> None:
+    async def quick_save_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -184,7 +184,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def get_section_metadata(
+    async def get_section_metadata(
         self, title: str, initial_position: tuple[int, int]
     ) -> dict:
         pass
@@ -200,7 +200,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def add_new_section(
+    async def add_new_section(
         self,
         coordinates: list[tuple[int, int]],
         is_area_section: bool,
@@ -213,7 +213,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def edit_selected_section_metadata(self) -> None:
+    async def edit_selected_section_metadata(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -229,7 +229,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def add_flow(self) -> None:
+    async def add_flow(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -241,7 +241,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def edit_selected_flow(self) -> None:
+    async def edit_selected_flow(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -257,7 +257,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def export_events(self) -> None:
+    async def export_events(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -349,7 +349,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def export_counts(self) -> None:
+    async def export_counts(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -423,7 +423,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def export_road_user_assignments(self) -> None:
+    async def export_road_user_assignments(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -455,7 +455,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def export_track_statistics(self) -> None:
+    async def export_track_statistics(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

@@ -1,18 +1,17 @@
 from nicegui import ui
 
 from OTAnalytics.application.resources.resource_manager import (
-    ProjectKeys,
     ResourceManager,
-    SvzMetadataKeys,
+    TrackFormKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
     AddTracksForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.offset_slider_form import (
-    OffSetSliderForm,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.visualization_offset_slider_form import (  # noqa
+    VisualizationOffSetSliderForm,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    AddVideoForm,
 )
 
 
@@ -21,25 +20,27 @@ class TrackForm:
         self,
         resource_manager: ResourceManager,
         add_tracks_form: AddTracksForm,
-        offset_slider_form: OffSetSliderForm,
+        add_videos_form: AddVideoForm,
+        offset_slider_form: VisualizationOffSetSliderForm,
     ) -> None:
         self._resource_manager = resource_manager
         self.add_tracks_form = add_tracks_form
+        self.add_videos_form = add_videos_form
         self.offset_slider_form = offset_slider_form
 
     def build(self) -> None:
         with ui.tabs().classes("w-full") as tabs:
-            one = ui.tab(
-                self._resource_manager.get(ProjectKeys.LABEL_PROJECT_FORM_HEADER)
+            track_tab = ui.tab(
+                self._resource_manager.get(TrackFormKeys.TAB_ONE),
             )
-            two = ui.tab(
+            video_tab = ui.tab(
                 self._resource_manager.get(
-                    SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER
+                    TrackFormKeys.TAB_TWO,
                 )
             )
-        with ui.tab_panels(tabs, value=one).classes("w-full"):
-            with ui.tab_panel(one):
+        with ui.tab_panels(tabs, value=track_tab).classes("w-full"):
+            with ui.tab_panel(track_tab):
                 self.add_tracks_form.build()
                 self.offset_slider_form.build()
-            with ui.tab_panel(two):
-                pass
+            with ui.tab_panel(video_tab):
+                self.add_videos_form.build()

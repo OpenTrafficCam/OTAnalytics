@@ -4,13 +4,13 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Iterable, Optional, Sequence
+from typing import Callable, Iterable, Iterator, Optional, Sequence
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import Detection
+from OTAnalytics.domain.track import Detection, TrackId
 from OTAnalytics.domain.types import EventType
 
 EVENT_LIST = "event_list"
@@ -394,8 +394,10 @@ class EventRepository:
         self, subject: Subject[EventRepositoryEvent] = Subject[EventRepositoryEvent]()
     ) -> None:
         self._subject = subject
-        self._events: dict[SectionId, list[Event]] = defaultdict(list)
-        self._non_section_events = list[Event]()
+        self._events: dict[SectionId, dict[str, list[Event]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
+        self._non_section_events: dict[str, list[Event]] = defaultdict(list)
 
     def register_observer(self, observer: OBSERVER[EventRepositoryEvent]) -> None:
         """Register observer to listen to repository changes.
@@ -412,8 +414,8 @@ class EventRepository:
             event (Event): the event to add
         """
         self.__do_add(event)
-        self.__discard_duplicates()
-        self.__sort()
+        self.__discard_duplicates([event])
+        self.__sort([event])
         self._subject.notify(EventRepositoryEvent([event], []))
 
     def __do_add(self, event: Event) -> None:
@@ -421,15 +423,33 @@ class EventRepository:
         Internal add method that does not notify observers.
         """
         if event.section_id:
-            self._events[event.section_id].append(event)
+            self._events[event.section_id][event.road_user_id].append(event)
         else:
-            self._non_section_events.append(event)
+            self._non_section_events[event.road_user_id].append(event)
 
-    def __discard_duplicates(self) -> None:
+    def __discard_duplicates(self, change_events: Iterable[Event]) -> None:
         """Discard duplicate events in repository."""
-        self._non_section_events = self.__remove_duplicates(self._non_section_events)
-        for section_id, events in self._events.items():
-            self._events[section_id] = self.__remove_duplicates(events)
+
+        for event in change_events:
+            if section_id := event.section_id:
+                self.__discard_section_event_duplicates_for(
+                    event.road_user_id, section_id
+                )
+            else:
+                self.__discard_non_section_event_duplicates_for(event.road_user_id)
+
+    def __discard_section_event_duplicates_for(
+        self, road_user_id: str, section_id: SectionId
+    ) -> None:
+        """Discard duplicate section events in repository."""
+        if track_dict := self._events.get(section_id):
+            if events := track_dict.get(road_user_id):
+                track_dict[road_user_id] = self.__remove_duplicates(events)
+
+    def __discard_non_section_event_duplicates_for(self, road_user_id: str) -> None:
+        """Discard duplicate non section events in repository."""
+        if events := self._non_section_events.get(road_user_id):
+            self._non_section_events[road_user_id] = self.__remove_duplicates(events)
 
     def __remove_duplicates(self, events: Iterable[Event]) -> list[Event]:
         """Discard duplicate events while retaining insertion order."""
@@ -452,19 +472,34 @@ class EventRepository:
         for event in events:
             self.__do_add(event)
         for section in sections:
-            self._events.setdefault(section, [])
-        self.__discard_duplicates()
-        self.__sort()
+            self._events[section]
+        self.__discard_duplicates(events)
+        self.__sort(events)
         self._subject.notify(EventRepositoryEvent(events, []))
 
     @staticmethod
     def comparator(event: Event) -> datetime:
         return event.occurrence
 
-    def __sort(self) -> None:
-        self._non_section_events = sorted(self._non_section_events, key=self.comparator)
-        for section_id, events in self._events.items():
-            self._events[section_id] = sorted(events, key=self.comparator)
+    def __sort(self, change_events: Iterable[Event]) -> None:
+        for event in change_events:
+            if section_id := event.section_id:
+                self.__sort_section_events_for(event.road_user_id, section_id)
+            else:
+                self.__sort_non_section_events_for(event.road_user_id)
+
+    def __sort_section_events_for(
+        self, road_user_id: str, section_id: SectionId
+    ) -> None:
+        if track_dict := self._events.get(section_id):
+            if events := track_dict.get(road_user_id):
+                self._events[section_id][road_user_id] = sorted(
+                    events, key=self.comparator
+                )
+
+    def __sort_non_section_events_for(self, road_user_id: str) -> None:
+        if events := self._non_section_events.get(road_user_id, []):
+            self._non_section_events[road_user_id] = sorted(events, key=self.comparator)
 
     def get_all(self) -> Iterable[Event]:
         """Get all events stored in the repository.
@@ -472,10 +507,27 @@ class EventRepository:
         Returns:
             Iterable[Event]: the events
         """
+
         return list(
-            itertools.chain.from_iterable(
-                [self._non_section_events, *self._events.values()]
+            itertools.chain(
+                self.get_non_section_events_iterator(),
+                self.get_section_events_iterator(),
             )
+        )
+
+    def get_section_events_iterator(self) -> Iterator[Event]:
+        return (
+            event
+            for events_by_section in self._events.values()
+            for events_by_id in events_by_section.values()
+            for event in events_by_id
+        )
+
+    def get_non_section_events_iterator(self) -> Iterator[Event]:
+        return (
+            event
+            for track_dict in self._non_section_events.values()
+            for event in track_dict
         )
 
     def clear(self) -> None:
@@ -484,8 +536,8 @@ class EventRepository:
         """
         if self._events or self._non_section_events:  # also clear non section events
             removed = list(self.get_all())
-            self._events = defaultdict(list)
-            self._non_section_events = list[Event]()
+            self._events = defaultdict(lambda: defaultdict(list))
+            self._non_section_events = defaultdict(list)
             self._subject.notify(EventRepositoryEvent([], removed))
 
     def remove(self, sections: list[SectionId]) -> None:
@@ -563,9 +615,89 @@ class EventRepository:
 
     def __create_event_list(self, sections: Sequence[SectionId]) -> Iterable[Event]:
         if sections:
-            event_lists = [self._events[section] for section in sections]
-            return list(itertools.chain.from_iterable(event_lists))
+            return list(
+                (
+                    event
+                    for section in sections
+                    for events_by_id in self._events[section].values()
+                    for event in events_by_id
+                )
+            )
         return self.get_all()
+
+    def remove_events_by_road_user_ids(self, road_user_ids: Iterable[TrackId]) -> None:
+        """
+        Removes events associated with the specified road user IDs.
+
+        This method iterates through the provided iterable of road user IDs to delete
+        both non-section and section events related to each ID. After removal, it
+        notifies the subscribers with the updated information about the removed events.
+
+        Args:
+            road_user_ids: An iterable of strings representing the IDs of road users
+                whose events are to be removed.
+
+        Returns:
+            None
+        """
+        removed = []
+        for road_user_id in road_user_ids:
+            removed.extend(
+                self.__remove_non_section_events_by_road_user_id(road_user_id.id)
+            )
+            removed.extend(
+                self.__remove_section_events_by_road_user_id(road_user_id.id)
+            )
+
+        self._subject.notify((EventRepositoryEvent([], removed)))
+
+    def __remove_section_events_by_road_user_id(self, road_user_id: str) -> list[Event]:
+        """
+        Removes all events associated with a specific road user ID from the internal
+        event tracking structure.
+
+        This method iterates through the internal events dictionary, identifies and
+        removes entries corresponding to the given road user ID. Any removed events
+        associated with the specified ID are collected and returned as a list.
+
+        Args:
+            road_user_id (str): The unique identifier of the road user whose events
+                should be removed.
+
+        Returns:
+            list[Event]: A list of Event objects that were associated with the given
+                road user ID and have been removed.
+        """
+        removed = []
+        for track_dict in self._events.values():
+            if ids_to_remove := track_dict.get(road_user_id):
+                removed.extend(ids_to_remove)
+                del track_dict[road_user_id]
+        return removed
+
+    def __remove_non_section_events_by_road_user_id(
+        self, road_user_id: str
+    ) -> list[Event]:
+        """
+        Removes non-section events associated with a specific road user ID.
+
+        This method retrieves and removes any non-section events linked to the given
+        road user ID from an internal data structure. The removed events are returned
+        as a list.
+
+        Args:
+            road_user_id (str): The identifier for the road user whose non-section
+                events are to be removed.
+
+        Returns:
+            list[Event]: A list of removed non-section events associated with the
+                provided road user ID.
+        """
+        removed = []
+        if non_section_events := self._non_section_events.get(road_user_id):
+            removed.extend(non_section_events)
+            del self._non_section_events[road_user_id]
+        return removed
 
     @staticmethod
     def __create_type_filter(

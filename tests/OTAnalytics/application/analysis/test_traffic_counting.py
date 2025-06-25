@@ -11,6 +11,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_START_TIME,
     LEVEL_TO_SECTION,
     AddSectionInformation,
+    AllFlowsSelection,
     CombinedTagger,
     Count,
     CountableAssignments,
@@ -22,11 +23,15 @@ from OTAnalytics.application.analysis.traffic_counting import (
     ExportTrafficCounting,
     FillEmptyCount,
     FilterBySectionEnterEvent,
+    FlowCandidate,
+    FlowSelection,
+    MaxDurationFlowSelection,
     ModeTagger,
     MultiTag,
     RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignments,
+    SelectedFlowCandidates,
     SimpleRoadUserAssigner,
     SingleTag,
     Tag,
@@ -34,6 +39,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     Tagger,
     TaggerFactory,
     TimeslotTagger,
+    TrafficCounting,
     create_export_specification,
     create_timeslot_tag,
 )
@@ -670,6 +676,145 @@ class TestCaseBuilder:
             ),
         ]
 
+    def build_max_duration_test_cases(
+        self,
+    ) -> list[tuple[list[FlowCandidate], FlowCandidate]]:
+        return [
+            self.__create_same_duration_candidates(),
+            self.__create_different_duration_candidates(),
+        ]
+
+    def build_all_flows_test_cases(
+        self,
+    ) -> list[tuple[list[FlowCandidate], list[FlowCandidate]]]:
+        return [
+            self.__create_all_flows_candidates(),
+        ]
+
+    def __create_all_flows_candidates(
+        self,
+    ) -> tuple[list[FlowCandidate], list[FlowCandidate]]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_north = create_event(self.first_track, self.north_section_id, 1)
+        first_west = create_event(self.first_track, self.west_section_id, 2)
+
+        south_north = Mock(spec=Flow)
+        north_west = Mock(spec=Flow)
+        first_candidate = FlowCandidate(
+            flow=south_north, candidate=EventPair(first_south, first_north)
+        )
+        second_candidate = FlowCandidate(
+            flow=north_west, candidate=EventPair(first_north, first_west)
+        )
+        candidates = [first_candidate, second_candidate]
+
+        return candidates, candidates
+
+    def __create_different_duration_candidates(
+        self,
+    ) -> tuple[list[FlowCandidate], FlowCandidate]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_north = create_event(self.first_track, self.north_section_id, 1)
+        first_east = create_event(self.first_track, self.east_section_id, 2)
+
+        south_east = Mock(spec=Flow)
+        south_north = Mock(spec=Flow)
+        candidates = []
+        first_candidate = FlowCandidate(
+            flow=south_east, candidate=EventPair(first_south, first_east)
+        )
+        second_candidate = FlowCandidate(
+            flow=south_north, candidate=EventPair(first_south, first_north)
+        )
+        candidates.append(first_candidate)
+        candidates.append(second_candidate)
+        expected_result = first_candidate
+
+        return candidates, expected_result
+
+    def __create_same_duration_candidates(
+        self,
+    ) -> tuple[list[FlowCandidate], FlowCandidate]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_north = create_event(self.first_track, self.north_section_id, 1)
+        first_west = create_event(self.first_track, self.west_section_id, 2)
+        first_east = create_event(self.first_track, self.east_section_id, 3)
+
+        south_north = Mock(spec=Flow)
+        north_west = Mock(spec=Flow)
+        west_east = Mock(spec=Flow)
+        first_candidate = FlowCandidate(
+            flow=south_north, candidate=EventPair(first_south, first_north)
+        )
+        second_candidate = FlowCandidate(
+            flow=north_west, candidate=EventPair(first_north, first_west)
+        )
+        third_candidate = FlowCandidate(
+            flow=west_east, candidate=EventPair(first_west, first_east)
+        )
+        candidates = [first_candidate, second_candidate, third_candidate]
+        expected_result = first_candidate
+
+        return candidates, expected_result
+
+    def build_select_flow_candidates_test_cases(
+        self,
+    ) -> list[tuple[str, str, list[FlowCandidate], list[RoadUserAssignment]]]:
+        return [
+            self.__create_single_candidate_assignment(),
+            self.__create_multiple_candidate_assignment(),
+        ]
+
+    def __create_single_candidate_assignment(
+        self,
+    ) -> tuple[str, str, list[FlowCandidate], list[RoadUserAssignment]]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_north = create_event(self.first_track, self.north_section_id, 1)
+        track_classification = "car"
+        south_north = Mock(spec=Flow)
+        south_north_pair = EventPair(first_south, first_north)
+        candidate = FlowCandidate(flow=south_north, candidate=south_north_pair)
+        expected_result = [
+            RoadUserAssignment(
+                road_user_type=track_classification,
+                road_user=self.first_track.id,
+                assignment=south_north,
+                events=south_north_pair,
+            )
+        ]
+        return self.first_track.id, track_classification, [candidate], expected_result
+
+    def __create_multiple_candidate_assignment(
+        self,
+    ) -> tuple[str, str, list[FlowCandidate], list[RoadUserAssignment]]:
+        first_south = create_event(self.first_track, self.south_section_id, 0)
+        first_north = create_event(self.first_track, self.north_section_id, 1)
+        first_east = create_event(self.first_track, self.east_section_id, 2)
+        track_classification = "car"
+        south_north = Mock(spec=Flow)
+        south_north_pair = EventPair(first_south, first_north)
+        south_east = Mock(spec=Flow)
+        south_east_pair = EventPair(first_south, first_east)
+        south_north_candidate = FlowCandidate(
+            flow=south_north, candidate=south_north_pair
+        )
+        south_east_candidate = FlowCandidate(flow=south_east, candidate=south_east_pair)
+        south_north_assignment = RoadUserAssignment(
+            road_user_type=track_classification,
+            road_user=self.first_track.id,
+            assignment=south_north,
+            events=south_north_pair,
+        )
+        south_east_assignment = RoadUserAssignment(
+            road_user_type=track_classification,
+            road_user=self.first_track.id,
+            assignment=south_east,
+            events=south_east_pair,
+        )
+        candidates = [south_north_candidate, south_east_candidate]
+        expected_result = [south_north_assignment, south_east_assignment]
+        return self.first_track.id, track_classification, candidates, expected_result
+
 
 def create_assignment_test_cases() -> (
     list[tuple[list[Event], list[Flow], RoadUserAssignments]]
@@ -709,6 +854,38 @@ class TestSimpleRoadUserAssigner:
         result = analysis.assign(events, flows)
 
         assert result == expected_result
+
+    def test_with_custom_flow_selection(
+        self, first_section_event: Event, second_section_event: Event, first_flow: Flow
+    ) -> None:
+        events = [first_section_event, second_section_event]
+        flows = [first_flow]
+        flow_selection = self._create_flow_selection()
+        target = self._create_target(flow_selection)
+
+        target.assign(events, flows)
+
+        flow_selection.select_flows.assert_called_once_with(
+            [
+                FlowCandidate(
+                    first_flow, EventPair(first_section_event, second_section_event)
+                )
+            ]
+        )
+
+    def _create_flow_selection(self) -> Mock:
+        flow_selection = Mock(spec=FlowSelection)
+        selected_candidates = SelectedFlowCandidates([])
+        flow_selection.select_flows.return_value = selected_candidates
+        return flow_selection
+
+    def _create_target(self, flow_selection: Mock) -> RoadUserAssigner:
+        return SimpleRoadUserAssigner(flow_selection=flow_selection)
+
+    def test_default_flow_selection(self) -> None:
+        target = SimpleRoadUserAssigner()
+
+        assert isinstance(target._flow_selection, MaxDurationFlowSelection)
 
 
 def create_counting_test_cases() -> list[tuple]:
@@ -785,6 +962,89 @@ class TestCombinedTagger:
         assert group_name == MultiTag(frozenset([first_id, second_id]))
 
 
+class TestMaxDurationFlowSelection:
+    def test_select_flows_with_empty_list(self) -> None:
+        target = self._create_target()
+        result = target.select_flows([])
+
+        assert isinstance(result, SelectedFlowCandidates)
+        assert result.candidates == []
+
+    def _create_target(self) -> MaxDurationFlowSelection:
+        return MaxDurationFlowSelection()
+
+    @pytest.mark.parametrize(
+        "candidates, expected_result", TestCaseBuilder().build_max_duration_test_cases()
+    )
+    def test_select_flows(
+        self,
+        candidates: list[FlowCandidate],
+        expected_result: FlowCandidate,
+    ) -> None:
+        target = self._create_target()
+
+        result = target.select_flows(candidates)
+
+        assert isinstance(result, SelectedFlowCandidates)
+        assert len(result.candidates) == 1
+        assert result.candidates[0] == expected_result
+
+
+class TestAllFlowsSelection:
+    def test_select_flows_with_empty_list(self) -> None:
+        target = self._create_target()
+        result = target.select_flows([])
+
+        assert isinstance(result, SelectedFlowCandidates)
+        assert result.candidates == []
+
+    def _create_target(self) -> AllFlowsSelection:
+        return AllFlowsSelection()
+
+    @pytest.mark.parametrize(
+        "candidates, expected_result", TestCaseBuilder().build_all_flows_test_cases()
+    )
+    def test_select_flows(
+        self,
+        candidates: list[FlowCandidate],
+        expected_result: list[FlowCandidate],
+    ) -> None:
+        target = self._create_target()
+
+        result = target.select_flows(candidates)
+
+        assert isinstance(result, SelectedFlowCandidates)
+        assert len(result.candidates) == len(expected_result)
+        assert result.candidates == expected_result
+
+
+class TestSelectedFlowCandidates:
+    def test_create_assignments_with_empty_list(self) -> None:
+        """Test that creating assignments from an empty list returns an empty list."""
+        selected = SelectedFlowCandidates([])
+        result = selected.create_assignments("user1", "car")
+
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+    @pytest.mark.parametrize(
+        "road_user_id, road_user_type, candidates, expected_result",
+        TestCaseBuilder().build_select_flow_candidates_test_cases(),
+    )
+    def test_create_assignments(
+        self,
+        road_user_id: str,
+        road_user_type: str,
+        candidates: list[FlowCandidate],
+        expected_result: list[RoadUserAssignment],
+    ) -> None:
+        target = SelectedFlowCandidates(candidates)
+
+        result = target.create_assignments(road_user_id, road_user_type)
+
+        assert result == expected_result
+
+
 class TestCountableAssignments:
     @pytest.mark.parametrize(
         "assignments, flows, expected_result", create_counting_test_cases()
@@ -802,7 +1062,14 @@ class TestCountableAssignments:
 
 
 class TestTrafficCounting:
-    def test_count_traffic(self) -> None:
+    @pytest.mark.parametrize("count_all_events", [False, True])
+    def test_count_traffic(self, count_all_events: bool) -> None:
+        """Test traffic counting with different count_all_events settings.
+
+        Args:
+            count_all_events: count all events or only within the time range.
+        """
+        # Setup test environment
         event_repository = Mock(spec=EventRepository)
         flow_repository = Mock(spec=FlowRepository)
         get_sections_by_ids = Mock(spec=GetSectionsById)
@@ -810,22 +1077,24 @@ class TestTrafficCounting:
         road_user_assigner = Mock(spec=RoadUserAssigner)
         tagger_factory = Mock(spec=TaggerFactory)
         tagger = Mock(spec=Tagger)
-        exporter_factory = Mock(spec=ExporterFactory)
-        exporter = Mock(spec=Exporter)
         events: list[Event] = []
         flows: list[Flow] = []
         modes: list[str] = []
         assignments = Mock(spec=RoadUserAssignments)
         tagged_assignments = Mock(spec=TaggedAssignments)
         counts = Mock(spec=Count)
+
+        # Configure mocks
         event_repository.get_all.return_value = events
+        event_repository.is_empty.return_value = True
         flow_repository.get_all.return_value = flows
         get_sections_by_ids.return_value = []
         road_user_assigner.assign.return_value = assignments
         tagger_factory.create_tagger.return_value = tagger
         assignments.tag.return_value = tagged_assignments
         tagged_assignments.count.return_value = counts
-        exporter_factory.create_exporter.return_value = exporter
+
+        # Create specification
         start = datetime(2023, 1, 1, 0, 0, 0)
         end = datetime(2023, 1, 1, 0, 15, 0)
         counting_specification = CountingSpecificationDto(
@@ -836,28 +1105,88 @@ class TestTrafficCounting:
             output_format="csv",
             output_file="counts.csv",
             export_mode=OVERWRITE,
+            count_all_events=count_all_events,
         )
-        export_specification = create_export_specification(
-            flows, counting_specification, get_sections_by_ids
-        )
-        use_case = ExportTrafficCounting(
+
+        target = TrafficCounting(
             event_repository,
             flow_repository,
             get_sections_by_ids,
             create_events,
             road_user_assigner,
             tagger_factory,
-            exporter_factory,
         )
 
-        use_case.export(counting_specification)
+        # Execute the use case
+        actual = target.count(counting_specification)
 
-        event_repository.get.assert_called_once_with(start_date=start, end_date=end)
-        flow_repository.get_all.assert_called_once()
+        # Verify common assertions
+        assert actual == counts
+        flow_repository.get_all.assert_called()
         create_events.assert_called_once()
-        road_user_assigner.assign.assert_called_once()
         tagger_factory.create_tagger.assert_called_once_with(counting_specification)
         assignments.tag.assert_called_once_with(tagger)
         tagged_assignments.count.assert_called_once_with(flows)
+
+        # Verify assertions specific to count_all_events setting
+        if count_all_events:
+            event_repository.get_all.assert_called_once()
+            event_repository.get.assert_not_called()
+            road_user_assigner.assign.assert_called_once_with(events, flows)
+        else:
+            event_repository.get_all.assert_not_called()
+            event_repository.get.assert_called_once_with(start_date=start, end_date=end)
+            road_user_assigner.assign.assert_called_once()
+
+
+class TestExportTrafficCounting:
+    def test_count_traffic(self) -> None:
+        """Test traffic counting with different count_all_events settings."""
+        # Setup test environment
+        traffic_counting = Mock(spec=TrafficCounting)
+        get_sections_by_id = Mock(spec=GetSectionsById)
+        exporter_factory = Mock(spec=ExporterFactory)
+        exporter = Mock(spec=Exporter)
+        flows: list[Flow] = []
+        modes: list[str] = []
+        counts = Mock(spec=Count)
+
+        # Configure mocks
+        traffic_counting.get_flows.return_value = flows
+        traffic_counting.count.return_value = counts
+        traffic_counting.provide_get_sections_by_id.return_value = get_sections_by_id
+        exporter_factory.create_exporter.return_value = exporter
+
+        # Create specification
+        start = datetime(2023, 1, 1, 0, 0, 0)
+        end = datetime(2023, 1, 1, 0, 15, 0)
+        counting_specification = CountingSpecificationDto(
+            start=start,
+            end=end,
+            interval_in_minutes=15,
+            modes=modes,
+            output_format="csv",
+            output_file="counts.csv",
+            export_mode=OVERWRITE,
+            count_all_events=True,
+        )
+
+        export_specification = create_export_specification(
+            flows, counting_specification, get_sections_by_id
+        )
+
+        target = ExportTrafficCounting(
+            traffic_counting,
+            exporter_factory,
+        )
+
+        # Execute the use case
+        target.export(counting_specification)
+
+        # Verify common assertions
+        traffic_counting.count.assert_called_once_with(counting_specification)
+        traffic_counting.get_flows.assert_called_once()
+        traffic_counting.provide_get_sections_by_id.assert_called_once()
+
         exporter_factory.create_exporter.assert_called_once_with(export_specification)
         exporter.export.assert_called_once_with(counts, OVERWRITE)

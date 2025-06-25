@@ -11,7 +11,7 @@ from OTAnalytics.application.use_cases.track_export import (
     TrackFileFormat,
 )
 from OTAnalytics.domain import track
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from OTAnalytics.plugin_parser.track_export import CsvTrackExport, set_column_order
@@ -50,7 +50,9 @@ class TestCsvTrackExport:
         use_case.export(specification=specification)
 
         actual = pandas.read_csv(
-            actual_file, dtype={track.TRACK_ID: object}, parse_dates=[track.OCCURRENCE]
+            actual_file,
+            dtype={track.TRACK_ID: object, track.ORIGINAL_TRACK_ID: object},
+            parse_dates=[track.OCCURRENCE],
         )
         expected = set_column_order(track_dataset.get_data().reset_index())
         assert sorted(actual.columns.tolist()) == sorted(expected.columns.tolist())

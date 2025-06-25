@@ -1,5 +1,5 @@
 import contextlib
-from typing import Callable
+from typing import Awaitable, Callable
 
 from OTAnalytics.application.application import CancelAddSection
 from OTAnalytics.application.use_cases.section_repository import AddSection
@@ -18,7 +18,7 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.types import EventType
 
-MetadataProvider = Callable[[], dict]
+MetadataProvider = Callable[[], Awaitable[dict]]
 
 
 class MissingCoordinate(Exception):
@@ -53,7 +53,7 @@ class AddNewSection:
         self._create_section_id = create_section_id
         self._add_section = add_section
 
-    def add_new_section(
+    async def add_new_section(
         self,
         coordinates: list[tuple[int, int]],
         is_area_section: bool,
@@ -61,16 +61,18 @@ class AddNewSection:
     ) -> Section | None:
         validate_coordinates(coordinates)
         with contextlib.suppress(CancelAddSection):
-            return self.__create_section(coordinates, is_area_section, get_metadata)
+            return await self.__create_section(
+                coordinates, is_area_section, get_metadata
+            )
         return None
 
-    def __create_section(
+    async def __create_section(
         self,
         coordinates: list[tuple[int, int]],
         is_area_section: bool,
         get_metadata: MetadataProvider,
     ) -> Section:
-        metadata = self.__get_metadata(get_metadata)
+        metadata = await self.__get_metadata(get_metadata)
         relative_offset_coordinates_enter = metadata[RELATIVE_OFFSET_COORDINATES][
             EventType.SECTION_ENTER.serialize()
         ]
@@ -85,9 +87,7 @@ class AddNewSection:
                     )
                 },
                 plugin_data={},
-                coordinates=[
-                    coordinate_from_tuple(coordinate) for coordinate in coordinates
-                ],
+                coordinates=await self._build_area_coordinates(coordinates),
             )
         else:
             section = LineSection(
@@ -99,24 +99,34 @@ class AddNewSection:
                     )
                 },
                 plugin_data={},
-                coordinates=[
-                    coordinate_from_tuple(coordinate) for coordinate in coordinates
-                ],
+                coordinates=await self._build_coordinates(coordinates),
             )
         if section is None:
             raise TypeError("section has to be LineSection or Area, but is None")
         self._add_section(section)
         return section
 
-    def __get_metadata(self, get_metadata: MetadataProvider) -> dict:
-        metadata = get_metadata()
+    async def _build_area_coordinates(
+        self, coordinates: list[tuple[int, int]]
+    ) -> list[geometry.Coordinate]:
+        if coordinates[-1] != coordinates[0]:
+            return await self._build_coordinates(coordinates + coordinates[0:1])
+        return await self._build_coordinates(coordinates)
+
+    async def _build_coordinates(
+        self, coordinates: list[tuple[int, int]]
+    ) -> list[geometry.Coordinate]:
+        return [coordinate_from_tuple(coordinate) for coordinate in coordinates]
+
+    async def __get_metadata(self, get_metadata: MetadataProvider) -> dict:
+        metadata = await get_metadata()
         while (
             (not metadata)
             or (NAME not in metadata)
             or (not self._add_section.is_section_name_valid(metadata[NAME]))
             or (RELATIVE_OFFSET_COORDINATES not in metadata)
         ):
-            metadata = get_metadata()
+            metadata = await get_metadata()
         return metadata
 
 

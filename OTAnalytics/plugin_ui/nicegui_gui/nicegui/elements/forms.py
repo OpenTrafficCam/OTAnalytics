@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from typing import Callable, Generic, Optional, TypeVar
 
 from nicegui import ui
@@ -8,11 +8,18 @@ from nicegui.elements.checkbox import Checkbox
 from nicegui.elements.input import Input
 from nicegui.elements.mixins.validation_element import ValidationElement
 from nicegui.elements.number import Number
+from nicegui.elements.select import Select
 from nicegui.events import ValueChangeEventArguments
 
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     MissingInstanceError,
 )
+
+YEAR_MONTH_DAY_FORMAT = "%Y-%m-%d"
+DAY_MONTH_YEAR_FORMAT = "%d.%m.%Y"
+
+HOUR_MINUTE_FORMAT = "%H:%M"
+HOUR_MINUTE_SECOND_FORMAT = f"{HOUR_MINUTE_FORMAT}:%S"
 
 T = TypeVar("T")
 
@@ -208,7 +215,7 @@ class FormFieldText(FormField[Input, str]):
             self._label_text,
             value=self._initial_value,
             validation=self._validation,
-        )
+        ).classes("w-full")
         if self._on_value_change:
             self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)
@@ -285,7 +292,80 @@ class FormFieldFloat(FormField[Number, float]):
             precision=self._precision,
             validation=self._validation,
             step=self._step,
-        )
+        ).classes("w-full")
+        self._apply(self.element)
+
+
+class FormFieldOptionalFloat(FormField[Number, float | None]):
+    """A class representing a floating point form field with validation and updating
+    capabilities. It supports optional values.
+
+    Args:
+        label_text (float): The label for the input field.
+        initial_value (float): The initial value of the input. Defaults to None.
+        min_value (float): The minimum allowable value for the input. Defaults to None.
+        max_value (float): The maximum allowable value for the input. Defaults to None.
+        precision (int) : The number of decimal places to display. Defaults to 2.
+        validation(Callable[..., str | None] | dict[str, Callable[..., bool]] | None):
+            Validation functions to be applied on the element's data. Defaults to None.
+        props (list[str] | None): props to be set for the number element.
+        marker (str | None): marker to be set for the number element.
+    """
+
+    @property
+    def value(self) -> float | None:
+        """Provides the current input of the form field
+
+        Returns:
+            float: The current input of the form field.
+        """
+
+        return float(self.element.value) if self.element.value else None
+
+    @property
+    def props(self) -> list[str] | None:
+        return self._props
+
+    @property
+    def marker(self) -> str | None:
+        return self._marker
+
+    def __init__(
+        self,
+        label_text: str,
+        initial_value: float | None = None,
+        min_value: float | None = None,
+        max_value: float | None = None,
+        precision: int = 2,
+        step: float = 0.01,
+        validation: (
+            Callable[..., str | None] | dict[str, Callable[..., bool]] | None
+        ) = None,
+        props: list[str] | None = None,
+        marker: str | None = None,
+    ):
+        super().__init__()
+        self._label_text = label_text
+        self._initial_value = initial_value
+        self._min = min_value
+        self._max = max_value
+        self._precision = precision
+        self._step = step
+        self._validation = validation
+        self._props = props
+        self._marker = marker
+
+    def build(self) -> None:
+        """Builds the UI form element."""
+        self._instance = ui.number(
+            label=self._label_text,
+            value=self._initial_value,
+            min=self._min,
+            max=self._max,
+            precision=self._precision,
+            validation=self._validation,
+            step=self._step,
+        ).classes("w-full")
         self._apply(self.element)
 
 
@@ -358,10 +438,14 @@ class FormFieldInteger(FormField[Number, int]):
             precision=self._precision,
             validation=self._validation,
             step=self._step,
-        )
+        ).classes("w-full")
         if self._on_value_change:
             self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)
+
+    @property
+    def initial_value(self) -> int | None:
+        return self._initial_value
 
 
 class FormFieldDate(FormField[Input, Optional[date]]):
@@ -375,7 +459,10 @@ class FormFieldDate(FormField[Input, Optional[date]]):
         if self.element and self.element.value:
             if isinstance(self.element.value, date):
                 return self.element.value
-            return datetime.strptime(self.element.value, "%Y-%m-%d").date()
+            return parse_datetime(
+                self.element.value,
+                formats=[YEAR_MONTH_DAY_FORMAT, DAY_MONTH_YEAR_FORMAT],
+            ).date()
         return None
 
     @property
@@ -431,8 +518,17 @@ class FormFieldDate(FormField[Input, Optional[date]]):
     @staticmethod
     def __format(value: date | None) -> str:
         if value:
-            return value.strftime("%Y-%m-%d")
+            return value.strftime(DAY_MONTH_YEAR_FORMAT)
         return ""
+
+
+def parse_datetime(value: str, formats: list[str]) -> datetime:
+    for format in formats:
+        try:
+            return datetime.strptime(value, format).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    raise ValueError(f"Could not parse datetime from {value}")
 
 
 class FormFieldTime(FormField[Input, Optional[time]]):
@@ -446,7 +542,10 @@ class FormFieldTime(FormField[Input, Optional[time]]):
         if self.element and self.element.value:
             if isinstance(self.element.value, time):
                 return self.element.value
-            return datetime.strptime(self.element.value, "%H:%M").time()
+            return parse_datetime(
+                self.element.value,
+                formats=[HOUR_MINUTE_SECOND_FORMAT, HOUR_MINUTE_FORMAT],
+            ).time()
         return None
 
     @property
@@ -486,7 +585,9 @@ class FormFieldTime(FormField[Input, Optional[time]]):
         ).style("max-width: 40%")
         with self._instance:
             with ui.menu().props("no-parent-event") as menu:
-                with ui.time(self.initial_value_text).bind_value(self._instance):
+                with ui.time(self.initial_value_text, mask="HH:mm:ss").bind_value(
+                    self._instance
+                ):
                     with ui.row().classes("justify-end"):
                         ui.button("Close", on_click=menu.close).props("flat")
             with self._instance.add_slot("append"):
@@ -498,7 +599,7 @@ class FormFieldTime(FormField[Input, Optional[time]]):
     @staticmethod
     def __format(value: time | None) -> str:
         if value:
-            return value.strftime("%H:%M")
+            return value.strftime("%H:%M:%S")
         return ""
 
 
@@ -528,7 +629,7 @@ class DateTimeForm:
         start_date = self._start_date.value
         start_time = self._start_time.value
         if start_date and start_time:
-            return datetime.combine(start_date, start_time)
+            return datetime.combine(start_date, start_time, tzinfo=timezone.utc)
         return None
 
     def set_value(self, value: datetime | None) -> None:
@@ -655,3 +756,61 @@ class FormFieldCheckbox(LazyInitializedElement[Checkbox]):
 
         """
         self.element.update()
+
+
+class FormFieldSelect(FormField[Select, str]):
+    """A class representing a select form field with updating capabilities.
+
+    Args:
+        label_text (str): The label for the select field.
+        options (list[str]): The values to be selected from.
+        initial_value (str): The initial value of the select field.
+        props (list[str] | None): props to be set for the select element.
+        marker (str | None): marker to be set for the select element.
+
+    """
+
+    @property
+    def value(self) -> str:
+        """Provides the current input of the form field
+
+        Returns:
+            int: The current input of the form field.
+        """
+        return self.element.value
+
+    @property
+    def props(self) -> list[str] | None:
+        return self._props
+
+    @property
+    def marker(self) -> str | None:
+        return self._marker
+
+    def __init__(
+        self,
+        label_text: str,
+        options: list[str],
+        initial_value: str | None = None,
+        on_value_change: Callable[[ValueChangeEventArguments], None] | None = None,
+        props: list[str] | None = None,
+        marker: str | None = None,
+    ) -> None:
+        super().__init__()
+        self._label_text = label_text
+        self._options = options
+        self._initial_value = initial_value
+        self._on_value_change = on_value_change
+        self._props = props
+        self._marker = marker
+
+    def build(self) -> None:
+        """Builds the UI form element."""
+        self._instance = ui.select(
+            label=self._label_text,
+            options=self._options,
+            value=self._initial_value if self._initial_value else self._options[0],
+        ).classes("w-full")
+        if self._on_value_change:
+            self._instance.on_value_change(self._on_value_change)
+        self._apply(self.element)

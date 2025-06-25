@@ -34,7 +34,10 @@ from OTAnalytics.domain.track import (
     TrackId,
     TrackImage,
 )
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY, TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    TRACK_GEOMETRY_FACTORY,
+    TrackDataset,
+)
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import (
     PATH,
@@ -453,6 +456,7 @@ def create_python_track(
         classification = track_classification_calculator.calculate(all_detections)
         try:
             current_track = PythonTrack(
+                _original_id=track_id,
                 _id=track_id,
                 _classification=classification,
                 _detections=sort_dets_by_occurrence,

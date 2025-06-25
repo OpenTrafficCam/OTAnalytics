@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
+from pathlib import Path
 from typing import Sequence
 
 from OTAnalytics.adapter_visualization.color_provider import (
@@ -16,6 +17,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     RoadUserAssigner,
     SimpleRoadUserAssigner,
     SimpleTaggerFactory,
+    TrafficCounting,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
@@ -30,18 +32,22 @@ from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
 from OTAnalytics.application.resources.resource_manager import ResourceManager
-from OTAnalytics.application.run_configuration import RunConfiguration
+from OTAnalytics.application.run_configuration import (
+    RunConfiguration,
+    RunConfigurationError,
+)
 from OTAnalytics.application.state import (
     ActionState,
     FileState,
     FlowState,
     SectionState,
     SelectedVideoUpdate,
+    TrackImageSizeUpdater,
     TrackImageUpdater,
-    TrackPropertiesUpdater,
     TracksMetadata,
     TrackState,
     TrackViewState,
+    VideoImageSizeUpdater,
     VideosMetadata,
 )
 from OTAnalytics.application.ui.frame_control import (
@@ -80,6 +86,7 @@ from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearAllEvents,
     GetAllEnterSectionEvents,
+    RemoveEventsByRoadUserId,
 )
 from OTAnalytics.application.use_cases.filter_visualization import (
     CreateDefaultFilter,
@@ -153,6 +160,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTracks,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
+    RemoveTracksByOriginalIds,
     TrackRepositorySize,
 )
 from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
@@ -162,6 +170,10 @@ from OTAnalytics.application.use_cases.track_statistics_export import (
 )
 from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
+)
+from OTAnalytics.application.use_cases.update_count_plots import (
+    CountPlotSaver,
+    CountPlotsUpdater,
 )
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import (
@@ -176,14 +188,19 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import TrackIdProvider
+from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_datastore.pandas_track_dataset_factory import (
+    PandasTrackDatasetFactory,
+    TypeCheckingPandasTrackDatasetFactory,
+)
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
-    FilteredPandasTrackDataset,
+    FilterByClassPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
@@ -250,6 +267,14 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
+from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
+    ClassByFlowCountPlotter,
+    CountPlotter,
+    FlowByClassCountPlotter,
+    MatplotlibCountBarPlotStyler,
+    MatplotlibCountLinePlotStyler,
+    MultipleCountPlotters,
+)
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
@@ -512,8 +537,12 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     @cached_property
-    def track_properties_updater(self) -> TrackPropertiesUpdater:
-        return TrackPropertiesUpdater(self.datastore, self.track_view_state)
+    def video_image_size_updater(self) -> VideoImageSizeUpdater:
+        return VideoImageSizeUpdater(self.track_image_size_updater)
+
+    @cached_property
+    def track_image_size_updater(self) -> TrackImageSizeUpdater:
+        return TrackImageSizeUpdater(self.track_view_state)
 
     @cached_property
     def clear_all_intersections(self) -> ClearAllIntersections:
@@ -582,9 +611,11 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def track_repository(self) -> TrackRepository:
         return TrackRepository(
-            FilteredPandasTrackDataset(
+            FilterByClassPandasTrackDataset(
                 PandasTrackDataset.from_list(
-                    [], ShapelyTrackGeometryDataset.from_track_dataset
+                    [],
+                    self.track_geometry_factory,
+                    self.pandas_by_max_confidence,
                 ),
                 self.run_config.include_classes,
                 self.run_config.exclude_classes,
@@ -592,10 +623,9 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     def _create_track_parser(self) -> TrackParser:
-        calculator = PandasByMaxConfidence()
         detection_parser = PandasDetectionParser(
-            calculator,
-            ShapelyTrackGeometryDataset.from_track_dataset,
+            self.pandas_by_max_confidence,
+            self.track_geometry_factory,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
         return OttrkParser(detection_parser)
@@ -610,8 +640,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             progressbar=TqdmBuilder(),
             track_dataset_factory=lambda tracks: PandasTrackDataset.from_list(
                 tracks,
-                ShapelyTrackGeometryDataset.from_track_dataset,
-                PandasByMaxConfidence(),
+                self.track_geometry_factory,
+                self.pandas_by_max_confidence,
             ),
             chunk_size=self.run_config.cli_chunk_size,
         )
@@ -725,12 +755,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def export_counts(self) -> ExportCounts:
         return ExportTrafficCounting(
-            self.event_repository,
-            self.flow_repository,
-            self.get_sections_by_id,
-            self.create_events,
-            self.road_user_assigner,
-            SimpleTaggerFactory(),
+            self.traffic_counting,
             CachedExporterFactory(
                 FillZerosExporterFactory(
                     AddSectionInformationExporterFactory(SimpleExporterFactory())
@@ -914,7 +939,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
         tracks_as_dataframe_provider = TracksAsDataFrameProvider(
             get_all_tracks=self.get_all_tracks,
-            track_geometry_factory=ShapelyTrackGeometryDataset.from_track_dataset,
+            track_geometry_factory=self.track_geometry_factory,
         )
         detection_rate_strategy = DetectionRateByPercentile(
             percentile_value=DETECTION_RATE_PERCENTILE_VALUE
@@ -972,6 +997,92 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def resource_manager(self) -> ResourceManager:
         return ResourceManager()
+
+    @cached_property
+    def pandas_track_dataset_factory(self) -> PandasTrackDatasetFactory:
+        return TypeCheckingPandasTrackDatasetFactory(
+            self.track_geometry_factory, self.pandas_by_max_confidence
+        )
+
+    @cached_property
+    def pandas_by_max_confidence(self) -> PandasByMaxConfidence:
+        return PandasByMaxConfidence()
+
+    @cached_property
+    def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
+        return ShapelyTrackGeometryDataset.from_track_dataset
+
+    @cached_property
+    def remove_events_by_road_user_id(self) -> RemoveEventsByRoadUserId:
+        return RemoveEventsByRoadUserId(self.event_repository)
+
+    @cached_property
+    def remove_tracks_by_original_ids(self) -> RemoveTracksByOriginalIds:
+        return RemoveTracksByOriginalIds(self.track_repository)
+
+    @cached_property
+    def traffic_counting(self) -> TrafficCounting:
+        return TrafficCounting(
+            self.event_repository,
+            self.flow_repository,
+            self.get_sections_by_id,
+            self.create_events,
+            self.road_user_assigner,
+            SimpleTaggerFactory(),
+        )
+
+    @cached_property
+    def update_count_plots(self) -> CountPlotsUpdater:
+        return CountPlotsUpdater(self.track_view_state, self.count_plotter)
+
+    @cached_property
+    def save_count_plots(self) -> CountPlotSaver:
+        try:
+            save_dir = self.run_config.save_dir
+        except RunConfigurationError:
+            save_dir = Path.cwd()
+
+        return CountPlotSaver(path=save_dir / "results")
+
+    @cached_property
+    def count_plotter(self) -> CountPlotter:
+        return MultipleCountPlotters(
+            self.traffic_counting,
+            plotters=[
+                FlowByClassCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountLinePlotStyler(legend=True),
+                ),
+                ClassByFlowCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountLinePlotStyler(legend=True),
+                ),
+                FlowByClassCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountBarPlotStyler(
+                        legend=True, time_interval_min=5
+                    ),
+                ),
+                ClassByFlowCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountBarPlotStyler(
+                        legend=True, ascending_trace_sum=True, time_interval_min=5
+                    ),
+                ),
+            ],
+        )
 
 
 def create_format_fixer(

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, Mock, PropertyMock, call
 import pytest
 
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import (
     TrackFileRepository,
     TrackListObserver,
@@ -184,6 +184,48 @@ class TestTrackRepository:
         dataset.classifications = classifications
         repository = TrackRepository(dataset)
         assert repository.classifications == classifications
+
+    def test_revert_cuts_for(self) -> None:
+        original_id_1 = TrackId("original-1")
+        original_id_2 = TrackId("original-2")
+
+        cut_id_1 = TrackId("cut-1")
+        cut_id_2 = TrackId("cut-2")
+        original_ids = frozenset([original_id_1, original_id_2])
+        reverted_ids = frozenset([original_id_1])
+        cut_ids = frozenset([cut_id_1, cut_id_2])
+
+        observer = Mock()
+        dataset = Mock()
+        dataset.revert_cuts_for.return_value = (dataset, reverted_ids, cut_ids)
+        target = TrackRepository(dataset)
+        target.register_tracks_observer(observer)
+        target.revert_cuts_for(original_ids)
+        dataset.revert_cuts_for.assert_called_once_with(original_ids)
+        observer.notify_tracks.assert_called_once_with(
+            TrackRepositoryEvent(added=reverted_ids, removed=cut_ids)
+        )
+
+    def test_remove_by_original_ids(self) -> None:
+        given_ids_to_remove = frozenset([TrackId("original-1"), TrackId("original-2")])
+        given_observer = Mock()
+        given_dataset = Mock()
+        updated_dataset = Mock()
+        removed_ids = frozenset([TrackId("actual-1")])
+
+        given_dataset.remove_by_original_ids.return_value = (
+            updated_dataset,
+            removed_ids,
+        )
+
+        target = TrackRepository(given_dataset)
+        target.register_tracks_observer(given_observer)
+        target.remove_by_original_ids(given_ids_to_remove)
+
+        assert target._dataset == updated_dataset
+        given_observer.notify_tracks.assert_called_once_with(
+            TrackRepositoryEvent.create_removed(removed_ids)
+        )
 
 
 class TestTrackFileRepository:

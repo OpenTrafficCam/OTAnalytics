@@ -22,9 +22,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     FormFieldCheckbox,
     FormFieldInteger,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
 
 MARKER_FILTER_BY_DATE_CHECKBOX = "marker-filter-by-date-checkbox"
 
@@ -53,11 +50,18 @@ class FilterDateRangeForm:
         last_occurrence_info_text = self._resource_manager.get(
             VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE
         )
-        if first_occurrence := self._viewmodel.get_first_detection_occurrence():
+
+        # Get first and last occurrence values
+        first_occurrence = self._viewmodel.get_first_detection_occurrence()
+        last_occurrence = self._viewmodel.get_last_detection_occurrence()
+
+        # Update info text
+        if first_occurrence:
             first_occurrence_info_text += first_occurrence.strftime(DATETIME_FORMAT)
 
-        if last_occurrence := self._viewmodel.get_last_detection_occurrence():
+        if last_occurrence:
             last_occurrence_info_text += last_occurrence.strftime(DATETIME_FORMAT)
+
         with ui.dialog() as self._dialog, ui.card():
             with ui.row():
                 ui.label(
@@ -73,6 +77,15 @@ class FilterDateRangeForm:
                     )
                 )
                 self._end_date.build()
+
+            # Set values after building the UI elements
+            if first_occurrence:
+                # Preset start date with first occurrence
+                self._start_date.set_value(first_occurrence)
+
+            if last_occurrence:
+                # Preset end date with last occurrence
+                self._end_date.set_value(last_occurrence)
             ui.label(first_occurrence_info_text)
             ui.label(last_occurrence_info_text)
             with ui.row():
@@ -112,6 +125,12 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._filter_by_date: ui.checkbox
         self._filter_by_class: ui.checkbox
         self._filter_by_class_list: list = []
+        self._button_previous_second: ui.button | None = None
+        self._button_previous_frame: ui.button | None = None
+        self._button_previous_event: ui.button | None = None
+        self._button_next_second: ui.button | None = None
+        self._button_next_frame: ui.button | None = None
+        self._button_next_event: ui.button | None = None
         self._introduce_to_viewmodel()
         self._frames_to_skip = 0
         self._seconds_to_skip = 0
@@ -142,6 +161,7 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_filter_frame(self)
+        self._viewmodel.set_video_control_frame(self)
 
     def build(self) -> None:
         with ui.grid(columns=3):
@@ -295,11 +315,17 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         pass
 
     def get_general_buttons(self) -> list[Button]:
-        return [
-            self._button_previous_second,
-            self._button_previous_frame,
-            self._button_previous_event,
-            self._button_next_second,
-            self._button_next_frame,
-            self._button_next_event,
-        ]
+        buttons = []
+        if self._button_previous_second:
+            buttons.append(self._button_previous_second)
+        if self._button_previous_frame:
+            buttons.append(self._button_previous_frame)
+        if self._button_previous_event:
+            buttons.append(self._button_previous_event)
+        if self._button_next_second:
+            buttons.append(self._button_next_second)
+        if self._button_next_frame:
+            buttons.append(self._button_next_frame)
+        if self._button_next_event:
+            buttons.append(self._button_next_event)
+        return buttons

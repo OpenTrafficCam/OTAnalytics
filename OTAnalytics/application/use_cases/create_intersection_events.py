@@ -1,12 +1,11 @@
 from datetime import datetime
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Protocol
 
 from OTAnalytics.application.analysis.intersect import (
     IntersectionError,
     RunIntersect,
     group_sections_by_offset,
 )
-from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import Event, EventBuilder, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
     Coordinate,
@@ -16,7 +15,7 @@ from OTAnalytics.domain.geometry import (
 )
 from OTAnalytics.domain.intersect import Intersector, IntersectParallelizationStrategy
 from OTAnalytics.domain.section import Area, LineSection, Section
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.types import EventType
 
 
@@ -257,11 +256,15 @@ class RunCreateIntersectionEvents:
         return events
 
 
+class GetTracks(Protocol):
+    def as_dataset(self) -> TrackDataset: ...
+
+
 class BatchedTracksRunIntersect(RunIntersect):
     def __init__(
         self,
         intersect_parallelizer: IntersectParallelizationStrategy,
-        get_tracks: GetAllTracks,
+        get_tracks: GetTracks,
     ) -> None:
         self._intersect_parallelizer = intersect_parallelizer
         self._get_tracks = get_tracks

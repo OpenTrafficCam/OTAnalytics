@@ -5,13 +5,6 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.adapter_visualization.color_provider import (
-    CLASS_BICYCLIST,
-    CLASS_CAR,
-    CLASS_CARGOBIKE,
-    CLASS_PEDESTRIAN,
-    CLASS_TRUCK,
-)
 from OTAnalytics.application.analysis.traffic_counting import (
     EventPair,
     RoadUserAssignment,
@@ -19,9 +12,10 @@ from OTAnalytics.application.analysis.traffic_counting import (
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
@@ -41,6 +35,8 @@ from tests.utils.builders.track_segment_builder import (
     TrackSegmentDatasetBuilder,
     TrackSegmentDatasetBuilderProvider,
 )
+
+pytest_plugins = ["nicegui.testing.user_plugin"]
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
@@ -221,29 +217,40 @@ def closed_track() -> Track:
 
 @pytest.fixture
 def car_track() -> Track:
-    return create_track("1", [(1, 1), (2, 2)], 1, CLASS_CAR, confidences=[0.6, 0.8])
+    return create_track(
+        "1", [(1, 1), (2, 2)], 1, OtcClasses.CAR, confidences=[0.6, 0.8]
+    )
 
 
 @pytest.fixture
 def car_track_continuing() -> Track:
-    return create_track("1", [(3, 3), (4, 4), (5, 5)], 3, CLASS_TRUCK)
+    return create_track("1", [(3, 3), (4, 4), (5, 5)], 3, OtcClasses.TRUCK)
 
 
 @pytest.fixture
 def pedestrian_track() -> Track:
     return create_track(
-        "2", [(1, 1), (2, 2), (3, 3)], 1, CLASS_PEDESTRIAN, confidences=[0.9, 0.8, 0.7]
+        "2",
+        [(1, 1), (2, 2), (3, 3)],
+        1,
+        OtcClasses.PEDESTRIAN,
+        confidences=[0.9, 0.8, 0.7],
     )
 
 
 @pytest.fixture
 def bicycle_track() -> Track:
-    return create_track("3", [(1, 1), (2, 2), (3, 3)], 4, CLASS_BICYCLIST)
+    return create_track("3", [(1, 1), (2, 2), (3, 3)], 4, OtcClasses.BICYCLIST)
 
 
 @pytest.fixture
 def cargo_bike_track() -> Track:
-    return create_track("4", [(1, 1), (2, 2), (3, 3)], 4, CLASS_CARGOBIKE)
+    return create_track("4", [(1, 1), (2, 2), (3, 3)], 4, OtcClasses.CARGO_BIKE_DRIVER)
+
+
+@pytest.fixture
+def single_detection_track() -> Track:
+    return create_track("5", [(2, 2)], 1, OtcClasses.CAR, confidences=[0.8])
 
 
 @pytest.fixture
@@ -265,27 +272,51 @@ def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
 def cutting_section_test_case() -> (
     tuple[LineSection, list[Track], list[Track], set[TrackId]]
 ):
+    track_id_1 = "1"
+    track_id_2 = "2"
+    track_id_3 = "3"
+
     first_track = create_track(
-        "1",
-        [(1, 1), (2, 1), (3, 1), (4, 1), (4, 2), (3, 2), (2, 2), (1, 2)],
+        track_id=track_id_1,
+        original_id=track_id_1,
+        coord=[(1, 1), (2, 1), (3, 1), (4, 1), (4, 2), (3, 2), (2, 2), (1, 2)],
         start_second=1,
     )
     expected_first_track_1 = create_track(
-        "1_0",
-        [
+        track_id="1_0",
+        original_id=track_id_1,
+        coord=[
             (1, 1),
             (2, 1),
         ],
-        1,
+        start_second=1,
     )
-    expected_first_track_2 = create_track("1_1", [(3, 1), (4, 1), (4, 2), (3, 2)], 3)
-    expected_first_track_3 = create_track("1_2", [(2, 2), (1, 2)], 7)
+    expected_first_track_2 = create_track(
+        track_id="1_1",
+        original_id=track_id_1,
+        coord=[(3, 1), (4, 1), (4, 2), (3, 2)],
+        start_second=3,
+    )
+    expected_first_track_3 = create_track(
+        track_id="1_2", original_id=track_id_1, coord=[(2, 2), (1, 2)], start_second=7
+    )
 
-    second_track = create_track("2", [(1, 1), (2, 1), (3, 1)], 1)
-    expected_second_track_1 = create_track("2_0", [(1, 1), (2, 1)], 1)
-    expected_second_track_2 = create_track("2_1", [(3, 1)], 3)
+    second_track = create_track(
+        track_id=track_id_2, coord=[(1, 1), (2, 1), (3, 1)], start_second=1
+    )
+    expected_second_track_1 = create_track(
+        track_id="2_0", original_id=track_id_2, coord=[(1, 1), (2, 1)], start_second=1
+    )
+    expected_second_track_2 = create_track(
+        track_id="2_1", original_id=track_id_2, coord=[(3, 1)], start_second=3
+    )
 
-    third_track = create_track("3", [(10, 10), (20, 10)], 10)
+    third_track = create_track(
+        track_id=track_id_3,
+        original_id=track_id_3,
+        coord=[(10, 10), (20, 10)],
+        start_second=10,
+    )
 
     _id = "#cut_1"
     cutting_section = LineSection(

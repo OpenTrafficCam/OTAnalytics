@@ -1,3 +1,4 @@
+import asyncio
 import tkinter
 from tkinter import Listbox
 from typing import Any
@@ -58,7 +59,7 @@ class FrameSections(AbstractCTkFrame):
         self.button_edit_metadata = CTkButton(
             master=self,
             text="Properties",
-            command=self._viewmodel.edit_selected_section_metadata,
+            command=self._edit_selected_section_metadata,
         )
         self.button_remove = CTkButton(
             master=self,
@@ -83,6 +84,9 @@ class FrameSections(AbstractCTkFrame):
         self.button_remove.grid(
             row=3, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
+
+    def _edit_selected_section_metadata(self) -> None:
+        asyncio.run(self._viewmodel.edit_selected_section_metadata())
 
     def _set_button_state_categories(self) -> None:
         self._general_buttons: list[CTkButton] = []
@@ -138,7 +142,7 @@ class TreeviewSections(TreeviewTemplate):
         self._viewmodel.set_selected_section_ids(ids)
 
     def _on_double_click(self, event: Any) -> None:
-        self._viewmodel.edit_selected_section_metadata()
+        asyncio.run(self._viewmodel.edit_selected_section_metadata())
 
     def update_items(self) -> None:
         self.delete(*self.get_children())

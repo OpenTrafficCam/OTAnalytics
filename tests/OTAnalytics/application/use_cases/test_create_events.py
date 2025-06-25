@@ -19,7 +19,7 @@ from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.section import Section, SectionId, SectionType
 from OTAnalytics.domain.track import Track
-from OTAnalytics.domain.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 
 
 @pytest.fixture
