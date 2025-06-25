@@ -108,15 +108,15 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def load_otconfig(self) -> None:
+    async def load_otconfig(self) -> None:
         pass
 
     @abstractmethod
-    def save_otconfig(self) -> None:
+    async def save_otconfig(self) -> None:
         pass
 
     @abstractmethod
-    def add_video(self) -> None:
+    async def add_video(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -156,15 +156,15 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def load_configuration(self) -> None:
+    async def load_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def save_configuration(self) -> None:
+    async def save_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def quick_save_configuration(self) -> None:
+    async def quick_save_configuration(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -257,7 +257,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def export_events(self) -> None:
+    async def export_events(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -349,7 +349,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def export_counts(self) -> None:
+    async def export_counts(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -423,7 +423,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def export_road_user_assignments(self) -> None:
+    async def export_road_user_assignments(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -455,7 +455,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def export_track_statistics(self) -> None:
+    async def export_track_statistics(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

@@ -93,10 +93,12 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
         ).classes("text-lg font-bold")
         with ui.row():
             self.open_project_button = ui.button(
-                self._resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT)
+                self._resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT),
+                on_click=self._open_project,
             )
             self.save_project_button = ui.button(
-                self._resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT)
+                self._resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT),
+                on_click=self._save_project,
             )
             self._quick_save_button.build()
         self._project_name.build()
@@ -109,14 +111,24 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
     def _update_start_date_to_model(self, value: datetime | None) -> None:
         self._view_model.update_project_start_date(value)
 
-    def _quick_save(self, _: ClickEventArguments) -> None:
-        self._view_model.quick_save_configuration()
+    async def _quick_save(self, _: ClickEventArguments) -> None:
+        await self._view_model.quick_save_configuration()
+
+    async def _save_project(self, _: ClickEventArguments) -> None:
+        await self._view_model.save_configuration()
+
+    async def _open_project(self, _: ClickEventArguments) -> None:
+        await self._view_model.load_configuration()
 
     def update(self, name: str, start_date: Optional[datetime]) -> None:
         if self._project_name._instance:
             self._project_name.set_value(name)
-            if start_date:
-                self._start_date.set_value(start_date)
+        if (
+            start_date
+            and hasattr(self._start_date, "_start_date")
+            and self._start_date._start_date._instance
+        ):
+            self._start_date.set_value(start_date)
 
     def get_general_buttons(self) -> list[Button]:
         buttons = []

@@ -215,7 +215,7 @@ class FormFieldText(FormField[Input, str]):
             self._label_text,
             value=self._initial_value,
             validation=self._validation,
-        )
+        ).classes("w-full")
         if self._on_value_change:
             self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)
@@ -292,7 +292,7 @@ class FormFieldFloat(FormField[Number, float]):
             precision=self._precision,
             validation=self._validation,
             step=self._step,
-        )
+        ).classes("w-full")
         self._apply(self.element)
 
 
@@ -365,7 +365,7 @@ class FormFieldOptionalFloat(FormField[Number, float | None]):
             precision=self._precision,
             validation=self._validation,
             step=self._step,
-        )
+        ).classes("w-full")
         self._apply(self.element)
 
 
@@ -438,10 +438,14 @@ class FormFieldInteger(FormField[Number, int]):
             precision=self._precision,
             validation=self._validation,
             step=self._step,
-        )
+        ).classes("w-full")
         if self._on_value_change:
             self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)
+
+    @property
+    def initial_value(self) -> int | None:
+        return self._initial_value
 
 
 class FormFieldDate(FormField[Input, Optional[date]]):
@@ -581,7 +585,9 @@ class FormFieldTime(FormField[Input, Optional[time]]):
         ).style("max-width: 40%")
         with self._instance:
             with ui.menu().props("no-parent-event") as menu:
-                with ui.time(self.initial_value_text).bind_value(self._instance):
+                with ui.time(self.initial_value_text, mask="HH:mm:ss").bind_value(
+                    self._instance
+                ):
                     with ui.row().classes("justify-end"):
                         ui.button("Close", on_click=menu.close).props("flat")
             with self._instance.add_slot("append"):
@@ -593,7 +599,7 @@ class FormFieldTime(FormField[Input, Optional[time]]):
     @staticmethod
     def __format(value: time | None) -> str:
         if value:
-            return value.strftime("%H:%M")
+            return value.strftime("%H:%M:%S")
         return ""
 
 
@@ -804,7 +810,7 @@ class FormFieldSelect(FormField[Select, str]):
             label=self._label_text,
             options=self._options,
             value=self._initial_value if self._initial_value else self._options[0],
-        )
+        ).classes("w-full")
         if self._on_value_change:
             self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)

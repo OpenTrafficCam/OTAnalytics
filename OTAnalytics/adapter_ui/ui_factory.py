@@ -31,7 +31,7 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def askopenfilename(
+    async def askopenfilename(
         self,
         title: str,
         filetypes: list[tuple[str, str]],
@@ -40,7 +40,7 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def askopenfilenames(
+    async def askopenfilenames(
         self,
         title: str,
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
@@ -48,7 +48,7 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def ask_for_save_file_path(
+    async def ask_for_save_file_path(
         self,
         title: str,
         filetypes: list[tuple[str, str]],
@@ -59,7 +59,7 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def configure_export_file(
+    async def configure_export_file(
         self,
         title: str,
         export_format_extensions: dict[str, str],
@@ -69,7 +69,7 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def configure_export_counts(
+    async def configure_export_counts(
         self,
         start: datetime | None,
         end: datetime | None,
