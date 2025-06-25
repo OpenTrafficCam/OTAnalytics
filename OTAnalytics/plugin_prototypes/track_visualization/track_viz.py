@@ -6,8 +6,10 @@ import pandas
 import seaborn
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
+from matplotlib.ticker import NullFormatter, NullLocator
 from mpl_toolkits.axes_grid1 import Divider, Size
 from pandas import DataFrame
 from PIL import Image
@@ -62,6 +64,10 @@ FRAME_OFFSET = 1
 
 ENCODING = "UTF-8"
 DPI = 100
+COLOR = "color"
+LINEWIDTH_TRACK = 0.6
+TRACK_START_SYMBOL = ">"
+TRACK_END_SYMBOL = "s"
 
 
 class EventToFlowResolver:
@@ -519,12 +525,12 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             axes (Axes): axes to plot on
         """
         seaborn.lineplot(
-            x="x",
-            y="y",
+            x=track.X,
+            y=track.Y,
             hue=track.TRACK_CLASSIFICATION,
             data=track_df,
             units=track.TRACK_ID,
-            linewidth=0.6,
+            linewidth=LINEWIDTH_TRACK,
             estimator=None,
             sort=False,
             alpha=self._alpha,
@@ -539,6 +545,58 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             # Need to manually remove it, if legend exists.
             if existing_legend := axes.legend_:
                 existing_legend.remove()
+
+
+class NonLegendTrackGeometryPlotter(MatplotlibPlotterImplementation):
+    """Plot geometry of tracks."""
+
+    def __init__(
+        self,
+        data_provider: PandasDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float = 0.5,
+    ) -> None:
+        self._data_provider = data_provider
+        self._color_palette_provider = color_palette_provider
+        self._alpha = alpha
+
+    def plot(self, axes: Axes) -> None:
+        data = self._data_provider.get_data()
+        if not data.empty:
+            self._plot_dataframe(data, axes)
+
+    def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
+        """
+        Plot given tracks on the given axes with the given transparency (alpha)
+
+        Args:
+            track_df (DataFrame): tracks to plot
+            axes (Axes): axes to plot on
+        """
+        for classification in track_df[track.TRACK_CLASSIFICATION].unique():
+            data = track_df.loc[track_df[track.TRACK_CLASSIFICATION] == classification]
+            grouped = data.groupby(level=track.TRACK_ID, group_keys=True)
+            lines = numpy.column_stack(
+                [
+                    grouped[track.X].shift(1).values,  # previous X
+                    grouped[track.Y].shift(1).values,  # previous Y
+                    data[track.X].values,  # current X
+                    data[track.Y].values,  # current Y
+                ]
+            )
+
+            segments = lines.reshape(-1, 2, 2)
+            lc = LineCollection(
+                segments.tolist(),
+                colors=self._color_palette_provider.get().get(classification, "black"),
+                linewidth=LINEWIDTH_TRACK,
+                alpha=self._alpha,
+            )
+            axes.add_collection(lc)
+
+
+def scatter(data: DataFrame, axes: Axes, marker: str) -> None:
+    axes.scatter(data[track.X], data[track.Y], c=data[COLOR], marker=marker, s=15)
 
 
 class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
@@ -569,28 +627,22 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot start and end points of
             axes (Axes): axes to plot on
         """
+        color_palette = self._color_palette_provider.get()
+        color_df = DataFrame(
+            {
+                track.TRACK_CLASSIFICATION: list(color_palette.keys()),
+                COLOR: list(color_palette.values()),
+            }
+        )
+        track_df = track_df.reset_index().merge(
+            color_df,
+            on=track.TRACK_CLASSIFICATION,
+            how="left",
+        )
         track_df_start = track_df.groupby(track.TRACK_ID).first().reset_index()
-        track_df_start["type"] = "start"
-
         track_df_end = track_df.groupby(track.TRACK_ID).last().reset_index()
-        track_df_end["type"] = "end"
-
-        track_df_start_end = pandas.concat([track_df_start, track_df_end]).sort_values(
-            [track.TRACK_ID, track.FRAME]
-        )
-
-        seaborn.scatterplot(
-            x="x",
-            y="y",
-            hue=track.TRACK_CLASSIFICATION,
-            data=track_df_start_end,
-            style="type",
-            markers={"start": ">", "end": "s"},
-            legend=self._enable_legend,
-            s=15,
-            ax=axes,
-            palette=self._color_palette_provider.get(),
-        )
+        scatter(track_df_start, axes, TRACK_START_SYMBOL)
+        scatter(track_df_end, axes, TRACK_END_SYMBOL)
 
 
 class FilterByVideo(PandasDataFrameProvider):
@@ -790,9 +842,18 @@ class MatplotlibTrackPlotter(TrackPlotter):
             aspect=False,
         )
         # The width and height of the rectangle are ignored.
-        return figure.add_axes(
+        axes = figure.add_axes(
             divider.get_position(), axes_locator=divider.new_locator(nx=1, ny=1)
         )
+        axes.xaxis.set_major_locator(NullLocator())
+        axes.xaxis.set_minor_locator(NullLocator())
+        axes.yaxis.set_major_locator(NullLocator())
+        axes.yaxis.set_minor_locator(NullLocator())
+        axes.xaxis.set_major_formatter(NullFormatter())
+        axes.xaxis.set_minor_formatter(NullFormatter())
+        axes.yaxis.set_major_formatter(NullFormatter())
+        axes.yaxis.set_minor_formatter(NullFormatter())
+        return axes
 
     def _style_axes(self, width: int, height: int, axes: Axes) -> None:
         """
@@ -809,6 +870,8 @@ class MatplotlibTrackPlotter(TrackPlotter):
             xticklabels=[],
             yticklabels=[],
         )
+        axes.get_xaxis().set_visible(False)
+        axes.get_yaxis().set_visible(False)
         axes.set_ylim(0, height)
         axes.set_xlim(0, width)
         axes.patch.set_alpha(0.0)

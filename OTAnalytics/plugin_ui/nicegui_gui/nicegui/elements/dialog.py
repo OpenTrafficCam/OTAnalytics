@@ -17,15 +17,18 @@ class DialogResult(StrEnum):
     CANCEL = "Cancel"
 
 
-class BaseDialog(ui.dialog):
+class BaseDialog:
+
+    @property
+    async def result(self) -> DialogResult:
+        return await self.build()
 
     def __init__(self, resource_manager: ResourceManager) -> None:
-        super().__init__()
         self.resource_manager = resource_manager
 
-    async def build(self) -> DialogResult:
-        with ui.dialog() as dialog, ui.card():
-            await self.build_content()
+    def build(self) -> ui.dialog:
+        with ui.dialog() as dialog, ui.card().classes("w-96"):
+            self.build_content()
             with ui.row():
                 apply = ui.button(
                     self.resource_manager.get(GeneralKeys.LABEL_APPLY),
@@ -37,8 +40,8 @@ class BaseDialog(ui.dialog):
                 )
                 apply.mark(MARKER_APPLY)
                 cancel.mark(MARKER_CANCEL)
-            return await dialog
+            return dialog
 
     @abstractmethod
-    async def build_content(self) -> None:
+    def build_content(self) -> None:
         raise NotImplementedError
