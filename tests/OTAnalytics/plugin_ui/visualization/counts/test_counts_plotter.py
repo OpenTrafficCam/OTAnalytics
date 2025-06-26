@@ -22,6 +22,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.state import TracksMetadata
 from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
+    DPI,
     ClassByFlowCountPlotter,
     CountPlotter,
     FigureData,
@@ -34,6 +35,9 @@ from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
     MatplotlibCountPlotter,
     MultipleCountPlotters,
 )
+
+IMAGE_WIDTH = 800
+IMAGE_HEIGHT = 600
 
 
 @pytest.fixture
@@ -173,7 +177,7 @@ class TestCountPlotter:
         plotter.plot(800, 600)
 
         plotter.get_counting_specification.assert_called_once()
-        traffic_counting.count.assert_called_once()
+        traffic_counting.count.assert_called_once_with(counting_specs)
         plotter.plot_count.assert_called_once_with(count, 800, 600)
 
 
@@ -234,22 +238,26 @@ class TestMatplotlibCountPlotStyler:
         self, mock_subplots: Mock, figure_mock: Mock, axes_mock: Mock
     ) -> None:
         """Test that apply_plotter calls _setup_fig_ax and _plot."""
+        figure_name = "Test Plot"
         # Setup
         mock_subplots.return_value = (figure_mock, axes_mock)
-
         styler = self.DummyStyler("_test")
-        data = FigureData(name="Test Plot", traces=[], x="x", y="y")
+        data = FigureData(name=figure_name, traces=[], x="x", y="y")
 
         # Execute
         with patch.object(styler, "_plot") as mock_plot:
             with patch.object(styler, "_convert_to_image") as mock_convert:
                 mock_convert.return_value = Mock(spec=CountImage)
-                styler.apply_plotter(data, 800, 600)
+                styler.apply_plotter(data, IMAGE_WIDTH, IMAGE_HEIGHT)
 
         # Verify
-        mock_subplots.assert_called_once()
+        mock_subplots.assert_called_once_with(
+            figsize=(IMAGE_WIDTH / DPI, IMAGE_HEIGHT / DPI), dpi=DPI
+        )
         mock_plot.assert_called_once_with(data, figure_mock, axes_mock)
-        mock_convert.assert_called_once()
+        mock_convert.assert_called_once_with(
+            figure_mock, IMAGE_WIDTH, IMAGE_HEIGHT, figure_name
+        )
 
 
 class TestMatplotlibCountLinePlotStyler:
@@ -376,7 +384,7 @@ class TestMatplotlibCountPlotter:
         plotter = self.DummyMatplotlibCountPlotter(
             traffic_counting, styler, [], counting_specs
         )
-        result = plotter.plot_count(count, 800, 600)
+        result = plotter.plot_count(count, IMAGE_WIDTH, IMAGE_HEIGHT)
         assert result == []
         assert styler.call_count == 0
 
@@ -400,7 +408,7 @@ class TestMatplotlibCountPlotter:
         )
 
         # Execute
-        result = plotter.plot_count(count, 800, 600)
+        result = plotter.plot_count(count, IMAGE_WIDTH, IMAGE_HEIGHT)
 
         # Verify
         assert styler.apply_plotter.call_count == 2
@@ -410,13 +418,13 @@ class TestMatplotlibCountPlotter:
 
         args1, kwargs1 = call_args_list[0]
         assert args1[0] == data1
-        assert args1[1] == 800
-        assert args1[2] == 600
+        assert args1[1] == IMAGE_WIDTH
+        assert args1[2] == IMAGE_HEIGHT
 
         args2, kwargs2 = call_args_list[1]
         assert args2[0] == data2
-        assert args2[1] == 800
-        assert args2[2] == 600
+        assert args2[1] == IMAGE_WIDTH
+        assert args2[2] == IMAGE_HEIGHT
 
 
 class TestFlowAndClassOverTimeCountPlotter:
@@ -430,16 +438,25 @@ class TestFlowAndClassOverTimeCountPlotter:
         self, traffic_counting: Mock, color_provider: Mock, tracks_metadata: Mock
     ) -> None:
         """Test that get_counting_specification returns the correct specification."""
+        given_interval_in_minutes = 10
 
         plotter = self.DummyFlowAndClassOverTimeCountPlotter(
-            traffic_counting, color_provider, tracks_metadata, interval_in_minutes=10
+            traffic_counting,
+            color_provider,
+            tracks_metadata,
+            interval_in_minutes=given_interval_in_minutes,
         )
 
         spec = plotter.get_counting_specification()
 
         assert spec.interval_in_minutes == 10
+        assert spec.start == datetime.min
+        assert spec.end == datetime.max
+        assert spec.count_all_events is True
+        assert spec.interval_in_minutes == given_interval_in_minutes
         assert spec.modes == list(tracks_metadata.detection_classifications)
-        assert spec.count_all_events
+        assert spec.output_file == "none"
+        assert spec.export_mode == OVERWRITE
 
     @patch(
         "OTAnalytics.plugin_ui.visualization.counts.counts_plotter"
@@ -462,7 +479,7 @@ class TestFlowAndClassOverTimeCountPlotter:
 
         result = plotter._prepare_dataframe(count)
 
-        assert result.empty
+        assert result.empty is True
         mock_count_dict_to_dataframe.assert_called_once_with(count.to_dict())
 
     @patch(
@@ -487,7 +504,7 @@ class TestFlowAndClassOverTimeCountPlotter:
 
         result = plotter._prepare_dataframe(count)
 
-        assert not result.empty
+        assert result.empty is not True
         assert len(result) == 8
         assert list(result["count"]) == [5, 3, 7, 0, 0, 1, 3, 4]
 
@@ -511,6 +528,8 @@ class TestFlowByClassCountPlotter:
         result = list(plotter._create_figure_data(sample_dataframe))
 
         # Verify
+        color_provider.get.assert_called_once()
+
         assert len(result) == 2  # One for each flow
         assert "flow1" in result[0].name
         assert "flow2" in result[1].name
@@ -543,6 +562,8 @@ class TestClassByFlowCountPlotter:
         result = list(plotter._create_figure_data(sample_dataframe))
 
         # Verify
+        color_provider.get.assert_called_once()
+        color_provider.update.assert_called_once_with(frozenset([]))
         assert len(result) == 2  # One for each classification
         assert "car" in result[0].name
         assert "bicycle" in result[1].name
@@ -562,6 +583,7 @@ class TestClassByFlowCountPlotter:
         sample_dataframe: DataFrame,
     ) -> None:
         """Test that _create_figure_data updates the color palette for new flows."""
+        unknown_flow = "flow3"
 
         plotter = ClassByFlowCountPlotter(
             traffic_counting, color_provider, tracks_metadata
@@ -569,11 +591,11 @@ class TestClassByFlowCountPlotter:
 
         # Add a new flow to the dataframe
         new_flow_data = sample_dataframe.copy()
-        new_flow_data[LEVEL_FLOW] = "flow3"
+        new_flow_data[LEVEL_FLOW] = unknown_flow
         combined_df = concat([sample_dataframe, new_flow_data])
 
         list(plotter._create_figure_data(combined_df))
 
+        color_provider.get.assert_called_once()
         color_provider.update.assert_called_once()
-        update_arg = color_provider.update.call_args[0][0]
-        assert "flow3" in update_arg
+        color_provider.update.assert_called_once_with(frozenset([unknown_flow]))
