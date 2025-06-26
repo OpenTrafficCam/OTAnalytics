@@ -26,6 +26,7 @@ from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.state import TracksMetadata
 from OTAnalytics.plugin_parser.export import count_dict_to_dataframe
 
+BAR_WIDTH_RATIO = 0.6
 DPI = 100
 
 
@@ -96,9 +97,9 @@ class MultipleCountPlotters(CountPlotter):
     treated as a single plotter. It delegates plotting operations to its contained
     plotters and aggregates their results.
 
-    Attributes:
-        _traffic_counting: The traffic counting service.
-        _plotters: A list of CountPlotter instances that this composite manages.
+    Args:
+        traffic_counting: The traffic counting service.
+        plotters: A list of CountPlotter instances that this composite manages.
     """
 
     def __init__(self, traffic_counting: TrafficCounting, plotters: list[CountPlotter]):
@@ -225,13 +226,15 @@ class MatplotlibCountBarPlotStyler(MatplotlibCountPlotStyler):
 
     def _plot(self, data: FigureData, figure: Figure, axes: Axes) -> None:
 
-        width: Any = timedelta(minutes=int(round(self._time_interval * 0.6)))
+        width: Any = timedelta(
+            minutes=int(round(self._time_interval * BAR_WIDTH_RATIO))
+        )
 
         bottom = list(data.traces[0].data[data.y].map(lambda _: 0))
         for trace in sorted(
             data.traces,
             key=lambda x: x.data[data.y].sum(),
-            reverse=self._ascending_trace_sum,
+            reverse=not self._ascending_trace_sum,
         ):
             axes.bar(
                 x=trace.data[data.x],
