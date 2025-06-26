@@ -509,23 +509,27 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
                 section.get_type() == SectionType.LINE
                 or section.get_type() == SectionType.CUTTING
             ):
-                # For line sections, check if any track segment intersects with the line
-                start_x, start_y = coordinates[0].x, coordinates[0].y
-                end_x, end_y = coordinates[1].x, coordinates[1].y
+                # For line sections, check if any track segment intersects with any leg
+                # of the line. A leg is formed by each consecutive pair of coordinates.
+                for i in range(len(coordinates) - 1):
+                    start_x, start_y = coordinates[i].x, coordinates[i].y
+                    end_x, end_y = coordinates[i + 1].x, coordinates[i + 1].y
 
-                # Find intersections with the line
-                intersections = find_line_intersections(
-                    self._segments_df,
-                    section.id.serialize(),
-                    start_x,
-                    start_y,
-                    end_x,
-                    end_y,
-                )
+                    # Find intersections with this leg of the line
+                    intersections = find_line_intersections(
+                        self._segments_df,
+                        section.id.serialize(),
+                        start_x,
+                        start_y,
+                        end_x,
+                        end_y,
+                    )
 
-                # Add track IDs that intersect with the line to the result set
-                intersecting_segments = intersections[intersections[INTERSECTS]]
-                intersecting_track_ids.update(intersecting_segments[TRACK_ID].unique())
+                    # Add track IDs that intersect with the line to the result set
+                    intersecting_segments = intersections[intersections[INTERSECTS]]
+                    intersecting_track_ids.update(
+                        intersecting_segments[TRACK_ID].unique()
+                    )
             elif section.get_type() == SectionType.AREA:
                 # For area sections, check if any track segment intersects with the
                 # polygon
@@ -574,55 +578,58 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
         for section in line_sections:
             # Get the coordinates of the section
             coordinates = section.get_coordinates()
-            start_x, start_y = coordinates[0].x, coordinates[0].y
-            end_x, end_y = coordinates[1].x, coordinates[1].y
 
-            # Find intersections with the line
-            intersections = find_line_intersections(
-                self._segments_df,
-                section.id.serialize(),
-                start_x,
-                start_y,
-                end_x,
-                end_y,
-            )
+            # Process each leg of the section (consecutive pair of coordinates)
+            for i in range(len(coordinates) - 1):
+                start_x, start_y = coordinates[i].x, coordinates[i].y
+                end_x, end_y = coordinates[i + 1].x, coordinates[i + 1].y
 
-            # Filter to only include segments that intersect with the line
-            intersecting_segments = intersections[intersections[INTERSECTS]]
-
-            # Process each intersecting segment
-            for _, segment in intersecting_segments.iterrows():
-                track_id = segment[TRACK_ID]
-
-                # Calculate the relative position of the intersection point
-                # along the segment
-                segment_length_x = segment[END_X] - segment[START_X]
-                segment_length_y = segment[END_Y] - segment[START_Y]
-
-                # Avoid division by zero
-                if segment_length_x == 0 and segment_length_y == 0:
-                    continue
-
-                # Calculate the relative position (0 to 1) along the segment
-                if segment_length_x != 0:
-                    relative_position = (
-                        segment[INTERSECTION_X] - segment[START_X]
-                    ) / segment_length_x
-                else:
-                    relative_position = (
-                        segment[INTERSECTION_Y] - segment[START_Y]
-                    ) / segment_length_y
-
-                # Create an IntersectionPoint
-                # The upper_index is 1 because we're dealing with segments (2 points)
-                intersection_point = IntersectionPoint(
-                    upper_index=1, relative_position=relative_position
+                # Find intersections with this leg of the line
+                intersections = find_line_intersections(
+                    self._segments_df,
+                    section.id.serialize(),
+                    start_x,
+                    start_y,
+                    end_x,
+                    end_y,
                 )
 
-                # Add to the result dictionary
-                if track_id not in result:
-                    result[track_id] = []
-                result[track_id].append((section.id, intersection_point))
+                # Filter to only include segments that intersect with the line
+                intersecting_segments = intersections[intersections[INTERSECTS]]
+
+                # Process each intersecting segment
+                for _, segment in intersecting_segments.iterrows():
+                    track_id = segment[TRACK_ID]
+
+                    # Calculate the relative position of the intersection point
+                    # along the segment
+                    segment_length_x = segment[END_X] - segment[START_X]
+                    segment_length_y = segment[END_Y] - segment[START_Y]
+
+                    # Avoid division by zero
+                    if segment_length_x == 0 and segment_length_y == 0:
+                        continue
+
+                    # Calculate the relative position (0 to 1) along the segment
+                    if segment_length_x != 0:
+                        relative_position = (
+                            segment[INTERSECTION_X] - segment[START_X]
+                        ) / segment_length_x
+                    else:
+                        relative_position = (
+                            segment[INTERSECTION_Y] - segment[START_Y]
+                        ) / segment_length_y
+
+                    # Create an IntersectionPoint
+                    # The upper_index is 1 because we're dealing with segments
+                    intersection_point = IntersectionPoint(
+                        upper_index=1, relative_position=relative_position
+                    )
+
+                    # Add to the result dictionary
+                    if track_id not in result:
+                        result[track_id] = []
+                    result[track_id].append((section.id, intersection_point))
 
         return result
 
