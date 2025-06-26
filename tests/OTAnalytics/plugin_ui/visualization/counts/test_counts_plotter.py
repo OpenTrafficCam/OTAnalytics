@@ -537,9 +537,21 @@ class TestFlowByClassCountPlotter:
         for figure_data in result:
             assert isinstance(figure_data, FigureData)
             assert len(figure_data.traces) == 2
-            labels = [trace.label for trace in figure_data.traces]
-            assert "car" in labels
-            assert "bicycle" in labels
+            actual_labels = {trace.label for trace in figure_data.traces}
+            expected_labels = {"car", "bicycle"}
+            assert actual_labels == expected_labels
+
+            # Verify the dataframe content in each trace
+            flow = "flow1" if "flow1" in figure_data.name else "flow2"
+            for trace in figure_data.traces:
+                expected_df = sample_dataframe[
+                    (sample_dataframe[LEVEL_FLOW] == flow)
+                    & (sample_dataframe[LEVEL_CLASSIFICATION] == trace.label)
+                ]
+                expected_df = expected_df.sort_values(LEVEL_START_TIME)
+
+                assert list(trace.data["count"]) == list(expected_df["count"])
+                assert trace.data.equals(expected_df)
 
 
 class TestClassByFlowCountPlotter:
@@ -571,9 +583,20 @@ class TestClassByFlowCountPlotter:
         for figure_data in result:
             assert isinstance(figure_data, FigureData)
             assert len(figure_data.traces) == 2
-            labels = [trace.label for trace in figure_data.traces]
-            assert "flow1" in labels
-            assert "flow2" in labels
+            actual_labels = {trace.label for trace in figure_data.traces}
+            expected_labels = {"flow1", "flow2"}
+            assert actual_labels == expected_labels
+
+            # Verify the dataframe content in each trace
+            classification = "car" if "car" in figure_data.name else "bicycle"
+            for trace in figure_data.traces:
+                expected_df = sample_dataframe[
+                    (sample_dataframe[LEVEL_CLASSIFICATION] == classification)
+                    & (sample_dataframe[LEVEL_FLOW] == trace.label)
+                ]
+                expected_df = expected_df.sort_values(LEVEL_START_TIME)
+
+                assert trace.data.equals(expected_df)
 
     def test_create_figure_data_updates_color_palette_for_new_flows(
         self,
