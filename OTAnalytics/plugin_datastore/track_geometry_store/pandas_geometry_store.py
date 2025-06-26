@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable, Optional, Sequence
 
 from pandas import DataFrame
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.section import Section, SectionId
+from OTAnalytics.domain.section import Section, SectionId, SectionType
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IntersectionPoint,
@@ -412,10 +412,45 @@ def check_polygon_intersections(
 
 
 class PandasTrackGeometryDataset(TrackGeometryDataset):
+    _segments_df: DataFrame
+
+    def __init__(self, segments_df: Optional[DataFrame] = None):
+        """Initialize a PandasTrackGeometryDataset.
+
+        Args:
+            segments_df (Optional[DataFrame], optional): DataFrame with track segments.
+                If None, an empty DataFrame will be created. Defaults to None.
+        """
+        if segments_df is None:
+            self._segments_df = DataFrame()
+        else:
+            self._segments_df = segments_df.copy()
+
+        # Ensure the DataFrame has the required columns
+        if not self._segments_df.empty and not all(
+            col in self._segments_df.columns
+            for col in [
+                TRACK_ID,
+                START_X,
+                START_Y,
+                END_X,
+                END_Y,
+                START_OCCURRENCE,
+                END_OCCURRENCE,
+            ]
+        ):
+            raise ValueError("Segments DataFrame must have the required columns")
+
     @property
     def track_ids(self) -> set[str]:
-        # TODO Junie implement
-        raise NotImplementedError
+        """Get track ids of tracks stored in dataset.
+
+        Returns:
+            set[str]: the track ids stored.
+        """
+        if self._segments_df.empty:
+            return set()
+        return set(self._segments_df[TRACK_ID].unique())
 
     @property
     def offset(self) -> RelativeOffsetCoordinate:
@@ -424,8 +459,12 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
 
     @property
     def empty(self) -> bool:
-        # TODO Junie implement
-        raise NotImplementedError
+        """Check if the dataset is empty.
+
+        Returns:
+            bool: True if the dataset is empty, False otherwise.
+        """
+        return self._segments_df.empty
 
     @staticmethod
     def from_track_dataset(
@@ -447,14 +486,145 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
         raise NotImplementedError
 
     def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
-        # TODO Junie implement
-        raise NotImplementedError
+        """Return a set of tracks intersecting a set of sections.
+
+        Args:
+            sections (list[Section]): the list of sections to intersect.
+
+        Returns:
+            set[TrackId]: the track ids intersecting the given sections.
+        """
+        if self.empty or not sections:
+            return set()
+
+        # Create a set to store the track IDs that intersect with any section
+        intersecting_track_ids: set[TrackId] = set()
+
+        # Check intersections for each section
+        for section in sections:
+            # Get the coordinates of the section
+            coordinates = section.get_coordinates()
+
+            if (
+                section.get_type() == SectionType.LINE
+                or section.get_type() == SectionType.CUTTING
+            ):
+                # For line sections, check if any track segment intersects with the line
+                start_x, start_y = coordinates[0].x, coordinates[0].y
+                end_x, end_y = coordinates[1].x, coordinates[1].y
+
+                # Find intersections with the line
+                intersections = find_line_intersections(
+                    self._segments_df,
+                    section.id.serialize(),
+                    start_x,
+                    start_y,
+                    end_x,
+                    end_y,
+                )
+
+                # Add track IDs that intersect with the line to the result set
+                intersecting_segments = intersections[intersections[INTERSECTS]]
+                intersecting_track_ids.update(intersecting_segments[TRACK_ID].unique())
+            elif section.get_type() == SectionType.AREA:
+                # For area sections, check if any track segment intersects with the
+                # polygon
+                polygon = Polygon(coordinates)
+
+                # Check polygon intersections
+                intersections = check_polygon_intersections(self._segments_df, polygon)
+
+                # Add track IDs that intersect with the polygon to the result set
+                intersecting_segments = intersections[intersections[INTERSECTS_POLYGON]]
+                intersecting_track_ids.update(intersecting_segments[TRACK_ID].unique())
+
+        return intersecting_track_ids
 
     def intersection_points(
         self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
-        # TODO Junie implement
-        raise NotImplementedError
+        """Return the intersection points from tracks and the given sections.
+
+        Args:
+            sections (list[Section]): the sections to intersect with.
+
+        Returns:
+            dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
+                the intersection points.
+        """
+        if self.empty or not sections:
+            return {}
+
+        # Create a dictionary to store the intersection points for each track
+        result: dict[TrackId, list[tuple[SectionId, IntersectionPoint]]] = {}
+
+        # Process only line sections
+        # (area sections don't have specific intersection points)
+        line_sections = [
+            section
+            for section in sections
+            if section.get_type() == SectionType.LINE
+            or section.get_type() == SectionType.CUTTING
+        ]
+
+        if not line_sections:
+            return {}
+
+        # For each line section, find intersections with track segments
+        for section in line_sections:
+            # Get the coordinates of the section
+            coordinates = section.get_coordinates()
+            start_x, start_y = coordinates[0].x, coordinates[0].y
+            end_x, end_y = coordinates[1].x, coordinates[1].y
+
+            # Find intersections with the line
+            intersections = find_line_intersections(
+                self._segments_df,
+                section.id.serialize(),
+                start_x,
+                start_y,
+                end_x,
+                end_y,
+            )
+
+            # Filter to only include segments that intersect with the line
+            intersecting_segments = intersections[intersections[INTERSECTS]]
+
+            # Process each intersecting segment
+            for _, segment in intersecting_segments.iterrows():
+                track_id = segment[TRACK_ID]
+
+                # Calculate the relative position of the intersection point
+                # along the segment
+                segment_length_x = segment[END_X] - segment[START_X]
+                segment_length_y = segment[END_Y] - segment[START_Y]
+
+                # Avoid division by zero
+                if segment_length_x == 0 and segment_length_y == 0:
+                    continue
+
+                # Calculate the relative position (0 to 1) along the segment
+                if segment_length_x != 0:
+                    relative_position = (
+                        segment[INTERSECTION_X] - segment[START_X]
+                    ) / segment_length_x
+                else:
+                    relative_position = (
+                        segment[INTERSECTION_Y] - segment[START_Y]
+                    ) / segment_length_y
+
+                # Create an IntersectionPoint
+                # The upper_index is 1 because we're dealing with segments (2 points)
+                intersection_point = IntersectionPoint(
+                    upper_index=1, relative_position=relative_position
+                )
+
+                # Add to the result dictionary
+                if track_id not in result:
+                    result[track_id] = []
+                result[track_id].append((section.id, intersection_point))
+
+        return result
 
     def contained_by_sections(
         self, sections: list[Section]
@@ -463,5 +633,37 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
         raise NotImplementedError
 
     def __eq__(self, other: Any) -> bool:
-        # TODO Junie implement
-        raise NotImplementedError
+        """Check if this dataset is equal to another dataset.
+
+        Args:
+            other (Any): the other dataset to compare with.
+
+        Returns:
+            bool: True if the datasets are equal, False otherwise.
+        """
+        if not isinstance(other, PandasTrackGeometryDataset):
+            return False
+
+        # If both are empty, they are equal
+        if self.empty and other.empty:
+            return True
+
+        # If only one is empty, they are not equal
+        if self.empty != other.empty:
+            return False
+
+        # Compare the DataFrames
+        # First, ensure both DataFrames have the same columns
+        if set(self._segments_df.columns) != set(other._segments_df.columns):
+            return False
+
+        # Sort both DataFrames to ensure consistent comparison
+        self_df = self._segments_df.sort_values(
+            by=[TRACK_ID, START_OCCURRENCE]
+        ).reset_index(drop=True)
+        other_df = other._segments_df.sort_values(
+            by=[TRACK_ID, START_OCCURRENCE]
+        ).reset_index(drop=True)
+
+        # Compare the DataFrames
+        return self_df.equals(other_df)
