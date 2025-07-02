@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.analysis.traffic_counting import RoadUserAssignment
+from OTAnalytics.application.analysis.road_user_assignment import RoadUserAssignment
 from OTAnalytics.application.use_cases.flow_statistics import (
     NumberOfTracksAssignedToEachFlow,
 )

@@ -15,7 +15,7 @@ class NumberOfTracksAssignedToEachFlow:
 
     def get(self) -> dict[FlowId, int]:
         result = self._initialize_flow_track_counts()
-        for road_user_assignment in self._get_assignments.get():
+        for road_user_assignment in self._get_assignments.get_as_list():
             flow_id = road_user_assignment.assignment.id
             result[flow_id] += 1
         return result

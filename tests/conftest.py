@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.analysis.traffic_counting import (
+from OTAnalytics.application.analysis.road_user_assignment import (
     EventPair,
     RoadUserAssignment,
 )

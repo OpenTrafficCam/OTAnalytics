@@ -3,18 +3,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Protocol, Self
 
-from OTAnalytics.application.analysis.traffic_counting import (
-    RoadUserAssigner,
+from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignment,
     RoadUserAssignments,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportFormat
 from OTAnalytics.application.export_formats import road_user_assignments as ras
 from OTAnalytics.application.export_formats.export_mode import ExportMode
-from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.get_road_user_assignments import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
-from OTAnalytics.domain.event import EventRepository
-from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.section import Section, SectionId, SectionRepository
 
 MaxConfidenceLookupTable = dict[str, float]
@@ -242,26 +241,17 @@ class RoadUserAssignmentExporterFactory(Protocol):
 class ExportRoadUserAssignments:
     """Use case to export_formats vehicle flow assignments."""
 
+    # todo should have option create ruas/create events set to true
     def __init__(
         self,
-        event_repository: EventRepository,
-        flow_repository: FlowRepository,
-        create_events: CreateEvents,
-        assigner: RoadUserAssigner,
+        get_all_assignments: GetRoadUserAssignments,
         exporter_factory: RoadUserAssignmentExporterFactory,
     ) -> None:
-        self._event_repository = event_repository
-        self._flow_repository = flow_repository
-        self._create_events = create_events
-        self._assigner = assigner
+        self._get_all_assignments = get_all_assignments
         self._exporter_factory = exporter_factory
 
     def export(self, specification: ExportSpecification) -> None:
-        if self._event_repository.is_empty():
-            self._create_events()
-        events = self._event_repository.get_all()
-        flows = self._flow_repository.get_all()
-        road_user_assignments = self._assigner.assign(events, flows)
+        road_user_assignments = self._get_all_assignments.get()
         exporter = self._exporter_factory.create(specification)
         exporter.export(road_user_assignments, specification.mode)
 

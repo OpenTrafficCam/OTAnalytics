@@ -3,6 +3,12 @@ from unittest.mock import Mock
 
 import pytest
 
+from OTAnalytics.application.analysis.road_user_assignment import (
+    EventPair,
+    RoadUserAssignment,
+    RoadUserAssignmentRepository,
+    RoadUserAssignments,
+)
 from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_CLASSIFICATION,
     LEVEL_END_TIME,
@@ -17,7 +23,6 @@ from OTAnalytics.application.analysis.traffic_counting import (
     CountableAssignments,
     CountByFlow,
     CountDecorator,
-    EventPair,
     Exporter,
     ExporterFactory,
     ExportTrafficCounting,
@@ -29,8 +34,6 @@ from OTAnalytics.application.analysis.traffic_counting import (
     ModeTagger,
     MultiTag,
     RoadUserAssigner,
-    RoadUserAssignment,
-    RoadUserAssignments,
     SelectedFlowCandidates,
     SimpleRoadUserAssigner,
     SingleTag,
@@ -49,6 +52,12 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.create_road_user_assignments import (
+    CreateRoadUserAssignments,
+)
+from OTAnalytics.application.use_cases.get_road_user_assignments import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
@@ -898,11 +907,11 @@ class TestRoadUserAssignment:
         second_groupd = SingleTag(level="mode", id="bike")
         car_assignment = Mock(spec=RoadUserAssignment)
         bike_assignment = Mock(spec=RoadUserAssignment)
-        mode = Mock(spec=Tagger)
-        mode.create_tag.side_effect = [first_groupd, second_groupd]
+        mode_tagger = Mock(spec=Tagger)
+        mode_tagger.create_tag.side_effect = [first_groupd, second_groupd]
         assignments = RoadUserAssignments([car_assignment, bike_assignment])
 
-        tagged = assignments.tag(by=mode)
+        tagged = mode_tagger.tag(assignments)
 
         assert tagged == TaggedAssignments(
             {
@@ -1094,6 +1103,16 @@ class TestTrafficCounting:
         assignments.tag.return_value = tagged_assignments
         tagged_assignments.count.return_value = counts
 
+        rua_repo = RoadUserAssignmentRepository()
+        create_assignments = CreateRoadUserAssignments(
+            flow_repository,
+            event_repository,
+            create_events,
+            road_user_assigner,
+            rua_repo,
+        )
+        get_assignments = GetRoadUserAssignments(rua_repo, create_assignments)
+
         # Create specification
         start = datetime(2023, 1, 1, 0, 0, 0)
         end = datetime(2023, 1, 1, 0, 15, 0)
@@ -1109,11 +1128,9 @@ class TestTrafficCounting:
         )
 
         target = TrafficCounting(
-            event_repository,
             flow_repository,
             get_sections_by_ids,
-            create_events,
-            road_user_assigner,
+            get_assignments,
             tagger_factory,
         )
 

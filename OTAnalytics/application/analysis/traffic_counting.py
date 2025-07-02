@@ -9,6 +9,11 @@ from typing import Callable, Iterable, Optional
 
 from PIL.Image import Image
 
+from OTAnalytics.application.analysis.road_user_assignment import (
+    EventPair,
+    RoadUserAssignment,
+    RoadUserAssignments,
+)
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
     ExportCounts,
@@ -17,9 +22,11 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     FlowNameDto,
 )
 from OTAnalytics.application.export_formats.export_mode import ExportMode
-from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.get_road_user_assignments import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
-from OTAnalytics.domain.event import Event, EventRepository
+from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.types import EventType
@@ -36,16 +43,6 @@ UNCLASSIFIED = "unclassified"
 
 RoadUserId = str
 RoadUserType = str
-
-
-@dataclass(frozen=True)
-class EventPair:
-    """
-    Pair of events of one track to find a matching flow.
-    """
-
-    start: Event
-    end: Event
 
 
 @dataclass(frozen=True)
@@ -333,18 +330,6 @@ class AddSectionInformation(CountDecorator):
         return found
 
 
-@dataclass(frozen=True)
-class RoadUserAssignment:
-    """
-    Assignment of a road user to a flow.
-    """
-
-    road_user: str
-    road_user_type: str
-    assignment: Flow
-    events: EventPair
-
-
 @dataclass
 class SelectedFlowCandidates:
     """
@@ -459,6 +444,26 @@ class Tagger(ABC):
             Tag: tag of the assignment
         """
         raise NotImplementedError
+
+    def tag(self, assignments: RoadUserAssignments) -> "TaggedAssignments":
+        """
+        Split the given assignments using this tagger. Each assignment is assigned to
+        exactly one part.
+
+        Args:
+            assignments (RoadUserAssignments):
+                RoadUserAssignments to split using this Tagger
+
+        Returns:
+            TaggedAssignments: group of RoadUserAssignments split by tag
+        """
+        tagged: dict[Tag, list[RoadUserAssignment]] = defaultdict(list)
+        for assignment in assignments.as_list():
+            tag = self.create_tag(assignment)
+            tagged[tag].append(assignment)
+        return TaggedAssignments(
+            {key: CountableAssignments(value) for key, value in tagged.items()}
+        )
 
 
 class ModeTagger(Tagger):
@@ -590,63 +595,6 @@ class TaggedAssignments:
 
     def __repr__(self) -> str:
         return TaggedAssignments.__name__ + repr(self._assignments)
-
-
-class RoadUserAssignments:
-    """
-    Represents a group of RoadUserAssignment objects.
-    """
-
-    @property
-    def road_user_ids(self) -> list[str]:
-        """Returns a sorted list of all road user ids within this group of assignments.
-
-        Returns:
-            list[str]: the road user ids.
-        """
-        return sorted([assignment.road_user for assignment in self._assignments])
-
-    def __init__(self, assignments: list[RoadUserAssignment]) -> None:
-        self._assignments = assignments.copy()
-
-    def tag(self, by: Tagger) -> TaggedAssignments:
-        """
-        Split the assignments using the given tagger. Each assignment is assigned to
-        exactly one part.
-
-        Args:
-            by (Tagger): tagger to determine the tag
-
-        Returns:
-            TaggedAssignments: group of RoadUserAssignments split by tag
-        """
-        tagged: dict[Tag, list[RoadUserAssignment]] = defaultdict(list)
-        for assignment in self._assignments:
-            tag = by.create_tag(assignment)
-            tagged[tag].append(assignment)
-        return TaggedAssignments(
-            {key: CountableAssignments(value) for key, value in tagged.items()}
-        )
-
-    def as_list(self) -> list[RoadUserAssignment]:
-        """
-        Retrieves a copy of the contained assignments.
-
-        Returns:
-            list[RoadUserAssignment]: a copy of the assignments
-        """
-        return self._assignments.copy()
-
-    def __hash__(self) -> int:
-        return hash(self._assignments)
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, RoadUserAssignments):
-            return self._assignments == other._assignments
-        return False
-
-    def __repr__(self) -> str:
-        return RoadUserAssignments.__name__ + repr(self._assignments)
 
 
 class RoadUserAssigner(ABC):
@@ -1009,21 +957,15 @@ class TrafficCounting:
 
     def __init__(
         self,
-        event_repository: EventRepository,
         flow_repository: FlowRepository,
         get_sections_by_id: GetSectionsById,
-        create_events: CreateEvents,
-        assigner: RoadUserAssigner,
+        get_assignments: GetRoadUserAssignments,
         tagger_factory: TaggerFactory,
-        enable_event_creation: bool = True,
     ):
-        self._event_repository = event_repository
         self._flow_repository = flow_repository
+        self._get_assignments = get_assignments
         self._get_sections_by_id = get_sections_by_id
-        self._create_events = create_events
-        self._assigner = assigner
         self._tagger_factory = tagger_factory
-        self._enable_event_creation = enable_event_creation
 
     def count(self, specification: CountingSpecificationDto) -> Count:
         """
@@ -1032,21 +974,13 @@ class TrafficCounting:
         Args:
             specification (CountingSpecificationDto): specification of the export
         """
-        if self._enable_event_creation and self._event_repository.is_empty():
-            self._create_events()
 
-        if specification.count_all_events:
-            events = self._event_repository.get_all()
-        else:
-            events = self._event_repository.get(
-                start_date=specification.start,
-                end_date=specification.end,
-            )
+        # todo how to reproduce assigning/tagging only from start to end given in spec?
 
         flows = self.get_flows()
-        assigned_flows = self._assigner.assign(events, flows)
+        assigned_flows = self._get_assignments.get()
         tagger = self._tagger_factory.create_tagger(specification)
-        tagged_assignments = assigned_flows.tag(tagger)
+        tagged_assignments = tagger.tag(assigned_flows)
         return tagged_assignments.count(flows)
 
     def get_flows(self) -> list[Flow]:
@@ -1056,11 +990,9 @@ class TrafficCounting:
         self, new_tagger_factory: TaggerFactory
     ) -> "TrafficCounting":
         return TrafficCounting(
-            self._event_repository,
             self._flow_repository,
             self._get_sections_by_id,
-            self._create_events,
-            self._assigner,
+            self._get_assignments,
             new_tagger_factory,
         )
 

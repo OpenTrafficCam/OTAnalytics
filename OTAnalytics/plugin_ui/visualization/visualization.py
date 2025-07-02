@@ -6,7 +6,6 @@ from pandas import DataFrame
 
 from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
-from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.plotting import (
     CachedPlotter,
@@ -25,6 +24,9 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
+from OTAnalytics.application.use_cases.get_road_user_assignments import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToGivenFlows,
@@ -36,8 +38,7 @@ from OTAnalytics.application.use_cases.highlight_intersections import (
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.application.use_cases.video_repository import GetVideos
-from OTAnalytics.domain.event import EventRepository
-from OTAnalytics.domain.flow import FlowId, FlowRepository
+from OTAnalytics.domain.flow import FlowId
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import TrackIdProvider
@@ -139,16 +140,12 @@ class TracksNotAssignedToSelection(PandasDataFrameProvider):
     def __init__(
         self,
         other: PandasDataFrameProvider,
-        assigner: RoadUserAssigner,
-        event_repository: EventRepository,
-        flow_repository: FlowRepository,
+        get_assignments: GetRoadUserAssignments,
         state: FlowState,
         track_repository: TrackRepository,
     ) -> None:
         self._other = other
-        self._event_repository = event_repository
-        self._flow_repository = flow_repository
-        self._assigner = assigner
+        self._get_assignments = get_assignments
         self._state = state
         self._track_repository = track_repository
 
@@ -157,9 +154,7 @@ class TracksNotAssignedToSelection(PandasDataFrameProvider):
             self._other,
             TracksNotIntersectingSelection(
                 TracksAssignedToGivenFlows(
-                    self._assigner,
-                    self._event_repository,
-                    self._flow_repository,
+                    self._get_assignments,
                     self._state.selected_flows.get(),
                 ),
                 self._track_repository,
@@ -247,27 +242,27 @@ class VisualizationBuilder:
     def build(
         self,
         flow_state: FlowState,
-        road_user_assigner: RoadUserAssigner,
+        get_assignments: GetRoadUserAssignments,
     ) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
         highlight_tracks_assigned_to_flows_plotter = (
             self._create_highlight_tracks_assigned_to_flows_plotter(
-                flow_state, road_user_assigner
+                flow_state, get_assignments
             )
         )
         highlight_tracks_not_assigned_to_flows_plotter = (
             self._create_highlight_tracks_not_assigned_to_flows_plotter(
-                road_user_assigner, flow_state
+                get_assignments, flow_state
             )
         )
 
         highlight_start_end_point_assigned_to_flows_plotter = (
             self._create_highlight_start_end_point_assigned_to_flows_plotter(
-                flow_state, road_user_assigner
+                flow_state, get_assignments
             )
         )
         highlight_start_end_point_not_assigned_to_flows_plotter = (
             self._create_highlight_start_end_point_not_assigned_to_flows_plotter(
-                road_user_assigner, flow_state
+                get_assignments, flow_state
             )
         )
 
@@ -475,13 +470,15 @@ class VisualizationBuilder:
         return plotter
 
     def _create_highlight_start_end_point_assigned_to_flows_plotter(
-        self, flow_state: FlowState, road_user_assigner: RoadUserAssigner
+        self,
+        flow_state: FlowState,
+        get_assignments: GetRoadUserAssignments,
     ) -> Plotter:
         return self._create_highlight_start_end_point_assigned_to_flow(
             self._create_highlight_start_end_point_assigned_to_flows_factory(
                 self._create_tracks_assigned_to_flows_filter(
                     self._get_data_provider_all_filters_with_offset(),
-                    road_user_assigner,
+                    get_assignments,
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_START_END_POINTS_ASSIGNED_TO_FLOWS,
@@ -491,13 +488,11 @@ class VisualizationBuilder:
         )
 
     def _create_highlight_start_end_point_not_assigned_to_flows_plotter(
-        self, road_user_assigner: RoadUserAssigner, flow_state: FlowState
+        self, get_assignments: GetRoadUserAssignments, flow_state: FlowState
     ) -> Plotter:
         flows_filter = TracksNotAssignedToSelection(
             self._get_data_provider_all_filters_with_offset(),
-            road_user_assigner,
-            self._event_repository,
-            self._flow_repository,
+            get_assignments,
             flow_state,
             self._track_repository,
         )
@@ -533,13 +528,13 @@ class VisualizationBuilder:
         return start_end_point_plotter
 
     def _create_highlight_tracks_assigned_to_flows_plotter(
-        self, flow_state: FlowState, road_user_assigner: RoadUserAssigner
+        self, flow_state: FlowState, get_assignments: GetRoadUserAssignments
     ) -> Plotter:
         return self._create_highlight_tracks_assigned_to_flow(
             self._create_highlight_tracks_assigned_to_flows_factory(
                 self._create_tracks_assigned_to_flows_filter(
                     self._get_data_provider_all_filters_with_offset(),
-                    road_user_assigner,
+                    get_assignments,
                 ),
                 self._color_palette_provider,
                 alpha=ALPHA_HIGHLIGHT_TRACKS_ASSIGNED_TO_FLOWS,
@@ -549,13 +544,11 @@ class VisualizationBuilder:
         )
 
     def _create_highlight_tracks_not_assigned_to_flows_plotter(
-        self, road_user_assigner: RoadUserAssigner, flow_state: FlowState
+        self, get_assignments: GetRoadUserAssignments, flow_state: FlowState
     ) -> Plotter:
         flows_filter = TracksNotAssignedToSelection(
             self._get_data_provider_all_filters_with_offset(),
-            road_user_assigner,
-            self._event_repository,
-            self._flow_repository,
+            get_assignments,
             flow_state,
             self._track_repository,
         )
@@ -873,14 +866,14 @@ class VisualizationBuilder:
         )
 
     def _create_tracks_assigned_to_flows_filter(
-        self, pandas_data_provider: PandasDataFrameProvider, assigner: RoadUserAssigner
+        self,
+        pandas_data_provider: PandasDataFrameProvider,
+        get_assignments: GetRoadUserAssignments,
     ) -> Callable[[FlowId], PandasDataFrameProvider]:
         return lambda flow: FilterById(
             pandas_data_provider,
             TracksAssignedToGivenFlows(
-                assigner,
-                self._event_repository,
-                self._flow_repository,
+                get_assignments,
                 [flow],
             ),
         )
@@ -917,15 +910,15 @@ class VisualizationBuilder:
         return plotter
 
     def _create_tracks_not_assigned_to_flows_filter(
-        self, pandas_data_provider: PandasDataFrameProvider, assigner: RoadUserAssigner
+        self,
+        pandas_data_provider: PandasDataFrameProvider,
+        get_assignments: GetRoadUserAssignments,
     ) -> Callable[[FlowId], PandasDataFrameProvider]:
         return lambda flow: FilterById(
             pandas_data_provider,
             TracksNotIntersectingSelection(
                 TracksAssignedToGivenFlows(
-                    assigner,
-                    self._event_repository,
-                    self._flow_repository,
+                    get_assignments,
                     [flow],
                 ),
                 self._track_repository,

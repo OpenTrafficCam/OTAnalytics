@@ -2,12 +2,22 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.analysis.traffic_counting import RoadUserAssignment
+from OTAnalytics.application.analysis.road_user_assignment import (
+    RoadUserAssignment,
+    RoadUserAssignmentRepository,
+)
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.use_cases.create_road_user_assignments import (
+    CreateRoadUserAssignments,
+)
+from OTAnalytics.application.use_cases.get_road_user_assignments import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportRoadUserAssignments,
     RoadUserAssignmentBuilder,
     RoadUserAssignmentBuildError,
+    RoadUserAssignmentExporterFactory,
 )
 from OTAnalytics.domain.section import Section
 from tests.utils.builders.road_user_assignment import create_road_user_assignment
@@ -94,14 +104,21 @@ class TestExportRoadUserAssignments:
         assignments = Mock()
         road_user_assigner.assign.return_value = assignments
 
-        exporter = Mock()
+        exporter = Mock(spec=RoadUserAssignmentExporterFactory)
         exporter_factory.create.return_value = exporter
 
-        export_road_user_assignments = ExportRoadUserAssignments(
-            event_repository,
+        rua_repo = RoadUserAssignmentRepository()
+        create_assignments = CreateRoadUserAssignments(
             flow_repository,
+            event_repository,
             create_events,
             road_user_assigner,
+            rua_repo,
+        )
+        get_assignments = GetRoadUserAssignments(rua_repo, create_assignments)
+
+        export_road_user_assignments = ExportRoadUserAssignments(
+            get_assignments,
             exporter_factory,
         )
         specification = Mock()

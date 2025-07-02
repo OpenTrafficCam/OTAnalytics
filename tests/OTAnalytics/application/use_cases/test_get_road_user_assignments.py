@@ -50,7 +50,7 @@ class TestGetRoadUserAssignments:
         get_assignments = GetRoadUserAssignments(
             flow_repository, event_repository, road_user_assigner
         )
-        actual = get_assignments.get()
+        actual = get_assignments.get_as_list()
         assert actual == assignments_as_list
         event_repository.get_all.assert_called_once()
         flow_repository.get_all.assert_called_once()
