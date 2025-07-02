@@ -1,3 +1,4 @@
+import asyncio
 import tkinter
 from typing import Any
 
@@ -35,11 +36,17 @@ class FrameVideos(AbstractCTkFrame):
         )
         self.treeview.configure(yscrollcommand=self._treeview_scrollbar.set)
         self.button_add_videos = CTkButton(
-            master=self, text="Add...", command=self._viewmodel.add_video
+            master=self, text="Add...", command=self._do_add_video
         )
         self.button_remove_videos = CTkButton(
-            master=self, text="Remove", command=self._viewmodel.remove_videos
+            master=self, text="Remove", command=self._do_remove_videos
         )
+
+    def _do_remove_videos(self) -> None:
+        self._viewmodel.remove_videos()
+
+    def _do_add_video(self) -> None:
+        asyncio.run(self._viewmodel.add_video())
 
     def _place_widgets(self) -> None:
         self.treeview.pack(side=tkinter.LEFT, expand=True, fill=tkinter.BOTH)
