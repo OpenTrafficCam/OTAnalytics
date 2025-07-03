@@ -207,6 +207,7 @@ class TrackImage:
     types of track visualisation.
     """
 
+    @abstractmethod
     def add(self, other: "TrackImage") -> "TrackImage":
         """
         Add the other image on top of this image. The composition of the two images
@@ -218,9 +219,6 @@ class TrackImage:
         Returns:
             TrackImage: combined image of this and the other image
         """
-        self_image = self.as_image().convert(mode="RGBA")
-        other_image = other.as_image().convert(mode="RGBA")
-        return PilImage(Image.alpha_composite(self_image, other_image))
 
     @abstractmethod
     def as_image(self) -> Image.Image:
@@ -230,6 +228,10 @@ class TrackImage:
         Returns:
             Image.Image: image as pillow image
         """
+        pass
+
+    @abstractmethod
+    def as_base64(self) -> str:
         pass
 
     @abstractmethod
@@ -254,24 +256,6 @@ class TrackImage:
 
     def save(self, name: str) -> None:
         self.as_image().save(name)
-
-
-@dataclass(frozen=True)
-class PilImage(TrackImage):
-    """
-    Concrete implementation using pillow as image format.
-    """
-
-    _image: Image.Image
-
-    def as_image(self) -> Image.Image:
-        return self._image
-
-    def width(self) -> int:
-        return self._image.width
-
-    def height(self) -> int:
-        return self._image.height
 
 
 class TrackClassificationCalculator(ABC):
