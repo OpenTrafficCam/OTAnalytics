@@ -446,6 +446,7 @@ class Datastore:
 
         Args:
             track_id (TrackId): identifier for the track
+            frame (int): frame number, defaults to 0
 
         Returns:
             Optional[TrackImage]: an image of the track if the track is available and

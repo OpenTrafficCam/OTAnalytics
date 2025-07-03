@@ -13,7 +13,7 @@ def gather_exception_messages(
     message and the messages of its sub-exceptions and so on...
 
     Args:
-        exception_group (BaseException | BaseExceptionGroup): The exception instance.
+        exception (BaseException | BaseExceptionGroup): The exception instance.
 
     Returns:
         list[str]: all exception messages of a single BaseException or ExceptionGroup
