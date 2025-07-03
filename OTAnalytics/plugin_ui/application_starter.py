@@ -17,6 +17,10 @@ from OTAnalytics.helpers.time_profiling import log_processing_time
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
 from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    NumpyImageFactory,
+    TrackImageFactory,
+)
 from OTAnalytics.plugin_ui.base_application import (
     create_format_fixer,
     create_otflow_parser,
@@ -71,7 +75,7 @@ class ApplicationStarter:
 
     @cached_property
     def video_parser(self) -> VideoParser:
-        return create_video_parser(self.videos_metadata)
+        return create_video_parser(self.videos_metadata, self.track_image_factory)
 
     @cached_property
     def flow_parser(self) -> FlowParser:
@@ -80,6 +84,10 @@ class ApplicationStarter:
     @cached_property
     def videos_metadata(self) -> VideosMetadata:
         return create_videos_metadata()
+
+    @cached_property
+    def track_image_factory(self) -> TrackImageFactory:
+        return NumpyImageFactory()
 
     def _build_cli_argument_parser(self) -> CliParser:
         return ArgparseCliParser()
