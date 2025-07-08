@@ -170,7 +170,7 @@ class MatplotlibCountPlotStyler:
         axes.set_title(title)
         axes.set_xlabel("Time")
         axes.set_ylabel("Count")
-        axes.set_ylim(ymin=0, ymax=10)
+        axes.set_ylim(ymin=0, ymax=20)
         xmin = datetime(year=2025, month=6, day=26).timestamp() / (24 * 60 * 60)
         xmax = datetime(year=2025, month=6, day=27).timestamp() / (24 * 60 * 60)
         axes.set_xlim(xmin=xmin, xmax=xmax)
