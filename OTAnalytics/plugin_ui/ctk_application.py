@@ -3,10 +3,15 @@ from functools import cached_property
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    PilImageFactory,
+    TrackImageFactory,
+)
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
 
 
 class OtAnalyticsCtkApplicationStarter(OtAnalyticsGuiApplicationStarter):
+
     def __init__(self, run_config: RunConfiguration) -> None:
         super().__init__(run_config)
         from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (
@@ -48,3 +53,7 @@ class OtAnalyticsCtkApplicationStarter(OtAnalyticsGuiApplicationStarter):
             self._pulling_progressbar_popup_builder
         )
         return pulling_progressbar_builder
+
+    @cached_property
+    def track_image_factory(self) -> TrackImageFactory:
+        return PilImageFactory()

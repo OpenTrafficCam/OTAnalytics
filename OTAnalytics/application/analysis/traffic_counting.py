@@ -5,6 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from random import Random
 from typing import Callable, Iterable, Optional
 
 from PIL.Image import Image
@@ -20,10 +21,13 @@ from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository
-from OTAnalytics.domain.flow import Flow, FlowRepository
+from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
+from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
+from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.types import EventType
 
+ADDITIONAL_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 
 LEVEL_FROM_SECTION = "from section"
@@ -1002,6 +1006,134 @@ def create_export_specification(
     return ExportSpecificationDto(counting_specification, flow_dtos)
 
 
+def create_assignment(classification: str, occurrence: str) -> RoadUserAssignment:
+    return RoadUserAssignment(
+        road_user="1",
+        road_user_type=classification,
+        assignment=Flow(
+            id=FlowId(id="1"),
+            name="parking lot",
+            start=SectionId(id="2"),
+            end=SectionId(id="1"),
+            distance=None,
+        ),
+        events=EventPair(
+            start=Event(
+                road_user_id="1",
+                road_user_type=classification,
+                hostname="OTCamera18",
+                occurrence=datetime.strptime(
+                    "2025-06-26 %s.005010" % occurrence, ADDITIONAL_DATETIME_FORMAT
+                ),
+                frame_number=31,
+                section_id=SectionId(id="2"),
+                event_coordinate=ImageCoordinate(x=484.0625, y=112.34375),
+                event_type=EventType.SECTION_ENTER,
+                direction_vector=DirectionVector2D(
+                    x1=0.8944271909999159, x2=0.4472135954999579
+                ),
+                video_name="OTCamera18_FR20_2025-06-26_06-45-00.mp4",
+                interpolated_occurrence=datetime.strptime(
+                    "2025-06-26 %s.004845" % occurrence, ADDITIONAL_DATETIME_FORMAT
+                ),
+                interpolated_event_coordinate=ImageCoordinate(
+                    x=481.30007003415216, y=110.96253501707609
+                ),
+            ),
+            end=Event(
+                road_user_id="1",
+                road_user_type=classification,
+                hostname="OTCamera18",
+                occurrence=datetime.strptime(
+                    "2025-06-26 %s.019873" % occurrence, ADDITIONAL_DATETIME_FORMAT
+                ),
+                frame_number=120,
+                section_id=SectionId(id="1"),
+                event_coordinate=ImageCoordinate(x=259.6875, y=253.75),
+                event_type=EventType.SECTION_ENTER,
+                direction_vector=DirectionVector2D(
+                    x1=-0.9979253089684582, x2=-0.06438227799796505
+                ),
+                video_name="OTCamera18_FR20_2025-06-26_06-45-00.mp4",
+                interpolated_occurrence=datetime.strptime(
+                    "2025-06-26 %s.019807" % occurrence, ADDITIONAL_DATETIME_FORMAT
+                ),
+                interpolated_event_coordinate=ImageCoordinate(
+                    x=265.3796964305835, y=254.11723847939248
+                ),
+            ),
+        ),
+    )
+
+
+time_random = Random()
+time_random.seed(42)
+class_random = Random()
+class_random.seed(43)
+TIMES = [
+    (
+        4,
+        [
+            "04:00:00",
+            "04:15:00",
+            "04:30:00",
+            "04:45:00",
+        ],
+    ),
+    (
+        6,
+        [
+            "05:00:00",
+            "05:15:00",
+            "05:30:00",
+            "05:45:00",
+        ],
+    ),
+    (
+        8,
+        [
+            "06:00:00",
+            "06:15:00",
+            "06:30:00",
+            "06:45:00",
+        ],
+    ),
+    (
+        12,
+        [
+            "07:00:00",
+            "07:15:00",
+            "07:30:00",
+            "07:45:00",
+        ],
+    ),
+    (
+        18,
+        [
+            "08:00:00",
+            "08:15:00",
+            "08:30:00",
+        ],
+    ),
+]
+CLASSES = [
+    OtcClasses.CAR,
+    OtcClasses.CAR,
+    OtcClasses.CAR,
+    OtcClasses.CAR,
+    OtcClasses.BICYCLIST,
+    OtcClasses.DELIVERY_VAN,
+    OtcClasses.DELIVERY_VAN,
+    OtcClasses.TRUCK,
+]
+temp: list = []
+# for amount, times in TIMES:
+#     for current in range(0, amount):
+#         next_time = time_random.choice(times)
+#         next_class = class_random.choice(CLASSES)
+#         temp.append(create_assignment(next_class, next_time))
+
+
 class TrafficCounting:
     """
     Use case to produce traffic counts.
@@ -1044,7 +1176,8 @@ class TrafficCounting:
             )
 
         flows = self.get_flows()
-        assigned_flows = self._assigner.assign(events, flows)
+        current = self._assigner.assign(events, flows)
+        assigned_flows = RoadUserAssignments(temp + current._assignments)
         tagger = self._tagger_factory.create_tagger(specification)
         tagged_assignments = assigned_flows.tag(tagger)
         return tagged_assignments.count(flows)

@@ -157,6 +157,7 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
     OTC_OTEVENTS_FORMAT_NAME,
     provide_available_eventlist_exporter,
 )
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import PilImageFactory
 from OTAnalytics.plugin_ui.cli import (
     InvalidSectionFileType,
     OTAnalyticsBulkCli,
@@ -173,6 +174,7 @@ DETECTION_RATE_PERCENTILE_VALUE = 0.9
 CONFIG_FILE = "path/to/config.otconfig"
 SECTION_FILE = "path/to/section.otflow"
 TRACK_FILE = f"ottrk_file.{DEFAULT_TRACK_FILE_TYPE}"
+DEFAULT_IMAGE_FACTORY = PilImageFactory()
 
 
 @pytest.fixture
@@ -244,7 +246,9 @@ def mock_flow_parser() -> Mock:
 
 @pytest.fixture
 def video_parser() -> VideoParser:
-    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(VideosMetadata())))
+    return CachedVideoParser(
+        SimpleVideoParser(PyAvVideoReader(VideosMetadata(), DEFAULT_IMAGE_FACTORY))
+    )
 
 
 @pytest.fixture

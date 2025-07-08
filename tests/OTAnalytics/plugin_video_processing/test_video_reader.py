@@ -6,12 +6,15 @@ import av
 import pytest
 from PIL import Image, ImageChops
 
-from OTAnalytics.domain.track import PilImage
 from OTAnalytics.domain.video import VideoReader
+from OTAnalytics.plugin_prototypes.track_visualization.pil_image import PilImage
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import PilImageFactory
 from OTAnalytics.plugin_video_processing.video_reader import (
     PyAvVideoReader,
     av_to_image,
 )
+
+DEFAULT_IMAGE_FACTORY = PilImageFactory()
 
 
 class TestPyAVVideoReader:
@@ -19,12 +22,14 @@ class TestPyAVVideoReader:
         expected_frames = []
         with av.open(str(video_path.absolute())) as container:
             for frame in container.decode(video=0):
-                expected_frames.append(av_to_image(frame, {}).as_image())
+                expected_frames.append(
+                    av_to_image(frame, {}, DEFAULT_IMAGE_FACTORY).as_image()
+                )
         return expected_frames
 
     @pytest.fixture
     def video_reader(self) -> VideoReader:
-        return PyAvVideoReader(Mock())
+        return PyAvVideoReader(Mock(), DEFAULT_IMAGE_FACTORY)
 
     def test_get_image_possible(
         self, cyclist_video: Path, video_reader: VideoReader
@@ -70,7 +75,7 @@ class TestPyAVVideoReader:
         given_videos_metadata = Mock()
         given_videos_metadata.get_by_video_name.return_value = given_metadata
 
-        target = PyAvVideoReader(given_videos_metadata)
+        target = PyAvVideoReader(given_videos_metadata, DEFAULT_IMAGE_FACTORY)
         actual = target._get_total_frames(given_video_stream, given_video_path)
 
         assert actual == expected
@@ -85,7 +90,7 @@ class TestPyAVVideoReader:
         given_video_stream.frames = expected
         given_videos_metadata = Mock()
 
-        target = PyAvVideoReader(given_videos_metadata)
+        target = PyAvVideoReader(given_videos_metadata, DEFAULT_IMAGE_FACTORY)
         actual = target._get_total_frames(given_video_stream, given_video_path)
         assert actual == expected
 
@@ -98,7 +103,7 @@ class TestPyAVVideoReader:
         given_videos_metadata = Mock()
         given_videos_metadata.get_by_video_name.return_value = None
 
-        target = PyAvVideoReader(given_videos_metadata)
+        target = PyAvVideoReader(given_videos_metadata, DEFAULT_IMAGE_FACTORY)
         actual = target._get_total_frames(given_video_stream, given_video_path)
 
         assert actual == 60
