@@ -94,7 +94,7 @@ class InvalidTrackGeometryDataset(Exception):
 
 
 def distance_on_track(point: Point, track_geom: GeometryCollection) -> float:
-    distance = line_locate_point(track_geom, point)
+    distance = float(line_locate_point(track_geom, point))
     return round(distance, NDIGITS_DISTANCE)
 
 
