@@ -80,7 +80,9 @@ class TestFileExtensionFiltering:
 
     @patch("pathlib.Path.glob")
     @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui")
-    def test_filtering_logic_with_multiple_extensions(self, mock_glob: Mock) -> None:
+    def test_filtering_logic_with_multiple_extensions(
+        self, mock_ui: Mock, mock_glob: Mock
+    ) -> None:
         """Test that the filtering logic correctly handles multiple extensions."""
         test_dir = Path("/tmp")
         extensions = [".txt", ".py"]

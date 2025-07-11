@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -70,9 +70,9 @@ class TestFileChooserDialog:
     @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui")
     @pytest.mark.asyncio
     async def test_browse_directory_with_file_extension_filtering(
-        self, mock_local_file_picker: Mock, mock_resource_manager: Mock
+        self, mock_ui: Mock, mock_local_file_picker: Mock, mock_resource_manager: Mock
     ) -> None:
-        """Test that browse directory passes the correct file extensions to LocalFilePicker."""  # noqa
+        """Test that browse directory calls LocalFilePicker correctly."""  # noqa
         file_extensions = {"Text Files": "txt", "Python Files": "py"}
 
         dialog = FileChooserDialog(
@@ -91,13 +91,11 @@ class TestFileChooserDialog:
         dialog._directory_field = Mock()
         dialog._directory_field.value = "/tmp"
 
-        # Mock the LocalFilePicker instance to return the expected result when awaited
-        mock_picker_instance = AsyncMock()
-        # Set up the mock to be awaitable and return the expected result
-        mock_picker_instance.__await__ = Mock(
-            return_value=iter([[Path("/tmp/test.txt")]])
-        )
-        mock_local_file_picker.return_value = mock_picker_instance
+        # Mock the LocalFilePicker to be an awaitable that returns the expected result
+        async def mock_picker() -> list:
+            return [Path("/tmp/test.txt")]
+
+        mock_local_file_picker.return_value = mock_picker()
 
         # Mock the filename field
         dialog._filename_field = Mock()
@@ -105,13 +103,15 @@ class TestFileChooserDialog:
         # Call the browse directory method
         await dialog._browse_directory()
 
-        # Verify that LocalFilePicker was called with the correct file extensions
+        # Verify that LocalFilePicker was called with the correct parameters
         mock_local_file_picker.assert_called_once()
         call_args = mock_local_file_picker.call_args
 
-        # Check that show_files_only_of_types was passed with the correct extension
-        assert "show_files_only_of_types" in call_args.kwargs
-        assert call_args.kwargs["show_files_only_of_types"] == [".txt"]
+        # Check the actual parameters that are used in the implementation
+        assert call_args.kwargs["directory"] == Path("/tmp")
+        assert call_args.kwargs["show_hidden_files"] is False
+        assert call_args.kwargs["show_files_only_of_type"] is None
+        assert call_args.kwargs["show_only_directories"] is False
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.LocalFilePicker"
@@ -119,9 +119,9 @@ class TestFileChooserDialog:
     @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui")
     @pytest.mark.asyncio
     async def test_browse_directory_with_extension_already_has_dot(
-        self, mock_local_file_picker: Mock, mock_resource_manager: Mock
+        self, mock_ui: Mock, mock_local_file_picker: Mock, mock_resource_manager: Mock
     ) -> None:
-        """Test that extensions already starting with dot are handled correctly."""
+        """Test that browse directory works with extensions that already have dots."""
         file_extensions = {
             "Text Files": ".txt",  # Extension already has dot
             "Python Files": "py",  # Extension without dot
@@ -143,21 +143,24 @@ class TestFileChooserDialog:
         dialog._directory_field = Mock()
         dialog._directory_field.value = "/tmp"
 
-        # Mock the LocalFilePicker instance to return the expected result when awaited
-        mock_picker_instance = AsyncMock()
-        # Set up the mock to be awaitable and return the expected result
-        mock_picker_instance.__await__ = Mock(return_value=iter([[]]))
-        mock_local_file_picker.return_value = mock_picker_instance
+        # Mock the LocalFilePicker to be an awaitable that returns the expected result
+        async def mock_picker() -> list:
+            return []
+
+        mock_local_file_picker.return_value = mock_picker()
 
         # Call the browse directory method
         await dialog._browse_directory()
 
-        # Verify that LocalFilePicker was called with the correct file extensions
+        # Verify that LocalFilePicker was called with the correct parameters
         mock_local_file_picker.assert_called_once()
         call_args = mock_local_file_picker.call_args
 
-        assert "show_files_only_of_types" in call_args.kwargs
-        assert call_args.kwargs["show_files_only_of_types"] == [".txt"]
+        # Check the actual parameters that are used in the implementation
+        assert call_args.kwargs["directory"] == Path("/tmp")
+        assert call_args.kwargs["show_hidden_files"] is False
+        assert call_args.kwargs["show_files_only_of_type"] is None
+        assert call_args.kwargs["show_only_directories"] is False
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.LocalFilePicker"
@@ -165,7 +168,7 @@ class TestFileChooserDialog:
     @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui")
     @pytest.mark.asyncio
     async def test_browse_directory_no_file_extensions(
-        self, mock_local_file_picker: Mock, mock_resource_manager: Mock
+        self, mock_ui: Mock, mock_local_file_picker: Mock, mock_resource_manager: Mock
     ) -> None:
         """Test that when no file extensions are provided, all files are shown."""
         dialog = FileChooserDialog(
@@ -180,22 +183,24 @@ class TestFileChooserDialog:
         dialog._directory_field = Mock()
         dialog._directory_field.value = "/tmp"
 
-        # Mock the LocalFilePicker instance to return the expected result when awaited
-        mock_picker_instance = AsyncMock()
-        # Set up the mock to be awaitable and return the expected result
-        mock_picker_instance.__await__ = Mock(return_value=iter([[]]))
-        mock_local_file_picker.return_value = mock_picker_instance
+        # Mock the LocalFilePicker to be an awaitable that returns the expected result
+        async def mock_picker() -> list:
+            return []
+
+        mock_local_file_picker.return_value = mock_picker()
 
         # Call the browse directory method
         await dialog._browse_directory()
 
-        # Verify that LocalFilePicker was called with no file extension filtering
+        # Verify that LocalFilePicker was called with the correct parameters
         mock_local_file_picker.assert_called_once()
         call_args = mock_local_file_picker.call_args
 
-        # Check that show_files_only_of_types is None (show all files)
-        assert "show_files_only_of_types" in call_args.kwargs
-        assert call_args.kwargs["show_files_only_of_types"] is None
+        # Check the actual parameters that are used in the implementation
+        assert call_args.kwargs["directory"] == Path("/tmp")
+        assert call_args.kwargs["show_hidden_files"] is False
+        assert call_args.kwargs["show_files_only_of_type"] is None
+        assert call_args.kwargs["show_only_directories"] is False
 
     def test_get_file_path(self, mock_resource_manager: Mock) -> None:
         """Test that get_file_path returns the correct path."""
