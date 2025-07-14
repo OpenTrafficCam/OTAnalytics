@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Callable, Iterator
 
-import matplotlib.dates as mdates
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.pyplot import close, subplots
@@ -170,12 +169,6 @@ class MatplotlibCountPlotStyler:
         axes.set_title(title)
         axes.set_xlabel("Time")
         axes.set_ylabel("Count")
-        axes.set_ylim(ymin=0, ymax=20)
-        xmin = datetime(year=2025, month=6, day=26).timestamp() / (24 * 60 * 60)
-        xmax = datetime(year=2025, month=6, day=27).timestamp() / (24 * 60 * 60)
-        axes.set_xlim(xmin=xmin, xmax=xmax)
-        myFmt = mdates.DateFormatter("%H:%M")
-        axes.xaxis.set_major_formatter(myFmt)
         if self._legend:
             axes.legend()
         axes.grid(True)
