@@ -793,7 +793,7 @@ class TrackImageFactory(ABC):
         pass
 
 
-class MultiMatplotlibTrackPlotter(TrackPlotter):
+class MultiMatplotlibTrackPlotter(MatplotlibPlotterImplementation):
     """
     Implementation of the TrackPlotter interface using matplotlib.
     """
@@ -806,120 +806,9 @@ class MultiMatplotlibTrackPlotter(TrackPlotter):
         self._plotters = plotters
         self._track_image_factory = track_image_factory
 
-    def plot(
-        self,
-        width: int,
-        height: int,
-    ) -> TrackImage:
-        """
-        Plot the tracks and section as image.
-
-        Args:
-            width (int): width of the image
-            height (int): height of the image
-
-        Returns:
-            TrackImage: image containing tracks and sections
-        """
-        image_width = width / DPI
-        image_height = height / DPI
-        figure = self._create_figure(width=image_width, height=image_height)
-        axes = self._create_axes(image_width, image_height, figure)
+    def plot(self, axes: Axes) -> None:
         for plotter in self._plotters:
             plotter.plot(axes)
-        self._style_axes(width, height, axes)
-        return self.convert_to_track_image(figure, axes)
-
-    def _create_axes(self, width: float, height: float, figure: Figure) -> Axes:
-        """
-        Create axes to plot on.
-
-        Args:
-            width (int): width of the axes
-            height (int): height of the axes
-            figure (Figure): figure object to add the axis to
-
-        Returns:
-            Axes: axes object with the given width and height
-        """
-        # The first items are for padding and the second items are for the axes.
-        # sizes are in inch.
-        horizontal = [Size.Fixed(0.0), Size.Fixed(width)]
-        vertical = [Size.Fixed(0.0), Size.Fixed(height)]
-
-        divider = Divider(
-            fig=figure,
-            pos=(0, 0, 1, 1),
-            horizontal=horizontal,
-            vertical=vertical,
-            aspect=False,
-        )
-        # The width and height of the rectangle are ignored.
-        axes = figure.add_axes(
-            divider.get_position(), axes_locator=divider.new_locator(nx=1, ny=1)
-        )
-        axes.xaxis.set_major_locator(NullLocator())
-        axes.xaxis.set_minor_locator(NullLocator())
-        axes.yaxis.set_major_locator(NullLocator())
-        axes.yaxis.set_minor_locator(NullLocator())
-        axes.xaxis.set_major_formatter(NullFormatter())
-        axes.xaxis.set_minor_formatter(NullFormatter())
-        axes.yaxis.set_major_formatter(NullFormatter())
-        axes.yaxis.set_minor_formatter(NullFormatter())
-        return axes
-
-    def _style_axes(self, width: int, height: int, axes: Axes) -> None:
-        """
-        Style axes object to show the image and tracks correctly.
-
-        Args:
-            width (int): width of the axes
-            height (int): height of the axes
-            axes (Axes): axes object to be styled
-        """
-        axes.set(
-            xlabel="",
-            ylabel="",
-            xticklabels=[],
-            yticklabels=[],
-        )
-        axes.get_xaxis().set_visible(False)
-        axes.get_yaxis().set_visible(False)
-        axes.set_ylim(0, height)
-        axes.set_xlim(0, width)
-        axes.patch.set_alpha(0.0)
-        axes.invert_yaxis()
-
-    def _create_figure(self, width: float, height: float) -> Figure:
-        """
-        Create figure to be plotted on.
-
-        Returns:
-            Figure: figure to be plotted on
-        """
-        figure = Figure(figsize=(width, height), dpi=DPI)
-        figure.patch.set_alpha(0.0)
-        return figure
-
-    def convert_to_track_image(self, figure: Figure, axes: Axes) -> TrackImage:
-        """
-        Convert the content of the axes into an image.
-
-        Args:
-            figure (Figure): figure containing the axes object
-            axes (Axes): axes object to convert
-
-        Returns:
-            TrackImage: image containing the content of the axes object
-        """
-        canvas = FigureCanvasAgg(figure)
-        canvas.draw()
-        bbox_contents = canvas.copy_from_bbox(axes.bbox)
-        left, bottom, right, top = bbox_contents.get_extents()
-
-        image_array = numpy.asarray(bbox_contents)
-        image_array = image_array.reshape([top - bottom, right - left, 4])
-        return self._track_image_factory.create(image_array)
 
 
 class MatplotlibTrackPlotter(TrackPlotter):
