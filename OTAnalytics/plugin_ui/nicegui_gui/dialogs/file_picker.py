@@ -102,17 +102,23 @@ class LocalFilePicker(ui.dialog):
 
     def add_drives_toggle(self) -> None:
         if platform.system() == "Windows":
-            import win32api
+            try:
+                import win32api
 
-            drives = win32api.GetLogicalDriveStrings().split(NULL_TERMINATOR)[:-1]
-            self.drives_toggle: ui.toggle = ui.toggle(
-                drives, value=drives[0], on_change=self.update_drive
-            )
+                drives = win32api.GetLogicalDriveStrings().split(NULL_TERMINATOR)[:-1]
+                self.drives_toggle: ui.toggle = ui.toggle(
+                    drives, value=drives[0], on_change=self.update_drive
+                )
+            except ImportError:
+                # win32api is not available, skip drives toggle functionality
+                # This can happen in testing environments or when pywin32 is not installed # noqa
+                pass
 
     def update_drive(self) -> None:
-        self.path = Path(self.drives_toggle.value).expanduser()
-        self.path_input.value = str(self.path)
-        self.update_grid()
+        if hasattr(self, "drives_toggle"):
+            self.path = Path(self.drives_toggle.value).expanduser()
+            self.path_input.value = str(self.path)
+            self.update_grid()
 
     def update_path_from_input(self, e: Any) -> None:
         try:
