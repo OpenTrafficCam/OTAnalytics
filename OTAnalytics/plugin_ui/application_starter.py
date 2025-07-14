@@ -18,7 +18,7 @@ from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStar
 from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    NumpyImageFactory,
+    PilImageFactory,
     TrackImageFactory,
 )
 from OTAnalytics.plugin_ui.base_application import (
@@ -87,7 +87,7 @@ class ApplicationStarter:
 
     @cached_property
     def track_image_factory(self) -> TrackImageFactory:
-        return NumpyImageFactory()
+        return PilImageFactory()
 
     def _build_cli_argument_parser(self) -> CliParser:
         return ArgparseCliParser()
