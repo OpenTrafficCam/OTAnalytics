@@ -24,7 +24,6 @@ from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.types import EventType
 
-ADDITIONAL_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 
 LEVEL_FROM_SECTION = "from section"
@@ -1045,9 +1044,9 @@ class TrafficCounting:
             )
 
         flows = self.get_flows()
-        current = self._assigner.assign(events, flows)
+        assigned_flows = self._assigner.assign(events, flows)
         tagger = self._tagger_factory.create_tagger(specification)
-        tagged_assignments = current.tag(tagger)
+        tagged_assignments = assigned_flows.tag(tagger)
         return tagged_assignments.count(flows)
 
     def get_flows(self) -> list[Flow]:
