@@ -71,6 +71,7 @@ repos:
           - types-flake8
           - types-openpyxl
           - types-pillow
+          - types-pywin32
           - types-requests
           - types-seaborn
           - types-selenium
@@ -97,4 +98,4 @@ repos:
       - id: shell-fmt-docker
         args:
           - -i
-          - "2"
+          - '2'
