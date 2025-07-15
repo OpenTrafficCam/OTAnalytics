@@ -498,9 +498,11 @@ class FormFieldDate(FormField[Input, Optional[date]]):
 
     def build(self) -> None:
         """Builds the UI form element."""
-        self._instance = ui.input(
-            self._label_text, value=self.initial_value_text
-        ).style("max-width: 40%")
+        self._instance = (
+            ui.input(self._label_text, value=self.initial_value_text)
+            .style("max-width: 40%")
+            .props("mask='##.##.####'")
+        )
         with self._instance:
             with ui.menu().props("no-parent-event") as menu:
                 with ui.date(value=self.initial_value_text).bind_value(self._instance):
@@ -542,10 +544,14 @@ class FormFieldTime(FormField[Input, Optional[time]]):
         if self.element and self.element.value:
             if isinstance(self.element.value, time):
                 return self.element.value
-            return parse_datetime(
-                self.element.value,
-                formats=[HOUR_MINUTE_SECOND_FORMAT, HOUR_MINUTE_FORMAT],
-            ).time()
+            try:
+                return parse_datetime(
+                    self.element.value,
+                    formats=[HOUR_MINUTE_SECOND_FORMAT, HOUR_MINUTE_FORMAT],
+                ).time()
+            except ValueError:
+                # Return None for invalid time input instead of raising exception
+                return None
         return None
 
     @property
@@ -580,9 +586,11 @@ class FormFieldTime(FormField[Input, Optional[time]]):
         self._marker = marker
 
     def build(self) -> None:
-        self._instance = ui.input(
-            self._label_text, value=self.initial_value_text
-        ).style("max-width: 40%")
+        self._instance = (
+            ui.input(self._label_text, value=self.initial_value_text)
+            .style("max-width: 40%")
+            .props("mask='##:##:##'")
+        )
         with self._instance:
             with ui.menu().props("no-parent-event") as menu:
                 with ui.time(self.initial_value_text, mask="HH:mm:ss").bind_value(
