@@ -503,6 +503,11 @@ class CountableAssignments:
     def __init__(self, assignments: list[RoadUserAssignment]) -> None:
         self._assignments = assignments.copy()
 
+    def filter(
+        self, condition: Callable[[RoadUserAssignment], bool]
+    ) -> "CountableAssignments":
+        return CountableAssignments([a for a in self._assignments if condition(a)])
+
     def count(self, flows: list[Flow]) -> Count:
         """
         Count the assignments. Flow without an assignment are assigned a zero count.
@@ -595,6 +600,16 @@ class TaggedAssignments:
 
     def __repr__(self) -> str:
         return TaggedAssignments.__name__ + repr(self._assignments)
+
+    def filter(
+        self, condition: Callable[[RoadUserAssignment], bool]
+    ) -> "TaggedAssignments":
+        return TaggedAssignments(
+            {
+                tag: countable.filter(condition)
+                for tag, countable in self._assignments.items()
+            }
+        )
 
 
 class RoadUserAssigner(ABC):
@@ -950,9 +965,33 @@ def create_export_specification(
     return ExportSpecificationDto(counting_specification, flow_dtos)
 
 
+def start_of(rua: RoadUserAssignment) -> datetime:
+    return rua.events.start.interpolated_occurrence
+
+
+def end_of(rua: RoadUserAssignment) -> datetime:
+    return rua.events.end.interpolated_occurrence
+
+
 class TrafficCounting:
     """
     Use case to produce traffic counts.
+
+    Args:
+        flow_repository (FlowRepository): repository providing flows for counting
+        get_sections_by_id (GetSectionsById): provides sections by id
+        get_assignments (GetRoadUserAssignments): provides assignments from repository
+            and initiates assignment if not yet computed
+        tagger_factory (TaggerFactory):
+            a factory to create a tagger for a given counting specifications
+        filter_lower_bound_strict: whether the (optionally) applied counting interval
+            filter should have a strict lower bound (filtering out assignments starting
+            before that bound). Defaults to True: count only assignments starting inside
+            the counting interval
+        filter_upper_bound_strict: whether the (optionally) applied counting interval
+            filter should have a strict upper bound (filtering out assignments ending
+            after that bound). Defaults to False: count also assignments ending outside
+            the counting interval
     """
 
     def __init__(
@@ -961,27 +1000,85 @@ class TrafficCounting:
         get_sections_by_id: GetSectionsById,
         get_assignments: GetRoadUserAssignments,
         tagger_factory: TaggerFactory,
+        filter_lower_bound_strict: bool = True,
+        filter_upper_bound_strict: bool = False,
     ):
         self._flow_repository = flow_repository
         self._get_assignments = get_assignments
         self._get_sections_by_id = get_sections_by_id
         self._tagger_factory = tagger_factory
+        self._filter_lower_bound_strict = filter_lower_bound_strict
+        self._filter_upper_bound_strict = filter_upper_bound_strict
 
     def count(self, specification: CountingSpecificationDto) -> Count:
         """
         Produce traffic counts based on the currently available events and flows.
 
         Args:
-            specification (CountingSpecificationDto): specification of the export
+            specification (CountingSpecificationDto): specification of the counting
         """
-
-        # todo how to reproduce assigning/tagging only from start to end given in spec?
 
         flows = self.get_flows()
         assigned_flows = self._get_assignments.get()
         tagger = self._tagger_factory.create_tagger(specification)
         tagged_assignments = tagger.tag(assigned_flows)
+
+        if not specification.count_all_events:
+            tagged_assignments = tagged_assignments.filter(
+                self.__assignment_filter_for(specification)
+            )
+
         return tagged_assignments.count(flows)
+
+    def __assignment_filter_for(
+        self,
+        specification: CountingSpecificationDto,
+    ) -> Callable[[RoadUserAssignment], bool]:
+        """Create a filter interval using the given specifications start and end time
+        as lower and upper bounds respectively.
+
+        The resulting filter determines whether RoadUserAssignments fall into the
+        desired observation interval and should be counted.
+
+        The is_upper/lower_strict parameters of this TrafficCounting object
+        can be used to configure the filter.
+        A strict bound does not allow the assignment to overlap the respective bound.
+        The four combinations are as follows (open = '('; closed = '['):
+            - [lower, upper]: both start and end of the rua must be inside the interval
+            - [lower, upper): the start of the rua must be inside the interval
+            - (lower, upper]: the end of the rua must be inside the interval
+            - (lower, upper): either start or end of the rua must be in the interval,
+                or [start, end] must enclose the interval
+
+        Args:
+            specification (CountingSpecificationDto): specification containing the
+                upper and lower bound for filtering
+            is_lower_strict (bool): whether the lower bound is strict
+            is_upper_strict (bool): whether the upper bound is strict
+
+        Returns:
+            Callable[[RoadUserAssignment], bool]: an rua filter
+        """
+        lower = specification.start
+        upper = specification.end
+        is_lower_strict = self._filter_lower_bound_strict
+        is_upper_strict = self._filter_upper_bound_strict
+
+        if is_lower_strict and is_upper_strict:
+            return lambda rua: lower <= start_of(rua) and end_of(rua) <= upper
+
+        elif is_lower_strict and not is_upper_strict:
+            return lambda rua: lower <= start_of(rua) <= upper
+
+        elif not is_lower_strict and is_upper_strict:
+            return lambda rua: lower <= end_of(rua) <= upper
+
+        else:
+            return (
+                lambda rua: lower <= start_of(rua) <= upper
+                or lower <= end_of(rua) <= upper
+                or (start_of(rua) <= lower and upper <= end_of(rua))
+            )
 
     def get_flows(self) -> list[Flow]:
         return self._flow_repository.get_all()
