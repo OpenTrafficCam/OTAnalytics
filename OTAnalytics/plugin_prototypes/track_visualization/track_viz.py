@@ -798,13 +798,8 @@ class MultiMatplotlibTrackPlotter(MatplotlibPlotterImplementation):
     Implementation of the TrackPlotter interface using matplotlib.
     """
 
-    def __init__(
-        self,
-        plotters: list[MatplotlibPlotterImplementation],
-        track_image_factory: TrackImageFactory,
-    ) -> None:
+    def __init__(self, plotters: list[MatplotlibPlotterImplementation]) -> None:
         self._plotters = plotters
-        self._track_image_factory = track_image_factory
 
     def plot(self, axes: Axes) -> None:
         for plotter in self._plotters:
