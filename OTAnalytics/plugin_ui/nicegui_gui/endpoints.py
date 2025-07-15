@@ -1,1 +1,2 @@
 ENDPOINT_MAIN_PAGE = "/"
+ENDPOINT_LOAD_OTCONFIG = "/load_otconfig"

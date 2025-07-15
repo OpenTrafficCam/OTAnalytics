@@ -1,9 +1,17 @@
 from functools import cached_property
 
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
+from OTAnalytics.application.use_cases.handle_load_otconfig import HandleLoadOtConfig
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
+from OTAnalytics.plugin_ui.nicegui_gui.endpoint_builders.load_config import (
+    LoadConfigEndpointBuilder,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_LOAD_OTCONFIG
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.endpoint_builder import (
+    FastApiEndpointBuilder,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
     AddTracksForm,
 )
@@ -85,12 +93,22 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         )
         self.preload_input_files.load(self.run_config)
         return NiceguiWebserver(
-            endpoint_builders=[],
+            endpoint_builders=[self.load_config_endpoint],
             page_builders=[main_page_builder],
             layout_components=NiceguiLayoutComponents(),
             hostname="localhost",
             port=5000,
         ).run()
+
+    @cached_property
+    def load_config_endpoint(self) -> FastApiEndpointBuilder:
+        return LoadConfigEndpointBuilder(
+            ENDPOINT_LOAD_OTCONFIG, self.handle_load_otconfig
+        )
+
+    @cached_property
+    def handle_load_otconfig(self) -> HandleLoadOtConfig:
+        return HandleLoadOtConfig(self.load_otconfig)
 
     @cached_property
     def analysis_form(self) -> AnalysisForm:
