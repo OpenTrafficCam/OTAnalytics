@@ -199,10 +199,9 @@ class TracksNotIntersectingSelection(TrackIdProvider):
 class TracksAssignedToSelectedFlows(TrackIdProvider):
     """Returns track ids that are assigned to the currently selected flows.
 
-    Args: todo
-        assigner (RoadUserAssigner): to assign tracks to flows.
-        event_repository (EventRepository): the event repository.
-        flow_repository (FlowRepository): the track repository.
+    Args:
+        get_assignments (GetRoadUserAssignments):
+            use case to get (or create initially) all RoadUserAssignments.
         flow_state (FlowState): the currently selected flows.
     """
 
@@ -215,9 +214,9 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
         self._flow_state = flow_state
 
     def get_ids(self) -> Iterable[TrackId]:
-        # todo
         # All flows must be passed to assigner to ensure that a track potentially
         # belonging to several flows is assigned to the correct one.
+        # This happens in the CreateRoadUserAssignments use case in get_assignments.
         assignments = self._get_assignments.get_as_list()
 
         ids = set()
@@ -231,9 +230,9 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
 class TracksAssignedToAllFlows(TrackIdProvider):
     """Returns track ids that are assigned to all flows.
 
-    Args: todo
-        assigner (RoadUserAssigner): to assign tracks to flows.
-        event_repository (EventRepository): the event repository.
+    Args:
+        get_assignments (GetRoadUserAssignments):
+            use case to get (or create initially) all RoadUserAssignments.
         flow_repository (FlowRepository): the track repository.
     """
 
@@ -253,10 +252,9 @@ class TracksAssignedToAllFlows(TrackIdProvider):
 class TracksAssignedToGivenFlows(TrackIdProvider):
     """Returns track ids that are assigned to the given flows.
 
-    Args: todo
-        assigner (RoadUserAssigner): to assign tracks to flows.
-        event_repository (EventRepository): the event repository.
-        flow_repository (FlowRepository): the track repository.
+    Args:
+        get_assignments (GetRoadUserAssignments):
+            use case to get (or create initially) all RoadUserAssignments.
         flow_ids (list[FlowId]): the flows to identify assigned tracks for.
     """
 
@@ -269,9 +267,9 @@ class TracksAssignedToGivenFlows(TrackIdProvider):
         self._flows = list(flow_ids)
 
     def get_ids(self) -> Iterable[TrackId]:
-        # todo
         # All flows must be passed to assigner to ensure that a track potentially
         # belonging to several flows is assigned to the correct one.
+        # This happens in the CreateRoadUserAssignments use case in get_assignments.
         assignments = self._get_assignments.get_as_list()
 
         ids = set()
