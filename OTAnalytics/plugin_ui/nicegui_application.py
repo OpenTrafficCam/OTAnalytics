@@ -85,6 +85,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         )
         self.preload_input_files.load(self.run_config)
         return NiceguiWebserver(
+            endpoint_builders=[],
             page_builders=[main_page_builder],
             layout_components=NiceguiLayoutComponents(),
             hostname="localhost",
