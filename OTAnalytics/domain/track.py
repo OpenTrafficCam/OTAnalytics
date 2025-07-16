@@ -200,8 +200,7 @@ class Track(ABC):
         return self.last_detection.occurrence
 
 
-@dataclass(frozen=True)
-class TrackImage:
+class TrackImage(ABC):
     """
     Represents an image with tracks. This might be an empty image or one with different
     types of track visualisation.
@@ -219,6 +218,7 @@ class TrackImage:
         Returns:
             TrackImage: combined image of this and the other image
         """
+        raise NotImplementedError
 
     @abstractmethod
     def as_image(self) -> Image.Image:
@@ -228,11 +228,11 @@ class TrackImage:
         Returns:
             Image.Image: image as pillow image
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def as_base64(self) -> str:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def width(self) -> int:
@@ -242,7 +242,7 @@ class TrackImage:
         Returns:
             int: width of the image
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def height(self) -> int:
@@ -252,7 +252,7 @@ class TrackImage:
         Returns:
             int: height of the image
         """
-        pass
+        raise NotImplementedError
 
     def save(self, name: str) -> None:
         self.as_image().save(name)

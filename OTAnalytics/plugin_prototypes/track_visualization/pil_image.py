@@ -7,7 +7,7 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_prototypes.track_visualization.cv2_image import serialize_image
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PilImage(TrackImage):
     """
     Concrete implementation using pillow as image format.
