@@ -4,11 +4,11 @@ echo "Install OTAnalytics development environment."
 
 WORKING_DIR=$(pwd)
 VENV="$WORKING_DIR"/.venv
-PIP="$VENV"/bin/pip
 PRE_COMMIT="$VENV"/bin/pre-commit
+UV="$VENV"/bin/uv
 
 bash "$WORKING_DIR"/install.sh
 
-$PIP install -r requirements-dev.txt --no-cache-dir
-$PIP install -e .
+$UV pip install -r requirements-dev.txt --python .venv
+$UV pip install -e .
 $PRE_COMMIT install --install-hooks
