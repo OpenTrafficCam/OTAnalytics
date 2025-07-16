@@ -27,7 +27,7 @@ class BaseDialog:
         self.resource_manager = resource_manager
 
     def build(self) -> ui.dialog:
-        with ui.dialog() as dialog, ui.card():
+        with ui.dialog() as dialog, ui.card().classes("w-96"):
             self.build_content()
             with ui.row():
                 apply = ui.button(
