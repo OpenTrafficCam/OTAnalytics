@@ -790,7 +790,7 @@ class TrackImageFactory(ABC):
     @abstractmethod
     def create(self, image: numpy.ndarray) -> TrackImage:
         """Create a TrackImage object from the given image."""
-        pass
+        raise NotImplementedError
 
 
 class MultiMatplotlibTrackPlotter(MatplotlibPlotterImplementation):
