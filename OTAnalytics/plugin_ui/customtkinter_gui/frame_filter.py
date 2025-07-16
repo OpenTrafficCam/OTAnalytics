@@ -733,7 +733,7 @@ class FilterTracksByClassPopup(CTkToplevel, WidgetPositionProvider):
         classes = self._viewmodel.get_classes()
         selected_classes = self._viewmodel.get_class_filter_selection()
 
-        treeview_classes = Treeview(master=self, show="tree", selectmode="none")
+        treeview_classes = Treeview(master=self, show="tree", selectmode="extended")
         treeview_classes["columns"] = "Classes"
         treeview_classes.column(column="#0", width=0, stretch=False)
         treeview_classes.column(column="Classes", anchor="w", width=150, minwidth=40)
