@@ -16,7 +16,7 @@ class TreeviewTemplate(AbstractTreeviewInterface, Treeview):
         show: Literal["tree", "headings", "tree headings", ""] = "tree",
         **kwargs: Any,
     ) -> None:
-        super().__init__(selectmode="extended", show=show, **kwargs)
+        super().__init__(selectmode="none", show=show, **kwargs)
         self._bind_events()
         self._define_columns()
         self._introduce_to_viewmodel()
