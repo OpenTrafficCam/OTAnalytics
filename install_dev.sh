@@ -3,7 +3,7 @@ set -e
 echo "Install OTAnalytics development environment."
 
 WORKING_DIR=$(pwd)
-VENV="$WORKING_DIR"/venv
+VENV="$WORKING_DIR"/.venv
 PIP="$VENV"/bin/pip
 PRE_COMMIT="$VENV"/bin/pre-commit
 

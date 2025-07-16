@@ -14,7 +14,7 @@ echo "Install OTAnalytics."
 echo "$DIR"
 cd "$DIR" || exit
 WORKING_DIR=$(pwd)
-VENV="$WORKING_DIR"/venv
+VENV="$WORKING_DIR"/.venv
 PYTHON="$VENV"/bin/python
 PIP="$VENV"/bin/pip
 UV="$VENV"/bin/uv
