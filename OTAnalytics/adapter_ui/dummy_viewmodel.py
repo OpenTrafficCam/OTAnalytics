@@ -536,6 +536,7 @@ class DummyViewModel(
 
     def _finish_action(self) -> None:
         self._application.action_state.action_running.set(False)
+        self._update_enabled_buttons()
 
     def set_window(self, window: AbstractMainWindow) -> None:
         self._window = window
