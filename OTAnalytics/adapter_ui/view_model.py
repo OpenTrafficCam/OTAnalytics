@@ -245,7 +245,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    async def remove_flows(self) -> None:
+    def remove_flows(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
