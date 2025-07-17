@@ -163,7 +163,10 @@ def action(func: Any) -> Any:
     async def wrapper_decorator(self: Any, *args: Any, **kwargs: Any) -> Any:
         self._start_action()
         try:
-            return await func(self, *args, **kwargs)
+            result = func(self, *args, **kwargs)
+            if result is not None:
+                return await result
+            return None
         finally:
             self._finish_action()
 
