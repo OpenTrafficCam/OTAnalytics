@@ -6,6 +6,7 @@ matplotlib==3.10.0
 more-itertools==10.7.0
 nicegui==2.11.0
 numpy==2.1.1
+opencv-python==4.10.0.84
 openpyxl==3.1.5
 pandas==2.2.3
 pillow==11.1.0
