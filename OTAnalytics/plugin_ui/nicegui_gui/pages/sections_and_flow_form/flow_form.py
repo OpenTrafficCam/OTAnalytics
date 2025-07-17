@@ -107,8 +107,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
     def generate_flow(self) -> None:
         self._viewmodel.generate_flows()
 
-    def remove_flow(self) -> None:
-        self._viewmodel.remove_flows()
+    async def remove_flow(self) -> None:
+        await self._viewmodel.remove_flows()
 
     async def show_flow_properties(self) -> None:
         await self._viewmodel.edit_selected_flow()
