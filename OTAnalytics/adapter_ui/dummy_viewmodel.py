@@ -39,6 +39,7 @@ from OTAnalytics.adapter_ui.flow_adapter import (
     SectionRefPointCalculator,
 )
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
+from OTAnalytics.adapter_ui.helpers import ensure_file_extension_is_present
 from OTAnalytics.adapter_ui.text_resources import (
     COLUMN_NAME,
     ColumnResource,
@@ -606,6 +607,12 @@ class DummyViewModel(
         self._save_otconfig(configuration_file)
 
     def _save_otconfig(self, otconfig_file: Path) -> None:
+        # Ensure the file has the correct extension
+        otconfig_file_str = ensure_file_extension_is_present(
+            str(otconfig_file), [f"*.{OTCONFIG_FILE_TYPE}"], f".{OTCONFIG_FILE_TYPE}"
+        )
+        otconfig_file = Path(otconfig_file_str)
+
         logger().info(f"Config file to save: {otconfig_file}")
         try:
             self._application.save_otconfig(otconfig_file)
@@ -841,7 +848,16 @@ class DummyViewModel(
         )
         if not configuration_file.stem:
             return
-        elif configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
+
+        # Ensure the file has a proper extension before checking
+        configuration_file_str = ensure_file_extension_is_present(
+            str(configuration_file),
+            [f"*.{OTCONFIG_FILE_TYPE}", f"*.{OTFLOW_FILE_TYPE}"],
+            f".{OTCONFIG_FILE_TYPE}",
+        )
+        configuration_file = Path(configuration_file_str)
+
+        if configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
             self._save_otflow(configuration_file)
         elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
             self._save_otconfig(configuration_file)
@@ -855,6 +871,12 @@ class DummyViewModel(
             await self.save_configuration()
 
     def _save_otflow(self, otflow_file: Path) -> None:
+        # Ensure the file has the correct extension
+        otflow_file_str = ensure_file_extension_is_present(
+            str(otflow_file), [f"*.{OTFLOW_FILE_TYPE}"], f".{OTFLOW_FILE_TYPE}"
+        )
+        otflow_file = Path(otflow_file_str)
+
         logger().info(f"Sections file to save: {otflow_file}")
         try:
             self._application.save_otflow(Path(otflow_file))
