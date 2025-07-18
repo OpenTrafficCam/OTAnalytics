@@ -673,6 +673,91 @@ class TestCanvasFormKeyboardEvents:
         # refresh_items_on_canvas is called twice: once during build() and once during cancel action # noqa
         assert mock_viewmodel.refresh_items_on_canvas.call_count == 2
 
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    @pytest.mark.asyncio
+    async def test_save_new_section_direct(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        """Test _save_new_section method directly."""
+        # Arrange
+        mock_interactive_image = MagicMock()
+        mock_ui.interactive_image.return_value = mock_interactive_image
+
+        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
+        canvas_form.build()
+        canvas_form._new_section = True
+        canvas_form._new_area_section = False
+        canvas_form._new_section_points = [
+            Circle(id="1", x=10, y=20, fill="red", pointer_event="all"),
+            Circle(id="2", x=30, y=40, fill="blue", pointer_event="all"),
+        ]
+
+        # Act
+        await canvas_form._save_new_section()
+
+        # Assert
+        mock_viewmodel.add_new_section.assert_called_once()
+        call_args = mock_viewmodel.add_new_section.call_args
+        assert call_args[1]["coordinates"] == [(10, 20), (30, 40)]
+        assert call_args[1]["is_area_section"] is False
+
+        # Verify reset
+        assert canvas_form._new_section is False
+        assert len(canvas_form._new_section_points) == 0
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_save_edit_section_direct(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+        mock_section: Mock,
+    ) -> None:
+        """Test _save_edit_section method directly."""
+        # Arrange
+        mock_interactive_image = MagicMock()
+        mock_ui.interactive_image.return_value = mock_interactive_image
+
+        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
+        canvas_form.build()
+        canvas_form._current_section = mock_section
+
+        # Act
+        canvas_form._save_edit_section()
+
+        # Assert
+        mock_viewmodel.update_section_coordinates.assert_called_once()
+
+        # Verify reset
+        assert canvas_form._current_section is None
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_cancel_action_direct(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        """Test _cancel_action method directly."""
+        # Arrange
+        mock_interactive_image = MagicMock()
+        mock_ui.interactive_image.return_value = mock_interactive_image
+
+        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
+        canvas_form.build()
+
+        # Act
+        canvas_form._cancel_action()
+
+        # Assert
+        mock_viewmodel.cancel_action.assert_called_once()
+        # refresh_items_on_canvas is called twice: once during
+        # build() and once during cancel action
+        assert mock_viewmodel.refresh_items_on_canvas.call_count == 2
+
 
 class TestCanvasFormDrawing:
     """Test drawing functionality in CanvasForm."""
