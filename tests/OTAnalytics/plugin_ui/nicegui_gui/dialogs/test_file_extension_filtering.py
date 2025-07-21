@@ -1,7 +1,11 @@
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import (
+    NAME,
+    ROW_DATA,
+    LocalFilePicker,
+)
 
 
 class TestFileExtensionFiltering:
@@ -111,6 +115,14 @@ class TestFileExtensionFiltering:
             directory=test_dir, show_files_only_of_types=extensions
         )
 
+        # Mock the grid to have a proper options dictionary structure
+        picker.grid = Mock()
+        picker.grid.options = {ROW_DATA: []}
+
+        # Set current_selected_option to something other than "All Files"
+        # so that show_files_only_of_types filtering is applied
+        picker.current_selected_option = "Custom Filter"
+
         # Call update_grid to trigger filtering
         picker.update_grid()
 
@@ -125,3 +137,18 @@ class TestFileExtensionFiltering:
         # Verify that the grid was updated (basic check)
         assert hasattr(picker, "grid")
         assert hasattr(picker.grid, "options")
+
+        # Assert that the grid only shows test.txt and script.py (plus folder)
+        grid_data = picker.grid.options[ROW_DATA]
+        file_names = [
+            item[NAME] for item in grid_data if not item[NAME].startswith("📁")
+        ]
+
+        # Should only contain test.txt and script.py
+        assert "test.txt" in file_names
+        assert "script.py" in file_names
+        assert "document.pdf" not in file_names
+        assert "readme.md" not in file_names
+
+        # Verify exactly 2 files are shown (test.txt and script.py)
+        assert len(file_names) == 2
