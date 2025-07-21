@@ -506,7 +506,7 @@ class FormFieldDate(FormField[Input, Optional[date]]):
         self._instance = (
             ui.input(self._label_text, value=self.initial_value_text)
             .style("max-width: 40%")
-            .props("mask='##.##.####'")
+            .props("mask='####-##-##'")
         )
         with self._instance:
             with ui.menu().props("no-parent-event") as menu:
