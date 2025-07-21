@@ -16,7 +16,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
 )
 
 YEAR_MONTH_DAY_FORMAT = "%Y-%m-%d"
-YEAR_MONTH_DAY_DOT_FORMAT = "%Y.%m.%d"
 DAY_MONTH_YEAR_FORMAT = "%d.%m.%Y"
 
 HOUR_MINUTE_FORMAT = "%H:%M"
@@ -464,7 +463,6 @@ class FormFieldDate(FormField[Input, Optional[date]]):
                 self.element.value,
                 formats=[
                     YEAR_MONTH_DAY_FORMAT,
-                    YEAR_MONTH_DAY_DOT_FORMAT,
                     DAY_MONTH_YEAR_FORMAT,
                 ],
             ).date()
