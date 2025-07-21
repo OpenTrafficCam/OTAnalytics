@@ -17,6 +17,8 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     EDIT_COLOR,
     ELEMENT_ID,
@@ -1083,10 +1085,6 @@ class TestCanvasFormImageHandling:
         )
 
         # Add some elements first
-        from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
-        from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
-        from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
-
         test_line = Line(id="test-line", x1=0, y1=0, x2=10, y2=10, stroke="red")
         test_polyline = Polyline(
             id="test-polyline", points=[(0, 0), (10, 10)], color="blue"
