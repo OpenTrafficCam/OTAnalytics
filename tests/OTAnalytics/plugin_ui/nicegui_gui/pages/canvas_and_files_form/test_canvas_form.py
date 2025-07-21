@@ -69,6 +69,44 @@ def mock_section() -> Mock:
     return section
 
 
+def setup_canvas_form_with_mocks(
+    mock_ui: Any,
+    mock_viewmodel: Mock,
+    mock_resource_manager: Mock,
+    hotkey_return_value: str = "s",
+    hotkey_side_effect: Any = None,
+    current_section: Mock | None = None,
+) -> CanvasForm:
+    """Helper method to set up CanvasForm with common mock configuration.
+
+    Args:
+        mock_ui: Mocked UI module
+        mock_viewmodel: Mock viewmodel
+        mock_resource_manager: Mock resource manager
+        hotkey_return_value: Return value for get_hotkey (default: "s")
+        hotkey_side_effect: Side effect for get_hotkey (overrides return_value if set)
+        current_section: Optional mock section to set as current section
+
+    Returns:
+        Configured CanvasForm instance
+    """
+    mock_interactive_image = MagicMock()
+    mock_ui.interactive_image.return_value = mock_interactive_image
+
+    if hotkey_side_effect is not None:
+        mock_resource_manager.get_hotkey.side_effect = hotkey_side_effect
+    else:
+        mock_resource_manager.get_hotkey.return_value = hotkey_return_value
+
+    canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
+    canvas_form.build()
+
+    if current_section is not None:
+        canvas_form._current_section = current_section
+
+    return canvas_form
+
+
 class TestCanvasFormHelperFunctions:
     """Test helper functions used by CanvasForm."""
 
@@ -169,30 +207,27 @@ class TestCanvasFormInitialization:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
         mock_ui.keyboard.return_value = MagicMock()
 
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-
         # Act
-        result = canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
 
         # Assert
-        assert result == canvas_form
-        assert canvas_form._background_image == mock_interactive_image
+        assert canvas_form._background_image == mock_ui.interactive_image.return_value
 
         # Verify interactive image setup
         mock_ui.interactive_image.assert_called_once()
-        mock_interactive_image.on.assert_any_call(
+        mock_ui.interactive_image.return_value.on.assert_any_call(
             "svg:pointerdown",
             mock_ui.interactive_image.return_value.on.call_args_list[0][0][1],
         )
-        mock_interactive_image.on.assert_any_call(
+        mock_ui.interactive_image.return_value.on.assert_any_call(
             "svg:pointermove",
             mock_ui.interactive_image.return_value.on.call_args_list[1][0][1],
         )
-        mock_interactive_image.on.assert_any_call(
+        mock_ui.interactive_image.return_value.on.assert_any_call(
             "svg:pointerup",
             mock_ui.interactive_image.return_value.on.call_args_list[2][0][1],
         )
@@ -374,11 +409,9 @@ class TestCanvasFormPointerEvents:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
         canvas_form._new_section = True
 
         mock_event = MagicMock(spec=events.MouseEventArguments)
@@ -403,11 +436,9 @@ class TestCanvasFormPointerEvents:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
         canvas_form._new_section = True
 
         # Act - Add multiple points
@@ -434,12 +465,9 @@ class TestCanvasFormPointerEvents:
         mock_section: Mock,
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
-        canvas_form._current_section = mock_section
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager, current_section=mock_section
+        )
 
         event_data = {IMAGE_X: 100, IMAGE_Y: 200, ELEMENT_ID: "test-element"}
 
@@ -463,12 +491,9 @@ class TestCanvasFormPointerEvents:
         mock_section: Mock,
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
-        canvas_form._current_section = mock_section
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager, current_section=mock_section
+        )
         canvas_form._current_point = MagicMock()
 
         event_data = {IMAGE_X: 150, IMAGE_Y: 250, ELEMENT_ID: "test-element"}
@@ -491,12 +516,9 @@ class TestCanvasFormPointerEvents:
         mock_section: Mock,
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
-        canvas_form._current_section = mock_section
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager, current_section=mock_section
+        )
         canvas_form._current_point = MagicMock()
 
         event_data = {IMAGE_X: 175, IMAGE_Y: 275, ELEMENT_ID: "test-element"}
@@ -584,12 +606,9 @@ class TestCanvasFormKeyboardEvents:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-        mock_resource_manager.get_hotkey.return_value = "s"
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
         canvas_form._new_section = True
         canvas_form._new_area_section = False
         canvas_form._new_section_points = [
@@ -625,13 +644,9 @@ class TestCanvasFormKeyboardEvents:
         mock_section: Mock,
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-        mock_resource_manager.get_hotkey.return_value = "s"
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
-        canvas_form._current_section = mock_section
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager, current_section=mock_section
+        )
 
         key_event = MagicMock(spec=KeyEventArguments)
         key_event.key = "s"
@@ -653,14 +668,15 @@ class TestCanvasFormKeyboardEvents:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-        mock_resource_manager.get_hotkey.side_effect = lambda key: (
-            "c" if key == HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY else "s"
-        )
+        def hotkey_side_effect(key: Any) -> str:
+            return "c" if key == HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY else "s"
 
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            hotkey_side_effect=hotkey_side_effect,
+        )
 
         key_event = MagicMock(spec=KeyEventArguments)
         key_event.key = "c"
@@ -682,11 +698,9 @@ class TestCanvasFormKeyboardEvents:
     ) -> None:
         """Test _save_new_section method directly."""
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
         canvas_form._new_section = True
         canvas_form._new_area_section = False
         canvas_form._new_section_points = [
@@ -719,12 +733,9 @@ class TestCanvasFormKeyboardEvents:
     ) -> None:
         """Test _save_edit_section method directly."""
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
-        canvas_form._current_section = mock_section
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager, current_section=mock_section
+        )
 
         # Act
         canvas_form._save_edit_section()
@@ -743,11 +754,9 @@ class TestCanvasFormKeyboardEvents:
     ) -> None:
         """Test _cancel_action method directly."""
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
 
         # Act
         canvas_form._cancel_action()
@@ -834,11 +843,9 @@ class TestCanvasFormDrawing:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
 
         coordinates = [(10, 20), (30, 40), (50, 60)]
 
@@ -863,11 +870,9 @@ class TestCanvasFormDrawing:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
 
         coordinates = [(10, 20), (30, 40)]
 
@@ -890,11 +895,9 @@ class TestCanvasFormDrawing:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
 
         start_section = Mock()
         start_section.id = "start-section"
@@ -932,11 +935,9 @@ class TestCanvasFormDrawing:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
 
         # Act
         canvas_form.start_section_builder(is_area_section=True)
@@ -956,11 +957,9 @@ class TestCanvasFormDrawing:
         mock_section: Mock,
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
 
         # Act
         canvas_form.start_section_geometry_editor(mock_section)
@@ -1029,11 +1028,9 @@ class TestCanvasFormImageHandling:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
 
         mock_track_image = Mock(spec=TrackImage)
         mock_pil_image = Mock(spec=Image.Image)
@@ -1044,7 +1041,9 @@ class TestCanvasFormImageHandling:
 
         # Assert
         assert canvas_form._current_image == mock_pil_image
-        mock_interactive_image.set_source.assert_called_with(mock_pil_image)
+        mock_ui.interactive_image.return_value.set_source.assert_called_with(
+            mock_pil_image
+        )
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
@@ -1053,17 +1052,15 @@ class TestCanvasFormImageHandling:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
 
         # Act
         canvas_form.clear_image()
 
         # Assert
-        mock_interactive_image.set_source.assert_called_with("")
+        mock_ui.interactive_image.return_value.set_source.assert_called_with("")
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
@@ -1072,11 +1069,9 @@ class TestCanvasFormImageHandling:
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
         # Arrange
-        mock_interactive_image = MagicMock()
-        mock_ui.interactive_image.return_value = mock_interactive_image
-
-        canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-        canvas_form.build()
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
 
         # Add some elements first
         from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
