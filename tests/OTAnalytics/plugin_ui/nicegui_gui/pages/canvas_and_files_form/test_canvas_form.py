@@ -9,6 +9,7 @@ from PIL import Image
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
+    CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE,
     SAVE_SECTION_HOTKEY_VALUE,
     HotKeys,
     ResourceManager,
@@ -673,7 +674,11 @@ class TestCanvasFormKeyboardEvents:
     ) -> None:
         # Arrange
         def hotkey_side_effect(key: Any) -> str:
-            return "c" if key == HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY else "s"
+            return (
+                CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE
+                if key == HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY
+                else SAVE_SECTION_HOTKEY_VALUE
+            )
 
         canvas_form = setup_canvas_form_with_mocks(
             mock_ui,
@@ -683,7 +688,7 @@ class TestCanvasFormKeyboardEvents:
         )
 
         key_event = MagicMock(spec=KeyEventArguments)
-        key_event.key = "c"
+        key_event.key = CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE
 
         # Act
         await canvas_form.handle_key(key_event)
