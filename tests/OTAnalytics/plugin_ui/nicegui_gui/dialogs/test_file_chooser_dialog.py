@@ -2,9 +2,13 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from nicegui import ui
+from nicegui.testing import User
 
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+    MARKER_DIRECTORY,
+    MARKER_FORMAT,
     FileChooserDialog,
 )
 
@@ -35,37 +39,42 @@ class TestFileChooserDialog:
             assert dialog._title == "Test Dialog"
             assert dialog._initial_file_stem == "test_file"
 
-    def test_get_extension_for_current_format(
-        self, resource_manager: ResourceManager
+    @pytest.mark.asyncio
+    async def test_get_extension_for_current_format(
+        self, user: User, resource_manager: ResourceManager
     ) -> None:
         """Test that the correct extension is returned for the selected format."""
         file_extensions = {"Text Files": "txt", "Python Files": "py"}
 
-        with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui"):
-            dialog = FileChooserDialog(
-                resource_manager=resource_manager,
-                title="Test Dialog",
-                file_extensions=file_extensions,
-                initial_file_stem="test_file",
-                initial_dir=Path("/tmp"),
-            )
+        dialog = FileChooserDialog(
+            resource_manager=resource_manager,
+            title="Test Dialog",
+            file_extensions=file_extensions,
+            initial_file_stem="test_file",
+            initial_dir=Path("/tmp"),
+        )
 
-            # Mock the format field to return a specific format
-            dialog._format_field = Mock()
-            dialog._format_field.value = "Text Files"
+        @ui.page("/test")
+        def page() -> None:
+            dialog.build().open()
 
-            extension = dialog._get_extension_for_current_format()
-            assert extension == "txt"
+        await user.open("/test")
+
+        # Select "Text Files" using user fixture
+        user.find(marker=MARKER_FORMAT).click()
+        user.find("Text Files").click()
+
+        extension = dialog._get_extension_for_current_format()
+        assert extension == "txt"
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.LocalFilePicker"
     )
-    @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui")
     @pytest.mark.asyncio
     async def test_browse_directory_with_file_extension_filtering(
         self,
-        mock_ui: Mock,
         mock_local_file_picker: Mock,
+        user: User,
         resource_manager: ResourceManager,
     ) -> None:
         """Test that browse directory calls LocalFilePicker correctly."""  # noqa
@@ -79,22 +88,24 @@ class TestFileChooserDialog:
             initial_dir=Path("/tmp"),
         )
 
-        # Mock the format field to return a specific format
-        dialog._format_field = Mock()
-        dialog._format_field.value = "Text Files"
+        @ui.page("/test")
+        def page() -> None:
+            dialog.build().open()
 
-        # Mock the directory field
-        dialog._directory_field = Mock()
-        dialog._directory_field.value = "/tmp"
+        await user.open("/test")
+
+        # Select "Text Files" using user fixture
+        user.find(marker=MARKER_FORMAT).click()
+        user.find("Text Files").click()
+
+        # Set directory using user fixture
+        user.find(marker=MARKER_DIRECTORY).clear().type("/tmp")
 
         # Mock the LocalFilePicker to be an awaitable that returns the expected result
         async def mock_picker() -> list:
             return [Path("/tmp/test.txt")]
 
         mock_local_file_picker.return_value = mock_picker()
-
-        # Mock the filename field
-        dialog._filename_field = Mock()
 
         # Call the browse directory method
         await dialog._browse_directory()
@@ -112,12 +123,11 @@ class TestFileChooserDialog:
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.LocalFilePicker"
     )
-    @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui")
     @pytest.mark.asyncio
     async def test_browse_directory_with_extension_already_has_dot(
         self,
-        mock_ui: Mock,
         mock_local_file_picker: Mock,
+        user: User,
         resource_manager: ResourceManager,
     ) -> None:
         """Test that browse directory works with extensions that already have dots."""
@@ -134,13 +144,18 @@ class TestFileChooserDialog:
             initial_dir=Path("/tmp"),
         )
 
-        # Mock the format field to return a format with extension that already has dot
-        dialog._format_field = Mock()
-        dialog._format_field.value = "Text Files"
+        @ui.page("/test")
+        def page() -> None:
+            dialog.build().open()
 
-        # Mock the directory field
-        dialog._directory_field = Mock()
-        dialog._directory_field.value = "/tmp"
+        await user.open("/test")
+
+        # Select "Text Files" using user fixture (extension already has dot)
+        user.find(marker=MARKER_FORMAT).click()
+        user.find("Text Files").click()
+
+        # Set directory using user fixture
+        user.find(marker=MARKER_DIRECTORY).clear().type("/tmp")
 
         # Mock the LocalFilePicker to be an awaitable that returns the expected result
         async def mock_picker() -> list:
