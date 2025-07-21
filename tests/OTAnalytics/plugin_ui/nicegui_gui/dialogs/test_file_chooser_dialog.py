@@ -12,15 +12,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
 class TestFileChooserDialog:
     """Test the FileChooserDialog file extension filtering functionality."""
 
-    @pytest.fixture
-    def mock_resource_manager(self) -> Mock:
-        """Create a mock resource manager."""
-        resource_manager = Mock(spec=ResourceManager)
-        resource_manager.get.return_value = "Test Label"
-        return resource_manager
-
     def test_file_chooser_dialog_initialization(
-        self, mock_resource_manager: Mock
+        self, resource_manager: ResourceManager
     ) -> None:
         """Test that FileChooserDialog can be initialized with file extensions."""
         file_extensions = {
@@ -31,7 +24,7 @@ class TestFileChooserDialog:
 
         with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui"):
             dialog = FileChooserDialog(
-                resource_manager=mock_resource_manager,
+                resource_manager=resource_manager,
                 title="Test Dialog",
                 file_extensions=file_extensions,
                 initial_file_stem="test_file",
@@ -43,14 +36,14 @@ class TestFileChooserDialog:
             assert dialog._initial_file_stem == "test_file"
 
     def test_get_extension_for_current_format(
-        self, mock_resource_manager: Mock
+        self, resource_manager: ResourceManager
     ) -> None:
         """Test that the correct extension is returned for the selected format."""
         file_extensions = {"Text Files": "txt", "Python Files": "py"}
 
         with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui"):
             dialog = FileChooserDialog(
-                resource_manager=mock_resource_manager,
+                resource_manager=resource_manager,
                 title="Test Dialog",
                 file_extensions=file_extensions,
                 initial_file_stem="test_file",
@@ -70,13 +63,16 @@ class TestFileChooserDialog:
     @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui")
     @pytest.mark.asyncio
     async def test_browse_directory_with_file_extension_filtering(
-        self, mock_ui: Mock, mock_local_file_picker: Mock, mock_resource_manager: Mock
+        self,
+        mock_ui: Mock,
+        mock_local_file_picker: Mock,
+        resource_manager: ResourceManager,
     ) -> None:
         """Test that browse directory calls LocalFilePicker correctly."""  # noqa
         file_extensions = {"Text Files": "txt", "Python Files": "py"}
 
         dialog = FileChooserDialog(
-            resource_manager=mock_resource_manager,
+            resource_manager=resource_manager,
             title="Test Dialog",
             file_extensions=file_extensions,
             initial_file_stem="test_file",
@@ -119,7 +115,10 @@ class TestFileChooserDialog:
     @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui")
     @pytest.mark.asyncio
     async def test_browse_directory_with_extension_already_has_dot(
-        self, mock_ui: Mock, mock_local_file_picker: Mock, mock_resource_manager: Mock
+        self,
+        mock_ui: Mock,
+        mock_local_file_picker: Mock,
+        resource_manager: ResourceManager,
     ) -> None:
         """Test that browse directory works with extensions that already have dots."""
         file_extensions = {
@@ -128,7 +127,7 @@ class TestFileChooserDialog:
         }
 
         dialog = FileChooserDialog(
-            resource_manager=mock_resource_manager,
+            resource_manager=resource_manager,
             title="Test Dialog",
             file_extensions=file_extensions,
             initial_file_stem="test_file",
@@ -168,11 +167,14 @@ class TestFileChooserDialog:
     @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui")
     @pytest.mark.asyncio
     async def test_browse_directory_no_file_extensions(
-        self, mock_ui: Mock, mock_local_file_picker: Mock, mock_resource_manager: Mock
+        self,
+        mock_ui: Mock,
+        mock_local_file_picker: Mock,
+        resource_manager: ResourceManager,
     ) -> None:
         """Test that when no file extensions are provided, all files are shown."""
         dialog = FileChooserDialog(
-            resource_manager=mock_resource_manager,
+            resource_manager=resource_manager,
             title="Test Dialog",
             file_extensions={},  # No file extensions
             initial_file_stem="test_file",
@@ -202,11 +204,11 @@ class TestFileChooserDialog:
         assert call_args.kwargs["show_files_only_of_type"] is None
         assert call_args.kwargs["show_only_directories"] is False
 
-    def test_get_file_path(self, mock_resource_manager: Mock) -> None:
+    def test_get_file_path(self, resource_manager: ResourceManager) -> None:
         """Test that get_file_path returns the correct path."""
         with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui"):
             dialog = FileChooserDialog(
-                resource_manager=mock_resource_manager,
+                resource_manager=resource_manager,
                 title="Test Dialog",
                 file_extensions={"Text": "txt"},
                 initial_file_stem="test_file",
@@ -222,13 +224,13 @@ class TestFileChooserDialog:
             file_path = dialog.get_file_path()
             assert file_path == Path("/home/user/test.txt")
 
-    def test_get_format(self, mock_resource_manager: Mock) -> None:
+    def test_get_format(self, resource_manager: ResourceManager) -> None:
         """Test that get_format returns the selected format."""
         file_extensions = {"Text Files": "txt", "Python Files": "py"}
 
         with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.ui"):
             dialog = FileChooserDialog(
-                resource_manager=mock_resource_manager,
+                resource_manager=resource_manager,
                 title="Test Dialog",
                 file_extensions=file_extensions,
                 initial_file_stem="test_file",
