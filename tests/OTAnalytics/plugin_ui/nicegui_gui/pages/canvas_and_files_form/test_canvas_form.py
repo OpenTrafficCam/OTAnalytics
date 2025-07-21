@@ -8,7 +8,11 @@ from nicegui.testing import User
 from PIL import Image
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.resources.resource_manager import HotKeys, ResourceManager
+from OTAnalytics.application.resources.resource_manager import (
+    SAVE_SECTION_HOTKEY_VALUE,
+    HotKeys,
+    ResourceManager,
+)
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
@@ -55,7 +59,7 @@ def mock_viewmodel() -> Mock:
 def mock_resource_manager() -> Mock:
     resource_manager = Mock(spec=ResourceManager)
     resource_manager.get_image.return_value = MagicMock(spec=Image.Image)
-    resource_manager.get_hotkey.return_value = "s"
+    resource_manager.get_hotkey.return_value = SAVE_SECTION_HOTKEY_VALUE
     resource_manager.get.return_value = "Test Label"
     return resource_manager
 
@@ -73,7 +77,7 @@ def setup_canvas_form_with_mocks(
     mock_ui: Any,
     mock_viewmodel: Mock,
     mock_resource_manager: Mock,
-    hotkey_return_value: str = "s",
+    hotkey_return_value: str = SAVE_SECTION_HOTKEY_VALUE,
     hotkey_side_effect: Any = None,
     current_section: Mock | None = None,
 ) -> CanvasForm:
@@ -83,7 +87,7 @@ def setup_canvas_form_with_mocks(
         mock_ui: Mocked UI module
         mock_viewmodel: Mock viewmodel
         mock_resource_manager: Mock resource manager
-        hotkey_return_value: Return value for get_hotkey (default: "s")
+        hotkey_return_value: Return value for get_hotkey
         hotkey_side_effect: Side effect for get_hotkey (overrides return_value if set)
         current_section: Optional mock section to set as current section
 
@@ -549,7 +553,7 @@ class TestCanvasFormKeyboardEvents:
         def page() -> None:
             # Don't mock the UI - create a real canvas form for testing
             canvas_form = CanvasForm(mock_viewmodel, mock_resource_manager)
-            mock_resource_manager.get_hotkey.return_value = "s"
+            mock_resource_manager.get_hotkey.return_value = SAVE_SECTION_HOTKEY_VALUE
 
             # Build the canvas form with real interactive image
             canvas_form.build()
@@ -585,7 +589,7 @@ class TestCanvasFormKeyboardEvents:
         # Test keyboard save by directly calling the canvas form method
         # This is more realistic than creating artificial buttons
         key_event = MagicMock(spec=KeyEventArguments)
-        key_event.key = "s"
+        key_event.key = SAVE_SECTION_HOTKEY_VALUE
         await canvas_form.handle_key(key_event)
 
         # Assert
@@ -617,7 +621,7 @@ class TestCanvasFormKeyboardEvents:
         ]
 
         key_event = MagicMock(spec=KeyEventArguments)
-        key_event.key = "s"
+        key_event.key = SAVE_SECTION_HOTKEY_VALUE
 
         # Act
         await canvas_form.handle_key(key_event)
@@ -649,7 +653,7 @@ class TestCanvasFormKeyboardEvents:
         )
 
         key_event = MagicMock(spec=KeyEventArguments)
-        key_event.key = "s"
+        key_event.key = SAVE_SECTION_HOTKEY_VALUE
 
         # Act
         await canvas_form.handle_key(key_event)

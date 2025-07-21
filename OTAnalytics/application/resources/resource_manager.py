@@ -290,9 +290,13 @@ DEFAULT_IMAGE_RESOURCE_MAP: dict[ResourceKey, str] = {
     CanvasKeys.IMAGE_DEFAULT: r"OTAnalytics/assets/OpenTrafficCam_800.png"
 }
 
+# Hotkey values as constants for reuse
+SAVE_SECTION_HOTKEY_VALUE = "Enter"
+CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE = "Escape"
+
 DEFAULT_HOTKEYS: dict[HotKeys, str] = {
-    HotKeys.SAVE_SECTION_HOTKEY: "Enter",
-    HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY: "Escape",
+    HotKeys.SAVE_SECTION_HOTKEY: SAVE_SECTION_HOTKEY_VALUE,
+    HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY: CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE,
 }
 
 
