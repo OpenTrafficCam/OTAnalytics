@@ -56,7 +56,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             columns=create_columns(resource_manager),
             rows=[],
             on_select_method=lambda e: self._select_flow(e.selection),
-            selection="single",
+            selection="multiple",
             marker=MARKER_FLOW_TABLE,
         )
         self._button_remove: ui.button | None = None
