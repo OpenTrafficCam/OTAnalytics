@@ -42,7 +42,6 @@ from OTAnalytics.domain.section import (
 )
 from OTAnalytics.domain.track import (
     H,
-    PilImage,
     Track,
     TrackId,
     TrackIdProvider,
@@ -58,6 +57,8 @@ from OTAnalytics.domain.track_repository import (
 )
 from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
+from OTAnalytics.plugin_prototypes.track_visualization.numpy_image import NumpyImage
+from OTAnalytics.plugin_prototypes.track_visualization.pil_image import PilImage
 
 """Frames start with 1 in OTVision but frames of videos are loaded zero based."""
 FRAME_OFFSET = 1
@@ -783,6 +784,28 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
             )
 
 
+class TrackImageFactory(ABC):
+    """Factory to create TrackImage objects."""
+
+    @abstractmethod
+    def create(self, image: numpy.ndarray) -> TrackImage:
+        """Create a TrackImage object from the given image."""
+        raise NotImplementedError
+
+
+class MultiMatplotlibTrackPlotter(MatplotlibPlotterImplementation):
+    """
+    Implementation of the TrackPlotter interface using matplotlib.
+    """
+
+    def __init__(self, plotters: list[MatplotlibPlotterImplementation]) -> None:
+        self._plotters = plotters
+
+    def plot(self, axes: Axes) -> None:
+        for plotter in self._plotters:
+            plotter.plot(axes)
+
+
 class MatplotlibTrackPlotter(TrackPlotter):
     """
     Implementation of the TrackPlotter interface using matplotlib.
@@ -791,8 +814,10 @@ class MatplotlibTrackPlotter(TrackPlotter):
     def __init__(
         self,
         plotter: MatplotlibPlotterImplementation,
+        track_image_factory: TrackImageFactory,
     ) -> None:
         self._plotter = plotter
+        self._track_image_factory = track_image_factory
 
     def plot(
         self,
@@ -906,4 +931,18 @@ class MatplotlibTrackPlotter(TrackPlotter):
 
         image_array = numpy.asarray(bbox_contents)
         image_array = image_array.reshape([top - bottom, right - left, 4])
-        return PilImage(Image.fromarray(image_array, mode="RGBA"))
+        return self._track_image_factory.create(image_array)
+
+
+class PilImageFactory(TrackImageFactory):
+    """Factory to create TrackImage objects using PIL."""
+
+    def create(self, image: numpy.ndarray) -> TrackImage:
+        return PilImage(Image.fromarray(image, mode="RGBA"))
+
+
+class NumpyImageFactory(TrackImageFactory):
+    """Factory to create TrackImage objects using base64 strings."""
+
+    def create(self, image: numpy.ndarray) -> TrackImage:
+        return NumpyImage(image_data=image)

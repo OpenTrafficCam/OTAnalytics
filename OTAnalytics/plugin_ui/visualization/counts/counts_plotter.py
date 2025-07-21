@@ -169,7 +169,6 @@ class MatplotlibCountPlotStyler:
         axes.set_title(title)
         axes.set_xlabel("Time")
         axes.set_ylabel("Count")
-
         if self._legend:
             axes.legend()
         axes.grid(True)
@@ -347,7 +346,7 @@ class FlowAndClassOverTimeCountPlotter(MatplotlibCountPlotter, ABC):
             interval_in_minutes=self._interval_in_minutes,
             modes=list(self._metadata.detection_classifications),
             output_file="none",
-            output_format="png",
+            output_format="jpeg",
             export_mode=OVERWRITE,
         )
 

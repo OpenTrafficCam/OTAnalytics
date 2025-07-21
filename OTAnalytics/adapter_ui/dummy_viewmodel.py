@@ -160,11 +160,10 @@ def flow_id(from_section: str, to_section: str) -> str:
 
 def action(func: Any) -> Any:
     @functools.wraps(func)
-    def wrapper_decorator(self: Any, *args: Any, **kwargs: Any) -> Any:
+    async def wrapper_decorator(self: Any, *args: Any, **kwargs: Any) -> Any:
         self._start_action()
         try:
-            value = func(self, *args, **kwargs)
-            return value
+            return await func(self, *args, **kwargs)
         finally:
             self._finish_action()
 
@@ -537,6 +536,7 @@ class DummyViewModel(
 
     def _finish_action(self) -> None:
         self._application.action_state.action_running.set(False)
+        self._update_enabled_buttons()
 
     def set_window(self, window: AbstractMainWindow) -> None:
         self._window = window

@@ -20,3 +20,7 @@ class OtcClasses(StrEnum):
     BICYCLIST = "bicyclist"
     PEDESTRIAN = "pedestrian"
     OTHER = "other"
+
+    @classmethod
+    def all(cls) -> frozenset[str]:
+        return frozenset([e.value for e in cls.__members__.values()])
