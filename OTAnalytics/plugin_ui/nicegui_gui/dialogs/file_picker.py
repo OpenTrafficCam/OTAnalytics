@@ -26,6 +26,7 @@ class LocalFilePicker(ui.dialog):
         show_files_only_of_types: list[str] | None = None,
         show_only_directories: bool = False,
         show_extension_select: bool = True,
+        extension_options: Dict[str, Optional[List[str]]] | None = None,
     ) -> None:
         """Local File Picker
 
@@ -46,6 +47,9 @@ class LocalFilePicker(ui.dialog):
             to select file extensions.
                 If True, a select dropdown will be
                 displayed to filter files by extension.
+            extension_options (Dict[str, Optional[List[str]]]): Custom extension options
+                for the dropdown selector. Keys are display names, values are lists of
+                extensions or None for "All Files". If None, uses default options.
         """
         super().__init__()
 
@@ -57,8 +61,8 @@ class LocalFilePicker(ui.dialog):
         self.show_only_directories: bool = show_only_directories
         self.show_extension_select: bool = show_extension_select
 
-        # Define common file extension options for the select dropdown
-        self.extension_options: Dict[str, Optional[List[str]]] = {
+        # Define file extension options for the select dropdown
+        self.extension_options: Dict[str, Optional[List[str]]] = extension_options or {
             "All Files": None,
             "OTConfig Files": [".otconfig"],
             "OTFlow Files": [".otflow"],
