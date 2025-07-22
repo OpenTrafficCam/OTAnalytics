@@ -146,8 +146,9 @@ class LocalFilePicker(ui.dialog):
 
         if self.show_only_directories:
             paths = [p for p in paths if p.is_dir()]
-        elif self.current_selected_option == "All Files":
+        elif self.show_extension_select and self.current_selected_option == "All Files":
             # This ensures that "All Files" overrides any other filtering parameters
+            # but only when extension select dropdown is enabled
             pass  # No additional filtering needed - show all files and directories
         elif self.current_extension_filter is not None:
             # Filter based on the dropdown selection (highest priority)
