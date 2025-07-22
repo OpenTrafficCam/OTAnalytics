@@ -225,9 +225,11 @@ class TestLocalFilePicker:
 
             assert picker.show_extension_select is True
             assert picker.extension_options is not None
-            assert "All Files" in picker.extension_options
-            assert "OTConfig Files" in picker.extension_options
-            assert picker.current_extension_filter is None
+            assert "All File Endings" in picker.extension_options
+            assert ".otconfig" in picker.extension_options
+            assert ".otflow" in picker.extension_options
+            assert ".otflow and .otconfig" in picker.extension_options
+            assert picker.current_extension_filter == [".otflow", ".otconfig"]
 
     def test_file_picker_with_extension_select_disabled(self) -> None:
         test_dir = Path("/tmp")
@@ -248,7 +250,7 @@ class TestLocalFilePicker:
 
             # Mock event object
             mock_event = Mock()
-            mock_event.value = "OTConfig Files"
+            mock_event.value = ".otconfig"
 
             # Call the update method
             picker.update_extension_filter(mock_event)

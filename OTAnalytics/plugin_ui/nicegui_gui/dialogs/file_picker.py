@@ -63,21 +63,32 @@ class LocalFilePicker(ui.dialog):
 
         # Define file extension options for the select dropdown
         if extension_options is None:
-            # Provide default extension options when none are specified
+            # Provide default extension options with 4 specific choices
             self.extension_options: Dict[str, Optional[List[str]]] = {
-                "OTConfig Files": [".otconfig"],
-                "OTFlow Files": [".otflow"],
+                "All File Endings": [".otflow", ".otconfig"],
+                ".otconfig": [".otconfig"],
+                ".otflow": [".otflow"],
             }
         else:
             self.extension_options = extension_options.copy()
-
-        # Dynamically create "All Files" from all other extension options
-        self._create_all_files_option()
+            # Only create "All Files" option if custom extension_options are provided
+            self._create_all_files_option()
 
         # Current selected extension filter from dropdown
         self.current_extension_filter: Optional[List[str]] = None
-        # Track the currently selected option name to handle "All Files" correctly
-        self.current_selected_option: str = "All Files"
+        self.current_selected_option: str = "All File Endings"
+
+        # Apply the default "All File Endings" filter instantly, but only when:
+        # 1. Extension select is enabled
+        # 2. No other filtering parameters are specified
+        if (
+            self.show_extension_select
+            and not self.show_files_only_of_types
+            and not self.show_files_only_of_type
+        ):
+            self.current_extension_filter = self.extension_options.get(  # noqa
+                "All File Endings"
+            )
 
         with self, ui.card().style("max-width: 70%; width: 100%"):
             self.add_drives_toggle()
@@ -102,7 +113,7 @@ class LocalFilePicker(ui.dialog):
                     self.extension_select: ui.select = ui.select(
                         options=list(self.extension_options.keys()),
                         label="File Type Filter",
-                        value="All Files",
+                        value="All File Endings",
                         on_change=self.update_extension_filter,
                     ).classes("w-full")
             with ui.row().classes("w-full justify-end"):
@@ -123,8 +134,8 @@ class LocalFilePicker(ui.dialog):
         if all_extensions:
             self.extension_options["All Files"] = list(sorted(all_extensions))
         else:
-            # If no extensions found, "All Files" shows no files (empty list)
-            self.extension_options["All Files"] = []
+            # If no extensions found, "All Files" shows all files (no filtering)
+            self.extension_options["All Files"] = None
 
     def add_drives_toggle(self) -> None:
         if platform.system() == "Windows":
@@ -168,8 +179,11 @@ class LocalFilePicker(ui.dialog):
 
         if self.show_only_directories:
             paths = [p for p in paths if p.is_dir()]
-        elif self.current_extension_filter is not None:
+        elif (
+            self.current_extension_filter is not None and self.current_extension_filter
+        ):
             # Filter based on the dropdown selection (highest priority)
+            # Only apply filter if current_extension_filter is not empty
             paths = [
                 p
                 for p in paths
@@ -205,12 +219,8 @@ class LocalFilePicker(ui.dialog):
             }
             for p in paths
         ]
-        if (
-            self.upper_limit is None
-            and self.path != self.path.parent
-            or self.upper_limit is not None
-            and self.path != self.upper_limit
-        ):
+        # Always show parent navigation (..) when we can navigate up
+        if self.path != self.path.parent:
             self.grid.options[ROW_DATA].insert(
                 0,
                 {
