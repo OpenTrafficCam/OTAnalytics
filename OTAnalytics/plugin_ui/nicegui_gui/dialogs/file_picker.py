@@ -62,11 +62,17 @@ class LocalFilePicker(ui.dialog):
         self.show_extension_select: bool = show_extension_select
 
         # Define file extension options for the select dropdown
-        self.extension_options: Dict[str, Optional[List[str]]] = extension_options or {
-            "All Files": None,
-            "OTConfig Files": [".otconfig"],
-            "OTFlow Files": [".otflow"],
-        }
+        if extension_options is None:
+            # Provide default extension options when none are specified
+            self.extension_options: Dict[str, Optional[List[str]]] = {
+                "OTConfig Files": [".otconfig"],
+                "OTFlow Files": [".otflow"],
+            }
+        else:
+            self.extension_options = extension_options.copy()
+
+        # Dynamically create "All Files" from all other extension options
+        self._create_all_files_option()
 
         # Current selected extension filter from dropdown
         self.current_extension_filter: Optional[List[str]] = None
@@ -103,6 +109,22 @@ class LocalFilePicker(ui.dialog):
                 ui.button(CANCEL_BUTTON_NAME, on_click=self.close).props("outline")
                 ui.button(OK_BUTTON_NAME, on_click=self._handle_ok)
         self.update_grid()
+
+    def _create_all_files_option(self) -> None:
+        """Dynamically create 'All Files' option from all other extension options."""
+        all_extensions = set()
+
+        # Collect all extensions from other options (excluding "All Files" if it exists)
+        for option_name, extensions in self.extension_options.items():
+            if option_name != "All Files" and extensions is not None:
+                all_extensions.update(extensions)
+
+        # Create "All Files" option with all collected extensions
+        if all_extensions:
+            self.extension_options["All Files"] = list(sorted(all_extensions))
+        else:
+            # If no extensions found, "All Files" shows no files (empty list)
+            self.extension_options["All Files"] = []
 
     def add_drives_toggle(self) -> None:
         if platform.system() == "Windows":
@@ -146,10 +168,6 @@ class LocalFilePicker(ui.dialog):
 
         if self.show_only_directories:
             paths = [p for p in paths if p.is_dir()]
-        elif self.show_extension_select and self.current_selected_option == "All Files":
-            # This ensures that "All Files" overrides any other filtering parameters
-            # but only when extension select dropdown is enabled
-            pass  # No additional filtering needed - show all files and directories
         elif self.current_extension_filter is not None:
             # Filter based on the dropdown selection (highest priority)
             paths = [
