@@ -3,6 +3,7 @@ from typing import List
 from unittest.mock import Mock, patch
 
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
+from tests.conftest import assert_shown_files
 
 
 class TestLocalFilePicker:
@@ -120,22 +121,20 @@ class TestLocalFilePicker:
         # Call update_grid to trigger filtering
         picker.update_grid()
 
-        # Verify that only .txt, .py files and directories are included
+        # Debug output
         row_data = picker.grid.options.get("rowData", [])
         print(f"DEBUG: picker.grid.options = {picker.grid.options}")
         print(f"DEBUG: row_data = {row_data}")
         shown_names = [row["name"] for row in row_data]
         print(f"DEBUG: shown_names = {shown_names}")
 
-        # Should include .txt and .py files, plus directories
-        assert "test.txt" in shown_names
-        assert "script.py" in shown_names
-        assert "📁 <strong>folder</strong>" in shown_names
-        # Should exclude .pdf files
-        assert "document.pdf" not in shown_names
-
-        # Verify we have exactly 4 items (2 files + 1 directory + 1 parent navigation)
-        assert len(row_data) == 4
+        # Use reusable assertion function
+        assert_shown_files(
+            picker=picker,
+            expected_included=["test.txt", "script.py", "📁 <strong>folder</strong>"],
+            expected_excluded=["document.pdf"],
+            expected_count=4,  # 2 files + 1 directory + 1 parent navigation
+        )
 
     @patch("pathlib.Path.glob")
     @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui")
@@ -194,18 +193,13 @@ class TestLocalFilePicker:
         # Call update_grid to trigger filtering
         picker.update_grid()
 
-        # Verify that only .txt files and directories are included
-        row_data = picker.grid.options.get("rowData", [])
-        shown_names = [row["name"] for row in row_data]
-
-        # Should include .txt files and directories
-        assert "test.txt" in shown_names
-        assert "📁 <strong>folder</strong>" in shown_names
-        # Should exclude .py files
-        assert "script.py" not in shown_names
-
-        # Verify we have exactly 3 items (1 file + 1 directory + 1 parent navigation)
-        assert len(row_data) == 3
+        # Use reusable assertion function
+        assert_shown_files(
+            picker=picker,
+            expected_included=["test.txt", "📁 <strong>folder</strong>"],
+            expected_excluded=["script.py"],
+            expected_count=3,  # 1 file + 1 directory + 1 parent navigation
+        )
 
     def test_file_picker_no_extension_filtering(self) -> None:
         """Test that when no extensions are specified, all files are shown."""
@@ -329,19 +323,11 @@ class TestLocalFilePicker:
         # Call update_grid to trigger filtering
         picker.update_grid()
 
+        # Use reusable assertion function
         # The dropdown filter should take priority over the parameter filter
-        row_data = picker.grid.options.get("rowData", [])
-        shown_names = [row["name"] for row in row_data]
-
-        # Should include .py files (from dropdown filter) and directories
-        assert "script.py" in shown_names
-        assert "📁 <strong>folder</strong>" in shown_names
-        # Should exclude .txt files (would be included by parameter filter
-        # but dropdown takes priority)
-        assert "test.txt" not in shown_names
-        # Should exclude .pdf files (not in either filter)
-        assert "document.pdf" not in shown_names
-
-        # Verify we have exactly 3 items (1 .py file + 1 directory +
-        # 1 parent navigation)
-        assert len(row_data) == 3
+        assert_shown_files(
+            picker=picker,
+            expected_included=["script.py", "📁 <strong>folder</strong>"],
+            expected_excluded=["test.txt", "document.pdf"],
+            expected_count=3,  # 1 .py file + 1 directory + 1 parent navigation
+        )

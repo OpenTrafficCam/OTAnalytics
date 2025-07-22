@@ -2,10 +2,10 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import (
-    NAME,
     ROW_DATA,
     LocalFilePicker,
 )
+from tests.conftest import assert_shown_files
 
 
 class TestFileExtensionFiltering:
@@ -138,17 +138,9 @@ class TestFileExtensionFiltering:
         assert hasattr(picker, "grid")
         assert hasattr(picker.grid, "options")
 
-        # Assert that the grid only shows test.txt and script.py (plus folder)
-        grid_data = picker.grid.options[ROW_DATA]
-        file_names = [
-            item[NAME] for item in grid_data if not item[NAME].startswith("📁")
-        ]
-
-        # Should only contain test.txt and script.py
-        assert "test.txt" in file_names
-        assert "script.py" in file_names
-        assert "document.pdf" not in file_names
-        assert "readme.md" not in file_names
-
-        # Verify exactly 2 files are shown (test.txt and script.py)
-        assert len(file_names) == 2
+        assert_shown_files(
+            picker=picker,
+            expected_included=["test.txt", "script.py"],
+            expected_excluded=["document.pdf", "readme.md"],
+            expected_count=4,
+        )
