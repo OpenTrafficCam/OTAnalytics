@@ -3,7 +3,7 @@ import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Any, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -138,7 +138,7 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
-SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
+SUPPORTED_VIDEO_FILE_TYPES = ["*.mp4", "*.avi", "*.mkv", "*.mov"]
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
@@ -548,9 +548,23 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
 
     async def add_video(self) -> None:
+        # Generate extension_options dynamically from SUPPORTED_VIDEO_FILE_TYPES
+        extension_options: Dict[str, Optional[List[str]]] = {}
+
+        # Convert "*.ext" format to ".ext" format for extension_options
+        clean_extensions = [ext.replace("*", "") for ext in SUPPORTED_VIDEO_FILE_TYPES]
+
+        # Add "All File Endings" option with all supported extensions
+        extension_options["All File Endings"] = clean_extensions
+
+        # Add individual extension options
+        for ext in clean_extensions:
+            extension_options[ext] = [ext]
+
         track_files = await self._ui_factory.askopenfilenames(
             title="Load video files",
             filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
+            extension_options=extension_options,
         )
         if not track_files:
             return

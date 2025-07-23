@@ -78,17 +78,29 @@ class LocalFilePicker(ui.dialog):
         self.current_extension_filter: Optional[List[str]] = None
         self.current_selected_option: str = "All File Endings"
 
-        # Apply the default "All File Endings" filter instantly, but only when:
-        # 1. Extension select is enabled
-        # 2. No other filtering parameters are specified
-        if (
-            self.show_extension_select
-            and not self.show_files_only_of_types
-            and not self.show_files_only_of_type
-        ):
-            self.current_extension_filter = self.extension_options.get(  # noqa
-                "All File Endings"
-            )
+        # Set up current_extension_filter based on provided parameters
+        if self.show_extension_select:
+            if self.show_files_only_of_types:
+                # Use the provided multiple extensions
+                self.current_extension_filter = self.show_files_only_of_types
+                # Try to find a matching option in extension_options
+                for option_name, extensions in self.extension_options.items():
+                    if extensions == self.show_files_only_of_types:
+                        self.current_selected_option = option_name
+                        break
+            elif self.show_files_only_of_type:
+                # Use the provided single extension
+                self.current_extension_filter = [self.show_files_only_of_type]
+                # Try to find a matching option in extension_options
+                for option_name, extensions in self.extension_options.items():
+                    if extensions == [self.show_files_only_of_type]:
+                        self.current_selected_option = option_name
+                        break
+            else:
+                # Apply the default "All File Endings" filter
+                self.current_extension_filter = self.extension_options.get(
+                    "All File Endings"
+                )
 
         with self, ui.card().style("max-width: 70%; width: 100%"):
             self.add_drives_toggle()
@@ -113,7 +125,7 @@ class LocalFilePicker(ui.dialog):
                     self.extension_select: ui.select = ui.select(
                         options=list(self.extension_options.keys()),
                         label="File Type Filter",
-                        value="All File Endings",
+                        value=self.current_selected_option,
                         on_change=self.update_extension_filter,
                     ).classes("w-full")
             with ui.row().classes("w-full justify-end"):
@@ -185,31 +197,13 @@ class LocalFilePicker(ui.dialog):
         elif (
             self.current_extension_filter is not None and self.current_extension_filter
         ):
-            # Filter based on the dropdown selection (highest priority)
+            # Filter based on current_extension_filter (handles all extension filtering)
             # Only apply filter if current_extension_filter is not empty
             paths = [
                 p
                 for p in paths
                 if p.is_file()
                 and p.suffix in self.current_extension_filter
-                or p.is_dir()
-            ]
-        elif self.show_files_only_of_types:
-            # Support multiple file extensions
-            paths = [
-                p
-                for p in paths
-                if p.is_file()
-                and p.suffix in self.show_files_only_of_types
-                or p.is_dir()
-            ]
-        elif self.show_files_only_of_type:
-            # Backward compatibility for single file extension
-            paths = [
-                p
-                for p in paths
-                if p.is_file()
-                and p.suffix == self.show_files_only_of_type
                 or p.is_dir()
             ]
         paths.sort(key=lambda p: p.name.lower())
