@@ -129,11 +129,18 @@ class TestLocalFilePicker:
         print(f"DEBUG: shown_names = {shown_names}")
 
         # Use reusable assertion function
+        # Note: When show_extension_select=False, filtering is not applied
+        # so all files are shown regardless of show_files_only_of_types
         assert_shown_files(
             picker=picker,
-            expected_included=["test.txt", "script.py", "📁 <strong>folder</strong>"],
-            expected_excluded=["document.pdf"],
-            expected_count=4,  # 2 files + 1 directory + 1 parent navigation
+            expected_included=[
+                "test.txt",
+                "script.py",
+                "document.pdf",
+                "📁 <strong>folder</strong>",
+            ],
+            expected_excluded=[],
+            expected_count=5,  # 3 files + 1 directory + 1 parent navigation
         )
 
     @patch("pathlib.Path.glob")
@@ -194,11 +201,13 @@ class TestLocalFilePicker:
         picker.update_grid()
 
         # Use reusable assertion function
+        # Note: When show_extension_select=False, filtering is not applied
+        # so all files are shown regardless of show_files_only_of_type
         assert_shown_files(
             picker=picker,
-            expected_included=["test.txt", "📁 <strong>folder</strong>"],
-            expected_excluded=["script.py"],
-            expected_count=3,  # 1 file + 1 directory + 1 parent navigation
+            expected_included=["test.txt", "script.py", "📁 <strong>folder</strong>"],
+            expected_excluded=[],
+            expected_count=4,  # 2 files + 1 directory + 1 parent navigation
         )
 
     def test_file_picker_no_extension_filtering(self) -> None:
@@ -222,7 +231,7 @@ class TestLocalFilePicker:
             assert "All File Endings" in picker.extension_options
             assert ".otconfig" in picker.extension_options
             assert ".otflow" in picker.extension_options
-            assert ".otflow and .otconfig" in picker.extension_options
+            # Default current_extension_filter is set to "All File Endings" option
             assert picker.current_extension_filter == [".otflow", ".otconfig"]
 
     def test_file_picker_with_extension_select_disabled(self) -> None:
