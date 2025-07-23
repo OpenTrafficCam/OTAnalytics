@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -237,3 +238,23 @@ class RoadUserAssignments:
             A string representation including the class name and the assignments.
         """
         return RoadUserAssignments.__name__ + repr(self._assignments)
+
+
+class RoadUserAssigner(ABC):
+    """
+    Class to assign tracks to flows.
+    """
+
+    @abstractmethod
+    def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
+        """
+        Assign each track to exactly one flow.
+
+        Args:
+            events (Iterable[Event]): events to be used during assignment
+            flows (list[Flow]): flows to assign tracks to
+
+        Returns:
+            RoadUserAssignments: group of RoadUserAssignment objects
+        """
+        raise NotImplementedError

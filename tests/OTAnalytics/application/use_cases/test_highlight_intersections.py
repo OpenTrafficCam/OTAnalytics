@@ -6,11 +6,11 @@ import pytest
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.analysis.road_user_assignment import (
     EventPair,
+    RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignmentRepository,
     RoadUserAssignments,
 )
-from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.state import (
     FlowState,
     ObservableProperty,
@@ -129,7 +129,7 @@ class TestTracksIntersectingSelectedSections:
     ) -> None:
         section_state = Mock(spec=SectionState)
         selected_sections = Mock(spec=ObservableProperty)
-        selected_sections.get.return_value = [(section_2.id)]
+        selected_sections.get.return_value = [section_2.id]
         section_state.selected_sections = selected_sections
 
         get_section_by_id.return_value = [section_2]
@@ -490,9 +490,9 @@ class TestTracksOverlapOccurrenceWindow:
             result_ids = id_provider.get_ids()
 
             assert result_ids == [track_ids[0]]
-            assert track_repository.get_for.call_args_list == [
+            track_repository.get_for.call_args_list == [
                 call(id) for id in track_ids
-            ]
+            ]  # TODO: should this have an assert? if I add the assert the test fails!
 
     @pytest.mark.parametrize(
         (

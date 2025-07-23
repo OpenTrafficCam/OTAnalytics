@@ -1,10 +1,13 @@
+from unittest import mock
 from unittest.mock import Mock
 
 import pytest
 
 from OTAnalytics.application.analysis.road_user_assignment import (
+    RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignmentRepository,
+    RoadUserAssignments,
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.use_cases.create_road_user_assignments import (
@@ -17,6 +20,7 @@ from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportRoadUserAssignments,
     RoadUserAssignmentBuilder,
     RoadUserAssignmentBuildError,
+    RoadUserAssignmentExporter,
     RoadUserAssignmentExporterFactory,
 )
 from OTAnalytics.domain.section import Section
@@ -91,8 +95,8 @@ class TestExportRoadUserAssignments:
         event_repository = Mock()
         flow_repository = Mock()
         create_events = Mock()
-        road_user_assigner = Mock()
-        exporter_factory = Mock()
+        road_user_assigner = Mock(spec=RoadUserAssigner)
+        exporter_factory = Mock(spec=RoadUserAssignmentExporterFactory)
 
         events = Mock()
         event_repository.is_empty.return_value = False
@@ -101,32 +105,38 @@ class TestExportRoadUserAssignments:
         flows = Mock()
         flow_repository.get_all.return_value = flows
 
-        assignments = Mock()
+        assignments = Mock(spec=RoadUserAssignments)
+        assignment_list: list[RoadUserAssignment] = []
+        assignments.as_list.return_value = assignment_list
         road_user_assigner.assign.return_value = assignments
 
-        exporter = Mock(spec=RoadUserAssignmentExporterFactory)
+        exporter = Mock(spec=RoadUserAssignmentExporter)
         exporter_factory.create.return_value = exporter
 
         rua_repo = RoadUserAssignmentRepository()
-        create_assignments = CreateRoadUserAssignments(
-            flow_repository,
-            event_repository,
-            create_events,
-            road_user_assigner,
-            rua_repo,
-        )
-        get_assignments = GetRoadUserAssignments(rua_repo, create_assignments)
 
-        export_road_user_assignments = ExportRoadUserAssignments(
-            get_assignments,
-            exporter_factory,
-        )
-        specification = Mock()
-        specification.save_path = Mock()
-        specification.format = "csv"
-        specification.mode = OVERWRITE
+        with mock.patch.object(RoadUserAssignmentRepository, "get_all") as get_all_mock:
+            get_all_mock.return_value = assignments
 
-        export_road_user_assignments.export(specification)
+            create_assignments = CreateRoadUserAssignments(
+                flow_repository,
+                event_repository,
+                create_events,
+                road_user_assigner,
+                rua_repo,
+            )
+            get_assignments = GetRoadUserAssignments(rua_repo, create_assignments)
+
+            export_road_user_assignments = ExportRoadUserAssignments(
+                get_assignments,
+                exporter_factory,
+            )
+            specification = Mock()
+            specification.save_path = Mock()
+            specification.format = "csv"
+            specification.mode = OVERWRITE
+
+            export_road_user_assignments.export(specification)
 
         event_repository.is_empty.assert_called_once()
         event_repository.get_all.assert_called_once()

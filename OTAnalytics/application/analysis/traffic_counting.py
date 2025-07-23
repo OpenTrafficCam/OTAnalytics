@@ -11,6 +11,7 @@ from PIL.Image import Image
 
 from OTAnalytics.application.analysis.road_user_assignment import (
     EventPair,
+    RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignments,
 )
@@ -610,26 +611,6 @@ class TaggedAssignments:
                 for tag, countable in self._assignments.items()
             }
         )
-
-
-class RoadUserAssigner(ABC):
-    """
-    Class to assign tracks to flows.
-    """
-
-    @abstractmethod
-    def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
-        """
-        Assign each track to exactly one flow.
-
-        Args:
-            events (Iterable[Event]): events to be used during assignment
-            flows (list[Flow]): flows to assign tracks to
-
-        Returns:
-            RoadUserAssignments: group of RoadUserAssignment objects
-        """
-        raise NotImplementedError
 
 
 class RoadUserAssignerDecorator(RoadUserAssigner):

@@ -1,7 +1,7 @@
 from OTAnalytics.application.analysis.road_user_assignment import (
+    RoadUserAssigner,
     RoadUserAssignmentRepository,
 )
-from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository

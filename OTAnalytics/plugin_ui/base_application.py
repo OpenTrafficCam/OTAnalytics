@@ -12,12 +12,12 @@ from OTAnalytics.application.analysis.intersect import (
     TracksIntersectingSections,
 )
 from OTAnalytics.application.analysis.road_user_assignment import (
+    RoadUserAssigner,
     RoadUserAssignmentRepository,
 )
 from OTAnalytics.application.analysis.traffic_counting import (
     ExportTrafficCounting,
     FilterBySectionEnterEvent,
-    RoadUserAssigner,
     SimpleRoadUserAssigner,
     SimpleTaggerFactory,
     TrafficCounting,
