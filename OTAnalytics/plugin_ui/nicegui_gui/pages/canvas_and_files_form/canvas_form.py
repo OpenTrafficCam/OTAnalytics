@@ -158,6 +158,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def _cancel_action(self) -> None:
         """Cancel the current action and refresh the canvas."""
+        self.__reset_editor()
         self._viewmodel.cancel_action()
         self._viewmodel.refresh_items_on_canvas()
 
