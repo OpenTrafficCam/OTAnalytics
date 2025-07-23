@@ -1087,7 +1087,6 @@ class DummyViewModel(
 
     def _draw_arrow_for_selected_flows(self) -> None:
         for flow in self._get_selected_flows():
-            print(flow)
             if start_section := self._application.get_section_for(flow.start):
                 if end_section := self._application.get_section_for(flow.end):
                     start_refpt_calculator = self._get_section_refpt_calculator(
