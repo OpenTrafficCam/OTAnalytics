@@ -536,6 +536,7 @@ class DummyViewModel(
         self._application.action_state.action_running.set(True)
 
     def _finish_action(self) -> None:
+        self.refresh_items_on_canvas()
         self._application.action_state.action_running.set(False)
         self._update_enabled_buttons()
 
@@ -1086,6 +1087,7 @@ class DummyViewModel(
 
     def _draw_arrow_for_selected_flows(self) -> None:
         for flow in self._get_selected_flows():
+            print(flow)
             if start_section := self._application.get_section_for(flow.start):
                 if end_section := self._application.get_section_for(flow.end):
                     start_refpt_calculator = self._get_section_refpt_calculator(
@@ -1150,6 +1152,7 @@ class DummyViewModel(
             flow = await self.__create_flow()
             logger().info(f"Added new flow: {flow.id}")
             self.set_selected_flow_ids([flow.id.serialize()])
+            self.refresh_items_on_canvas()
 
     async def __create_flow(self) -> Flow:
         flow_data = await self._show_flow_popup()
@@ -1242,6 +1245,12 @@ class DummyViewModel(
 
     def generate_flows(self) -> None:
         self._application.generate_flows()
+        # Select all flows so they become visible on canvas
+        all_flow_ids = [
+            flow.id.serialize() for flow in self._application.get_all_flows()
+        ]
+        self.set_selected_flow_ids(all_flow_ids)
+        self.refresh_items_on_canvas()
 
     def __to_resource(self, section: Section) -> ColumnResource:
         values = {COLUMN_NAME: section.name}

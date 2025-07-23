@@ -23,6 +23,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
 TEST_FLOW_NAME = "Test Flow"
 TEST_START_SECTION = "Section A"
 TEST_END_SECTION = "Section B"
+TEST_START_SECTION_ID = "section-a-id"
+TEST_END_SECTION_ID = "section-b-id"
 TEST_DISTANCE = 100.0
 TEST_FLOW_ID = "flow-123"
 ENDPOINT_NAME = "/test-edit-flow-dialog"
@@ -32,7 +34,18 @@ ENDPOINT_NAME = "/test-edit-flow-dialog"
 def section_ids() -> Mock:
     section_ids = MagicMock(spec=ColumnResources)
     section_ids.names = [TEST_START_SECTION, TEST_END_SECTION, "Section C"]
-    section_ids.get_name_for.side_effect = lambda x: x
+    # Mock name-to-ID mapping (what the dialog now uses)
+    section_ids.get_id_for.side_effect = lambda name: {
+        TEST_START_SECTION: TEST_START_SECTION_ID,
+        TEST_END_SECTION: TEST_END_SECTION_ID,
+        "Section C": "section-c-id",
+    }.get(name, name)
+    # Mock ID-to-name mapping (for display purposes)
+    section_ids.get_name_for.side_effect = lambda id: {
+        TEST_START_SECTION_ID: TEST_START_SECTION,
+        TEST_END_SECTION_ID: TEST_END_SECTION,
+        "section-c-id": "Section C",
+    }.get(id, id)
     return section_ids
 
 
@@ -48,8 +61,8 @@ def name_generator() -> Mock:
 def flow_dto() -> FlowDto:
     return FlowDto(
         name=TEST_FLOW_NAME,
-        start_section=TEST_START_SECTION,
-        end_section=TEST_END_SECTION,
+        start_section=TEST_START_SECTION_ID,  # Use section ID, not name
+        end_section=TEST_END_SECTION_ID,  # Use section ID, not name
         flow_id=TEST_FLOW_ID,
         distance=TEST_DISTANCE,
     )
@@ -155,8 +168,12 @@ class TestEditFlowDialog:
 
         # Check that the flow has the correct values
         assert flow.name == TEST_FLOW_NAME
-        assert flow.start_section == TEST_START_SECTION
-        assert flow.end_section == TEST_END_SECTION
+        assert (
+            flow.start_section == TEST_START_SECTION_ID
+        )  # Now expects section ID, not name
+        assert (
+            flow.end_section == TEST_END_SECTION_ID
+        )  # Now expects section ID, not name
         assert flow.distance == TEST_DISTANCE
         assert flow.flow_id is None  # No input values were provided
 
@@ -179,8 +196,12 @@ class TestEditFlowDialog:
 
         # Check that the flow has the correct values
         assert flow.name == TEST_FLOW_NAME
-        assert flow.start_section == TEST_START_SECTION
-        assert flow.end_section == TEST_END_SECTION
+        assert (
+            flow.start_section == TEST_START_SECTION_ID
+        )  # Now expects section ID, not name
+        assert (
+            flow.end_section == TEST_END_SECTION_ID
+        )  # Now expects section ID, not name
         assert flow.distance == TEST_DISTANCE
         assert flow.flow_id == TEST_FLOW_ID
 
