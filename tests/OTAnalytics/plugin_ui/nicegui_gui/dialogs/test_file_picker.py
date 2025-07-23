@@ -1,6 +1,10 @@
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 from unittest.mock import Mock, patch
+
+import pytest
+from nicegui import ui
+from nicegui.testing import User
 
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
 from tests.conftest import assert_shown_files
@@ -9,35 +13,59 @@ from tests.conftest import assert_shown_files
 class TestLocalFilePicker:
     """Test the LocalFilePicker file extension filtering functionality."""
 
-    def test_file_picker_initialization_with_multiple_extensions(self) -> None:
+    @pytest.mark.asyncio
+    async def test_file_picker_initialization_with_multiple_extensions(
+        self, user: User
+    ) -> None:
         test_dir: Path = Path("/tmp")
         extensions: List[str] = [".txt", ".py", ".md"]
 
-        with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui"):
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
+
+        @ui.page("/test-file-picker-init")
+        def test_page() -> None:
             picker = LocalFilePicker(
                 directory=test_dir, show_files_only_of_types=extensions
             )
+            # Store picker for assertions
+            picker_container["picker"] = picker
 
-            assert picker.show_files_only_of_types == extensions
-            assert picker.path == test_dir.expanduser()
+        await user.open("/test-file-picker-init")
 
-    def test_file_picker_backward_compatibility(self) -> None:
+        # Access the picker instance for assertions
+        picker = picker_container["picker"]
+        assert picker.show_files_only_of_types == extensions
+        assert picker.path == test_dir.expanduser()
+
+    @pytest.mark.asyncio
+    async def test_file_picker_backward_compatibility(self, user: User) -> None:
         """Test that the old single extension parameter still works."""
         test_dir: Path = Path("/tmp")
         extension: str = ".txt"
 
-        with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui"):
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
+
+        @ui.page("/test-file-picker-backward")
+        def test_page() -> None:
             picker = LocalFilePicker(
                 directory=test_dir, show_files_only_of_type=extension
             )
+            # Store picker for assertions
+            picker_container["picker"] = picker
 
-            assert picker.show_files_only_of_type == extension
-            assert picker.show_files_only_of_types is None
+        await user.open("/test-file-picker-backward")
 
+        # Access the picker instance for assertions
+        picker = picker_container["picker"]
+        assert picker.show_files_only_of_type == extension
+        assert picker.show_files_only_of_types is None
+
+    @pytest.mark.asyncio
     @patch("pathlib.Path.glob")
-    @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui")
-    def test_file_filtering_with_multiple_extensions(
-        self, mock_ui: Mock, mock_glob: Mock
+    async def test_file_filtering_with_multiple_extensions(
+        self, mock_glob: Mock, user: User
     ) -> None:
         """Test that files are filtered correctly with multiple extensions."""
         test_dir: Path = Path("/tmp")
@@ -79,16 +107,23 @@ class TestLocalFilePicker:
 
         mock_glob.return_value = mock_files
 
-        picker = LocalFilePicker(
-            directory=test_dir,
-            show_files_only_of_types=extensions,
-            show_extension_select=False,
-        )
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
 
-        # Set up the mock grid with proper options dictionary
-        picker.grid = Mock()
-        picker.grid.options = {}
-        picker.grid.update = Mock()
+        @ui.page("/test-file-filtering-multiple")
+        def test_page() -> None:
+            picker = LocalFilePicker(
+                directory=test_dir,
+                show_files_only_of_types=extensions,
+                show_extension_select=False,
+            )
+            # Store picker for assertions
+            picker_container["picker"] = picker
+
+        await user.open("/test-file-filtering-multiple")
+
+        # Access the picker instance for testing
+        picker = picker_container["picker"]
 
         # Replace picker.path with a mock that has a glob method
         mock_path = Mock()
@@ -143,10 +178,10 @@ class TestLocalFilePicker:
             expected_count=5,  # 3 files + 1 directory + 1 parent navigation
         )
 
+    @pytest.mark.asyncio
     @patch("pathlib.Path.glob")
-    @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui")
-    def test_file_filtering_with_single_extension_backward_compatibility(
-        self, mock_ui: Mock, mock_glob: Mock
+    async def test_file_filtering_with_single_extension_backward_compatibility(
+        self, mock_glob: Mock, user: User
     ) -> None:
         test_dir: Path = Path("/tmp")
         extension: str = ".txt"
@@ -180,16 +215,23 @@ class TestLocalFilePicker:
 
         mock_glob.return_value = mock_files
 
-        picker = LocalFilePicker(
-            directory=test_dir,
-            show_files_only_of_type=extension,
-            show_extension_select=False,
-        )
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
 
-        # Set up the mock grid with proper options dictionary
-        picker.grid = Mock()
-        picker.grid.options = {}
-        picker.grid.update = Mock()
+        @ui.page("/test-file-filtering-single")
+        def test_page() -> None:
+            picker = LocalFilePicker(
+                directory=test_dir,
+                show_files_only_of_type=extension,
+                show_extension_select=False,
+            )
+            # Store picker for assertions
+            picker_container["picker"] = picker
+
+        await user.open("/test-file-filtering-single")
+
+        # Access the picker instance for testing
+        picker = picker_container["picker"]
 
         # Replace picker.path with a mock that has a glob method
         mock_path = Mock()
@@ -210,61 +252,104 @@ class TestLocalFilePicker:
             expected_count=4,  # 2 files + 1 directory + 1 parent navigation
         )
 
-    def test_file_picker_no_extension_filtering(self) -> None:
+    @pytest.mark.asyncio
+    async def test_file_picker_no_extension_filtering(self, user: User) -> None:
         """Test that when no extensions are specified, all files are shown."""
         test_dir = Path("/tmp")
 
-        with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui"):
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
+
+        @ui.page("/test-file-picker-no-filtering")
+        def test_page() -> None:
             picker = LocalFilePicker(directory=test_dir)
+            # Store picker for assertions
+            picker_container["picker"] = picker
 
-            assert picker.show_files_only_of_type is None
-            assert picker.show_files_only_of_types is None
+        await user.open("/test-file-picker-no-filtering")
 
-    def test_file_picker_with_extension_select_enabled(self) -> None:
+        # Access the picker instance for assertions
+        picker = picker_container["picker"]
+        assert picker.show_files_only_of_type is None
+        assert picker.show_files_only_of_types is None
+
+    @pytest.mark.asyncio
+    async def test_file_picker_with_extension_select_enabled(self, user: User) -> None:
         test_dir = Path("/tmp")
 
-        with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui"):
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
+
+        @ui.page("/test-file-picker-extension-enabled")
+        def test_page() -> None:
             picker = LocalFilePicker(directory=test_dir, show_extension_select=True)
+            # Store picker for assertions
+            picker_container["picker"] = picker
 
-            assert picker.show_extension_select is True
-            assert picker.extension_options is not None
-            assert "All File Endings" in picker.extension_options
-            assert ".otconfig" in picker.extension_options
-            assert ".otflow" in picker.extension_options
-            # Default current_extension_filter is set to "All File Endings" option
-            assert picker.current_extension_filter == [".otflow", ".otconfig"]
+        await user.open("/test-file-picker-extension-enabled")
 
-    def test_file_picker_with_extension_select_disabled(self) -> None:
+        # Access the picker instance for assertions
+        picker = picker_container["picker"]
+        assert picker.show_extension_select is True
+        assert picker.extension_options is not None
+        assert "All File Endings" in picker.extension_options
+        assert ".otconfig" in picker.extension_options
+        assert ".otflow" in picker.extension_options
+        # Default current_extension_filter is set to "All File Endings" option
+        assert picker.current_extension_filter == [".otflow", ".otconfig"]
+
+    @pytest.mark.asyncio
+    async def test_file_picker_with_extension_select_disabled(self, user: User) -> None:
         test_dir = Path("/tmp")
 
-        with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui"):
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
+
+        @ui.page("/test-file-picker-extension-disabled")
+        def test_page() -> None:
             picker = LocalFilePicker(directory=test_dir, show_extension_select=False)
+            # Store picker for assertions
+            picker_container["picker"] = picker
 
-            assert picker.show_extension_select is False
-            assert (
-                picker.extension_options is not None
-            )  # Still defined but not used in UI
+        await user.open("/test-file-picker-extension-disabled")
 
-    def test_extension_filter_update(self) -> None:
+        # Access the picker instance for assertions
+        picker = picker_container["picker"]
+        assert picker.show_extension_select is False
+        assert picker.extension_options is not None  # Still defined but not used in UI
+
+    @pytest.mark.asyncio
+    async def test_extension_filter_update(self, user: User) -> None:
         test_dir = Path("/tmp")
 
-        with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui"):
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
+
+        @ui.page("/test-extension-filter-update")
+        def test_page() -> None:
             picker = LocalFilePicker(directory=test_dir, show_extension_select=True)
+            # Store picker for assertions
+            picker_container["picker"] = picker
 
-            # Mock event object
-            mock_event = Mock()
-            mock_event.value = ".otconfig"
+        await user.open("/test-extension-filter-update")
 
-            # Call the update method
-            picker.update_extension_filter(mock_event)
+        # Access the picker instance for testing
+        picker = picker_container["picker"]
 
-            # Verify the filter was updated
-            assert picker.current_extension_filter == [".otconfig"]
+        # Mock event object
+        mock_event = Mock()
+        mock_event.value = ".otconfig"
 
+        # Call the update method
+        picker.update_extension_filter(mock_event)
+
+        # Verify the filter was updated
+        assert picker.current_extension_filter == [".otconfig"]
+
+    @pytest.mark.asyncio
     @patch("pathlib.Path.glob")
-    @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui")
-    def test_dropdown_filter_takes_priority(
-        self, mock_ui: Mock, mock_glob: Mock
+    async def test_dropdown_filter_takes_priority(
+        self, mock_glob: Mock, user: User
     ) -> None:
         """Test that dropdown filter takes priority over parameter-based filters."""
         test_dir: Path = Path("/tmp")
@@ -305,17 +390,24 @@ class TestLocalFilePicker:
 
         mock_glob.return_value = mock_files
 
-        # Create picker with parameter-based filter
-        picker = LocalFilePicker(
-            directory=test_dir,
-            show_files_only_of_types=[".txt", ".md"],  # Parameter filter
-            show_extension_select=True,
-        )
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
 
-        # Set up the mock grid with proper options dictionary
-        picker.grid = Mock()
-        picker.grid.options = {}
-        picker.grid.update = Mock()
+        @ui.page("/test-dropdown-filter-priority")
+        def test_page() -> None:
+            # Create picker with parameter-based filter
+            picker = LocalFilePicker(
+                directory=test_dir,
+                show_files_only_of_types=[".txt", ".md"],  # Parameter filter
+                show_extension_select=True,
+            )
+            # Store picker for assertions
+            picker_container["picker"] = picker
+
+        await user.open("/test-dropdown-filter-priority")
+
+        # Access the picker instance for testing
+        picker = picker_container["picker"]
 
         # Replace picker.path with a mock that has a glob method
         mock_path = Mock()

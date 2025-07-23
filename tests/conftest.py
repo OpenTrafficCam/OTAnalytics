@@ -38,6 +38,7 @@ from tests.utils.builders.track_segment_builder import (
 
 pytest_plugins = ["nicegui.testing.user_plugin"]
 
+
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
 

@@ -1,91 +1,141 @@
 from pathlib import Path
+from typing import Any, Dict
 from unittest.mock import Mock, patch
 
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import (
-    ROW_DATA,
-    LocalFilePicker,
-)
+import pytest
+from nicegui import ui
+from nicegui.testing import User
+
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
 from tests.conftest import assert_shown_files
 
 
 class TestFileExtensionFiltering:
     """Test the new file extension filtering functionality."""
 
-    def test_multiple_extensions_filtering_example(self) -> None:
+    @pytest.mark.asyncio
+    async def test_multiple_extensions_filtering_example(self, user: User) -> None:
         """Demonstrate how to use LocalFilePicker with multiple file extensions."""
         test_dir = Path("/tmp")
 
         # Example: Filter for text files, Python files, and Markdown files
         extensions = [".txt", ".py", ".md"]
 
-        with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui"):
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
+
+        @ui.page("/test-multiple-extensions-example")
+        def test_page() -> None:
             picker = LocalFilePicker(
                 directory=test_dir, show_files_only_of_types=extensions
             )
+            # Store picker for assertions
+            picker_container["picker"] = picker
 
-            # Verify the picker was configured correctly
-            assert picker.show_files_only_of_types == extensions
-            assert (
-                picker.show_files_only_of_type is None
-            )  # Should be None when using new parameter
-            assert picker.path == test_dir.expanduser()
+        await user.open("/test-multiple-extensions-example")
 
-    def test_single_extension_backward_compatibility_example(self) -> None:
+        # Access the picker instance for assertions
+        picker = picker_container["picker"]
+        # Verify the picker was configured correctly
+        assert picker.show_files_only_of_types == extensions
+        assert (
+            picker.show_files_only_of_type is None
+        )  # Should be None when using new parameter
+        assert picker.path == test_dir.expanduser()
+
+    @pytest.mark.asyncio
+    async def test_single_extension_backward_compatibility_example(
+        self, user: User
+    ) -> None:
         """Demonstrate backward compatibility with single extension filtering."""
         test_dir = Path("/tmp")
 
         # Example: Filter for only Python files (old way)
         extension = ".py"
 
-        with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui"):
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
+
+        @ui.page("/test-single-extension-example")
+        def test_page() -> None:
             picker = LocalFilePicker(
                 directory=test_dir, show_files_only_of_type=extension
             )
+            # Store picker for assertions
+            picker_container["picker"] = picker
 
-            # Verify the picker was configured correctly
-            assert picker.show_files_only_of_type == extension
-            assert (
-                picker.show_files_only_of_types is None
-            )  # Should be None when using old parameter
-            assert picker.path == test_dir.expanduser()
+        await user.open("/test-single-extension-example")
 
-    def test_no_extension_filtering_example(self) -> None:
+        # Access the picker instance for assertions
+        picker = picker_container["picker"]
+        # Verify the picker was configured correctly
+        assert picker.show_files_only_of_type == extension
+        assert (
+            picker.show_files_only_of_types is None
+        )  # Should be None when using old parameter
+        assert picker.path == test_dir.expanduser()
+
+    @pytest.mark.asyncio
+    async def test_no_extension_filtering_example(self, user: User) -> None:
         """Demonstrate showing all files (no filtering)."""
         test_dir = Path("/tmp")
 
-        with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui"):
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
+
+        @ui.page("/test-no-extension-filtering-example")
+        def test_page() -> None:
             picker = LocalFilePicker(directory=test_dir)
+            # Store picker for assertions
+            picker_container["picker"] = picker
 
-            # Verify no filtering is applied
-            assert picker.show_files_only_of_type is None
-            assert picker.show_files_only_of_types is None
-            assert picker.path == test_dir.expanduser()
+        await user.open("/test-no-extension-filtering-example")
 
-    def test_priority_of_multiple_extensions_over_single(self) -> None:
+        # Access the picker instance for assertions
+        picker = picker_container["picker"]
+        # Verify no filtering is applied
+        assert picker.show_files_only_of_type is None
+        assert picker.show_files_only_of_types is None
+        assert picker.path == test_dir.expanduser()
+
+    @pytest.mark.asyncio
+    async def test_priority_of_multiple_extensions_over_single(
+        self, user: User
+    ) -> None:
         test_dir = Path("/tmp")
 
         # Provide both parameters - multiple should take priority
         single_extension = ".txt"
         multiple_extensions = [".py", ".md"]
 
-        with patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui"):
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
+
+        @ui.page("/test-priority-multiple-over-single")
+        def test_page() -> None:
             picker = LocalFilePicker(
                 directory=test_dir,
                 show_files_only_of_type=single_extension,
                 show_files_only_of_types=multiple_extensions,
             )
+            # Store picker for assertions
+            picker_container["picker"] = picker
 
-            # Verify both are stored
-            assert picker.show_files_only_of_type == single_extension
-            assert picker.show_files_only_of_types == multiple_extensions
+        await user.open("/test-priority-multiple-over-single")
 
-            # The filtering logic should prioritize multiple_extensions
-            # This would be tested in the actual filtering logic
+        # Access the picker instance for assertions
+        picker = picker_container["picker"]
+        # Verify both are stored
+        assert picker.show_files_only_of_type == single_extension
+        assert picker.show_files_only_of_types == multiple_extensions
 
+        # The filtering logic should prioritize multiple_extensions
+        # This would be tested in the actual filtering logic
+
+    @pytest.mark.asyncio
     @patch("pathlib.Path.glob")
-    @patch("OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker.ui")
-    def test_filtering_logic_with_multiple_extensions(
-        self, mock_ui: Mock, mock_glob: Mock
+    async def test_filtering_logic_with_multiple_extensions(
+        self, mock_glob: Mock, user: User
     ) -> None:
         """Test that the filtering logic correctly handles multiple extensions."""
         test_dir = Path("/tmp")
@@ -111,13 +161,27 @@ class TestFileExtensionFiltering:
 
         mock_glob.return_value = mock_files
 
-        picker = LocalFilePicker(
-            directory=test_dir, show_files_only_of_types=extensions
-        )
+        # Container to store picker instance
+        picker_container: Dict[str, Any] = {}
 
-        # Mock the grid to have a proper options dictionary structure
-        picker.grid = Mock()
-        picker.grid.options = {ROW_DATA: []}
+        @ui.page("/test-filtering-logic-multiple-extensions")
+        def test_page() -> None:
+            picker = LocalFilePicker(
+                directory=test_dir, show_files_only_of_types=extensions
+            )
+            # Store picker for assertions
+            picker_container["picker"] = picker
+
+        await user.open("/test-filtering-logic-multiple-extensions")
+
+        # Access the picker instance for testing
+        picker = picker_container["picker"]
+
+        # Replace picker.path with a mock that has a glob method
+        mock_path = Mock()
+        mock_path.glob.return_value = mock_files
+        mock_path.parent = test_dir.parent
+        picker.path = mock_path
 
         # Set current_selected_option to something other than "All Files"
         # so that show_files_only_of_types filtering is applied
