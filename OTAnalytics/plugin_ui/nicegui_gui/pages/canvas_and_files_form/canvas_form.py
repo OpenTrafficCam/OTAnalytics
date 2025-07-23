@@ -129,23 +129,37 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     async def handle_key(self, e: KeyEventArguments) -> None:
         if e.key == self._resource_manager.get_hotkey(HotKeys.SAVE_SECTION_HOTKEY):
             if self._new_section:
-                coordinates = [circle.to_tuple() for circle in self._new_section_points]
-                self.__reset_editor()
-                await self._viewmodel.add_new_section(
-                    coordinates=coordinates,
-                    is_area_section=self._new_area_section,
-                    get_metadata=self.__get_metadata,
-                )
+                await self._save_new_section()
             elif self._current_section:
-                metadata = self._current_section.to_dict()
-                coordinates = self._current_section_geometry()
-                self.__reset_editor()
-                self._viewmodel.update_section_coordinates(metadata, coordinates)
+                self._save_edit_section()
         if e.key == self._resource_manager.get_hotkey(
             HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY
         ):
-            self._viewmodel.cancel_action()
-            self._viewmodel.refresh_items_on_canvas()
+            self._cancel_action()
+
+    async def _save_new_section(self) -> None:
+        """Save a new section with the current points."""
+        coordinates = [circle.to_tuple() for circle in self._new_section_points]
+        self.__reset_editor()
+        await self._viewmodel.add_new_section(
+            coordinates=coordinates,
+            is_area_section=self._new_area_section,
+            get_metadata=self.__get_metadata,
+        )
+
+    def _save_edit_section(self) -> None:
+        """Save changes to an existing section."""
+        if self._current_section is None:
+            return
+        metadata = self._current_section.to_dict()
+        coordinates = self._current_section_geometry()
+        self.__reset_editor()
+        self._viewmodel.update_section_coordinates(metadata, coordinates)
+
+    def _cancel_action(self) -> None:
+        """Cancel the current action and refresh the canvas."""
+        self._viewmodel.cancel_action()
+        self._viewmodel.refresh_items_on_canvas()
 
     def _current_section_geometry(self) -> list[tuple[int, int]]:
         if self._current_section is None:

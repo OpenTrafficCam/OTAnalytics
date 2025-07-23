@@ -52,14 +52,14 @@ class CtkUiFactory(UiFactory):
     ) -> MessageBox:
         return MinimalInfoBox(message=message, initial_position=initial_position)
 
-    def askopenfilenames(
+    async def askopenfilenames(
         self,
         title: str,
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
     ) -> Literal[""] | tuple[str, ...]:
         return askopenfilenames(title=title, filetypes=filetypes)
 
-    def askopenfilename(
+    async def askopenfilename(
         self,
         title: str,
         filetypes: list[tuple[str, str]],
@@ -69,7 +69,7 @@ class CtkUiFactory(UiFactory):
             title=title, filetypes=filetypes, defaultextension=defaultextension
         )
 
-    def ask_for_save_file_path(
+    async def ask_for_save_file_path(
         self,
         title: str,
         filetypes: list[tuple[str, str]],
@@ -85,7 +85,7 @@ class CtkUiFactory(UiFactory):
             initialdir=initialdir,
         )
 
-    def configure_export_file(
+    async def configure_export_file(
         self,
         title: str,
         export_format_extensions: dict[str, str],
@@ -108,7 +108,7 @@ class CtkUiFactory(UiFactory):
         export_format = export_config[toplevel_export_file.EXPORT_FORMAT]
         return ExportFileDto(file=file, export_format=export_format)
 
-    def configure_export_counts(
+    async def configure_export_counts(
         self,
         start: datetime | None,
         end: datetime | None,

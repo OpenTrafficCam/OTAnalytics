@@ -8,10 +8,10 @@ class EventTypeParseError(Exception):
 class EventType(Enum):
     """Enum defining all event types."""
 
-    SECTION_ENTER: str = "section-enter"
-    SECTION_LEAVE: str = "section-leave"
-    ENTER_SCENE: str = "enter-scene"
-    LEAVE_SCENE: str = "leave-scene"
+    SECTION_ENTER = "section-enter"
+    SECTION_LEAVE = "section-leave"
+    ENTER_SCENE = "enter-scene"
+    LEAVE_SCENE = "leave-scene"
 
     def serialize(self) -> str:
         return self.value

@@ -200,13 +200,13 @@ class Track(ABC):
         return self.last_detection.occurrence
 
 
-@dataclass(frozen=True)
-class TrackImage:
+class TrackImage(ABC):
     """
     Represents an image with tracks. This might be an empty image or one with different
     types of track visualisation.
     """
 
+    @abstractmethod
     def add(self, other: "TrackImage") -> "TrackImage":
         """
         Add the other image on top of this image. The composition of the two images
@@ -218,9 +218,7 @@ class TrackImage:
         Returns:
             TrackImage: combined image of this and the other image
         """
-        self_image = self.as_image().convert(mode="RGBA")
-        other_image = other.as_image().convert(mode="RGBA")
-        return PilImage(Image.alpha_composite(self_image, other_image))
+        raise NotImplementedError
 
     @abstractmethod
     def as_image(self) -> Image.Image:
@@ -230,7 +228,11 @@ class TrackImage:
         Returns:
             Image.Image: image as pillow image
         """
-        pass
+        raise NotImplementedError
+
+    @abstractmethod
+    def as_base64(self) -> str:
+        raise NotImplementedError
 
     @abstractmethod
     def width(self) -> int:
@@ -240,7 +242,7 @@ class TrackImage:
         Returns:
             int: width of the image
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def height(self) -> int:
@@ -250,28 +252,10 @@ class TrackImage:
         Returns:
             int: height of the image
         """
-        pass
+        raise NotImplementedError
 
     def save(self, name: str) -> None:
         self.as_image().save(name)
-
-
-@dataclass(frozen=True)
-class PilImage(TrackImage):
-    """
-    Concrete implementation using pillow as image format.
-    """
-
-    _image: Image.Image
-
-    def as_image(self) -> Image.Image:
-        return self._image
-
-    def width(self) -> int:
-        return self._image.width
-
-    def height(self) -> int:
-        return self._image.height
 
 
 class TrackClassificationCalculator(ABC):

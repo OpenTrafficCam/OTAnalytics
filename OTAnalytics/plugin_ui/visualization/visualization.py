@@ -67,6 +67,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     SectionLayerPlotter,
     TrackBoundingBoxPlotter,
     TrackGeometryPlotter,
+    TrackImageFactory,
     TrackPointPlotter,
     TrackStartEndPointPlotter,
 )
@@ -192,6 +193,7 @@ class VisualizationBuilder:
         section_state: SectionState,
         color_palette_provider: ColorPaletteProvider,
         pulling_progressbar_builder: ProgressbarBuilder,
+        track_image_factory: TrackImageFactory,
         enable_single_legend: bool = True,
         enable_multi_legend: bool = False,
     ) -> None:
@@ -200,6 +202,7 @@ class VisualizationBuilder:
         self._section_state = section_state
         self._color_palette_provider = color_palette_provider
         self._pulling_progressbar_builder = pulling_progressbar_builder
+        self._track_image_factory = track_image_factory
         self._enable_single_legend = enable_single_legend
         self._enable_multi_legend = enable_multi_legend
         self._track_repository = datastore._track_repository
@@ -382,6 +385,15 @@ class VisualizationBuilder:
         all_tracks_plotter = self._wrap_plotter_with_cache(track_geometry_plotter)
         return all_tracks_plotter
 
+    @cached_property
+    def all_tracks_plotter_implementation(self) -> MatplotlibPlotterImplementation:
+        return create_track_geometry_plotter(
+            self._get_data_provider_all_filters_with_offset(),
+            self._color_palette_provider,
+            alpha=ALPHA_ALL_TRACKS_PLOTTER,
+            enable_legend=self._enable_single_legend,
+        )
+
     def _create_highlight_tracks_intersecting_sections_plotter(self) -> Plotter:
         return self._create_cached_section_layer_plotter(
             self._create_highlight_tracks_intersecting_section_factory(
@@ -526,6 +538,15 @@ class VisualizationBuilder:
             track_start_end_point_plotter
         )
         return start_end_point_plotter
+
+    @cached_property
+    def start_end_point_plotter_implementation(self) -> MatplotlibPlotterImplementation:
+        return TrackStartEndPointPlotter(
+            self._get_data_provider_class_filter_with_offset(),
+            self._color_palette_provider,
+            alpha=ALPHA_HIGHLIGHT_START_END_POINTS,
+            enable_legend=self._enable_multi_legend,
+        )
 
     def _create_highlight_tracks_assigned_to_flows_plotter(
         self, flow_state: FlowState, get_assignments: GetRoadUserAssignments
@@ -714,6 +735,7 @@ class VisualizationBuilder:
             create_track_geometry_plotter(
                 pandas_data_provider, color_palette_provider, alpha, enable_legend
             ),
+            track_image_factory=self._track_image_factory,
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
 
@@ -745,6 +767,7 @@ class VisualizationBuilder:
                 enable_legend=enable_legend,
                 alpha=alpha,
             ),
+            track_image_factory=self._track_image_factory,
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
 
@@ -953,6 +976,7 @@ class VisualizationBuilder:
                 alpha=ALPHA_BOUNDING_BOX,
                 linewidth=LINEWIDTH_BOUNDING_BOX,
             ),
+            track_image_factory=self._track_image_factory,
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
 
@@ -970,6 +994,7 @@ class VisualizationBuilder:
                 alpha=ALPHA_BOUNDING_BOX,
                 markersize=MARKERSIZE_TRACK_POINT,
             ),
+            track_image_factory=self._track_image_factory,
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
 
@@ -988,6 +1013,7 @@ class VisualizationBuilder:
                 marker=MARKER_EVENT_FRAME,
                 markersize=MARKERSIZE_EVENT_FRAME,
             ),
+            track_image_factory=self._track_image_factory,
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
 
@@ -1000,5 +1026,6 @@ class VisualizationBuilder:
                 marker=MARKER_EVENT_FILTER,
                 markersize=MARKERSIZE_EVENT_FILTER,
             ),
+            track_image_factory=self._track_image_factory,
         )
         return PlotterPrototype(self._track_view_state, track_plotter)

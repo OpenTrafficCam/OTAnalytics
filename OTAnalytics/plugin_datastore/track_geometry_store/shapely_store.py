@@ -94,7 +94,7 @@ class InvalidTrackGeometryDataset(Exception):
 
 
 def distance_on_track(point: Point, track_geom: GeometryCollection) -> float:
-    distance = line_locate_point(track_geom, point)
+    distance = float(line_locate_point(track_geom, point))
     return round(distance, NDIGITS_DISTANCE)
 
 
@@ -394,7 +394,7 @@ def calculate_all_projections(tracks: DataFrame) -> Series:
     tracks["pow_y"] = tracks["length_y"].pow(2)
     tracks["sum_x_y_pow"] = tracks["pow_x"] + tracks["pow_y"]
     tracks["distance"] = tracks["sum_x_y_pow"].pow(1 / 2)
-    tracks["distance"].fillna(0, inplace=True)
+    tracks["distance"] = tracks["distance"].fillna(0)
     tracks["cum-distance"] = tracks.groupby(level=0, group_keys=True)[
         "distance"
     ].cumsum()

@@ -50,11 +50,18 @@ class FilterDateRangeForm:
         last_occurrence_info_text = self._resource_manager.get(
             VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE
         )
-        if first_occurrence := self._viewmodel.get_first_detection_occurrence():
+
+        # Get first and last occurrence values
+        first_occurrence = self._viewmodel.get_first_detection_occurrence()
+        last_occurrence = self._viewmodel.get_last_detection_occurrence()
+
+        # Update info text
+        if first_occurrence:
             first_occurrence_info_text += first_occurrence.strftime(DATETIME_FORMAT)
 
-        if last_occurrence := self._viewmodel.get_last_detection_occurrence():
+        if last_occurrence:
             last_occurrence_info_text += last_occurrence.strftime(DATETIME_FORMAT)
+
         with ui.dialog() as self._dialog, ui.card():
             with ui.row():
                 ui.label(
@@ -70,6 +77,15 @@ class FilterDateRangeForm:
                     )
                 )
                 self._end_date.build()
+
+            # Set values after building the UI elements
+            if first_occurrence:
+                # Preset start date with first occurrence
+                self._start_date.set_value(first_occurrence)
+
+            if last_occurrence:
+                # Preset end date with last occurrence
+                self._end_date.set_value(last_occurrence)
             ui.label(first_occurrence_info_text)
             ui.label(last_occurrence_info_text)
             with ui.row():

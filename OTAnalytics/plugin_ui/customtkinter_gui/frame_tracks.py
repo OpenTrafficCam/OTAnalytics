@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 from customtkinter import CTkButton, ThemeManager
@@ -37,7 +38,7 @@ class TracksFrame(AbstractFrameOffset, AbstractCTkFrame):
 
     def _get_widgets(self) -> None:
         self.button_load_tracks = CTkButton(
-            master=self, text="Add tracks...", command=self._viewmodel.load_tracks
+            master=self, text="Add tracks...", command=self._do_load_tracks
         )
         self._frame_bbox_offset = FrameBboxOffset(
             master=self,
@@ -52,6 +53,9 @@ class TracksFrame(AbstractFrameOffset, AbstractCTkFrame):
         )
         if current_track_offset := self._viewmodel.get_track_offset():
             self.update_offset(*current_track_offset)
+
+    def _do_load_tracks(self) -> None:
+        asyncio.run(self._viewmodel.load_tracks())
 
     def _place_widgets(self) -> None:
         self.button_load_tracks.grid(

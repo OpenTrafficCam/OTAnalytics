@@ -272,6 +272,9 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
     SimpleTrackStatisticsExporterFactory,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    TrackImageFactory,
+)
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
     ClassByFlowCountPlotter,
@@ -570,6 +573,11 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         raise NotImplementedError
 
     @cached_property
+    @abstractmethod
+    def track_image_factory(self) -> TrackImageFactory:
+        raise NotImplementedError
+
+    @cached_property
     def videos_metadata(self) -> VideosMetadata:
         return create_videos_metadata()
 
@@ -689,6 +697,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.section_state,
             self.color_palette_provider,
             self.progressbar_builder,
+            self.track_image_factory,
         )
 
     @cached_property
@@ -859,7 +868,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def video_parser(self) -> VideoParser:
-        return create_video_parser(self.videos_metadata)
+        return create_video_parser(self.videos_metadata, self.track_image_factory)
 
     @cached_property
     def remark_repository(self) -> RemarkRepository:
@@ -1107,8 +1116,12 @@ def create_format_fixer(
     return MultiFixer([FixMissingAnalysis(default_value_provider)])
 
 
-def create_video_parser(videos_metadata: VideosMetadata) -> VideoParser:
-    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(videos_metadata)))
+def create_video_parser(
+    videos_metadata: VideosMetadata, track_image_factory: TrackImageFactory
+) -> VideoParser:
+    return CachedVideoParser(
+        SimpleVideoParser(PyAvVideoReader(videos_metadata, track_image_factory))
+    )
 
 
 def create_videos_metadata() -> VideosMetadata:
