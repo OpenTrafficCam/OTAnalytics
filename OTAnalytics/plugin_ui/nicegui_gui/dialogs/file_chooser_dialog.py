@@ -32,6 +32,7 @@ class FileChooserDialog(BaseDialog):
         file_extensions: dict[str, str],
         initial_file_stem: str,
         initial_dir: Path = Path.home(),
+        extension_options: dict[str, list[str] | None] | None = None,
     ) -> None:
         """Initialize the file chooser dialog.
 
@@ -41,12 +42,14 @@ class FileChooserDialog(BaseDialog):
             file_extensions: A dictionary mapping format names to file extensions
             initial_file_stem: The initial file name without extension
             initial_dir: The initial directory to show
+            extension_options: Optional dictionary mapping
         """
         super().__init__(resource_manager)
         self._title = title
         self._file_extensions = file_extensions
         self._initial_file_stem = initial_file_stem
         self._initial_dir = initial_dir
+        self._extension_options = extension_options
 
         # Create form fields
         self._format_field = FormFieldSelect(
@@ -128,6 +131,7 @@ class FileChooserDialog(BaseDialog):
             show_hidden_files=False,
             show_files_only_of_type=None,  # Show all files
             show_only_directories=False,
+            extension_options=self._extension_options,
         )
         result = await picker
         if result and result[0]:
