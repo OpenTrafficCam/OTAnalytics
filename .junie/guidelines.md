@@ -43,6 +43,7 @@ OTAnalytics/
 ## Development Setup
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/OpenTrafficCam/OTAnalytics.git
    cd OTAnalytics
@@ -53,7 +54,6 @@ OTAnalytics/
 - Linux/macOS: `./install_dev.sh`
 - Windows: `install_dev.cmd`
 
-
 3. **Activate the virtual environment**:
 
 - `source venv/bin/activate`
@@ -61,6 +61,7 @@ OTAnalytics/
 ## Running the Application
 
 - **GUI Mode**:
+
   - Linux/macOS: `./start_gui.sh`
   - Windows: `start_gui.cmd`
 
@@ -71,11 +72,13 @@ OTAnalytics/
 ## Testing
 
 - **Run all tests**:
+
   ```bash
   python -m pytest
   ```
 
 - **Run tests with coverage**:
+
   ```bash
   python -m pytest --cov=OTAnalytics
   ```
