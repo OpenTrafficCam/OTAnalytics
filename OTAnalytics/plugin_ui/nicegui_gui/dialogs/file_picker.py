@@ -44,8 +44,7 @@ class LocalFilePicker(ui.dialog):
             show_only_directories (bool): Whether to show only directories.
                 If True, files will not be shown in the picker.
             show_extension_select (bool): Whether to show a dropdown
-            to select file extensions.
-                If True, a select dropdown will be
+                to select file extensions. If True, a select dropdown will be
                 displayed to filter files by extension.
             extension_options (Dict[str, Optional[List[str]]]): Custom extension options
                 for the dropdown selector. Keys are display names, values are lists of
