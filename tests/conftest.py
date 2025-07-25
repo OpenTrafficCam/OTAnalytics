@@ -1,6 +1,6 @@
 import shutil
 from pathlib import Path
-from typing import Any, Generator, Sequence, TypeVar
+from typing import Any, Generator, List, Sequence, TypeVar
 from unittest.mock import Mock
 
 import pytest
@@ -37,6 +37,7 @@ from tests.utils.builders.track_segment_builder import (
 )
 
 pytest_plugins = ["nicegui.testing.user_plugin"]
+
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
@@ -416,3 +417,48 @@ def second_road_user_assignment(
         first_flow,
         EventPair(first_section_event, second_section_event),
     )
+
+
+def assert_shown_files(
+    picker: Any,
+    expected_included: List[str],
+    expected_excluded: List[str],
+    expected_count: int,
+) -> None:
+    """
+    Reusable function to assert which files are shown in a LocalFilePicker.
+
+    Args:
+        picker: The LocalFilePicker instance to test
+        expected_included: List of file names that should be shown
+        expected_excluded: List of file names that should not be shown
+        expected_count: Expected total number of items in the grid
+    """
+    # Get row data from picker grid - handle both access patterns
+    row_data = picker.grid.options.get("rowData", [])
+
+    # Extract shown file names
+    shown_names = []
+    for row in row_data:
+        if isinstance(row, dict):
+            # Handle "name" key access pattern
+            name = row.get("name")
+            if name:
+                shown_names.append(name)
+
+    # Assert included files
+    for file_name in expected_included:
+        assert (
+            file_name in shown_names
+        ), f"Expected file '{file_name}' not found in shown files: {shown_names}"
+
+    # Assert excluded files
+    for file_name in expected_excluded:
+        assert (
+            file_name not in shown_names
+        ), f"Unexpected file '{file_name}' found in shown files: {shown_names}"
+
+    # Assert total count
+    assert (
+        len(row_data) == expected_count
+    ), f"Expected {expected_count} items, but got {len(row_data)}"
