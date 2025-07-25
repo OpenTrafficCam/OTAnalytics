@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from types import MethodType
-from unittest.mock import MagicMock, Mock
+from typing import Any
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -37,6 +38,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     MultiTag,
     SelectedFlowCandidates,
     SimpleRoadUserAssigner,
+    SimpleTaggerFactory,
     SingleTag,
     Tag,
     TaggedAssignments,
@@ -1162,6 +1164,101 @@ class TestTrafficCounting:
         else:
             tagged_assignments.filter.assert_called_once()
             road_user_assigner.assign.assert_called_once()
+
+
+class TestTrafficCountingFilterOptions:
+    START_1 = datetime(2000, 1, 1, 0, 0, 3, tzinfo=timezone.utc)
+    START_2 = datetime(2000, 1, 1, 0, 0, 8, tzinfo=timezone.utc)
+    END = datetime(2000, 1, 1, 0, 0, 10, tzinfo=timezone.utc)
+
+    @pytest.mark.parametrize(
+        "count_all_events,start,end,lower,upper,expected",
+        [
+            (True, START_1, END, True, True, [1, 2, 3, 4, 5, 6]),
+            (False, START_1, END, True, True, [4]),
+            (False, START_1, END, False, True, [1, 2, 3, 4]),
+            (False, START_1, END, True, False, [4, 5, 6]),
+            (False, START_1, END, False, False, [1, 2, 3, 4, 5, 6]),
+            (False, START_2, END, True, True, []),
+            (False, START_2, END, False, True, [2, 3, 4]),
+            (False, START_2, END, True, False, []),
+            (False, START_2, END, False, False, [2, 3, 4, 5, 6]),
+        ],
+    )
+    def tests_traffic_counting_filter(
+        self,
+        count_all_events: bool,
+        start: datetime,
+        end: datetime,
+        lower: bool,
+        upper: bool,
+        expected: list[int],
+    ) -> None:
+        # setup assignment / flow data
+        builder = TestCaseBuilder()
+        setup: tuple[list[Event], list[Flow], RoadUserAssignments] = (
+            builder.build_assignment_test_cases()[0]
+        )
+        (_, flows, assignments) = setup
+
+        modes = ["car"]
+
+        # Setup mocked environment
+        flow_repository = Mock(spec=FlowRepository)
+        flow_repository.get_all.return_value = flows
+        get_sections_by_ids = Mock(spec=GetSectionsById)
+        get_sections_by_ids.return_value = []
+        create_assignments = Mock(spec=CreateRoadUserAssignments)
+
+        # Setup actual environment
+        rua_repo = RoadUserAssignmentRepository()
+        rua_repo.add_road_user_assignments(assignments)
+        tagger_factory = SimpleTaggerFactory()
+        get_assignments = GetRoadUserAssignments(rua_repo, create_assignments)
+
+        target = TrafficCounting(
+            flow_repository,
+            get_sections_by_ids,
+            get_assignments,
+            tagger_factory,
+            filter_lower_bound_strict=lower,
+            filter_upper_bound_strict=upper,
+        )
+
+        # Create specification
+        counting_specification = CountingSpecificationDto(
+            start=start,
+            end=end,
+            interval_in_minutes=15,
+            modes=modes,
+            output_format="csv",
+            output_file="counts.csv",
+            export_mode=OVERWRITE,
+            count_all_events=count_all_events,
+        )
+
+        # setup spy to capture tagged assignments after filter & before count
+        filtered_assignments: list[TaggedAssignments] = []
+        original_count = TaggedAssignments.count
+
+        def spy(self: TaggedAssignments, *args: Any, **kwargs: Any) -> Count:
+            filtered_assignments.append(self)
+            return original_count(self, *args, **kwargs)
+
+        # Execute the use case
+        with patch.object(TaggedAssignments, "count", new=spy):
+            result = target.count(counting_specification)
+
+            assert sum(result.to_dict().values()) == len(expected)
+
+        assert len(filtered_assignments) == 1
+        assert expected == sorted(
+            [
+                int(a.road_user)
+                for c in filtered_assignments[0]._assignments.values()
+                for a in c._assignments
+            ]
+        )
 
 
 class TestExportTrafficCounting:

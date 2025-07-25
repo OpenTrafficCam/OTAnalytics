@@ -211,7 +211,7 @@ class RoadUserAssignments:
         Returns:
             The hash value based on the contained assignments.
         """
-        return hash(self._assignments)
+        return hash(str(self._assignments))
 
     def __eq__(self, other: object) -> bool:
         """
