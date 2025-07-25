@@ -13,7 +13,7 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
-from OTAnalytics.application.application import CancelAddFlow
+from OTAnalytics.application.application import CancelAddFlow, CancelAddSection
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
@@ -197,7 +197,7 @@ class NiceGuiUiFactory(UiFactory):
         result = await dialog.result
         if result == DialogResult.APPLY:
             return dialog.get_section()
-        raise CancelAddFlow()
+        raise CancelAddSection()
 
     async def configure_flow(
         self,
