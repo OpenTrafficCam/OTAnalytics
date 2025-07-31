@@ -13,6 +13,6 @@ echo "Start OTAnalytics."
 echo "$DIR"
 cd "$DIR" || exit
 
-source "$DIR"/venv/bin/activate
+source "$DIR"/.venv/bin/activate
 python3.12 -m OTAnalytics "$@"
 deactivate
