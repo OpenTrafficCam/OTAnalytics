@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from OTAnalytics.application.analysis.traffic_counting import RoadUserAssignment
+from OTAnalytics.application.analysis.road_user_assignment import RoadUserAssignment
 from OTAnalytics.application.use_cases.flow_statistics import (
     NumberOfTracksAssignedToEachFlow,
 )
@@ -43,7 +43,7 @@ def get_road_user_assignments() -> Mock:
         FOURTH_ASSIGNMENT,
     ]
     get_assignments = Mock()
-    get_assignments.get.return_value = assignments
+    get_assignments.get_as_list.return_value = assignments
     return get_assignments
 
 
@@ -69,5 +69,5 @@ class TestNumberOfTracksAssignedToEachFlow:
             SECOND_FLOW.id: 1,
             FLOW_WITH_NO_ASSIGNMENTS.id: 0,
         }
-        get_road_user_assignments.get.assert_called_once()
+        get_road_user_assignments.get_as_list.assert_called_once()
         flow_repository.get_all.assert_called_once()
