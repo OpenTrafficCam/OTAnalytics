@@ -51,7 +51,7 @@ class LocalFilePicker(ui.dialog):
                 extensions or None for "All Files". If None, uses default options.
         """
         super().__init__()
-
+        self.multiple = multiple
         self.path: Path = directory.expanduser()
         self.upper_limit: Path = directory.expanduser()
         self.show_hidden_files: bool = show_hidden_files
@@ -240,7 +240,7 @@ class LocalFilePicker(ui.dialog):
         paths: List[Path] = [self._map_to_domain(r[PATH]) for r in rows]
 
         # If no rows are selected and we're in directory-only mode, use the current directory # noqa
-        if not paths and self.show_only_directories:
+        if not paths and (self.show_only_directories or self.multiple):
             paths = [self.path]
 
         self.submit(paths)
