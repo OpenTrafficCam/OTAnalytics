@@ -1,23 +1,32 @@
-from OTAnalytics.application.analysis.traffic_counting import (
-    RoadUserAssigner,
+from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignment,
+    RoadUserAssignmentRepository,
+    RoadUserAssignments,
 )
-from OTAnalytics.domain.event import EventRepository
-from OTAnalytics.domain.flow import FlowRepository
+from OTAnalytics.application.use_cases.create_road_user_assignments import (
+    CreateRoadUserAssignments,
+)
 
 
 class GetRoadUserAssignments:
     def __init__(
         self,
-        flow_repository: FlowRepository,
-        event_repository: EventRepository,
-        assigner: RoadUserAssigner,
+        assignment_repository: RoadUserAssignmentRepository,
+        create_assignments: CreateRoadUserAssignments,
+        enable_assignment_creation: bool = True,
     ) -> None:
-        self._flow_repository = flow_repository
-        self._event_repository = event_repository
-        self._assigner = assigner
+        self._assignment_repository = assignment_repository
+        self._create_assignments = create_assignments
+        self._enable_assignment_creation = enable_assignment_creation
 
-    def get(self) -> list[RoadUserAssignment]:
-        return self._assigner.assign(
-            self._event_repository.get_all(), self._flow_repository.get_all()
-        ).as_list()
+    def get_as_list(self) -> list[RoadUserAssignment]:
+        self.__check_update()
+        return self._assignment_repository.get_all_as_list()
+
+    def get(self) -> RoadUserAssignments:
+        self.__check_update()
+        return self._assignment_repository.get_all()
+
+    def __check_update(self) -> None:
+        if self._assignment_repository.is_empty() and self._enable_assignment_creation:
+            self._create_assignments()

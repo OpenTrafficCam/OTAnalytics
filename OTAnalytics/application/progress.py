@@ -88,7 +88,7 @@ class ManualIncrementingProgressbar(Progressbar):
         """Update the progressbar by passed value.
 
         Args:
-            value (int): value to update the progressbar by.
+            progress (int): progress value to update the progressbar by.
         """
         self._counter.increment(progress)
         if self._notify:

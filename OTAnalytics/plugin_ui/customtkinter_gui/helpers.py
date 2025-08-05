@@ -83,7 +83,8 @@ def coordinate_is_on_widget(
         tkinter (or customtkinter) widget.
 
     Args:
-        coordinate (tuple[int, int]): Coordinate relative to the widget position.
+        coordinate_relative_to_widget (tuple[int, int]):
+            Coordinate relative to the widget position.
             E.g. for the tkinter/customtkinter canvas, absolute coordinates have to be
             transformed to relative coordinates using Canvas.canvasx(absolute_x) as well
             as Canvas.canvasy(absolute_y).
@@ -115,7 +116,7 @@ def ask_for_save_file_path(
 
     Args:
         title (str): title for the file chooser
-        file_types (list[tuple[str, str]]): supported file types to choose from
+        filetypes (list[tuple[str, str]]): supported file types to choose from
         defaultextension (str): default extension used if none is present
 
     Returns:
