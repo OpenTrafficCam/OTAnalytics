@@ -6,8 +6,8 @@ build-backend = "hatchling.build"
 name = "OTAnalytics"
 dynamic = ["version"]
 authors = [
-  { name="OpenTrafficCam contributors", email="team@opentrafficcam.org" },
-  { name="platomo GmbH", email="info@platomo.de" },
+    { name = "OpenTrafficCam contributors", email = "team@opentrafficcam.org" },
+    { name = "platomo GmbH", email = "info@platomo.de" },
 ]
 description = "OTAnalytics is a core module of the OpenTrafficCam framework to perform traffic analysis on trajectories of road users."
 
@@ -24,7 +24,6 @@ classifiers = [
 keywords = ["OpenTrafficCam", "Traffic Analysis", "Traffic Counting", "Trajectories"]
 dependencies = [
     "av==13.0.0",
-    "customtkinter==5.2.2",
     "fastapi==0.115.5",
     "ijson==3.3.0",
     "matplotlib==3.10.0",
@@ -46,6 +45,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+desktop = [
+    "customtkinter==5.2.2",
+]
 dev = [
     "black==25.1.0",
     "flake8==7.1.1",

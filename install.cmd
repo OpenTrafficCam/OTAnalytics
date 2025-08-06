@@ -11,5 +11,5 @@ python -m venv .venv
 call .venv\Scripts\activate
 python -m pip install --upgrade pip
 pip install uv
-uv pip install -e . --python .venv%
+uv pip install -e .[desktop] --python .venv%
 deactivate
