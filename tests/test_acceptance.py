@@ -71,8 +71,3 @@ class TestProjectInformation:
         given_app.start()
         target.open(ENDPOINT_MAIN_PAGE)
         target.shot("dummy")
-        # await screen.should_contain(
-        #     resource_manager.get(ProjectKeys.LABEL_PROJECT_NAME)
-        # )
-        # screen.find(marker=MARKER_PROJECT_NAME).type("TROETOEROE")
-        # await screen.should_see("TROETOEROE")
