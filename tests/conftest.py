@@ -36,7 +36,7 @@ from tests.utils.builders.track_segment_builder import (
     TrackSegmentDatasetBuilderProvider,
 )
 
-pytest_plugins = ["nicegui.testing.user_plugin"]
+pytest_plugins = ["nicegui.testing.plugin"]
 
 
 T = TypeVar("T")
