@@ -71,7 +71,7 @@ jobs:
           file-path: "OTAnalytics"
       - name: Build a binary wheel and a source tarball
         shell: bash
-        run: uv build --outdir ${{ env.out_dir }}
+        run: uv build --out-dir ${{ env.out_dir }}
 
       - name: Store the distribution packages
         uses: actions/upload-artifact@v4
