@@ -19,6 +19,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.12
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
       - name: Download test data
         run: |
           gh release download \
@@ -33,12 +37,11 @@ jobs:
           unzip ./\*.zip
           rm ./*.zip
           cd ..
-      - name: Install requirements
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
-      - name: Run benchmark tests
-        run: pytest ./tests/benchmark_otanalytics.py --benchmark-json output.json
+      - name: Install the project
+        shell: bash
+        run: uv sync --locked --all-extras --dev
+      - name: Run regression tests
+        run: uv run pytest ./tests/benchmark_otanalytics.py --benchmark-json output.json
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
