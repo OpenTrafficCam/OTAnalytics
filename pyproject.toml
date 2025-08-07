@@ -6,10 +6,11 @@ build-backend = "hatchling.build"
 name = "OTAnalytics"
 dynamic = ["dependencies", "version"]
 authors = [
-  { name="OpenTrafficCam contributors", email="team@opentrafficcam.org" },
-  { name="platomo GmbH", email="info@platomo.de" },
+    { name = "OpenTrafficCam contributors", email = "team@opentrafficcam.org" },
+    { name = "platomo GmbH", email = "info@platomo.de" },
 ]
 description = "OTAnalytics is a core module of the OpenTrafficCam framework to perform traffic analysis on trajectories of road users."
+requires-python = "==3.12.*"
 
 readme = "README.md"
 requires-python = ">=3.11"
