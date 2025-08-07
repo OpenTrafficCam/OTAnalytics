@@ -1,7 +1,6 @@
 echo Install OTAnalytics development environment.
 call install.cmd
 call .venv\Scripts\activate
-uv pip install -r requirements-dev.txt --python .venv%
-uv pip install -e .
+uv pip install -e .[dev] --python .venv
 pre-commit install --install-hooks
 deactivate
