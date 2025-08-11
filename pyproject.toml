@@ -45,7 +45,7 @@ dependencies = [
     "uvicorn==0.32.1",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "black==25.1.0",
     "flake8==7.1.1",
@@ -72,6 +72,8 @@ Repository = "https://github.com/OpenTrafficCam/OTAnalytics"
 Issues = "https://github.com/OpenTrafficCam/OTAnalytics/issues"
 Changelog = "https://github.com/OpenTrafficCam/OTAnalytics/releases"
 
+[tool.uv]
+default-groups = []
 
 [tool.hatch.version]
 path = "OTAnalytics/version.py"
