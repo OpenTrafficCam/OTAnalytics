@@ -1,14 +1,18 @@
+import multiprocessing as py_multiprocessing
 import shutil
 from pathlib import Path
 from typing import Any, Generator, List, Sequence, TypeVar
 from unittest.mock import Mock
 
 import pytest
+from nicegui.testing import Screen
+from selenium import webdriver
 
 from OTAnalytics.application.analysis.traffic_counting import (
     EventPair,
     RoadUserAssignment,
 )
+from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate
@@ -27,7 +31,12 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
+from OTAnalytics.plugin_ui.nicegui_application import Webserver
 from tests.utils.builders.event_builder import EventBuilder
+from tests.utils.builders.otanalytics_builders import (
+    MultiprocessingWorker,
+    NiceguiOtanalyticsBuilder,
+)
 from tests.utils.builders.track_builder import TrackBuilder, create_track
 from tests.utils.builders.track_segment_builder import (
     PANDAS,
@@ -41,6 +50,56 @@ pytest_plugins = ["nicegui.testing.plugin"]
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
+
+
+@pytest.fixture
+def chrome_options() -> webdriver.ChromeOptions:
+    """Create Chrome options for Selenium testing.
+
+    This fixture creates a ChromeOptions instance that can be used by the
+    nicegui_chrome_options fixture for Selenium testing.
+
+    Sets a larger window size (1920x1080) to capture more content in screenshots.
+
+    Returns:
+        webdriver.ChromeOptions: Chrome options for Selenium testing.
+    """
+    options = webdriver.ChromeOptions()
+    options.add_argument("--window-size=1920,1080")
+    return options
+
+
+@pytest.fixture(scope="session")
+def given_builder() -> NiceguiOtanalyticsBuilder:
+    return NiceguiOtanalyticsBuilder()
+
+
+@pytest.fixture(scope="session")
+def given_app(
+    given_builder: NiceguiOtanalyticsBuilder,
+) -> YieldFixture[MultiprocessingWorker]:
+    py_multiprocessing.set_start_method("fork", force=True)
+    app = given_builder.build()
+    yield app
+    app.stop()
+
+
+@pytest.fixture(scope="session")
+def given_webserver(given_builder: NiceguiOtanalyticsBuilder) -> Webserver:
+    return given_builder.webserver
+
+
+@pytest.fixture
+async def target(screen: Screen, given_webserver: Webserver) -> Screen:
+    given_webserver.build_pages()
+    # Set a larger window size for better screenshots
+    screen.selenium.set_window_size(1920, 1080)
+    return screen
+
+
+@pytest.fixture
+def resource_manager() -> ResourceManager:
+    return ResourceManager()
 
 
 @pytest.fixture(scope="module")
@@ -462,3 +521,61 @@ def assert_shown_files(
     assert (
         len(row_data) == expected_count
     ), f"Expected {expected_count} items, but got {len(row_data)}"
+
+
+# --- Test data download/extraction helpers for acceptance tests ---
+@pytest.fixture(scope="module")
+def otcamera19_extracted_dir(test_data_dir: Path) -> Path:
+    """Ensure the OTCamera19 acceptance test data is available and extracted.
+
+    Attempts to locate extracted content in tests/data. If not present, tries to
+    download the zip asset from the public GitHub releases (latest) and extracts it.
+    If download or extraction fails (e.g., offline), the depending tests will be
+    skipped to avoid flakiness in local environments.
+
+    Returns:
+        Path: directory containing the extracted test data files (tests/data)
+    """
+    asset = "OTCamera19_FR20_2023-05-24_06-00-00_11-45-00.zip"
+    prefix = "OTCamera19_FR20_2023-05-24"
+    test_data_dir.mkdir(parents=True, exist_ok=True)
+    # Heuristics: consider data present if any path starting with prefix exists
+    existing_dirs = [p for p in test_data_dir.glob(f"{prefix}*") if p.exists()]
+    if existing_dirs:
+        return test_data_dir
+
+    zip_path = test_data_dir / asset
+
+    # Try to download the zip from GitHub Releases (latest)
+    try:
+        import ssl
+        import urllib.request
+
+        url = (
+            "https://github.com/platomo/OpenTrafficCam-testdata/releases/latest/download/"  # noqa
+            + asset
+        )
+        ctx = ssl.create_default_context()
+        with (
+            urllib.request.urlopen(url, context=ctx) as resp,
+            open(zip_path, "wb") as f,
+        ):
+            f.write(resp.read())
+    except Exception as e:  # pragma: no cover - network issues not under test
+        pytest.skip(f"Could not download test data asset {asset}: {e}")
+
+    # Unzip the archive
+    try:
+        import zipfile
+
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            zf.extractall(test_data_dir)
+        # Cleanup zip after extraction
+        try:
+            zip_path.unlink()
+        except Exception:
+            pass
+    except Exception as e:  # pragma: no cover
+        pytest.skip(f"Could not unzip test data asset {asset}: {e}")
+
+    return test_data_dir
