@@ -1,12 +1,16 @@
 from datetime import datetime
 
 import pandas as pd
+import pytest
 from pandas import DataFrame
 from pytest import approx
 
-from OTAnalytics.domain.geometry import Coordinate
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.track import H, W
 from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store import (
+    END_H,
     END_OCCURRENCE,
+    END_W,
     END_X,
     END_Y,
     INTERSECTION_LINE_ID,
@@ -15,7 +19,9 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store imp
     INTERSECTS,
     INTERSECTS_POLYGON,
     OCCURRENCE,
+    START_H,
     START_OCCURRENCE,
+    START_W,
     START_X,
     START_Y,
     TRACK_ID,
@@ -31,7 +37,9 @@ from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store imp
 def test_find_line_intersections_empty_df() -> None:
     """Test that an empty DataFrame returns an empty DataFrame."""
     df = DataFrame()
-    result = find_line_intersections(df, "line1", 0.0, 0.0, 10.0, 10.0)
+    result = find_line_intersections(
+        df, "line1", 0.0, 0.0, 10.0, 10.0, RelativeOffsetCoordinate(0.0, 0.0)
+    )
     assert result.empty
 
 
@@ -44,6 +52,10 @@ def test_find_line_intersections_no_intersections() -> None:
         START_Y: [15.0, 150.0],
         END_X: [20.0, 110.0],
         END_Y: [25.0, 160.0],
+        START_W: [0.0, 0.0],
+        START_H: [0.0, 0.0],
+        END_W: [0.0, 0.0],
+        END_H: [0.0, 0.0],
         START_OCCURRENCE: [
             datetime(2023, 1, 1, 10, 0, 0),
             datetime(2023, 1, 1, 10, 0, 0),
@@ -64,7 +76,13 @@ def test_find_line_intersections_no_intersections() -> None:
 
     # Find intersections
     result = find_line_intersections(
-        segments_df, line_id, start_x, start_y, end_x, end_y
+        segments_df,
+        line_id,
+        start_x,
+        start_y,
+        end_x,
+        end_y,
+        RelativeOffsetCoordinate(0.0, 0.0),
     )
 
     # Check that no segments intersect
@@ -74,15 +92,35 @@ def test_find_line_intersections_no_intersections() -> None:
     assert (result[INTERSECTION_LINE_ID].isna()).all()
 
 
-def test_find_line_intersections_with_intersections() -> None:
+@pytest.mark.parametrize(
+    "offset, expected_intersection",
+    [
+        (RelativeOffsetCoordinate(0.0, 0.0), 30.0),
+        (RelativeOffsetCoordinate(0.5, 0.0), 33.0),
+        (RelativeOffsetCoordinate(1.0, 0.0), 36.0),
+        (RelativeOffsetCoordinate(0.0, 0.5), 33.0),
+        (RelativeOffsetCoordinate(0.5, 0.5), 36.0),
+        (RelativeOffsetCoordinate(1.0, 0.5), 39.0),
+        (RelativeOffsetCoordinate(0.0, 1.0), 36.0),
+        (RelativeOffsetCoordinate(0.5, 1.0), 39.0),
+        (RelativeOffsetCoordinate(1.0, 1.0), 42.0),
+    ],
+)
+def test_find_line_intersections_with_intersections(
+    offset: RelativeOffsetCoordinate, expected_intersection: float
+) -> None:
     """Test with segments that intersect with the line."""
     # Create test data
     segments_data = {
         TRACK_ID: ["track1", "track2"],
-        START_X: [15.0, 100.0],
+        START_X: [60.0, 100.0],
         START_Y: [0.0, 150.0],
-        END_X: [15.0, 110.0],
-        END_Y: [30.0, 160.0],
+        END_X: [0.0, 110.0],
+        END_Y: [60.0, 160.0],
+        START_W: [12.0, 12.0],
+        START_H: [12.0, 12.0],
+        END_W: [12.0, 12.0],
+        END_H: [12.0, 12.0],
         START_OCCURRENCE: [
             datetime(2023, 1, 1, 10, 0, 0),
             datetime(2023, 1, 1, 10, 0, 0),
@@ -98,18 +136,18 @@ def test_find_line_intersections_with_intersections() -> None:
     line_id = "intersecting_line"
     start_x = 0.0
     start_y = 0.0
-    end_x = 30.0
-    end_y = 30.0
+    end_x = 120.0
+    end_y = 120.0
 
     # Find intersections
     result = find_line_intersections(
-        segments_df, line_id, start_x, start_y, end_x, end_y
+        segments_df, line_id, start_x, start_y, end_x, end_y, offset
     )
 
     # Check that the first segment intersects
     assert result.iloc[0][INTERSECTS]
-    assert result.iloc[0][INTERSECTION_X] == approx(15.0)
-    assert result.iloc[0][INTERSECTION_Y] == approx(15.0)
+    assert result.iloc[0][INTERSECTION_X] == approx(expected_intersection)
+    assert result.iloc[0][INTERSECTION_Y] == approx(expected_intersection)
     assert result.iloc[0][INTERSECTION_LINE_ID] == line_id
 
     # Check that the second segment doesn't intersect
@@ -128,6 +166,10 @@ def test_find_line_intersections_multiple_intersections() -> None:
         START_Y: [10.0, 10.0, 40.0],
         END_X: [10.0, 110.0, 40.0],
         END_Y: [20.0, 20.0, 30.0],
+        START_W: [0.0, 0.0, 0.0],
+        START_H: [0.0, 0.0, 0.0],
+        END_W: [0.0, 0.0, 0.0],
+        END_H: [0.0, 0.0, 0.0],
         START_OCCURRENCE: [
             datetime(2023, 1, 1, 10, 0, 0),
             datetime(2023, 1, 1, 10, 0, 0),
@@ -150,7 +192,13 @@ def test_find_line_intersections_multiple_intersections() -> None:
 
     # Find intersections
     result = find_line_intersections(
-        segments_df, line_id, start_x, start_y, end_x, end_y
+        segments_df,
+        line_id,
+        start_x,
+        start_y,
+        end_x,
+        end_y,
+        RelativeOffsetCoordinate(0.0, 0.0),
     )
 
     # Check that the first and third segments intersect
@@ -189,6 +237,8 @@ def test_create_track_segments_single_track() -> None:
         ],
         X: [10.0, 20.0, 30.0],
         Y: [15.0, 25.0, 35.0],
+        W: [10.0, 20.0, 30.0],
+        H: [8.0, 16.0, 24.0],
     }
     df = DataFrame(data)
 
@@ -204,8 +254,12 @@ def test_create_track_segments_single_track() -> None:
     assert result.iloc[0][END_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 1)
     assert result.iloc[0][START_X] == 10.0
     assert result.iloc[0][START_Y] == 15.0
+    assert result.iloc[0][START_W] == 10.0
+    assert result.iloc[0][START_H] == 8.0
     assert result.iloc[0][END_X] == 20.0
     assert result.iloc[0][END_Y] == 25.0
+    assert result.iloc[0][END_W] == 20.0
+    assert result.iloc[0][END_H] == 16.0
 
     # Check second segment
     assert result.iloc[1][TRACK_ID] == "track1"
@@ -213,8 +267,12 @@ def test_create_track_segments_single_track() -> None:
     assert result.iloc[1][END_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 2)
     assert result.iloc[1][START_X] == 20.0
     assert result.iloc[1][START_Y] == 25.0
+    assert result.iloc[1][START_W] == 20.0
+    assert result.iloc[1][START_H] == 16.0
     assert result.iloc[1][END_X] == 30.0
     assert result.iloc[1][END_Y] == 35.0
+    assert result.iloc[1][END_W] == 30.0
+    assert result.iloc[1][END_H] == 24.0
 
 
 def test_create_track_segments_multiple_tracks() -> None:
@@ -230,6 +288,8 @@ def test_create_track_segments_multiple_tracks() -> None:
         ],
         X: [10.0, 20.0, 100.0, 110.0],
         Y: [15.0, 25.0, 150.0, 160.0],
+        W: [5.0, 10.0, 20.0, 40.0],
+        H: [8.0, 16.0, 30.0, 60.0],
     }
     df = DataFrame(data)
 
@@ -245,8 +305,12 @@ def test_create_track_segments_multiple_tracks() -> None:
     assert track1_segment[END_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 1)
     assert track1_segment[START_X] == 10.0
     assert track1_segment[START_Y] == 15.0
+    assert track1_segment[START_W] == 5.0
+    assert track1_segment[START_H] == 8.0
     assert track1_segment[END_X] == 20.0
     assert track1_segment[END_Y] == 25.0
+    assert track1_segment[END_W] == 10.0
+    assert track1_segment[END_H] == 16.0
 
     # Check track2 segment
     track2_segment = result[result[TRACK_ID] == "track2"].iloc[0]
@@ -254,8 +318,12 @@ def test_create_track_segments_multiple_tracks() -> None:
     assert track2_segment[END_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 1)
     assert track2_segment[START_X] == 100.0
     assert track2_segment[START_Y] == 150.0
+    assert track2_segment[START_W] == 20.0
+    assert track2_segment[START_H] == 30.0
     assert track2_segment[END_X] == 110.0
     assert track2_segment[END_Y] == 160.0
+    assert track2_segment[END_W] == 40.0
+    assert track2_segment[END_H] == 60.0
 
 
 def test_check_polygon_intersections_empty_df() -> None:
@@ -270,7 +338,9 @@ def test_check_polygon_intersections_empty_df() -> None:
             Coordinate(0.0, 0.0),
         ]
     )
-    result = check_polygon_intersections(df, polygon)
+    result = check_polygon_intersections(
+        df, polygon, RelativeOffsetCoordinate(0.0, 0.0)
+    )
     assert result.empty
 
 
@@ -283,6 +353,10 @@ def test_check_polygon_intersections_no_intersections() -> None:
         START_Y: [20.0, 150.0],
         END_X: [30.0, 110.0],
         END_Y: [30.0, 160.0],
+        START_W: [0.0, 0.0],
+        START_H: [0.0, 0.0],
+        END_W: [0.0, 0.0],
+        END_H: [0.0, 0.0],
         START_OCCURRENCE: [
             datetime(2023, 1, 1, 10, 0, 0),
             datetime(2023, 1, 1, 10, 0, 0),
@@ -306,7 +380,9 @@ def test_check_polygon_intersections_no_intersections() -> None:
     )
 
     # Check intersections
-    result = check_polygon_intersections(segments_df, polygon)
+    result = check_polygon_intersections(
+        segments_df, polygon, RelativeOffsetCoordinate(0.0, 0.0)
+    )
 
     # Check that no segments intersect with the polygon
     assert not result[INTERSECTS_POLYGON].any()
@@ -321,6 +397,10 @@ def test_check_polygon_intersections_with_intersections() -> None:
         START_Y: [5.0, 150.0, 5.0],
         END_X: [15.0, 110.0, 25.0],
         END_Y: [15.0, 160.0, 15.0],
+        START_W: [0.0, 0.0, 0.0],
+        START_H: [0.0, 0.0, 0.0],
+        END_W: [0.0, 0.0, 0.0],
+        END_H: [0.0, 0.0, 0.0],
         START_OCCURRENCE: [
             datetime(2023, 1, 1, 10, 0, 0),
             datetime(2023, 1, 1, 10, 0, 0),
@@ -346,7 +426,9 @@ def test_check_polygon_intersections_with_intersections() -> None:
     )
 
     # Check intersections
-    result = check_polygon_intersections(segments_df, polygon)
+    result = check_polygon_intersections(
+        segments_df, polygon, RelativeOffsetCoordinate(0.0, 0.0)
+    )
 
     # Check that the first and third segments intersect with the polygon
     assert result.iloc[0][INTERSECTS_POLYGON]

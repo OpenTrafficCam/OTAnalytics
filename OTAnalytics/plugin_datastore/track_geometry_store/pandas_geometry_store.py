@@ -6,12 +6,14 @@ from pandas import DataFrame
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId, SectionType
-from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track import H, Track, TrackId, W
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IntersectionPoint,
     TrackDataset,
     TrackGeometryDataset,
 )
+from OTAnalytics.domain.types import EventType
+from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 
 # Column names for track points
 TRACK_ID = "track-id"
@@ -24,8 +26,12 @@ START_OCCURRENCE = "start-occurrence"
 END_OCCURRENCE = "end-occurrence"
 START_X = "start-x"
 START_Y = "start-y"
+START_W = "start-w"
+START_H = "start-h"
 END_X = "end-x"
 END_Y = "end-y"
+END_W = "end-w"
+END_H = "end-h"
 
 # Column names for intersections
 INTERSECTS = "intersects"
@@ -43,14 +49,17 @@ UB = "ub"
 
 @dataclass(frozen=True)
 class Polygon(DataclassValidation):
-    """A polygon is made up of line segments which form a closed polygonal chain.
+    """A polygon consists of an ordered sequence of coordinates.
+
+    Note:
+        The coordinates are not required to form a closed chain in this representation.
 
     Args:
-        coordinates (list[Coordinate]): the coordinates defining the polygon
+        coordinates (list[Coordinate]): The coordinates defining the polygon. Must
+            contain at least two coordinates.
 
     Raises:
-        ValueError: if coordinates defining the polygon is less than 4
-        ValueError: if coordinates do not define a closed polygonal chain
+        ValueError: If fewer than two coordinates are provided.
     """
 
     coordinates: list[Coordinate]
@@ -67,16 +76,16 @@ class Polygon(DataclassValidation):
 
 def create_track_segments(df: DataFrame) -> DataFrame:
     """
-    Create track segments from a DataFrame containing track points.
+    Create track segments from a DataFrame of track points.
 
     A track segment connects two consecutive points of a track.
 
     Args:
-        df (DataFrame): DataFrame with columns TRACK_ID, OCCURRENCE, X, Y
+        df (DataFrame): DataFrame with columns TRACK_ID, OCCURRENCE, X, Y, W, H.
 
     Returns:
         DataFrame: DataFrame with columns TRACK_ID, START_OCCURRENCE, END_OCCURRENCE,
-                  START_X, START_Y, END_X, END_Y
+            START_X, START_Y, START_W, START_H, END_X, END_Y, END_W, END_H.
     """
     if df.empty:
         return DataFrame()
@@ -96,9 +105,13 @@ def create_track_segments(df: DataFrame) -> DataFrame:
     segments[END_OCCURRENCE] = data[OCCURRENCE]
     segments[END_X] = data[X]
     segments[END_Y] = data[Y]
+    segments[END_W] = data[W]
+    segments[END_H] = data[H]
     segments[START_OCCURRENCE] = grouped[OCCURRENCE].shift(1)
     segments[START_X] = grouped[X].shift(1)
     segments[START_Y] = grouped[Y].shift(1)
+    segments[START_W] = grouped[W].shift(1)
+    segments[START_H] = grouped[H].shift(1)
 
     # Remove rows where start values are NaN (first point of each track)
     segments = segments.dropna()
@@ -107,6 +120,19 @@ def create_track_segments(df: DataFrame) -> DataFrame:
     segments = segments.reset_index(drop=True)
 
     return segments
+
+
+def apply_offset(segments_df: DataFrame, offset: RelativeOffsetCoordinate) -> DataFrame:
+    """Apply an offset to the coordinates of a DataFrame containing track segments."""
+    if segments_df.empty:
+        return segments_df
+
+    segments_df = segments_df.copy()
+    segments_df[START_X] += segments_df[START_W] * offset.x
+    segments_df[START_Y] += segments_df[START_H] * offset.y
+    segments_df[END_X] += segments_df[END_W] * offset.x
+    segments_df[END_Y] += segments_df[END_H] * offset.y
+    return segments_df
 
 
 def calculate_intersection_parameters(
@@ -175,22 +201,28 @@ def check_line_intersections(
     line_y1: float,
     line_x2: float,
     line_y2: float,
+    offset: RelativeOffsetCoordinate,
 ) -> DataFrame:
     """
     Check if track segments intersect with a line.
 
     Args:
-        segments_df (DataFrame): DataFrame with track segments
-        line_x1 (float): X-coordinate of the line's start point
-        line_y1 (float): Y-coordinate of the line's start point
-        line_x2 (float): X-coordinate of the line's end point
-        line_y2 (float): Y-coordinate of the line's end point
+        segments_df (DataFrame): DataFrame with track segments.
+        line_x1 (float): X-coordinate of the line's start point.
+        line_y1 (float): Y-coordinate of the line's start point.
+        line_x2 (float): X-coordinate of the line's end point.
+        line_y2 (float): Y-coordinate of the line's end point.
+        offset (RelativeOffsetCoordinate): Relative offset applied to segment endpoints
+            before intersection checks.
 
     Returns:
-        DataFrame: Boolean mask indicating which segments intersect with the line
+        DataFrame: DataFrame with a single column INTERSECTS indicating whether each
+            segment intersects the line.
     """
     if segments_df.empty:
         return segments_df
+
+    segments_df = apply_offset(segments_df, offset)
 
     # Calculate intersection parameters
     params_df = calculate_intersection_parameters(
@@ -228,25 +260,30 @@ def calculate_intersection_points(
     line_y1: float,
     line_x2: float,
     line_y2: float,
+    offset: RelativeOffsetCoordinate,
 ) -> DataFrame:
     """
     Calculate intersection points between track segments and a line.
 
     Args:
-        segments_df (DataFrame): DataFrame with track segments
-        line_x1 (float): X-coordinate of the line's start point
-        line_y1 (float): Y-coordinate of the line's start point
-        line_x2 (float): X-coordinate of the line's end point
-        line_y2 (float): Y-coordinate of the line's end point
+        segments_df (DataFrame): DataFrame with track segments.
+        line_x1 (float): X-coordinate of the line's start point.
+        line_y1 (float): Y-coordinate of the line's start point.
+        line_x2 (float): X-coordinate of the line's end point.
+        line_y2 (float): Y-coordinate of the line's end point.
+        offset (RelativeOffsetCoordinate): Relative offset applied to segment endpoints
+            before intersection calculation.
 
     Returns:
         DataFrame: DataFrame with columns INTERSECTION_X and INTERSECTION_Y containing
-                  the coordinates of intersection points
+            the coordinates of intersection points.
     """
     if segments_df.empty:
         return DataFrame(
             index=segments_df.index, columns=[INTERSECTION_X, INTERSECTION_Y]
         )
+
+    segments_df = apply_offset(segments_df, offset)
 
     # Calculate intersection parameters
     params_df = calculate_intersection_parameters(
@@ -302,6 +339,7 @@ def find_line_intersections(
     start_y: float,
     end_x: float,
     end_y: float,
+    offset: RelativeOffsetCoordinate,
 ) -> DataFrame:
     """
     Find intersection points between track segments and a line.
@@ -314,6 +352,8 @@ def find_line_intersections(
         start_y (float): Y-coordinate of the line's start point
         end_x (float): X-coordinate of the line's end point
         end_y (float): Y-coordinate of the line's end point
+        offset (RelativeOffsetCoordinate): Relative offset applied to segment endpoints
+            before intersection checks.
 
     Returns:
         DataFrame: The input DataFrame with additional columns for intersection
@@ -337,13 +377,15 @@ def find_line_intersections(
     result_df[INTERSECTION_LINE_ID] = None
 
     # Check which segments intersect with the line
-    intersects_df = check_line_intersections(result_df, start_x, start_y, end_x, end_y)
+    intersects_df = check_line_intersections(
+        result_df, start_x, start_y, end_x, end_y, offset
+    )
 
     # If there are any intersections
     if intersects_df[INTERSECTS].any():
         # Calculate intersection points
         intersection_df = calculate_intersection_points(
-            result_df, start_x, start_y, end_x, end_y
+            result_df, start_x, start_y, end_x, end_y, offset
         )
 
         # Update the result DataFrame with intersection information
@@ -363,6 +405,7 @@ def find_line_intersections(
 def check_polygon_intersections(
     segments_df: DataFrame,
     polygon: Polygon,
+    offset: RelativeOffsetCoordinate,
 ) -> DataFrame:
     """
     Check if track segments intersect with a polygon.
@@ -372,12 +415,14 @@ def check_polygon_intersections(
 
     Args:
         segments_df (DataFrame): DataFrame with track segments (output of
-            create_track_segments)
-        polygon (Polygon): The polygon to check intersections with
+            create_track_segments).
+        polygon (Polygon): The polygon to check intersections with.
+        offset (RelativeOffsetCoordinate): Relative offset applied to segment endpoints
+            before intersection checks.
 
     Returns:
         DataFrame: The input DataFrame with an additional column INTERSECTS_POLYGON
-            indicating if the segment intersects with the polygon
+            indicating if the segment intersects with the polygon.
     """
     if segments_df.empty:
         return segments_df
@@ -401,7 +446,12 @@ def check_polygon_intersections(
 
         # Check which segments intersect with the current line segment
         intersects_df = check_line_intersections(
-            result_df, start_x, start_y, end_x, end_y
+            result_df,
+            start_x,
+            start_y,
+            end_x,
+            end_y,
+            offset,
         )
 
         # Update the result DataFrame
@@ -409,6 +459,12 @@ def check_polygon_intersections(
             result_df.loc[intersects_df[INTERSECTS], INTERSECTS_POLYGON] = True
 
     return result_df
+
+
+def get_section_offset(section: Section) -> RelativeOffsetCoordinate:
+    if offset := section.relative_offset_coordinates.get(EventType.SECTION_ENTER):
+        return offset
+    raise ValueError(f"Section {section.id} has no offset")
 
 
 class PandasTrackGeometryDataset(TrackGeometryDataset):
@@ -470,8 +526,29 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
     def from_track_dataset(
         dataset: TrackDataset, offset: RelativeOffsetCoordinate
     ) -> "TrackGeometryDataset":
-        # TODO Do not implement
-        raise NotImplementedError
+        """Create a PandasTrackGeometryDataset from a TrackDataset.
+
+        Args:
+            dataset (TrackDataset): The source track dataset. Must be a
+                PandasTrackDataset.
+            offset (RelativeOffsetCoordinate): Relative offset to apply to track points
+                before segment creation. Currently not applied in this implementation.
+
+        Returns:
+            TrackGeometryDataset: A dataset containing the generated track segments.
+
+        Raises:
+            ValueError: If the dataset is not a PandasTrackDataset.
+        """
+        if isinstance(dataset, PandasTrackDataset):
+            data = dataset.get_data()
+            segments = create_track_segments(data)
+            return PandasTrackGeometryDataset(segments)
+        else:
+            raise ValueError(
+                "PandasTrackGeometryDataset can only be created from a "
+                "PandasTrackDataset"
+            )
 
     def add_all(self, tracks: Iterable[Track]) -> "TrackGeometryDataset":
         # TODO Do not implement
@@ -504,6 +581,7 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
         for section in sections:
             # Get the coordinates of the section
             coordinates = section.get_coordinates()
+            offset = get_section_offset(section)
 
             if (
                 section.get_type() == SectionType.LINE
@@ -523,6 +601,7 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
                         start_y,
                         end_x,
                         end_y,
+                        offset,
                     )
 
                     # Add track IDs that intersect with the line to the result set
@@ -536,7 +615,9 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
                 polygon = Polygon(coordinates)
 
                 # Check polygon intersections
-                intersections = check_polygon_intersections(self._segments_df, polygon)
+                intersections = check_polygon_intersections(
+                    self._segments_df, polygon, offset
+                )
 
                 # Add track IDs that intersect with the polygon to the result set
                 intersecting_segments = intersections[intersections[INTERSECTS_POLYGON]]
@@ -578,6 +659,7 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
         for section in line_sections:
             # Get the coordinates of the section
             coordinates = section.get_coordinates()
+            offset = get_section_offset(section)
 
             # Process each leg of the section (consecutive pair of coordinates)
             for i in range(len(coordinates) - 1):
@@ -592,6 +674,7 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
                     start_y,
                     end_x,
                     end_y,
+                    offset,
                 )
 
                 # Filter to only include segments that intersect with the line
