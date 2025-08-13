@@ -337,6 +337,28 @@ def track_files_2hours(test_data_dir: Path) -> list[Path]:
 
 
 @pytest.fixture(scope="module")
+def track_files_4hours(test_data_dir: Path) -> list[Path]:
+    return [
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_08-00-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_08-15-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_08-30-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_08-45-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_09-00-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_09-15-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_09-30-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_09-45-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_10-00-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_10-15-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_10-30-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_10-45-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_11-00-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_11-15-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_11-30-00.ottrk"),
+        Path(test_data_dir / "OTCamera19_FR20_2023-05-24_11-45-00.ottrk"),
+    ]
+
+
+@pytest.fixture(scope="module")
 def otflow_file(test_data_dir: Path) -> Path:
     return test_data_dir / Path("OTCamera19_FR20_2023-05-24.otflow")
 
@@ -385,6 +407,13 @@ def use_case_provider_2hours(
     otflow_file: Path, track_files_2hours: list[Path], test_data_tmp_dir: Path
 ) -> UseCaseProvider:
     return UseCaseProvider(otflow_file, track_files_2hours, str(test_data_tmp_dir))
+
+
+@pytest.fixture
+def use_case_provider_4hours(
+    otflow_file: Path, track_files_4hours: list[Path], test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    return UseCaseProvider(otflow_file, track_files_4hours, str(test_data_tmp_dir))
 
 
 @pytest.fixture
@@ -471,6 +500,18 @@ class TestBenchmarkTracksIntersectingSections:
         benchmark.pedantic(
             use_case,
             args=(use_case_provider_2hours.sections,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_4hours(
+        self, benchmark: BenchmarkFixture, use_case_provider_4hours: UseCaseProvider
+    ) -> None:
+        use_case = use_case_provider_4hours.get_tracks_intersecting_sections()
+        benchmark.pedantic(
+            use_case,
+            args=(use_case_provider_4hours.sections,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
