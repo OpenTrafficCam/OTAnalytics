@@ -55,6 +55,9 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     FilteredPythonTrackDataset,
     PythonTrackDataset,
 )
+from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store import (
+    PandasTrackGeometryDataset,
+)
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
@@ -76,6 +79,7 @@ from tests.utils.builders.run_configuration import create_run_config
 
 PYTHON = "PYTHON"
 PANDAS = "PANDAS"
+PURE_PANDAS = "PANDAS"
 CURRENT_DATASET_TYPE = PANDAS
 
 EXCLUDE_FILTER = [
@@ -208,6 +212,9 @@ class UseCaseProvider:
         elif dataset_type == PANDAS:
             repository = TrackRepository(self.provide_pandas_track_dataset())
             parser = OttrkParser(self.provide_pandas_detection_parser())
+        elif dataset_type == PURE_PANDAS:
+            repository = TrackRepository(self.provide_pure_pandas_track_dataset())
+            parser = OttrkParser(self.provide_pure_pandas_detection_parser())
         else:
             raise ValueError(f"Unknown dataset type {dataset_type}")
         detection_metadata = _fill_track_repository(parser, repository, track_files)
@@ -220,6 +227,11 @@ class UseCaseProvider:
             ),
             self._include_classes,
             self._exclude_classes,
+        )
+
+    def provide_pandas_detection_parser(self) -> PandasDetectionParser:
+        return PandasDetectionParser(
+            PandasByMaxConfidence(), ShapelyTrackGeometryDataset.from_track_dataset
         )
 
     def provide_python_track_dataset(self) -> TrackDataset:
@@ -238,9 +250,18 @@ class UseCaseProvider:
             ShapelyTrackGeometryDataset.from_track_dataset,
         )
 
-    def provide_pandas_detection_parser(self) -> PandasDetectionParser:
+    def provide_pure_pandas_track_dataset(self) -> TrackDataset:
+        return FilterByClassPandasTrackDataset(
+            PandasTrackDataset.from_list(
+                [], PandasTrackGeometryDataset.from_track_dataset
+            ),
+            self._include_classes,
+            self._exclude_classes,
+        )
+
+    def provide_pure_pandas_detection_parser(self) -> PandasDetectionParser:
         return PandasDetectionParser(
-            PandasByMaxConfidence(), ShapelyTrackGeometryDataset.from_track_dataset
+            PandasByMaxConfidence(), PandasTrackGeometryDataset.from_track_dataset
         )
 
     def counting_specification(self, save_dir: Path) -> CountingSpecificationDto:
@@ -280,6 +301,8 @@ class UseCaseProvider:
             )
         elif dataset_type == PANDAS:
             return OttrkParser(self.provide_pandas_detection_parser())
+        elif dataset_type == PURE_PANDAS:
+            return OttrkParser(self.provide_pure_pandas_detection_parser())
         else:
             raise ValueError(f"Unknown dataset type {dataset_type}")
 
@@ -436,6 +459,18 @@ class TestBenchmarkTracksIntersectingSections:
         benchmark.pedantic(
             use_case,
             args=(use_case_provider_15min.sections,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_2hours(
+        self, benchmark: BenchmarkFixture, use_case_provider_2hours: UseCaseProvider
+    ) -> None:
+        use_case = use_case_provider_2hours.get_tracks_intersecting_sections()
+        benchmark.pedantic(
+            use_case,
+            args=(use_case_provider_2hours.sections,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
