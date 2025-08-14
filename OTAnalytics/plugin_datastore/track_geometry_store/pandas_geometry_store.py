@@ -552,13 +552,16 @@ def get_section_offset(section: Section) -> RelativeOffsetCoordinate:
 class PandasTrackGeometryDataset(TrackGeometryDataset):
     _segments_df: DataFrame
 
-    def __init__(self, segments_df: Optional[DataFrame] = None):
+    def __init__(
+        self, offset: RelativeOffsetCoordinate, segments_df: Optional[DataFrame] = None
+    ):
         """Initialize a PandasTrackGeometryDataset.
 
         Args:
             segments_df (Optional[DataFrame], optional): DataFrame with track segments.
                 If None, an empty DataFrame will be created. Defaults to None.
         """
+        self._offset = offset
         if segments_df is None:
             self._segments_df = DataFrame()
         else:
@@ -592,8 +595,7 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
 
     @property
     def offset(self) -> RelativeOffsetCoordinate:
-        # TODO Do not implement
-        raise NotImplementedError
+        return self._offset
 
     @property
     def empty(self) -> bool:
@@ -625,7 +627,7 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
         if isinstance(dataset, PandasTrackDataset):
             data = dataset.get_data()
             segments = create_track_segments(data)
-            return PandasTrackGeometryDataset(segments)
+            return PandasTrackGeometryDataset(offset, segments)
         else:
             raise ValueError(
                 "PandasTrackGeometryDataset can only be created from a "
