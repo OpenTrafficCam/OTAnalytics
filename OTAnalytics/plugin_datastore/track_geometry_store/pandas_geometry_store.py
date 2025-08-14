@@ -1,3 +1,4 @@
+import math
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Sequence
 
@@ -91,29 +92,33 @@ def create_track_segments(df: DataFrame) -> DataFrame:
         return DataFrame()
 
     # Create MultiIndex and sort once
-    df_indexed = df.set_index([TRACK_ID, OCCURRENCE]).sort_index()
+    if TRACK_ID in df.columns or OCCURRENCE in df.columns:
+        df_indexed = df.reset_index().set_index([TRACK_ID, OCCURRENCE]).sort_index()
+    else:
+        df_indexed = df.sort_index()
+    df_indexed[END_OCCURRENCE] = df_indexed.index.get_level_values(1)
 
     # Group by level 0 (TRACK_ID) - this is very fast on sorted MultiIndex
     grouped = df_indexed.groupby(level=0)
 
     # Create segments DataFrame
-    segments = DataFrame()
+    segments = DataFrame(index=df_indexed.index)
     segments[TRACK_ID] = df_indexed.index.get_level_values(0)
-    segments[END_OCCURRENCE] = df_indexed.index.get_level_values(1)
+    segments[END_OCCURRENCE] = df_indexed[END_OCCURRENCE]
     segments[END_X] = df_indexed[X]
     segments[END_Y] = df_indexed[Y]
     segments[END_W] = df_indexed[W]
     segments[END_H] = df_indexed[H]
 
     # Shift operations are faster on sorted groups
-    segments[START_OCCURRENCE] = grouped[OCCURRENCE].shift(1)
+    segments[START_OCCURRENCE] = grouped[END_OCCURRENCE].shift(1)
     segments[START_X] = grouped[X].shift(1)
     segments[START_Y] = grouped[Y].shift(1)
     segments[START_W] = grouped[W].shift(1)
     segments[START_H] = grouped[H].shift(1)
 
     # Remove NaN rows and reset index
-    segments = segments.dropna().reset_index(drop=True)
+    segments = segments.dropna().reset_index()
 
     return segments
 
@@ -565,22 +570,31 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
         if segments_df is None:
             self._segments_df = DataFrame()
         else:
-            self._segments_df = segments_df.copy()
+            self._segments_df = segments_df
 
         # Ensure the DataFrame has the required columns
-        if not self._segments_df.empty and not all(
-            col in self._segments_df.columns
+        missing_columns = [
+            col
             for col in [
                 TRACK_ID,
                 START_X,
                 START_Y,
+                START_W,
+                START_H,
                 END_X,
                 END_Y,
+                END_W,
+                END_H,
                 START_OCCURRENCE,
                 END_OCCURRENCE,
             ]
-        ):
-            raise ValueError("Segments DataFrame must have the required columns")
+            if col not in self._segments_df.columns
+        ]
+        if not self._segments_df.empty and len(missing_columns) > 0:
+            raise ValueError(
+                "Segments DataFrame must have the required columns. "
+                f"Following columns are missing: {missing_columns}"
+            )
 
     @property
     def track_ids(self) -> set[str]:
@@ -770,22 +784,30 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
 
                     # Calculate the relative position of the intersection point
                     # along the segment
-                    segment_length_x = segment[END_X] - segment[START_X]
-                    segment_length_y = segment[END_Y] - segment[START_Y]
-
+                    segment_length_x = (segment[END_X] + segment[END_W] * offset.x) - (
+                        segment[START_X] + segment[START_W] * offset.x
+                    )
+                    segment_length_y = (segment[END_Y] + segment[END_H] * offset.y) - (
+                        segment[START_Y] + segment[START_H] * offset.y
+                    )
+                    segment_length = math.sqrt(
+                        segment_length_x**2 + segment_length_y**2
+                    )
                     # Avoid division by zero
                     if segment_length_x == 0 and segment_length_y == 0:
                         continue
 
                     # Calculate the relative position (0 to 1) along the segment
-                    if segment_length_x != 0:
-                        relative_position = (
-                            segment[INTERSECTION_X] - segment[START_X]
-                        ) / segment_length_x
-                    else:
-                        relative_position = (
-                            segment[INTERSECTION_Y] - segment[START_Y]
-                        ) / segment_length_y
+                    intersection_length_x = segment[INTERSECTION_X] - (
+                        segment[START_X] + segment[START_W] * offset.x
+                    )
+                    intersection_length_y = segment[INTERSECTION_Y] - (
+                        segment[START_Y] + segment[START_H] * offset.y
+                    )
+                    intersection_length = math.sqrt(
+                        intersection_length_x**2 + intersection_length_y**2
+                    )
+                    relative_position = intersection_length / segment_length
 
                     # Create an IntersectionPoint
                     # The upper_index is 1 because we're dealing with segments
