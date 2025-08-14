@@ -248,6 +248,14 @@ class PandasDataFrameProvider:
         pass
 
 
+def unpack(track_id: TrackId | str) -> str:
+    return track_id.id if isinstance(track_id, TrackId) else track_id
+
+
+def pack(track_id: TrackId | str) -> TrackId:
+    return track_id if isinstance(track_id, TrackId) else TrackId(track_id)
+
+
 class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     @property
     def track_ids(self) -> frozenset[TrackId]:
@@ -366,10 +374,13 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def _add_to_geometry_dataset(
         self, new_tracks: TrackDataset
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
-        updated = dict[RelativeOffsetCoordinate, TrackGeometryDataset]()
-        for offset, geometries in self._geometry_datasets.items():
-            updated[offset] = geometries.add_all(new_tracks)
-        return updated
+        # TODO reactivate after remove is implemented in geometry dataset
+        self._geometry_datasets.clear()
+        return {}
+        # updated = dict[RelativeOffsetCoordinate, TrackGeometryDataset]()
+        # for offset, geometries in self._geometry_datasets.items():
+        #     updated[offset] = geometries.add_all(new_tracks)
+        # return updated
 
     def __get_tracks(self, other: Iterable[Track]) -> DataFrame:
         if isinstance(other, PandasDataFrameProvider):
@@ -385,7 +396,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         if self._dataset.empty:
             return None
         try:
-            return self._create_track_flyweight(id.id)
+            return self._create_track_flyweight(unpack(id))
         except KeyError:
             return None
 
@@ -393,14 +404,14 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return PandasTrackDataset(self.track_geometry_factory)
 
     def remove(self, track_id: TrackId) -> "PandasTrackDataset":
-        remaining_tracks = self._dataset.drop(track_id.id, errors="ignore")
+        remaining_tracks = self._dataset.drop(unpack(track_id), errors="ignore")
         updated_geometry_datasets = self._remove_from_geometry_dataset([track_id.id])
         return PandasTrackDataset.from_dataframe(
             remaining_tracks, self.track_geometry_factory, updated_geometry_datasets
         )
 
     def remove_multiple(self, track_ids: set[TrackId]) -> "PandasTrackDataset":
-        track_ids_primitive = [track_id.id for track_id in track_ids]
+        track_ids_primitive = [unpack(track_id) for track_id in track_ids]
         remaining_tracks = self._dataset.drop(track_ids_primitive, errors="ignore")
         updated_geometry_datasets = self._remove_from_geometry_dataset(
             track_ids_primitive
@@ -412,10 +423,13 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def _remove_from_geometry_dataset(
         self, track_ids: Sequence[str]
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
-        updated_dataset = {}
-        for offset, geometry_dataset in self._geometry_datasets.items():
-            updated_dataset[offset] = geometry_dataset.remove(track_ids)
-        return updated_dataset
+        # TODO reactivate after remove is implemented in geometry dataset
+        self._geometry_datasets.clear()
+        return {}
+        # updated_dataset = {}
+        # for offset, geometry_dataset in self._geometry_datasets.items():
+        #     updated_dataset[offset] = geometry_dataset.remove(track_ids)
+        # return updated_dataset
 
     def as_list(self) -> list[Track]:
         if (track_ids := self.get_index()) is not None:
@@ -468,10 +482,11 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def _get_geometries_for(
         self, track_ids: list[str]
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
-        geometry_datasets = {}
-        for offset, geometry_dataset in self._geometry_datasets.items():
-            geometry_datasets[offset] = geometry_dataset.get_for(track_ids)
-        return geometry_datasets
+        # TODO reactivate after remove is implemented in geometry dataset
+        return {}
+        # for offset, geometry_dataset in self._geometry_datasets.items():
+        #     geometry_datasets[offset] = geometry_dataset.get_for(track_ids)
+        # return geometry_datasets
 
     def __len__(self) -> int:
         if self._dataset.empty:
@@ -602,7 +617,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             return self, set()
         intersection_points = self.intersection_points([section], offset)
         cut_indices = {
-            track_id.id: [
+            unpack(track_id): [
                 ip[1].upper_index
                 for ip in sorted(intersection_points, key=lambda ip: ip[1])
             ]
