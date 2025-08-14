@@ -374,13 +374,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def _add_to_geometry_dataset(
         self, new_tracks: TrackDataset
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
-        # TODO reactivate after remove is implemented in geometry dataset
-        self._geometry_datasets.clear()
-        return {}
-        # updated = dict[RelativeOffsetCoordinate, TrackGeometryDataset]()
-        # for offset, geometries in self._geometry_datasets.items():
-        #     updated[offset] = geometries.add_all(new_tracks)
-        # return updated
+        updated = dict[RelativeOffsetCoordinate, TrackGeometryDataset]()
+        for offset, geometries in self._geometry_datasets.items():
+            updated[offset] = geometries.add_all(new_tracks)
+        return updated
 
     def __get_tracks(self, other: Iterable[Track]) -> DataFrame:
         if isinstance(other, PandasDataFrameProvider):
@@ -423,13 +420,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def _remove_from_geometry_dataset(
         self, track_ids: Sequence[str]
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
-        # TODO reactivate after remove is implemented in geometry dataset
-        self._geometry_datasets.clear()
-        return {}
-        # updated_dataset = {}
-        # for offset, geometry_dataset in self._geometry_datasets.items():
-        #     updated_dataset[offset] = geometry_dataset.remove(track_ids)
-        # return updated_dataset
+        updated_dataset = {}
+        for offset, geometry_dataset in self._geometry_datasets.items():
+            updated_dataset[offset] = geometry_dataset.remove(track_ids)
+        return updated_dataset
 
     def as_list(self) -> list[Track]:
         if (track_ids := self.get_index()) is not None:
@@ -482,11 +476,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def _get_geometries_for(
         self, track_ids: list[str]
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
-        # TODO reactivate after remove is implemented in geometry dataset
-        return {}
-        # for offset, geometry_dataset in self._geometry_datasets.items():
-        #     geometry_datasets[offset] = geometry_dataset.get_for(track_ids)
-        # return geometry_datasets
+        geometry_datasets = {}
+        for offset, geometry_dataset in self._geometry_datasets.items():
+            geometry_datasets[offset] = geometry_dataset.get_for(track_ids)
+        return geometry_datasets
 
     def __len__(self) -> int:
         if self._dataset.empty:

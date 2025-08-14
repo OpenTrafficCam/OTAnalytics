@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Sequence
 
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
@@ -649,16 +649,119 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
             )
 
     def add_all(self, tracks: Iterable[Track]) -> "TrackGeometryDataset":
-        # TODO convert to segments and append segments to dataframe
-        raise NotImplementedError
+        """Add tracks to existing dataset.
+
+        Pre-existing tracks will be overwritten.
+
+        Args:
+            tracks (Iterable[Track]): the tracks to add.
+
+        Returns:
+            TrackGeometryDataset: the dataset with tracks added.
+        """
+        # Convert tracks to DataFrame format
+        track_data = self._convert_tracks_to_dataframe(tracks)
+        if track_data.empty:
+            return self
+
+        # Create segments from track data
+        new_segments = create_track_segments(track_data)
+        if new_segments.empty:
+            return self
+
+        if self.empty:
+            # If current dataset is empty, return new dataset with the new segments
+            return PandasTrackGeometryDataset(self._offset, new_segments)
+
+        # Merge with existing segments, overwriting duplicates
+        # Remove existing segments for tracks that are being added
+        new_track_ids = new_segments[TRACK_ID].unique()
+        existing_without_new = self._segments_df[
+            ~self._segments_df[TRACK_ID].isin(new_track_ids)
+        ]
+
+        # Combine existing (without overlaps) and new segments
+        combined_segments = DataFrame()
+        if not existing_without_new.empty and not new_segments.empty:
+            combined_segments = concat(
+                [existing_without_new, new_segments], ignore_index=True
+            )
+        elif not existing_without_new.empty:
+            combined_segments = existing_without_new
+        elif not new_segments.empty:
+            combined_segments = new_segments
+
+        return PandasTrackGeometryDataset(self._offset, combined_segments)
+
+    def _convert_tracks_to_dataframe(self, tracks: Iterable[Track]) -> DataFrame:
+        """Convert tracks to DataFrame format.
+
+        Args:
+            tracks (Iterable[Track]): tracks to convert.
+
+        Returns:
+            DataFrame: tracks as dataframe with TRACK_ID, OCCURRENCE, X, Y, W, H.
+        """
+        if not tracks:
+            return DataFrame()
+
+        data = []
+        for track in tracks:
+            track_id = track.id.id
+            for detection in track.detections:
+                data.append(
+                    {
+                        TRACK_ID: track_id,
+                        OCCURRENCE: detection.occurrence,
+                        X: detection.x,
+                        Y: detection.y,
+                        W: detection.w,
+                        H: detection.h,
+                    }
+                )
+
+        if not data:
+            return DataFrame()
+
+        return DataFrame(data)
 
     def remove(self, ids: Sequence[str]) -> "TrackGeometryDataset":
-        # TODO remove all segments with given ids
-        raise NotImplementedError
+        """Remove track geometries with given ids from dataset.
+
+        Args:
+            ids (Sequence[str]): the track geometries to remove.
+
+        Returns:
+            TrackGeometryDataset: the dataset with tracks removed.
+        """
+        if self.empty or not ids:
+            return self
+
+        # Filter out segments with track IDs in the removal list
+        remaining_segments = self._segments_df[~self._segments_df[TRACK_ID].isin(ids)]
+
+        return PandasTrackGeometryDataset(self._offset, remaining_segments)
 
     def get_for(self, track_ids: list[str]) -> "TrackGeometryDataset":
-        # TODO filter segments by track ids
-        raise NotImplementedError
+        """Get geometries for given track ids if they exist.
+
+        Ids that do not exist will not be included in the dataset.
+
+        Args:
+            track_ids (list[str]): the track ids.
+
+        Returns:
+            TrackGeometryDataset: the dataset with tracks.
+        """
+        if self.empty or not track_ids:
+            return PandasTrackGeometryDataset(self._offset)
+
+        # Filter segments to include only those with track IDs in the provided list
+        filtered_segments = self._segments_df[
+            self._segments_df[TRACK_ID].isin(track_ids)
+        ]
+
+        return PandasTrackGeometryDataset(self._offset, filtered_segments)
 
     def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
         """Return a set of tracks intersecting a set of sections.
