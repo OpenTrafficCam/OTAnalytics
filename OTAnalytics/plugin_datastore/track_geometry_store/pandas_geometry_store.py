@@ -118,7 +118,7 @@ def create_track_segments(df: DataFrame) -> DataFrame:
     segments[START_H] = grouped[H].shift(1)
 
     # Remove NaN rows and reset index
-    segments = segments.dropna().reset_index()
+    segments = segments.dropna().reset_index(drop=True)
 
     return segments
 
