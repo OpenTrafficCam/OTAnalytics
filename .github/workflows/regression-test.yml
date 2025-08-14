@@ -37,6 +37,6 @@ jobs:
           cd ..
       - name: Install the project
         shell: bash
-        run: uv sync --locked --all-extras --dev
+        run: uv sync --locked --dev
       - name: Run regression tests
         run: uv run pytest ./tests/regression_otanalytics.py
