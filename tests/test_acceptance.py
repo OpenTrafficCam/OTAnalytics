@@ -1,4 +1,5 @@
 from pathlib import Path
+from pathlib import Path as _Path
 from typing import Any, Generator, TypeVar
 
 import pytest
@@ -10,6 +11,7 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
 from tests.utils.builders.otanalytics_builders import MultiprocessingWorker
 from tests.utils.ui_helpers import set_input_value
 
@@ -318,53 +320,52 @@ class TestProjectInformation:
         target.find("Project")
 
         # Helper to set values using aria-labels with Screen/selenium
-        def set_inputs(
+        def fill_project_form(
             name: str, date_str: str, time_str: str
         ) -> tuple[WebElement, WebElement, WebElement]:
-            name_el = target.find_by_css(
+            name_input = target.find_by_css(
                 f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_PROJECT_NAME)}"]'
             )
-            date_el = target.find_by_css(
+            date_input = target.find_by_css(
                 f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_START_DATE)}"]'
             )
-            time_el = target.find_by_css(
+            time_input = target.find_by_css(
                 f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_START_TIME)}"]'
             )
             # clear and type via JS to avoid input event issues
             for el, value in [
-                (name_el, name),
-                (date_el, date_str),
-                (time_el, time_str),
+                (name_input, name),
+                (date_input, date_str),
+                (time_input, time_str),
             ]:
                 set_input_value(target, el, value)
-            return name_el, date_el, time_el
+            return name_input, date_input, time_input
 
         # Helper to read current values
-        def get_inputs(
-            name_el: WebElement, date_el: WebElement, time_el: WebElement
+        def read_project_form_values(
+            name_input: WebElement, date_input: WebElement, time_input: WebElement
         ) -> tuple[str, str, str]:
-            name_v = target.selenium.execute_script(
-                "return arguments[0].value;", name_el
+            actual_name = target.selenium.execute_script(
+                "return arguments[0].value;", name_input
             )
-            date_v = target.selenium.execute_script(
-                "return arguments[0].value;", date_el
+            actual_date = target.selenium.execute_script(
+                "return arguments[0].value;", date_input
             )
-            time_v = target.selenium.execute_script(
-                "return arguments[0].value;", time_el
+            actual_time = target.selenium.execute_script(
+                "return arguments[0].value;", time_input
             )
-            return name_v, date_v, time_v
+            return actual_name, actual_date, actual_time
 
         # Initial values to save
-        v1_name = "Acceptance Save/Load Project"
-        v1_date = "2023-05-24"
-        v1_time = "06:00:00"
-        name_el, date_el, time_el = set_inputs(v1_name, v1_date, v1_time)
+        saved_name = "Acceptance Save/Load Project"
+        saved_date = "2023-05-24"
+        saved_time = "06:00:00"
+        name_input, date_input, time_input = fill_project_form(
+            saved_name, saved_date, saved_time
+        )
         target.wait(0.3)
 
         # Patch NiceGuiUiFactory to bypass dialogs
-        from pathlib import Path as _Path
-
-        from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
 
         save_path = _Path(test_data_tmp_dir) / "project_information.otconfig"
 
@@ -407,10 +408,12 @@ class TestProjectInformation:
         assert save_path.exists(), f"Expected saved config at {save_path}"
 
         # Change inputs to different values (simulate different project/new)
-        v2_name = "Different Project Name"
-        v2_date = "2024-01-15"
-        v2_time = "07:30:00"
-        name_el, date_el, time_el = set_inputs(v2_name, v2_date, v2_time)
+        modified_name = "Different Project Name"
+        modified_date = "2024-01-15"
+        modified_time = "07:30:00"
+        name_input, date_input, time_input = fill_project_form(
+            modified_name, modified_date, modified_time
+        )
         target.wait(0.2)
 
         # Click Open... to import previously saved config
@@ -421,27 +424,33 @@ class TestProjectInformation:
         target.wait(0.7)
 
         # Verify fields restored to saved values
-        n, d, t = get_inputs(name_el, date_el, time_el)
-        assert n == v1_name
-        assert d == v1_date
-        assert t == v1_time
+        actual_name, actual_date, actual_time = read_project_form_values(
+            name_input, date_input, time_input
+        )
+        assert actual_name == saved_name
+        assert actual_date == saved_date
+        assert actual_time == saved_time
 
-        # Overwrite scenario: change fields again
-        v3_name = "Temp Name Before Import"
-        v3_date = "2025-08-13"
-        v3_time = "08:45:00"
-        name_el, date_el, time_el = set_inputs(v3_name, v3_date, v3_time)
+        # Overwrite scenario: change fields again (interim values)
+        interim_name = "Temp Name Before Import"
+        interim_date = "2025-08-13"
+        interim_time = "08:45:00"
+        name_input, date_input, time_input = fill_project_form(
+            interim_name, interim_date, interim_time
+        )
         target.wait(0.2)
 
-        # Import the same saved file; expect fields to match v1_* again
+        # Import the same saved file; expect fields to match saved_* again
         assert click_by_text(
             resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT)
         ), "Open button not found (2nd time)"
         target.wait(0.7)
-        n, d, t = get_inputs(name_el, date_el, time_el)
-        assert n == v1_name
-        assert d == v1_date
-        assert t == v1_time
+        actual_name, actual_date, actual_time = read_project_form_values(
+            name_input, date_input, time_input
+        )
+        assert actual_name == saved_name
+        assert actual_date == saved_date
+        assert actual_time == saved_time
 
 
 @pytest.mark.timeout(300)
