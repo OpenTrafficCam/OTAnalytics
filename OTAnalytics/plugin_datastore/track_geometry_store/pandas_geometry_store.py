@@ -90,34 +90,30 @@ def create_track_segments(df: DataFrame) -> DataFrame:
     if df.empty:
         return DataFrame()
 
-    # Make a copy to avoid modifying the original DataFrame
-    data = df.copy()
+    # Create MultiIndex and sort once
+    df_indexed = df.set_index([TRACK_ID, OCCURRENCE]).sort_index()
 
-    # Ensure the DataFrame is sorted by track-id and occurrence
-    data = data.sort_values(by=[TRACK_ID, OCCURRENCE])
+    # Group by level 0 (TRACK_ID) - this is very fast on sorted MultiIndex
+    grouped = df_indexed.groupby(level=0)
 
-    # Group by track-id to create segments
-    grouped = data.groupby(TRACK_ID)
-
-    # Create a new DataFrame with shifted values to get start and end points
+    # Create segments DataFrame
     segments = DataFrame()
-    segments[TRACK_ID] = data[TRACK_ID]
-    segments[END_OCCURRENCE] = data[OCCURRENCE]
-    segments[END_X] = data[X]
-    segments[END_Y] = data[Y]
-    segments[END_W] = data[W]
-    segments[END_H] = data[H]
+    segments[TRACK_ID] = df_indexed.index.get_level_values(0)
+    segments[END_OCCURRENCE] = df_indexed.index.get_level_values(1)
+    segments[END_X] = df_indexed[X]
+    segments[END_Y] = df_indexed[Y]
+    segments[END_W] = df_indexed[W]
+    segments[END_H] = df_indexed[H]
+
+    # Shift operations are faster on sorted groups
     segments[START_OCCURRENCE] = grouped[OCCURRENCE].shift(1)
     segments[START_X] = grouped[X].shift(1)
     segments[START_Y] = grouped[Y].shift(1)
     segments[START_W] = grouped[W].shift(1)
     segments[START_H] = grouped[H].shift(1)
 
-    # Remove rows where start values are NaN (first point of each track)
-    segments = segments.dropna()
-
-    # Reset index for clean output
-    segments = segments.reset_index(drop=True)
+    # Remove NaN rows and reset index
+    segments = segments.dropna().reset_index(drop=True)
 
     return segments
 
@@ -141,6 +137,7 @@ def calculate_intersection_parameters(
     line_y1: float,
     line_x2: float,
     line_y2: float,
+    offset: RelativeOffsetCoordinate,
 ) -> DataFrame:
     """
     Calculate parameters needed for line intersection calculations.
@@ -162,10 +159,16 @@ def calculate_intersection_parameters(
     # Initialize result DataFrame
     result_df = DataFrame(index=segments_df.index)
 
+    # Apply offset on-the-fly (no mutation/copy)
+    sxa = segments_df[START_X] + segments_df[START_W] * offset.x
+    sya = segments_df[START_Y] + segments_df[START_H] * offset.y
+    exa = segments_df[END_X] + segments_df[END_W] * offset.x
+    eya = segments_df[END_Y] + segments_df[END_H] * offset.y
+
     # Calculate denominator for all segments at once
-    result_df[DENOMINATOR] = (line_y2 - line_y1) * (
-        segments_df[END_X] - segments_df[START_X]
-    ) - (line_x2 - line_x1) * (segments_df[END_Y] - segments_df[START_Y])
+    result_df[DENOMINATOR] = (line_y2 - line_y1) * (exa - sxa) - (line_x2 - line_x1) * (
+        eya - sya
+    )
 
     # Filter out segments where lines are parallel (denominator == 0)
     result_df[NON_PARALLEL] = result_df[DENOMINATOR] != 0
@@ -177,15 +180,12 @@ def calculate_intersection_parameters(
     if result_df[NON_PARALLEL].any():
         # Calculate the parameters for the intersection points
         ua_values = (
-            (line_x2 - line_x1) * (segments_df[START_Y] - line_y1)
-            - (line_y2 - line_y1) * (segments_df[START_X] - line_x1)
+            (line_x2 - line_x1) * (sya - line_y1)
+            - (line_y2 - line_y1) * (sxa - line_x1)
         ) / result_df[DENOMINATOR]
 
         ub_values = (
-            (segments_df[END_X] - segments_df[START_X])
-            * (segments_df[START_Y] - line_y1)
-            - (segments_df[END_Y] - segments_df[START_Y])
-            * (segments_df[START_X] - line_x1)
+            (exa - sxa) * (sya - line_y1) - (eya - sya) * (sxa - line_x1)
         ) / result_df[DENOMINATOR]
 
         # Update ua and ub columns for non-parallel segments
@@ -220,25 +220,56 @@ def check_line_intersections(
             segment intersects the line.
     """
     if segments_df.empty:
-        return segments_df
+        return DataFrame(index=segments_df.index, data=False, columns=[INTERSECTS])
 
-    segments_df = apply_offset(segments_df, offset)
+    # Bounding box of the line
+    line_min_x = min(line_x1, line_x2)
+    line_max_x = max(line_x1, line_x2)
+    line_min_y = min(line_y1, line_y2)
+    line_max_y = max(line_y1, line_y2)
 
-    # Calculate intersection parameters
-    params_df = calculate_intersection_parameters(
-        segments_df, line_x1, line_y1, line_x2, line_y2
+    # Segment endpoints adjusted by offset (no copy/mutation)
+    sxa = segments_df[START_X] + segments_df[START_W] * offset.x
+    sya = segments_df[START_Y] + segments_df[START_H] * offset.y
+    exa = segments_df[END_X] + segments_df[END_W] * offset.x
+    eya = segments_df[END_Y] + segments_df[END_H] * offset.y
+
+    # Segment bounding boxes
+    seg_min_x = sxa.where(sxa <= exa, exa)
+    seg_max_x = sxa.where(sxa >= exa, exa)
+    seg_min_y = sya.where(sya <= eya, eya)
+    seg_max_y = sya.where(sya >= eya, eya)
+
+    # Candidate segments whose bbox intersects the line bbox
+    candidate_mask = (
+        (seg_max_x >= line_min_x)
+        & (seg_min_x <= line_max_x)
+        & (seg_max_y >= line_min_y)
+        & (seg_min_y <= line_max_y)
     )
 
-    # If all segments are parallel or ua/ub couldn't be calculated
+    # Prepare result DataFrame (all False by default)
+    intersects_df = DataFrame(index=segments_df.index, data=False, columns=[INTERSECTS])
+
+    if not candidate_mask.any():
+        return intersects_df
+
+    # Calculate intersection parameters for candidates only
+    candidate_df = segments_df.loc[candidate_mask]
+    params_df = calculate_intersection_parameters(
+        candidate_df, line_x1, line_y1, line_x2, line_y2, offset
+    )
+
+    # If all candidate segments are parallel or ua/ub couldn't be calculated
     if (
         not params_df[NON_PARALLEL].any()
         or params_df[UA].isna().all()
         or params_df[UB].isna().all()
     ):
-        return DataFrame(index=segments_df.index, data=False, columns=[INTERSECTS])
+        return intersects_df
 
-    # Create a mask for valid intersections (intersection point is on both line
-    # segments)
+    # Create a mask for valid intersections
+    # (intersection point is on both line segments)
     valid_intersection_mask = (
         (0 <= params_df[UA])
         & (params_df[UA] <= 1)
@@ -247,9 +278,10 @@ def check_line_intersections(
         & params_df[NON_PARALLEL]
     )
 
-    # Create a DataFrame with the intersection results
-    intersects_df = DataFrame(index=segments_df.index, data=False, columns=[INTERSECTS])
-    intersects_df.loc[valid_intersection_mask, INTERSECTS] = True
+    # Update the result DataFrame with True where intersections occur
+    if valid_intersection_mask.any():
+        valid_idx = params_df.index[valid_intersection_mask]
+        intersects_df.loc[valid_idx, INTERSECTS] = True
 
     return intersects_df
 
@@ -283,11 +315,9 @@ def calculate_intersection_points(
             index=segments_df.index, columns=[INTERSECTION_X, INTERSECTION_Y]
         )
 
-    segments_df = apply_offset(segments_df, offset)
-
-    # Calculate intersection parameters
+    # Calculate intersection parameters (offset applied on-the-fly)
     params_df = calculate_intersection_parameters(
-        segments_df, line_x1, line_y1, line_x2, line_y2
+        segments_df, line_x1, line_y1, line_x2, line_y2, offset
     )
 
     # Initialize DataFrame for intersection coordinates
@@ -313,13 +343,15 @@ def calculate_intersection_points(
     )
 
     if valid_intersection_mask.any():
+        # Adjusted segment endpoints with offset
+        sxa = segments_df[START_X] + segments_df[START_W] * offset.x
+        sya = segments_df[START_Y] + segments_df[START_H] * offset.y
+        exa = segments_df[END_X] + segments_df[END_W] * offset.x
+        eya = segments_df[END_Y] + segments_df[END_H] * offset.y
+
         # Calculate the intersection points for valid intersections
-        intersection_x = segments_df[START_X] + params_df[UA] * (
-            segments_df[END_X] - segments_df[START_X]
-        )
-        intersection_y = segments_df[START_Y] + params_df[UA] * (
-            segments_df[END_Y] - segments_df[START_Y]
-        )
+        intersection_x = sxa + params_df[UA] * (exa - sxa)
+        intersection_y = sya + params_df[UA] * (eya - sya)
 
         # Update the result DataFrame with intersection coordinates
         intersection_df.loc[valid_intersection_mask, INTERSECTION_X] = intersection_x[
@@ -339,7 +371,7 @@ def find_line_intersections(
     start_y: float,
     end_x: float,
     end_y: float,
-    offset: RelativeOffsetCoordinate,
+    offset: RelativeOffsetCoordinate | None = None,
 ) -> DataFrame:
     """
     Find intersection points between track segments and a line.
@@ -367,8 +399,12 @@ def find_line_intersections(
     if segments_df.empty:
         return segments_df
 
-    # Create a copy to avoid modifying the original DataFrame
-    result_df = segments_df.copy()
+    # Default offset if not provided
+    if offset is None:
+        offset = RelativeOffsetCoordinate(0.0, 0.0)
+
+    # Use a shallow copy to avoid duplicating data blocks
+    result_df = segments_df.copy(deep=False)
 
     # Initialize new columns
     result_df[INTERSECTS] = False
@@ -378,24 +414,30 @@ def find_line_intersections(
 
     # Check which segments intersect with the line
     intersects_df = check_line_intersections(
-        result_df, start_x, start_y, end_x, end_y, offset
+        segments_df, start_x, start_y, end_x, end_y, offset
     )
 
     # If there are any intersections
     if intersects_df[INTERSECTS].any():
-        # Calculate intersection points
+        valid_intersection_mask = intersects_df[INTERSECTS]
+
+        # Calculate intersection points only for intersecting segments
         intersection_df = calculate_intersection_points(
-            result_df, start_x, start_y, end_x, end_y, offset
+            segments_df.loc[valid_intersection_mask],
+            start_x,
+            start_y,
+            end_x,
+            end_y,
+            offset,
         )
 
         # Update the result DataFrame with intersection information
-        valid_intersection_mask = intersects_df[INTERSECTS]
         result_df.loc[valid_intersection_mask, INTERSECTS] = True
-        result_df.loc[valid_intersection_mask, INTERSECTION_X] = intersection_df.loc[
-            valid_intersection_mask, INTERSECTION_X
+        result_df.loc[valid_intersection_mask, INTERSECTION_X] = intersection_df[
+            INTERSECTION_X
         ]
-        result_df.loc[valid_intersection_mask, INTERSECTION_Y] = intersection_df.loc[
-            valid_intersection_mask, INTERSECTION_Y
+        result_df.loc[valid_intersection_mask, INTERSECTION_Y] = intersection_df[
+            INTERSECTION_Y
         ]
         result_df.loc[valid_intersection_mask, INTERSECTION_LINE_ID] = line_id
 
@@ -427,14 +469,43 @@ def check_polygon_intersections(
     if segments_df.empty:
         return segments_df
 
-    # Create a copy to avoid modifying the original DataFrame
-    result_df = segments_df.copy()
+    # Shallow copy to add result column without duplicating data
+    result_df = segments_df.copy(deep=False)
 
     # Initialize the intersects-polygon column to False
     result_df[INTERSECTS_POLYGON] = False
 
     # Get the coordinates of the polygon
     polygon_coordinates = polygon.coordinates
+
+    # Polygon bounding box
+    poly_min_x = min(c.x for c in polygon_coordinates)
+    poly_max_x = max(c.x for c in polygon_coordinates)
+    poly_min_y = min(c.y for c in polygon_coordinates)
+    poly_max_y = max(c.y for c in polygon_coordinates)
+
+    # Segment endpoints adjusted by offset (no copy/mutation)
+    sxa = segments_df[START_X] + segments_df[START_W] * offset.x
+    sya = segments_df[START_Y] + segments_df[START_H] * offset.y
+    exa = segments_df[END_X] + segments_df[END_W] * offset.x
+    eya = segments_df[END_Y] + segments_df[END_H] * offset.y
+
+    # Segment bounding boxes
+    seg_min_x = sxa.where(sxa <= exa, exa)
+    seg_max_x = sxa.where(sxa >= exa, exa)
+    seg_min_y = sya.where(sya <= eya, eya)
+    seg_max_y = sya.where(sya >= eya, eya)
+
+    # Pre-filter segments whose bbox intersects polygon bbox
+    candidate_mask = (
+        (seg_max_x >= poly_min_x)
+        & (seg_min_x <= poly_max_x)
+        & (seg_max_y >= poly_min_y)
+        & (seg_min_y <= poly_max_y)
+    )
+
+    if not candidate_mask.any():
+        return result_df
 
     # Check intersections with each line segment of the polygon
     for i in range(len(polygon_coordinates) - 1):
@@ -444,19 +515,30 @@ def check_polygon_intersections(
         end_x = polygon_coordinates[i + 1].x
         end_y = polygon_coordinates[i + 1].y
 
+        # Further prefilter by line bbox
+        line_min_x = min(start_x, end_x)
+        line_max_x = max(start_x, end_x)
+        line_min_y = min(start_y, end_y)
+        line_max_y = max(start_y, end_y)
+        cand2_mask = (
+            (seg_max_x >= line_min_x)
+            & (seg_min_x <= line_max_x)
+            & (seg_max_y >= line_min_y)
+            & (seg_min_y <= line_max_y)
+            & candidate_mask
+        )
+        if not cand2_mask.any():
+            continue
+
         # Check which segments intersect with the current line segment
         intersects_df = check_line_intersections(
-            result_df,
-            start_x,
-            start_y,
-            end_x,
-            end_y,
-            offset,
+            segments_df.loc[cand2_mask], start_x, start_y, end_x, end_y, offset
         )
 
-        # Update the result DataFrame
+        # Update the result DataFrame using indices of True values
         if intersects_df[INTERSECTS].any():
-            result_df.loc[intersects_df[INTERSECTS], INTERSECTS_POLYGON] = True
+            true_idx = intersects_df.index[intersects_df[INTERSECTS]]
+            result_df.loc[true_idx, INTERSECTS_POLYGON] = True
 
     return result_df
 
