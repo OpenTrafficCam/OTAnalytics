@@ -185,8 +185,8 @@ from OTAnalytics.plugin_datastore.pandas_track_dataset_factory import (
     TypeCheckingPandasTrackDatasetFactory,
 )
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
-from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
-    ShapelyTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store import (
+    PandasTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     FilterByClassPandasTrackDataset,
@@ -996,7 +996,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
-        return ShapelyTrackGeometryDataset.from_track_dataset
+        return PandasTrackGeometryDataset.from_track_dataset
+        # return ShapelyTrackGeometryDataset.from_track_dataset
 
 
 def create_format_fixer(
