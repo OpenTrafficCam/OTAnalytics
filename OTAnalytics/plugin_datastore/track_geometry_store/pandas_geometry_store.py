@@ -123,19 +123,6 @@ def create_track_segments(df: DataFrame) -> DataFrame:
     return segments
 
 
-def apply_offset(segments_df: DataFrame, offset: RelativeOffsetCoordinate) -> DataFrame:
-    """Apply an offset to the coordinates of a DataFrame containing track segments."""
-    if segments_df.empty:
-        return segments_df
-
-    segments_df = segments_df.copy()
-    segments_df[START_X] += segments_df[START_W] * offset.x
-    segments_df[START_Y] += segments_df[START_H] * offset.y
-    segments_df[END_X] += segments_df[END_W] * offset.x
-    segments_df[END_Y] += segments_df[END_H] * offset.y
-    return segments_df
-
-
 def calculate_intersection_parameters(
     segments_df: DataFrame,
     line_x1: float,
