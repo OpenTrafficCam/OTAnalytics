@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from functools import cached_property
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -79,8 +80,8 @@ from tests.utils.builders.run_configuration import create_run_config
 
 PYTHON = "PYTHON"
 PANDAS = "PANDAS"
-PURE_PANDAS = "PANDAS"
-CURRENT_DATASET_TYPE = PANDAS
+PURE_PANDAS = "PURE_PANDAS"
+CURRENT_DATASET_TYPE = PURE_PANDAS
 
 EXCLUDE_FILTER = [
     OtcClasses.PEDESTRIAN,
@@ -105,6 +106,22 @@ def _fill_track_repository(
             track_parse_result.detection_metadata.detection_classes
         )
     return DetectionMetadata(frozenset(detection_classes))
+
+
+class BenchmarkOtAnalyticsStarter(OtAnalyticsCliApplicationStarter):
+    def __init__(
+        self,
+        run_config: RunConfiguration,
+        dataset_type: str,
+    ) -> None:
+        super().__init__(run_config)
+        self._dataset_type = dataset_type
+
+    @cached_property
+    def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
+        if self._dataset_type == PURE_PANDAS:
+            return PandasTrackGeometryDataset.from_track_dataset
+        return ShapelyTrackGeometryDataset.from_track_dataset
 
 
 class UseCaseProvider:
@@ -146,7 +163,7 @@ class UseCaseProvider:
         self._include_classes: frozenset[str] = frozenset()
         self._exclude_classes: frozenset[str] = frozenset()
         self._flow_parser = OtFlowParser()
-        self._starter = OtAnalyticsCliApplicationStarter(self.run_config)
+        self._starter = BenchmarkOtAnalyticsStarter(self.run_config, dataset_type)
         track_repository, detection_metadata = self.provide_track_repository(
             self._ottrk_files, dataset_type
         )
