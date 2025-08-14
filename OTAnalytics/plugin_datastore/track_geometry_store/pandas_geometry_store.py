@@ -649,15 +649,15 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
             )
 
     def add_all(self, tracks: Iterable[Track]) -> "TrackGeometryDataset":
-        # TODO Do not implement
+        # TODO convert to segments and append segments to dataframe
         raise NotImplementedError
 
     def remove(self, ids: Sequence[str]) -> "TrackGeometryDataset":
-        # TODO Do not implement
+        # TODO remove all segments with given ids
         raise NotImplementedError
 
     def get_for(self, track_ids: list[str]) -> "TrackGeometryDataset":
-        # TODO Do not implement
+        # TODO filter segments by track ids
         raise NotImplementedError
 
     def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
