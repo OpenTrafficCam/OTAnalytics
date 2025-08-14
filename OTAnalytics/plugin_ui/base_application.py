@@ -997,7 +997,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
         return PandasTrackGeometryDataset.from_track_dataset
-        # return ShapelyTrackGeometryDataset.from_track_dataset
 
 
 def create_format_fixer(
