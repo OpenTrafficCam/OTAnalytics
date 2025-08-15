@@ -153,16 +153,13 @@ class TestDatastore:
         section_repository: Mock,
         flow_repository: Mock,
         video_parser: Mock,
-        track_video_parser: Mock,
         event_repository: Mock,
         event_list_parser: Mock,
         video_repository: Mock,
-        track_to_video_repository: Mock,
         progressbar: Mock,
         remark_repository: Mock,
     ) -> None:
         track_parser.parse.return_value = []
-        track_video_parser.parse.return_value = []
         store = Datastore(
             track_repository=track_repository,
             track_file_repository=track_file_repository,
