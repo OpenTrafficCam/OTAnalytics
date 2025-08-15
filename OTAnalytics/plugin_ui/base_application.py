@@ -223,6 +223,7 @@ from OTAnalytics.plugin_parser.export import (
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
+from OTAnalytics.plugin_parser.feathers_parser import FeathersParser
 from OTAnalytics.plugin_parser.json_parser import parse_json
 from OTAnalytics.plugin_parser.otconfig_parser import (
     FixMissingAnalysis,
@@ -604,12 +605,18 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     def _create_track_parser(self) -> TrackParser:
+        return self._create_feathers_parser()
+
+    def _create_ottrk_parser(self) -> TrackParser:
         detection_parser = PandasDetectionParser(
             self.pandas_by_max_confidence,
             self.track_geometry_factory,
             track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
         )
         return OttrkParser(detection_parser)
+
+    def _create_feathers_parser(self) -> TrackParser:
+        return FeathersParser()
 
     def _create_stream_track_parser(self) -> StreamTrackParser:
         return StreamOttrkParser(
