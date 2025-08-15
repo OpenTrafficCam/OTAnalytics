@@ -39,7 +39,7 @@ dependencies = [
     "requests==2.32.4",
     "seaborn==0.13.2",
     "shapely==2.0.7",
-    "starlette==0.41.2",
+    "starlette==0.47.2",
     "tqdm==4.67.1",
     "ujson==5.10.0",
     "uvicorn==0.32.1",
