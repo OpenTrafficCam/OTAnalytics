@@ -27,21 +27,20 @@ from typing import Any, Dict
 
 from OTAnalytics.application.datastore import TrackParseResult
 from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
-from OTAnalytics.domain.track_repository import TrackRepository
-from OTAnalytics.plugin_datastore.python_track_store import (
-    ByMaxConfidence,
-    PythonTrackDataset,
-)
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
 from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store import (
     PandasTrackGeometryDataset,
 )
-from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
+from OTAnalytics.plugin_datastore.track_store import (
+    PandasByMaxConfidence,
+    PandasTrackDataset,
+)
 from OTAnalytics.plugin_parser.json_parser import write_json
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     OttrkParser,
-    PythonDetectionParser,
 )
+from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 
 
 def create_track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
@@ -52,17 +51,12 @@ def create_track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
 def create_ottrk_parser() -> OttrkParser:
     """Create an OttrkParser with the required detection parser."""
     # Create required dependencies for PythonDetectionParser
-    track_classification_calculator = ByMaxConfidence()
+    track_classification_calculator = PandasByMaxConfidence()
     track_geometry_factory = create_track_geometry_factory()
 
-    # Create empty track repository (no existing tracks when parsing new file)
-    empty_track_dataset = PythonTrackDataset.from_list([], track_geometry_factory)
-    track_repository = TrackRepository(empty_track_dataset)
-
     # Create detection parser with all required dependencies
-    detection_parser = PythonDetectionParser(
-        track_classification_calculator=track_classification_calculator,
-        track_repository=track_repository,
+    detection_parser = PandasDetectionParser(
+        calculator=track_classification_calculator,
         track_geometry_factory=track_geometry_factory,
         track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
     )
