@@ -53,7 +53,32 @@ class TrackParseResult:
     video_metadata: VideoMetadata
 
 
+@dataclass(frozen=True)
+class TracksParseResult:
+    tracks: TrackDataset
+    detections_metadata: list[DetectionMetadata]
+    videos_metadata: list[VideoMetadata]
+
+
+def combine_track_datasets(results: list[TrackParseResult]) -> TrackDataset:
+    if not results:
+        raise ValueError("No results to combine")
+    tracks = results[0].tracks
+    for result in results[1:]:
+        tracks.add_all(result.tracks)
+    return tracks
+
+
 class TrackParser(ABC):
+    def parse_files(self, files: list[Path]) -> TracksParseResult:
+        if not files:
+            raise ValueError("No files to parse")
+        results = [self.parse(file) for file in files]
+        tracks = combine_track_datasets(results)
+        detections_metadata = [result.detection_metadata for result in results]
+        videos_metadata = [result.video_metadata for result in results]
+        return TracksParseResult(tracks, detections_metadata, videos_metadata)
+
     @abstractmethod
     def parse(self, file: Path) -> TrackParseResult:
         raise NotImplementedError
