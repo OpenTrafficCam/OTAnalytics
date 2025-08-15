@@ -1,5 +1,5 @@
 ---
-name: Regression Test With Pytest
+name: Acceptance Test With Pytest
 on:
   pull_request:
     branches:
@@ -9,8 +9,8 @@ on:
 permissions: read-all
 
 jobs:
-  regression-test:
-    name: Run pytest regression test
+  acceptance-test:
+    name: Run pytest Acceptance test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,5 +38,5 @@ jobs:
       - name: Install the project
         shell: bash
         run: uv sync --locked --dev
-      - name: Run regression tests
+      - name: Run acceptance tests
         run: uv run pytest ./test-acceptance.py
