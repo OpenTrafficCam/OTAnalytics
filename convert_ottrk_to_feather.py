@@ -2,7 +2,7 @@
 """
 Script to convert ottrk files to Apache Arrow/Feather format with metadata export.
 
-This script reads a single ottrk file using the OttrkParser, extracts the pandas
+This script reads one or more ottrk files using the OttrkParser, extracts the pandas
 DataFrame, and saves it in Apache Arrow/Feather format. The metadata is saved as a
 separate JSON file. Both output files use the same stem as the input file.
 
@@ -10,14 +10,21 @@ Requirements:
     - pyarrow: Required for feather format export (install with: pip install pyarrow)
 
 Usage:
-    python convert_ottrk_to_feather.py <input_file.ottrk>
+    python convert_ottrk_to_feather.py <input_file1.ottrk> [input_file2.ottrk ...]
 
-Example:
+Examples:
+    # Convert single file
     python convert_ottrk_to_feather.py data/sample.ottrk
 
-    This will create:
-    - data/sample.feather (DataFrame in feather format)
-    - data/sample_metadata.json (metadata in JSON format)
+    # Convert multiple files python convert_ottrk_to_feather.py data/sample1.ottrk
+        data/sample2.ottrk data/sample3.ottrk
+
+    # Convert all ottrk files in a directory using shell globbing
+    python convert_ottrk_to_feather.py data/*.ottrk
+
+    Each input file will create:
+    - <input_stem>.feather (DataFrame in feather format)
+    - <input_stem>_metadata.json (metadata in JSON format)
 """
 
 import argparse
@@ -164,17 +171,34 @@ def main():
         "export"
     )
     parser.add_argument(
-        "input_file",
+        "input_files",
         type=Path,
-        help="Path to the input ottrk file",
+        nargs="+",
+        help="Path(s) to the input ottrk file(s)",
     )
 
     args = parser.parse_args()
 
-    try:
-        convert_ottrk_to_feather(args.input_file)
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+    # Process each input file
+    failed_files = []
+    for input_file in args.input_files:
+        try:
+            convert_ottrk_to_feather(input_file)
+        except Exception as e:
+            print(f"Error processing {input_file}: {e}", file=sys.stderr)
+            failed_files.append(input_file)
+
+    # Report overall results
+    total_files = len(args.input_files)
+    successful_files = total_files - len(failed_files)
+
+    print("\nProcessing complete:")
+    print(f"  - Successfully converted: {successful_files}/{total_files} files")
+
+    if failed_files:
+        print(f"  - Failed to convert: {len(failed_files)} files")
+        for failed_file in failed_files:
+            print(f"    * {failed_file}")
         sys.exit(1)
 
 
