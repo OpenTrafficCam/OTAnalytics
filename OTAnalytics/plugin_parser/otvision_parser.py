@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, Sequence, Tuple
+from typing import Any, Callable, Iterable, Optional, Sequence
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics import version
@@ -15,7 +15,6 @@ from OTAnalytics.application.datastore import (
     EventListParser,
     TrackParser,
     TrackParseResult,
-    TrackVideoParser,
     VideoParser,
 )
 from OTAnalytics.application.logger import logger
@@ -1018,26 +1017,6 @@ class CachedVideoParser(VideoParser):
         relative_to: Path = Path("."),
     ) -> dict[str, list[dict]]:
         return self._other.convert(videos=videos, relative_to=relative_to)
-
-
-class OttrkVideoParser(TrackVideoParser):
-    def __init__(
-        self,
-        video_parser: VideoParser,
-        track_format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
-    ) -> None:
-        self._video_parser = video_parser
-        self._track_format_fixer = track_format_fixer
-
-    def parse(
-        self, file: Path, track_ids: list[TrackId], metadata: VideoMetadata
-    ) -> Tuple[list[TrackId], list[Video]]:
-        video = self._video_parser.parse(file.parent / metadata.path, metadata)
-        return track_ids, [video] * len(track_ids)
-
-    def __parse_recorded_start_date(self, metadata: dict) -> datetime:
-        start_date = float(metadata[ottrk_format.RECORDED_START_DATE])
-        return datetime.fromtimestamp(start_date, tz=timezone.utc)
 
 
 class OtEventListParser(EventListParser):

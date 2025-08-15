@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Optional, Sequence, Tuple
+from typing import Iterable, Optional, Sequence
 
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.project import Project
@@ -26,7 +27,6 @@ from OTAnalytics.domain.section import (
     SectionListObserver,
     SectionRepository,
 )
-from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import (
     TrackFileRepository,
@@ -114,77 +114,6 @@ class VideoParser(ABC):
         pass
 
 
-class TrackToVideoRepository:
-    """
-    Repository containing the videos per track.
-    """
-
-    def __init__(self) -> None:
-        self._videos: dict[TrackId, Video] = {}
-
-    def add(self, track_id: TrackId, video: Video) -> None:
-        """
-        Add a video for a track id.
-
-        Args:
-            track_id (TrackId): id of the track
-            video (Video): video containing the track
-        """
-        self._videos[track_id] = video
-
-    def add_all(self, track_ids: Iterable[TrackId], videos: Iterable[Video]) -> None:
-        """
-        Add all videos for all tracks.
-
-        Args:
-            track_ids (Iterable[TrackId]): track ids to be added
-            videos (Iterable[Video]): videos per track id to be added
-        """
-        for track_id, video in zip(track_ids, videos):
-            self.add(track_id, video)
-
-    def get_video_for(self, track_id: TrackId) -> Optional[Video]:
-        """
-        Retrieve a video for the given track id.
-
-        Args:
-            track_id (TrackId): id of the track to get a video for
-
-        Returns:
-            Optional[Video]: video of the track if a video exists for the track
-        """
-        return self._videos.get(track_id)
-
-    def clear(self) -> None:
-        """
-        Clear the repository.
-        """
-        self._videos.clear()
-
-
-class TrackVideoParser(ABC):
-    """
-    Parse the information about videos from a track file
-    """
-
-    @abstractmethod
-    def parse(
-        self, file: Path, track_ids: list[TrackId], metadata: VideoMetadata
-    ) -> Tuple[list[TrackId], list[Video]]:
-        """
-        Parse the given file in ottrk format and retrieve video information from it
-
-        Args:
-            file (Path): file in ottrk format
-            track_ids (list[TrackId]): track ids to get videos for
-            metadata (VideoMetadata): the video metadata
-
-        Returns:
-            Tuple[list[TrackId], list[Video]]: track ids and the corresponding videos
-        """
-        pass
-
-
 class Datastore:
     """
     Central element to hold data in the application.
@@ -199,17 +128,14 @@ class Datastore:
         flow_repository: FlowRepository,
         event_repository: EventRepository,
         event_list_parser: EventListParser,
-        track_to_video_repository: TrackToVideoRepository,
         video_repository: VideoRepository,
         video_parser: VideoParser,
-        track_video_parser: TrackVideoParser,
         progressbar: ProgressbarBuilder,
         remark_repository: RemarkRepository,
     ) -> None:
         self._track_parser = track_parser
         self._event_list_parser = event_list_parser
         self._video_parser = video_parser
-        self._track_video_parser = track_video_parser
         self._track_repository = track_repository
         self._track_file_repository = track_file_repository
         self._section_repository = section_repository
@@ -217,7 +143,6 @@ class Datastore:
         self._event_repository = event_repository
         self._video_repository = video_repository
         self._remark_repository = remark_repository
-        self._track_to_video_repository = track_to_video_repository
         self._progressbar = progressbar
         self.project = Project(name="", start_date=None, metadata=None)
 
@@ -246,7 +171,6 @@ class Datastore:
         self._event_repository.clear()
         self._section_repository.clear()
         self._flow_repository.clear()
-        self._track_to_video_repository.clear()
         self._track_repository.clear()
         self._video_repository.clear()
 
@@ -455,27 +379,8 @@ class Datastore:
     def get_video_at(self, file: Path) -> Optional[Video]:
         return self._video_repository.get(file)
 
-    def get_video_for(self, track_id: TrackId) -> Optional[Video]:
-        return self._track_to_video_repository.get_video_for(track_id)
+    def get_video_by_date(self, current: datetime) -> list[Video]:
+        return self._video_repository.get_by_date(current)
 
     def get_all_videos(self) -> list[Video]:
         return self._video_repository.get_all()
-
-    def get_image_of_track(
-        self,
-        track_id: TrackId,
-        frame: int = 0,
-    ) -> Optional[TrackImage]:
-        """
-        Retrieve an image for the given track.
-
-        Args:
-            track_id (TrackId): identifier for the track
-
-        Returns:
-            Optional[TrackImage]: an image of the track if the track is available and
-            the image can be loaded
-        """
-        return (
-            video.get_frame(frame) if (video := self.get_video_for(track_id)) else None
-        )

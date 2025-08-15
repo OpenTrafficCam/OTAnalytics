@@ -98,9 +98,8 @@ class Given:
     track_repository: Mock = Mock()
     track_file_repository: Mock = Mock()
     track_parser: Mock = Mock()
-    track_video_parser: Mock = Mock()
     video_repository: Mock = Mock()
-    track_to_video_repository: Mock = Mock()
+    video_parser: Mock = Mock()
     progressbar: Mock = Mock()
     tracks_metadata: Mock = Mock()
     videos_metadata: Mock = Mock()
@@ -109,10 +108,9 @@ class Given:
     def __post_init__(self) -> None:
         self.order.track_parser = self.track_parser
         self.order.videos_metadata = self.videos_metadata
-        self.order.track_video_parser = self.track_video_parser
         self.order.video_repository = self.video_repository
         self.order.track_repository = self.track_repository
-        self.order.track_to_video_repository = self.track_to_video_repository
+        self.order.video_parser = self.video_parser
         self.order.tracks_metadata = self.tracks_metadata
 
 
@@ -134,7 +132,6 @@ def setup(
     given = Given(track_ids, videos, classes, parse_result)
     given.track_file_repository.get_all.return_value = existing_track_files
     given.track_parser.parse.return_value = parse_result
-    given.track_video_parser.parse.return_value = track_ids, videos
     given.progressbar.return_value = track_files
     return given
 
@@ -158,11 +155,10 @@ def create_detection_metadata(classes: set[str]) -> Mock:
 def create_target(given: Given) -> LoadTrackFiles:
     return LoadTrackFiles(
         track_parser=given.track_parser,
-        track_video_parser=given.track_video_parser,
         track_repository=given.track_repository,
         track_file_repository=given.track_file_repository,
         video_repository=given.video_repository,
-        track_to_video_repository=given.track_to_video_repository,
+        video_parser=given.video_parser,
         progressbar=given.progressbar,
         tracks_metadata=given.tracks_metadata,
         videos_metadata=given.videos_metadata,

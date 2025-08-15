@@ -1,42 +1,30 @@
 from pathlib import Path
 
-from OTAnalytics.application.datastore import (
-    TrackParser,
-    TrackToVideoRepository,
-    TrackVideoParser,
-    VideoParser,
-)
+from OTAnalytics.application.datastore import TrackParser, VideoParser
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
-from OTAnalytics.plugin_parser.otvision_parser import (
-    CachedVideoParser,
-    SimpleVideoParser,
-)
-from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
 
 class LoadTrackFiles:
     def __init__(
         self,
         track_parser: TrackParser,
-        track_video_parser: TrackVideoParser,
         track_repository: TrackRepository,
         track_file_repository: TrackFileRepository,
         video_repository: VideoRepository,
-        track_to_video_repository: TrackToVideoRepository,
+        video_parser: VideoParser,
         progressbar: ProgressbarBuilder,
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
     ) -> None:
         self._track_parser = track_parser
-        self._track_video_parser = track_video_parser
         self._track_repository = track_repository
         self._track_file_repository = track_file_repository
         self._video_repository = video_repository
-        self._track_to_video_repository = track_to_video_repository
+        self._video_parser = video_parser
         self._progressbar = progressbar
         self._tracks_metadata = tracks_metadata
         self._videos_metadata = videos_metadata
@@ -72,7 +60,6 @@ class LoadTrackFiles:
             for video_metadata in parse_result.videos_metadata
         ]
         self._video_repository.add_all(videos)
-        # self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(parse_result.tracks)
         self._track_file_repository.add_all(files_to_load)
         for detection_metadata in parse_result.detections_metadata:
@@ -80,12 +67,6 @@ class LoadTrackFiles:
                 detection_metadata.detection_classes
             )
         logger().info(f"Loaded {len(files_to_load)} track files and videos...")
-
-    @property
-    def _video_parser(self) -> VideoParser:
-        return CachedVideoParser(
-            SimpleVideoParser(PyAvVideoReader(self._videos_metadata))
-        )
 
     def _load_one_by_one(self, files: list[Path]) -> None:
         raised_exceptions: list[Exception] = []
@@ -116,16 +97,11 @@ class LoadTrackFiles:
             file (Path): file in ottrk format
         """
         parse_result = self._track_parser.parse(file)
-        # track_ids = list(parse_result.tracks.track_ids)
-        # track_ids, videos = self._track_video_parser.parse(
-        #     file, track_ids, parse_result.video_metadata
-        # )
         video = self._video_parser.parse(
             file.parent / parse_result.video_metadata.path, parse_result.video_metadata
         )
         self._videos_metadata.update(parse_result.video_metadata)
         self._video_repository.add(video)
-        # self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(parse_result.tracks)
         self._track_file_repository.add(file)
         self._tracks_metadata.update_detection_classes(

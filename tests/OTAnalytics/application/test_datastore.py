@@ -11,8 +11,6 @@ from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
     TrackParser,
-    TrackToVideoRepository,
-    TrackVideoParser,
     VideoParser,
 )
 from OTAnalytics.application.parser.config_parser import ConfigParser
@@ -116,11 +114,6 @@ def video_parser() -> Mock:
 
 
 @pytest.fixture
-def track_video_parser() -> Mock:
-    return Mock(spec=TrackVideoParser)
-
-
-@pytest.fixture
 def event_repository() -> Mock:
     return Mock(spec=EventRepository)
 
@@ -133,11 +126,6 @@ def event_list_parser() -> Mock:
 @pytest.fixture
 def video_repository() -> Mock:
     return Mock(spec=VideoRepository)
-
-
-@pytest.fixture
-def track_to_video_repository() -> Mock:
-    return Mock(spec=TrackToVideoRepository)
 
 
 @pytest.fixture
@@ -185,8 +173,6 @@ class TestDatastore:
             event_list_parser=event_list_parser,
             video_repository=video_repository,
             video_parser=video_parser,
-            track_video_parser=track_video_parser,
-            track_to_video_repository=track_to_video_repository,
             progressbar=progressbar,
             remark_repository=remark_repository,
         )
@@ -204,11 +190,9 @@ class TestDatastore:
         section_repository: Mock,
         flow_repository: Mock,
         video_parser: Mock,
-        track_video_parser: Mock,
         event_repository: Mock,
         event_list_parser: Mock,
         video_repository: Mock,
-        track_to_video_repository: Mock,
         progressbar: Mock,
         remark_repository: Mock,
     ) -> None:
@@ -222,8 +206,6 @@ class TestDatastore:
             event_list_parser=event_list_parser,
             video_repository=video_repository,
             video_parser=video_parser,
-            track_video_parser=track_video_parser,
-            track_to_video_repository=track_to_video_repository,
             progressbar=progressbar,
             remark_repository=remark_repository,
         )
@@ -247,11 +229,9 @@ class TestDatastore:
         section_repository: Mock,
         flow_repository: Mock,
         video_parser: Mock,
-        track_video_parser: Mock,
         event_repository: Mock,
         event_list_parser: Mock,
         video_repository: Mock,
-        track_to_video_repository: Mock,
         progressbar: Mock,
         remark_repository: Mock,
     ) -> None:
@@ -265,8 +245,6 @@ class TestDatastore:
             event_list_parser=event_list_parser,
             video_repository=video_repository,
             video_parser=video_parser,
-            track_video_parser=track_video_parser,
-            track_to_video_repository=track_to_video_repository,
             progressbar=progressbar,
             remark_repository=remark_repository,
         )

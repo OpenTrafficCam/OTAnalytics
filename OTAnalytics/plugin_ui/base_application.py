@@ -23,7 +23,6 @@ from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
     TrackParser,
-    TrackToVideoRepository,
     VideoParser,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
@@ -161,9 +160,6 @@ from OTAnalytics.application.use_cases.track_statistics_export import (
     ExportTrackStatistics,
     TrackStatisticsExporterFactory,
 )
-from OTAnalytics.application.use_cases.track_to_video_repository import (
-    ClearAllTrackToVideos,
-)
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import (
     AddAllVideos,
@@ -238,7 +234,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkFormatFixer,
     OttrkParser,
-    OttrkVideoParser,
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
@@ -439,10 +434,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     @cached_property
-    def clear_all_track_to_videos(self) -> ClearAllTrackToVideos:
-        return ClearAllTrackToVideos(self.track_to_video_repository)
-
-    @cached_property
     def clear_all_videos(self) -> ClearAllVideos:
         return ClearAllVideos(self.video_repository)
 
@@ -573,7 +564,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         """
         track_parser = self._create_track_parser()
         event_list_parser = self._create_event_list_parser()
-        track_video_parser = OttrkVideoParser(self.video_parser)
         return Datastore(
             self.track_repository,
             self.track_file_repository,
@@ -582,10 +572,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.flow_repository,
             self.event_repository,
             event_list_parser,
-            self.track_to_video_repository,
             self.video_repository,
             self.video_parser,
-            track_video_parser,
             self.progressbar_builder,
             self.remark_repository,
         )
@@ -798,7 +786,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.clear_all_flows,
             self.clear_all_intersections,
             self.clear_all_sections,
-            self.clear_all_track_to_videos,
             self.clear_all_tracks,
             self.clear_all_videos,
         )
@@ -837,14 +824,12 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def load_track_files(self) -> LoadTrackFiles:
         track_parser = self._create_track_parser()
-        track_video_parser = OttrkVideoParser(self.video_parser)
         return LoadTrackFiles(
             track_parser,
-            track_video_parser,
             self.track_repository,
             self.track_file_repository,
             self.video_repository,
-            self.track_to_video_repository,
+            self.video_parser,
             self.progressbar_builder,
             self.tracks_metadata,
             self.videos_metadata,
@@ -861,10 +846,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def video_repository(self) -> VideoRepository:
         return VideoRepository()
-
-    @cached_property
-    def track_to_video_repository(self) -> TrackToVideoRepository:
-        return TrackToVideoRepository()
 
     @cached_property
     def preload_input_files(self) -> PreloadInputFiles:
