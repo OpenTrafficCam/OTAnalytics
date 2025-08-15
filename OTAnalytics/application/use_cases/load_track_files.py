@@ -36,9 +36,6 @@ class LoadTrackFiles:
         Args:
             files (Path): files in ottrk format.
         """
-        self._load_all_at_once(files)
-
-    def _load_all_at_once(self, files: list[Path]) -> None:
         if not files:
             return
         parent_folder = files[0].parent
@@ -68,45 +65,8 @@ class LoadTrackFiles:
             )
         logger().info(f"Loaded {len(files_to_load)} track files and videos...")
 
-    def _load_one_by_one(self, files: list[Path]) -> None:
-        raised_exceptions: list[Exception] = []
-        for file in self._progressbar(
-            files, unit="files", description="Processed ottrk files: "
-        ):
-            if self._is_file_already_loaded(file):
-                logger().warning(f"File '{file}' already loaded. Skipping... ")
-                continue
-            try:
-
-                self.load(file)
-            except Exception as cause:
-                raised_exceptions.append(cause)
-        if raised_exceptions:
-            raise ExceptionGroup(
-                "Errors occurred while loading the track files:", raised_exceptions
-            )
-
     def _is_file_already_loaded(self, file: Path) -> bool:
         return file in self._track_file_repository.get_all()
-
-    def load(self, file: Path) -> None:
-        """
-        Load and parse the given track file together with the corresponding video file.
-
-        Args:
-            file (Path): file in ottrk format
-        """
-        parse_result = self._track_parser.parse(file)
-        video = self._video_parser.parse(
-            file.parent / parse_result.video_metadata.path, parse_result.video_metadata
-        )
-        self._videos_metadata.update(parse_result.video_metadata)
-        self._video_repository.add(video)
-        self._track_repository.add_all(parse_result.tracks)
-        self._track_file_repository.add(file)
-        self._tracks_metadata.update_detection_classes(
-            parse_result.detection_metadata.detection_classes
-        )
 
     def _log_already_loaded_files(
         self, files: list[Path], files_to_load: list[Path]
