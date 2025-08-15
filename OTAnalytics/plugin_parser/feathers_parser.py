@@ -15,7 +15,9 @@ from OTAnalytics.application.datastore import (
     DetectionMetadata,
     TrackParser,
     TrackParseResult,
+    TracksParseResult,
 )
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store import (
@@ -26,6 +28,25 @@ from OTAnalytics.plugin_datastore.track_store import (
     PandasTrackDataset,
 )
 from OTAnalytics.plugin_parser.json_parser import parse_json
+
+
+def use_feathers_files(files: list[Path]) -> list[Path]:
+    raised_exceptions: list[Exception] = []
+    result = []
+    for file in files:
+        try:
+            if not file.suffix.lower() == ".feather":
+                if file.suffix.lower() == ".ottrk":
+                    result.append(file.with_suffix(".feather"))
+                else:
+                    raise ValueError(f"Input file must have .feather extension: {file}")
+        except Exception as cause:
+            raised_exceptions.append(cause)
+    if raised_exceptions:
+        raise ExceptionGroup(
+            "Errors occurred while loading the track files:", raised_exceptions
+        )
+    return result
 
 
 class FeathersParser(TrackParser):
@@ -54,6 +75,60 @@ class FeathersParser(TrackParser):
             track_geometry_factory = PandasTrackGeometryDataset.from_track_dataset
         self._track_geometry_factory = track_geometry_factory
 
+    def parse_files(self, files: list[Path]) -> TracksParseResult:
+        """
+        Parse feather file and its metadata to create TrackParseResult.
+
+        Args:
+            file: Path to the feather file
+
+        Returns:
+            TrackParseResult: Contains tracks, detection metadata, and video metadata
+
+        Raises:
+            FileNotFoundError: If the feather file or metadata file is not found
+            ValueError: If the file extension is not .feather
+        """
+        logger().info(f"Parsing {len(files)} track files...")
+        files_to_process = use_feathers_files(files)
+        videos_metadata = []
+        detections_metadata = []
+        data_frames = []
+        for file in files_to_process:
+            if not file.exists():
+                raise FileNotFoundError(f"Feather file not found: {file}")
+            # Construct metadata file path
+            metadata_file = file.parent / f"{file.stem}_metadata.json"
+            if not metadata_file.exists():
+                raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
+
+            # Read the feather file
+            df = pd.read_feather(file)
+            data_frames.append(df)
+
+            # Read the metadata
+            metadata = parse_json(metadata_file)
+
+            # Parse video metadata
+            video_metadata = self._parse_video_metadata(metadata["video_metadata"])
+            videos_metadata.append(video_metadata)
+
+            # Parse detection metadata
+            detection_metadata = self._parse_detection_metadata(
+                metadata["detection_metadata"]
+            )
+            detections_metadata.append(detection_metadata)
+        logger().info(f"{len(files)} track files parsed.")
+
+        df = pd.concat(data_frames)
+        # Create TrackDataset from DataFrame
+        calculator = PandasByMaxConfidence()
+        tracks = PandasTrackDataset.from_dataframe(
+            df, self._track_geometry_factory, calculator=calculator
+        )
+        logger().info("TrackDataset created.")
+        return TracksParseResult(tracks, detections_metadata, videos_metadata)
+
     def parse(self, file: Path) -> TrackParseResult:
         """
         Parse feather file and its metadata to create TrackParseResult.
@@ -68,8 +143,6 @@ class FeathersParser(TrackParser):
             FileNotFoundError: If the feather file or metadata file is not found
             ValueError: If the file extension is not .feather
         """
-        if not file.exists():
-            raise FileNotFoundError(f"Feather file not found: {file}")
 
         if not file.suffix.lower() == ".feather":
             if file.suffix.lower() == ".ottrk":
@@ -77,6 +150,8 @@ class FeathersParser(TrackParser):
             else:
                 raise ValueError(f"Input file must have .feather extension: {file}")
 
+        if not file.exists():
+            raise FileNotFoundError(f"Feather file not found: {file}")
         # Construct metadata file path
         metadata_file = file.parent / f"{file.stem}_metadata.json"
         if not metadata_file.exists():
