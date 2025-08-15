@@ -4,12 +4,18 @@ from OTAnalytics.application.datastore import (
     TrackParser,
     TrackToVideoRepository,
     TrackVideoParser,
+    VideoParser,
 )
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_parser.otvision_parser import (
+    CachedVideoParser,
+    SimpleVideoParser,
+)
+from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
 
 class LoadTrackFiles:
@@ -42,6 +48,46 @@ class LoadTrackFiles:
         Args:
             files (Path): files in ottrk format.
         """
+        self._load_all_at_once(files)
+
+    def _load_all_at_once(self, files: list[Path]) -> None:
+        if not files:
+            return
+        parent_folder = files[0].parent
+        files_to_load = [
+            file for file in files if not self._is_file_already_loaded(file)
+        ]
+        self._log_already_loaded_files(files, files_to_load)
+        if not files_to_load:
+            return
+        logger().info(f"Loading {len(files_to_load)} track files and videos...")
+        parse_result = self._track_parser.parse_files(files_to_load)
+        for video_metadata in parse_result.videos_metadata:
+            self._videos_metadata.update(video_metadata)
+
+        videos = [
+            self._video_parser.parse(
+                parent_folder / video_metadata.path, video_metadata
+            )
+            for video_metadata in parse_result.videos_metadata
+        ]
+        self._video_repository.add_all(videos)
+        # self._track_to_video_repository.add_all(track_ids, videos)
+        self._track_repository.add_all(parse_result.tracks)
+        self._track_file_repository.add_all(files_to_load)
+        for detection_metadata in parse_result.detections_metadata:
+            self._tracks_metadata.update_detection_classes(
+                detection_metadata.detection_classes
+            )
+        logger().info(f"Loaded {len(files_to_load)} track files and videos...")
+
+    @property
+    def _video_parser(self) -> VideoParser:
+        return CachedVideoParser(
+            SimpleVideoParser(PyAvVideoReader(self._videos_metadata))
+        )
+
+    def _load_one_by_one(self, files: list[Path]) -> None:
         raised_exceptions: list[Exception] = []
         for file in self._progressbar(
             files, unit="files", description="Processed ottrk files: "
@@ -70,15 +116,25 @@ class LoadTrackFiles:
             file (Path): file in ottrk format
         """
         parse_result = self._track_parser.parse(file)
-        track_ids = list(parse_result.tracks.track_ids)
-        track_ids, videos = self._track_video_parser.parse(
-            file, track_ids, parse_result.video_metadata
+        # track_ids = list(parse_result.tracks.track_ids)
+        # track_ids, videos = self._track_video_parser.parse(
+        #     file, track_ids, parse_result.video_metadata
+        # )
+        video = self._video_parser.parse(
+            file.parent / parse_result.video_metadata.path, parse_result.video_metadata
         )
         self._videos_metadata.update(parse_result.video_metadata)
-        self._video_repository.add_all(videos)
-        self._track_to_video_repository.add_all(track_ids, videos)
+        self._video_repository.add(video)
+        # self._track_to_video_repository.add_all(track_ids, videos)
         self._track_repository.add_all(parse_result.tracks)
         self._track_file_repository.add(file)
         self._tracks_metadata.update_detection_classes(
             parse_result.detection_metadata.detection_classes
         )
+
+    def _log_already_loaded_files(
+        self, files: list[Path], files_to_load: list[Path]
+    ) -> None:
+        already_loaded_files = set(files) - set(files_to_load)
+        for file in already_loaded_files:
+            logger().warning(f"File '{file}' already loaded. Skipping... ")
