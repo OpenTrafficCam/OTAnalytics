@@ -78,7 +78,19 @@ def given_builder() -> NiceguiOtanalyticsBuilder:
 def given_app(
     given_builder: NiceguiOtanalyticsBuilder,
 ) -> YieldFixture[MultiprocessingWorker]:
-    py_multiprocessing.set_start_method("fork", force=True)
+    # Choose a compatible multiprocessing start method for the current platform
+    # Prefer 'fork' on POSIX for speed, but fall back to 'forkserver' or 'spawn'
+    try:
+        methods = py_multiprocessing.get_all_start_methods()
+        preferred = (
+            "fork"
+            if "fork" in methods
+            else ("forkserver" if "forkserver" in methods else "spawn")
+        )
+        py_multiprocessing.set_start_method(preferred, force=True)
+    except Exception:
+        # If already set or unsupported, continue with the default
+        pass
     app = given_builder.build()
     yield app
     app.stop()
