@@ -27,6 +27,7 @@ from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
+from OTAnalytics.plugin_parser.convert_ottrk_to_feathers import convert_ottrk_to_feather
 from OTAnalytics.plugin_parser.json_parser import parse_json
 
 
@@ -37,9 +38,12 @@ def use_feathers_files(files: list[Path]) -> list[Path]:
         try:
             if not file.suffix.lower() == ".feather":
                 if file.suffix.lower() == ".ottrk":
+                    convert_ottrk_to_feather(file)
                     result.append(file.with_suffix(".feather"))
                 else:
-                    raise ValueError(f"Input file must have .feather extension: {file}")
+                    raise ValueError(
+                        f"Input file must have .feather or .ottrk extension: {file}"
+                    )
         except Exception as cause:
             raised_exceptions.append(cause)
     if raised_exceptions:
