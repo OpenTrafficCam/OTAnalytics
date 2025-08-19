@@ -20,13 +20,13 @@ class NiceguiWebserver:
         self._page_builders = page_builders
         self._layout_components = layout_components
         self._hostname = hostname
-        self._port = port
+        self._port = 50111
         self._hot_reload = hot_reload
 
     def run(self) -> None:
         app = FastAPI()
         self.build_pages()
-        ui.run_with(app, favicon="🎬")
+        ui.run_with(app, favicon="📊")
         uvicorn.run(app, host=self._hostname, port=self._port)
 
     def build_pages(self) -> None:
