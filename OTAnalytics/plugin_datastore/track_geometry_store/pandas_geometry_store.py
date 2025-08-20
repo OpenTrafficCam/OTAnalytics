@@ -1,9 +1,15 @@
 import math
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Sequence
 
+import shapely
 from pandas import DataFrame, concat
+from shapely.creation import prepare
+from shapely.geometry.base import BaseGeometry
+from shapely.vectorized import contains
 
+from OTAnalytics.domain import track
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId, SectionType
@@ -17,8 +23,8 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 
 # Column names for track points
-TRACK_ID = "track-id"
-OCCURRENCE = "occurrence"
+TRACK_ID = track.TRACK_ID
+OCCURRENCE = track.OCCURRENCE
 X = "x"
 Y = "y"
 
@@ -693,9 +699,9 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
             return DataFrame()
 
         data = []
-        for track in tracks:
-            track_id = track.id.id
-            for detection in track.detections:
+        for current in tracks:
+            track_id = current.id.id
+            for detection in current.detections:
                 data.append(
                     {
                         TRACK_ID: track_id,
@@ -916,7 +922,30 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
         self, sections: list[Section]
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         # TODO Do not implement
-        raise NotImplementedError
+        contains_result: dict[TrackId, list[tuple[SectionId, list[bool]]]] = (
+            defaultdict(list)
+        )
+        for _section in sections:
+            section_geom = area_section_to_shapely(_section)
+
+            x_coords = self._segments_df["x"].to_numpy()
+            y_coords = self._segments_df["y"].to_numpy()
+
+            contains_masks = contains(section_geom, x_coords, y_coords)
+            # contains_masks_old = self._segments_df[GEOMETRY].apply(
+            #     lambda line: [
+            #         contains(section_geom, Point(p)) for p in get_coordinates(line)
+            #     ]
+            # )
+            tracks_contained = contains_masks[contains_masks.map(any)]
+
+            if tracks_contained.empty:
+                continue
+
+            tracks_contained.index = tracks_contained.index.map(TrackId)
+            for track_id, contains_mask in tracks_contained.to_dict().items():
+                contains_result[track_id].append((_section.id, contains_mask))
+        return contains_result
 
     def __eq__(self, other: Any) -> bool:
         """Check if this dataset is equal to another dataset.
@@ -953,3 +982,9 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
 
         # Compare the DataFrames
         return self_df.equals(other_df)
+
+
+def area_section_to_shapely(section: Section) -> BaseGeometry:
+    geometry = shapely.Polygon([(c.x, c.y) for c in section.get_coordinates()])
+    prepare(geometry)
+    return geometry
