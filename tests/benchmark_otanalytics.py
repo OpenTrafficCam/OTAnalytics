@@ -29,6 +29,8 @@ from OTAnalytics.application.use_cases.section_repository import (
     RemoveSection,
 )
 from OTAnalytics.application.use_cases.track_repository import (
+    AddAllTracks,
+    ClearAllTracks,
     GetAllTracks,
     GetTracksWithoutSingleDetections,
 )
@@ -205,10 +207,14 @@ class UseCaseProvider:
     def get_cut_tracks(self) -> CutTracksIntersectingSection:
         get_sections_by_id = GetSectionsById(self._section_repository)
         get_tracks = GetAllTracks(self._track_repository)
+        clear_all_tracks = ClearAllTracks(self._track_repository)
+        add_all_tracks = AddAllTracks(self._track_repository)
         remove_section = RemoveSection(self._section_repository)
         return SimpleCutTracksIntersectingSection(
             get_sections_by_id,
             get_tracks,
+            clear_all_tracks,
+            add_all_tracks,
             remove_section,
         )
 

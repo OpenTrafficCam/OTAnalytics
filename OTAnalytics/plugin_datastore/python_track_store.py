@@ -539,6 +539,8 @@ class PythonTrackDataset(TrackDataset):
 
     def split(self, batches: int) -> Sequence["PythonTrackDataset"]:
         dataset_size = len(self._tracks)
+        if dataset_size == 0:
+            return []
         batch_size = ceil(dataset_size / batches)
 
         dataset_batches = []

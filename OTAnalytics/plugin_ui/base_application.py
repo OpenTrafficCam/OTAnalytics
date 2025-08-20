@@ -798,6 +798,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return SimpleCutTracksIntersectingSection(
             self.get_sections_by_id,
             self.get_all_tracks,
+            self.clear_all_tracks,
+            self.add_all_tracks,
             self.remove_section,
         )
 

@@ -416,6 +416,8 @@ class TestOTAnalyticsCli:
         cut_tracks = SimpleCutTracksIntersectingSection(
             GetSectionsById(section_repository),
             get_all_tracks,
+            clear_all_tracks,
+            add_all_tracks,
             RemoveSection(section_repository),
         )
         apply_cli_cuts = ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
@@ -509,6 +511,8 @@ class TestOTAnalyticsCli:
         cut_tracks = SimpleCutTracksIntersectingSection(
             GetSectionsById(section_repository),
             get_all_tracks,
+            clear_all_tracks,
+            add_all_tracks,
             RemoveSection(section_repository),
         )
         apply_cli_cuts = ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
