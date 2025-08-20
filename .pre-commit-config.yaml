@@ -59,6 +59,7 @@ repos:
           - numpy==2.1.1
           - pandas-stubs==2.2.3.241126
           - pandas==2.2.3
+          - polars==1.32.3
           - pre-commit==4.1.0
           - pyarrow==21.0.0
           - pytest-asyncio==0.24.0

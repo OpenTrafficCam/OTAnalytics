@@ -31,6 +31,14 @@ class TrackId:
         return self.id
 
 
+def unpack(track_id: TrackId | str) -> str:
+    return track_id.id if isinstance(track_id, TrackId) else track_id
+
+
+def pack(track_id: TrackId | str) -> TrackId:
+    return track_id if isinstance(track_id, TrackId) else TrackId(track_id)
+
+
 class TrackError(Exception):
     def __init__(self, track_id: TrackId, *args: object) -> None:
         super().__init__(*args)
