@@ -2,14 +2,9 @@ from typing import Iterable
 
 from OTAnalytics.application.use_cases.section_repository import GetCuttingSections
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
-from OTAnalytics.domain.section import (
-    SectionId,
-    SectionListObserver,
-    SectionRepositoryEvent,
-)
+from OTAnalytics.domain.section import SectionListObserver, SectionRepositoryEvent
 from OTAnalytics.domain.track import TrackId, TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
-from OTAnalytics.domain.types import EventType
 
 
 class TrackIdsInsideCuttingSections(TrackIdProvider):
@@ -25,23 +20,7 @@ class TrackIdsInsideCuttingSections(TrackIdProvider):
         if not cutting_sections:
             return set()
 
-        results: set[TrackId] = set()
-        for cutting_section in cutting_sections:
-            offset = cutting_section.get_offset(EventType.SECTION_ENTER)
-            # set of all tracks where at least one coordinate is contained
-            # by at least one cutting section
-            results.update(
-                set(
-                    track_id
-                    for track_id, section_data in (
-                        track_dataset.contained_by_sections(
-                            [cutting_section], offset
-                        ).items()
-                    )
-                    if contains_true(section_data)
-                )
-            )
-        return results
+        return track_dataset.ids_inside(cutting_sections)
 
 
 class CachedTrackIdsInsideCuttingSections(
@@ -79,10 +58,3 @@ class CachedTrackIdsInsideCuttingSections(
 
     def __get_empty_cache(self) -> set[TrackId]:
         return set()
-
-
-def contains_true(section_data: list[tuple[SectionId, list[bool]]]) -> bool:
-    for _, bool_list in section_data:
-        if any(bool_list):
-            return True
-    return False

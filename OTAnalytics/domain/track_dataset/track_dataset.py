@@ -6,6 +6,7 @@ from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.types import EventType
 
 START_X: str = "start_x"
 START_Y: str = "start_y"
@@ -21,6 +22,13 @@ END_VIDEO_NAME: str = "end_video_name"
 
 class TrackDoesNotExistError(Exception):
     pass
+
+
+def contains_true(section_data: list[tuple[SectionId, list[bool]]]) -> bool:
+    for _, bool_list in section_data:
+        if any(bool_list):
+            return True
+    return False
 
 
 @dataclass(frozen=True, order=True)
@@ -252,6 +260,23 @@ class TrackDataset(ABC):
                 original state.
         """
         raise NotImplementedError
+
+    def ids_inside(self, sections: list[Section]) -> set[TrackId]:
+        results: set[TrackId] = set()
+        for cutting_section in sections:
+            offset = cutting_section.get_offset(EventType.SECTION_ENTER)
+            # set of all tracks where at least one coordinate is contained
+            # by at least one cutting section
+            results.update(
+                set(
+                    track_id
+                    for track_id, section_data in (
+                        self.contained_by_sections([cutting_section], offset).items()
+                    )
+                    if contains_true(section_data)
+                )
+            )
+        return results
 
 
 class TrackGeometryDataset(ABC):
