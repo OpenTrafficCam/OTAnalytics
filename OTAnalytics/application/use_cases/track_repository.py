@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application.logger import logger
-from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider
+from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider, pack, unpack
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import (
     RemoveMultipleTracksError,
@@ -25,7 +25,9 @@ class FilteredTrackIdProviderByTrackIdProvider(TrackIdProvider):
         self._by = by
 
     def get_ids(self) -> set[TrackId]:
-        return set(self._other.get_ids()).intersection(self._by.get_ids())
+        other_ids = set({unpack(id) for id in self._other.get_ids()})
+        self_ids = set({unpack(id) for id in self._by.get_ids()})
+        return {pack(id) for id in other_ids.intersection(self_ids)}
 
 
 class GetAllTracks:

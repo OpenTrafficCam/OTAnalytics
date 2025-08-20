@@ -15,7 +15,7 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.domain.track import Detection, Track, TrackId, unpack
 from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
     FilterByClassTrackDataset,
     FilteredTrackDataset,
@@ -246,14 +246,6 @@ class PandasDataFrameProvider:
     @abstractmethod
     def get_data(self) -> DataFrame:
         pass
-
-
-def unpack(track_id: TrackId | str) -> str:
-    return track_id.id if isinstance(track_id, TrackId) else track_id
-
-
-def pack(track_id: TrackId | str) -> TrackId:
-    return track_id if isinstance(track_id, TrackId) else TrackId(track_id)
 
 
 class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
@@ -608,6 +600,13 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         if len(self) == 0:
             logger().info("No tracks to cut")
             return self, set()
+
+        # TODO is this only:
+        # - groupby trackid
+        # - shift by 1
+        # - calculate intersects per segment
+        # - cumcount per intersects by track id
+        # - add cumcount to track id
         intersection_points = self.intersection_points([section], offset)
         cut_indices = {
             unpack(track_id): [
