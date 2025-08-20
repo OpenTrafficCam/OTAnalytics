@@ -48,6 +48,7 @@ from OTAnalytics.domain.track import (
     W,
     X,
     Y,
+    unpack,
 )
 from OTAnalytics.domain.track_repository import (
     TrackListObserver,
@@ -207,7 +208,7 @@ class FilterById(PandasDataFrameProvider):
                 "must be index of DataFrame for filtering to work."
             )
 
-        ids = [track_id.id for track_id in self._filter.get_ids()]
+        ids = [unpack(track_id) for track_id in self._filter.get_ids()]
         intersection_of_ids = data.index.unique(level=track.TRACK_ID).intersection(ids)
         return data.loc[intersection_of_ids]
 
