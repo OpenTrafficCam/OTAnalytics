@@ -623,9 +623,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         old_track_ids = self._dataset.rename({track.TRACK_ID: "old_track_id"})
 
         result = old_track_ids.join(new_track_ids, on=ROW_ID, how="left")
-        result = result.with_columns(
-            (pl.col(track.TRACK_ID).backward_fill().over("old_track_id"))
-        ).drop("old_track_id")
+        result = result.drop("old_track_id")
         return (
             PolarsTrackDataset.from_dataframe(result, self.track_geometry_factory),
             set(),

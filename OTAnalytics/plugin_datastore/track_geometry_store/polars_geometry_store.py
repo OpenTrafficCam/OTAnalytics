@@ -351,6 +351,7 @@ def find_line_intersections(
         ]
     ).select(
         [
+            ROW_ID,
             track.TRACK_ID,
             START_X,
             START_Y,
@@ -962,7 +963,7 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
         coordinates = section.get_coordinates()
         offset = get_section_offset(section)
 
-        if section.get_type() == SectionType.CUTTING:
+        if section.get_type() in [SectionType.CUTTING, SectionType.LINE]:
             # For line sections, check if any track segment intersects with any leg
             # of the line. A leg is formed by each consecutive pair of coordinates.
             for i in range(len(coordinates) - 1):
@@ -995,7 +996,24 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                     .select([ROW_ID, TRACK_ID, INTERSECTS])
                 )
 
-        results = result.with_columns(pl.col(INTERSECTS).cum_sum().alias("cum_sum"))
+        COLUMN_ORDER = [ROW_ID, TRACK_ID, INTERSECTS, "cum_sum", "order"]
+        results = (
+            result.with_columns(
+                pl.col(INTERSECTS).cum_sum().over(TRACK_ID).alias("cum_sum")
+            )
+            .with_columns(pl.lit(1).alias("order"))
+            .select(COLUMN_ORDER)
+        )
+        temp = (
+            results.group_by(TRACK_ID)
+            .first()
+            .with_columns(pl.lit(0).alias("order"))
+            .with_columns(pl.lit(0, pl.UInt32).alias("cum_sum"))
+            .with_columns(pl.col(ROW_ID) - 1)
+            .select(COLUMN_ORDER)
+        )
+        temp_r = pl.concat([results, temp])
+        results = temp_r.sort(by=[TRACK_ID, ROW_ID, "order"])
         return results.with_columns(
             pl.col(TRACK_ID) + "_" + pl.col("cum_sum").cast(pl.Utf8).alias(TRACK_ID)
         ).select([ROW_ID, TRACK_ID])
