@@ -5,11 +5,11 @@ This module provides a TrackParser implementation that reads track data from
 feather files and their accompanying metadata JSON files to create TrackParseResult.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
-import pandas as pd
+import polars as pl
 
 from OTAnalytics.application.datastore import (
     DetectionMetadata,
@@ -18,14 +18,14 @@ from OTAnalytics.application.datastore import (
     TracksParseResult,
 )
 from OTAnalytics.application.logger import logger
-from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.video import VideoMetadata
-from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store import (
-    PandasTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.polars_track_store import (
+    POLARS_TRACK_GEOMETRY_FACTORY,
+    PolarsByMaxConfidence,
+    PolarsTrackDataset,
 )
-from OTAnalytics.plugin_datastore.track_store import (
-    PandasByMaxConfidence,
-    PandasTrackDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
+    PolarsTrackGeometryDataset,
 )
 from OTAnalytics.plugin_parser.convert_ottrk_to_feathers import convert_ottrk_to_feather
 from OTAnalytics.plugin_parser.json_parser import parse_json
@@ -36,14 +36,7 @@ def use_feathers_files(files: list[Path]) -> list[Path]:
     result = []
     for file in files:
         try:
-            if not file.suffix.lower() == ".feather":
-                if file.suffix.lower() == ".ottrk":
-                    convert_ottrk_to_feather(file)
-                    result.append(file.with_suffix(".feather"))
-                else:
-                    raise ValueError(
-                        f"Input file must have .feather or .ottrk extension: {file}"
-                    )
+            result.append(use_feather_file(file))
         except Exception as cause:
             raised_exceptions.append(cause)
     if raised_exceptions:
@@ -51,6 +44,19 @@ def use_feathers_files(files: list[Path]) -> list[Path]:
             "Errors occurred while loading the track files:", raised_exceptions
         )
     return result
+
+
+def use_feather_file(file: Path) -> Path:
+    if not file.suffix.lower() == ".feather":
+        if file.suffix.lower() == ".ottrk":
+            if not file.with_suffix(".feather").exists():
+                convert_ottrk_to_feather(file)
+            return file.with_suffix(".feather")
+        else:
+            raise ValueError(
+                f"Input file must have .feather or .ottrk extension: {file}"
+            )
+    return file
 
 
 class FeathersParser(TrackParser):
@@ -67,7 +73,7 @@ class FeathersParser(TrackParser):
 
     def __init__(
         self,
-        track_geometry_factory: Optional[TRACK_GEOMETRY_FACTORY] = None,
+        track_geometry_factory: Optional[POLARS_TRACK_GEOMETRY_FACTORY] = None,
     ) -> None:
         """
         Initialize the FeathersParser.
@@ -76,7 +82,7 @@ class FeathersParser(TrackParser):
             If None, uses PandasTrackGeometryDataset.from_track_dataset.
         """
         if track_geometry_factory is None:
-            track_geometry_factory = PandasTrackGeometryDataset.from_track_dataset
+            track_geometry_factory = PolarsTrackGeometryDataset.from_track_dataset
         self._track_geometry_factory = track_geometry_factory
 
     def parse_files(self, files: list[Path]) -> TracksParseResult:
@@ -107,7 +113,7 @@ class FeathersParser(TrackParser):
                 raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
 
             # Read the feather file
-            df = pd.read_feather(file)
+            df = pl.read_ipc(file)
             data_frames.append(df)
 
             # Read the metadata
@@ -124,10 +130,10 @@ class FeathersParser(TrackParser):
             detections_metadata.append(detection_metadata)
         logger().info(f"{len(files)} track files parsed.")
 
-        df = pd.concat(data_frames)
+        df = pl.concat(data_frames)
         # Create TrackDataset from DataFrame
-        calculator = PandasByMaxConfidence()
-        tracks = PandasTrackDataset.from_dataframe(
+        calculator = PolarsByMaxConfidence()
+        tracks = PolarsTrackDataset.from_dataframe(
             df, self._track_geometry_factory, calculator=calculator
         )
         logger().info("TrackDataset created.")
@@ -147,12 +153,7 @@ class FeathersParser(TrackParser):
             FileNotFoundError: If the feather file or metadata file is not found
             ValueError: If the file extension is not .feather
         """
-
-        if not file.suffix.lower() == ".feather":
-            if file.suffix.lower() == ".ottrk":
-                file = file.with_suffix(".feather")
-            else:
-                raise ValueError(f"Input file must have .feather extension: {file}")
+        file = use_feather_file(file)
 
         if not file.exists():
             raise FileNotFoundError(f"Feather file not found: {file}")
@@ -162,14 +163,14 @@ class FeathersParser(TrackParser):
             raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
 
         # Read the feather file
-        df = pd.read_feather(file)
+        df = pl.read_ipc(file)
 
         # Read the metadata
         metadata = parse_json(metadata_file)
 
         # Create TrackDataset from DataFrame
-        calculator = PandasByMaxConfidence()
-        tracks = PandasTrackDataset.from_dataframe(
+        calculator = PolarsByMaxConfidence()
+        tracks = PolarsTrackDataset.from_dataframe(
             df, self._track_geometry_factory, calculator=calculator
         )
 
@@ -193,12 +194,14 @@ class FeathersParser(TrackParser):
         Returns:
             VideoMetadata: Parsed video metadata object
         """
-        recorded_start_date = datetime.fromisoformat(metadata["recorded_start_date"])
+        recorded_start_date = datetime.fromtimestamp(
+            metadata["recorded_start_date"], tz=timezone.utc
+        )
 
         # Parse optional fields
         expected_duration = None
-        if "expected_duration" in metadata:
-            expected_duration = timedelta(seconds=metadata["expected_duration"])
+        if entry := metadata.get("expected_duration"):
+            expected_duration = timedelta(seconds=entry)
 
         actual_fps = metadata.get("actual_fps")
 
