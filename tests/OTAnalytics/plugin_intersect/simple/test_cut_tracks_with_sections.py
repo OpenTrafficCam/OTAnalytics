@@ -1,4 +1,4 @@
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -7,9 +7,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     RemoveSection,
 )
 from OTAnalytics.application.use_cases.track_repository import (
-    AddAllTracks,
     GetTracksWithoutSingleDetections,
-    RemoveTracks,
 )
 from OTAnalytics.domain.section import (
     Area,
@@ -59,15 +57,11 @@ class TestSimpleCutTracksIntersectingSection:
         track_dataset.cut_with_section.return_value = (cut_tracks_dataset, {track_id})
         get_tracks.as_dataset.return_value = track_dataset
 
-        add_all_tracks = Mock(spec=AddAllTracks)
-        remove_tracks = Mock(spec=RemoveTracks)
         remove_section = Mock(spec=RemoveSection)
 
         cut_tracks_intersecting_section = SimpleCutTracksIntersectingSection(
             get_sections_by_id,
             get_tracks,
-            add_all_tracks,
-            remove_tracks,
             remove_section,
         )
         cut_tracks_intersecting_section(cutting_section, False)
@@ -75,14 +69,6 @@ class TestSimpleCutTracksIntersectingSection:
 
         assert get_tracks.as_dataset.call_count == 2
 
-        assert add_all_tracks.call_args_list == [
-            call(cut_tracks_dataset),
-            call(cut_tracks_dataset),
-        ]
-        assert remove_tracks.call_args_list == [
-            call({track_id}),
-            call({track_id}),
-        ]
         remove_section.assert_called_once_with(cutting_section.id)
 
     def test_notify_sections(
@@ -97,7 +83,7 @@ class TestSimpleCutTracksIntersectingSection:
 
         with patch.object(SimpleCutTracksIntersectingSection, "__call__") as call_mock:
             cut_tracks_intersecting_section = SimpleCutTracksIntersectingSection(
-                get_sections_by_id, Mock(), Mock(), Mock(), Mock()
+                get_sections_by_id, Mock(), Mock()
             )
             cut_tracks_intersecting_section.notify_sections(
                 SectionRepositoryEvent.create_added(section_ids)
@@ -112,7 +98,7 @@ class TestSimpleCutTracksIntersectingSection:
     def test_register(self, mock_subject_register: Mock) -> None:
         observer = Mock()
         cut_tracks_intersecting_section = SimpleCutTracksIntersectingSection(
-            Mock(), Mock(), Mock(), Mock(), Mock()
+            Mock(), Mock(), Mock()
         )
         cut_tracks_intersecting_section.register(observer)
         mock_subject_register.assert_called_once_with(observer)

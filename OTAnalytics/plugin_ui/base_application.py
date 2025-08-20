@@ -173,21 +173,16 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import TrackIdProvider
-from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
-from OTAnalytics.plugin_datastore.pandas_track_dataset_factory import (
-    PandasTrackDatasetFactory,
-    TypeCheckingPandasTrackDatasetFactory,
+from OTAnalytics.plugin_datastore.polars_track_store import (
+    POLARS_TRACK_GEOMETRY_FACTORY,
+    PolarsByMaxConfidence,
+    PolarsTrackDataset,
 )
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
-from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store import (
-    PandasTrackGeometryDataset,
-)
-from OTAnalytics.plugin_datastore.track_store import (
-    FilterByClassPandasTrackDataset,
-    PandasByMaxConfidence,
-    PandasTrackDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
+    PolarsTrackGeometryDataset,
 )
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
@@ -233,10 +228,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtFlowParser,
     OttrkFormatFixer,
-    OttrkParser,
     SimpleVideoParser,
 )
-from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from OTAnalytics.plugin_parser.road_user_assignment_export import (
     SimpleRoadUserAssignmentExporterFactory,
 )
@@ -581,30 +574,19 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def track_repository(self) -> TrackRepository:
         return TrackRepository(
-            FilterByClassPandasTrackDataset(
-                PandasTrackDataset.from_list(
-                    [],
-                    self.track_geometry_factory,
-                    self.pandas_by_max_confidence,
-                ),
-                self.run_config.include_classes,
-                self.run_config.exclude_classes,
-            )
+            # FilterByClassPandasTrackDataset(
+            PolarsTrackDataset.from_list(
+                [],
+                self.track_geometry_factory,
+                self.polars_by_max_confidence,
+            ),
+            # self.run_config.include_classes,
+            # self.run_config.exclude_classes,
+            # )
         )
 
     def _create_track_parser(self) -> TrackParser:
-        return self._create_feathers_parser()
-
-    def _create_ottrk_parser(self) -> TrackParser:
-        detection_parser = PandasDetectionParser(
-            self.pandas_by_max_confidence,
-            self.track_geometry_factory,
-            track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
-        )
-        return OttrkParser(detection_parser)
-
-    def _create_feathers_parser(self) -> TrackParser:
-        return FeathersParser()
+        return FeathersParser(self.track_geometry_factory)
 
     def _create_stream_track_parser(self) -> StreamTrackParser:
         return StreamOttrkParser(
@@ -614,10 +596,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             ),
             format_fixer=OttrkFormatFixer(),
             progressbar=TqdmBuilder(),
-            track_dataset_factory=lambda tracks: PandasTrackDataset.from_list(
+            track_dataset_factory=lambda tracks: PolarsTrackDataset.from_list(
                 tracks,
                 self.track_geometry_factory,
-                self.pandas_by_max_confidence,
+                self.polars_by_max_confidence,
             ),
             chunk_size=self.run_config.cli_chunk_size,
         )
@@ -816,8 +798,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return SimpleCutTracksIntersectingSection(
             self.get_sections_by_id,
             self.get_all_tracks,
-            self.add_all_tracks,
-            self.remove_tracks,
             self.remove_section,
         )
 
@@ -973,18 +953,12 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return ResourceManager()
 
     @cached_property
-    def pandas_track_dataset_factory(self) -> PandasTrackDatasetFactory:
-        return TypeCheckingPandasTrackDatasetFactory(
-            self.track_geometry_factory, self.pandas_by_max_confidence
-        )
+    def polars_by_max_confidence(self) -> PolarsByMaxConfidence:
+        return PolarsByMaxConfidence()
 
     @cached_property
-    def pandas_by_max_confidence(self) -> PandasByMaxConfidence:
-        return PandasByMaxConfidence()
-
-    @cached_property
-    def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
-        return PandasTrackGeometryDataset.from_track_dataset
+    def track_geometry_factory(self) -> POLARS_TRACK_GEOMETRY_FACTORY:
+        return PolarsTrackGeometryDataset.from_track_dataset
 
 
 def create_format_fixer(

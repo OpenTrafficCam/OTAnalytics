@@ -8,11 +8,7 @@ from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
     RemoveSection,
 )
-from OTAnalytics.application.use_cases.track_repository import (
-    AddAllTracks,
-    GetAllTracks,
-    RemoveTracks,
-)
+from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.section import (
     Section,
@@ -29,10 +25,6 @@ class SimpleCutTracksIntersectingSection(CutTracksIntersectingSection):
     Args:
         get_sections_by_id (GetSectionsById): get sections by id.
         get_tracks (GetAllTracks): get all tracks.
-        add_all_tracks (AddAllTracks): used to add all tracks to the track
-            repository.
-        remove_tracks (RemoveTracks): used to remove original tracks that have been
-            cut.
         remove_section (RemoveSection): used to remove the cutting section.
     """
 
@@ -40,16 +32,12 @@ class SimpleCutTracksIntersectingSection(CutTracksIntersectingSection):
         self,
         get_sections_by_id: GetSectionsById,
         get_tracks: GetAllTracks,
-        add_all_tracks: AddAllTracks,
-        remove_tracks: RemoveTracks,
         remove_section: RemoveSection,
     ) -> None:
         self._subject: Subject[CutTracksDto] = Subject[CutTracksDto]()
 
         self._get_sections_by_id = get_sections_by_id
         self._get_tracks = get_tracks
-        self._add_all_tracks = add_all_tracks
-        self._remove_tracks = remove_tracks
         self._remove_section = remove_section
 
     def __call__(
@@ -59,8 +47,6 @@ class SimpleCutTracksIntersectingSection(CutTracksIntersectingSection):
         cut_tracks_dataset, ids_of_cut_tracks = track_dataset.cut_with_section(
             cutting_section, cutting_section.get_offset(EventType.SECTION_ENTER)
         )
-        self._remove_tracks(ids_of_cut_tracks)
-        self._add_all_tracks(cut_tracks_dataset)
         if not preserve_cutting_section:
             self._remove_section(cutting_section.id)
         self._subject.notify(

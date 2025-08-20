@@ -79,7 +79,6 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackIds,
     GetAllTracks,
     GetTracksWithoutSingleDetections,
-    RemoveTracks,
     TrackRepositorySize,
 )
 from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
@@ -417,8 +416,6 @@ class TestOTAnalyticsCli:
         cut_tracks = SimpleCutTracksIntersectingSection(
             GetSectionsById(section_repository),
             get_all_tracks,
-            add_all_tracks,
-            RemoveTracks(track_repository),
             RemoveSection(section_repository),
         )
         apply_cli_cuts = ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
@@ -512,8 +509,6 @@ class TestOTAnalyticsCli:
         cut_tracks = SimpleCutTracksIntersectingSection(
             GetSectionsById(section_repository),
             get_all_tracks,
-            add_all_tracks,
-            RemoveTracks(track_repository),
             RemoveSection(section_repository),
         )
         apply_cli_cuts = ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))

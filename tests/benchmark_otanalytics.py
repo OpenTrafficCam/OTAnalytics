@@ -29,10 +29,8 @@ from OTAnalytics.application.use_cases.section_repository import (
     RemoveSection,
 )
 from OTAnalytics.application.use_cases.track_repository import (
-    AddAllTracks,
     GetAllTracks,
     GetTracksWithoutSingleDetections,
-    RemoveTracks,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
@@ -51,13 +49,17 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
+from OTAnalytics.plugin_datastore.polars_track_store import (
+    POLARS_TRACK_GEOMETRY_FACTORY,
+    PolarsTrackDataset,
+)
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     FilteredPythonTrackDataset,
     PythonTrackDataset,
 )
-from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store import (
-    PandasTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
+    PolarsTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
@@ -70,6 +72,7 @@ from OTAnalytics.plugin_datastore.track_store import (
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
 )
+from OTAnalytics.plugin_parser.feathers_parser import FeathersParser
 from OTAnalytics.plugin_parser.otvision_parser import (
     OtFlowParser,
     OttrkParser,
@@ -81,7 +84,8 @@ from tests.utils.builders.run_configuration import create_run_config
 PYTHON = "PYTHON"
 PANDAS = "PANDAS"
 PURE_PANDAS = "PURE_PANDAS"
-CURRENT_DATASET_TYPE = PURE_PANDAS
+POLARS = "POLARS"
+CURRENT_DATASET_TYPE = POLARS
 
 EXCLUDE_FILTER = [
     OtcClasses.PEDESTRIAN,
@@ -118,10 +122,10 @@ class BenchmarkOtAnalyticsStarter(OtAnalyticsCliApplicationStarter):
         self._dataset_type = dataset_type
 
     @cached_property
-    def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
-        if self._dataset_type == PURE_PANDAS:
-            return PandasTrackGeometryDataset.from_track_dataset
-        return ShapelyTrackGeometryDataset.from_track_dataset
+    def track_geometry_factory(self) -> POLARS_TRACK_GEOMETRY_FACTORY:
+        if self._dataset_type == POLARS:
+            return PolarsTrackGeometryDataset.from_track_dataset
+        raise ValueError(f"Unknown dataset type {self._dataset_type}")
 
 
 class UseCaseProvider:
@@ -201,14 +205,10 @@ class UseCaseProvider:
     def get_cut_tracks(self) -> CutTracksIntersectingSection:
         get_sections_by_id = GetSectionsById(self._section_repository)
         get_tracks = GetAllTracks(self._track_repository)
-        add_all_tracks = AddAllTracks(self._track_repository)
-        remove_tracks = RemoveTracks(self._track_repository)
         remove_section = RemoveSection(self._section_repository)
         return SimpleCutTracksIntersectingSection(
             get_sections_by_id,
             get_tracks,
-            add_all_tracks,
-            remove_tracks,
             remove_section,
         )
 
@@ -223,6 +223,7 @@ class UseCaseProvider:
     def provide_track_repository(
         self, track_files: list[Path], dataset_type: str
     ) -> tuple[TrackRepository, DetectionMetadata]:
+        parser: TrackParser
         if dataset_type == PYTHON:
             repository = TrackRepository(self.provide_python_track_dataset())
             parser = OttrkParser(self.provide_python_detection_parser(repository))
@@ -231,7 +232,10 @@ class UseCaseProvider:
             parser = OttrkParser(self.provide_pandas_detection_parser())
         elif dataset_type == PURE_PANDAS:
             repository = TrackRepository(self.provide_pure_pandas_track_dataset())
-            parser = OttrkParser(self.provide_pure_pandas_detection_parser())
+            parser = FeathersParser()
+        elif dataset_type == POLARS:
+            repository = TrackRepository(self.provide_polars_track_dataset())
+            parser = FeathersParser(PolarsTrackGeometryDataset.from_track_dataset)
         else:
             raise ValueError(f"Unknown dataset type {dataset_type}")
         detection_metadata = _fill_track_repository(parser, repository, track_files)
@@ -270,7 +274,7 @@ class UseCaseProvider:
     def provide_pure_pandas_track_dataset(self) -> TrackDataset:
         return FilterByClassPandasTrackDataset(
             PandasTrackDataset.from_list(
-                [], PandasTrackGeometryDataset.from_track_dataset
+                [], PolarsTrackGeometryDataset.from_track_dataset
             ),
             self._include_classes,
             self._exclude_classes,
@@ -278,7 +282,12 @@ class UseCaseProvider:
 
     def provide_pure_pandas_detection_parser(self) -> PandasDetectionParser:
         return PandasDetectionParser(
-            PandasByMaxConfidence(), PandasTrackGeometryDataset.from_track_dataset
+            PandasByMaxConfidence(), PolarsTrackGeometryDataset.from_track_dataset
+        )
+
+    def provide_polars_track_dataset(self) -> TrackDataset:
+        return PolarsTrackDataset.from_list(
+            [], PolarsTrackGeometryDataset.from_track_dataset
         )
 
     def counting_specification(self, save_dir: Path) -> CountingSpecificationDto:
@@ -319,7 +328,7 @@ class UseCaseProvider:
         elif dataset_type == PANDAS:
             return OttrkParser(self.provide_pandas_detection_parser())
         elif dataset_type == PURE_PANDAS:
-            return OttrkParser(self.provide_pure_pandas_detection_parser())
+            return FeathersParser()
         else:
             raise ValueError(f"Unknown dataset type {dataset_type}")
 
@@ -413,6 +422,11 @@ def pandas_track_parser() -> TrackParser:
 
 
 @pytest.fixture
+def feathers_track_parser() -> TrackParser:
+    return FeathersParser()
+
+
+@pytest.fixture
 def use_case_provider_15min(
     otflow_file: Path, track_file_15min: Path, test_data_tmp_dir: Path
 ) -> UseCaseProvider:
@@ -481,11 +495,11 @@ class TestBenchmarkTrackParser:
     def test_load_15min(
         self,
         benchmark: BenchmarkFixture,
-        pandas_track_parser: OttrkParser,
+        feathers_track_parser: TrackParser,
         track_file_15min: Path,
     ) -> None:
         benchmark.pedantic(
-            pandas_track_parser.parse,
+            feathers_track_parser.parse,
             args=(track_file_15min,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
