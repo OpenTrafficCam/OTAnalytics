@@ -4,10 +4,11 @@ from unittest.mock import Mock, PropertyMock, call, patch
 import pytest
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
-from OTAnalytics.application.analysis.traffic_counting import (
+from OTAnalytics.application.analysis.road_user_assignment import (
     EventPair,
     RoadUserAssigner,
     RoadUserAssignment,
+    RoadUserAssignmentRepository,
     RoadUserAssignments,
 )
 from OTAnalytics.application.state import (
@@ -15,6 +16,13 @@ from OTAnalytics.application.state import (
     ObservableProperty,
     SectionState,
     TrackViewState,
+)
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
+)
+from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.create_road_user_assignments import (
+    CreateRoadUserAssignments,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
@@ -121,7 +129,7 @@ class TestTracksIntersectingSelectedSections:
     ) -> None:
         section_state = Mock(spec=SectionState)
         selected_sections = Mock(spec=ObservableProperty)
-        selected_sections.get.return_value = [(section_2.id)]
+        selected_sections.get.return_value = [section_2.id]
         section_state.selected_sections = selected_sections
 
         get_section_by_id.return_value = [section_2]
@@ -342,11 +350,19 @@ class TestTracksAssignedToSelectedFlows:
         event_repository = Mock(spec=EventRepository)
         event_repository.get_all.return_value = [event]
 
+        create_events = Mock(spec=CreateEvents)
+
         flow_repository = Mock(spec=FlowRepository)
         flow_repository.get_all.return_value = [first_flow, second_flow]
 
+        rua_repo = RoadUserAssignmentRepository()
+        create_assignments = CreateRoadUserAssignments(
+            flow_repository, event_repository, create_events, assigner, rua_repo, False
+        )
+        get_assignments = GetRoadUserAssignments(rua_repo, create_assignments)
+
         tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
-            assigner, event_repository, flow_repository, flow_state
+            get_assignments, flow_state
         )
         track_ids = list(tracks_assigned_to_flow.get_ids())
 
@@ -474,7 +490,9 @@ class TestTracksOverlapOccurrenceWindow:
             result_ids = id_provider.get_ids()
 
             assert result_ids == [track_ids[0]]
-            track_repository.get_for.call_args_list == [call(id) for id in track_ids]
+            track_repository.get_for.call_args_list == [
+                call(id) for id in track_ids
+            ]  # TODO: should this have an assert? if I add the assert the test fails!
 
     @pytest.mark.parametrize(
         (

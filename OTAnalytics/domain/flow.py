@@ -146,7 +146,7 @@ class FlowListSubject:
         Notifies observers about the list of flows.
 
         Args:
-            tracks (list[FlowId]): list of added flows
+            flows (list[FlowId]): list of added flows
         """
         [observer.notify_flows(flows) for observer in self.observers]
 

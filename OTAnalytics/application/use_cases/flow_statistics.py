@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from OTAnalytics.application.use_cases.get_road_user_assignments import (
+from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
 )
 from OTAnalytics.domain.flow import FlowId, FlowRepository
@@ -15,7 +15,7 @@ class NumberOfTracksAssignedToEachFlow:
 
     def get(self) -> dict[FlowId, int]:
         result = self._initialize_flow_track_counts()
-        for road_user_assignment in self._get_assignments.get():
+        for road_user_assignment in self._get_assignments.get_as_list():
             flow_id = road_user_assignment.assignment.id
             result[flow_id] += 1
         return result

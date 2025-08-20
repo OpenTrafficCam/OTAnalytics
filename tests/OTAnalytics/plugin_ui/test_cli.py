@@ -6,6 +6,9 @@ from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 
+from OTAnalytics.application.analysis.road_user_assignment import (
+    RoadUserAssignmentRepository,
+)
 from OTAnalytics.application.analysis.traffic_counting import (
     ExportCounts,
     ExportTrafficCounting,
@@ -39,6 +42,9 @@ from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     SimpleCreateIntersectionEvents,
@@ -47,13 +53,20 @@ from OTAnalytics.application.use_cases.create_events import (
 from OTAnalytics.application.use_cases.create_intersection_events import (
     BatchedTracksRunIntersect,
 )
+from OTAnalytics.application.use_cases.create_road_user_assignments import (
+    CreateRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearAllEvents,
     GetAllEnterSectionEvents,
 )
 from OTAnalytics.application.use_cases.export_events import EventListExporter
-from OTAnalytics.application.use_cases.flow_repository import AddFlow, FlowRepository
+from OTAnalytics.application.use_cases.flow_repository import (
+    AddFlow,
+    FlowRepository,
+    GetAllFlows,
+)
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToAllFlows,
@@ -436,12 +449,23 @@ class TestOTAnalyticsCli:
             clear_all_events, create_intersection_events, create_scene_events
         )
         assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
-        traffic_counting = TrafficCounting(
-            event_repository,
-            flow_repository,
-            GetSectionsById(section_repository),
+
+        assignment_repository = RoadUserAssignmentRepository()
+        create_assignments = CreateRoadUserAssignments(
+            GetAllFlows(flow_repository),
+            GetAllEnterSectionEvents(event_repository),
             create_events,
             assigner,
+            assignment_repository,
+        )
+        get_assignments = GetRoadUserAssignments(
+            assignment_repository, create_assignments
+        )
+
+        traffic_counting = TrafficCounting(
+            flow_repository,
+            GetSectionsById(section_repository),
+            get_assignments,
             SimpleTaggerFactory(),
         )
         export_counts = ExportTrafficCounting(
@@ -456,10 +480,7 @@ class TestOTAnalyticsCli:
             track_repository, tracks_metadata, videos_metadata
         )
         export_road_user_assignments = ExportRoadUserAssignments(
-            event_repository=event_repository,
-            flow_repository=flow_repository,
-            create_events=create_events,
-            assigner=assigner,
+            get_all_assignments=get_assignments,
             exporter_factory=SimpleRoadUserAssignmentExporterFactory(
                 section_repository, get_all_tracks
             ),
@@ -534,12 +555,24 @@ class TestOTAnalyticsCli:
             clear_all_events, create_intersection_events, create_scene_events
         )
         assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
-        traffic_counting = TrafficCounting(
-            event_repository,
-            flow_repository,
-            GetSectionsById(section_repository),
+
+        assignment_repository = RoadUserAssignmentRepository()
+        create_assignments = CreateRoadUserAssignments(
+            GetAllFlows(flow_repository),
+            GetAllEnterSectionEvents(event_repository),
             create_events,
             assigner,
+            assignment_repository,
+            True,
+        )
+        get_assignments = GetRoadUserAssignments(
+            assignment_repository, create_assignments, True
+        )
+
+        traffic_counting = TrafficCounting(
+            flow_repository,
+            GetSectionsById(section_repository),
+            get_assignments,
             SimpleTaggerFactory(),
         )
         export_counts = ExportTrafficCounting(
@@ -551,7 +584,7 @@ class TestOTAnalyticsCli:
         get_all_tracks = GetAllTracks(track_repository)
         get_cutting_sections = GetCuttingSections(section_repository)
         tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
-            SimpleRoadUserAssigner(), event_repository, flow_repository
+            get_assignments, flow_repository
         )
         export_track_statistics = ExportTrackStatistics(
             CalculateTrackStatistics(
@@ -581,10 +614,7 @@ class TestOTAnalyticsCli:
             track_repository, tracks_metadata, videos_metadata
         )
         export_road_user_assignments = ExportRoadUserAssignments(
-            event_repository=event_repository,
-            flow_repository=flow_repository,
-            create_events=create_events,
-            assigner=assigner,
+            get_all_assignments=get_assignments,
             exporter_factory=SimpleRoadUserAssignmentExporterFactory(
                 section_repository, get_all_tracks
             ),
