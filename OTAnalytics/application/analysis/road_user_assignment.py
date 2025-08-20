@@ -1,9 +1,13 @@
+import itertools
 from abc import ABC, abstractmethod
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Iterable
 
+from application import logger
+
 from OTAnalytics.domain.event import Event
-from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.observer import OBSERVER, Subject
 
 
@@ -85,7 +89,10 @@ class RoadUserAssignmentRepository:
         ](),
     ):
         self._subject = subject
-        self._assignments: list[RoadUserAssignment] = []
+        self._assignments: dict[str, dict[FlowId, RoadUserAssignment]] = defaultdict(
+            dict
+        )
+        self._observed_flows: Counter[FlowId] = Counter()
 
     def register_observer(
         self, observer: OBSERVER[RoadUserAssignmentRepositoryEvent]
@@ -98,16 +105,16 @@ class RoadUserAssignmentRepository:
         """
         self._subject.register(observer)
 
-    def add(self, road_user_assignment: RoadUserAssignment) -> None:
+    def add(self, assignment: RoadUserAssignment) -> None:
         """
         Add a single road user assignment to the repository and notify observers.
 
         Args:
             road_user_assignment: The road user assignment to be added.
         """
-        self._assignments.append(road_user_assignment)
+        self.__do_add(assignment)
         self._subject.notify(
-            RoadUserAssignmentRepositoryEvent.create_added([road_user_assignment])
+            RoadUserAssignmentRepositoryEvent.create_added([assignment])
         )
 
     def add_all(self, assignments: Iterable[RoadUserAssignment]) -> None:
@@ -117,10 +124,16 @@ class RoadUserAssignmentRepository:
         Args:
             assignments: The road user assignments to be added.
         """
-        self._assignments.extend(assignments)
+        for assignment in assignments:
+            self.__do_add(assignment)
         self._subject.notify(
             RoadUserAssignmentRepositoryEvent.create_added(assignments)
         )
+
+    def __do_add(self, assignment: RoadUserAssignment) -> None:
+        flow = assignment.assignment.id
+        self._assignments[assignment.road_user][flow] = assignment
+        self._observed_flows[flow] += 1
 
     def add_road_user_assignments(
         self, road_user_assignments: "RoadUserAssignments"
@@ -136,14 +149,6 @@ class RoadUserAssignmentRepository:
         """
         self.add_all(road_user_assignments.as_list())
 
-    def clear(self) -> None:
-        """
-        Remove all road user assignments from the repository and notify observers.
-        """
-        removed = frozenset(self._assignments)
-        self._assignments = []
-        self._subject.notify(RoadUserAssignmentRepositoryEvent.create_removed(removed))
-
     def get_all(self) -> "RoadUserAssignments":
         """
         Get all road user assignments as a RoadUserAssignments object.
@@ -151,16 +156,64 @@ class RoadUserAssignmentRepository:
         Returns:
             A RoadUserAssignments object containing all assignments in the repository.
         """
-        return RoadUserAssignments(self._assignments)
+        return RoadUserAssignments(self.get_all_as_list())
 
-    def get_all_as_list(self) -> list[RoadUserAssignment]:
+    def get_all_as_list(
+        self,
+    ) -> list[RoadUserAssignment]:
         """
         Get all road user assignments as a list.
 
         Returns:
             A list of all RoadUserAssignment objects in the repository.
         """
-        return list(self._assignments)
+        return list(
+            itertools.chain.from_iterable(
+                track.values() for track in self._assignments.values()
+            )
+        )
+
+    def clear(self) -> None:
+        """
+        Remove all road user assignments from the repository and notify observers.
+        """
+        removed = frozenset(self.get_all_as_list())
+        self._assignments.clear()
+        self._observed_flows.clear()
+        self._subject.notify(RoadUserAssignmentRepositoryEvent.create_removed(removed))
+
+    def remove_assignments_of_event(self, event: Event) -> None:
+        user_assignments = self._assignments[event.road_user_id]
+        removed = []
+        for flow, assignment in user_assignments.items():
+            events = assignment.events
+            if event == events.start or event == events.end:
+                del user_assignments[flow]
+                self._observed_flows[flow] -= 1
+                removed.append(assignment)
+
+        if not user_assignments:
+            del self._assignments[event.road_user_id]
+
+        for flow in list(self._observed_flows):
+            count = self._observed_flows[flow]
+            if count <= 0:
+                if count < 0:
+                    logger.warn(
+                        "Tracking count of assignments by flow"
+                        + f"turned negative while removing {event}"
+                    )
+                del self._observed_flows[flow]
+
+        self._subject.notify(RoadUserAssignmentRepositoryEvent.create_removed(removed))
+
+    def remove_assignments_of_flow(self, flow: FlowId) -> None:
+        removed = [
+            user.pop(flow) for user in self._assignments.values() if flow in user
+        ]
+
+        del self._observed_flows[flow]
+        self._subject.notify(RoadUserAssignmentRepositoryEvent.create_removed(removed))
 
     def is_empty(self) -> bool:
         """
@@ -170,6 +223,9 @@ class RoadUserAssignmentRepository:
             True if the repository contains no assignments, False otherwise.
         """
         return not self._assignments
+
+    def get_observed_flows(self) -> set[FlowId]:
+        return set(self._observed_flows)
 
 
 class RoadUserAssignments:
@@ -211,7 +267,7 @@ class RoadUserAssignments:
         Returns:
             The hash value based on the contained assignments.
         """
-        return hash(str(self._assignments))
+        return hash(self._assignments)
 
     def __eq__(self, other: object) -> bool:
         """

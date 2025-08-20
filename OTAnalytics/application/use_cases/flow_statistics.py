@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from OTAnalytics.application.use_cases.get_road_user_assignments import (
+from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
 )
 from OTAnalytics.domain.flow import FlowId, FlowRepository

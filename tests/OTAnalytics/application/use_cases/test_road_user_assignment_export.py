@@ -10,11 +10,11 @@ from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignments,
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.create_road_user_assignments import (
     CreateRoadUserAssignments,
-)
-from OTAnalytics.application.use_cases.get_road_user_assignments import (
-    GetRoadUserAssignments,
 )
 from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportRoadUserAssignments,

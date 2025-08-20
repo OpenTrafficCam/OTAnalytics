@@ -42,6 +42,9 @@ from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     SimpleCreateIntersectionEvents,
@@ -59,9 +62,10 @@ from OTAnalytics.application.use_cases.event_repository import (
     GetAllEnterSectionEvents,
 )
 from OTAnalytics.application.use_cases.export_events import EventListExporter
-from OTAnalytics.application.use_cases.flow_repository import AddFlow, FlowRepository
-from OTAnalytics.application.use_cases.get_road_user_assignments import (
-    GetRoadUserAssignments,
+from OTAnalytics.application.use_cases.flow_repository import (
+    AddFlow,
+    FlowRepository,
+    GetAllFlows,
 )
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
@@ -448,8 +452,8 @@ class TestOTAnalyticsCli:
 
         assignment_repository = RoadUserAssignmentRepository()
         create_assignments = CreateRoadUserAssignments(
-            flow_repository,
-            event_repository,
+            GetAllFlows(flow_repository),
+            GetAllEnterSectionEvents(event_repository),
             create_events,
             assigner,
             assignment_repository,
@@ -554,8 +558,8 @@ class TestOTAnalyticsCli:
 
         assignment_repository = RoadUserAssignmentRepository()
         create_assignments = CreateRoadUserAssignments(
-            flow_repository,
-            event_repository,
+            GetAllFlows(flow_repository),
+            GetAllEnterSectionEvents(event_repository),
             create_events,
             assigner,
             assignment_repository,

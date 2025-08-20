@@ -4,7 +4,7 @@ from typing import Iterable, Optional
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.state import FlowState, SectionState, TrackViewState
-from OTAnalytics.application.use_cases.get_road_user_assignments import (
+from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
 )
 from OTAnalytics.application.use_cases.section_repository import (

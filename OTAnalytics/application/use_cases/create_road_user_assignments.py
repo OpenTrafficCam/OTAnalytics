@@ -3,34 +3,38 @@ from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignmentRepository,
 )
 from OTAnalytics.application.use_cases.create_events import CreateEvents
-from OTAnalytics.domain.event import EventRepository
-from OTAnalytics.domain.flow import FlowRepository
+from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
+from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 
 
 class CreateRoadUserAssignments:
     def __init__(
         self,
-        flow_repository: FlowRepository,
-        event_repository: EventRepository,
+        get_all_flows: GetAllFlows,
+        get_all_section_events: GetAllEnterSectionEvents,
+        # TODO are section enter events sufficient for flow assignment?
         create_events: CreateEvents,
         assigner: RoadUserAssigner,
         assignment_repository: RoadUserAssignmentRepository,
         enable_event_creation: bool = True,
     ) -> None:
-        self._flow_repository = flow_repository
-        self._event_repository = event_repository
+        self._get_all_flows = get_all_flows
+        self._get_all_section_events = get_all_section_events
         self._create_events = create_events
         self._assigner = assigner
         self._assignment_repository = assignment_repository
         self._enable_event_creation = enable_event_creation
 
     def __call__(self, overwrite_non_empty_repo: bool = False) -> None:
-        if self._enable_event_creation and self._event_repository.is_empty():
+        # TODO maybe move event creation completely outside of this use case?
+        if self._enable_event_creation and not self._get_all_section_events.get():
             self._create_events()
 
-        if self._assignment_repository.is_empty() or overwrite_non_empty_repo:
-            events = self._event_repository.get_all()
-            flows = self._flow_repository.get_all()
-            assigned_flows = self._assigner.assign(events, flows)
-            self._assignment_repository.clear()
-            self._assignment_repository.add_road_user_assignments(assigned_flows)
+        events = self._get_all_section_events.get()
+        flows = self._get_all_flows.get()
+        assigned_flows = self._assigner.assign(events, flows)
+
+        # TODO think about when to recompute and where to trigger
+
+        # no harm adding assignments for track_id,flow that already exist -> overwritten
+        self._assignment_repository.add_road_user_assignments(assigned_flows)

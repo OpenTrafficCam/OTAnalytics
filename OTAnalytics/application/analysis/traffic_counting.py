@@ -23,7 +23,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     FlowNameDto,
 )
 from OTAnalytics.application.export_formats.export_mode import ExportMode
-from OTAnalytics.application.use_cases.get_road_user_assignments import (
+from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
 )
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById

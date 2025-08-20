@@ -54,12 +54,12 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     FlowNameDto,
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.create_road_user_assignments import (
     CreateRoadUserAssignments,
-)
-from OTAnalytics.application.use_cases.get_road_user_assignments import (
-    GetRoadUserAssignments,
 )
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository

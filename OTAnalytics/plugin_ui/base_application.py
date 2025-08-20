@@ -60,6 +60,12 @@ from OTAnalytics.application.ui.frame_control import (
 )
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
+    RemoveAssignmentsOfChangedFlow,
+    RemoveAssignmentsOfRemovedEvents,
+    RemoveAssignmentsOfRemovedFlows,
+)
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.config import SaveOtconfig
 from OTAnalytics.application.use_cases.config_has_changed import (
@@ -120,9 +126,6 @@ from OTAnalytics.application.use_cases.generate_flows import (
 )
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
-from OTAnalytics.application.use_cases.get_road_user_assignments import (
-    GetRoadUserAssignments,
-)
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToAllFlows,
@@ -912,15 +915,35 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return RoadUserAssignmentRepository()
 
     @cached_property
+    def get_all_enter_section_events(self) -> GetAllEnterSectionEvents:
+        return GetAllEnterSectionEvents(self.event_repository)
+
+    @cached_property
     def create_assignments(self) -> CreateRoadUserAssignments:
         return CreateRoadUserAssignments(
-            self.flow_repository,
-            self.event_repository,
+            self.get_all_flows,
+            self.get_all_enter_section_events,
             self.create_events,
             self.road_user_assigner,
             self.assignment_repository,
             enable_event_creation=True,
         )
+
+    @cached_property
+    def remove_assignments_of_removed_events(self) -> RemoveAssignmentsOfRemovedEvents:
+        return RemoveAssignmentsOfRemovedEvents(
+            self.assignment_repository, self.event_repository
+        )
+
+    @cached_property
+    def remove_assignments_of_removed_flows(self) -> RemoveAssignmentsOfRemovedFlows:
+        return RemoveAssignmentsOfRemovedFlows(
+            self.assignment_repository, self.get_all_flows
+        )
+
+    @cached_property
+    def remove_assignments_of_changed_flows(self) -> RemoveAssignmentsOfChangedFlow:
+        return RemoveAssignmentsOfChangedFlow(self.assignment_repository)
 
     @cached_property
     def get_all_assignments(self) -> GetRoadUserAssignments:

@@ -10,7 +10,7 @@ from OTAnalytics.application.analysis.road_user_assignment import (
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportFormat
 from OTAnalytics.application.export_formats import road_user_assignments as ras
 from OTAnalytics.application.export_formats.export_mode import ExportMode
-from OTAnalytics.application.use_cases.get_road_user_assignments import (
+from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
 )
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
@@ -241,7 +241,7 @@ class RoadUserAssignmentExporterFactory(Protocol):
 class ExportRoadUserAssignments:
     """Use case to export_formats vehicle flow assignments."""
 
-    # todo should have option create ruas/create events set to true
+    # TODO should have option create ruas/create events set to true
     def __init__(
         self,
         get_all_assignments: GetRoadUserAssignments,
