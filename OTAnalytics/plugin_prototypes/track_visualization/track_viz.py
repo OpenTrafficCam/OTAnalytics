@@ -54,6 +54,7 @@ from OTAnalytics.domain.track_repository import (
     TrackRepository,
     TrackRepositoryEvent,
 )
+from OTAnalytics.plugin_datastore.polars_track_store import PolarsDataFrameProvider
 from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 
@@ -301,6 +302,12 @@ class PandasTrackProvider(PandasDataFrameProvider):
         tracks = self._track_repository.get_all()
         if isinstance(tracks, PandasDataFrameProvider):
             return tracks.get_data()
+        if isinstance(tracks, PolarsDataFrameProvider):
+            return (
+                tracks.get_data()
+                .to_pandas()
+                .set_index([track.TRACK_ID, track.OCCURRENCE])
+            )
         track_list = tracks.as_list()
         if not track_list:
             return DataFrame()
