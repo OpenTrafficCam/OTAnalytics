@@ -20,7 +20,7 @@ class NiceguiWebserver:
         self._page_builders = page_builders
         self._layout_components = layout_components
         self._hostname = hostname
-        self._port = 50111
+        self._port = port
         self._hot_reload = hot_reload
 
     def run(self) -> None:
