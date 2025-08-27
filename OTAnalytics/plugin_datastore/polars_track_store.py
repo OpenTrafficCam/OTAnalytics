@@ -40,6 +40,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     IntersectionPoint,
     TrackDataset,
     TrackDoesNotExistError,
+    TrackIdSet,
     TrackSegmentDataset,
 )
 from OTAnalytics.domain.types import EventType
@@ -273,12 +274,11 @@ POLARS_TRACK_GEOMETRY_FACTORY = Callable[
 
 class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     @property
-    def track_ids(self) -> frozenset[TrackId]:
+    def track_ids(self) -> TrackIdSet:
         if self._dataset.is_empty():
-            return frozenset()
-        return frozenset(
-            TrackId(_id) for _id in self._dataset.get_column(track.TRACK_ID).unique()
-        )
+            return PolarsTrackIdSet()
+        unique_track_ids = self._dataset.get_column(track.TRACK_ID).unique()
+        return PolarsTrackIdSet(unique_track_ids)
 
     @property
     def first_occurrence(self) -> datetime | None:
@@ -874,3 +874,51 @@ def area_section_to_shapely(section: Section) -> BaseGeometry:
     geometry = shapely.Polygon([(c.x, c.y) for c in section.get_coordinates()])
     prepare(geometry)
     return geometry
+
+
+class PolarsTrackIdSet(TrackIdSet):
+    """
+    Polars-based implementation of TrackIdSet using a Series for optimal performance.
+    """
+
+    def __init__(self, track_ids: Iterable[TrackId] | pl.Series | None = None):
+        if track_ids is None:
+            self._series = pl.Series([], dtype=pl.String)
+        elif isinstance(track_ids, pl.Series):
+            self._series = track_ids.unique().sort()
+        else:
+            # Convert TrackId objects to strings
+            id_strings = [unpack(track_id) for track_id in track_ids]
+            self._series = pl.Series(id_strings, dtype=pl.String).unique().sort()
+
+    def __iter__(self) -> Iterator[TrackId]:
+        for id_str in self._series:
+            yield TrackId(id_str)
+
+    def __len__(self) -> int:
+        return len(self._series)
+
+    def intersection(self, other: "TrackIdSet") -> "TrackIdSet":
+        if isinstance(other, PolarsTrackIdSet):
+            # Efficient intersection using Polars operations
+            intersected_series = self._series.filter(self._series.is_in(other._series))
+            return PolarsTrackIdSet(intersected_series)
+        else:
+            # Convert other to set of strings for intersection
+            other_strings = {unpack(track_id) for track_id in other}
+            intersected_series = self._series.filter(
+                self._series.is_in(list(other_strings))
+            )
+            return PolarsTrackIdSet(intersected_series)
+
+    def union(self, other: "TrackIdSet") -> "TrackIdSet":
+        if isinstance(other, PolarsTrackIdSet):
+            # Efficient union using Polars operations
+            combined_series = pl.concat([self._series, other._series]).unique().sort()
+            return PolarsTrackIdSet(combined_series)
+        else:
+            # Convert other to strings and combine
+            other_strings = [unpack(track_id) for track_id in other]
+            other_series = pl.Series(other_strings, dtype=pl.String)
+            combined_series = pl.concat([self._series, other_series]).unique().sort()
+            return PolarsTrackIdSet(combined_series)

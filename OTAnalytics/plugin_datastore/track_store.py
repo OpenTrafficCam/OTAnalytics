@@ -36,8 +36,10 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     TrackDataset,
     TrackDoesNotExistError,
     TrackGeometryDataset,
+    TrackIdSet,
     TrackSegmentDataset,
 )
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from OTAnalytics.plugin_parser import ottrk_dataformat
 
 RANK = "rank"
@@ -250,15 +252,14 @@ class PandasDataFrameProvider:
 
 class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     @property
-    def track_ids(self) -> frozenset[TrackId]:
+    def track_ids(self) -> TrackIdSet:
         if self._dataset.empty:
-            return frozenset()
-        return frozenset(
-            [
-                TrackId(_id)
-                for _id in self._dataset.index.get_level_values(LEVEL_TRACK_ID)
-            ]
-        )
+            return PythonTrackIdSet()
+        track_ids = [
+            TrackId(_id)
+            for _id in self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique()
+        ]
+        return PythonTrackIdSet(track_ids)
 
     @property
     def first_occurrence(self) -> datetime | None:

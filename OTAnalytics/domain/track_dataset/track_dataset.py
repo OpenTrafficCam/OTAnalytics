@@ -64,10 +64,28 @@ class TrackSegmentDataset(ABC):
         raise NotImplementedError
 
 
+class TrackIdSet(ABC):
+    @abstractmethod
+    def __iter__(self) -> Iterator[TrackId]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def __len__(self) -> int:
+        raise NotImplementedError
+
+    @abstractmethod
+    def intersection(self, other: "TrackIdSet") -> "TrackIdSet":
+        raise NotImplementedError
+
+    @abstractmethod
+    def union(self, other: "TrackIdSet") -> "TrackIdSet":
+        raise NotImplementedError
+
+
 class TrackDataset(ABC):
     @property
     @abstractmethod
-    def track_ids(self) -> frozenset[TrackId]:
+    def track_ids(self) -> TrackIdSet:
         raise NotImplementedError
 
     @property

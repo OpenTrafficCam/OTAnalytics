@@ -8,6 +8,7 @@ from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IntersectionPoint,
     TrackDataset,
+    TrackIdSet,
     TrackSegmentDataset,
 )
 
@@ -18,7 +19,7 @@ class FilteredTrackDataset(TrackDataset):
         raise NotImplementedError
 
     @property
-    def track_ids(self) -> frozenset[TrackId]:
+    def track_ids(self) -> TrackIdSet:
         return self._filter().track_ids
 
     @property

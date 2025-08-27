@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Callable, Iterable, Optional, Sequence
+from typing import Callable, Iterable, Iterator, Optional, Sequence
 
 from more_itertools import batched
 
@@ -40,6 +40,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     TrackDataset,
     TrackDoesNotExistError,
     TrackGeometryDataset,
+    TrackIdSet,
     TrackSegmentDataset,
 )
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
@@ -384,8 +385,8 @@ class PythonTrackDataset(TrackDataset):
     """Pure Python implementation of a TrackDataset."""
 
     @property
-    def track_ids(self) -> frozenset[TrackId]:
-        return frozenset(self._tracks.keys())
+    def track_ids(self) -> TrackIdSet:
+        return PythonTrackIdSet(self._tracks.keys())
 
     @property
     def first_occurrence(self) -> datetime | None:
@@ -938,3 +939,31 @@ class SimpleCutTrackPartBuilder(TrackBuilder):
                 )
             )
         return new_detections
+
+
+class PythonTrackIdSet(TrackIdSet):
+    """Pure Python implementation of TrackIdSet using a set for storage."""
+
+    def __init__(self, track_ids: Iterable[TrackId] | None = None):
+        if track_ids is None:
+            self._ids: set[TrackId] = set()
+        else:
+            self._ids = set(track_ids)
+
+    def __iter__(self) -> Iterator[TrackId]:
+        return iter(self._ids)
+
+    def __len__(self) -> int:
+        return len(self._ids)
+
+    def intersection(self, other: "TrackIdSet") -> "TrackIdSet":
+        if isinstance(other, PythonTrackIdSet):
+            return PythonTrackIdSet(self._ids & other._ids)
+        else:
+            return PythonTrackIdSet(self._ids & set(other))
+
+    def union(self, other: "TrackIdSet") -> "TrackIdSet":
+        if isinstance(other, PythonTrackIdSet):
+            return PythonTrackIdSet(self._ids | other._ids)
+        else:
+            return PythonTrackIdSet(self._ids | set(other))

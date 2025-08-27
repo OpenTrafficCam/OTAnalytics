@@ -607,11 +607,11 @@ class TestPandasTrackDataset:
         pedestrian_track: Track,
     ) -> None:
         dataset = PandasTrackDataset(track_geometry_factory)
-        assert dataset.track_ids == frozenset()
+        assert len(dataset.track_ids) == 0
+        assert set(dataset.track_ids) == set()
         updated_dataset = dataset.add_all([car_track, pedestrian_track])
-        assert updated_dataset.track_ids == frozenset(
-            [car_track.id, pedestrian_track.id]
-        )
+        assert len(updated_dataset.track_ids) == 2
+        assert set(updated_dataset.track_ids) == {car_track.id, pedestrian_track.id}
 
     def test_empty(
         self, track_geometry_factory: TRACK_GEOMETRY_FACTORY, car_track: Track

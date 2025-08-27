@@ -668,11 +668,11 @@ class TestPythonTrackDataset:
         pedestrian_track: Track,
     ) -> None:
         dataset = PythonTrackDataset(ShapelyTrackGeometryDataset.from_track_dataset)
-        assert dataset.track_ids == frozenset()
+        assert len(dataset.track_ids) == 0
+        assert set(dataset.track_ids) == set()
         updated_dataset = dataset.add_all([car_track, pedestrian_track])
-        assert updated_dataset.track_ids == frozenset(
-            [car_track.id, pedestrian_track.id]
-        )
+        assert len(updated_dataset.track_ids) == 2
+        assert set(updated_dataset.track_ids) == {car_track.id, pedestrian_track.id}
 
     def test_empty(self, car_track: Track) -> None:
         empty_dataset = PythonTrackDataset(
