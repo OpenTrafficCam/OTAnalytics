@@ -7,13 +7,13 @@ from typing import Iterable, Optional
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset, TrackIdSet
 
 
 @dataclass(frozen=True)
 class TrackRepositoryEvent:
-    added: frozenset[TrackId]
-    removed: frozenset[TrackId]
+    added: TrackIdSet
+    removed: TrackIdSet
 
     @staticmethod
     def create_added(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
@@ -166,7 +166,7 @@ class TrackRepository:
         """
         return self._dataset
 
-    def get_all_ids(self) -> Iterable[TrackId]:
+    def get_all_ids(self) -> TrackIdSet:
         """Get all track ids in this repository.
 
         Returns:

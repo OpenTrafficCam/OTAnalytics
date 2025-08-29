@@ -65,6 +65,11 @@ class TrackSegmentDataset(ABC):
 
 
 class TrackIdSet(ABC):
+
+    @abstractmethod
+    def __eq__(self, other: Any) -> bool:
+        raise NotImplementedError
+
     @abstractmethod
     def __iter__(self) -> Iterator[TrackId]:
         raise NotImplementedError
@@ -81,6 +86,24 @@ class TrackIdSet(ABC):
     def union(self, other: "TrackIdSet") -> "TrackIdSet":
         raise NotImplementedError
 
+    @abstractmethod
+    def difference(self, other: "TrackIdSet") -> "TrackIdSet":
+        raise NotImplementedError
+
+
+class EmptyTrackIdSet(TrackIdSet):
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, EmptyTrackIdSet)
+    def __iter__(self) -> Iterator[TrackId]:
+        return iter([])
+    def __len__(self) -> int:
+        return 0
+    def intersection(self, other: "TrackIdSet") -> "TrackIdSet":
+        return other
+    def union(self, other: "TrackIdSet") -> "TrackIdSet":
+        return self
+    def difference(self, other: "TrackIdSet") -> "TrackIdSet":
+        return self
 
 class TrackDataset(ABC):
     @property
@@ -155,7 +178,7 @@ class TrackDataset(ABC):
     @abstractmethod
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> set[TrackId]:
+    ) -> TrackIdSet:
         """Return a set of tracks intersecting a set of sections.
 
         Args:
@@ -235,7 +258,7 @@ class TrackDataset(ABC):
     @abstractmethod
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["TrackDataset", set[TrackId]]:
+    ) -> tuple["TrackDataset", TrackId]:
         """Use section to cut track with TrackDataset.
 
         Args:
@@ -249,7 +272,7 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+    def get_max_confidences_for(self, track_ids: TrackIdSet) -> dict[str, float]:
         """Get max confidences for given track ids.
 
         Args:
@@ -264,7 +287,7 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def revert_cuts_for(self, original_track_ids: frozenset[TrackId]) -> "TrackDataset":
+    def revert_cuts_for(self, original_track_ids: TrackIdSet) -> "TrackDataset":
         """
         Reverses the effects of track cutting operations for the specified original
         track IDs.
@@ -279,22 +302,8 @@ class TrackDataset(ABC):
         """
         raise NotImplementedError
 
-    def ids_inside(self, sections: list[Section]) -> set[TrackId]:
-        results: set[TrackId] = set()
-        for cutting_section in sections:
-            offset = cutting_section.get_offset(EventType.SECTION_ENTER)
-            # set of all tracks where at least one coordinate is contained
-            # by at least one cutting section
-            results.update(
-                set(
-                    track_id
-                    for track_id, section_data in (
-                        self.contained_by_sections([cutting_section], offset).items()
-                    )
-                    if contains_true(section_data)
-                )
-            )
-        return results
+    def ids_inside(self, sections: list[Section]) -> TrackIdSet:
+        raise NotImplementedError
 
 
 class TrackGeometryDataset(ABC):

@@ -19,9 +19,9 @@ from OTAnalytics.domain.track import (
     Detection,
     Track,
     TrackId,
-    TrackIdProvider,
     TrackImage,
 )
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackRepository, TrackRepositoryEvent
 from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,

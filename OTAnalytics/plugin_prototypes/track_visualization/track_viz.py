@@ -43,13 +43,13 @@ from OTAnalytics.domain.track import (
     PilImage,
     Track,
     TrackId,
-    TrackIdProvider,
     TrackImage,
     W,
     X,
     Y,
     unpack,
 )
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import (
     TrackListObserver,
     TrackRepository,

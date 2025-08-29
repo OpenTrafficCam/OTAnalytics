@@ -3,8 +3,11 @@ from typing import Iterable
 from OTAnalytics.application.use_cases.section_repository import GetCuttingSections
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.section import SectionListObserver, SectionRepositoryEvent
-from OTAnalytics.domain.track import TrackId, TrackIdProvider
+from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet, EmptyTrackIdSet
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 class TrackIdsInsideCuttingSections(TrackIdProvider):
@@ -14,11 +17,11 @@ class TrackIdsInsideCuttingSections(TrackIdProvider):
         self._get_tracks = get_tracks
         self._get_cutting_sections = get_cutting_sections
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         track_dataset = self._get_tracks.as_dataset()
         cutting_sections = self._get_cutting_sections()
         if not cutting_sections:
-            return set()
+            return PythonTrackIdSet()
 
         return track_dataset.ids_inside(cutting_sections)
 
@@ -32,9 +35,9 @@ class CachedTrackIdsInsideCuttingSections(
         get_cutting_sections: GetCuttingSections,
     ) -> None:
         super().__init__(get_tracks, get_cutting_sections)
-        self._cached_ids: set[TrackId] = self.__get_empty_cache()
+        self._cached_ids: TrackIdSet = self.__get_empty_cache()
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         if self._cached_ids == self.__get_empty_cache():
             self._cached_ids = super().get_ids()
 
@@ -53,8 +56,8 @@ class CachedTrackIdsInsideCuttingSections(
     def _reset_cache(self) -> None:
         self._cached_ids = self.__get_empty_cache()
 
-    def _remove_track_ids(self, remove_track_ids: Iterable[TrackId]) -> None:
-        self._cached_ids = self._cached_ids.difference(set(remove_track_ids))
+    def _remove_track_ids(self, remove_track_ids: TrackIdSet) -> None:
+        self._cached_ids = self._cached_ids.difference(remove_track_ids)
 
-    def __get_empty_cache(self) -> set[TrackId]:
-        return set()
+    def __get_empty_cache(self) -> TrackIdSet:
+        return EmptyTrackIdSet()

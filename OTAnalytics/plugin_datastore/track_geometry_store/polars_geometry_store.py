@@ -13,8 +13,10 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     IntersectionPoint,
     TrackDataset,
     TrackGeometryDataset,
+    TrackIdSet,
 )
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
 
 # Column names for track segments
 ROW_ID = "row_id"
@@ -736,7 +738,7 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
 
         return PolarsTrackGeometryDataset(self._offset, filtered_segments)
 
-    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+    def intersecting_tracks(self, sections: list[Section]) -> TrackIdSet:
         """Return a set of tracks intersecting a set of sections.
 
         Args:
@@ -746,7 +748,7 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
             set[TrackId]: the track ids intersecting the given sections.
         """
         if self.empty or not sections:
-            return set()
+            return PolarsTrackIdSet()
 
         # Create a set to store the track IDs that intersect with any section
         intersecting_track_ids: set[TrackId] = set()

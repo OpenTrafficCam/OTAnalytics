@@ -18,6 +18,7 @@ from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 LEVEL_FROM_SECTION = "from section"
 LEVEL_TO_SECTION = "to section"
@@ -597,7 +598,9 @@ class RoadUserAssignments:
         Returns:
             list[str]: the road user ids.
         """
-        return sorted([assignment.road_user for assignment in self._assignments])
+        return PythonTrackIdSet(
+            sorted([assignment.road_user for assignment in self._assignments])
+        )
 
     def __init__(self, assignments: list[RoadUserAssignment]) -> None:
         self._assignments = assignments.copy()

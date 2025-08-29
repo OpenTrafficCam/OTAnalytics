@@ -172,7 +172,7 @@ from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
-from OTAnalytics.domain.track import TrackIdProvider
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 from OTAnalytics.plugin_datastore.polars_track_store import (

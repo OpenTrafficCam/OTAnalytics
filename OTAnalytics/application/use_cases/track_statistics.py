@@ -7,7 +7,7 @@ from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectio
 from OTAnalytics.application.use_cases.number_of_tracks_to_be_validated import (
     NumberOfTracksToBeValidated,
 )
-from OTAnalytics.domain.track import TrackIdProvider
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 
 
 @dataclass

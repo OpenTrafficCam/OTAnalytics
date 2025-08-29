@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Callable, Iterable, Iterator, Optional, Sequence
+from typing import Callable, Iterable, Iterator, Optional, Sequence, Any
 
 from more_itertools import batched
 
@@ -42,6 +42,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     TrackGeometryDataset,
     TrackIdSet,
     TrackSegmentDataset,
+    contains_true,
 )
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 
@@ -619,6 +620,21 @@ class PythonTrackDataset(TrackDataset):
         geometry_dataset = self._get_geometry_dataset_for(offset)
         return geometry_dataset.contained_by_sections(sections)
 
+    def ids_inside(self, sections: list[Section]) -> TrackIdSet:
+        results: set[TrackId] = set()
+        for cutting_section in sections:
+            offset = cutting_section.get_offset(EventType.SECTION_ENTER)
+            results.update(
+                set(
+                    track_id
+                    for track_id, section_data in (
+                        self.contained_by_sections([cutting_section], offset).items()
+                    )
+                    if contains_true(section_data)
+                )
+            )
+        return PythonTrackIdSet(results)
+
     def calculate_geometries_for(
         self, offsets: Iterable[RelativeOffsetCoordinate]
     ) -> None:
@@ -950,6 +966,13 @@ class PythonTrackIdSet(TrackIdSet):
         else:
             self._ids = set(track_ids)
 
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, PythonTrackIdSet):
+            return self._ids == other._ids
+        elif isinstance(other, TrackIdSet):
+            return self._ids == PythonTrackIdSet(other)._ids
+        return False
+
     def __iter__(self) -> Iterator[TrackId]:
         return iter(self._ids)
 
@@ -967,3 +990,9 @@ class PythonTrackIdSet(TrackIdSet):
             return PythonTrackIdSet(self._ids | other._ids)
         else:
             return PythonTrackIdSet(self._ids | set(other))
+
+    def difference(self, other: "TrackIdSet") -> "TrackIdSet":
+        if isinstance(other, PythonTrackIdSet):
+            return PythonTrackIdSet(self._ids - other._ids)
+        else:
+            return PythonTrackIdSet(self._ids - set(other))

@@ -44,6 +44,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     TrackSegmentDataset,
 )
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
     ROW_ID,
     PolarsTrackGeometryDataset,
@@ -447,7 +448,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> set[TrackId]:
+    ) -> TrackIdSet:
         geometry_dataset = self._get_geometry_dataset_for(offset)
         return geometry_dataset.intersecting_tracks(sections)
 
@@ -478,8 +479,8 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         geometry_dataset = self._get_geometry_dataset_for(offset)
         return geometry_dataset.intersection_points(sections)
 
-    def ids_inside(self, sections: list[Section]) -> set[TrackId]:
-        result: set[TrackId] = set()
+    def ids_inside(self, sections: list[Section]) -> TrackIdSet:
+        result: TrackIdSet = PolarsTrackIdSet()
         for _section in sections:
             section_geom = area_section_to_shapely(_section)
             offset = _section.get_offset(EventType.SECTION_ENTER)
@@ -491,12 +492,13 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             ).to_numpy()
 
             contains_masks = contains(section_geom, x_coords, y_coords)
-            result.update(
-                self._dataset.filter(contains_masks)
-                .select(pl.col(track.TRACK_ID))
-                .unique()
-                .to_series()
-                .to_list()
+            result = result.union(
+                PolarsTrackIdSet(
+                    self._dataset.filter(contains_masks)
+                    .select(pl.col(track.TRACK_ID))
+                    .unique()
+                    .to_series()
+                )
             )
         return result
 
@@ -669,7 +671,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             self.track_geometry_factory, filtered_dataset, calculator=self.calculator
         )
 
-    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+    def get_max_confidences_for(self, track_ids: TrackIdSet) -> dict[str, float]:
         if not track_ids or self._dataset.is_empty():
             return {}
 
@@ -696,9 +698,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                 "Some tracks do not exist in dataset with given id"
             ) from cause
 
-    def revert_cuts_for(
-        self, original_track_ids: frozenset[TrackId]
-    ) -> "PolarsTrackDataset":
+    def revert_cuts_for(self, original_track_ids: TrackIdSet) -> "PolarsTrackDataset":
         if self._dataset.is_empty():
             return self
 
@@ -721,7 +721,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             calculator=self.calculator,
         )
 
-    def _get_existing_track_ids(self, track_ids: frozenset[TrackId]) -> list[str]:
+    def _get_existing_track_ids(self, track_ids: TrackIdSet) -> TrackIdSet:
         if self._dataset.is_empty():
             return []
 
@@ -874,51 +874,3 @@ def area_section_to_shapely(section: Section) -> BaseGeometry:
     geometry = shapely.Polygon([(c.x, c.y) for c in section.get_coordinates()])
     prepare(geometry)
     return geometry
-
-
-class PolarsTrackIdSet(TrackIdSet):
-    """
-    Polars-based implementation of TrackIdSet using a Series for optimal performance.
-    """
-
-    def __init__(self, track_ids: Iterable[TrackId] | pl.Series | None = None):
-        if track_ids is None:
-            self._series = pl.Series([], dtype=pl.String)
-        elif isinstance(track_ids, pl.Series):
-            self._series = track_ids.unique().sort()
-        else:
-            # Convert TrackId objects to strings
-            id_strings = [unpack(track_id) for track_id in track_ids]
-            self._series = pl.Series(id_strings, dtype=pl.String).unique().sort()
-
-    def __iter__(self) -> Iterator[TrackId]:
-        for id_str in self._series:
-            yield TrackId(id_str)
-
-    def __len__(self) -> int:
-        return len(self._series)
-
-    def intersection(self, other: "TrackIdSet") -> "TrackIdSet":
-        if isinstance(other, PolarsTrackIdSet):
-            # Efficient intersection using Polars operations
-            intersected_series = self._series.filter(self._series.is_in(other._series))
-            return PolarsTrackIdSet(intersected_series)
-        else:
-            # Convert other to set of strings for intersection
-            other_strings = {unpack(track_id) for track_id in other}
-            intersected_series = self._series.filter(
-                self._series.is_in(list(other_strings))
-            )
-            return PolarsTrackIdSet(intersected_series)
-
-    def union(self, other: "TrackIdSet") -> "TrackIdSet":
-        if isinstance(other, PolarsTrackIdSet):
-            # Efficient union using Polars operations
-            combined_series = pl.concat([self._series, other._series]).unique().sort()
-            return PolarsTrackIdSet(combined_series)
-        else:
-            # Convert other to strings and combine
-            other_strings = [unpack(track_id) for track_id in other]
-            other_series = pl.Series(other_strings, dtype=pl.String)
-            combined_series = pl.concat([self._series, other_series]).unique().sort()
-            return PolarsTrackIdSet(combined_series)

@@ -2,8 +2,9 @@ from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application.logger import logger
-from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider, pack, unpack
-from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
+from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset, TrackIdSet
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import (
     RemoveMultipleTracksError,
     TrackFileRepository,
@@ -15,7 +16,7 @@ class AllTrackIdsProvider(TrackIdProvider):
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def get_ids(self) -> Iterable[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         return self._track_repository.get_all_ids()
 
 
@@ -24,10 +25,10 @@ class FilteredTrackIdProviderByTrackIdProvider(TrackIdProvider):
         self._other = other
         self._by = by
 
-    def get_ids(self) -> set[TrackId]:
-        other_ids = set({unpack(id) for id in self._other.get_ids()})
-        self_ids = set({unpack(id) for id in self._by.get_ids()})
-        return {pack(id) for id in other_ids.intersection(self_ids)}
+    def get_ids(self) -> TrackIdSet:
+        other_ids = self._other.get_ids()
+        self_ids = self._by.get_ids()
+        return other_ids.intersection(self_ids)
 
 
 class GetAllTracks:

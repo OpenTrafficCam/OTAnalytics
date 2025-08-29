@@ -37,7 +37,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     TrackDoesNotExistError,
     TrackGeometryDataset,
     TrackIdSet,
-    TrackSegmentDataset,
+    TrackSegmentDataset, contains_true,
 )
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from OTAnalytics.plugin_parser import ottrk_dataformat
@@ -529,6 +529,23 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         geometry_dataset = self._get_geometry_dataset_for(offset)
         return geometry_dataset.contained_by_sections(sections)
+
+    def ids_inside(self, sections: list[Section]) -> TrackIdSet:
+        results: set[TrackId] = set()
+        for cutting_section in sections:
+            offset = cutting_section.get_offset(EventType.SECTION_ENTER)
+            # set of all tracks where at least one coordinate is contained
+            # by at least one cutting section
+            results.update(
+                set(
+                    track_id
+                    for track_id, section_data in (
+                        self.contained_by_sections([cutting_section], offset).items()
+                    )
+                    if contains_true(section_data)
+                )
+            )
+        return PythonTrackIdSet(results)
 
     def calculate_geometries_for(
         self, offsets: Iterable[RelativeOffsetCoordinate]

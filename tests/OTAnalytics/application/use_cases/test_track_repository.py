@@ -17,9 +17,11 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracks,
     TrackRepositorySize,
 )
-from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider
+from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 @pytest.fixture
@@ -51,7 +53,7 @@ def track_file_repository(track_files: list[Mock]) -> Mock:
 
 
 def create_track_ids_from_ids(ids: Iterable[str]) -> Iterable[TrackId]:
-    return [TrackId(id) for id in ids]
+    return PythonTrackIdSet({TrackId(id) for id in ids})
 
 
 @pytest.fixture

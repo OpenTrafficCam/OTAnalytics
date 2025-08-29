@@ -13,7 +13,9 @@ from OTAnalytics.application.use_cases.section_repository import (
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowId, FlowRepository
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider
+from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackRepository
 
 
@@ -53,7 +55,7 @@ class TracksIntersectingSelectedSections(TrackIdProvider):
         self._get_section_by_id = get_section_by_id
         self._intersection_repository = intersection_repository
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         currently_selected_sections = self._section_state.selected_sections.get()
         return TracksIntersectingGivenSections(
             set(currently_selected_sections),
@@ -87,7 +89,7 @@ class TracksIntersectingAllNonCuttingSections(TrackIdProvider):
         self._get_section_by_id = get_sections_by_id
         self._intersection_repository = intersection_repository
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         ids_non_cutting_sections = {
             section.id
             for section in self._get_all_sections()
@@ -123,7 +125,7 @@ class TracksIntersectingAllSections(TrackIdProvider):
         self._get_section_by_id = get_section_by_id
         self._intersection_repository = intersection_repository
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         ids_all_sections = {section.id for section in self._get_all_sections()}
         return TracksIntersectingGivenSections(
             ids_all_sections,
@@ -155,15 +157,15 @@ class TracksIntersectingGivenSections(TrackIdProvider):
         self._get_section_by_id = get_section_by_id
         self._intersection_repository = intersection_repository
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         existing_intersections = self._intersection_repository.get(self._section_ids)
         section_ids_to_process = self._section_ids - existing_intersections.keys()
         new_intersections = self._calculate_new_intersections(section_ids_to_process)
-        return set.union(new_intersections, *existing_intersections.values())
+        return new_intersections.union(*existing_intersections.values())
 
     def _calculate_new_intersections(
         self, section_ids_to_process: set[SectionId]
-    ) -> set[TrackId]:
+    ) -> TrackIdSet:
         new_intersections: set[TrackId] = set()
         if section_ids_to_process:
             sections = self._get_section_by_id(section_ids_to_process)
@@ -189,7 +191,7 @@ class TracksNotIntersectingSelection(TrackIdProvider):
         self._track_id_provider = track_id_provider
         self._track_repository = track_repository
 
-    def get_ids(self) -> Iterable[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         all_track_ids = {track.id for track in self._track_repository.get_all()}
         assigned_tracks = set(self._track_id_provider.get_ids())
         return all_track_ids - assigned_tracks
@@ -217,7 +219,7 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
         self._flow_repository = flow_repository
         self._flow_state = flow_state
 
-    def get_ids(self) -> Iterable[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         events = self._event_repository.get_all()
         # All flows must be passed to assigner to ensure that a track potentially
         # belonging to several flows is assigned to the correct one.
@@ -251,7 +253,7 @@ class TracksAssignedToAllFlows(TrackIdProvider):
         self._event_repository = event_repository
         self._flow_repository = flow_repository
 
-    def get_ids(self) -> Iterable[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         all_flow_ids = [flow.id for flow in self._flow_repository.get_all()]
         return TracksAssignedToGivenFlows(
             self._assigner, self._event_repository, self._flow_repository, all_flow_ids
@@ -280,7 +282,7 @@ class TracksAssignedToGivenFlows(TrackIdProvider):
         self._flow_repository = flow_repository
         self._flows = list(flow_ids)
 
-    def get_ids(self) -> Iterable[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         events = self._event_repository.get_all()
         # All flows must be passed to assigner to ensure that a track potentially
         # belonging to several flows is assigned to the correct one.
@@ -314,7 +316,7 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
         self._track_repository = track_repository
         self._track_view_state = track_view_state
 
-    def get_ids(self) -> Iterable[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         if self._other:
             tracks = self._get_other_track_ids()
         else:
