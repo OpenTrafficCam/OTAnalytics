@@ -10,6 +10,7 @@ from OTAnalytics.domain.track_repository import (
     TrackFileRepository,
     TrackRepository,
 )
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 class AllTrackIdsProvider(TrackIdProvider):
@@ -150,7 +151,7 @@ class RemoveTracks:
             track_ids (Iterable[TrackId]): ids of tracks to be removed.
         """
         try:
-            self._track_repository.remove_multiple(set(track_ids))
+            self._track_repository.remove_multiple(PythonTrackIdSet(track_ids))
         except RemoveMultipleTracksError as cause:
             logger().info(cause)
 

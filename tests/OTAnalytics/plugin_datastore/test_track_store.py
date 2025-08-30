@@ -358,7 +358,7 @@ class TestPandasTrackDataset:
         all_track_ids = PythonTrackIdSet(
             [first_track.id, second_track.id, third_track.id]
         )
-        track_ids_to_remove = {first_track.id, second_track.id}
+        track_ids_to_remove = PythonTrackIdSet({first_track.id, second_track.id})
         tracks_df = _convert_tracks([first_track, second_track, third_track])
         geometry_dataset, updated_geometry_dataset = create_mock_geometry_dataset()
         dataset = PandasTrackDataset.from_dataframe(

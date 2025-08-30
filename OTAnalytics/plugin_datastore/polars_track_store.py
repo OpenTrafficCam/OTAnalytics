@@ -425,8 +425,8 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             self.calculator,
         )
 
-    def remove_multiple(self, track_ids: set[TrackId]) -> "PolarsTrackDataset":
-        track_id_strings = [unpack(track_id) for track_id in track_ids]
+    def remove_multiple(self, track_ids: TrackIdSet) -> "PolarsTrackDataset":
+        track_id_strings = self.__to_polars_series(track_ids)
         filtered_data = self._dataset.filter(
             ~pl.col(LEVEL_TRACK_ID).is_in(track_id_strings)
         )
@@ -436,6 +436,11 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             self._geometry_datasets,
             self.calculator,
         )
+
+    def __to_polars_series(self, track_ids: TrackIdSet) -> pl.Series | list:
+        if isinstance(track_ids, PolarsTrackIdSet):
+            return track_ids._series
+        return [unpack(track_id) for track_id in track_ids]
 
     def as_list(self) -> list[Track]:
         return list(self.as_generator())

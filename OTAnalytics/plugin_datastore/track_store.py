@@ -403,8 +403,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             remaining_tracks, self.track_geometry_factory, updated_geometry_datasets
         )
 
-    def remove_multiple(self, track_ids: set[TrackId]) -> "PandasTrackDataset":
-        # TODO change to TrackIdSet
+    def remove_multiple(self, track_ids: TrackIdSet) -> "PandasTrackDataset":
         track_ids_primitive = [unpack(track_id) for track_id in track_ids]
         remaining_tracks = self._dataset.drop(track_ids_primitive, errors="ignore")
         updated_geometry_datasets = self._remove_from_geometry_dataset(
@@ -719,7 +718,7 @@ class FilteredPandasTrackDataset(
     def remove(self, track_id: TrackId) -> PandasTrackDataset:
         return self.wrap(self._other.remove(track_id))
 
-    def remove_multiple(self, track_ids: set[TrackId]) -> PandasTrackDataset:
+    def remove_multiple(self, track_ids: TrackIdSet) -> PandasTrackDataset:
         return self.wrap(self._other.remove_multiple(track_ids))
 
     def clear(self) -> PandasTrackDataset:

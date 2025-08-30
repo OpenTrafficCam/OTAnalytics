@@ -198,8 +198,8 @@ class TrackRepository:
         #  application layer
         self.observers.notify(TrackRepositoryEvent.create_removed([track_id]))
 
-    def remove_multiple(self, track_ids: set[TrackId]) -> None:
-        not_existing_tracks = track_ids - set(self._dataset.track_ids)
+    def remove_multiple(self, track_ids: TrackIdSet) -> None:
+        not_existing_tracks = track_ids.difference(self._dataset.track_ids)
         if not_existing_tracks:
             logger().warning(
                 f"Trying to remove {len(not_existing_tracks)} "

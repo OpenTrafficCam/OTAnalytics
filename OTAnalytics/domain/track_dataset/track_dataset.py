@@ -166,7 +166,7 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
+    def remove_multiple(self, track_ids: TrackIdSet) -> "TrackDataset":
         raise NotImplementedError
 
     @abstractmethod

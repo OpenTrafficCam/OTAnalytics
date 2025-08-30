@@ -513,12 +513,14 @@ class PythonTrackDataset(TrackDataset):
     def remove(self, track_id: TrackId) -> "PythonTrackDataset":
         new_tracks = self._tracks.copy()
         del new_tracks[track_id]
-        updated_geometry_datasets = self._remove_from_geometry_datasets({track_id})
+        updated_geometry_datasets = self._remove_from_geometry_datasets(
+            PythonTrackIdSet({track_id})
+        )
         return PythonTrackDataset(
             self.track_geometry_factory, new_tracks, updated_geometry_datasets
         )
 
-    def remove_multiple(self, track_ids: set[TrackId]) -> "PythonTrackDataset":
+    def remove_multiple(self, track_ids: TrackIdSet) -> "PythonTrackDataset":
         new_tracks = self._tracks.copy()
         for track_id in track_ids:
             del new_tracks[track_id]
@@ -528,7 +530,7 @@ class PythonTrackDataset(TrackDataset):
         )
 
     def _remove_from_geometry_datasets(
-        self, track_ids: Iterable[TrackId]
+        self, track_ids: TrackIdSet
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
         updated = {}
         for offset, geometry_dataset in self._geometry_datasets.items():
@@ -720,7 +722,7 @@ class PythonTrackDataset(TrackDataset):
         for original_id, track_part in tracks_to_revert.items():
             reverted_tracks.append(self.__revert_cut_for(original_id, track_part))
 
-        result = self.remove_multiple(track_ids_to_remove)
+        result = self.remove_multiple(PythonTrackIdSet(track_ids_to_remove))
         return result.add_all(reverted_tracks)
 
     def _create_original_track(
@@ -833,7 +835,7 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
                 tracks_to_remove.append(_track.id)
 
         updated_geometry_datasets = self._other._remove_from_geometry_datasets(
-            tracks_to_remove
+            PythonTrackIdSet(tracks_to_remove)
         )
         return PythonTrackDataset(
             self._other.track_geometry_factory,
@@ -853,7 +855,7 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
     def remove(self, track_id: TrackId) -> "TrackDataset":
         return self.wrap(self._other.remove(track_id))
 
-    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
+    def remove_multiple(self, track_ids: TrackIdSet) -> "TrackDataset":
         return self.wrap(self._other.remove_multiple(track_ids))
 
     def clear(self) -> "TrackDataset":

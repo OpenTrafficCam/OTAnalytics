@@ -463,7 +463,9 @@ class TestPythonTrackDataset:
         assert list(dataset) == [car_track, pedestrian_track]
         result = cast(
             PythonTrackDataset,
-            dataset.remove_multiple({car_track.id, pedestrian_track.id}),
+            dataset.remove_multiple(
+                PythonTrackIdSet({car_track.id, pedestrian_track.id})
+            ),
         )
         assert list(result) == []
         assert result._geometry_datasets == {

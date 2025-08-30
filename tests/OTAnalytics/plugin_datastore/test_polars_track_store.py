@@ -264,7 +264,9 @@ class TestPolarsTrackDataset:
             track_geometry_factory,
         )
 
-        result = dataset.remove_multiple({TrackId("second"), TrackId("fourth")})
+        result = dataset.remove_multiple(
+            PolarsTrackIdSet({TrackId("second"), TrackId("fourth")})
+        )
 
         assert len(result) == 2
         track_ids = {track_id.id for track_id in result.track_ids}

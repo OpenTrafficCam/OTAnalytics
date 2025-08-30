@@ -369,7 +369,7 @@ class TestFilteredTrackDataset:
         )
         for filtered_dataset in filtered_datasets.values():
             result = filtered_dataset.remove_multiple(
-                {cargo_bike_track.id, bicycle_track.id}
+                PythonTrackIdSet({cargo_bike_track.id, bicycle_track.id})
             )
             assert isinstance(result, type(filtered_dataset))
             assert result.include_classes == filtered_dataset.include_classes

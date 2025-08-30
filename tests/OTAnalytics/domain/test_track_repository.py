@@ -137,7 +137,7 @@ class TestTrackRepository:
         ]
 
     def test_remove_multiple(self, track_1: Track, track_2: Track) -> None:
-        tracks_to_remove = frozenset([track_1.id, track_2.id])
+        tracks_to_remove = PythonTrackIdSet([track_1.id, track_2.id])
         updated_dataset = Mock(spec=TrackDataset)
         type(updated_dataset).track_ids = PropertyMock(return_value=tracks_to_remove)
         dataset = Mock(spec=TrackDataset)
@@ -148,8 +148,10 @@ class TestTrackRepository:
         observer = Mock(spec=TrackListObserver)
         repository.register_tracks_observer(observer)
 
-        repository.remove_multiple({track_1.id, track_2.id})
-        dataset.remove_multiple.assert_called_once_with({track_1.id, track_2.id})
+        repository.remove_multiple(PythonTrackIdSet({track_1.id, track_2.id}))
+        dataset.remove_multiple.assert_called_once_with(
+            PythonTrackIdSet({track_1.id, track_2.id})
+        )
         assert observer.notify_tracks.call_args_list == [
             call(TrackRepositoryEvent.create_removed(tracks_to_remove))
         ]
