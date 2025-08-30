@@ -10,6 +10,7 @@ from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
     FilterByClassTrackDataset,
 )
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDoesNotExistError
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from tests.utils.assertions import (
     assert_equal_track_properties,
     assert_track_dataset_has_tracks,
@@ -67,7 +68,7 @@ class TestFilteredTrackDataset:
             [cargo_bike_track, bicycle_track], [OtcClasses.BICYCLIST], []
         )
         for filtered_dataset in filtered_datasets.values():
-            assert filtered_dataset.track_ids == frozenset([bicycle_track.id])
+            assert filtered_dataset.track_ids == PythonTrackIdSet([bicycle_track.id])
 
     def test_first_and_last_occurrence(
         self, car_track: Track, cargo_bike_track: Track
@@ -446,10 +447,10 @@ class TestFilteredTrackDataset:
 
         for empty_dataset in empty_datasets.values():
             with pytest.raises(TrackDoesNotExistError):
-                empty_dataset.get_max_confidences_for([car_track.id.id])
+                empty_dataset.get_max_confidences_for(PythonTrackIdSet([car_track.id]))
 
             filled_dataset = empty_dataset.add_all([car_track, pedestrian_track])
-            all_track_ids = [track_id.id for track_id in filled_dataset.track_ids]
+            all_track_ids = PythonTrackIdSet(filled_dataset.track_ids)
 
             result = filled_dataset.get_max_confidences_for(all_track_ids)
             assert result == expected

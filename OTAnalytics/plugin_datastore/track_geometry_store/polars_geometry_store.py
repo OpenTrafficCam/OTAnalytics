@@ -784,7 +784,10 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                     intersecting_segments = intersections.filter(pl.col(INTERSECTS))
                     if not intersecting_segments.is_empty():
                         intersecting_track_ids.update(
-                            intersecting_segments[TRACK_ID].unique().to_list()
+                            TrackId(track_id)
+                            for track_id in intersecting_segments[TRACK_ID]
+                            .unique()
+                            .to_list()
                         )
             elif section.get_type() == SectionType.AREA:
                 # For area sections, check if any track segment intersects with the
@@ -800,10 +803,13 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                 intersecting_segments = intersections.filter(pl.col(INTERSECTS_POLYGON))
                 if not intersecting_segments.is_empty():
                     intersecting_track_ids.update(
-                        intersecting_segments[TRACK_ID].unique().to_list()
+                        TrackId(track_id)
+                        for track_id in intersecting_segments[TRACK_ID]
+                        .unique()
+                        .to_list()
                     )
 
-        return intersecting_track_ids
+        return PolarsTrackIdSet(intersecting_track_ids)
 
     def intersection_points(
         self, sections: list[Section]

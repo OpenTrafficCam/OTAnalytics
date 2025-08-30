@@ -17,13 +17,14 @@ from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 class IntersectionRepository(ABC):
-    def store(self, intersections: dict[SectionId, set[TrackId]]) -> None:
+    def store(self, intersections: dict[SectionId, TrackIdSet]) -> None:
         raise NotImplementedError
 
-    def get(self, sections: set[SectionId]) -> dict[SectionId, set[TrackId]]:
+    def get(self, sections: set[SectionId]) -> dict[SectionId, TrackIdSet]:
         raise NotImplementedError
 
     def clear(self) -> None:
@@ -161,7 +162,10 @@ class TracksIntersectingGivenSections(TrackIdProvider):
         existing_intersections = self._intersection_repository.get(self._section_ids)
         section_ids_to_process = self._section_ids - existing_intersections.keys()
         new_intersections = self._calculate_new_intersections(section_ids_to_process)
-        return new_intersections.union(*existing_intersections.values())
+        result = new_intersections
+        for track_id_set in existing_intersections.values():
+            result = result.union(track_id_set)
+        return result
 
     def _calculate_new_intersections(
         self, section_ids_to_process: set[SectionId]
@@ -172,7 +176,7 @@ class TracksIntersectingGivenSections(TrackIdProvider):
             intersections = self._tracks_intersecting_sections(sections)
             self._intersection_repository.store(intersections)
             new_intersections.update(*intersections.values())
-        return new_intersections
+        return PythonTrackIdSet(new_intersections)
 
 
 class TracksNotIntersectingSelection(TrackIdProvider):
@@ -194,7 +198,7 @@ class TracksNotIntersectingSelection(TrackIdProvider):
     def get_ids(self) -> TrackIdSet:
         all_track_ids = {track.id for track in self._track_repository.get_all()}
         assigned_tracks = set(self._track_id_provider.get_ids())
-        return all_track_ids - assigned_tracks
+        return PythonTrackIdSet(all_track_ids - assigned_tracks)
 
 
 class TracksAssignedToSelectedFlows(TrackIdProvider):
@@ -231,7 +235,7 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
             if assignment.assignment.id in self._flow_state.selected_flows.get():
                 ids.add(TrackId(assignment.road_user))
         print(f"Tracks assigned to selected flow(s): {len(ids)}")
-        return ids
+        return PythonTrackIdSet(ids)
 
 
 class TracksAssignedToAllFlows(TrackIdProvider):
@@ -293,7 +297,7 @@ class TracksAssignedToGivenFlows(TrackIdProvider):
         for assignment in assignments:
             if assignment.assignment.id in self._flows:
                 ids.add(TrackId(assignment.road_user))
-        return ids
+        return PythonTrackIdSet(ids)
 
 
 class TracksOverlapOccurrenceWindow(TrackIdProvider):
@@ -322,7 +326,7 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
         else:
             tracks = self._track_repository.get_all()
 
-        return self._filter(tracks)
+        return PythonTrackIdSet(self._filter(tracks))
 
     def _get_other_track_ids(self) -> Iterable[Track]:
         if self._other:

@@ -75,7 +75,7 @@ class TestFilteredTrackIdProviderByTrackIdProvider:
         )
         filtered_ids = filtered_provider.get_ids()
 
-        assert filtered_ids == set(track_ids)
+        assert filtered_ids == PythonTrackIdSet(track_ids)
         assert track_id_provider.get_ids.call_count == 2
 
     def test_get_ids(self, track_id_provider: Mock) -> None:
@@ -90,7 +90,7 @@ class TestFilteredTrackIdProviderByTrackIdProvider:
         )
         filtered_ids = filtered_provider.get_ids()
 
-        assert filtered_ids == set(create_track_ids_from_ids(["2", "3"]))
+        assert filtered_ids == PythonTrackIdSet(create_track_ids_from_ids(["2", "3"]))
         track_id_provider.get_ids.assert_called_once()
         filter.get_ids.assert_called_once()
 

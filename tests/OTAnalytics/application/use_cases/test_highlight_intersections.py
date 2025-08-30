@@ -35,8 +35,10 @@ from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 @pytest.fixture
@@ -175,7 +177,7 @@ class TestTracksIntersectingAllSections:
 
         track_ids = provider.get_ids()
 
-        assert track_ids == {track_id_1, track_id_2}
+        assert track_ids == PythonTrackIdSet({track_id_1, track_id_2})
 
 
 class TestTracksIntersectingGivenSections:
@@ -189,7 +191,7 @@ class TestTracksIntersectingGivenSections:
     ) -> None:
         section_ids = {section_1.id}
         sections = [section_1]
-        section_1_tracks = {track_id_1}
+        section_1_tracks: TrackIdSet = PythonTrackIdSet({track_id_1})
         original_track_ids = {section_1.id: section_1_tracks}
         intersection_repository.get.return_value = {}
         get_section_by_id.return_value = sections
@@ -219,7 +221,7 @@ class TestTracksIntersectingGivenSections:
     ) -> None:
         section_ids = {section_1.id}
         sections = [section_1]
-        section_1_tracks = {track_id_1}
+        section_1_tracks: TrackIdSet = PythonTrackIdSet({track_id_1})
         original_intersections = {section_1.id: section_1_tracks}
         intersection_repository.get.return_value = original_intersections
         get_section_by_id.return_value = sections
@@ -252,8 +254,8 @@ class TestTracksIntersectingGivenSections:
         section_ids = {section_1.id, section_2.id}
         sections_to_process = [section_2]
         section_ids_to_process = {section_2.id}
-        section_1_tracks = {track_id_1}
-        section_2_tracks = {track_id_2}
+        section_1_tracks: TrackIdSet = PythonTrackIdSet({track_id_1})
+        section_2_tracks: TrackIdSet = PythonTrackIdSet({track_id_2})
         existing_intersections = {section_1.id: section_1_tracks}
         new_intersections = {section_2.id: section_2_tracks}
         intersection_repository.get.return_value = existing_intersections
@@ -268,7 +270,7 @@ class TestTracksIntersectingGivenSections:
 
         track_ids = provider.get_ids()
 
-        assert track_ids == {track_id_1, track_id_2}
+        assert track_ids == PythonTrackIdSet({track_id_1, track_id_2})
         intersection_repository.get.assert_called_once_with(section_ids)
         get_section_by_id.assert_called_once_with(section_ids_to_process)
         tracks_intersecting_sections.assert_called_once_with(sections_to_process)
@@ -444,38 +446,45 @@ class TestTracksOverlapOccurrenceWindow:
     def test_get_ids(self) -> None:
         track_repository = Mock(spec=TrackRepository)
         track_view_state = Mock(spec=TrackViewState)
-        track_ids = [Mock(spec=TrackId), Mock(spec=TrackId)]
+        first_id = Mock(spec=TrackId)
         tracks = [Mock(spec=Track), None]
         track_repository.get_all.return_value = tracks
 
         with patch.object(
-            TracksOverlapOccurrenceWindow, "_filter", return_value=[track_ids[0]]
+            TracksOverlapOccurrenceWindow, "_filter", return_value=[first_id]
         ):
             id_provider = TracksOverlapOccurrenceWindow(
                 track_repository, track_view_state
             )
             result_ids = id_provider.get_ids()
 
-            assert result_ids == [track_ids[0]]
+            assert result_ids == PythonTrackIdSet([first_id])
             track_repository.get_all.assert_called_once()
 
     def test_get_ids_as_decorator(self) -> None:
         track_repository = Mock(spec=TrackRepository)
         track_view_state = Mock(spec=TrackViewState)
-        track_ids = [Mock(spec=TrackId), Mock(spec=TrackId)]
+        first_id = Mock(spec=TrackId)
+        track_ids = [first_id, Mock(spec=TrackId)]
         tracks = [Mock(spec=Track), None]
         track_repository.get_for.side_effect = tracks
+        other = Mock(spec=TrackIdProvider)
+        other.get_ids.return_value = track_ids
 
         with patch.object(
-            TracksOverlapOccurrenceWindow, "_filter", return_value=[track_ids[0]]
+            TracksOverlapOccurrenceWindow, "_filter", return_value=[first_id]
         ):
             id_provider = TracksOverlapOccurrenceWindow(
-                track_repository, track_view_state
+                track_repository,
+                track_view_state,
+                other=other,
             )
             result_ids = id_provider.get_ids()
 
-            assert result_ids == [track_ids[0]]
-            track_repository.get_for.call_args_list == [call(id) for id in track_ids]
+            assert result_ids == PythonTrackIdSet([first_id])
+            assert track_repository.get_for.call_args_list == [
+                call(id) for id in track_ids
+            ]
 
     @pytest.mark.parametrize(
         (

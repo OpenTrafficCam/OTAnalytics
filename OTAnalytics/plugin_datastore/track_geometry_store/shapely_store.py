@@ -27,7 +27,9 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     IntersectionPoint,
     TrackDataset,
     TrackGeometryDataset,
+    TrackIdSet,
 )
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from OTAnalytics.plugin_datastore.track_store import LEVEL_TRACK_ID, PandasTrackDataset
 
 TRACK_ID = "track_id"
@@ -241,7 +243,7 @@ class ShapelyTrackGeometryDataset(TrackGeometryDataset):
         filtered_df = self._dataset.loc[_ids]
         return ShapelyTrackGeometryDataset(self.offset, filtered_df)
 
-    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+    def intersecting_tracks(self, sections: list[Section]) -> TrackIdSet:
         intersecting_tracks = set()
         section_geoms = line_sections_to_shapely_multi(sections)
         prepared_function = partial(calculate_intersects, section_geoms=section_geoms)
@@ -254,7 +256,7 @@ class ShapelyTrackGeometryDataset(TrackGeometryDataset):
         ]
         intersecting_tracks.update(track_ids)
 
-        return intersecting_tracks
+        return PythonTrackIdSet(intersecting_tracks)
 
     def intersection_points(
         self, sections: list[Section]

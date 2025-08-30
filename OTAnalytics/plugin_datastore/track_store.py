@@ -32,13 +32,16 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     START_X,
     START_Y,
     TRACK_GEOMETRY_FACTORY,
+    EmptyTrackIdSet,
     IntersectionPoint,
     TrackDataset,
     TrackDoesNotExistError,
     TrackGeometryDataset,
     TrackIdSet,
-    TrackSegmentDataset, contains_true,
+    TrackSegmentDataset,
+    contains_true,
 )
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from OTAnalytics.plugin_parser import ottrk_dataformat
 
@@ -401,6 +404,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         )
 
     def remove_multiple(self, track_ids: set[TrackId]) -> "PandasTrackDataset":
+        # TODO change to TrackIdSet
         track_ids_primitive = [unpack(track_id) for track_id in track_ids]
         remaining_tracks = self._dataset.drop(track_ids_primitive, errors="ignore")
         updated_geometry_datasets = self._remove_from_geometry_dataset(
@@ -493,9 +497,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> set[TrackId]:
+    ) -> TrackIdSet:
         geometry_dataset = self._get_geometry_dataset_for(offset)
-        return geometry_dataset.intersecting_tracks(sections)
+        intersecting_ids = geometry_dataset.intersecting_tracks(sections)
+        return PythonTrackIdSet(intersecting_ids)
 
     def _get_geometry_dataset_for(
         self, offset: RelativeOffsetCoordinate
@@ -614,10 +619,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["PandasTrackDataset", set[TrackId]]:
+    ) -> tuple["PandasTrackDataset", TrackIdSet]:
         if len(self) == 0:
             logger().info("No tracks to cut")
-            return self, set()
+            return self, EmptyTrackIdSet()
 
         # TODO is this only:
         # - groupby trackid
@@ -647,9 +652,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         cut_tracks_df.index = MultiIndex.from_frame(
             index_as_df[[track.TRACK_ID, track.OCCURRENCE]]
         )
-        return PandasTrackDataset(self.track_geometry_factory, cut_tracks_df), set(
-            intersection_points.keys()
-        )
+        return PandasTrackDataset(
+            self.track_geometry_factory, cut_tracks_df
+        ), PythonTrackIdSet(intersection_points.keys())
 
     def _create_cut_track_id(self, row: Series, cut_info: dict[str, list[int]]) -> str:
         if (track_id := row[track.TRACK_ID]) in cut_info.keys():
@@ -657,10 +662,11 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             return f"{track_id}_{cut_segment_index}"
         return row[track.TRACK_ID]
 
-    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+    def get_max_confidences_for(self, track_ids: TrackIdSet) -> dict[str, float]:
+        track_id_strings = [track_id.id for track_id in track_ids]
         try:
             return (
-                self._dataset.loc[track_ids][track.CONFIDENCE]
+                self._dataset.loc[track_id_strings][track.CONFIDENCE]
                 .groupby(level=[LEVEL_TRACK_ID])
                 .max()
                 .to_dict()
@@ -670,9 +676,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
                 "Some tracks do not exists in dataset with given id"
             ) from cause
 
-    def revert_cuts_for(
-        self, original_track_ids: frozenset[TrackId]
-    ) -> "PandasTrackDataset":
+    def revert_cuts_for(self, original_track_ids: TrackIdSet) -> "PandasTrackDataset":
         if self._dataset.empty:
             return self
         ids_to_revert = self._get_existing_track_ids(original_track_ids)
@@ -690,7 +694,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             calculator=self.calculator,
         )
 
-    def _get_existing_track_ids(self, track_ids: frozenset[TrackId]) -> list[str]:
+    def _get_existing_track_ids(self, track_ids: TrackIdSet) -> list[str]:
         converted_ids = [track_id.id for track_id in track_ids]
         return list(
             self._dataset.loc[
@@ -731,7 +735,7 @@ class FilteredPandasTrackDataset(
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple[PandasTrackDataset, set[TrackId]]:
+    ) -> tuple[PandasTrackDataset, TrackIdSet]:
         dataset, original_track_ids = self._other.cut_with_section(section, offset)
         return self.wrap(dataset), original_track_ids
 
@@ -746,9 +750,7 @@ class FilteredPandasTrackDataset(
     def get_data(self) -> DataFrame:
         return self._filter().get_data()
 
-    def revert_cuts_for(
-        self, original_track_ids: frozenset[TrackId]
-    ) -> PandasTrackDataset:
+    def revert_cuts_for(self, original_track_ids: TrackIdSet) -> PandasTrackDataset:
         return self.wrap(self._other.revert_cuts_for(original_track_ids))
 
 

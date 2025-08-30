@@ -18,8 +18,10 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     IntersectionPoint,
     TrackDataset,
     TrackGeometryDataset,
+    TrackIdSet,
 )
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 
 # Column names for track points
@@ -756,17 +758,17 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
 
         return PandasTrackGeometryDataset(self._offset, filtered_segments)
 
-    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+    def intersecting_tracks(self, sections: list[Section]) -> TrackIdSet:
         """Return a set of tracks intersecting a set of sections.
 
         Args:
             sections (list[Section]): the list of sections to intersect.
 
         Returns:
-            set[TrackId]: the track ids intersecting the given sections.
+            TrackIdSet: the track ids intersecting the given sections.
         """
         if self.empty or not sections:
-            return set()
+            return PythonTrackIdSet()
 
         # Create a set to store the track IDs that intersect with any section
         intersecting_track_ids: set[TrackId] = set()
@@ -801,7 +803,8 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
                     # Add track IDs that intersect with the line to the result set
                     intersecting_segments = intersections[intersections[INTERSECTS]]
                     intersecting_track_ids.update(
-                        intersecting_segments[TRACK_ID].unique()
+                        TrackId(track_id)
+                        for track_id in intersecting_segments[TRACK_ID].unique()
                     )
             elif section.get_type() == SectionType.AREA:
                 # For area sections, check if any track segment intersects with the
@@ -815,9 +818,12 @@ class PandasTrackGeometryDataset(TrackGeometryDataset):
 
                 # Add track IDs that intersect with the polygon to the result set
                 intersecting_segments = intersections[intersections[INTERSECTS_POLYGON]]
-                intersecting_track_ids.update(intersecting_segments[TRACK_ID].unique())
+                intersecting_track_ids.update(
+                    TrackId(track_id)
+                    for track_id in intersecting_segments[TRACK_ID].unique()
+                )
 
-        return intersecting_track_ids
+        return PythonTrackIdSet(intersecting_track_ids)
 
     def intersection_points(
         self, sections: list[Section]

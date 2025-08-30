@@ -615,10 +615,12 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["TrackDataset", set[TrackId]]:
+    ) -> tuple["TrackDataset", TrackIdSet]:
         if len(self) == 0:
             logger().info("No tracks to cut")
-            return self, set()
+            from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet
+
+            return self, EmptyTrackIdSet()
 
         geometry_dataset = self._get_geometry_dataset_for(offset)
         new_track_ids = geometry_dataset.track_ids_after_cut(section)
@@ -628,7 +630,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         result = result.drop("old_track_id")
         return (
             PolarsTrackDataset.from_dataframe(result, self.track_geometry_factory),
-            set(),
+            PolarsTrackIdSet(),
         )
 
     def _add_cut_track_part(
@@ -676,8 +678,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             return {}
 
         try:
+            track_id_strings = [track_id.id for track_id in track_ids]
             result = (
-                self._dataset.filter(pl.col(LEVEL_TRACK_ID).is_in(track_ids))
+                self._dataset.filter(pl.col(LEVEL_TRACK_ID).is_in(track_id_strings))
                 .group_by(LEVEL_TRACK_ID)
                 .agg(pl.col(track.CONFIDENCE).max())
             )
@@ -707,8 +710,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             return self
 
         # Revert track IDs back to original IDs
+        ids_to_revert_strings = [track_id.id for track_id in ids_to_revert]
         result = self._dataset.with_columns(
-            pl.when(pl.col(LEVEL_TRACK_ID).is_in(ids_to_revert))
+            pl.when(pl.col(LEVEL_TRACK_ID).is_in(ids_to_revert_strings))
             .then(pl.col(track.ORIGINAL_TRACK_ID))
             .otherwise(pl.col(LEVEL_TRACK_ID))
             .alias(LEVEL_TRACK_ID)
@@ -723,7 +727,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
     def _get_existing_track_ids(self, track_ids: TrackIdSet) -> TrackIdSet:
         if self._dataset.is_empty():
-            return []
+            from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet
+
+            return EmptyTrackIdSet()
 
         converted_ids = [track_id.id for track_id in track_ids]
         existing_ids = (
@@ -732,7 +738,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             .unique()
             .to_list()
         )
-        return existing_ids
+        return PolarsTrackIdSet([TrackId(track_id) for track_id in existing_ids])
 
     def split(self, batches: int) -> Sequence["PolarsTrackDataset"]:
         dataset_size = len(self)

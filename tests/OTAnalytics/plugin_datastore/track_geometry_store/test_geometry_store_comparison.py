@@ -169,11 +169,9 @@ def dataframes_equal(
 def prepare_polars_data_frame(
     data: dict[str, list[Any]],
 ) -> pl.DataFrame:
-    df = pl.DataFrame(data)
+    df = pl.DataFrame(data).with_row_index(ROW_ID)
     if OCCURRENCE in df.columns:
-        return df.with_row_index(ROW_ID).with_columns(
-            pl.col(OCCURRENCE).dt.cast_time_unit("ns")
-        )
+        return df.with_columns(pl.col(OCCURRENCE).dt.cast_time_unit("ns"))
     else:
         return df.with_columns(
             pl.col(START_OCCURRENCE).dt.cast_time_unit("ns")

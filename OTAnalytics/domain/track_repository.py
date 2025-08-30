@@ -7,7 +7,12 @@ from typing import Iterable, Optional
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset, TrackIdSet
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    EmptyTrackIdSet,
+    TrackDataset,
+    TrackIdSet,
+)
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 @dataclass(frozen=True)
@@ -17,11 +22,11 @@ class TrackRepositoryEvent:
 
     @staticmethod
     def create_added(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
-        return TrackRepositoryEvent(frozenset(tracks), frozenset())
+        return TrackRepositoryEvent(PythonTrackIdSet(tracks), EmptyTrackIdSet())
 
     @staticmethod
     def create_removed(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
-        return TrackRepositoryEvent(frozenset(), frozenset(tracks))
+        return TrackRepositoryEvent(EmptyTrackIdSet(), PythonTrackIdSet(tracks))
 
 
 class TrackListObserver(ABC):
@@ -221,7 +226,7 @@ class TrackRepository:
     def __len__(self) -> int:
         return len(self._dataset)
 
-    def revert_cuts_for(self, original_ids: frozenset[TrackId]) -> None:
+    def revert_cuts_for(self, original_ids: TrackIdSet) -> None:
         """
         Reverts cuts in the dataset for the provided set of original IDs.
 
@@ -231,7 +236,7 @@ class TrackRepository:
         cuts for the specified IDs.
 
         Args:
-            original_ids (frozenset[TrackId]): A set of strings representing the
+            original_ids (TrackIdSet): A set of TrackId representing the
                 original IDs of the items in the dataset for which the cuts need to be
                 reverted.
 

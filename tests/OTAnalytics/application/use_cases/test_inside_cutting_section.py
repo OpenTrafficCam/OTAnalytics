@@ -9,7 +9,7 @@ from OTAnalytics.application.use_cases.section_repository import GetCuttingSecti
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.section import SectionId, SectionRepositoryEvent
 from OTAnalytics.domain.track import TrackId
-from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet, EmptyTrackIdSet
+from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet, TrackIdSet
 from OTAnalytics.domain.track_repository import TrackRepositoryEvent
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
@@ -79,7 +79,7 @@ def assert__reset_cache_called_once_when_notify_tracks_with(
 class TestCachedTrackIdsInsideCuttingSections:
     def test__init__(self, get_tracks: Mock, get_cutting_sections: Mock) -> None:
         cached = CachedTrackIdsInsideCuttingSections(get_tracks, get_cutting_sections)
-        assert cached._cached_ids == set()
+        assert cached._cached_ids == EmptyTrackIdSet()
 
     def test_get_ids(
         self,
@@ -107,7 +107,9 @@ class TestCachedTrackIdsInsideCuttingSections:
         remove_track_event: TrackRepositoryEvent,
     ) -> None:
         cached_track_ids_inside_cutting_sections.notify_tracks(remove_track_event)
-        assert cached_track_ids_inside_cutting_sections._cached_ids == PythonTrackIdSet({TrackId("1")})
+        assert cached_track_ids_inside_cutting_sections._cached_ids == PythonTrackIdSet(
+            {TrackId("1")}
+        )
 
     def test_notify_add_sections_clear_cache(
         self,

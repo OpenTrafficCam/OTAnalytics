@@ -52,7 +52,7 @@ class FilteredTrackDataset(TrackDataset):
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> set[TrackId]:
+    ) -> TrackIdSet:
         return self._filter().intersecting_tracks(sections, offset)
 
     def intersection_points(
@@ -74,7 +74,7 @@ class FilteredTrackDataset(TrackDataset):
     def get_last_segments(self) -> TrackSegmentDataset:
         return self._filter().get_last_segments()
 
-    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+    def get_max_confidences_for(self, track_ids: TrackIdSet) -> dict[str, float]:
         return self._filter().get_max_confidences_for(track_ids)
 
 

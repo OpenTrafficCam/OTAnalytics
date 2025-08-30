@@ -6,7 +6,6 @@ from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.types import EventType
 
 START_X: str = "start_x"
 START_Y: str = "start_y"
@@ -94,16 +93,22 @@ class TrackIdSet(ABC):
 class EmptyTrackIdSet(TrackIdSet):
     def __eq__(self, other: Any) -> bool:
         return isinstance(other, EmptyTrackIdSet)
+
     def __iter__(self) -> Iterator[TrackId]:
         return iter([])
+
     def __len__(self) -> int:
         return 0
+
     def intersection(self, other: "TrackIdSet") -> "TrackIdSet":
-        return other
-    def union(self, other: "TrackIdSet") -> "TrackIdSet":
         return self
+
+    def union(self, other: "TrackIdSet") -> "TrackIdSet":
+        return other
+
     def difference(self, other: "TrackIdSet") -> "TrackIdSet":
         return self
+
 
 class TrackDataset(ABC):
     @property
@@ -258,7 +263,7 @@ class TrackDataset(ABC):
     @abstractmethod
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["TrackDataset", TrackId]:
+    ) -> tuple["TrackDataset", TrackIdSet]:
         """Use section to cut track with TrackDataset.
 
         Args:
@@ -266,7 +271,7 @@ class TrackDataset(ABC):
             offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
 
         Returns:
-            tuple[TrackDataset, set[TrackId]]: the dataset containing the cut tracks
+            tuple[TrackDataset, TrackIdSet]: the dataset containing the cut tracks
                 and the original track ids that have been cut.
         """
         raise NotImplementedError
@@ -384,14 +389,14 @@ class TrackGeometryDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def intersecting_tracks(self, sections: list[Section]) -> set[TrackId]:
+    def intersecting_tracks(self, sections: list[Section]) -> TrackIdSet:
         """Return a set of tracks intersecting a set of sections.
 
         Args:
             sections (list[Section]): the list of sections to intersect.
 
         Returns:
-            set[TrackId]: the track ids intersecting the given sections.
+            TrackIdSet: the track ids intersecting the given sections.
         """
         raise NotImplementedError
 

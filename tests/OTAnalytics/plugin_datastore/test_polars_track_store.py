@@ -4,6 +4,7 @@ import polars as pl
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
 from OTAnalytics.plugin_datastore.polars_track_store import (
     COLUMNS,
     POLARS_TRACK_GEOMETRY_FACTORY,
@@ -345,7 +346,7 @@ class TestPolarsTrackDataset:
         dataset = PolarsTrackDataset.from_list(
             [car_track, pedestrian_track], track_geometry_factory
         )
-        expected = frozenset({car_track.id, pedestrian_track.id})
+        expected = PolarsTrackIdSet({car_track.id, pedestrian_track.id})
         assert dataset.track_ids == expected
 
     def test_empty(

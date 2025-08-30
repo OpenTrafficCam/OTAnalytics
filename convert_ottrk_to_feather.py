@@ -34,7 +34,7 @@ from pathlib import Path
 from OTAnalytics.plugin_parser.convert_ottrk_to_feathers import convert_ottrk_to_feather
 
 
-def main():
+def main() -> None:
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(
         description="Convert ottrk files to Apache Arrow/Feather format with metadata "

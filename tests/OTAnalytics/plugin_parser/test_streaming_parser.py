@@ -13,6 +13,7 @@ from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
+    PythonTrackIdSet,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
@@ -73,7 +74,7 @@ def assert_track_stream_equals_dataset(
 def assert_track_list_equals_dataset(
     bulk_res: TrackDataset, tracks: list[Track]
 ) -> None:
-    assert bulk_res.track_ids == {track.id for track in tracks}
+    assert bulk_res.track_ids == PythonTrackIdSet({track.id for track in tracks})
     print("Size", len(bulk_res.track_ids), len(tracks))
 
     for actual_track in tracks:

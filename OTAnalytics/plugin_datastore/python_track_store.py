@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Callable, Iterable, Iterator, Optional, Sequence, Any
+from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 
 from more_itertools import batched
 
@@ -36,6 +36,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     START_X,
     START_Y,
     TRACK_GEOMETRY_FACTORY,
+    EmptyTrackIdSet,
     IntersectionPoint,
     TrackDataset,
     TrackDoesNotExistError,
@@ -44,6 +45,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     TrackSegmentDataset,
     contains_true,
 )
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 
 
@@ -583,9 +585,10 @@ class PythonTrackDataset(TrackDataset):
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> set[TrackId]:
+    ) -> TrackIdSet:
         geometry_dataset = self._get_geometry_dataset_for(offset)
-        return geometry_dataset.intersecting_tracks(sections)
+        intersecting_ids = geometry_dataset.intersecting_tracks(sections)
+        return PythonTrackIdSet(intersecting_ids)
 
     def _get_geometry_dataset_for(
         self, offset: RelativeOffsetCoordinate
@@ -666,10 +669,10 @@ class PythonTrackDataset(TrackDataset):
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["PythonTrackDataset", set[TrackId]]:
+    ) -> tuple["PythonTrackDataset", TrackIdSet]:
         if len(self) == 0:
             logger().info("No tracks to cut")
-            return self, set()
+            return self, EmptyTrackIdSet()
         shapely_mapper = ShapelyMapper()
 
         intersecting_track_ids = self.intersecting_tracks([section], offset)
@@ -686,22 +689,20 @@ class PythonTrackDataset(TrackDataset):
             intersecting_track_ids,
         )
 
-    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+    def get_max_confidences_for(self, track_ids: TrackIdSet) -> dict[str, float]:
         result: dict[str, float] = {}
         for track_id in track_ids:
-            _track = self.get_for(TrackId(track_id))
+            _track = self.get_for(track_id)
             if not _track:
                 raise TrackDoesNotExistError(f"Track {track_id} not found.")
 
             max_confidence = max(
                 [detection.confidence for detection in _track.detections]
             )
-            result[track_id] = max_confidence
+            result[track_id.id] = max_confidence
         return result
 
-    def revert_cuts_for(
-        self, original_track_ids: frozenset[TrackId]
-    ) -> "PythonTrackDataset":
+    def revert_cuts_for(self, original_track_ids: TrackIdSet) -> "PythonTrackDataset":
         # NOTE: This implementation prioritizes maintainability over performance.
         # If performance becomes a concern in high-volume operations, consider
         # implementing a mapping cache of original track IDs to their derived segments.
@@ -868,11 +869,11 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["TrackDataset", set[TrackId]]:
+    ) -> tuple["TrackDataset", TrackIdSet]:
         dataset, original_track_ids = self._other.cut_with_section(section, offset)
         return self.wrap(dataset), original_track_ids
 
-    def revert_cuts_for(self, original_track_ids: frozenset[TrackId]) -> TrackDataset:
+    def revert_cuts_for(self, original_track_ids: TrackIdSet) -> TrackDataset:
         return self.wrap(self._other.revert_cuts_for(original_track_ids))
 
 

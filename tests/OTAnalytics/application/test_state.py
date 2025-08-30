@@ -33,6 +33,7 @@ from OTAnalytics.domain.section import (
     SectionType,
 )
 from OTAnalytics.domain.track import Detection, Track, TrackId, TrackImage
+from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet
 from OTAnalytics.domain.track_repository import (
     TrackObserver,
     TrackRepository,
@@ -91,7 +92,7 @@ class TestTrackState:
         state = TrackState()
 
         state.notify_tracks(TrackRepositoryEvent.create_added([first_track]))
-        state.notify_tracks(TrackRepositoryEvent(frozenset(), frozenset()))
+        state.notify_tracks(TrackRepositoryEvent(EmptyTrackIdSet(), EmptyTrackIdSet()))
 
         assert state.selected_track is None
 

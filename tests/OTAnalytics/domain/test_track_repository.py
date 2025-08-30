@@ -13,6 +13,7 @@ from OTAnalytics.domain.track_repository import (
     TrackRepositoryEvent,
     TrackSubject,
 )
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 class TestTrackSubject:
@@ -186,7 +187,7 @@ class TestTrackRepository:
         assert repository.classifications == classifications
 
     def test_revert_cuts_for(self) -> None:
-        original_ids = frozenset([TrackId("1")])
+        original_ids = PythonTrackIdSet([TrackId("1")])
         dataset = Mock()
         target = TrackRepository(dataset)
         target.revert_cuts_for(original_ids)
