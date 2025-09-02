@@ -23,4 +23,4 @@ python3.12 -m venv "$VENV"
 
 $PYTHON -m pip install --upgrade pip
 $PIP install uv
-$UV pip install -r requirements.txt --python .venv
+$UV pip install . --python .venv
