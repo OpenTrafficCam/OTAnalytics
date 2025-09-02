@@ -196,9 +196,9 @@ class TracksNotIntersectingSelection(TrackIdProvider):
         self._track_repository = track_repository
 
     def get_ids(self) -> TrackIdSet:
-        all_track_ids = {track.id for track in self._track_repository.get_all()}
-        assigned_tracks = set(self._track_id_provider.get_ids())
-        return PythonTrackIdSet(all_track_ids - assigned_tracks)
+        all_track_ids = self._track_repository.get_all_ids()
+        assigned_tracks = self._track_id_provider.get_ids()
+        return all_track_ids.difference(assigned_tracks)
 
 
 class TracksAssignedToSelectedFlows(TrackIdProvider):

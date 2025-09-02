@@ -1,7 +1,9 @@
-from OTAnalytics.domain.track import TRACK_ID, TrackId
+import polars as pl
+
+from OTAnalytics.domain.track import TRACK_ID
 from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet, TrackIdSet
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
-from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
+from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
 from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
 
 
@@ -20,7 +22,5 @@ class PandasTrackIdProvider(TrackIdProvider):
                 f"{TRACK_ID}"
                 "must be in the index of DataFrame for retrieving all track ids."
             )
-
-        return PythonTrackIdSet(
-            [TrackId(id) for id in data.index.get_level_values(TRACK_ID)]
-        )
+        series = data.index.get_level_values(TRACK_ID).unique()
+        return PolarsTrackIdSet(pl.from_pandas(series).cast(pl.Utf8))

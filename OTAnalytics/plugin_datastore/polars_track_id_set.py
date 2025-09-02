@@ -1,4 +1,4 @@
-from typing import Iterable, Iterator, Any
+from typing import Any, Iterable, Iterator
 
 import polars as pl
 
@@ -61,5 +61,14 @@ class PolarsTrackIdSet(TrackIdSet):
             return PolarsTrackIdSet(combined_series)
 
     def difference(self, other: "TrackIdSet") -> "TrackIdSet":
-        # TODO implement
-        raise NotImplementedError
+        if isinstance(other, PolarsTrackIdSet):
+            # Efficient difference using Polars operations
+            difference_series = self._series.filter(~self._series.is_in(other._series))
+            return PolarsTrackIdSet(difference_series)
+        else:
+            # Convert other to set of strings for difference
+            other_strings = {unpack(track_id) for track_id in other}
+            difference_series = self._series.filter(
+                ~self._series.is_in(list(other_strings))
+            )
+            return PolarsTrackIdSet(difference_series)
