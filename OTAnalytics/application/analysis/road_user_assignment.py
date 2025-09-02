@@ -4,11 +4,12 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Iterable
 
-from application import logger
-
+from OTAnalytics.application.logger import logger as logging
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.observer import OBSERVER, Subject
+
+logger = logging()
 
 
 @dataclass(frozen=True)

@@ -1,5 +1,5 @@
 from unittest import mock
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -16,6 +16,8 @@ from OTAnalytics.application.use_cases.assignment_repository import (
 from OTAnalytics.application.use_cases.create_road_user_assignments import (
     CreateRoadUserAssignments,
 )
+from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
+from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportRoadUserAssignments,
     RoadUserAssignmentBuilder,
@@ -24,6 +26,7 @@ from OTAnalytics.application.use_cases.road_user_assignment_export import (
     RoadUserAssignmentExporterFactory,
 )
 from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.types import EventType
 from tests.utils.builders.road_user_assignment import create_road_user_assignment
 
 
@@ -99,8 +102,7 @@ class TestExportRoadUserAssignments:
         exporter_factory = Mock(spec=RoadUserAssignmentExporterFactory)
 
         events = Mock()
-        event_repository.is_empty.return_value = False
-        event_repository.get_all.return_value = events
+        event_repository.get.return_value = events
 
         flows = Mock()
         flow_repository.get_all.return_value = flows
@@ -119,8 +121,8 @@ class TestExportRoadUserAssignments:
             get_all_mock.return_value = assignments
 
             create_assignments = CreateRoadUserAssignments(
-                flow_repository,
-                event_repository,
+                GetAllFlows(flow_repository),
+                GetAllEnterSectionEvents(event_repository),
                 create_events,
                 road_user_assigner,
                 rua_repo,
@@ -138,8 +140,10 @@ class TestExportRoadUserAssignments:
 
             export_road_user_assignments.export(specification)
 
-        event_repository.is_empty.assert_called_once()
-        event_repository.get_all.assert_called_once()
+        args = call(event_types=[EventType.SECTION_ENTER])
+        event_repository.get.assert_has_calls([args, args])
+        event_repository.get_all.assert_not_called()
+
         flow_repository.get_all.assert_called_once()
         road_user_assigner.assign.assert_called_once_with(events, flows)
         exporter_factory.create.assert_called_once_with(specification)

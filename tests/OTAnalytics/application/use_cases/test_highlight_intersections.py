@@ -24,6 +24,8 @@ from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.create_road_user_assignments import (
     CreateRoadUserAssignments,
 )
+from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
+from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToSelectedFlows,
@@ -44,6 +46,7 @@ from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId, TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.domain.types import EventType
 
 
 @pytest.fixture
@@ -348,7 +351,7 @@ class TestTracksAssignedToSelectedFlows:
 
         event = Mock(spec=Event)
         event_repository = Mock(spec=EventRepository)
-        event_repository.get_all.return_value = [event]
+        event_repository.get.return_value = [event]
 
         create_events = Mock(spec=CreateEvents)
 
@@ -357,7 +360,12 @@ class TestTracksAssignedToSelectedFlows:
 
         rua_repo = RoadUserAssignmentRepository()
         create_assignments = CreateRoadUserAssignments(
-            flow_repository, event_repository, create_events, assigner, rua_repo, False
+            GetAllFlows(flow_repository),
+            GetAllEnterSectionEvents(event_repository),
+            create_events,
+            assigner,
+            rua_repo,
+            False,
         )
         get_assignments = GetRoadUserAssignments(rua_repo, create_assignments)
 
@@ -366,8 +374,12 @@ class TestTracksAssignedToSelectedFlows:
         )
         track_ids = list(tracks_assigned_to_flow.get_ids())
 
+        event_repository.get.assert_has_calls(
+            [call(event_types=[EventType.SECTION_ENTER])]
+        )
+        event_repository.get_all.assert_not_called()
+
         assert track_ids == [TrackId("1")]
-        event_repository.get_all.assert_called_once()
         flow_repository.get_all.assert_called_once()
         assert selected_flows.get.call_count == 2
         assigner.assign.assert_called_once_with([event], [first_flow, second_flow])
