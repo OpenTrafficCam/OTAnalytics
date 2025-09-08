@@ -46,7 +46,17 @@ from tests.utils.builders.track_segment_builder import (
     TrackSegmentDatasetBuilderProvider,
 )
 
-pytest_plugins = ["nicegui.testing.plugin"]
+# Load NiceGUI testing plugin only when needed (acceptance context)
+pytest_plugins: list[str] = []
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    # Import the nicegui testing plugin lazily to avoid unnecessary
+    # selenium/chromedriver setup on environments (e.g., Windows CI) where
+    # UI/browser is not available. Acceptance workflow enables it via
+    # GITHUB_WORKFLOW name; developers can set RUN_ACCEPTANCE=1 locally.
+    if _is_acceptance_context():
+        config.pluginmanager.import_plugin("nicegui.testing.plugin")
 
 
 # --- Acceptance test collection control ---
