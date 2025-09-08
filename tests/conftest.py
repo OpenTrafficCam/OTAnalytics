@@ -78,12 +78,10 @@ def pytest_ignore_collect(path: Path, config: pytest.Config) -> bool:  # type: i
 
     p = str(path)
     # Target only the known acceptance test locations
-    if p.endswith("tests/test_acceptance.py"):
+    name = os.path.basename(p)
+    if name in {"test_acceptance.py", "test-acceptance.py"}:
         return True
     if "/acceptance_test/" in p or "\\acceptance_test\\" in p:
-        return True
-    # Also guard against a possible alternative hyphenated filename
-    if p.endswith("tests/test-acceptance.py"):
         return True
 
     return False
