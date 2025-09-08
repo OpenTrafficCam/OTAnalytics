@@ -39,4 +39,4 @@ jobs:
         shell: bash
         run: uv sync --locked --dev
       - name: Run acceptance tests
-        run: uv run pytest ./test-acceptance.py
+        run: uv run pytest ./tests/test-acceptance.py
