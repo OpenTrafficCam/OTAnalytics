@@ -1,4 +1,5 @@
 import multiprocessing as py_multiprocessing
+import os
 import shutil
 from pathlib import Path
 from typing import Any, Generator, List, Sequence, TypeVar
@@ -46,6 +47,46 @@ from tests.utils.builders.track_segment_builder import (
 )
 
 pytest_plugins = ["nicegui.testing.plugin"]
+
+
+# --- Acceptance test collection control ---
+# Ensure acceptance tests only run in the dedicated GitHub Actions workflow
+# without modifying workflow files. We detect the workflow via the
+# GITHUB_WORKFLOW environment variable which is automatically set by GitHub.
+# Alternatively, developers can force running acceptance tests locally by setting
+# RUN_ACCEPTANCE=1 in their environment.
+ACCEPTANCE_WORKFLOW_NAME = "Acceptance Test With Pytest"
+
+
+def _is_acceptance_context() -> bool:
+    return (
+        os.environ.get("GITHUB_WORKFLOW") == ACCEPTANCE_WORKFLOW_NAME
+        or os.environ.get("RUN_ACCEPTANCE") == "1"
+    )
+
+
+def pytest_ignore_collect(path: Path, config: pytest.Config) -> bool:  # type: ignore[override] # noqa
+    """Skip collecting acceptance tests unless in acceptance context.
+
+    This prevents acceptance tests from running in the default CI workflow (test.yml)
+    and during regular local runs, while allowing them in the dedicated
+    acceptance-test.yml (based on the workflow name) or when explicitly enabled
+    via RUN_ACCEPTANCE=1.
+    """
+    if _is_acceptance_context():
+        return False
+
+    p = str(path)
+    # Target only the known acceptance test locations
+    if p.endswith("tests/test_acceptance.py"):
+        return True
+    if "/acceptance_test/" in p or "\\acceptance_test\\" in p:
+        return True
+    # Also guard against a possible alternative hyphenated filename
+    if p.endswith("tests/test-acceptance.py"):
+        return True
+
+    return False
 
 
 T = TypeVar("T")
