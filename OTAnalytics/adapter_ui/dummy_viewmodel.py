@@ -1038,7 +1038,7 @@ class DummyViewModel(
             self.treeview_sections.update_selected_items([id.serialize()])
 
     @action
-    def remove_sections(self) -> None:
+    async def remove_sections(self) -> None:
         if not (selected_section_ids := self.get_selected_section_ids()):
             position = self.treeview_sections.get_position()
             self._ui_factory.info_box(
@@ -1319,7 +1319,7 @@ class DummyViewModel(
             self.__update_flow_data(flow_data=flow_data)
 
     @action
-    def remove_flows(self) -> None:
+    async def remove_flows(self) -> None:
         if flow_ids := self._application.flow_state.selected_flows.get():
             for flow_id in flow_ids:
                 self._application.remove_flow(flow_id)

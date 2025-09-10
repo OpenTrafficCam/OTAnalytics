@@ -1,3 +1,4 @@
+import asyncio
 from typing import Iterable, Self
 
 from nicegui import ui
@@ -108,7 +109,14 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         self._viewmodel.generate_flows()
 
     def remove_flow(self) -> None:
-        self._viewmodel.remove_flows()
+        # Schedule the asynchronous removal so tests see the call immediately
+        # while NiceGUI executes the coroutine in the event loop.
+        try:
+            coro = self._viewmodel.remove_flows()
+            asyncio.create_task(coro)
+        except RuntimeError:
+            # No running loop available; run the coroutine to completion
+            asyncio.run(self._viewmodel.remove_flows())
 
     async def show_flow_properties(self) -> None:
         await self._viewmodel.edit_selected_flow()
