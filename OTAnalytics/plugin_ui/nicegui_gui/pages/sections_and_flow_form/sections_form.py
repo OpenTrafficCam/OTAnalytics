@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, Iterable, Self
 
 from nicegui import ui
@@ -111,7 +112,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
             with ui.row().style(BASIC_WIDTH):
                 self._button_remove = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_REMOVE),
-                    on_click=self._viewmodel.remove_sections,
+                    on_click=self.remove_sections,
                 ).style(BASIC_WIDTH)
                 self._button_remove.mark(MARKER_BUTTON_REMOVE)
         self.update_items()
@@ -137,6 +138,16 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
 
     def update_selected_items(self, item_ids: list[str]) -> None:
         self._section_table.select(item_ids)
+
+    def remove_sections(self) -> None:
+        # Schedule the asynchronous removal so tests see the call immediately
+        # while NiceGUI executes the coroutine in the event loop.
+        try:
+            coro = self._viewmodel.remove_sections()
+            asyncio.create_task(coro)
+        except RuntimeError:
+            # No running loop available; run the coroutine to completion
+            asyncio.run(self._viewmodel.remove_sections())
 
     def update_items(self) -> None:
         self._section_table.update(map_to_ui(self._viewmodel.get_all_sections()))
