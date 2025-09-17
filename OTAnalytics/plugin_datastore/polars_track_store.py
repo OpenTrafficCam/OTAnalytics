@@ -638,24 +638,6 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             PolarsTrackIdSet(),
         )
 
-    def _add_cut_track_part(
-        self,
-        cut_tracks_data: list,
-        detections: list[dict],
-        original_track_id_str: str,
-        original_id: str,
-        part_index: int,
-    ) -> None:
-        """Add a cut track part to the cut tracks data list."""
-        new_track_id = f"{original_track_id_str}_{part_index}"
-
-        for detection in detections:
-            # Create a copy of detection with new track ID
-            detection_copy = detection.copy()
-            detection_copy[track.TRACK_ID] = new_track_id
-            detection_copy[track.ORIGINAL_TRACK_ID] = original_id
-            cut_tracks_data.append(detection_copy)
-
     def filter_by_min_detection_length(self, length: int) -> TrackDataset:
         if self._dataset.is_empty():
             return self
