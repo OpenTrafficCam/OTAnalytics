@@ -5,12 +5,7 @@ from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     group_sections_by_offset,
 )
-from OTAnalytics.domain.event import (
-    Event,
-    EventBuilder,
-    EventDataset,
-    SectionEventBuilder,
-)
+from OTAnalytics.domain.event import EventBuilder, EventDataset, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
     Coordinate,
     DirectionVector2D,
@@ -238,7 +233,7 @@ class BatchedTracksRunIntersect(RunIntersect):
         self._intersect_parallelizer = intersect_parallelizer
         self._get_tracks = get_tracks
 
-    def __call__(self, sections: Iterable[Section]) -> list[Event]:
+    def __call__(self, sections: Iterable[Section]) -> EventDataset:
         filtered_tracks = self._get_tracks.as_dataset()
         filtered_tracks.calculate_geometries_for(
             {_section.get_offset(EventType.SECTION_ENTER) for _section in sections}
@@ -250,7 +245,7 @@ class BatchedTracksRunIntersect(RunIntersect):
         return self._intersect_parallelizer.execute(_create_events, tasks)
 
 
-def _create_events(tracks: TrackDataset, sections: Iterable[Section]) -> list[Event]:
+def _create_events(tracks: TrackDataset, sections: Iterable[Section]) -> EventDataset:
     event_dataset = EventDataset()
     event_builder = SectionEventBuilder()
 
@@ -262,7 +257,7 @@ def _create_events(tracks: TrackDataset, sections: Iterable[Section]) -> list[Ev
         event_builder=event_builder,
     )
     event_dataset.extend(create_intersection_events.create())
-    return event_dataset.get_events()
+    return event_dataset
 
 
 def separate_sections(

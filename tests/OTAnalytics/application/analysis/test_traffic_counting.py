@@ -49,7 +49,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
-from OTAnalytics.domain.event import Event, EventRepository
+from OTAnalytics.domain.event import Event, EventDataset, EventRepository
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import SectionId
@@ -832,8 +832,10 @@ class TestFilterBySectionEnterEvent:
         road_user_assigner = Mock(spec=RoadUserAssigner)
 
         decorator = FilterBySectionEnterEvent(road_user_assigner)
-        decorator.assign([enter_scene_event, section_enter_event], [flow])
-        road_user_assigner.assign.assert_called_once_with([section_enter_event], [flow])
+        decorator.assign(EventDataset([enter_scene_event, section_enter_event]), [flow])
+        road_user_assigner.assign.assert_called_once_with(
+            EventDataset([section_enter_event]), [flow]
+        )
 
 
 class TestSimpleRoadUserAssigner:

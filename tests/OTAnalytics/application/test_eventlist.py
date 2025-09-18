@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.application.eventlist import SceneActionDetector, SceneEventListBuilder
-from OTAnalytics.domain.event import Event, EventType
+from OTAnalytics.domain.event import Event, EventDataset, EventType
 from OTAnalytics.domain.geometry import (
     Coordinate,
     ImageCoordinate,
@@ -170,63 +170,67 @@ class TestSceneActionDetector:
         last_segments.apply.assert_called_once()
 
 
-def create_expected_events(track: Track) -> list[Event]:
+def create_expected_events(track: Track) -> EventDataset:
     return create_expected_enter_scene_events(
         track
     ) + create_expected_leave_scene_events(track)
 
 
-def create_expected_leave_scene_events(track: Track) -> list[Event]:
+def create_expected_leave_scene_events(track: Track) -> EventDataset:
     occurrence = track.last_detection.occurrence
     event_coordinate = ImageCoordinate(track.last_detection.x, track.last_detection.y)
-    return [
-        Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=HOSTNAME,
-            occurrence=occurrence,
-            frame_number=track.last_detection.frame,
-            section_id=None,
-            event_coordinate=event_coordinate,
-            event_type=EventType.LEAVE_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.detections[-2].x,
-                track.detections[-2].y,
-                track.last_detection.x,
-                track.last_detection.y,
+    return EventDataset(
+        [
+            Event(
+                road_user_id=track.id.id,
+                road_user_type=track.classification,
+                hostname=HOSTNAME,
+                occurrence=occurrence,
+                frame_number=track.last_detection.frame,
+                section_id=None,
+                event_coordinate=event_coordinate,
+                event_type=EventType.LEAVE_SCENE,
+                direction_vector=calculate_direction_vector(
+                    track.detections[-2].x,
+                    track.detections[-2].y,
+                    track.last_detection.x,
+                    track.last_detection.y,
+                ),
+                video_name=track.first_detection.video_name,
+                interpolated_occurrence=occurrence,
+                interpolated_event_coordinate=event_coordinate,
             ),
-            video_name=track.first_detection.video_name,
-            interpolated_occurrence=occurrence,
-            interpolated_event_coordinate=event_coordinate,
-        ),
-    ]
+        ]
+    )
 
 
-def create_expected_enter_scene_events(track: Track) -> list[Event]:
+def create_expected_enter_scene_events(track: Track) -> EventDataset:
     event_coordinate = ImageCoordinate(track.first_detection.x, track.first_detection.y)
     occurrence = track.first_detection.occurrence
 
-    return [
-        Event(
-            road_user_id=track.id.id,
-            road_user_type=track.classification,
-            hostname=HOSTNAME,
-            occurrence=occurrence,
-            frame_number=track.first_detection.frame,
-            section_id=None,
-            event_coordinate=event_coordinate,
-            event_type=EventType.ENTER_SCENE,
-            direction_vector=calculate_direction_vector(
-                track.first_detection.x,
-                track.first_detection.y,
-                track.detections[1].x,
-                track.detections[1].y,
-            ),
-            video_name=track.first_detection.video_name,
-            interpolated_occurrence=occurrence,
-            interpolated_event_coordinate=event_coordinate,
-        )
-    ]
+    return EventDataset(
+        [
+            Event(
+                road_user_id=track.id.id,
+                road_user_type=track.classification,
+                hostname=HOSTNAME,
+                occurrence=occurrence,
+                frame_number=track.first_detection.frame,
+                section_id=None,
+                event_coordinate=event_coordinate,
+                event_type=EventType.ENTER_SCENE,
+                direction_vector=calculate_direction_vector(
+                    track.first_detection.x,
+                    track.first_detection.y,
+                    track.detections[1].x,
+                    track.detections[1].y,
+                ),
+                video_name=track.first_detection.video_name,
+                interpolated_occurrence=occurrence,
+                interpolated_event_coordinate=event_coordinate,
+            )
+        ]
+    )
 
 
 def first_segment_of(track: Track) -> dict:

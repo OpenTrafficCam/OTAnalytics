@@ -632,6 +632,11 @@ class EventDataset:
             return NotImplemented
         return EventDataset(self._events + other._events)
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, EventDataset):
+            return False
+        return self._events == other._events
+
     def extend(self, other: "EventDataset") -> None:
         """Extend this dataset with events from another dataset.
 

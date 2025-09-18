@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Iterable, Sequence
 
-from OTAnalytics.domain.event import Event, EventBuilder, EventDataset
+from OTAnalytics.domain.event import EventBuilder, EventDataset
 from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
@@ -101,20 +101,20 @@ class IntersectParallelizationStrategy(ABC):
     @abstractmethod
     def execute(
         self,
-        intersect: Callable[[TrackDataset, Iterable[Section]], Iterable[Event]],
+        intersect: Callable[[TrackDataset, Iterable[Section]], EventDataset],
         tasks: Sequence[tuple[TrackDataset, Iterable[Section]]],
-    ) -> list[Event]:
+    ) -> EventDataset:
         """Executes the intersection of tracks with sections with the implemented
         parallelization strategy.
 
         Args:
-            intersect (Callable[[TrackDataset, Iterable[Section]], Iterable[Event]]):
+            intersect (Callable[[TrackDataset, Iterable[Section]], EventDataset]):
                 the function to be executed on an iterable of tracks and sections.
             tasks (Sequence[tuple[TrackDataset, Iterable[Section]]): the argument
                 to intersect function.
 
         Returns:
-            Iterable[Event]: the generated events.
+            EventDataset: the generated events.
         """
         raise NotImplementedError
 
