@@ -657,14 +657,6 @@ class EventDataset:
         """
         self._events.append(event)
 
-    def get_events(self) -> list[Event]:
-        """Get the underlying list of events.
-
-        Returns:
-            The list of events contained in this dataset.
-        """
-        return self._events.copy()
-
     def is_empty(self) -> bool:
         """Check if the dataset contains no events.
 
