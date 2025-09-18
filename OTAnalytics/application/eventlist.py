@@ -53,7 +53,7 @@ class SceneEventListBuilder:
     """Create enter and leave scene events for track segments."""
 
     def __init__(self) -> None:
-        self._events = EventDataset()
+        self._events: list[Event] = []
 
     def add_enter_scene_events(
         self, segments: TrackSegmentDataset
@@ -83,7 +83,7 @@ class SceneEventListBuilder:
         Returns:
             EventDataset: complete event dataset
         """
-        return EventDataset(self._events.get_events())
+        return EventDataset(self._events)
 
     def _create_enter_scene_event(self, value: dict) -> None:
         event = self.__create_event(
