@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Callable, Iterable, Protocol
 
 from OTAnalytics.application.analysis.intersect import (
@@ -7,7 +6,6 @@ from OTAnalytics.application.analysis.intersect import (
 )
 from OTAnalytics.domain.event import EventBuilder, EventDataset, SectionEventBuilder
 from OTAnalytics.domain.geometry import (
-    Coordinate,
     DirectionVector2D,
     RelativeOffsetCoordinate,
     calculate_direction_vector,
@@ -61,18 +59,6 @@ class IntersectByIntersectionPoints(Intersector):
     ) -> EventDataset:
         intersection_result = track_dataset.wrap_intersection_points(sections, offset)
         return intersection_result.create_events(offset, event_builder)
-
-    def _get_interpolated_occurrence(
-        self, previous: datetime, current: datetime, relative_position: float
-    ) -> datetime:
-        return previous + (current - previous) * relative_position
-
-    def _get_interpolated_event_coordinate(
-        self, previous: Coordinate, current: Coordinate, relative_position: float
-    ) -> Coordinate:
-        interpolated_x = previous.x + relative_position * (current.x - previous.x)
-        interpolated_y = previous.y + relative_position * (current.y - previous.y)
-        return Coordinate(interpolated_x, interpolated_y)
 
 
 class IntersectAreaByTrackPoints(Intersector):
