@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.application.eventlist import SceneActionDetector, SceneEventListBuilder
-from OTAnalytics.domain.event import Event, EventDataset, EventType
+from OTAnalytics.domain.event import Event, EventDataset, EventType, PythonEventDataset
 from OTAnalytics.domain.geometry import (
     Coordinate,
     ImageCoordinate,
@@ -179,7 +179,7 @@ def create_expected_events(track: Track) -> EventDataset:
 def create_expected_leave_scene_events(track: Track) -> EventDataset:
     occurrence = track.last_detection.occurrence
     event_coordinate = ImageCoordinate(track.last_detection.x, track.last_detection.y)
-    return EventDataset(
+    return PythonEventDataset(
         [
             Event(
                 road_user_id=track.id.id,
@@ -208,7 +208,7 @@ def create_expected_enter_scene_events(track: Track) -> EventDataset:
     event_coordinate = ImageCoordinate(track.first_detection.x, track.first_detection.y)
     occurrence = track.first_detection.occurrence
 
-    return EventDataset(
+    return PythonEventDataset(
         [
             Event(
                 road_user_id=track.id.id,

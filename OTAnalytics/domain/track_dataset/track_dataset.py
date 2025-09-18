@@ -7,6 +7,7 @@ from OTAnalytics.domain.event import (
     Event,
     EventBuilder,
     EventDataset,
+    PythonEventDataset,
     SectionEventBuilder,
 )
 from OTAnalytics.domain.geometry import (
@@ -581,7 +582,7 @@ class IntersectionPointsDataset:
                 )
                 events.append(event_builder.create_event(detection))
 
-        return EventDataset(events)
+        return PythonEventDataset(events)
 
     def _get_interpolated_occurrence(
         self, previous: datetime, current: datetime, relative_position: float

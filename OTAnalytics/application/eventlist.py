@@ -7,6 +7,7 @@ from OTAnalytics.domain.event import (
     Event,
     EventDataset,
     ImproperFormattedFilename,
+    PythonEventDataset,
 )
 from OTAnalytics.domain.geometry import ImageCoordinate, calculate_direction_vector
 from OTAnalytics.domain.track_dataset.track_dataset import (
@@ -83,7 +84,7 @@ class SceneEventListBuilder:
         Returns:
             EventDataset: complete event dataset
         """
-        return EventDataset(self._events)
+        return PythonEventDataset(self._events)
 
     def _create_enter_scene_event(self, value: dict) -> None:
         event = self.__create_event(

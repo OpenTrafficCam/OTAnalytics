@@ -3,7 +3,7 @@ from typing import Callable, Iterable, Sequence
 
 from OTAnalytics.application.config import DEFAULT_NUM_PROCESSES
 from OTAnalytics.application.logger import logger
-from OTAnalytics.domain.event import EventDataset
+from OTAnalytics.domain.event import EventDataset, PythonEventDataset
 from OTAnalytics.domain.intersect import IntersectParallelizationStrategy
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
@@ -48,7 +48,7 @@ class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
     def _combine_event_datasets(
         self, event_datasets: Iterable[EventDataset]
     ) -> EventDataset:
-        combined = EventDataset()
+        combined = PythonEventDataset()
         for dataset in event_datasets:
             combined.extend(dataset)
         return combined

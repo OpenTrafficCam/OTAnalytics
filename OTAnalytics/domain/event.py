@@ -596,7 +596,64 @@ def before_filter(date: datetime) -> Callable[[Event], bool]:
     return lambda actual: actual.occurrence <= date
 
 
-class EventDataset:
+class EventDataset(ABC):
+    """A collection of events."""
+
+    @abstractmethod
+    def __iter__(self) -> Iterator[Event]:
+        """Iterate over the events in the dataset."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __len__(self) -> int:
+        """Return the number of events in the dataset."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __add__(self, other: "EventDataset") -> "EventDataset":
+        """Add two EventDatasets together to create a new combined dataset.
+
+        Args:
+            other: Another EventDataset to combine with this one.
+
+        Returns:
+            A new EventDataset containing events from both datasets.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def __eq__(self, other: object) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def extend(self, other: "EventDataset") -> None:
+        """Extend this dataset with events from another dataset.
+
+        Args:
+            other: Another EventDataset whose events will be added to this dataset.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def append(self, event: Event) -> None:
+        """Add a single event to the dataset.
+
+        Args:
+            event: The event to add to the dataset.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_empty(self) -> bool:
+        """Check if the dataset contains no events.
+
+        Returns:
+            True if the dataset is empty, False otherwise.
+        """
+        raise NotImplementedError
+
+
+class PythonEventDataset(EventDataset):
     """A dataset wrapper for a collection of events.
 
     This class wraps a list of events and provides methods for combining
@@ -628,12 +685,12 @@ class EventDataset:
         Returns:
             A new EventDataset containing events from both datasets.
         """
-        if not isinstance(other, EventDataset):
+        if not isinstance(other, PythonEventDataset):
             raise TypeError()
-        return EventDataset(self._events + other._events)
+        return PythonEventDataset(self._events + other._events)
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, EventDataset):
+        if not isinstance(other, PythonEventDataset):
             return False
         return self._events == other._events
 
@@ -643,7 +700,7 @@ class EventDataset:
         Args:
             other: Another EventDataset whose events will be added to this dataset.
         """
-        if isinstance(other, EventDataset):
+        if isinstance(other, PythonEventDataset):
             self._events.extend(other._events)
         else:
             # Support extending with a list of events for compatibility

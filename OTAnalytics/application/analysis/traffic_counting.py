@@ -14,7 +14,12 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
-from OTAnalytics.domain.event import Event, EventDataset, EventRepository
+from OTAnalytics.domain.event import (
+    Event,
+    EventDataset,
+    EventRepository,
+    PythonEventDataset,
+)
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.types import EventType
@@ -681,7 +686,7 @@ class FilterBySectionEnterEvent(RoadUserAssignerDecorator):
     """Decorator to filters events by event type section-enter."""
 
     def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
-        section_enter_events = EventDataset(
+        section_enter_events = PythonEventDataset(
             [event for event in events if event.event_type == EventType.SECTION_ENTER]
         )
         return super().assign(section_enter_events, flows)
@@ -752,7 +757,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             dict[tuple[RoadUserId, RoadUserType], EventDataset]: events grouped by user
         """
         events_by_road_user: dict[tuple[RoadUserId, RoadUserType], EventDataset] = (
-            defaultdict(EventDataset)
+            defaultdict(PythonEventDataset)
         )
         sorted_events = sorted(
             events, key=lambda _event: _event.interpolated_occurrence
