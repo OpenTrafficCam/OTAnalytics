@@ -212,6 +212,22 @@ class TrackDataset(ABC):
         """
         raise NotImplementedError
 
+    def wrap_intersection_points(
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
+    ) -> "IntersectionPointsDataset":
+        """
+        Return the intersection points wrapped in an IntersectionPointsDataset.
+
+        Args:
+            sections (list[Section]): the sections to intersect with.
+            offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
+
+        Returns:
+            IntersectionPointsDataset: the intersection points dataset.
+        """
+        intersection_data = self.intersection_points(sections, offset)
+        return IntersectionPointsDataset(intersection_data)
+
     @abstractmethod
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
@@ -416,6 +432,21 @@ class TrackGeometryDataset(ABC):
         """
         raise NotImplementedError
 
+    def wrap_intersection_points(
+        self, sections: list[Section]
+    ) -> "IntersectionPointsDataset":
+        """
+        Return the intersection points wrapped in an IntersectionPointsDataset.
+
+        Args:
+            sections (list[Section]): the sections to intersect with.
+
+        Returns:
+            IntersectionPointsDataset: the intersection points dataset.
+        """
+        intersection_data = self.intersection_points(sections)
+        return IntersectionPointsDataset(intersection_data)
+
     @abstractmethod
     def contained_by_sections(
         self, sections: list[Section]
@@ -434,6 +465,76 @@ class TrackGeometryDataset(ABC):
     @abstractmethod
     def __eq__(self, other: Any) -> bool:
         raise NotImplementedError
+
+
+class IntersectionPointsDataset:
+    """Dataset containing intersection points between tracks and sections."""
+
+    def __init__(self, data: dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]):
+        """Initialize the intersection points dataset.
+
+        Args:
+            data: Dictionary mapping track IDs to lists of intersection points
+                 with section IDs.
+        """
+        self._data = data
+
+    def items(
+        self,
+    ) -> Iterator[tuple[TrackId, list[tuple[SectionId, IntersectionPoint]]]]:
+        """Iterate over track IDs and their intersection points.
+
+        Returns:
+            Iterator yielding (track_id, intersection_points) tuples.
+        """
+        return iter(self._data.items())
+
+    def keys(self) -> Iterator[TrackId]:
+        """Get all track IDs that have intersection points.
+
+        Returns:
+            Iterator over track IDs.
+        """
+        return iter(self._data.keys())
+
+    def get(self, track_id: TrackId) -> list[tuple[SectionId, IntersectionPoint]]:
+        """Get intersection points for a specific track ID.
+
+        Args:
+            track_id: The track ID to get intersection points for.
+
+        Returns:
+            List of (section_id, intersection_point) tuples for the track.
+        """
+        return self._data.get(track_id, [])
+
+    @property
+    def empty(self) -> bool:
+        """Check if the dataset is empty.
+
+        Returns:
+            True if no intersection points exist, False otherwise.
+        """
+        return len(self._data) == 0
+
+    def __len__(self) -> int:
+        """Get the number of tracks with intersection points.
+
+        Returns:
+            Number of tracks that have intersection points.
+        """
+        return len(self._data)
+
+    def __contains__(self, track_id: TrackId) -> bool:
+        """Check if a track ID has intersection points.
+
+        Args:
+            track_id: The track ID to check.
+
+        Returns:
+            True if the track has intersection points, False otherwise.
+        """
+        return track_id in self._data
 
 
 TRACK_GEOMETRY_FACTORY = Callable[

@@ -56,7 +56,9 @@ class IntersectByIntersectionPoints(Intersector):
         offset: RelativeOffsetCoordinate,
         event_builder: EventBuilder,
     ) -> list[Event]:
-        intersection_result = track_dataset.intersection_points(sections, offset)
+        # TODO Create an EventDataset and internally use the PolarsDataFrame
+        # The for loop kills performance
+        intersection_result = track_dataset.wrap_intersection_points(sections, offset)
 
         events: list[Event] = []
         for track_id, intersection_points in intersection_result.items():
