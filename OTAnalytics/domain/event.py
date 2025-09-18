@@ -629,7 +629,7 @@ class EventDataset:
             A new EventDataset containing events from both datasets.
         """
         if not isinstance(other, EventDataset):
-            return NotImplemented
+            raise TypeError()
         return EventDataset(self._events + other._events)
 
     def __eq__(self, other: object) -> bool:
