@@ -3,7 +3,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 
-from OTAnalytics.domain.event import Event, EventBuilder, SectionEventBuilder
+from OTAnalytics.domain.event import (
+    Event,
+    EventBuilder,
+    EventDataset,
+    SectionEventBuilder,
+)
 from OTAnalytics.domain.geometry import (
     Coordinate,
     RelativeOffsetCoordinate,
@@ -536,9 +541,7 @@ class IntersectionPointsDataset:
         self,
         offset: RelativeOffsetCoordinate,
         event_builder: EventBuilder = SectionEventBuilder(),
-    ) -> list[Event]:
-        # TODO Create an EventDataset and internally use the PolarsDataFrame
-        # The for loop kills performance
+    ) -> EventDataset:
         events: list[Event] = []
         for track_id, intersection_points in self.items():
             if not (track := self._track_dataset.get_for(track_id)):
@@ -578,7 +581,7 @@ class IntersectionPointsDataset:
                 )
                 events.append(event_builder.create_event(detection))
 
-        return events
+        return EventDataset(events)
 
     def _get_interpolated_occurrence(
         self, previous: datetime, current: datetime, relative_position: float

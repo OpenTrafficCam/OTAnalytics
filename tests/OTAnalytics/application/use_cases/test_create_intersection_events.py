@@ -9,6 +9,7 @@ from OTAnalytics.application.use_cases.create_intersection_events import (
     IntersectByIntersectionPoints,
     separate_sections,
 )
+from OTAnalytics.domain.event import EventDataset
 from OTAnalytics.domain.geometry import (
     Coordinate,
     DirectionVector2D,
@@ -71,7 +72,7 @@ class _TestCase:
         self.expected_event_coords = expected_event_coords
         self.direction_vectors = direction_vectors
 
-    def assert_valid(self, event_results: list, event_builder: Mock) -> None:
+    def assert_valid(self, event_results: EventDataset, event_builder: Mock) -> None:
         assert len(event_results) == len(self.expected_event_coords)
         if self.expected_event_coords:
             self._assert_has_calls(event_builder)
@@ -125,11 +126,11 @@ class LineSectionTestCase(_TestCase):
         self.expected_interpolated_occurrences = expected_interpolated_occurrences
         self.expected_interpolated_coords = expected_interpolated_coords
 
-    def assert_valid(self, event_results: list, event_builder: Mock) -> None:
+    def assert_valid(self, event_results: EventDataset, event_builder: Mock) -> None:
         super().assert_valid(event_results, event_builder)
         self._assert_valid(event_results, event_builder)
 
-    def _assert_valid(self, event_results: list, event_builder: Mock) -> None:
+    def _assert_valid(self, event_results: EventDataset, event_builder: Mock) -> None:
         self.track_dataset.wrap_intersection_points.assert_called_once_with(
             [self.section], self.section.get_offset(EventType.SECTION_ENTER)
         )
@@ -158,7 +159,7 @@ class AreaSectionTestCase(_TestCase):
             track, track_dataset, section, expected_event_coords, direction_vectors
         )
 
-    def assert_valid(self, event_results: list, event_builder: Mock) -> None:
+    def assert_valid(self, event_results: EventDataset, event_builder: Mock) -> None:
         super().assert_valid(event_results, event_builder)
         self._assert_valid()
 

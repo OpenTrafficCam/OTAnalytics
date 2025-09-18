@@ -5,7 +5,12 @@ from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     group_sections_by_offset,
 )
-from OTAnalytics.domain.event import Event, EventBuilder, SectionEventBuilder
+from OTAnalytics.domain.event import (
+    Event,
+    EventBuilder,
+    EventDataset,
+    SectionEventBuilder,
+)
 from OTAnalytics.domain.geometry import (
     Coordinate,
     DirectionVector2D,
@@ -40,16 +45,17 @@ class IntersectByIntersectionPoints(Intersector):
         track_dataset: TrackDataset,
         sections: Iterable[Section],
         event_builder: EventBuilder,
-    ) -> list[Event]:
+    ) -> EventDataset:
         sections_grouped_by_offset = group_sections_by_offset(
             sections, EventType.SECTION_ENTER
         )
-        events = []
+        event_dataset = EventDataset()
         for offset, section_group in sections_grouped_by_offset.items():
-            events.extend(
-                self.__do_intersect(track_dataset, section_group, offset, event_builder)
+            result = self.__do_intersect(
+                track_dataset, section_group, offset, event_builder
             )
-        return events
+            event_dataset.extend(result)
+        return event_dataset
 
     def __do_intersect(
         self,
@@ -57,7 +63,7 @@ class IntersectByIntersectionPoints(Intersector):
         sections: list[Section],
         offset: RelativeOffsetCoordinate,
         event_builder: EventBuilder,
-    ) -> list[Event]:
+    ) -> EventDataset:
         intersection_result = track_dataset.wrap_intersection_points(sections, offset)
         return intersection_result.create_events(offset, event_builder)
 
@@ -88,16 +94,17 @@ class IntersectAreaByTrackPoints(Intersector):
         track_dataset: TrackDataset,
         sections: Iterable[Section],
         event_builder: EventBuilder,
-    ) -> list[Event]:
+    ) -> EventDataset:
         sections_grouped_by_offset = group_sections_by_offset(
             sections, EventType.SECTION_ENTER
         )
-        events = []
+        event_dataset = EventDataset()
         for offset, section_group in sections_grouped_by_offset.items():
-            events.extend(
-                self.__do_intersect(track_dataset, section_group, offset, event_builder)
+            result = self.__do_intersect(
+                track_dataset, section_group, offset, event_builder
             )
-        return events
+            event_dataset.extend(result)
+        return event_dataset
 
     def __do_intersect(
         self,
@@ -105,7 +112,7 @@ class IntersectAreaByTrackPoints(Intersector):
         sections: list[Section],
         offset: RelativeOffsetCoordinate,
         event_builder: EventBuilder,
-    ) -> list[Event]:
+    ) -> EventDataset:
         contained_by_sections_result = track_dataset.contained_by_sections(
             sections, offset
         )
@@ -184,7 +191,7 @@ class IntersectAreaByTrackPoints(Intersector):
                     events.append(event)
                     section_currently_entered = entered
 
-        return events
+        return EventDataset(events)
 
 
 class RunCreateIntersectionEvents:
@@ -202,20 +209,20 @@ class RunCreateIntersectionEvents:
         self._sections = sections
         self._event_builder = event_builder
 
-    def create(self) -> list[Event]:
-        events = []
+    def create(self) -> EventDataset:
+        event_dataset = EventDataset()
         line_sections, area_sections = separate_sections(self._sections)
-        events.extend(
+        event_dataset.extend(
             self._intersect_line_section.intersect(
                 self._track_dataset, line_sections, self._event_builder
             )
         )
-        events.extend(
+        event_dataset.extend(
             self._intersect_area_section.intersect(
                 self._track_dataset, area_sections, self._event_builder
             )
         )
-        return events
+        return event_dataset
 
 
 class GetTracks(Protocol):
@@ -244,7 +251,7 @@ class BatchedTracksRunIntersect(RunIntersect):
 
 
 def _create_events(tracks: TrackDataset, sections: Iterable[Section]) -> list[Event]:
-    events = []
+    event_dataset = EventDataset()
     event_builder = SectionEventBuilder()
 
     create_intersection_events = RunCreateIntersectionEvents(
@@ -254,8 +261,8 @@ def _create_events(tracks: TrackDataset, sections: Iterable[Section]) -> list[Ev
         sections=sections,
         event_builder=event_builder,
     )
-    events.extend(create_intersection_events.create())
-    return events
+    event_dataset.extend(create_intersection_events.create())
+    return event_dataset.get_events()
 
 
 def separate_sections(

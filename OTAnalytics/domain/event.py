@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Iterable, Optional, Sequence
+from typing import Callable, Iterable, Iterator, Optional, Sequence
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
@@ -594,3 +594,76 @@ def after_filter(date: datetime) -> Callable[[Event], bool]:
 
 def before_filter(date: datetime) -> Callable[[Event], bool]:
     return lambda actual: actual.occurrence <= date
+
+
+class EventDataset:
+    """A dataset wrapper for a collection of events.
+
+    This class wraps a list of events and provides methods for combining
+    multiple datasets and accessing the events.
+    """
+
+    def __init__(self, events: list[Event] | None = None) -> None:
+        """Initialize the EventDataset.
+
+        Args:
+            events: Optional list of events. If None, an empty list is created.
+        """
+        self._events = events if events is not None else []
+
+    def __iter__(self) -> Iterator[Event]:
+        """Iterate over the events in the dataset."""
+        return iter(self._events)
+
+    def __len__(self) -> int:
+        """Return the number of events in the dataset."""
+        return len(self._events)
+
+    def __add__(self, other: "EventDataset") -> "EventDataset":
+        """Add two EventDatasets together to create a new combined dataset.
+
+        Args:
+            other: Another EventDataset to combine with this one.
+
+        Returns:
+            A new EventDataset containing events from both datasets.
+        """
+        if not isinstance(other, EventDataset):
+            return NotImplemented
+        return EventDataset(self._events + other._events)
+
+    def extend(self, other: "EventDataset") -> None:
+        """Extend this dataset with events from another dataset.
+
+        Args:
+            other: Another EventDataset whose events will be added to this dataset.
+        """
+        if isinstance(other, EventDataset):
+            self._events.extend(other._events)
+        else:
+            # Support extending with a list of events for compatibility
+            self._events.extend(other)
+
+    def append(self, event: Event) -> None:
+        """Add a single event to the dataset.
+
+        Args:
+            event: The event to add to the dataset.
+        """
+        self._events.append(event)
+
+    def get_events(self) -> list[Event]:
+        """Get the underlying list of events.
+
+        Returns:
+            The list of events contained in this dataset.
+        """
+        return self._events.copy()
+
+    def is_empty(self) -> bool:
+        """Check if the dataset contains no events.
+
+        Returns:
+            True if the dataset is empty, False otherwise.
+        """
+        return len(self._events) == 0

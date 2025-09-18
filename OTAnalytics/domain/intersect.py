@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Iterable, Sequence
 
-from OTAnalytics.domain.event import Event, EventBuilder
+from OTAnalytics.domain.event import Event, EventBuilder, EventDataset
 from OTAnalytics.domain.geometry import Coordinate, Line, Polygon
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
@@ -140,7 +140,7 @@ class Intersector(ABC):
         track_dataset: TrackDataset,
         sections: Iterable[Section],
         event_builder: EventBuilder,
-    ) -> list[Event]:
+    ) -> EventDataset:
         """Intersect tracks with sections and generate events if they intersect.
 
         Args:
