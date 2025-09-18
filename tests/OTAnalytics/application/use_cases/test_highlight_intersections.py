@@ -35,7 +35,7 @@ from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
-from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet
+from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet, TrackIdSet
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
@@ -280,18 +280,22 @@ class TestTracksIntersectingGivenSections:
 class TestTracksNotIntersectingSelection:
     def test_get_ids(self, track_1: Mock, track_2: Mock) -> None:
         track_repository = Mock(spec=TrackRepository)
-        track_repository.get_all.return_value = [track_1, track_2]
+        track_repository.get_all_ids.return_value = PythonTrackIdSet(
+            [track_1.id, track_2.id]
+        )
 
         tracks_intersecting_sections = Mock(spec=TrackIdProvider)
-        tracks_intersecting_sections.get_ids.return_value = {track_1.id}
+        tracks_intersecting_sections.get_ids.return_value = PythonTrackIdSet(
+            [track_1.id]
+        )
 
         tracks_not_intersecting_sections = TracksNotIntersectingSelection(
             tracks_intersecting_sections, track_repository
         )
-        track_ids = list(tracks_not_intersecting_sections.get_ids())
+        track_ids = tracks_not_intersecting_sections.get_ids()
 
-        assert track_ids == [track_2.id]
-        track_repository.get_all.assert_called_once()
+        assert track_ids == PythonTrackIdSet([track_2.id])
+        track_repository.get_all_ids.assert_called_once()
         tracks_intersecting_sections.get_ids.assert_called_once()
 
     def test_no_selection_returns_all_tracks(
@@ -300,18 +304,20 @@ class TestTracksNotIntersectingSelection:
         track_1 = Mock(spec=Track)
         track_2 = Mock(spec=Track)
         track_repository = Mock(spec=TrackRepository)
-        track_repository.get_all.return_value = [track_1, track_2]
+        track_repository.get_all_ids.return_value = PythonTrackIdSet(
+            [track_1.id, track_2.id]
+        )
 
         tracks_intersecting_sections = Mock(spec=TrackIdProvider)
-        tracks_intersecting_sections.get_ids.return_value = {}
+        tracks_intersecting_sections.get_ids.return_value = EmptyTrackIdSet()
 
         tracks_not_intersecting_sections = TracksNotIntersectingSelection(
             tracks_intersecting_sections, track_repository
         )
         track_ids = tracks_not_intersecting_sections.get_ids()
 
-        assert set(track_ids) == {track_1.id, track_2.id}
-        track_repository.get_all.assert_called_once()
+        assert track_ids == PythonTrackIdSet([track_1.id, track_2.id])
+        track_repository.get_all_ids.assert_called_once()
         tracks_intersecting_sections.get_ids.assert_called_once()
 
 
