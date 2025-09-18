@@ -9,10 +9,6 @@ from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet
 from OTAnalytics.domain.types import EventType
 
 
-class IntersectionError(Exception):
-    pass
-
-
 class RunIntersect(ABC):
     """
     Interface defining the use case to intersect the given tracks with the given

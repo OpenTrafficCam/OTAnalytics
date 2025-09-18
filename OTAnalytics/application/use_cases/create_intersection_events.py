@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Callable, Iterable, Protocol
 
 from OTAnalytics.application.analysis.intersect import (
-    IntersectionError,
     RunIntersect,
     group_sections_by_offset,
 )
@@ -15,7 +14,10 @@ from OTAnalytics.domain.geometry import (
 )
 from OTAnalytics.domain.intersect import Intersector, IntersectParallelizationStrategy
 from OTAnalytics.domain.section import Area, LineSection, Section
-from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    IntersectionError,
+    TrackDataset,
+)
 from OTAnalytics.domain.types import EventType
 
 
@@ -56,50 +58,8 @@ class IntersectByIntersectionPoints(Intersector):
         offset: RelativeOffsetCoordinate,
         event_builder: EventBuilder,
     ) -> list[Event]:
-        # TODO Create an EventDataset and internally use the PolarsDataFrame
-        # The for loop kills performance
         intersection_result = track_dataset.wrap_intersection_points(sections, offset)
-
-        events: list[Event] = []
-        for track_id, intersection_points in intersection_result.items():
-            if not (track := track_dataset.get_for(track_id)):
-                raise IntersectionError(
-                    "Track not found. Unable to create intersection event "
-                    f"for track {track_id}."
-                )
-            event_builder.add_road_user_type(track.classification)
-            for section_id, intersection_point in intersection_points:
-                event_builder.add_section_id(section_id)
-                detection = track.get_detection(intersection_point.upper_index)
-                previous_detection = track.get_detection(intersection_point.lower_index)
-                current_coord = detection.get_coordinate(offset)
-                prev_coord = previous_detection.get_coordinate(offset)
-                direction_vector = self._calculate_direction_vector(
-                    prev_coord.x,
-                    prev_coord.y,
-                    current_coord.x,
-                    current_coord.y,
-                )
-                interpolated_occurrence = self._get_interpolated_occurrence(
-                    previous=previous_detection.occurrence,
-                    current=detection.occurrence,
-                    relative_position=intersection_point.relative_position,
-                )
-                interpolated_event_coordinate = self._get_interpolated_event_coordinate(
-                    previous=prev_coord,
-                    current=current_coord,
-                    relative_position=intersection_point.relative_position,
-                )
-                event_builder.add_event_type(EventType.SECTION_ENTER)
-                event_builder.add_direction_vector(direction_vector)
-                event_builder.add_event_coordinate(current_coord.x, current_coord.y)
-                event_builder.add_interpolated_occurrence(interpolated_occurrence)
-                event_builder.add_interpolated_event_coordinate(
-                    interpolated_event_coordinate.x, interpolated_event_coordinate.y
-                )
-                events.append(event_builder.create_event(detection))
-
-        return events
+        return intersection_result.create_events(offset, event_builder)
 
     def _get_interpolated_occurrence(
         self, previous: datetime, current: datetime, relative_position: float
