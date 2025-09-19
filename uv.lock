@@ -359,16 +359,16 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.115.5"
+version = "0.116.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "starlette" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ae/29/f71316b9273b6552a263748e49cd7b83898dc9499a663d30c7b9cb853cb8/fastapi-0.115.5.tar.gz", hash = "sha256:0e7a4d0dc0d01c68df21887cce0945e72d3c48b9f4f79dfe7a7d53aa08fbb289", size = 301047, upload-time = "2024-11-12T16:17:34.8Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/01/64/1296f46d6b9e3b23fb22e5d01af3f104ef411425531376212f1eefa2794d/fastapi-0.116.2.tar.gz", hash = "sha256:231a6af2fe21cfa2c32730170ad8514985fc250bec16c9b242d3b94c835ef529", size = 298595, upload-time = "2025-09-16T18:29:23.058Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/54/c4/148d5046a96c428464557264877ae5a9338a83bbe0df045088749ec89820/fastapi-0.115.5-py3-none-any.whl", hash = "sha256:596b95adbe1474da47049e802f9a65ab2ffa9c2b07e7efee70eb8a66c9f2f796", size = 94866, upload-time = "2024-11-12T16:17:31.027Z" },
+    { url = "https://files.pythonhosted.org/packages/32/e4/c543271a8018874b7f682bf6156863c416e1334b8ed3e51a69495c5d4360/fastapi-0.116.2-py3-none-any.whl", hash = "sha256:c3a7a8fb830b05f7e087d920e0d786ca1fc9892eb4e9a84b227be4c1bc7569db", size = 95670, upload-time = "2025-09-16T18:29:21.329Z" },
 ]
 
 [[package]]
@@ -856,7 +856,7 @@ wheels = [
 
 [[package]]
 name = "nicegui"
-version = "2.11.0"
+version = "2.24.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -864,6 +864,7 @@ dependencies = [
     { name = "certifi" },
     { name = "docutils" },
     { name = "fastapi" },
+    { name = "h11" },
     { name = "httpx" },
     { name = "ifaddr" },
     { name = "itsdangerous" },
@@ -871,18 +872,18 @@ dependencies = [
     { name = "markdown2" },
     { name = "orjson", marker = "platform_machine != 'i386' and platform_machine != 'i686'" },
     { name = "pygments" },
+    { name = "python-engineio" },
     { name = "python-multipart" },
     { name = "python-socketio", extra = ["asyncio-client"] },
-    { name = "requests" },
+    { name = "starlette" },
     { name = "typing-extensions" },
-    { name = "urllib3" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "vbuild" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e2/38/b8b38b7d8c6cddbaf56b43340e8b623487e465c5e45810fc8bc4066ae3ff/nicegui-2.11.0.tar.gz", hash = "sha256:455ae73d21795add23134268d22a6aebed3f012fd5412482d0ed840026bed534", size = 16030731, upload-time = "2025-02-04T09:19:03.046Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/68/a4d4db67c6485cc3d46edd6f71a8cf6296583491552829946e9e8cd4710e/nicegui-2.24.1.tar.gz", hash = "sha256:e35221034077ac796cf05ade2d9e7aeaa7e421bbb87798fc8538a29979897ad1", size = 13108990, upload-time = "2025-09-11T03:20:51.594Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a5/32/4fb1ec7c88a4219c8c1121ecb998ca1cd6a5edb40f7a2ce28bde47ce16e3/nicegui-2.11.0-py3-none-any.whl", hash = "sha256:f18cdaf83cee90efe46ea2e21413150c8c00c30324f2025394ab983ff8256618", size = 16477465, upload-time = "2025-02-04T09:18:58.354Z" },
+    { url = "https://files.pythonhosted.org/packages/43/8f/d123b74c6e760e941ccbdaf25b61c309d8bb16177802c801aa3f14543386/nicegui-2.24.1-py3-none-any.whl", hash = "sha256:a1bfc566cd2c9d290925f4df8b8023e63edaab6590e19160de97d9f84b8d6d8c", size = 13496427, upload-time = "2025-09-11T03:20:47.828Z" },
 ]
 
 [[package]]
@@ -1014,11 +1015,11 @@ dev = [
 requires-dist = [
     { name = "av", specifier = "==13.0.0" },
     { name = "customtkinter", specifier = "==5.2.2" },
-    { name = "fastapi", specifier = "==0.115.5" },
+    { name = "fastapi", specifier = "==0.116.2" },
     { name = "ijson", specifier = "==3.3.0" },
     { name = "matplotlib", specifier = "==3.10.0" },
     { name = "more-itertools", specifier = "==10.7.0" },
-    { name = "nicegui", specifier = "==2.11.0" },
+    { name = "nicegui", specifier = "==2.24.1" },
     { name = "numpy", specifier = "==2.1.1" },
     { name = "opencv-python-headless", specifier = "==4.10.0.84" },
     { name = "openpyxl", specifier = "==3.1.5" },
@@ -1028,7 +1029,7 @@ requires-dist = [
     { name = "requests", specifier = "==2.32.4" },
     { name = "seaborn", specifier = "==0.13.2" },
     { name = "shapely", specifier = "==2.0.7" },
-    { name = "starlette", specifier = "==0.41.2" },
+    { name = "starlette", specifier = "==0.48.0" },
     { name = "tqdm", specifier = "==4.67.1" },
     { name = "ujson", specifier = "==5.10.0" },
     { name = "uvicorn", specifier = "==0.32.1" },
@@ -1652,14 +1653,15 @@ wheels = [
 
 [[package]]
 name = "starlette"
-version = "0.41.2"
+version = "0.48.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/da/1fb4bdb72ae12b834becd7e1e7e47001d32f91ec0ce8d7bc1b618d9f0bd9/starlette-0.41.2.tar.gz", hash = "sha256:9834fd799d1a87fd346deb76158668cfa0b0d56f85caefe8268e2d97c3468b62", size = 2573867, upload-time = "2024-10-27T08:20:02.818Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/a5/d6f429d43394057b67a6b5bbe6eae2f77a6bf7459d961fdb224bf206eee6/starlette-0.48.0.tar.gz", hash = "sha256:7e8cee469a8ab2352911528110ce9088fdc6a37d9876926e73da7ce4aa4c7a46", size = 2652949, upload-time = "2025-09-13T08:41:05.699Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/54/43/f185bfd0ca1d213beb4293bed51d92254df23d8ceaf6c0e17146d508a776/starlette-0.41.2-py3-none-any.whl", hash = "sha256:fbc189474b4731cf30fcef52f18a8d070e3f3b46c6a04c97579e85e6ffca942d", size = 73259, upload-time = "2024-10-27T08:20:00.052Z" },
+    { url = "https://files.pythonhosted.org/packages/be/72/2db2f49247d0a18b4f1bb9a5a39a0162869acf235f3a96418363947b3d46/starlette-0.48.0-py3-none-any.whl", hash = "sha256:0764ca97b097582558ecb498132ed0c7d942f233f365b86ba37770e026510659", size = 73736, upload-time = "2025-09-13T08:41:03.869Z" },
 ]
 
 [[package]]
