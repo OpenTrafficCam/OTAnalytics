@@ -1021,13 +1021,11 @@ class FilterLastNDetectionsPandasTrackDataset(FilteredPandasTrackDataset):
 
 def get_latest_occurrences(dataframe: DataFrame, last_n: int) -> DataFrame:
     index_names = dataframe.index.names
-    dataframe.reset_index(inplace=True)
-    dataframe[RANK] = dataframe.groupby(track.TRACK_ID)[track.OCCURRENCE].rank(
+    result = dataframe.reset_index()
+    result.loc[:, RANK] = result.groupby(track.TRACK_ID)[track.OCCURRENCE].rank(
         method="first", ascending=False
     )
-    result = (
-        dataframe[dataframe[RANK] <= last_n].drop(RANK, axis=1).reset_index(drop=True)
-    )
+    result = result[result[RANK] <= last_n].drop(RANK, axis=1).reset_index(drop=True)
     return result.set_index(index_names)
 
 

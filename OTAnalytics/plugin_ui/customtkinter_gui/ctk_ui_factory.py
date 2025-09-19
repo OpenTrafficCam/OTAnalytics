@@ -56,6 +56,7 @@ class CtkUiFactory(UiFactory):
         self,
         title: str,
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
+        extension_options: dict[str, list[str] | None] | None = None,
     ) -> Literal[""] | tuple[str, ...]:
         return askopenfilenames(title=title, filetypes=filetypes)
 

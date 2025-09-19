@@ -64,7 +64,7 @@ class AddVideoForm(ButtonForm, AbstractTreeviewInterface):
             columns=create_columns(resource_manager),
             rows=[],
             on_select_method=lambda e: self._select_video(e.selection),
-            selection="single",
+            selection="multiple",
         )
         self.introduce_to_viewmodel()
 
@@ -88,6 +88,7 @@ class AddVideoForm(ButtonForm, AbstractTreeviewInterface):
         )
         self._remove_video_button = ui.button(
             self._resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS),
+            on_click=lambda _: self._remove_video(),
         )
         self._update_video_table()
         return self

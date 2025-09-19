@@ -13,7 +13,7 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
-from OTAnalytics.application.application import CancelAddFlow
+from OTAnalytics.application.application import CancelAddFlow, CancelAddSection
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
@@ -61,7 +61,11 @@ class NiceGuiUiFactory(UiFactory):
         return NiceGuiMessageBox()
 
     async def askopenfilename(
-        self, title: str, filetypes: list[tuple[str, str]], defaultextension: str
+        self,
+        title: str,
+        filetypes: list[tuple[str, str]],
+        defaultextension: str,
+        extension_options: dict[str, list[str] | None] | None = None,
     ) -> str:
         # Convert filetypes to the format expected by FileChooserDialog
         file_extensions = {desc: ext.replace(".", "") for desc, ext in filetypes}
@@ -71,6 +75,7 @@ class NiceGuiUiFactory(UiFactory):
             title=title,
             file_extensions=file_extensions,
             initial_file_stem="",
+            extension_options=extension_options,
         )
 
         result = await dialog.result
@@ -82,6 +87,7 @@ class NiceGuiUiFactory(UiFactory):
         self,
         title: str,
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
+        extension_options: dict[str, list[str] | None] | None = None,
     ) -> Literal[""] | tuple[str, ...]:
         # For now, we'll just support selecting a single file
         # In a real implementation, this would allow selecting multiple files
@@ -94,7 +100,9 @@ class NiceGuiUiFactory(UiFactory):
                 # Use the first extension from the list/tuple
                 converted_filetypes.append((desc, ext[0]))
 
-        file_path = await self.askopenfilename(title, converted_filetypes, "")
+        file_path = await self.askopenfilename(
+            title, converted_filetypes, "", extension_options
+        )
         if file_path:
             return (file_path,)
         return ""
@@ -189,7 +197,7 @@ class NiceGuiUiFactory(UiFactory):
         result = await dialog.result
         if result == DialogResult.APPLY:
             return dialog.get_section()
-        raise CancelAddFlow()
+        raise CancelAddSection()
 
     async def configure_flow(
         self,

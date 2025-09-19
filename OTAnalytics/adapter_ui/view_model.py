@@ -152,7 +152,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def load_tracks(self) -> None:
+    async def load_tracks(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
