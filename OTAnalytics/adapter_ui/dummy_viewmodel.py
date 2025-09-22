@@ -571,8 +571,7 @@ class DummyViewModel(
         if not video_files:
             return
         logger().info(f"Video files to load: {video_files}")
-        paths = [Path(file) for file in video_files]
-        self._application.add_videos(files=paths)
+        self._application.add_videos(files=video_files)
 
     def remove_videos(self) -> None:
         self._application.remove_videos()
