@@ -1,10 +1,7 @@
-from typing import Iterable
-
 from OTAnalytics.application.use_cases.section_repository import GetCuttingSections
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.section import SectionListObserver, SectionRepositoryEvent
-from OTAnalytics.domain.track import TrackId
-from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet, EmptyTrackIdSet
+from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet, TrackIdSet
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
