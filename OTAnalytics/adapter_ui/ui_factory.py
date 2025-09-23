@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Literal
+from typing import Iterable
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
@@ -45,7 +45,7 @@ class UiFactory(ABC):
         title: str,
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
         extension_options: dict[str, list[str] | None] | None = None,
-    ) -> Literal[""] | tuple[str, ...]:
+    ) -> list[Path]:
         raise NotImplementedError
 
     @abstractmethod
