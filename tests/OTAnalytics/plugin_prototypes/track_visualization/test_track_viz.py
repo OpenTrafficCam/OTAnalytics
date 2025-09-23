@@ -41,6 +41,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     MatplotlibTrackPlotter,
     PandasDataFrameProvider,
     PandasTrackProvider,
+    PilImageFactory,
     PlotterPrototype,
     TrackGeometryPlotter,
     TrackPlotter,
@@ -88,7 +89,7 @@ class TestPandasDataProvider:
         width = 100
         height = 100
         plotter_implementation = Mock(spec=MatplotlibPlotterImplementation)
-        plotter = MatplotlibTrackPlotter(plotter_implementation)
+        plotter = MatplotlibTrackPlotter(plotter_implementation, PilImageFactory())
 
         image = plotter.plot(width=width, height=height)
 

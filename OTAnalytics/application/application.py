@@ -71,6 +71,7 @@ from OTAnalytics.application.use_cases.track_statistics_export import (
     ExportTrackStatistics,
     TrackStatisticsExportSpecification,
 )
+from OTAnalytics.application.use_cases.update_count_plots import CountPlotsUpdater
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
@@ -146,6 +147,7 @@ class OTAnalyticsApplication:
         number_of_tracks_assigned_to_each_flow: NumberOfTracksAssignedToEachFlow,
         export_track_statistics: ExportTrackStatistics,
         get_current_remark: GetCurrentRemark,
+        update_count_plots: CountPlotsUpdater,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -192,6 +194,7 @@ class OTAnalyticsApplication:
         )
         self._export_track_statistics = export_track_statistics
         self._get_current_remark = get_current_remark
+        self._update_count_plots = update_count_plots
 
     def connect_observers(self) -> None:
         """
@@ -693,6 +696,9 @@ class OTAnalyticsApplication:
         self,
     ) -> Iterable[ExportFormat]:
         return self._export_track_statistics.get_supported_formats()
+
+    def update_count_plots(self) -> None:
+        self._update_count_plots.update()
 
 
 class MissingTracksError(Exception):

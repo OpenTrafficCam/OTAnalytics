@@ -112,6 +112,16 @@ class CustomDumper(yaml.SafeDumper):
     def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
         return super(CustomDumper, self).increase_indent(flow, False)
 
+    def choose_scalar_style(self) -> str:
+        # Get the default style choice
+        style = super().choose_scalar_style()
+
+        # If the default choice is single quotes, change to double quotes
+        if style == "'":
+            return '"'
+
+        return style
+
 
 def parse_multiple_requirements_file(
     files: Iterable[Path],
@@ -124,6 +134,8 @@ def parse_multiple_requirements_file(
 
 def parse_requirements_file(requirements_file: Path) -> set[AdditionalMypyDependency]:
     """Parse requirements.txt and extract package names using regex."""
+    if not requirements_file.exists():
+        return set()
     with open(requirements_file, "r") as file:
         lines = file.readlines()
 

@@ -36,6 +36,7 @@ class EditFlowDialog(BaseDialog):
         self._name_generator = name_generator
         self._input_values = input_values
         self._show_distance = show_distance
+        self._section_ids = section_ids  # Store reference for ID/name mapping
         name = input_values.name if input_values else ""
         self._last_autofilled_name: str = name
         start_value = (
@@ -76,7 +77,7 @@ class EditFlowDialog(BaseDialog):
             marker=MARKER_DISTANCE,
         )
 
-    async def build_content(self) -> None:
+    def build_content(self) -> None:
         self._start_section.build()
         self._end_section.build()
         self._name.build()
@@ -97,10 +98,14 @@ class EditFlowDialog(BaseDialog):
             self._last_autofilled_name = auto_name
 
     def get_flow(self) -> FlowDto:
+        # Convert section names back to section IDs
+        start_section_id = self._section_ids.get_id_for(self._start_section.value)
+        end_section_id = self._section_ids.get_id_for(self._end_section.value)
+
         return FlowDto(
             name=self._name.value,
-            start_section=self._start_section.value,
-            end_section=self._end_section.value,
+            start_section=start_section_id,
+            end_section=end_section_id,
             flow_id=self._input_values.flow_id if self._input_values else None,
             distance=self._distance.value,
         )

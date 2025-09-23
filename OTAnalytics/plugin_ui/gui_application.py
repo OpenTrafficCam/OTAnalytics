@@ -114,6 +114,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         for group in layer_groups:
             group.register(self.track_image_updater.notify_layers)
 
+        # configure observers for count plot saver
+        self.track_view_state.count_plots.register(self.save_count_plots.save)
+
     @cached_property
     def view_model(self) -> ViewModel:
         return DummyViewModel(
@@ -167,6 +170,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.number_of_tracks_assigned_to_each_flow,
             self.export_track_statistics,
             self.get_current_remark,
+            self.update_count_plots,
         )
 
     @cached_property

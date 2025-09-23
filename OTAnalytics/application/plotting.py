@@ -141,9 +141,9 @@ class TrackBackgroundPlotter(Plotter):
     def plot(self) -> Optional[TrackImage]:
         if videos := self._video_provider():
             visualization_time = self._visualization_time_provider.get_time()
-            frame_number = videos[0].get_frame_number_for(visualization_time)
+            frame_number = videos[-1].get_frame_number_for(visualization_time)
             logger().debug(f"Background plotter frame number: {frame_number}")
-            return videos[0].get_frame(frame_number)
+            return videos[-1].get_frame(frame_number)
         return None
 
 
@@ -307,7 +307,22 @@ class GetCurrentVideoPath:
         return None
 
 
-class GetCurrentFrame:
+class GetFrameNumber(ABC):
+    @abstractmethod
+    def get_frame_number(self) -> int:
+        raise NotImplementedError
+
+
+class ConstantOffsetFrameNumber(GetFrameNumber):
+    def __init__(self, other: GetFrameNumber, offset: int) -> None:
+        self._other = other
+        self._offset = offset
+
+    def get_frame_number(self) -> int:
+        return self._other.get_frame_number() + self._offset
+
+
+class GetCurrentFrame(GetFrameNumber):
     """
     This use case provides the currently visible frame. It uses the current filters
     end date to retrieve the corresponding frame.

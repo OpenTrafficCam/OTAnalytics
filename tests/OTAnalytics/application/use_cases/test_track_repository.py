@@ -15,6 +15,7 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetTracksFromIds,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
+    RemoveTracksByOriginalIds,
     TrackRepositorySize,
 )
 from OTAnalytics.domain.track import Track, TrackId
@@ -229,3 +230,16 @@ class TestTrackRepositorySize:
         result = track_repository_size.get()
         assert result == expected_size
         track_repository.__len__.assert_called_once()
+
+
+class TestRemoveTracksByOriginalIds:
+    def test_remove(self) -> None:
+        given_track_repository = Mock()
+        given_original_ids = PythonTrackIdSet([TrackId("1"), TrackId("2")])
+
+        target = RemoveTracksByOriginalIds(given_track_repository)
+        target.remove(given_original_ids)
+
+        given_track_repository.remove_by_original_ids.assert_called_once_with(
+            given_original_ids
+        )

@@ -3,7 +3,7 @@ import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Any, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -39,6 +39,7 @@ from OTAnalytics.adapter_ui.flow_adapter import (
     SectionRefPointCalculator,
 )
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
+from OTAnalytics.adapter_ui.helpers import ensure_file_extension_is_present
 from OTAnalytics.adapter_ui.text_resources import (
     COLUMN_NAME,
     ColumnResource,
@@ -65,7 +66,7 @@ from OTAnalytics.application.config import (
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
-from OTAnalytics.application.export_formats.export_mode import INITIAL_MERGE, OVERWRITE
+from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
@@ -138,7 +139,7 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
-SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
+SUPPORTED_VIDEO_FILE_TYPES = ["*.mp4", "*.avi", "*.mkv", "*.mov"]
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
@@ -160,11 +161,10 @@ def flow_id(from_section: str, to_section: str) -> str:
 
 def action(func: Any) -> Any:
     @functools.wraps(func)
-    def wrapper_decorator(self: Any, *args: Any, **kwargs: Any) -> Any:
+    async def wrapper_decorator(self: Any, *args: Any, **kwargs: Any) -> Any:
         self._start_action()
         try:
-            value = func(self, *args, **kwargs)
-            return value
+            return await func(self, *args, **kwargs)
         finally:
             self._finish_action()
 
@@ -536,7 +536,9 @@ class DummyViewModel(
         self._application.action_state.action_running.set(True)
 
     def _finish_action(self) -> None:
+        self.refresh_items_on_canvas()
         self._application.action_state.action_running.set(False)
+        self._update_enabled_buttons()
 
     def set_window(self, window: AbstractMainWindow) -> None:
         self._window = window
@@ -547,16 +549,29 @@ class DummyViewModel(
         self.treeview_videos.update_selected_items(current_paths)
         self._update_enabled_video_buttons()
 
-    def add_video(self) -> None:
-        track_files = self._ui_factory.askopenfilenames(
+    async def add_video(self) -> None:
+        # Generate extension_options dynamically from SUPPORTED_VIDEO_FILE_TYPES
+        extension_options: Dict[str, Optional[List[str]]] = {}
+
+        # Convert "*.ext" format to ".ext" format for extension_options
+        clean_extensions = [ext.replace("*", "") for ext in SUPPORTED_VIDEO_FILE_TYPES]
+
+        # Add "All File Endings" option with all supported extensions
+        extension_options["All File Endings"] = clean_extensions
+
+        # Add individual extension options
+        for ext in clean_extensions:
+            extension_options[ext] = [ext]
+
+        video_files = await self._ui_factory.askopenfilenames(
             title="Load video files",
             filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
+            extension_options=extension_options,
         )
-        if not track_files:
+        if not video_files:
             return
-        logger().info(f"Video files to load: {track_files}")
-        paths = [Path(file) for file in track_files]
-        self._application.add_videos(files=paths)
+        logger().info(f"Video files to load: {video_files}")
+        self._application.add_videos(files=video_files)
 
     def remove_videos(self) -> None:
         self._application.remove_videos()
@@ -592,9 +607,9 @@ class DummyViewModel(
         project = self._application._datastore.project
         self.frame_project.update(name=project.name, start_date=project.start_date)
 
-    def save_otconfig(self) -> None:
+    async def save_otconfig(self) -> None:
         suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
-        configuration_file = self._ui_factory.ask_for_save_file_path(
+        configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")],
             defaultextension=f".{OTCONFIG_FILE_TYPE}",
@@ -606,6 +621,12 @@ class DummyViewModel(
         self._save_otconfig(configuration_file)
 
     def _save_otconfig(self, otconfig_file: Path) -> None:
+        # Ensure the file has the correct extension
+        otconfig_file_str = ensure_file_extension_is_present(
+            str(otconfig_file), [f"*.{OTCONFIG_FILE_TYPE}"], f".{OTCONFIG_FILE_TYPE}"
+        )
+        otconfig_file = Path(otconfig_file_str)
+
         logger().info(f"Config file to save: {otconfig_file}")
         try:
             self._application.save_otconfig(otconfig_file)
@@ -640,9 +661,9 @@ class DummyViewModel(
             initial_position=self.treeview_sections.get_position(),
         )
 
-    def load_otconfig(self) -> None:
+    async def load_otconfig(self) -> None:
         otconfig_file = Path(
-            self._ui_factory.askopenfilename(
+            await self._ui_factory.askopenfilename(
                 title="Load configuration file",
                 filetypes=[
                     (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
@@ -775,8 +796,8 @@ class DummyViewModel(
         ]
 
     @action
-    def load_tracks(self) -> None:
-        track_files = self._ui_factory.askopenfilenames(
+    async def load_tracks(self) -> None:
+        track_files = await self._ui_factory.askopenfilenames(
             title="Load track files", filetypes=[("tracks file", "*.ottrk")]
         )
         if not track_files:
@@ -785,16 +806,16 @@ class DummyViewModel(
         track_paths = [Path(file) for file in track_files]
         self._application.add_tracks_of_files(track_files=track_paths)
 
-    def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
+    async def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
         configuration_file = Path(
-            self._ui_factory.askopenfilename(
+            await self._ui_factory.askopenfilename(
                 title="Load sections file",
                 filetypes=[
                     (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
                     (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
                 ],
-                defaultextension=f".{OTFLOW_FILE_TYPE}",
+                defaultextension=f".{OTCONFIG_FILE_TYPE}",
             )
         )
         if not configuration_file.stem:
@@ -827,9 +848,9 @@ class DummyViewModel(
         self.set_selected_flow_ids([])
         self.refresh_items_on_canvas()
 
-    def save_configuration(self) -> None:
+    async def save_configuration(self) -> None:
         suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
-        configuration_file = self._ui_factory.ask_for_save_file_path(
+        configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
                 (f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}"),
@@ -841,20 +862,35 @@ class DummyViewModel(
         )
         if not configuration_file.stem:
             return
-        elif configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
+
+        # Ensure the file has a proper extension before checking
+        configuration_file_str = ensure_file_extension_is_present(
+            str(configuration_file),
+            [f"*.{OTCONFIG_FILE_TYPE}", f"*.{OTFLOW_FILE_TYPE}"],
+            f".{OTCONFIG_FILE_TYPE}",
+        )
+        configuration_file = Path(configuration_file_str)
+
+        if configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
             self._save_otflow(configuration_file)
         elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
             self._save_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to save has unknown file extension")
 
-    def quick_save_configuration(self) -> None:
+    async def quick_save_configuration(self) -> None:
         try:
             self._application.quick_save_configuration()
         except NoExistingFileToSave:
-            self.save_configuration()
+            await self.save_configuration()
 
     def _save_otflow(self, otflow_file: Path) -> None:
+        # Ensure the file has the correct extension
+        otflow_file_str = ensure_file_extension_is_present(
+            str(otflow_file), [f"*.{OTFLOW_FILE_TYPE}"], f".{OTFLOW_FILE_TYPE}"
+        )
+        otflow_file = Path(otflow_file_str)
+
         logger().info(f"Sections file to save: {otflow_file}")
         try:
             self._application.save_otflow(Path(otflow_file))
@@ -1128,6 +1164,7 @@ class DummyViewModel(
             flow = await self.__create_flow()
             logger().info(f"Added new flow: {flow.id}")
             self.set_selected_flow_ids([flow.id.serialize()])
+            self.refresh_items_on_canvas()
 
     async def __create_flow(self) -> Flow:
         flow_data = await self._show_flow_popup()
@@ -1220,6 +1257,12 @@ class DummyViewModel(
 
     def generate_flows(self) -> None:
         self._application.generate_flows()
+        # Select all flows so they become visible on canvas
+        all_flow_ids = [
+            flow.id.serialize() for flow in self._application.get_all_flows()
+        ]
+        self.set_selected_flow_ids(all_flow_ids)
+        self.refresh_items_on_canvas()
 
     def __to_resource(self, section: Section) -> ColumnResource:
         values = {COLUMN_NAME: section.name}
@@ -1292,6 +1335,10 @@ class DummyViewModel(
             initial_position=self.get_position(),
         )
         self._application.create_events()
+
+        # TODO find appropriate place to trigger update of plots
+        # self._application.update_count_plots()
+
         self.notify_flows(self.get_all_flow_ids())
         start_msg_popup.update_message(message="Creating events completed")
         sleep(1)
@@ -1304,13 +1351,13 @@ class DummyViewModel(
         self._application.save_events(Path(file))
         logger().info(f"Eventlist file saved to '{file}'")
 
-    def export_events(self) -> None:
+    async def export_events(self) -> None:
         export_format_extensions: dict[str, str] = {
             key: exporter.get_extension()
             for key, exporter in self._event_list_export_formats.items()
         }
         try:
-            event_list_exporter, file = self._configure_event_exporter(
+            event_list_exporter, file = await self._configure_event_exporter(
                 export_format_extensions
             )
             self._application.export_events(Path(file), event_list_exporter)
@@ -1320,10 +1367,10 @@ class DummyViewModel(
         except CancelExportFile:
             logger().info("User canceled configuration of export")
 
-    def _configure_event_exporter(
+    async def _configure_event_exporter(
         self, export_format_extensions: dict[str, str]
     ) -> tuple[EventListExporter, Path]:
-        export_config = self._ui_factory.configure_export_file(
+        export_config = await self._ui_factory.configure_export_file(
             title="Export events",
             export_format_extensions=export_format_extensions,
             initial_file_stem=CONTEXT_FILE_TYPE_EVENTS,
@@ -1499,7 +1546,7 @@ class DummyViewModel(
         self._application.disable_filter_track_by_class()
         self.frame_filter.disable_filter_by_class_button()
 
-    def export_counts(self) -> None:
+    async def export_counts(self) -> None:
         if len(self._application.get_all_flows()) == 0:
             self._ui_factory.info_box(
                 message=(
@@ -1521,7 +1568,7 @@ class DummyViewModel(
             self._application._tracks_metadata.filtered_detection_classifications
         )
         try:
-            export_specification = self._ui_factory.configure_export_counts(
+            export_specification = await self._ui_factory.configure_export_counts(
                 start=start,
                 end=end,
                 default_format=default_format,
@@ -1602,14 +1649,10 @@ class DummyViewModel(
     ) -> None:
         self._button_quick_save_config = button_quick_save_config
 
-    def export_road_user_assignments(self) -> None:
+    async def export_road_user_assignments(self) -> None:
         if len(self._application.get_all_flows()) == 0:
             self._ui_factory.info_box(
-                message=(
-                    "Counting needs at least one flow.\n"
-                    "There is no flow configured.\n"
-                    "Please create a flow."
-                ),
+                message=("There is no flow configured.\n" "Please create a flow."),
                 initial_position=self.get_position(),
             )
             return
@@ -1619,7 +1662,7 @@ class DummyViewModel(
         }
 
         try:
-            export_config = self._ui_factory.configure_export_file(
+            export_config = await self._ui_factory.configure_export_file(
                 title="Export road user assignments",
                 export_format_extensions=export_formats,
                 initial_file_stem="road_user_assignments",
@@ -1714,7 +1757,7 @@ class DummyViewModel(
     def get_tracks_assigned_to_each_flow(self) -> dict[FlowId, int]:
         return self._application.number_of_tracks_assigned_to_each_flow()
 
-    def export_track_statistics(self) -> None:
+    async def export_track_statistics(self) -> None:
         if self._application.get_track_repository_size() == 0:
             self._ui_factory.info_box(
                 message=(
@@ -1730,7 +1773,7 @@ class DummyViewModel(
         }
 
         try:
-            export_config = self._ui_factory.configure_export_file(
+            export_config = await self._ui_factory.configure_export_file(
                 title="Export track statistics",
                 export_format_extensions=export_formats,
                 initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
@@ -1741,7 +1784,7 @@ class DummyViewModel(
             export_format = export_config.export_format
 
             export_specification = TrackStatisticsExportSpecification(
-                save_path, export_format, INITIAL_MERGE
+                save_path, export_format, OVERWRITE
             )
             self._application.export_track_statistics(export_specification)
             logger().info(f"Exporting track statistics to {save_path}")

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Literal
+from typing import Iterable
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
@@ -31,7 +31,7 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def askopenfilename(
+    async def askopenfilename(
         self,
         title: str,
         filetypes: list[tuple[str, str]],
@@ -40,15 +40,16 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def askopenfilenames(
+    async def askopenfilenames(
         self,
         title: str,
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
-    ) -> Literal[""] | tuple[str, ...]:
+        extension_options: dict[str, list[str] | None] | None = None,
+    ) -> list[Path]:
         raise NotImplementedError
 
     @abstractmethod
-    def ask_for_save_file_path(
+    async def ask_for_save_file_path(
         self,
         title: str,
         filetypes: list[tuple[str, str]],
@@ -59,7 +60,7 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def configure_export_file(
+    async def configure_export_file(
         self,
         title: str,
         export_format_extensions: dict[str, str],
@@ -69,7 +70,7 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def configure_export_counts(
+    async def configure_export_counts(
         self,
         start: datetime | None,
         end: datetime | None,

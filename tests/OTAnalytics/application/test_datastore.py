@@ -44,8 +44,14 @@ class MockVideoReader(VideoReader):
         del index
 
         class MockImage(TrackImage):
+            def add(self, other: TrackImage) -> TrackImage:
+                return self
+
             def as_image(self) -> Any:
                 return Image.fromarray(array([[1, 0], [0, 1]], int32))
+
+            def as_base64(self) -> str:
+                return "base64 string"
 
             def width(self) -> int:
                 return 2

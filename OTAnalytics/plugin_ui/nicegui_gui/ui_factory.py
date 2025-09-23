@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Literal
+from typing import Any, Iterable
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
@@ -13,14 +13,24 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
-from OTAnalytics.application.application import CancelAddFlow
+from OTAnalytics.application.application import CancelAddFlow, CancelAddSection
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.helpers.file_helpers import (
+    get_all_files_with_correct_file_ending_in_directory,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import EditFlowDialog
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
     EditSectionDialog,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.export_counts_dialog import (
+    ExportCountsDialog,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+    FileChooserDialog,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import DialogResult
 
 
@@ -54,19 +64,59 @@ class NiceGuiUiFactory(UiFactory):
     ) -> MessageBox:
         return NiceGuiMessageBox()
 
-    def askopenfilename(
-        self, title: str, filetypes: list[tuple[str, str]], defaultextension: str
+    async def askopenfilename(
+        self,
+        title: str,
+        filetypes: list[tuple[str, str]],
+        defaultextension: str,
+        extension_options: dict[str, list[str] | None] | None = None,
     ) -> str:
+        # Convert filetypes to the format expected by FileChooserDialog
+        file_extensions = {desc: ext.replace(".", "") for desc, ext in filetypes}
+
+        dialog = FileChooserDialog(
+            resource_manager=self._resource_manager,
+            title=title,
+            file_extensions=file_extensions,
+            initial_file_stem="",
+            extension_options=extension_options,
+        )
+
+        result = await dialog.result
+        if result == DialogResult.APPLY:
+            return str(dialog.get_file_path())
         return ""
 
-    def askopenfilenames(
+    async def askopenfilenames(
         self,
         title: str,
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
-    ) -> Literal[""] | tuple[str, ...]:
-        return tuple([""])
+        extension_options: dict[str, list[str] | None] | None = None,
+    ) -> list[Path]:
+        # For now, we'll just support selecting a single file
+        # In a real implementation, this would allow selecting multiple files
+        # Convert list/tuple of extensions to individual (desc, ext) pairs
+        converted_filetypes = []
+        for desc, ext in filetypes:
+            if isinstance(ext, str):
+                converted_filetypes.append(ext)
+            elif isinstance(ext, (list, tuple)) and ext:
+                # Use the first extension from the list/tuple
+                converted_filetypes.append(ext[0])
 
-    def ask_for_save_file_path(
+        file_paths = await LocalFilePicker(
+            directory=Path.home(),
+            show_hidden_files=False,
+            show_files_only_of_type=None,  # Show all files
+            show_only_directories=False,
+            extension_options=extension_options,
+            multiple=True,
+        )
+        return get_all_files_with_correct_file_ending_in_directory(
+            file_paths, converted_filetypes
+        )
+
+    async def ask_for_save_file_path(
         self,
         title: str,
         filetypes: list[tuple[str, str]],
@@ -74,18 +124,45 @@ class NiceGuiUiFactory(UiFactory):
         initialfile: str,
         initialdir: Path,
     ) -> Path:
+        # Convert filetypes to the format expected by FileChooserDialog
+        file_extensions = {desc: ext.replace(".", "") for desc, ext in filetypes}
+
+        dialog = FileChooserDialog(
+            resource_manager=self._resource_manager,
+            title=title,
+            file_extensions=file_extensions,
+            initial_file_stem=Path(initialfile).stem,
+            initial_dir=initialdir,
+        )
+
+        result = await dialog.result
+        if result == DialogResult.APPLY:
+            return dialog.get_file_path()
         return Path("")
 
-    def configure_export_file(
+    async def configure_export_file(
         self,
         title: str,
         export_format_extensions: dict[str, str],
         initial_file_stem: str,
         viewmodel: ViewModel,
     ) -> ExportFileDto:
-        raise NotImplementedError
+        dialog = FileChooserDialog(
+            resource_manager=self._resource_manager,
+            title=title,
+            file_extensions=export_format_extensions,
+            initial_file_stem=initial_file_stem,
+        )
 
-    def configure_export_counts(
+        result = await dialog.result
+        if result == DialogResult.APPLY:
+            return ExportFileDto(
+                file=dialog.get_file_path(),
+                export_format=dialog.get_format(),
+            )
+        raise CancelAddFlow()
+
+    async def configure_export_counts(
         self,
         start: datetime | None,
         end: datetime | None,
@@ -94,7 +171,20 @@ class NiceGuiUiFactory(UiFactory):
         export_formats: dict[str, str],
         viewmodel: ViewModel,
     ) -> CountingSpecificationDto:
-        raise NotImplementedError
+        dialog = ExportCountsDialog(
+            resource_manager=self._resource_manager,
+            viewmodel=viewmodel,
+            start=start,
+            end=end,
+            default_format=default_format,
+            modes=modes,
+            export_formats=export_formats,
+        )
+
+        result = await dialog.result
+        if result == DialogResult.APPLY:
+            return dialog.get_specification()
+        raise CancelAddFlow()
 
     async def configure_section(
         self,
@@ -113,10 +203,10 @@ class NiceGuiUiFactory(UiFactory):
             input_values=input_values,
             show_offset=show_offset,
         )
-        result = await dialog.build()
+        result = await dialog.result
         if result == DialogResult.APPLY:
             return dialog.get_section()
-        raise CancelAddFlow()
+        raise CancelAddSection()
 
     async def configure_flow(
         self,
@@ -134,12 +224,12 @@ class NiceGuiUiFactory(UiFactory):
             input_values=input_values,
             show_distance=show_distance,
         )
-        result = await dialog.build()
+        result = await dialog.result
         if result == DialogResult.APPLY:
             return dialog.get_flow()
         raise CancelAddFlow()
 
 
-def async_to_sync(awaitable: Any) -> None:
+def async_to_sync(awaitable: Any) -> Any:
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(awaitable)

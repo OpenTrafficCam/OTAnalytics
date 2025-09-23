@@ -9,11 +9,13 @@ from av import VideoFrame
 from av.container import InputContainer
 from av.video.stream import VideoStream
 from numpy import ndarray
-from PIL import Image
 
 from OTAnalytics.application.state import VideosMetadata
-from OTAnalytics.domain.track import PilImage, TrackImage
+from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.video import InvalidVideoError, VideoReader
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    TrackImageFactory,
+)
 
 FIRST_FRAME = 0
 OFFSET = 1
@@ -21,10 +23,12 @@ GRAYSCALE = "L"
 DISPLAYMATRIX = "DISPLAYMATRIX"
 
 
-def av_to_image(frame: VideoFrame, side_data: dict) -> PilImage:
-    array = frame.to_ndarray(format="rgb24")
+def av_to_image(
+    frame: VideoFrame, side_data: dict, track_image_factory: TrackImageFactory
+) -> TrackImage:
+    array = frame.to_ndarray(format="rgba")
     rotated_image = rotate(array, side_data)
-    return PilImage(Image.fromarray(rotated_image).convert(GRAYSCALE))
+    return track_image_factory.create(rotated_image)
 
 
 def rotate(array: ndarray, side_data: dict) -> ndarray:
@@ -52,8 +56,11 @@ def rotate(array: ndarray, side_data: dict) -> ndarray:
 
 class PyAvVideoReader(VideoReader):
 
-    def __init__(self, videos_metadata: VideosMetadata) -> None:
+    def __init__(
+        self, videos_metadata: VideosMetadata, track_image_factory: TrackImageFactory
+    ) -> None:
         self._videos_metadata = videos_metadata
+        self._track_image_factory = track_image_factory
 
     def get_fps(self, video_path: Path) -> float:
         with self.__get_clip(video_path) as container:
@@ -88,7 +95,7 @@ class PyAvVideoReader(VideoReader):
         self,
         frame_to_read: int,
         video_path: Path,
-    ) -> PilImage:
+    ) -> TrackImage:
         with self.__get_clip(video_path) as container:
             if len(container.streams.video) <= 0:
                 raise InvalidVideoError(f"{str(video_path)} is not a video")
@@ -104,7 +111,7 @@ class PyAvVideoReader(VideoReader):
                 container, frame_to_read, framerate, time_base, video_path
             )
             side_data = container.streams.video[0].side_data
-        return av_to_image(frame, side_data)
+        return av_to_image(frame, side_data, self._track_image_factory)
 
     def _do_read_frame(
         self,

@@ -128,29 +128,65 @@ class SvzMetadataForm(AbstractFrameSvzMetadata, ABC):
 
     def update(self, metadata: dict) -> None:
         if metadata:
-            if TK_NUMBER in metadata and self._tk_number:
+            if TK_NUMBER in metadata and self._tk_number and self._tk_number._instance:
                 self._tk_number.set_value(metadata[TK_NUMBER])
-            if COUNTING_LOCATION_NUMBER in metadata and self._counting_location_number:
+            if (
+                COUNTING_LOCATION_NUMBER in metadata
+                and self._counting_location_number
+                and self._counting_location_number._instance
+            ):
                 self._counting_location_number.set_value(
                     metadata[COUNTING_LOCATION_NUMBER]
                 )
-            if DIRECTION in metadata and self._direction_select:
+            if (
+                DIRECTION in metadata
+                and self._direction_select
+                and self._direction_select._instance
+            ):
                 self._direction_select.set_value(metadata[DIRECTION])
-            if DIRECTION_DESCRIPTION in metadata and self._direction_description:
+            if (
+                DIRECTION_DESCRIPTION in metadata
+                and self._direction_description
+                and self._direction_description._instance
+            ):
                 self._direction_description.set_value(metadata[DIRECTION_DESCRIPTION])
-            if HAS_BICYCLE_LANE in metadata and self._has_bicycle_lane:
+            if (
+                HAS_BICYCLE_LANE in metadata
+                and self._has_bicycle_lane
+                and self._has_bicycle_lane._instance
+            ):
                 self._has_bicycle_lane.set_value(metadata[HAS_BICYCLE_LANE])
-            if IS_BICYCLE_COUNTING in metadata and self._is_bicycle_counting:
+            if (
+                IS_BICYCLE_COUNTING in metadata
+                and self._is_bicycle_counting
+                and self._is_bicycle_counting._instance
+            ):
                 self._is_bicycle_counting.set_value(metadata[IS_BICYCLE_COUNTING])
-            if COUNTING_DAY in metadata and self._counting_day_select:
+            if (
+                COUNTING_DAY in metadata
+                and self._counting_day_select
+                and self._counting_day_select._instance
+            ):
                 self._counting_day_select.set_value(metadata[COUNTING_DAY])
-            if WEATHER in metadata and self._weather_type_select:
+            if (
+                WEATHER in metadata
+                and self._weather_type_select
+                and self._weather_type_select._instance
+            ):
                 self._weather_type_select.set_value(metadata[WEATHER])
-            if REMARK in metadata and self._remark:
+            if REMARK in metadata and self._remark and self._remark._instance:
                 self._remark.set_value(metadata[REMARK])
-            if COORDINATE_X in metadata and self._coordinate_x:
+            if (
+                COORDINATE_X in metadata
+                and self._coordinate_x
+                and self._coordinate_x._instance
+            ):
                 self._coordinate_x.set_value(metadata[COORDINATE_X])
-            if COORDINATE_Y in metadata and self._coordinate_y:
+            if (
+                COORDINATE_Y in metadata
+                and self._coordinate_y
+                and self._coordinate_y._instance
+            ):
                 self._coordinate_y.set_value(metadata[COORDINATE_Y])
 
     def build(self) -> Self:

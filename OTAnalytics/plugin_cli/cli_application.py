@@ -12,6 +12,10 @@ from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     provide_available_eventlist_exporter,
 )
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    PilImageFactory,
+    TrackImageFactory,
+)
 from OTAnalytics.plugin_ui.base_application import BaseOtAnalyticsApplicationStarter
 from OTAnalytics.plugin_ui.cli import (
     OTAnalyticsBulkCli,
@@ -98,3 +102,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
     @cached_property
     def progressbar_builder(self) -> ProgressbarBuilder:
         return TqdmBuilder()
+
+    @cached_property
+    def track_image_factory(self) -> TrackImageFactory:
+        return PilImageFactory()

@@ -37,6 +37,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     START_VIDEO_NAME,
     START_X,
     START_Y,
+    EmptyTrackIdSet,
     IntersectionPoint,
     TrackDataset,
     TrackDoesNotExistError,
@@ -688,13 +689,15 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                 "Some tracks do not exist in dataset with given id"
             ) from cause
 
-    def revert_cuts_for(self, original_track_ids: TrackIdSet) -> "PolarsTrackDataset":
+    def revert_cuts_for(
+        self, original_track_ids: TrackIdSet
+    ) -> tuple["PolarsTrackDataset", TrackIdSet, TrackIdSet]:
         if self._dataset.is_empty():
-            return self
+            return self, EmptyTrackIdSet(), EmptyTrackIdSet()
 
         ids_to_revert = self._get_existing_track_ids(original_track_ids)
         if not ids_to_revert:
-            return self
+            return self, EmptyTrackIdSet(), EmptyTrackIdSet()
 
         # Revert track IDs back to original IDs
         ids_to_revert_strings = [track_id.id for track_id in ids_to_revert]
@@ -705,11 +708,15 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             .alias(LEVEL_TRACK_ID)
         )
 
-        return PolarsTrackDataset.from_dataframe(
-            result,
-            self.track_geometry_factory,
-            geometry_dataset=self._geometry_datasets,
-            calculator=self.calculator,
+        return (
+            PolarsTrackDataset.from_dataframe(
+                result,
+                self.track_geometry_factory,
+                geometry_dataset=self._geometry_datasets,
+                calculator=self.calculator,
+            ),
+            ids_to_revert,
+            ids_to_revert,
         )
 
     def _get_existing_track_ids(self, track_ids: TrackIdSet) -> TrackIdSet:
@@ -761,6 +768,26 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         for offset, geometry_dataset in self._geometry_datasets.items():
             geometry_datasets[offset] = geometry_dataset.get_for(track_ids)
         return geometry_datasets
+
+    def remove_by_original_ids(
+        self, original_ids: TrackIdSet
+    ) -> tuple["PolarsTrackDataset", TrackIdSet]:
+        unique_track_ids = self._dataset.get_column(track.ORIGINAL_TRACK_ID).unique()
+        self_ids = PolarsTrackIdSet(unique_track_ids)
+        ids_to_remove = self_ids.intersection(original_ids)
+        filtered_dataset = self._dataset.filter(
+            ~pl.col(track.ORIGINAL_TRACK_ID).is_in(
+                PolarsTrackIdSet(ids_to_remove)._series
+            )
+        )
+
+        updated_track_dataset = PolarsTrackDataset(
+            dataset=filtered_dataset,
+            calculator=self.calculator,
+            track_geometry_factory=self.track_geometry_factory,
+        )
+
+        return updated_track_dataset, ids_to_remove
 
 
 def create_empty_dataframe() -> pl.DataFrame:

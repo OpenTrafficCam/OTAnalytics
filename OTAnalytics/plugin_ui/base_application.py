@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
+from pathlib import Path
 from typing import Sequence
 
 from OTAnalytics.adapter_visualization.color_provider import (
@@ -16,6 +17,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     RoadUserAssigner,
     SimpleRoadUserAssigner,
     SimpleTaggerFactory,
+    TrafficCounting,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
@@ -29,7 +31,10 @@ from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
 from OTAnalytics.application.resources.resource_manager import ResourceManager
-from OTAnalytics.application.run_configuration import RunConfiguration
+from OTAnalytics.application.run_configuration import (
+    RunConfiguration,
+    RunConfigurationError,
+)
 from OTAnalytics.application.state import (
     ActionState,
     FileState,
@@ -80,6 +85,7 @@ from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearAllEvents,
     GetAllEnterSectionEvents,
+    RemoveEventsByRoadUserId,
 )
 from OTAnalytics.application.use_cases.filter_visualization import (
     CreateDefaultFilter,
@@ -153,12 +159,17 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTracks,
     GetTracksWithoutSingleDetections,
     RemoveTracks,
+    RemoveTracksByOriginalIds,
     TrackRepositorySize,
 )
 from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
 from OTAnalytics.application.use_cases.track_statistics_export import (
     ExportTrackStatistics,
     TrackStatisticsExporterFactory,
+)
+from OTAnalytics.application.use_cases.update_count_plots import (
+    CountPlotSaver,
+    CountPlotsUpdater,
 )
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import (
@@ -244,7 +255,18 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
     SimpleTrackStatisticsExporterFactory,
 )
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
+from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
+    TrackImageFactory,
+)
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
+from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
+    ClassByFlowCountPlotter,
+    CountPlotter,
+    FlowByClassCountPlotter,
+    MatplotlibCountBarPlotStyler,
+    MatplotlibCountLinePlotStyler,
+    MultipleCountPlotters,
+)
 from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 
@@ -536,6 +558,11 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         raise NotImplementedError
 
     @cached_property
+    @abstractmethod
+    def track_image_factory(self) -> TrackImageFactory:
+        raise NotImplementedError
+
+    @cached_property
     def videos_metadata(self) -> VideosMetadata:
         return create_videos_metadata()
 
@@ -647,6 +674,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.section_state,
             self.color_palette_provider,
             self.progressbar_builder,
+            self.track_image_factory,
         )
 
     @cached_property
@@ -713,12 +741,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def export_counts(self) -> ExportCounts:
         return ExportTrafficCounting(
-            self.event_repository,
-            self.flow_repository,
-            self.get_sections_by_id,
-            self.create_events,
-            self.road_user_assigner,
-            SimpleTaggerFactory(),
+            self.traffic_counting,
             CachedExporterFactory(
                 FillZerosExporterFactory(
                     AddSectionInformationExporterFactory(SimpleExporterFactory())
@@ -819,7 +842,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def video_parser(self) -> VideoParser:
-        return create_video_parser(self.videos_metadata)
+        return create_video_parser(self.videos_metadata, self.track_image_factory)
 
     @cached_property
     def remark_repository(self) -> RemarkRepository:
@@ -962,6 +985,78 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def track_geometry_factory(self) -> POLARS_TRACK_GEOMETRY_FACTORY:
         return PolarsTrackGeometryDataset.from_track_dataset
 
+    @cached_property
+    def remove_events_by_road_user_id(self) -> RemoveEventsByRoadUserId:
+        return RemoveEventsByRoadUserId(self.event_repository)
+
+    @cached_property
+    def remove_tracks_by_original_ids(self) -> RemoveTracksByOriginalIds:
+        return RemoveTracksByOriginalIds(self.track_repository)
+
+    @cached_property
+    def traffic_counting(self) -> TrafficCounting:
+        return TrafficCounting(
+            self.event_repository,
+            self.flow_repository,
+            self.get_sections_by_id,
+            self.create_events,
+            self.road_user_assigner,
+            SimpleTaggerFactory(),
+        )
+
+    @cached_property
+    def update_count_plots(self) -> CountPlotsUpdater:
+        return CountPlotsUpdater(self.track_view_state, self.count_plotter)
+
+    @cached_property
+    def save_count_plots(self) -> CountPlotSaver:
+        try:
+            save_dir = self.run_config.save_dir
+        except RunConfigurationError:
+            save_dir = Path.cwd()
+
+        return CountPlotSaver(path=save_dir / "results")
+
+    @cached_property
+    def count_plotter(self) -> CountPlotter:
+        return MultipleCountPlotters(
+            self.traffic_counting,
+            plotters=[
+                FlowByClassCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountLinePlotStyler(legend=True),
+                ),
+                ClassByFlowCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountLinePlotStyler(legend=True),
+                ),
+                FlowByClassCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountBarPlotStyler(
+                        legend=True, time_interval_min=5
+                    ),
+                ),
+                ClassByFlowCountPlotter(
+                    self.traffic_counting,
+                    self.color_palette_provider,
+                    self.tracks_metadata,
+                    interval_in_minutes=5,  # TODO configure interval
+                    styler=MatplotlibCountBarPlotStyler(
+                        legend=True, ascending_trace_sum=True, time_interval_min=5
+                    ),
+                ),
+            ],
+        )
+
 
 def create_format_fixer(
     default_value_provider: OtConfigDefaultValueProvider,
@@ -969,8 +1064,12 @@ def create_format_fixer(
     return MultiFixer([FixMissingAnalysis(default_value_provider)])
 
 
-def create_video_parser(videos_metadata: VideosMetadata) -> VideoParser:
-    return CachedVideoParser(SimpleVideoParser(PyAvVideoReader(videos_metadata)))
+def create_video_parser(
+    videos_metadata: VideosMetadata, track_image_factory: TrackImageFactory
+) -> VideoParser:
+    return CachedVideoParser(
+        SimpleVideoParser(PyAvVideoReader(videos_metadata, track_image_factory))
+    )
 
 
 def create_videos_metadata() -> VideosMetadata:

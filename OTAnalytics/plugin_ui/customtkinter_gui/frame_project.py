@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import tkinter
 from datetime import datetime
@@ -119,20 +120,29 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             master=self._button_frame,
             text="Open...",
             width=10,
-            command=self._viewmodel.load_configuration,
+            command=self._do_open,
         )
         self.button_save_as = CTkButton(
             master=self._button_frame,
             text="Save as...",
             width=10,
-            command=self._viewmodel.save_configuration,
+            command=self._do_save_as,
         )
         self.button_quick_save = ButtonQuickSaveConfig(
             master=self._button_frame,
             text="Save",
             width=10,
-            command=self._viewmodel.quick_save_configuration,
+            command=self._do_quick_save,
         )
+
+    def _do_quick_save(self) -> None:
+        asyncio.run(self._viewmodel.quick_save_configuration())
+
+    def _do_save_as(self) -> None:
+        asyncio.run(self._viewmodel.save_configuration())
+
+    def _do_open(self) -> None:
+        asyncio.run(self._viewmodel.load_configuration())
 
     def _place_widgets(self) -> None:
         self.grid_rowconfigure(2, weight=1)

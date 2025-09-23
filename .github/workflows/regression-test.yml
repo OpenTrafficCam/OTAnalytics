@@ -17,6 +17,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.12
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
       - name: Download test data
         run: |
           gh release download \
@@ -31,9 +35,8 @@ jobs:
           unzip ./\*.zip
           rm ./*.zip
           cd ..
-      - name: Install requirements
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+      - name: Install the project
+        shell: bash
+        run: uv sync --locked --dev
       - name: Run regression tests
-        run: pytest ./tests/regression_otanalytics.py
+        run: uv run pytest ./tests/regression_otanalytics.py
