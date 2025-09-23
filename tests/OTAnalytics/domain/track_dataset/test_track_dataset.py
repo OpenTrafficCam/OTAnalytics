@@ -53,8 +53,8 @@ class TestTrackDataset:
             actual_dataset, removed_ids = target.remove_by_original_ids(
                 PythonTrackIdSet([first_track_part_1.original_id])
             )
-            assert actual_dataset.track_ids == frozenset([uncut_track.id])
-            assert removed_ids == frozenset(
+            assert actual_dataset.track_ids == PythonTrackIdSet([uncut_track.id])
+            assert removed_ids == PythonTrackIdSet(
                 [first_track_part_1.id, first_track_part_2.id]
             )
             assert len(actual_dataset) == 1
