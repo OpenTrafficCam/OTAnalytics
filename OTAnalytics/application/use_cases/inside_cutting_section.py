@@ -4,7 +4,6 @@ from OTAnalytics.domain.section import SectionListObserver, SectionRepositoryEve
 from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet, TrackIdSet
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
-from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 class TrackIdsInsideCuttingSections(TrackIdProvider):
@@ -18,7 +17,7 @@ class TrackIdsInsideCuttingSections(TrackIdProvider):
         track_dataset = self._get_tracks.as_dataset()
         cutting_sections = self._get_cutting_sections()
         if not cutting_sections:
-            return PythonTrackIdSet()
+            return EmptyTrackIdSet()
 
         return track_dataset.ids_inside(cutting_sections)
 
