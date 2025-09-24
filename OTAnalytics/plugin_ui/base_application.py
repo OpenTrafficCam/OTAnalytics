@@ -548,7 +548,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def simple_road_user_assigner(self) -> RoadUserAssigner:
-        return SimpleRoadUserAssigner()
+        return SimpleRoadUserAssigner(self.track_id_set_factory)
 
     @cached_property
     def file_state(self) -> FileState:

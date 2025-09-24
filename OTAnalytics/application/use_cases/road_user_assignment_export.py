@@ -16,8 +16,6 @@ from OTAnalytics.application.use_cases.track_repository import GetAllTracks
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.section import Section, SectionId, SectionRepository
-from OTAnalytics.domain.track import TrackId
-from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 MaxConfidenceLookupTable = dict[str, float]
 MaxConfidenceProvider = Callable[[list[str]], MaxConfidenceLookupTable]
@@ -198,10 +196,9 @@ class RoadUserAssignmentExporter(ABC):
     def _get_max_conf_lookup_table_for(
         self, assignments: RoadUserAssignments
     ) -> MaxConfidenceLookupTable:
-        track_id_set = PythonTrackIdSet(
-            [TrackId(track_id) for track_id in assignments.road_user_ids]
+        return self._get_all_tracks.as_dataset().get_max_confidences_for(
+            assignments.road_user_ids
         )
-        return self._get_all_tracks.as_dataset().get_max_confidences_for(track_id_set)
 
     def _get_section_by_id(self, section_id: SectionId) -> Section:
         result = self._section_repository.get(section_id)

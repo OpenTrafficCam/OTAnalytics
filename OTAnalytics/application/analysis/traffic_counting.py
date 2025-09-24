@@ -27,6 +27,7 @@ from OTAnalytics.domain.event import (
 )
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet, TrackIdSetFactory
 from OTAnalytics.domain.types import EventType
 
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
@@ -603,16 +604,23 @@ class RoadUserAssignments:
     """
 
     @property
-    def road_user_ids(self) -> list[str]:
+    def road_user_ids(self) -> TrackIdSet:
         """Returns a sorted list of all road user ids within this group of assignments.
 
         Returns:
             list[str]: the road user ids.
         """
-        return sorted([assignment.road_user for assignment in self._assignments])
+        return self._track_id_set_factory.create(
+            {assignment.road_user for assignment in self._assignments}
+        )
 
-    def __init__(self, assignments: list[RoadUserAssignment]) -> None:
+    def __init__(
+        self,
+        assignments: list[RoadUserAssignment],
+        track_id_set_factory: TrackIdSetFactory,
+    ) -> None:
         self._assignments = assignments.copy()
+        self._track_id_set_factory = track_id_set_factory
 
     def tag(self, by: Tagger) -> TaggedAssignments:
         """
@@ -705,7 +713,9 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
     """
 
     def __init__(
-        self, flow_selection: FlowSelection = MaxDurationFlowSelection()
+        self,
+        track_id_set_factory: TrackIdSetFactory,
+        flow_selection: FlowSelection = MaxDurationFlowSelection(),
     ) -> None:
         """
         Initialize the SimpleRoadUserAssigner with a flow selection strategy.
@@ -715,6 +725,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
                 Defaults to MaxDurationFlowSelection.
         """
         self._flow_selection = flow_selection
+        self._track_id_set_factory = track_id_set_factory
 
     def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
         """
@@ -800,7 +811,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
                     road_user_id=road_user_id, road_user_type=road_user_type
                 )
                 assignments.extend(user_assignments)
-        return RoadUserAssignments(assignments)
+        return RoadUserAssignments(assignments, self._track_id_set_factory)
 
     def __create_candidates(
         self,

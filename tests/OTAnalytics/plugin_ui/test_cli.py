@@ -435,7 +435,10 @@ class TestOTAnalyticsCli:
         create_events = CreateEvents(
             clear_all_events, create_intersection_events, create_scene_events
         )
-        assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
+        track_id_set_factory = PolarsTrackIdSetFactory()
+        assigner = FilterBySectionEnterEvent(
+            SimpleRoadUserAssigner(track_id_set_factory)
+        )
         traffic_counting = TrafficCounting(
             event_repository,
             flow_repository,
@@ -533,7 +536,10 @@ class TestOTAnalyticsCli:
         create_events = CreateEvents(
             clear_all_events, create_intersection_events, create_scene_events
         )
-        assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
+        track_id_set_factory = PolarsTrackIdSetFactory()
+        assigner = FilterBySectionEnterEvent(
+            SimpleRoadUserAssigner(track_id_set_factory)
+        )
         traffic_counting = TrafficCounting(
             event_repository,
             flow_repository,
@@ -550,9 +556,8 @@ class TestOTAnalyticsCli:
         )
         get_all_tracks = GetAllTracks(track_repository)
         get_cutting_sections = GetCuttingSections(section_repository)
-        track_id_set_factory = PolarsTrackIdSetFactory()
         tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
-            SimpleRoadUserAssigner(),
+            SimpleRoadUserAssigner(track_id_set_factory),
             event_repository,
             flow_repository,
             track_id_set_factory,
