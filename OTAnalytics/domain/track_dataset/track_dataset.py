@@ -232,7 +232,7 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def wrap_intersection_points(
+    def intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> "IntersectionPointsDataset":
         """

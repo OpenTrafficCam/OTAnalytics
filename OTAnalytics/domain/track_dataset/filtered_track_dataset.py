@@ -55,10 +55,10 @@ class FilteredTrackDataset(TrackDataset):
     ) -> TrackIdSet:
         return self._filter().intersecting_tracks(sections, offset)
 
-    def wrap_intersection_points(
+    def intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> IntersectionPointsDataset:
-        return self._filter().wrap_intersection_points(sections, offset)
+        return self._filter().intersection_points(sections, offset)
 
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate

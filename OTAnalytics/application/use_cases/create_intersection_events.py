@@ -62,7 +62,7 @@ class IntersectByIntersectionPoints(Intersector):
         offset: RelativeOffsetCoordinate,
         event_builder: EventBuilder,
     ) -> EventDataset:
-        intersection_result = track_dataset.wrap_intersection_points(sections, offset)
+        intersection_result = track_dataset.intersection_points(sections, offset)
         return intersection_result.create_events(offset, event_builder)
 
 

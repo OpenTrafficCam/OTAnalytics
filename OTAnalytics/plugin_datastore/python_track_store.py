@@ -614,7 +614,7 @@ class PythonTrackDataset(TrackDataset):
             self._geometry_datasets[offset] = geometry_dataset
         return geometry_dataset
 
-    def wrap_intersection_points(
+    def intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> IntersectionPointsDataset:
         geometry_dataset = self._get_geometry_dataset_for(offset)

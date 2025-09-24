@@ -246,10 +246,8 @@ class TestFilteredTrackDataset:
         sections = Mock()
         offset = Mock()
         for dataset, mock_other in mocked_datasets:
-            dataset.wrap_intersection_points(sections, offset)
-            mock_other.wrap_intersection_points.assert_called_once_with(
-                sections, offset
-            )
+            dataset.intersection_points(sections, offset)
+            mock_other.intersection_points.assert_called_once_with(sections, offset)
 
     def test_contained_by_section(self) -> None:
         mocked_datasets = self.get_mocked_datasets([], [])
