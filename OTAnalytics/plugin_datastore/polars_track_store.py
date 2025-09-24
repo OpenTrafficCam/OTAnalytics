@@ -304,6 +304,14 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     def empty(self) -> bool:
         return self._dataset.is_empty()
 
+    @property
+    def track_geometry_factory(self) -> POLARS_TRACK_GEOMETRY_FACTORY:
+        return self._track_geometry_factory
+
+    @property
+    def calculator(self) -> PolarsTrackClassificationCalculator:
+        return self._calculator
+
     def __init__(
         self,
         track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
@@ -318,8 +326,8 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         else:
             self._dataset = create_empty_dataframe()
 
-        self.calculator = calculator
-        self.track_geometry_factory = track_geometry_factory
+        self._calculator = calculator
+        self._track_geometry_factory = track_geometry_factory
         if geometry_datasets is None:
             self._geometry_datasets = dict[
                 RelativeOffsetCoordinate, PolarsTrackGeometryDataset
@@ -630,7 +638,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["TrackDataset", TrackIdSet]:
+    ) -> tuple["PolarsTrackDataset", TrackIdSet]:
         if len(self) == 0:
             logger().info("No tracks to cut")
             from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet
