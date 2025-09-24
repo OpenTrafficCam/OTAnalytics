@@ -60,6 +60,8 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
 
 MAGNITUDE = "magnitude"
+CUM_SUM = "cum_sum"
+ORDER = "order"
 
 SEGMENT_LENGTH_X = "segment_length_x"
 SEGMENT_LENGTH_Y = "segment_length_y"
@@ -1367,24 +1369,24 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                     .select([ROW_ID, TRACK_ID, INTERSECTS])
                 )
 
-        COLUMN_ORDER = [ROW_ID, TRACK_ID, INTERSECTS, "cum_sum", "order"]
+        COLUMN_ORDER = [ROW_ID, TRACK_ID, INTERSECTS, CUM_SUM, ORDER]
         results = (
             result.with_columns(
-                pl.col(INTERSECTS).cum_sum().over(TRACK_ID).alias("cum_sum")
+                pl.col(INTERSECTS).cum_sum().over(TRACK_ID).alias(CUM_SUM)
             )
-            .with_columns(pl.lit(1).alias("order"))
+            .with_columns(pl.lit(1).alias(ORDER))
             .select(COLUMN_ORDER)
         )
         temp = (
             results.group_by(TRACK_ID)
             .first()
-            .with_columns(pl.lit(0).alias("order"))
-            .with_columns(pl.lit(0, pl.UInt32).alias("cum_sum"))
+            .with_columns(pl.lit(0).alias(ORDER))
+            .with_columns(pl.lit(0, pl.UInt32).alias(CUM_SUM))
             .with_columns(pl.col(ROW_ID) - 1)
             .select(COLUMN_ORDER)
         )
         temp_r = pl.concat([results, temp])
-        results = temp_r.sort(by=[TRACK_ID, ROW_ID, "order"])
+        results = temp_r.sort(by=[TRACK_ID, ROW_ID, ORDER])
         return results.with_columns(
-            pl.col(TRACK_ID) + "_" + pl.col("cum_sum").cast(pl.Utf8).alias(TRACK_ID)
+            pl.col(TRACK_ID) + "_" + pl.col(CUM_SUM).cast(pl.Utf8).alias(TRACK_ID)
         ).select([ROW_ID, TRACK_ID])
