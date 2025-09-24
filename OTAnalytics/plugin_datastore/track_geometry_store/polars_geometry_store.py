@@ -1,16 +1,57 @@
 import math
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Sequence
+from typing import Any, Iterable, Iterator, Optional, Sequence
 
 import polars as pl
 
-from OTAnalytics.domain import track
+from OTAnalytics.domain import event, track
 from OTAnalytics.domain.common import DataclassValidation
-from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.event import (
+    SECTION_ID,
+    Event,
+    EventBuilder,
+    EventDataset,
+    SectionEventBuilder,
+)
+from OTAnalytics.domain.geometry import (
+    Coordinate,
+    DirectionVector2D,
+    ImageCoordinate,
+    RelativeOffsetCoordinate,
+)
 from OTAnalytics.domain.section import Section, SectionId, SectionType
-from OTAnalytics.domain.track import OCCURRENCE, TRACK_ID, H, Track, TrackId, W, X, Y
+from OTAnalytics.domain.track import (
+    FRAME,
+    OCCURRENCE,
+    TRACK_CLASSIFICATION,
+    TRACK_ID,
+    VIDEO_NAME,
+    H,
+    Track,
+    TrackId,
+    W,
+    X,
+    Y,
+)
 from OTAnalytics.domain.track_dataset.track_dataset import (
+    CURRENT_X,
+    CURRENT_Y,
+    END_FRAME,
+    END_H,
+    END_OCCURRENCE,
+    END_VIDEO_NAME,
+    END_W,
+    END_X,
+    END_Y,
+    PREVIOUS_X,
+    PREVIOUS_Y,
+    START_H,
+    START_OCCURRENCE,
+    START_W,
+    START_X,
+    START_Y,
     IntersectionPoint,
+    IntersectionPointsDataset,
     TrackDataset,
     TrackGeometryDataset,
     TrackIdSet,
@@ -18,18 +59,18 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
 
+MAGNITUDE = "magnitude"
+
+SEGMENT_LENGTH_X = "segment_length_x"
+SEGMENT_LENGTH_Y = "segment_length_y"
+SEGMENT_LENGTH = "segment_length"
+INTERSECTION_LENGTH_X = "intersection_length_x"
+INTERSECTION_LENGTH_Y = "intersection_length_y"
+INTERSECTION_LENGTH = "intersection_length"
+RELATIVE_POSITION = "relative_position"
+
 # Column names for track segments
 ROW_ID = "row_id"
-START_OCCURRENCE = "start-occurrence"
-END_OCCURRENCE = "end-occurrence"
-START_X = "start-x"
-START_Y = "start-y"
-START_W = "start-w"
-START_H = "start-h"
-END_X = "end-x"
-END_Y = "end-y"
-END_W = "end-w"
-END_H = "end-h"
 
 # Column names for intersections
 INTERSECTS = "intersects"
@@ -43,6 +84,14 @@ DENOMINATOR = "denominator"
 NON_PARALLEL = "non_parallel"
 UA = "ua"
 UB = "ub"
+
+# Column names for events
+DIRECTION_VECTOR_X = f"{event.DIRECTION_VECTOR}_X"
+DIRECTION_VECTOR_Y = f"{event.DIRECTION_VECTOR}_Y"
+EVENT_COORDINATE_X = f"{event.EVENT_COORDINATE}_X"
+EVENT_COORDINATE_Y = f"{event.EVENT_COORDINATE}_Y"
+INTERPOLATED_EVENT_COORDINATE_X = f"{event.INTERPOLATED_EVENT_COORDINATE}_X"
+INTERPOLATED_EVENT_COORDINATE_Y = f"{event.INTERPOLATED_EVENT_COORDINATE}_Y"
 
 
 @dataclass(frozen=True)
@@ -100,6 +149,8 @@ def create_track_segments(df: pl.DataFrame) -> pl.DataFrame:
             pl.col(Y).alias(END_Y),
             pl.col(W).alias(END_W),
             pl.col(H).alias(END_H),
+            pl.col(FRAME).alias(END_FRAME),
+            pl.col(VIDEO_NAME).alias(END_VIDEO_NAME),
             # Start values (previous row within the same track)
             pl.col(OCCURRENCE).shift(1).over(TRACK_ID).alias(START_OCCURRENCE),
             pl.col(X).shift(1).over(TRACK_ID).alias(START_X),
@@ -114,6 +165,9 @@ def create_track_segments(df: pl.DataFrame) -> pl.DataFrame:
         [
             ROW_ID,
             TRACK_ID,
+            TRACK_CLASSIFICATION,
+            END_VIDEO_NAME,
+            END_FRAME,
             END_OCCURRENCE,
             END_X,
             END_Y,
@@ -354,7 +408,10 @@ def find_line_intersections(
     ).select(
         [
             ROW_ID,
-            track.TRACK_ID,
+            TRACK_ID,
+            TRACK_CLASSIFICATION,
+            END_VIDEO_NAME,
+            END_FRAME,
             START_X,
             START_Y,
             END_X,
@@ -514,6 +571,172 @@ def get_section_offset(section: Section) -> RelativeOffsetCoordinate:
     if offset := section.relative_offset_coordinates.get(EventType.SECTION_ENTER):
         return offset
     raise ValueError(f"Section {section.id} has no offset")
+
+
+class PolarsEventDataset(EventDataset):
+
+    def __init__(self, events: Optional[pl.DataFrame] = None) -> None:
+        if events is None:
+            self._events = pl.DataFrame()
+        else:
+            self._events = events
+
+    def __iter__(self) -> Iterator[Event]:
+        for row in self._events.iter_rows(named=True):
+            yield Event(
+                road_user_id=row[event.ROAD_USER_ID],
+                road_user_type=row[event.ROAD_USER_TYPE],
+                hostname=row[event.HOSTNAME],
+                occurrence=row[event.OCCURRENCE],
+                frame_number=row[event.FRAME_NUMBER],
+                section_id=(
+                    SectionId(row[event.SECTION_ID]) if row[event.SECTION_ID] else None
+                ),
+                event_coordinate=ImageCoordinate(
+                    row[EVENT_COORDINATE_X], row[EVENT_COORDINATE_Y]
+                ),
+                event_type=EventType.parse(row[event.EVENT_TYPE]),
+                direction_vector=DirectionVector2D(
+                    row[DIRECTION_VECTOR_X], row[DIRECTION_VECTOR_Y]
+                ),
+                video_name=row[event.VIDEO_NAME],
+                interpolated_occurrence=row[event.INTERPOLATED_OCCURRENCE],
+                interpolated_event_coordinate=ImageCoordinate(
+                    row[INTERPOLATED_EVENT_COORDINATE_X],
+                    row[INTERPOLATED_EVENT_COORDINATE_Y],
+                ),
+            )
+
+    def __len__(self) -> int:
+        return len(self._events)
+
+    def __add__(self, other: "EventDataset") -> "EventDataset":
+        raise NotImplementedError
+
+    def __eq__(self, other: object) -> bool:
+        raise NotImplementedError
+
+    def extend(self, other: "EventDataset") -> None:
+        raise NotImplementedError
+
+    def append(self, event: Event) -> None:
+        raise NotImplementedError
+
+    def is_empty(self) -> bool:
+        return self._events.is_empty()
+
+
+class PolarsIntersectionPointsDataset(IntersectionPointsDataset):
+
+    def __init__(self, points: Optional[pl.DataFrame] = None) -> None:
+        if points is None:
+            self._points = pl.DataFrame()
+        else:
+            self._points = points
+
+    def items(
+        self,
+    ) -> Iterator[tuple[TrackId, list[tuple[SectionId, IntersectionPoint]]]]:
+        raise NotImplementedError
+
+    def keys(self) -> Iterator[TrackId]:
+        raise NotImplementedError
+
+    def get(self, track_id: TrackId) -> list[tuple[SectionId, IntersectionPoint]]:
+        raise NotImplementedError
+
+    @property
+    def empty(self) -> bool:
+        return self._points.is_empty()
+
+    def __len__(self) -> int:
+        return len(self._points)
+
+    def __contains__(self, track_id: TrackId) -> bool:
+        raise NotImplementedError
+
+    def create_events(
+        self,
+        offset: RelativeOffsetCoordinate,
+        event_builder: EventBuilder = SectionEventBuilder(),
+    ) -> EventDataset:
+        if self.empty:
+            return PolarsEventDataset()
+        events = (
+            self._points.with_columns(
+                [
+                    pl.col(TRACK_ID).alias(event.ROAD_USER_ID),
+                    pl.col(TRACK_CLASSIFICATION).alias(event.ROAD_USER_TYPE),
+                    pl.col(END_VIDEO_NAME).alias(
+                        event.HOSTNAME
+                    ),  # TODO extract hostname
+                    pl.col(END_OCCURRENCE).alias(event.OCCURRENCE),
+                    pl.col(END_FRAME).alias(event.FRAME_NUMBER),
+                    pl.col(SECTION_ID).alias(event.SECTION_ID),
+                    pl.col(END_X).alias(EVENT_COORDINATE_X),
+                    pl.col(END_Y).alias(EVENT_COORDINATE_Y),
+                    pl.lit(EventType.SECTION_ENTER.value).alias(event.EVENT_TYPE),
+                    (pl.col(PREVIOUS_Y) - pl.col(PREVIOUS_X)).alias(DIRECTION_VECTOR_X),
+                    (pl.col(CURRENT_Y) - pl.col(CURRENT_X)).alias(DIRECTION_VECTOR_Y),
+                    pl.col(END_VIDEO_NAME).alias(event.VIDEO_NAME),
+                    (
+                        pl.col(START_OCCURRENCE)
+                        + pl.col(RELATIVE_POSITION)
+                        * (pl.col(END_OCCURRENCE) - pl.col(START_OCCURRENCE))
+                    ).alias(event.INTERPOLATED_OCCURRENCE),
+                    (
+                        pl.col(PREVIOUS_X)
+                        + pl.col(RELATIVE_POSITION)
+                        * (pl.col(CURRENT_X) - pl.col(PREVIOUS_X))
+                    ).alias(INTERPOLATED_EVENT_COORDINATE_X),
+                    (
+                        pl.col(PREVIOUS_Y)
+                        + pl.col(RELATIVE_POSITION)
+                        * (pl.col(CURRENT_Y) - pl.col(PREVIOUS_Y))
+                    ).alias(INTERPOLATED_EVENT_COORDINATE_Y),
+                ]
+            )
+            .with_columns(
+                [
+                    (
+                        pl.col(DIRECTION_VECTOR_X) ** 2
+                        + pl.col(DIRECTION_VECTOR_Y) ** 2
+                    ).alias(MAGNITUDE),
+                ]
+            )
+            .with_columns(
+                [
+                    pl.when(pl.col(MAGNITUDE) == 0)
+                    .then(pl.lit(0))
+                    .otherwise(pl.col(DIRECTION_VECTOR_X) / pl.col(MAGNITUDE))
+                    .alias(DIRECTION_VECTOR_X),
+                    pl.when(pl.col(MAGNITUDE) == 0)
+                    .then(pl.lit(0))
+                    .otherwise(pl.col(DIRECTION_VECTOR_Y) / pl.col(MAGNITUDE))
+                    .alias(DIRECTION_VECTOR_Y),
+                ]
+            )
+            .select(
+                [
+                    event.ROAD_USER_ID,
+                    event.ROAD_USER_TYPE,
+                    event.HOSTNAME,
+                    event.OCCURRENCE,
+                    event.FRAME_NUMBER,
+                    event.SECTION_ID,
+                    EVENT_COORDINATE_X,
+                    EVENT_COORDINATE_Y,
+                    event.EVENT_TYPE,
+                    DIRECTION_VECTOR_X,
+                    DIRECTION_VECTOR_Y,
+                    event.VIDEO_NAME,
+                    event.INTERPOLATED_OCCURRENCE,
+                    INTERPOLATED_EVENT_COORDINATE_X,
+                    INTERPOLATED_EVENT_COORDINATE_Y,
+                ]
+            )
+        )
+        return PolarsEventDataset(events)
 
 
 class PolarsTrackGeometryDataset(TrackGeometryDataset):
@@ -907,8 +1130,148 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                     if track_id not in result:
                         result[track_id] = []
                     result[track_id].append((section.id, intersection_point))
-
         return result
+
+    def wrap_intersection_points(
+        self, sections: list[Section]
+    ) -> IntersectionPointsDataset:
+        """Return the intersection points from tracks and the given sections.
+
+        Args:
+            sections (list[Section]): the sections to intersect with.
+
+        Returns:
+            IntersectionPointsDataset: the intersection points.
+        """
+        if self.empty or not sections:
+            return PolarsIntersectionPointsDataset()
+
+        # Process only line sections
+        # (area sections don't have specific intersection points)
+        line_sections = [
+            section
+            for section in sections
+            if section.get_type() == SectionType.LINE
+            or section.get_type() == SectionType.CUTTING
+        ]
+
+        if not line_sections:
+            return PolarsIntersectionPointsDataset()
+
+        result_df: list[pl.DataFrame] = []
+        # For each line section, find intersections with track segments
+        for section in line_sections:
+            # Get the coordinates of the section
+            coordinates = section.get_coordinates()
+            offset = get_section_offset(section)
+
+            # Process each leg of the section (consecutive pair of coordinates)
+            for i in range(len(coordinates) - 1):
+                start_x, start_y = coordinates[i].x, coordinates[i].y
+                end_x, end_y = coordinates[i + 1].x, coordinates[i + 1].y
+
+                # Find intersections with this leg of the line
+                intersections = find_line_intersections(
+                    self._segments_df,
+                    section.id.serialize(),
+                    start_x,
+                    start_y,
+                    end_x,
+                    end_y,
+                    offset,
+                )
+
+                # Filter to only include segments that intersect with the line
+                intersecting_segments = intersections.filter(pl.col(INTERSECTS))
+
+                intersection_points = (
+                    intersecting_segments.with_columns(
+                        [
+                            (pl.col(END_X) + pl.col(END_W) * offset.x).alias(CURRENT_X),
+                            (pl.col(END_Y) + pl.col(END_H) * offset.y).alias(CURRENT_Y),
+                            (pl.col(START_X) + pl.col(START_W) * offset.x).alias(
+                                PREVIOUS_X
+                            ),
+                            (pl.col(START_Y) + pl.col(START_H) * offset.y).alias(
+                                PREVIOUS_Y
+                            ),
+                        ]
+                    )
+                    .with_columns(
+                        [
+                            (pl.col(CURRENT_X) - pl.col(PREVIOUS_X)).alias(
+                                SEGMENT_LENGTH_X
+                            ),
+                            (pl.col(CURRENT_Y) - pl.col(PREVIOUS_Y)).alias(
+                                SEGMENT_LENGTH_Y
+                            ),
+                        ]
+                    )
+                    .with_columns(
+                        [
+                            (
+                                pl.col(SEGMENT_LENGTH_X) ** 2
+                                + pl.col(SEGMENT_LENGTH_Y) ** 2
+                            )
+                            .sqrt()
+                            .alias(SEGMENT_LENGTH)
+                        ]
+                    )
+                    .with_columns(
+                        [
+                            (
+                                pl.col(INTERSECTION_X)
+                                - (pl.col(START_X) + pl.col(START_W) * offset.x)
+                            ).alias(INTERSECTION_LENGTH_X),
+                            (
+                                pl.col(INTERSECTION_Y)
+                                - (pl.col(START_Y) + pl.col(START_H) * offset.y)
+                            ).alias(INTERSECTION_LENGTH_Y),
+                        ]
+                    )
+                    .with_columns(
+                        [
+                            (
+                                pl.col(INTERSECTION_LENGTH_X) ** 2
+                                + pl.col(INTERSECTION_LENGTH_Y) ** 2
+                            )
+                            .sqrt()
+                            .alias(INTERSECTION_LENGTH)
+                        ]
+                    )
+                    .with_columns(
+                        [
+                            pl.when(
+                                (pl.col(SEGMENT_LENGTH_X) == 0)
+                                & (pl.col(SEGMENT_LENGTH_Y) == 0)
+                            )
+                            .then(None)
+                            .otherwise(
+                                pl.col(INTERSECTION_LENGTH) / pl.col(SEGMENT_LENGTH)
+                            )
+                            .alias(RELATIVE_POSITION)
+                        ]
+                    )
+                    .filter(pl.col(RELATIVE_POSITION).is_not_null())
+                    .drop(
+                        [
+                            SEGMENT_LENGTH_X,
+                            SEGMENT_LENGTH_Y,
+                            SEGMENT_LENGTH,
+                            INTERSECTION_LENGTH_X,
+                            INTERSECTION_LENGTH_Y,
+                            INTERSECTION_LENGTH,
+                        ]
+                    )
+                    .with_columns(pl.lit(section.id.id).alias(SECTION_ID))
+                )
+
+                if len(intersecting_segments) > 0:
+                    result_df.append(intersection_points)
+
+        if result_df:
+            return PolarsIntersectionPointsDataset(pl.concat(result_df))
+        return PolarsIntersectionPointsDataset()
 
     def contained_by_sections(
         self, sections: list[Section]

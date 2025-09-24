@@ -39,6 +39,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     START_Y,
     EmptyTrackIdSet,
     IntersectionPoint,
+    IntersectionPointsDataset,
     TrackDataset,
     TrackDoesNotExistError,
     TrackIdSet,
@@ -216,7 +217,6 @@ COLUMNS = [
     track.H,
     track.FRAME,
     track.OCCURRENCE,
-    ottrk_dataformat.INPUT_FILE_PATH,
     track.INTERPOLATED_DETECTION,
     ottrk_dataformat.FIRST,
     ottrk_dataformat.FINISHED,
@@ -382,7 +382,10 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
         # Get all tracks (existing + new) and assign classification
         combined_tracks = pl.concat(
-            [drop_row_id(self._dataset), drop_row_id(new_tracks_with_classification)]
+            [
+                drop_row_id(self._dataset).select(COLUMNS),
+                drop_row_id(new_tracks_with_classification).select(COLUMNS),
+            ]
         ).sort(INDEX_NAMES)
 
         # Re-assign track classification to the combined dataset
@@ -484,6 +487,12 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
         geometry_dataset = self._get_geometry_dataset_for(offset)
         return geometry_dataset.intersection_points(sections)
+
+    def wrap_intersection_points(
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
+    ) -> IntersectionPointsDataset:
+        geometry_dataset = self._get_geometry_dataset_for(offset)
+        return geometry_dataset.wrap_intersection_points(sections)
 
     def ids_inside(self, sections: list[Section]) -> TrackIdSet:
         result: TrackIdSet = PolarsTrackIdSet()
@@ -837,6 +846,8 @@ def _convert_tracks(tracks: Iterable[Track]) -> pl.DataFrame:
         for detection in current_track.detections:
             dto = detection.to_dict()
             dto[track.ORIGINAL_TRACK_ID] = current_track.original_id.id
+            dto[ottrk_dataformat.FIRST] = current_track.first_detection == detection
+            dto[ottrk_dataformat.FINISHED] = current_track.last_detection == detection
             prepared.append(dto)
 
     if not prepared:
