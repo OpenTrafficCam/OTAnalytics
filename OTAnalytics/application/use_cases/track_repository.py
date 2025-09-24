@@ -84,11 +84,11 @@ class GetAllTrackIds:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def __call__(self) -> Iterable[TrackId]:
+    def __call__(self) -> TrackIdSet:
         """Get all track ids from the track repository.
 
         Returns:
-            Iterable[TrackId]: the track ids.
+            TrackIdSet: the track ids.
         """
         return self._track_repository.get_all_ids()
 

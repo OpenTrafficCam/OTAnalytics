@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, Mock, PropertyMock, call
 import pytest
 
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet, TrackDataset
 from OTAnalytics.domain.track_repository import (
     TrackFileRepository,
     TrackListObserver,
@@ -43,7 +43,7 @@ class TestTrackRepository:
 
     def test_add_all(self, track_1: Mock, track_2: Mock) -> None:
         track_ids_property = PropertyMock(
-            return_value=frozenset([track_1.id, track_2.id])
+            return_value=PythonTrackIdSet([track_1.id, track_2.id])
         )
         tracks = MagicMock(spec=TrackDataset)
         tracks.__len__.return_value = 2
@@ -63,7 +63,9 @@ class TestTrackRepository:
 
         dataset.add_all.assert_called_with(tracks)
         observer.notify_tracks.assert_called_with(
-            TrackRepositoryEvent.create_added([track_1.id, track_2.id])
+            TrackRepositoryEvent.create_added(
+                PythonTrackIdSet([track_1.id, track_2.id])
+            )
         )
 
     def test_add_nothing(self) -> None:
@@ -93,7 +95,7 @@ class TestTrackRepository:
         cleared_dataset = Mock(spec=TrackDataset)
         dataset = Mock(spec=TrackDataset)
         type(dataset).track_ids = PropertyMock(
-            return_value=frozenset([track_1.id, track_2.id])
+            return_value=PythonTrackIdSet([track_1.id, track_2.id])
         )
         dataset.clear.return_value = cleared_dataset
         observer = Mock(spec=TrackListObserver)
@@ -104,11 +106,15 @@ class TestTrackRepository:
 
         assert repository._dataset == cleared_dataset
         assert observer.notify_tracks.call_args_list == [
-            call(TrackRepositoryEvent.create_removed([track_1.id, track_2.id]))
+            call(
+                TrackRepositoryEvent.create_removed(
+                    PythonTrackIdSet([track_1.id, track_2.id])
+                )
+            )
         ]
 
     def test_get_all_ids(self, track_1: Mock, track_2: Mock) -> None:
-        ids: frozenset[TrackId] = frozenset()
+        ids = EmptyTrackIdSet()
         dataset = Mock(spec=TrackDataset)
         type(dataset).track_ids = PropertyMock(return_value=ids)
         repository = TrackRepository(dataset)
@@ -116,25 +122,6 @@ class TestTrackRepository:
         actual_ids = repository.get_all_ids()
 
         assert actual_ids is ids
-
-    def test_remove(self, track_1: Track, track_2: Track) -> None:
-        dataset = Mock(spec=TrackDataset)
-        dataset.remove.return_value = dataset
-        repository = TrackRepository(dataset)
-
-        observer = Mock(spec=TrackListObserver)
-        repository.register_tracks_observer(observer)
-
-        repository.remove(track_1.id)
-        assert len(dataset.remove.call_args_list) == 1
-        assert call(track_1.id) in dataset.remove.call_args_list
-        repository.remove(track_2.id)
-        assert call(track_2.id) in dataset.remove.call_args_list
-
-        assert observer.notify_tracks.call_args_list == [
-            call(TrackRepositoryEvent.create_removed([track_1.id])),
-            call(TrackRepositoryEvent.create_removed([track_2.id])),
-        ]
 
     def test_remove_multiple(self, track_1: Track, track_2: Track) -> None:
         tracks_to_remove = PythonTrackIdSet([track_1.id, track_2.id])
@@ -216,7 +203,7 @@ class TestTrackRepository:
         given_observer = Mock()
         given_dataset = Mock()
         updated_dataset = Mock()
-        removed_ids = frozenset([TrackId("actual-1")])
+        removed_ids = PythonTrackIdSet([TrackId("actual-1")])
 
         given_dataset.remove_by_original_ids.return_value = (
             updated_dataset,

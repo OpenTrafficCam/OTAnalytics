@@ -31,12 +31,12 @@ def track_ids() -> TrackIdSet:
 
 @pytest.fixture
 def add_track_event() -> TrackRepositoryEvent:
-    return TrackRepositoryEvent.create_added([TrackId("1")])
+    return TrackRepositoryEvent.create_added(PythonTrackIdSet([TrackId("1")]))
 
 
 @pytest.fixture
 def remove_track_event() -> TrackRepositoryEvent:
-    return TrackRepositoryEvent.create_removed([TrackId("2")])
+    return TrackRepositoryEvent.create_removed(PythonTrackIdSet([TrackId("2")]))
 
 
 @pytest.fixture

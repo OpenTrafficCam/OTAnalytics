@@ -40,6 +40,7 @@ from OTAnalytics.domain.track_repository import (
     TrackRepositoryEvent,
 )
 from OTAnalytics.domain.video import VideoMetadata
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 FIRST_START_DATE = datetime(
     year=2019,
@@ -82,7 +83,9 @@ class TestTrackState:
         state = TrackState()
 
         state.notify_tracks(
-            TrackRepositoryEvent.create_added([first_track, second_track])
+            TrackRepositoryEvent.create_added(
+                PythonTrackIdSet([first_track, second_track])
+            )
         )
 
         assert state.selected_track in [first_track, second_track]
@@ -91,7 +94,9 @@ class TestTrackState:
         first_track = TrackId("1")
         state = TrackState()
 
-        state.notify_tracks(TrackRepositoryEvent.create_added([first_track]))
+        state.notify_tracks(
+            TrackRepositoryEvent.create_added(PythonTrackIdSet([first_track]))
+        )
         state.notify_tracks(TrackRepositoryEvent(EmptyTrackIdSet(), EmptyTrackIdSet()))
 
         assert state.selected_track is None
@@ -99,7 +104,9 @@ class TestTrackState:
     def test_reset(self) -> None:
         first_track = TrackId("1")
         target = TrackState()
-        target.notify_tracks(TrackRepositoryEvent.create_added([first_track]))
+        target.notify_tracks(
+            TrackRepositoryEvent.create_added(PythonTrackIdSet([first_track]))
+        )
 
         target.reset()
 
@@ -237,7 +244,7 @@ class TestTrackImageUpdater:
         updater = TrackImageUpdater(
             datastore, track_view_state, section_state, flow_state, plotter
         )
-        tracks: list[TrackId] = [track_id]
+        tracks = PythonTrackIdSet([track_id])
 
         updater.notify_tracks(TrackRepositoryEvent.create_added(tracks))
 

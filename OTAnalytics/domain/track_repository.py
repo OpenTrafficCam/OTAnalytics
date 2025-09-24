@@ -12,7 +12,6 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     TrackDataset,
     TrackIdSet,
 )
-from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 @dataclass(frozen=True)
@@ -21,12 +20,12 @@ class TrackRepositoryEvent:
     removed: TrackIdSet
 
     @staticmethod
-    def create_added(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
-        return TrackRepositoryEvent(PythonTrackIdSet(tracks), EmptyTrackIdSet())
+    def create_added(tracks: TrackIdSet) -> "TrackRepositoryEvent":
+        return TrackRepositoryEvent(tracks, EmptyTrackIdSet())
 
     @staticmethod
-    def create_removed(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
-        return TrackRepositoryEvent(EmptyTrackIdSet(), PythonTrackIdSet(tracks))
+    def create_removed(tracks: TrackIdSet) -> "TrackRepositoryEvent":
+        return TrackRepositoryEvent(EmptyTrackIdSet(), tracks)
 
 
 class TrackListObserver(ABC):
@@ -179,25 +178,6 @@ class TrackRepository:
         """
         return self._dataset.track_ids
 
-    def remove(self, track_id: TrackId) -> None:
-        """Remove track by its id and notify observers
-
-        Raises:
-            TrackRemoveError: if track does not exist in repository.
-
-        Args:
-            track_id (TrackId): the id of the track to be removed.
-        """
-        try:
-            self._dataset = self._dataset.remove(track_id)
-        except KeyError:
-            raise TrackRemoveError(
-                track_id, f"Trying to remove non existing track with id '{track_id.id}'"
-            )
-        # TODO: Pass removed track id to notify when moving observers to
-        #  application layer
-        self.observers.notify(TrackRepositoryEvent.create_removed([track_id]))
-
     def remove_multiple(self, track_ids: TrackIdSet) -> None:
         not_existing_tracks = track_ids.difference(self._dataset.track_ids)
         if not_existing_tracks:
@@ -219,7 +199,7 @@ class TrackRepository:
         """
         Clear the repository and inform the observers about the empty repository.
         """
-        removed = list(self._dataset.track_ids)
+        removed = self._dataset.track_ids
         self._dataset = self._dataset.clear()
         self.observers.notify(TrackRepositoryEvent.create_removed(removed))
 
