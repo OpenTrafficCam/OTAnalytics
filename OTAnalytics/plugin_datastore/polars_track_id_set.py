@@ -3,7 +3,7 @@ from typing import Any, Iterable, Iterator
 import polars as pl
 
 from OTAnalytics.domain.track import TrackId, unpack
-from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet, TrackIdSetFactory
 
 
 class PolarsTrackIdSet(TrackIdSet):
@@ -11,7 +11,9 @@ class PolarsTrackIdSet(TrackIdSet):
     Polars-based implementation of TrackIdSet using a Series for optimal performance.
     """
 
-    def __init__(self, track_ids: Iterable[TrackId] | pl.Series | None = None):
+    def __init__(
+        self, track_ids: Iterable[TrackId] | Iterable[str] | pl.Series | None = None
+    ):
         if track_ids is None:
             self._series = pl.Series([], dtype=pl.String)
         elif isinstance(track_ids, pl.Series):
@@ -72,3 +74,9 @@ class PolarsTrackIdSet(TrackIdSet):
                 ~self._series.is_in(list(other_strings))
             )
             return PolarsTrackIdSet(difference_series)
+
+
+class PolarsTrackIdSetFactory(TrackIdSetFactory):
+
+    def create(self, track_ids: Iterable[TrackId] | Iterable[str]) -> TrackIdSet:
+        return PolarsTrackIdSet(track_ids)

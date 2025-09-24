@@ -110,6 +110,12 @@ class TrackIdSet(ABC):
         raise NotImplementedError
 
 
+class TrackIdSetFactory(ABC):
+    @abstractmethod
+    def create(self, track_ids: Iterable[TrackId] | Iterable[str]) -> TrackIdSet:
+        raise NotImplementedError
+
+
 class EmptyTrackIdSet(TrackIdSet):
     def __eq__(self, other: Any) -> bool:
         return isinstance(other, EmptyTrackIdSet)
@@ -128,6 +134,16 @@ class EmptyTrackIdSet(TrackIdSet):
 
     def difference(self, other: "TrackIdSet") -> "TrackIdSet":
         return self
+
+
+def concat(
+    track_id_sets: Iterable[TrackIdSet],
+) -> TrackIdSet:
+    """Concatenate multiple track ID sets into a single track ID set."""
+    result: TrackIdSet = EmptyTrackIdSet()
+    for current in track_id_sets:
+        result = result.union(current)
+    return result
 
 
 class TrackDataset(ABC):

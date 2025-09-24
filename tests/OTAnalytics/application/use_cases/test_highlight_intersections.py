@@ -35,7 +35,11 @@ from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId
-from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet, TrackIdSet
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    EmptyTrackIdSet,
+    TrackIdSet,
+    TrackIdSetFactory,
+)
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
@@ -158,8 +162,8 @@ class TestTracksIntersectingAllSections:
         intersection_repository: Mock,
     ) -> None:
         sections = [section_1, section_2]
-        section_1_tracks = {track_id_1}
-        section_2_tracks = {track_id_2}
+        section_1_tracks = PythonTrackIdSet({track_id_1})
+        section_2_tracks = PythonTrackIdSet({track_id_2})
         original_track_ids = {
             section_1.id: section_1_tracks,
             section_2.id: section_2_tracks,
@@ -354,17 +358,22 @@ class TestTracksAssignedToSelectedFlows:
         flow_repository = Mock(spec=FlowRepository)
         flow_repository.get_all.return_value = [first_flow, second_flow]
 
-        tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
-            assigner, event_repository, flow_repository, flow_state
-        )
-        track_ids = list(tracks_assigned_to_flow.get_ids())
+        track_id_set = Mock(spec=TrackIdSet)
+        mock_factory = Mock(spec=TrackIdSetFactory)
+        mock_factory.create.return_value = track_id_set
 
-        assert track_ids == [TrackId("1")]
+        tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
+            assigner, event_repository, flow_repository, flow_state, mock_factory
+        )
+        track_ids = tracks_assigned_to_flow.get_ids()
+
+        assert track_ids == track_id_set
         event_repository.get_all.assert_called_once()
         flow_repository.get_all.assert_called_once()
         assert selected_flows.get.call_count == 2
         assigner.assign.assert_called_once_with([event], [first_flow, second_flow])
         assignments.as_list.assert_called_once()
+        mock_factory.create.assert_called_once_with({"1"})
 
 
 class TestTracksOverlapOccurrenceWindow:
@@ -452,24 +461,31 @@ class TestTracksOverlapOccurrenceWindow:
     def test_get_ids(self) -> None:
         track_repository = Mock(spec=TrackRepository)
         track_view_state = Mock(spec=TrackViewState)
+        track_id_set = Mock(spec=TrackIdSet)
+        mock_factory = Mock(spec=TrackIdSetFactory)
+        mock_factory.create.return_value = track_id_set
         first_id = Mock(spec=TrackId)
         tracks = [Mock(spec=Track), None]
         track_repository.get_all.return_value = tracks
 
         with patch.object(
-            TracksOverlapOccurrenceWindow, "_filter", return_value=[first_id]
+            TracksOverlapOccurrenceWindow, "_filter", return_value={first_id}
         ):
             id_provider = TracksOverlapOccurrenceWindow(
-                track_repository, track_view_state
+                track_repository, track_view_state, mock_factory
             )
             result_ids = id_provider.get_ids()
 
-            assert result_ids == PythonTrackIdSet([first_id])
+            assert result_ids == track_id_set
             track_repository.get_all.assert_called_once()
+            mock_factory.create.assert_called_once_with({first_id})
 
     def test_get_ids_as_decorator(self) -> None:
         track_repository = Mock(spec=TrackRepository)
         track_view_state = Mock(spec=TrackViewState)
+        track_id_set = Mock(spec=TrackIdSet)
+        mock_factory = Mock(spec=TrackIdSetFactory)
+        mock_factory.create.return_value = track_id_set
         first_id = Mock(spec=TrackId)
         track_ids = [first_id, Mock(spec=TrackId)]
         tracks = [Mock(spec=Track), None]
@@ -478,19 +494,21 @@ class TestTracksOverlapOccurrenceWindow:
         other.get_ids.return_value = track_ids
 
         with patch.object(
-            TracksOverlapOccurrenceWindow, "_filter", return_value=[first_id]
+            TracksOverlapOccurrenceWindow, "_filter", return_value={first_id}
         ):
             id_provider = TracksOverlapOccurrenceWindow(
                 track_repository,
                 track_view_state,
                 other=other,
+                track_id_set_factory=mock_factory,
             )
             result_ids = id_provider.get_ids()
 
-            assert result_ids == PythonTrackIdSet([first_id])
+            assert result_ids == track_id_set
             assert track_repository.get_for.call_args_list == [
                 call(id) for id in track_ids
             ]
+            mock_factory.create.assert_called_once_with({first_id})
 
     @pytest.mark.parametrize(
         (
@@ -526,6 +544,8 @@ class TestTracksOverlapOccurrenceWindow:
         observable_property.get.return_value = filter_element
         track_view_state.filter_element = observable_property
 
+        mock_factory = Mock(spec=TrackIdSetFactory)
+
         start_detection = Mock(spec=Detection)
         start_time = datetime(2020, 1, 1, 13)
         start_detection.occurrence = start_time
@@ -556,11 +576,11 @@ class TestTracksOverlapOccurrenceWindow:
             track.end.return_value = end_detection
 
             id_provider = TracksOverlapOccurrenceWindow(
-                track_repository, track_view_state
+                track_repository, track_view_state, mock_factory
             )
             result_ids = id_provider._filter([track])
 
-            assert result_ids == [track_id]
+            assert result_ids == {track_id}
             mock_start.assert_called_once()
             mock_end.assert_called_once()
             if filter_start or filter_end:
@@ -572,3 +592,4 @@ class TestTracksOverlapOccurrenceWindow:
                 )
             else:
                 mock_has_overlap.assert_not_called()
+            mock_factory.create.assert_not_called()

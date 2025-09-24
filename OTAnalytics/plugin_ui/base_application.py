@@ -183,9 +183,11 @@ from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSetFactory
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSetFactory
 from OTAnalytics.plugin_datastore.polars_track_store import (
     POLARS_TRACK_GEOMETRY_FACTORY,
     PolarsByMaxConfidence,
@@ -675,6 +677,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.color_palette_provider,
             self.progressbar_builder,
             self.track_image_factory,
+            self.track_id_set_factory,
         )
 
     @cached_property
@@ -903,7 +906,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
         tracks_assigned_to_all_flows = FilteredTrackIdProviderByTrackIdProvider(
             TracksAssignedToAllFlows(
-                self.road_user_assigner, self.event_repository, self.flow_repository
+                self.road_user_assigner,
+                self.event_repository,
+                self.flow_repository,
+                self.track_id_set_factory,
             ),
             self.all_filtered_track_ids,
         )
@@ -984,6 +990,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def track_geometry_factory(self) -> POLARS_TRACK_GEOMETRY_FACTORY:
         return PolarsTrackGeometryDataset.from_track_dataset
+
+    @cached_property
+    def track_id_set_factory(self) -> TrackIdSetFactory:
+        return PolarsTrackIdSetFactory()
 
     @cached_property
     def remove_events_by_road_user_id(self) -> RemoveEventsByRoadUserId:

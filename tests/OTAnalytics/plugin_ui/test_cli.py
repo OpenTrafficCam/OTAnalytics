@@ -91,6 +91,7 @@ from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
 from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSetFactory
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
@@ -549,8 +550,12 @@ class TestOTAnalyticsCli:
         )
         get_all_tracks = GetAllTracks(track_repository)
         get_cutting_sections = GetCuttingSections(section_repository)
+        track_id_set_factory = PolarsTrackIdSetFactory()
         tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
-            SimpleRoadUserAssigner(), event_repository, flow_repository
+            SimpleRoadUserAssigner(),
+            event_repository,
+            flow_repository,
+            track_id_set_factory,
         )
         export_track_statistics = ExportTrackStatistics(
             CalculateTrackStatistics(

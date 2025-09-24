@@ -40,6 +40,7 @@ from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowId, FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSetFactory
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
@@ -145,6 +146,7 @@ class TracksNotAssignedToSelection(PandasDataFrameProvider):
         flow_repository: FlowRepository,
         state: FlowState,
         track_repository: TrackRepository,
+        track_id_set_factory: TrackIdSetFactory,
     ) -> None:
         self._other = other
         self._event_repository = event_repository
@@ -152,6 +154,7 @@ class TracksNotAssignedToSelection(PandasDataFrameProvider):
         self._assigner = assigner
         self._state = state
         self._track_repository = track_repository
+        self._track_id_set_factory = track_id_set_factory
 
     def get_data(self) -> DataFrame:
         return FilterById(
@@ -162,6 +165,7 @@ class TracksNotAssignedToSelection(PandasDataFrameProvider):
                     self._event_repository,
                     self._flow_repository,
                     self._state.selected_flows.get(),
+                    track_id_set_factory=self._track_id_set_factory,
                 ),
                 self._track_repository,
             ),
@@ -199,6 +203,7 @@ class VisualizationBuilder:
         color_palette_provider: ColorPaletteProvider,
         pulling_progressbar_builder: ProgressbarBuilder,
         track_image_factory: TrackImageFactory,
+        track_id_set_factory: TrackIdSetFactory,
         enable_single_legend: bool = True,
         enable_multi_legend: bool = False,
     ) -> None:
@@ -208,6 +213,7 @@ class VisualizationBuilder:
         self._color_palette_provider = color_palette_provider
         self._pulling_progressbar_builder = pulling_progressbar_builder
         self._track_image_factory = track_image_factory
+        self._track_id_set_factory = track_id_set_factory
         self._enable_single_legend = enable_single_legend
         self._enable_multi_legend = enable_multi_legend
         self._track_repository = datastore._track_repository
@@ -512,6 +518,7 @@ class VisualizationBuilder:
             self._flow_repository,
             flow_state,
             self._track_repository,
+            track_id_set_factory=self._track_id_set_factory,
         )
         cached_plotter = CachedPlotter(
             self._create_track_start_end_point_plotter(
@@ -579,6 +586,7 @@ class VisualizationBuilder:
             self._flow_repository,
             flow_state,
             self._track_repository,
+            track_id_set_factory=self._track_id_set_factory,
         )
         cached_plotter = CachedPlotter(
             self._create_track_geometry_plotter(
@@ -757,6 +765,7 @@ class VisualizationBuilder:
                 other=id_filter,
                 track_repository=self._track_repository,
                 track_view_state=self._track_view_state,
+                track_id_set_factory=self._track_id_set_factory,
             ),
         )
 
@@ -838,6 +847,7 @@ class VisualizationBuilder:
                 ),
                 track_repository=self._track_repository,
                 track_view_state=self._track_view_state,
+                track_id_set_factory=self._track_id_set_factory,
             ),
         )
 
@@ -892,6 +902,7 @@ class VisualizationBuilder:
                 ),
                 track_repository=self._track_repository,
                 track_view_state=self._track_view_state,
+                track_id_set_factory=self._track_id_set_factory,
             ),
         )
 
@@ -905,6 +916,7 @@ class VisualizationBuilder:
                 self._event_repository,
                 self._flow_repository,
                 [flow],
+                track_id_set_factory=self._track_id_set_factory,
             ),
         )
 
@@ -950,6 +962,7 @@ class VisualizationBuilder:
                     self._event_repository,
                     self._flow_repository,
                     [flow],
+                    track_id_set_factory=self._track_id_set_factory,
                 ),
                 self._track_repository,
             ),
