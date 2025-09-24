@@ -1,5 +1,3 @@
-from utils.assertions import assert_track_datasets_equal
-
 from OTAnalytics.domain.track import Track
 from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.filter_pandas_track_store import (
@@ -8,6 +6,7 @@ from OTAnalytics.plugin_datastore.filter_pandas_track_store import (
 )
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrack
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
+from tests.utils.assertions import assert_track_datasets_equal
 
 
 class TestFilterByIdPandasTrackDataset:

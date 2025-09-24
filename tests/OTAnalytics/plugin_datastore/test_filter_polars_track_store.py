@@ -1,5 +1,4 @@
 import pytest
-from utils.assertions import assert_track_datasets_equal
 
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_datastore.filter_polars_track_dataset import (
@@ -14,6 +13,7 @@ from OTAnalytics.plugin_datastore.python_track_store import PythonTrack
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
     PolarsTrackGeometryDataset,
 )
+from tests.utils.assertions import assert_track_datasets_equal
 
 
 @pytest.fixture
