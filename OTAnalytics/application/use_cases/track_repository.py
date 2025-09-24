@@ -10,7 +10,6 @@ from OTAnalytics.domain.track_repository import (
     TrackFileRepository,
     TrackRepository,
 )
-from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 class AllTrackIdsProvider(TrackIdProvider):
@@ -142,16 +141,16 @@ class RemoveTracks:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def __call__(self, track_ids: Iterable[TrackId]) -> None:
+    def __call__(self, track_ids: TrackIdSet) -> None:
         """Remove tracks from track repository.
 
         Tracks that do not exist in the repository will be skipped.
 
         Args:
-            track_ids (Iterable[TrackId]): ids of tracks to be removed.
+            track_ids (TrackIdSet): ids of tracks to be removed.
         """
         try:
-            self._track_repository.remove_multiple(PythonTrackIdSet(track_ids))
+            self._track_repository.remove_multiple(track_ids)
         except RemoveMultipleTracksError as cause:
             logger().info(cause)
 
