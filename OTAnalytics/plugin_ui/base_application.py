@@ -187,6 +187,9 @@ from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSetFactory
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
+from OTAnalytics.plugin_datastore.filter_polars_track_dataset import (
+    FilterByClassPolarsTrackDataset,
+)
 from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSetFactory
 from OTAnalytics.plugin_datastore.polars_track_store import (
     POLARS_TRACK_GEOMETRY_FACTORY,
@@ -603,15 +606,15 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def track_repository(self) -> TrackRepository:
         return TrackRepository(
-            # FilterByClassPandasTrackDataset(
-            PolarsTrackDataset.from_list(
-                [],
-                self.track_geometry_factory,
-                self.polars_by_max_confidence,
-            ),
-            # self.run_config.include_classes,
-            # self.run_config.exclude_classes,
-            # )
+            FilterByClassPolarsTrackDataset(
+                PolarsTrackDataset.from_list(
+                    [],
+                    self.track_geometry_factory,
+                    self.polars_by_max_confidence,
+                ),
+                self.run_config.include_classes,
+                self.run_config.exclude_classes,
+            )
         )
 
     def _create_track_parser(self) -> TrackParser:

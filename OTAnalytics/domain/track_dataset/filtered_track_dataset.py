@@ -7,6 +7,7 @@ from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IntersectionPoint,
+    IntersectionPointsDataset,
     TrackDataset,
     TrackIdSet,
     TrackSegmentDataset,
@@ -59,6 +60,11 @@ class FilteredTrackDataset(TrackDataset):
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
         return self._filter().intersection_points(sections, offset)
+
+    def wrap_intersection_points(
+        self, sections: list[Section], offset: RelativeOffsetCoordinate
+    ) -> IntersectionPointsDataset:
+        return self._filter().wrap_intersection_points(sections, offset)
 
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
