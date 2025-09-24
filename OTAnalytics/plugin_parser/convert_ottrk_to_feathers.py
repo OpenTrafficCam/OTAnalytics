@@ -4,8 +4,8 @@ from typing import Any, Dict
 from OTAnalytics.application.datastore import TrackParseResult
 from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
-from OTAnalytics.plugin_datastore.track_geometry_store.pandas_geometry_store import (
-    PandasTrackGeometryDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
+    PolarsTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
     PandasByMaxConfidence,
@@ -21,7 +21,7 @@ from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 
 def create_track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
     """Create a track geometry factory for PandasTrackDataset."""
-    return PandasTrackGeometryDataset.from_track_dataset
+    return PolarsTrackGeometryDataset.from_track_dataset
 
 
 def create_ottrk_parser() -> OttrkParser:
