@@ -17,6 +17,10 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     TrackGeometryDataset,
     TrackIdSet,
 )
+from OTAnalytics.plugin_datastore.filter_pandas_track_store import (
+    FilterByIdPandasTrackDataset,
+    FilterLastNDetectionsPandasTrackDataset,
+)
 from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrack,
     PythonTrackDataset,
@@ -28,8 +32,6 @@ from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
 from OTAnalytics.plugin_datastore.track_store import (
     COLUMNS,
     INDEX_NAMES,
-    FilterByIdPandasTrackDataset,
-    FilterLastNDetectionsPandasTrackDataset,
     PandasDetection,
     PandasTrack,
     PandasTrackDataset,

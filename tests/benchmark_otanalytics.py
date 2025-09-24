@@ -51,6 +51,9 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
+from OTAnalytics.plugin_datastore.filter_pandas_track_store import (
+    FilterByClassPandasTrackDataset,
+)
 from OTAnalytics.plugin_datastore.polars_track_store import (
     POLARS_TRACK_GEOMETRY_FACTORY,
     PolarsTrackDataset,
@@ -67,7 +70,6 @@ from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_store import (
-    FilterByClassPandasTrackDataset,
     PandasByMaxConfidence,
     PandasTrackDataset,
 )
