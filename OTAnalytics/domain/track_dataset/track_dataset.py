@@ -232,22 +232,6 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def intersection_points(
-        self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
-        """
-        Return the intersection points resulting from the tracks and the
-        given sections.
-
-        Args:
-            sections (list[Section]): the sections to intersect with.
-            offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
-
-        Returns:
-            dict[TrackId, list[tuple[SectionId]]]: the intersection points.
-        """
-        raise NotImplementedError
-
     def wrap_intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> "IntersectionPointsDataset":
@@ -261,8 +245,7 @@ class TrackDataset(ABC):
         Returns:
             IntersectionPointsDataset: the intersection points dataset.
         """
-        intersection_data = self.intersection_points(sections, offset)
-        return PythonIntersectionPointsDataset(intersection_data, self)
+        raise NotImplementedError
 
     @abstractmethod
     def contained_by_sections(

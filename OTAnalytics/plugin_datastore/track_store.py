@@ -29,7 +29,8 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     START_Y,
     TRACK_GEOMETRY_FACTORY,
     EmptyTrackIdSet,
-    IntersectionPoint,
+    IntersectionPointsDataset,
+    PythonIntersectionPointsDataset,
     TrackDataset,
     TrackDoesNotExistError,
     TrackGeometryDataset,
@@ -526,11 +527,12 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             self._geometry_datasets[offset] = geometry_dataset
         return geometry_dataset
 
-    def intersection_points(
+    def wrap_intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
+    ) -> IntersectionPointsDataset:
         geometry_dataset = self._get_geometry_dataset_for(offset)
-        return geometry_dataset.intersection_points(sections)
+        intersection_data = geometry_dataset.intersection_points(sections)
+        return PythonIntersectionPointsDataset(intersection_data, self)
 
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
@@ -633,7 +635,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         # - calculate intersects per segment
         # - cumcount per intersects by track id
         # - add cumcount to track id
-        intersection_points = self.intersection_points([section], offset)
+        intersection_points = self.wrap_intersection_points([section], offset)
         cut_indices = {
             unpack(track_id): [
                 ip[1].upper_index

@@ -38,7 +38,6 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     START_X,
     START_Y,
     EmptyTrackIdSet,
-    IntersectionPoint,
     IntersectionPointsDataset,
     TrackDataset,
     TrackDoesNotExistError,
@@ -489,12 +488,6 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             geometry_dataset = self.track_geometry_factory(self, offset)
             self._geometry_datasets[offset] = geometry_dataset
         return geometry_dataset
-
-    def intersection_points(
-        self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
-        geometry_dataset = self._get_geometry_dataset_for(offset)
-        return geometry_dataset.intersection_points(sections)
 
     def wrap_intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
