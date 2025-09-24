@@ -1330,6 +1330,7 @@ class DummyViewModel(
             )
 
     def create_events(self) -> None:
+        logger().info("Creating events")
         start_msg_popup = self._ui_factory.minimal_info_box(
             message="Create events...",
             initial_position=self.get_position(),
@@ -1343,6 +1344,7 @@ class DummyViewModel(
         start_msg_popup.update_message(message="Creating events completed")
         sleep(1)
         start_msg_popup.close()
+        logger().info("Events created")
 
     def get_all_flow_ids(self) -> list[FlowId]:
         return [flow.id for flow in self.get_all_flows()]
