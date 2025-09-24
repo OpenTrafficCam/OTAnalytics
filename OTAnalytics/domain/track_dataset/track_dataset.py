@@ -21,14 +21,22 @@ from OTAnalytics.domain.types import EventType
 
 START_X: str = "start_x"
 START_Y: str = "start_y"
+START_W: str = "start_w"
+START_H: str = "start_h"
 START_OCCURRENCE: str = "start_occurrence"
 START_FRAME: str = "start_frame"
 START_VIDEO_NAME: str = "start_video_name"
 END_X: str = "end_x"
 END_Y: str = "end_y"
+END_W: str = "end_w"
+END_H: str = "end_h"
 END_OCCURRENCE: str = "end_occurrence"
 END_FRAME: str = "end_frame"
 END_VIDEO_NAME: str = "end_video_name"
+CURRENT_X: str = "current_x"
+CURRENT_Y: str = "current_y"
+PREVIOUS_X: str = "previous_x"
+PREVIOUS_Y: str = "previous_y"
 
 
 class TrackDoesNotExistError(Exception):
@@ -238,7 +246,7 @@ class TrackDataset(ABC):
             IntersectionPointsDataset: the intersection points dataset.
         """
         intersection_data = self.intersection_points(sections, offset)
-        return IntersectionPointsDataset(intersection_data, self)
+        return PythonIntersectionPointsDataset(intersection_data, self)
 
     @abstractmethod
     def contained_by_sections(
@@ -487,7 +495,82 @@ class TrackGeometryDataset(ABC):
         raise NotImplementedError
 
 
-class IntersectionPointsDataset:
+class IntersectionPointsDataset(ABC):
+    """Dataset containing intersection points between tracks and sections."""
+
+    @abstractmethod
+    def items(
+        self,
+    ) -> Iterator[tuple[TrackId, list[tuple[SectionId, IntersectionPoint]]]]:
+        """Iterate over track IDs and their intersection points.
+
+        Returns:
+            Iterator yielding (track_id, intersection_points) tuples.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def keys(self) -> Iterator[TrackId]:
+        """Get all track IDs that have intersection points.
+
+        Returns:
+            Iterator over track IDs.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get(self, track_id: TrackId) -> list[tuple[SectionId, IntersectionPoint]]:
+        """Get intersection points for a specific track ID.
+
+        Args:
+            track_id: The track ID to get intersection points for.
+
+        Returns:
+            List of (section_id, intersection_point) tuples for the track.
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def empty(self) -> bool:
+        """Check if the dataset is empty.
+
+        Returns:
+            True if no intersection points exist, False otherwise.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def __len__(self) -> int:
+        """Get the number of tracks with intersection points.
+
+        Returns:
+            Number of tracks that have intersection points.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def __contains__(self, track_id: TrackId) -> bool:
+        """Check if a track ID has intersection points.
+
+        Args:
+            track_id: The track ID to check.
+
+        Returns:
+            True if the track has intersection points, False otherwise.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_events(
+        self,
+        offset: RelativeOffsetCoordinate,
+        event_builder: EventBuilder = SectionEventBuilder(),
+    ) -> EventDataset:
+        raise NotImplementedError
+
+
+class PythonIntersectionPointsDataset(IntersectionPointsDataset):
     """Dataset containing intersection points between tracks and sections."""
 
     def __init__(

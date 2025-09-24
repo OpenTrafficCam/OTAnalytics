@@ -26,7 +26,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import Detection, Track
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IntersectionPoint,
-    IntersectionPointsDataset,
+    PythonIntersectionPointsDataset,
     TrackDataset,
 )
 from OTAnalytics.domain.types import EventType
@@ -250,8 +250,8 @@ def test_case_track_line_section(track: Track) -> _TestCase:
     prev_detection = track.detections[ip.lower_index]
     detection = track.detections[ip.upper_index]
     track_dataset = Mock(spec=TrackDataset)
-    track_dataset.wrap_intersection_points.return_value = IntersectionPointsDataset(
-        {track.id: [(section.id, ip)]}, track_dataset
+    track_dataset.wrap_intersection_points.return_value = (
+        PythonIntersectionPointsDataset({track.id: [(section.id, ip)]}, track_dataset)
     )
     track_dataset.get_for.return_value = track
     expected_event_coord = _ExpectedEventCoord.from_detection(
@@ -298,14 +298,16 @@ def test_case_closed_track_line_section(
 ) -> _TestCase:
     section = create_section([(0, 1.5), (3, 1.5)], SectionType.LINE)
     track_dataset = Mock(spec=TrackDataset)
-    track_dataset.wrap_intersection_points.return_value = IntersectionPointsDataset(
-        {
-            closed_track.id: [
-                (section.id, IntersectionPoint(upper_index=2, relative_position=0)),
-                (section.id, IntersectionPoint(upper_index=4, relative_position=0)),
-            ]
-        },
-        track_dataset,
+    track_dataset.wrap_intersection_points.return_value = (
+        PythonIntersectionPointsDataset(
+            {
+                closed_track.id: [
+                    (section.id, IntersectionPoint(upper_index=2, relative_position=0)),
+                    (section.id, IntersectionPoint(upper_index=4, relative_position=0)),
+                ]
+            },
+            track_dataset,
+        )
     )
     track_dataset.get_for.return_value = closed_track
     expected_event_coords = [
@@ -326,8 +328,8 @@ def test_case_closed_track_line_section(
 def test_case_line_section_no_intersection(track: Track) -> _TestCase:
     section = create_section([(0, 0), (10, 0)], SectionType.LINE)
     track_dataset = Mock(spec=TrackDataset)
-    track_dataset.wrap_intersection_points.return_value = IntersectionPointsDataset(
-        {}, track_dataset
+    track_dataset.wrap_intersection_points.return_value = (
+        PythonIntersectionPointsDataset({}, track_dataset)
     )
     track_dataset.get_for.return_value = track
 
