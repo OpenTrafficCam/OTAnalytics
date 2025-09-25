@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
@@ -25,7 +26,7 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import Detection, Track, TrackId, unpack
+from OTAnalytics.domain.track import Detection, Track, TrackId, pack, unpack
 from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
     END_OCCURRENCE,
@@ -498,16 +499,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     def ids_inside(self, sections: list[Section]) -> TrackIdSet:
         result: TrackIdSet = PolarsTrackIdSet()
         for _section in sections:
-            section_geom = area_section_to_shapely(_section)
-            offset = _section.get_offset(EventType.SECTION_ENTER)
-            x_coords = (
-                self._dataset[track.X] + offset.x * self._dataset[track.W]
-            ).to_numpy()
-            y_coords = (
-                self._dataset[track.Y] + offset.y * self._dataset[track.H]
-            ).to_numpy()
-
-            contains_masks = contains(section_geom, x_coords, y_coords)
+            contains_masks = self.__calculate_contains_by_section_mask(_section)
             result = result.union(
                 PolarsTrackIdSet(
                     self._dataset.filter(contains_masks)
@@ -518,10 +510,36 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             )
         return result
 
+    def __calculate_contains_by_section_mask(self, section: Section) -> numpy.ndarray:
+        section_geom = area_section_to_shapely(section)
+        offset = section.get_offset(EventType.SECTION_ENTER)
+        x_coords = (
+            self._dataset[track.X] + offset.x * self._dataset[track.W]
+        ).to_numpy()
+        y_coords = (
+            self._dataset[track.Y] + offset.y * self._dataset[track.H]
+        ).to_numpy()
+        return contains(section_geom, x_coords, y_coords)
+
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
-        raise NotImplementedError
+        contains_result: dict[TrackId, list[tuple[SectionId, list[bool]]]] = (
+            defaultdict(list)
+        )
+        for _section in sections:
+            contains_masks = self.__calculate_contains_by_section_mask(_section)
+            if any(contains_masks):
+                temp = (
+                    self._dataset.with_columns(
+                        pl.Series("contains_mask", contains_masks)
+                    )
+                    .group_by(pl.col(track.TRACK_ID))
+                    .agg(pl.col("contains_mask").alias("grouped"))
+                )
+                for track_id, contains_mask in temp.iter_rows():
+                    contains_result[pack(track_id)].append((_section.id, contains_mask))
+        return contains_result
 
     def _add_to_geometry_dataset(self, dataset: "PolarsTrackDataset") -> dict:
         """Add to geometry dataset - placeholder implementation."""

@@ -1,8 +1,12 @@
+from dataclasses import dataclass
 from unittest.mock import Mock, call
 
 import polars as pl
+import pytest
 
 from OTAnalytics.domain import track
+from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
 from OTAnalytics.plugin_datastore.polars_track_store import (
@@ -14,8 +18,112 @@ from OTAnalytics.plugin_datastore.polars_track_store import (
     _convert_tracks,
     create_empty_dataframe,
 )
+from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
+    PolarsTrackGeometryDataset,
+)
 from tests.utils.assertions import assert_equal_track_properties
 from tests.utils.builders.track_builder import TrackBuilder
+
+
+def create_line_section(
+    section_id: str, coordinates: list[tuple[float, float]]
+) -> Section:
+    section = Mock(spec=LineSection)
+    section.get_coordinates.return_value = [
+        Coordinate(coord[0], coord[1]) for coord in coordinates
+    ]
+    section.get_offset.return_value = RelativeOffsetCoordinate(0.0, 0.0)
+    section.id = SectionId(section_id)
+    return section
+
+
+@dataclass
+class ContainedBySectionTestCase:
+    tracks: list[Track]
+    sections: list[Section]
+    expected_result: dict[TrackId, list[tuple[SectionId, list[bool]]]]
+
+
+@pytest.fixture
+def contained_by_section_test_case(
+    straight_track: Track, complex_track: Track, closed_track: Track
+) -> ContainedBySectionTestCase:
+    # Straight track starts outside section
+    first_section = create_line_section(
+        "1", [(1.5, 0.5), (1.5, 1.5), (2.5, 1.5), (2.5, 0.5), (1.5, 0.5)]
+    )
+    # Straight track starts inside section
+    second_section = create_line_section(
+        "2", [(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5), (0.5, 0.5)]
+    )
+    # Straight track is inside section
+    third_section = create_line_section(
+        "3", [(0.0, 0.0), (0.0, 2.0), (4.0, 2.0), (4.0, 0.0), (0.0, 0.0)]
+    )
+    # Straight track starts outside stays inside section
+    fourth_section = create_line_section(
+        "4", [(1.5, 0.5), (1.5, 1.5), (4.0, 1.5), (4.0, 0.5), (1.5, 0.5)]
+    )
+    # Complex track starts outside section with multiple intersections
+    fifth_section = create_line_section(
+        "5",
+        [(1.5, 0.5), (1.5, 2.5), (2.5, 2.5), (2.5, 0.5), (1.5, 0.5)],
+    )
+    # Complex track starts inside section with multiple intersections
+    sixth_section = create_line_section(
+        "6", [(0.5, 0.5), (0.5, 2.5), (1.5, 2.5), (1.5, 0.5), (0.5, 0.5)]
+    )
+    # Closed track
+    seventh_section = create_line_section(
+        "7", [(1.5, 0.5), (1.5, 2.0), (2.5, 2.0), (2.5, 0.5), (1.5, 0.5)]
+    )
+    # Not contained track
+    eighth_section = create_line_section(
+        "not-contained", [(3.0, 1.0), (3.0, 2.0), (4.0, 2.0), (4.0, 1.0), (3.0, 1.0)]
+    )
+    expected = {
+        straight_track.id: [
+            (first_section.id, [False, True, False]),
+            (second_section.id, [True, False, False]),
+            (third_section.id, [True, True, True]),
+            (fourth_section.id, [False, True, True]),
+            (fifth_section.id, [False, True, False]),
+            (sixth_section.id, [True, False, False]),
+            (seventh_section.id, [False, True, False]),
+        ],
+        complex_track.id: [
+            (first_section.id, [False, True, False, False, False, False]),
+            (second_section.id, [True, False, False, False, False, False]),
+            (third_section.id, [True, True, True, True, False, False]),
+            (fourth_section.id, [False, True, False, False, False, False]),
+            (fifth_section.id, [False, True, True, False, False, True]),
+            (sixth_section.id, [True, False, False, True, True, False]),
+            (seventh_section.id, [False, True, True, False, False, False]),
+        ],
+        closed_track.id: [
+            (first_section.id, [False, True, False, False, False]),
+            (second_section.id, [True, False, False, False, True]),
+            (third_section.id, [True, True, False, False, True]),
+            (fourth_section.id, [False, True, False, False, False]),
+            (fifth_section.id, [False, True, True, False, False]),
+            (sixth_section.id, [True, False, False, True, True]),
+            (seventh_section.id, [False, True, False, False, False]),
+        ],
+    }
+    return ContainedBySectionTestCase(
+        [straight_track, complex_track, closed_track],
+        [
+            first_section,
+            second_section,
+            third_section,
+            fourth_section,
+            fifth_section,
+            sixth_section,
+            seventh_section,
+            eighth_section,
+        ],
+        expected,
+    )
 
 
 class TestPolarsDetection:
@@ -379,6 +487,25 @@ class TestPolarsTrackDataset:
         assert result is not None
         assert result.id == track.id
         assert len(result.detections) == 1
+
+    def test_contained_by_sections(
+        self,
+        contained_by_section_test_case: ContainedBySectionTestCase,
+    ) -> None:
+        unused_offset = RelativeOffsetCoordinate(0, 0)
+        track_dataset = PolarsTrackDataset.from_list(
+            contained_by_section_test_case.tracks,
+            PolarsTrackGeometryDataset.from_track_dataset,
+        )
+        result = track_dataset.contained_by_sections(
+            contained_by_section_test_case.sections, unused_offset
+        )
+        expected_result = contained_by_section_test_case.expected_result
+        for track_id in expected_result:
+            result_data = result[track_id]
+            expected_data = expected_result[track_id]
+            assert result_data == expected_data
+        assert result == expected_result
 
 
 def test_convert_tracks() -> None:
