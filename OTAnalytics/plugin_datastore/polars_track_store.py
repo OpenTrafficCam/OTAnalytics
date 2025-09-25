@@ -275,6 +275,23 @@ POLARS_TRACK_GEOMETRY_FACTORY = Callable[
 
 
 class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
+    """High-performance TrackDataset implementation using Polars for vectorized
+    operations.
+
+    This implementation leverages Polars DataFrames to provide significant performance
+    improvements for large-scale track data processing through vectorized operations.
+
+    Key features:
+    - Vectorized intersection calculations
+    - Efficient memory usage through lazy evaluation
+    - Optimized filtering and aggregation operations
+
+    Note:
+        This implementation may have different performance characteristics
+        compared to other TrackDataset implementations, particularly for
+        small datasets where setup overhead may outweigh benefits.
+    """
+
     @property
     def track_ids(self) -> TrackIdSet:
         if self._dataset.is_empty():
@@ -466,6 +483,22 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> TrackIdSet:
+        """Return a set of tracks intersecting a set of sections.
+
+        This implementation uses Polars-based vectorized geometry operations for
+        improved performance on large track datasets.
+
+        Args:
+            sections (list[Section]): the list of sections to intersect.
+            offset (RelativeOffsetCoordinate): the offset to be applied to the tracks.
+
+        Returns:
+            TrackIdSet: the track ids intersecting the given sections.
+
+        Performance:
+            O(n*m) where n is number of tracks and m is number of sections,
+            but with vectorized operations for significant speedup on large datasets.
+        """
         geometry_dataset = self._get_geometry_dataset_for(offset)
         return geometry_dataset.intersecting_tracks(sections)
 
