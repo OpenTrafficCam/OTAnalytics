@@ -172,6 +172,7 @@ from OTAnalytics.application.use_cases.track_to_video_repository import (
     ClearAllTrackToVideos,
 )
 from OTAnalytics.application.use_cases.update_count_plots import (
+    CountDataUpdater,
     CountPlotSaver,
     CountPlotsUpdater,
 )
@@ -1043,6 +1044,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def update_count_plots(self) -> CountPlotsUpdater:
         return CountPlotsUpdater(self.track_view_state, self.count_plotter)
+
+    @cached_property
+    def update_count_data(self) -> CountDataUpdater:
+        return CountDataUpdater(self.track_view_state, self.count_plotter)
 
     @cached_property
     def save_count_plots(self) -> CountPlotSaver:
