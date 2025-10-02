@@ -59,7 +59,7 @@ class PolarsTrackIdSet(TrackIdSet):
             return PolarsTrackIdSet(combined_series)
         else:
             # Convert other to strings and combine
-            other_strings = [unpack(track_id) for track_id in other]
+            other_strings = {unpack(track_id) for track_id in other}
             other_series = pl.Series(other_strings, dtype=pl.String)
             combined_series = pl.concat([self._series, other_series]).unique().sort()
             return PolarsTrackIdSet(combined_series)
