@@ -21,6 +21,9 @@ from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 
 METADATA_SUFFIX = "_metadata.json"
 FEATHER_FILETYPE = ".feather"
+KEY_DETECTION_METADATA = "detection_metadata"
+KEY_DETECTION_CLASSES = "detection_classes"
+KEY_VIDEO_METADATA = "video_metadata"
 
 
 def create_track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
@@ -52,10 +55,12 @@ def convert_to_pandas_dataset(
 def create_metadata_dict(parse_result: TrackParseResult) -> Dict[str, Any]:
     """Create a metadata dictionary from TrackParseResult."""
     metadata = {
-        "detection_metadata": {
-            "detection_classes": list(parse_result.detection_metadata.detection_classes)
+        KEY_DETECTION_METADATA: {
+            KEY_DETECTION_CLASSES: list(
+                parse_result.detection_metadata.detection_classes
+            )
         },
-        "video_metadata": parse_result.video_metadata.to_dict(),
+        KEY_VIDEO_METADATA: parse_result.video_metadata.to_dict(),
     }
     return metadata
 

@@ -29,6 +29,9 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
 )
 from OTAnalytics.plugin_parser.convert_ottrk_to_feathers import (
     FEATHER_FILETYPE,
+    KEY_DETECTION_CLASSES,
+    KEY_DETECTION_METADATA,
+    KEY_VIDEO_METADATA,
     METADATA_SUFFIX,
     convert_ottrk_to_feather,
 )
@@ -162,7 +165,7 @@ class FeathersParser(TrackParser):
         if not file.exists():
             raise FileNotFoundError(f"Feather file not found: {file}")
         # Construct metadata file path
-        metadata_file = file.parent / f"{file.stem}_metadata.json"
+        metadata_file = file.parent / f"{file.stem}{METADATA_SUFFIX}"
         if not metadata_file.exists():
             raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
 
@@ -179,11 +182,11 @@ class FeathersParser(TrackParser):
         )
 
         # Parse video metadata
-        video_metadata = self._parse_video_metadata(metadata["video_metadata"])
+        video_metadata = self._parse_video_metadata(metadata[KEY_VIDEO_METADATA])
 
         # Parse detection metadata
         detection_metadata = self._parse_detection_metadata(
-            metadata["detection_metadata"]
+            metadata[KEY_DETECTION_METADATA]
         )
 
         return TrackParseResult(tracks, detection_metadata, video_metadata)
@@ -228,5 +231,5 @@ class FeathersParser(TrackParser):
         Returns:
             DetectionMetadata: Parsed detection metadata object
         """
-        detection_classes = frozenset(metadata["detection_classes"])
+        detection_classes = frozenset(metadata[KEY_DETECTION_CLASSES])
         return DetectionMetadata(detection_classes)
