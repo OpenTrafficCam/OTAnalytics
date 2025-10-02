@@ -3,7 +3,7 @@ Tests for the FeathersParser module.
 """
 
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch
@@ -58,6 +58,12 @@ def sample_df() -> pd.DataFrame:
     )
 
 
+GIVEN_RECORDED_START_DATE = 1672574400.0  # 2022-01-01T10:00:00 as timestamp
+EXPECTED_RECORDED_START_DATE = datetime.fromtimestamp(
+    GIVEN_RECORDED_START_DATE, tz=timezone.utc
+)
+
+
 @pytest.fixture
 def sample_metadata() -> dict[str, Any]:
     """Create sample metadata for testing."""
@@ -65,7 +71,7 @@ def sample_metadata() -> dict[str, Any]:
         "detection_metadata": {"detection_classes": ["car", "truck", "bus"]},
         "video_metadata": {
             "path": "test_video.mp4",
-            "recorded_start_date": 1672574400.0,  # 2023-01-01T10:00:00 as timestamp
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
             "recorded_fps": 30.0,
             "number_of_frames": 900,
             "expected_duration": 30.0,
@@ -165,6 +171,7 @@ class TestFeathersParser:
             video_metadata = result.video_metadata
             assert isinstance(video_metadata, VideoMetadata)
             assert video_metadata.path == "test_video.mp4"
+            assert video_metadata.start == EXPECTED_RECORDED_START_DATE
             assert video_metadata.recorded_fps == 30.0
             assert video_metadata.number_of_frames == 900
             assert video_metadata.actual_fps == 29.97
@@ -191,7 +198,7 @@ class TestFeathersParser:
         """Test parsing video metadata with minimal required fields."""
         minimal_metadata = {
             "path": "video.mp4",
-            "recorded_start_date": 1672574400.0,  # 2023-01-01T10:00:00 as timestamp
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
             "recorded_fps": 30.0,
             "number_of_frames": 900,
         }
@@ -200,6 +207,7 @@ class TestFeathersParser:
 
         assert isinstance(result, VideoMetadata)
         assert result.path == "video.mp4"
+        assert result.start == EXPECTED_RECORDED_START_DATE
         assert result.recorded_fps == 30.0
         assert result.number_of_frames == 900
         assert result.expected_duration is None
@@ -211,7 +219,7 @@ class TestFeathersParser:
         """Test parsing video metadata with all optional fields."""
         full_metadata = {
             "path": "video.mp4",
-            "recorded_start_date": 1672574400.0,  # 2023-01-01T10:00:00 as timestamp
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
             "recorded_fps": 30.0,
             "number_of_frames": 900,
             "expected_duration": 30.0,
@@ -226,6 +234,7 @@ class TestFeathersParser:
         assert result.number_of_frames == 900
         assert result.expected_duration == timedelta(seconds=30.0)
         assert result.actual_fps == 29.97
+        assert result.start == EXPECTED_RECORDED_START_DATE
 
     def test_parse_detection_metadata(self, parser: FeathersParser) -> None:
         """Test parsing detection metadata."""
