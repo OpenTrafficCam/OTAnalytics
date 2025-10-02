@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from OTAnalytics.application.datastore import TrackParseResult
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
@@ -75,13 +76,13 @@ def convert_ottrk_to_feather(input_file: Path) -> None:
     feather_file = output_dir / f"{output_stem}.feather"
     metadata_file = output_dir / f"{output_stem}_metadata.json"
 
-    print(f"Reading ottrk file: {input_file}")
+    logger().info(f"Reading ottrk file: {input_file}")
 
     # Parse the ottrk file
     parser = create_ottrk_parser()
     parse_result = parser.parse(input_file)
 
-    print(f"Parsed {len(parse_result.tracks)} tracks")
+    logger().info(f"Parsed {len(parse_result.tracks)} tracks")
 
     if isinstance(parse_result.tracks, PandasTrackDataset):
         pandas_dataset = parse_result.tracks
@@ -90,18 +91,18 @@ def convert_ottrk_to_feather(input_file: Path) -> None:
 
     # Get the pandas DataFrame
     df = pandas_dataset.get_data()
-    print(f"DataFrame shape: {df.shape}")
+    logger().info(f"DataFrame shape: {df.shape}")
 
     # Save DataFrame to feather format
-    print(f"Saving DataFrame to: {feather_file}")
+    logger().info(f"Saving DataFrame to: {feather_file}")
     df.to_feather(feather_file)
 
     # Create and save metadata
     metadata = create_metadata_dict(parse_result)
-    print(f"Saving metadata to: {metadata_file}")
+    logger().info(f"Saving metadata to: {metadata_file}")
     write_json(metadata, metadata_file)
 
-    print("Conversion completed successfully!")
-    print("Output files:")
-    print(f"  - Data: {feather_file}")
-    print(f"  - Metadata: {metadata_file}")
+    logger().info("Conversion completed successfully!")
+    logger().info("Output files:")
+    logger().info(f"  - Data: {feather_file}")
+    logger().info(f"  - Metadata: {metadata_file}")
