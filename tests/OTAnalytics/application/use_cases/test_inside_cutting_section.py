@@ -56,8 +56,6 @@ def cached_track_ids_inside_cutting_sections() -> CachedTrackIdsInsideCuttingSec
     cached_track_ids_inside_cutting_sections = CachedTrackIdsInsideCuttingSections(
         get_all_tracks, get_cutting_sections
     )
-    from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
-
     cached_track_ids_inside_cutting_sections._cached_ids = PythonTrackIdSet(
         {
             TrackId("1"),
