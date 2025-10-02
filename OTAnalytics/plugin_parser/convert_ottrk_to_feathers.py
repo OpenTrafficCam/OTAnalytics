@@ -19,6 +19,9 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 
+METADATA_SUFFIX = "_metadata.json"
+FEATHER_FILETYPE = ".feather"
+
 
 def create_track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
     """Create a track geometry factory for PandasTrackDataset."""
@@ -73,8 +76,8 @@ def convert_ottrk_to_feather(input_file: Path) -> None:
     # Create output file paths using the same stem as input
     output_stem = input_file.stem
     output_dir = input_file.parent
-    feather_file = output_dir / f"{output_stem}.feather"
-    metadata_file = output_dir / f"{output_stem}_metadata.json"
+    feather_file = output_dir / f"{output_stem}{FEATHER_FILETYPE}"
+    metadata_file = output_dir / f"{output_stem}{METADATA_SUFFIX}"
 
     logger().info(f"Reading ottrk file: {input_file}")
 
