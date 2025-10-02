@@ -613,15 +613,19 @@ class PolarsEventDataset(EventDataset):
         return len(self._events)
 
     def __add__(self, other: "EventDataset") -> "EventDataset":
+        # TODO: Check to remove
         raise NotImplementedError
 
     def __eq__(self, other: object) -> bool:
+        # TODO: Check to remove
         raise NotImplementedError
 
     def extend(self, other: "EventDataset") -> None:
+        # TODO: Check to remove
         raise NotImplementedError
 
     def append(self, event: Event) -> None:
+        # TODO: Check to remove
         raise NotImplementedError
 
     def is_empty(self) -> bool:
