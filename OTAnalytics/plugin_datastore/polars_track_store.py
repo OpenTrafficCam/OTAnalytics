@@ -783,8 +783,6 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
     def _get_existing_track_ids(self, track_ids: TrackIdSet) -> TrackIdSet:
         if self._dataset.is_empty():
-            from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet
-
             return EmptyTrackIdSet()
 
         converted_ids = [unpack(track_id) for track_id in track_ids]
