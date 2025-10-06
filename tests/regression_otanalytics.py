@@ -48,7 +48,7 @@ def otflow_file(test_data_dir: Path) -> str:
 
 @pytest.fixture(scope="module")
 def cli_chunk_size() -> int:
-    return 5
+    return 1000
 
 
 @pytest.fixture
