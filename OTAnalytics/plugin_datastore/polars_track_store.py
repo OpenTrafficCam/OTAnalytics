@@ -792,9 +792,8 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             self._dataset.filter(pl.col(track.ORIGINAL_TRACK_ID).is_in(converted_ids))
             .get_column(LEVEL_TRACK_ID)
             .unique()
-            .to_list()
         )
-        return PolarsTrackIdSet([TrackId(track_id) for track_id in existing_ids])
+        return PolarsTrackIdSet(existing_ids)
 
     def split(self, batches: int) -> Sequence["PolarsTrackDataset"]:
         dataset_size = len(self)
