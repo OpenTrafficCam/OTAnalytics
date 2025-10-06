@@ -67,12 +67,10 @@ def assert_two_files_equal_sorted(
 ) -> None:
 
     with open(actual_counts_file, mode="r") as actual:
-        act_lines = sorted(actual.readlines())
-        act_lines = sorted([line.split(",", 1)[1] for line in act_lines])
+        act_lines = sorted([line.split(",", 1)[1] for line in actual.readlines()])
 
         with open(expected_counts_file, mode="r") as expected:
-            exp_lines = sorted(expected.readlines())
-            exp_lines = sorted([line.split(",", 1)[1] for line in exp_lines])
+            exp_lines = sorted([line.split(",", 1)[1] for line in expected.readlines()])
 
             assert set(act_lines) == set(exp_lines), (
                 f"Sets are not equal [act len: {len(act_lines)}, "
