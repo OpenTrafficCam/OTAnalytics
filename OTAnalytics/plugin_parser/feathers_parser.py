@@ -27,7 +27,11 @@ from OTAnalytics.plugin_datastore.polars_track_store import (
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
     PolarsTrackGeometryDataset,
 )
-from OTAnalytics.plugin_parser.convert_ottrk_to_feathers import convert_ottrk_to_feather
+from OTAnalytics.plugin_parser.convert_ottrk_to_feathers import (
+    FEATHER_FILETYPE,
+    METADATA_SUFFIX,
+    convert_ottrk_to_feather,
+)
 from OTAnalytics.plugin_parser.json_parser import parse_json
 
 
@@ -47,14 +51,14 @@ def use_feathers_files(files: list[Path]) -> list[Path]:
 
 
 def use_feather_file(file: Path) -> Path:
-    if not file.suffix.lower() == ".feather":
+    if not file.suffix.lower() == FEATHER_FILETYPE:
         if file.suffix.lower() == ".ottrk":
-            if not file.with_suffix(".feather").exists():
+            if not file.with_suffix(FEATHER_FILETYPE).exists():
                 convert_ottrk_to_feather(file)
-            return file.with_suffix(".feather")
+            return file.with_suffix(FEATHER_FILETYPE)
         else:
             raise ValueError(
-                f"Input file must have .feather or .ottrk extension: {file}"
+                f"Input file must have {FEATHER_FILETYPE} or .ottrk extension: {file}"
             )
     return file
 
@@ -108,7 +112,7 @@ class FeathersParser(TrackParser):
             if not file.exists():
                 raise FileNotFoundError(f"Feather file not found: {file}")
             # Construct metadata file path
-            metadata_file = file.parent / f"{file.stem}_metadata.json"
+            metadata_file = file.parent / f"{file.stem}{METADATA_SUFFIX}"
             if not metadata_file.exists():
                 raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
 

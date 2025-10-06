@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, call
 
 from OTAnalytics.application.datastore import TracksParseResult
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
@@ -13,12 +13,13 @@ other_file = Path("other.file.ottrk")
 
 class TestLoadTrackFile:
     def test_load_multiple_files(self) -> None:
+        classes = {"class1", "class2"}
         given = setup(
             track_ids=[TrackId("1"), TrackId("2")],
             video_files=[Path("video1.mp4"), Path("video2.mp4")],
             track_files=[some_file, other_file],
             existing_track_files=[],
-            classes={"class1", "class2"},
+            classes=classes,
         )
         target = create_target(given)
 
@@ -32,6 +33,10 @@ class TestLoadTrackFile:
         given.track_file_repository.add_all.assert_called_once_with(
             [some_file, other_file]
         )
+        assert given.tracks_metadata.update_detection_classes.call_args_list == [
+            call(classes),
+            call(classes),
+        ]
 
     def test_load_existing_track_file(self) -> None:
         """
@@ -55,6 +60,7 @@ class TestLoadTrackFile:
         given.video_repository.add_all.assert_not_called()
         given.track_repository.add_all.assert_not_called()
         given.track_file_repository.add_all.assert_not_called()
+        given.tracks_metadata.update_detection_classes.assert_not_called()
 
     def test_load_multiple_with_existing_track_file(self) -> None:
         """
@@ -62,12 +68,13 @@ class TestLoadTrackFile:
 
         @bug by randy-seng
         """  # noqa
+        classes = {"class1"}
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
-            track_files=[some_file, other_file],
+            track_files=[other_file],
             existing_track_files=[some_file],
-            classes={"class1"},
+            classes=classes,
         )
         target = create_target(given)
 
@@ -80,6 +87,7 @@ class TestLoadTrackFile:
             given.parse_result.tracks
         )
         given.track_file_repository.add_all.assert_called_once_with([other_file])
+        given.tracks_metadata.update_detection_classes.assert_called_once_with(classes)
 
     def test_load_empty_files_list(self) -> None:
         given = setup(
@@ -98,6 +106,7 @@ class TestLoadTrackFile:
         given.video_repository.add_all.assert_not_called()
         given.track_repository.add_all.assert_not_called()
         given.track_file_repository.add_all.assert_not_called()
+        given.tracks_metadata.update_detection_classes.assert_not_called()
 
     def test_load_with_videos_metadata_update(self) -> None:
         given = setup(
