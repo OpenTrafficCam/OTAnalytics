@@ -685,8 +685,6 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     ) -> tuple["PolarsTrackDataset", TrackIdSet]:
         if len(self) == 0:
             logger().info("No tracks to cut")
-            from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet
-
             return self, EmptyTrackIdSet()
 
         geometry_dataset = self._get_geometry_dataset_for(offset)
