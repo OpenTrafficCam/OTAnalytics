@@ -728,7 +728,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             return {}
 
         try:
-            track_id_strings = [track_id.id for track_id in track_ids]
+            track_id_strings = [unpack(track_id) for track_id in track_ids]
             result = (
                 self._dataset.filter(pl.col(LEVEL_TRACK_ID).is_in(track_id_strings))
                 .group_by(LEVEL_TRACK_ID)
@@ -762,7 +762,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             return self, EmptyTrackIdSet(), EmptyTrackIdSet()
 
         # Revert track IDs back to original IDs
-        ids_to_revert_strings = [track_id.id for track_id in ids_to_revert]
+        ids_to_revert_strings = [unpack(track_id) for track_id in ids_to_revert]
         result = self._dataset.with_columns(
             pl.when(pl.col(LEVEL_TRACK_ID).is_in(ids_to_revert_strings))
             .then(pl.col(track.ORIGINAL_TRACK_ID))
