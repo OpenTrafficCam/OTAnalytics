@@ -5,6 +5,23 @@ import pandas as pd
 from OTAnalytics.application.config import DEFAULT_EVENTLIST_FILE_TYPE
 from OTAnalytics.application.datastore import EventListParser
 from OTAnalytics.application.export_formats import event_list
+from OTAnalytics.application.export_formats.event_list import (
+    DIRECTION_VECTOR_X,
+    DIRECTION_VECTOR_Y,
+    EVENT_COORDINATE_X,
+    EVENT_COORDINATE_Y,
+    EVENT_TYPE,
+    FRAME_NUMBER,
+    HOSTNAME,
+    OCCURRENCE,
+    OCCURRENCE_DATE,
+    OCCURRENCE_TIME,
+    ROAD_USER_ID,
+    ROAD_USER_TYPE,
+    SECTION_ID,
+    SECTION_NAME,
+    VIDEO_NAME,
+)
 from OTAnalytics.application.export_formats.export_mode import INITIAL_MERGE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.export_events import (
@@ -24,6 +41,27 @@ OTC_EXCEL_FORMAT_NAME = "Excel (OpenTrafficCam)"
 OTC_CSV_FORMAT_NAME = "CSV (OpenTrafficCam)"
 OTC_OTEVENTS_FORMAT_NAME = "OTEvents (OpenTrafficCam)"
 
+OCCURRENCE_SEC = f"{OCCURRENCE}_sec"
+
+EXPORT_COLUMNS = [
+    ROAD_USER_ID,
+    ROAD_USER_TYPE,
+    HOSTNAME,
+    OCCURRENCE,
+    FRAME_NUMBER,
+    SECTION_ID,
+    EVENT_TYPE,
+    VIDEO_NAME,
+    OCCURRENCE_SEC,
+    EVENT_COORDINATE_X,
+    EVENT_COORDINATE_Y,
+    DIRECTION_VECTOR_X,
+    DIRECTION_VECTOR_Y,
+    SECTION_NAME,
+    OCCURRENCE_DATE,
+    OCCURRENCE_TIME,
+]
+
 
 class EventListDataFrameBuilder:
     def __init__(self, events: Iterable[Event], sections: Iterable[Section]):
@@ -39,7 +77,7 @@ class EventListDataFrameBuilder:
         self._split_columns_with_lists()
         self._add_section_names()
         self._add_detailed_date_time_columns()
-        return self._df
+        return self._df.loc[:, EXPORT_COLUMNS]
 
     def _add_detailed_date_time_columns(self) -> None:
         occurrence_column = pd.to_datetime(self._df[event_list.OCCURRENCE])
