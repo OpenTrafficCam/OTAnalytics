@@ -689,13 +689,16 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
         geometry_dataset = self._get_geometry_dataset_for(offset)
         new_track_ids = geometry_dataset.track_ids_after_cut(section)
+        original_track_ids = PolarsTrackIdSet(
+            self._dataset.get_column(track.TRACK_ID).unique()
+        )
         old_track_ids = self._dataset.rename({track.TRACK_ID: "old_track_id"})
 
         result = old_track_ids.join(new_track_ids, on=ROW_ID, how="left")
         result = result.drop("old_track_id")
         return (
             PolarsTrackDataset.from_dataframe(result, self.track_geometry_factory),
-            PolarsTrackIdSet(),
+            original_track_ids,
         )
 
     def filter_by_min_detection_length(self, length: int) -> TrackDataset:
