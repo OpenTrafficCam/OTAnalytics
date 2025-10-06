@@ -22,23 +22,6 @@ class CountPlotsUpdater:
         self._state.count_plots.set(plots)
 
 
-class CountDataUpdater:
-
-    def __init__(self, state: TrackViewState, plotter: CountPlotter) -> None:
-        self._state = state
-        self._plotter = plotter
-
-    def __call__(self) -> None:
-        self.update()
-
-    def update(self) -> None:
-        # TODO use TrafficCounting directly
-        # TODO use OTCamera Test Data instead of Hoy
-        data = self._plotter.prepare()
-
-        self._state.count_data.set(data)
-
-
 class CountPlotSaver:
 
     def __init__(self, path: Path):
