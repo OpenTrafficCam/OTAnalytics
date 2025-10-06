@@ -40,7 +40,9 @@ class PolarsTrackIdSet(TrackIdSet):
     def intersection(self, other: "TrackIdSet") -> "TrackIdSet":
         if isinstance(other, PolarsTrackIdSet):
             # Efficient intersection using Polars operations
-            intersected_series = self._series.filter(self._series.is_in(other._series))
+            intersected_series = self._series.filter(
+                self._series.is_in(other._series)
+            ).sort()
             return PolarsTrackIdSet(intersected_series)
         else:
             # Convert other to set of strings for intersection
@@ -65,14 +67,16 @@ class PolarsTrackIdSet(TrackIdSet):
     def difference(self, other: "TrackIdSet") -> "TrackIdSet":
         if isinstance(other, PolarsTrackIdSet):
             # Efficient difference using Polars operations
-            difference_series = self._series.filter(~self._series.is_in(other._series))
+            difference_series = self._series.filter(
+                ~self._series.is_in(other._series)
+            ).sort()
             return PolarsTrackIdSet(difference_series)
         else:
             # Convert other to set of strings for difference
             other_strings = {unpack(track_id) for track_id in other}
             difference_series = self._series.filter(
                 ~self._series.is_in(list(other_strings))
-            )
+            ).sort()
             return PolarsTrackIdSet(difference_series)
 
 
