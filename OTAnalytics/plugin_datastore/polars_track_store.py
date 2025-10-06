@@ -787,7 +787,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
             return EmptyTrackIdSet()
 
-        converted_ids = [track_id.id for track_id in track_ids]
+        converted_ids = [unpack(track_id) for track_id in track_ids]
         existing_ids = (
             self._dataset.filter(pl.col(track.ORIGINAL_TRACK_ID).is_in(converted_ids))
             .get_column(LEVEL_TRACK_ID)
