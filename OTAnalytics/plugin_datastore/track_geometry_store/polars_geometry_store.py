@@ -236,8 +236,8 @@ def calculate_intersection_parameters(
             [
                 # Calculate denominator for intersection formula
                 (
-                    pl.col("line_dy") * pl.col("seg_dx")
-                    - pl.col("line_dx") * pl.col("seg_dy")
+                    pl.col("line_dx") * pl.col("seg_dy")
+                    - pl.col("line_dy") * pl.col("seg_dx")
                 ).alias(DENOMINATOR),
             ]
         )
@@ -255,8 +255,8 @@ def calculate_intersection_parameters(
             pl.when(pl.col(NON_PARALLEL))
             .then(
                 (
-                    pl.col("seg_dx") * (pl.col("seg_y1") - line_y1)
-                    - pl.col("seg_dy") * (pl.col("seg_x1") - line_x1)
+                    (pl.col("seg_x1") - line_x1) * pl.col("seg_dy")
+                    - (pl.col("seg_y1") - line_y1) * pl.col("seg_dx")
                 )
                 / pl.col(DENOMINATOR)
             )
@@ -265,8 +265,8 @@ def calculate_intersection_parameters(
             pl.when(pl.col(NON_PARALLEL))
             .then(
                 (
-                    pl.col("line_dx") * (pl.col("seg_y1") - line_y1)
-                    - pl.col("line_dy") * (pl.col("seg_x1") - line_x1)
+                    (pl.col("seg_x1") - line_x1) * pl.col("line_dy")
+                    - (pl.col("seg_y1") - line_y1) * pl.col("line_dx")
                 )
                 / pl.col(DENOMINATOR)
             )
