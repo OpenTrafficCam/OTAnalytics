@@ -682,8 +682,8 @@ class PolarsIntersectionPointsDataset(IntersectionPointsDataset):
                     pl.col(END_X).alias(EVENT_COORDINATE_X),
                     pl.col(END_Y).alias(EVENT_COORDINATE_Y),
                     pl.lit(EventType.SECTION_ENTER.value).alias(event.EVENT_TYPE),
-                    (pl.col(PREVIOUS_Y) - pl.col(PREVIOUS_X)).alias(DIRECTION_VECTOR_X),
-                    (pl.col(CURRENT_Y) - pl.col(CURRENT_X)).alias(DIRECTION_VECTOR_Y),
+                    (pl.col(CURRENT_X) - pl.col(PREVIOUS_X)).alias(DIRECTION_VECTOR_X),
+                    (pl.col(CURRENT_Y) - pl.col(PREVIOUS_Y)).alias(DIRECTION_VECTOR_Y),
                     pl.col(END_VIDEO_NAME).alias(event.VIDEO_NAME),
                     (
                         pl.col(START_OCCURRENCE)
@@ -705,8 +705,10 @@ class PolarsIntersectionPointsDataset(IntersectionPointsDataset):
             .with_columns(
                 [
                     (
-                        pl.col(DIRECTION_VECTOR_X) ** 2
-                        + pl.col(DIRECTION_VECTOR_Y) ** 2
+                        (
+                            pl.col(DIRECTION_VECTOR_X) ** 2
+                            + pl.col(DIRECTION_VECTOR_Y) ** 2
+                        ).sqrt()
                     ).alias(MAGNITUDE),
                 ]
             )
