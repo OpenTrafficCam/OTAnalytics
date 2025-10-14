@@ -59,16 +59,11 @@ def otflow_parser() -> FlowParser:
 class TestRegressionCompleteApplication:
 
     @pytest.mark.skip
-    @pytest.mark.parametrize(
-        "cli_mode",
-        [CliMode.STREAM, CliMode.BULK],
-    )
     def test_15_min_recreate_test_data(
         self,
         otflow_file: str,
         all_track_files_test_dataset: list[Path],
         otflow_parser: FlowParser,
-        cli_mode: CliMode,
         cli_chunk_size: int,
     ) -> None:
         for test_file in tqdm(all_track_files_test_dataset, desc="test data file"):
@@ -83,7 +78,7 @@ class TestRegressionCompleteApplication:
                 test_interval=test_interval,
                 otflow_parser=otflow_parser,
                 event_formats=("csv", "otevents"),
-                cli_mode=cli_mode,
+                cli_mode=CliMode.BULK,
                 cli_chunk_size=cli_chunk_size,
             )
 
