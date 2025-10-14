@@ -673,14 +673,14 @@ class PolarsIntersectionPointsDataset(IntersectionPointsDataset):
                 [
                     pl.col(TRACK_ID).alias(event.ROAD_USER_ID),
                     pl.col(TRACK_CLASSIFICATION).alias(event.ROAD_USER_TYPE),
-                    pl.col(END_VIDEO_NAME).alias(
-                        event.HOSTNAME
-                    ),  # TODO extract hostname
+                    pl.col(END_VIDEO_NAME)
+                    .str.extract(event.FILE_NAME_PATTERN)
+                    .alias(event.HOSTNAME),
                     pl.col(END_OCCURRENCE).alias(event.OCCURRENCE),
                     pl.col(END_FRAME).alias(event.FRAME_NUMBER),
                     pl.col(SECTION_ID).alias(event.SECTION_ID),
-                    pl.col(END_X).alias(EVENT_COORDINATE_X),
-                    pl.col(END_Y).alias(EVENT_COORDINATE_Y),
+                    pl.col(CURRENT_X).alias(EVENT_COORDINATE_X),
+                    pl.col(CURRENT_Y).alias(EVENT_COORDINATE_Y),
                     pl.lit(EventType.SECTION_ENTER.value).alias(event.EVENT_TYPE),
                     (pl.col(CURRENT_X) - pl.col(PREVIOUS_X)).alias(DIRECTION_VECTOR_X),
                     (pl.col(CURRENT_Y) - pl.col(PREVIOUS_Y)).alias(DIRECTION_VECTOR_Y),
