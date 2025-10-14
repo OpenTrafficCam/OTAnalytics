@@ -13,6 +13,9 @@ from OTAnalytics.application.export_formats.event_list import (
     EVENT_TYPE,
     FRAME_NUMBER,
     HOSTNAME,
+    INTERPOLATED_EVENT_COORDINATE_X,
+    INTERPOLATED_EVENT_COORDINATE_Y,
+    INTERPOLATED_OCCURRENCE,
     OCCURRENCE,
     OCCURRENCE_DATE,
     OCCURRENCE_TIME,
@@ -60,6 +63,9 @@ EXPORT_COLUMNS = [
     SECTION_NAME,
     OCCURRENCE_DATE,
     OCCURRENCE_TIME,
+    INTERPOLATED_OCCURRENCE,
+    INTERPOLATED_EVENT_COORDINATE_X,
+    INTERPOLATED_EVENT_COORDINATE_Y,
 ]
 
 
@@ -107,8 +113,21 @@ class EventListDataFrameBuilder:
                 self._df[event_list.DIRECTION_VECTOR].tolist(), index=self._df.index
             )
         )
+        self._df[
+            [
+                event_list.INTERPOLATED_EVENT_COORDINATE_X,
+                event_list.INTERPOLATED_EVENT_COORDINATE_Y,
+            ]
+        ] = pd.DataFrame(
+            self._df[event_list.INTERPOLATED_EVENT_COORDINATE].tolist(),
+            index=self._df.index,
+        )
         self._df = self._df.drop(
-            columns=[event_list.EVENT_COORDINATE, event_list.DIRECTION_VECTOR]
+            columns=[
+                event_list.EVENT_COORDINATE,
+                event_list.DIRECTION_VECTOR,
+                event_list.INTERPOLATED_EVENT_COORDINATE,
+            ]
         )
 
     def _add_section_names(self) -> None:
