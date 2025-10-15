@@ -62,6 +62,7 @@ from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
 MAGNITUDE = "magnitude"
 CUM_SUM = "cum_sum"
 ORDER = "order"
+TRACK_ID_SUFFIX = f"{TRACK_ID}_suffix"
 
 SEGMENT_LENGTH_X = "segment_length_x"
 SEGMENT_LENGTH_Y = "segment_length_y"
@@ -1393,6 +1394,16 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
         )
         temp_r = pl.concat([results, temp])
         results = temp_r.sort(by=[TRACK_ID, ROW_ID, ORDER])
-        return results.with_columns(
-            pl.col(TRACK_ID) + "_" + pl.col(CUM_SUM).cast(pl.Utf8).alias(TRACK_ID)
-        ).select([ROW_ID, TRACK_ID])
+        cut_track_ids = (
+            results.filter(pl.col(CUM_SUM) > 0).unique().select(TRACK_ID).to_series()
+        )
+        return (
+            results.with_columns(
+                pl.when(pl.col(TRACK_ID).is_in(cut_track_ids))
+                .then("_" + pl.col(CUM_SUM).cast(pl.Utf8))
+                .otherwise(pl.lit("").cast(pl.Utf8))
+                .alias(TRACK_ID_SUFFIX)
+            )
+            .with_columns((pl.col(TRACK_ID) + pl.col(TRACK_ID_SUFFIX)).alias(TRACK_ID))
+            .select([ROW_ID, TRACK_ID])
+        )
