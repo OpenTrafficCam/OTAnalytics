@@ -64,6 +64,9 @@ class FilteredPolarsTrackDataset(
         dataset, original_track_ids = self._other.cut_with_section(section, offset)
         return self.wrap(dataset), original_track_ids
 
+    def ids_inside(self, sections: list[Section]) -> TrackIdSet:
+        return self._filter().ids_inside(sections)
+
     @abstractmethod
     def _filter(self) -> PolarsTrackDataset:
         raise NotImplementedError
