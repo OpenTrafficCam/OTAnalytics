@@ -563,16 +563,15 @@ class DummyViewModel(
         for ext in clean_extensions:
             extension_options[ext] = [ext]
 
-        track_files = await self._ui_factory.askopenfilenames(
+        video_files = await self._ui_factory.askopenfilenames(
             title="Load video files",
             filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
             extension_options=extension_options,
         )
-        if not track_files:
+        if not video_files:
             return
-        logger().info(f"Video files to load: {track_files}")
-        paths = [Path(file) for file in track_files]
-        self._application.add_videos(files=paths)
+        logger().info(f"Video files to load: {video_files}")
+        self._application.add_videos(files=video_files)
 
     def remove_videos(self) -> None:
         self._application.remove_videos()
