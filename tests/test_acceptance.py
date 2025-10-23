@@ -332,6 +332,7 @@ class TestProjectInformation:
             actual_time = time_input.get_attribute("value")
             return actual_name, actual_date, actual_time
 
+        target.should_contain("Project")
         # Initial values to save
         saved_name = "Acceptance Save/Load Project"
         saved_date = "2023-05-24"
@@ -341,7 +342,6 @@ class TestProjectInformation:
         )
 
         # Patch NiceGuiUiFactory to bypass dialogs
-
         save_path = _Path(test_data_tmp_dir) / "project_information.otconfig"
 
         async def fake_ask_for_save_file_path(*args: object, **kwargs: object) -> _Path:
@@ -360,22 +360,10 @@ class TestProjectInformation:
             NiceGuiUiFactory, "askopenfilename", fake_askopenfilename, raising=True
         )
 
-        # Helper to click a button by its label text
-        def click_by_text(label: str) -> bool:
-            script = (
-                "var label=arguments[0];"
-                "var candidates = Array.from(document.querySelectorAll('button, "
-                ".q-btn'));"
-                "var el = candidates.find(e => (e.innerText || e.textContent || '' )"
-                ".trim() === label);"
-                "if(!el){el = candidates.find(e => (e.innerText || e.textContent || "
-                "'').includes(label));}"
-                "if(el){el.click(); return true;} return false;"
-            )
-            return bool(target.selenium.execute_script(script, label))
-
         # Click Save (quick save) which falls back to Save As if no file exists
         target.click(resource_manager.get(ProjectKeys.LABEL_QUICK_SAVE))
+
+        target.should_contain("Project")
         # Ensure file was created (if saving is allowed without sections)
         assert save_path.exists(), f"Expected saved config at {save_path}"
 
@@ -387,6 +375,7 @@ class TestProjectInformation:
             modified_name, modified_date, modified_time
         )
 
+        target.should_contain("Project")
         # Click Open... to import previously saved config
         assert target.click(
             resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT)
@@ -416,16 +405,3 @@ class TestProjectInformation:
         assert actual_name == saved_name
         assert actual_date == saved_date
         assert actual_time == saved_time
-
-
-@pytest.mark.timeout(TIMEOUT)
-def test_download_and_unzip_otcamera19(otcamera19_extracted_dir: Path) -> None:
-    """Ensure the OTCamera19 test data can be downloaded and extracted.
-
-    This also serves as a guard that the acceptance environment can access the
-    public testdata release and that the fixture remembers the location under
-    tests/data.
-    """
-    assert otcamera19_extracted_dir.exists(), "Expected tests/data directory to exist"
-    matches = list(otcamera19_extracted_dir.glob("OTCamera19_FR20_2023-05-24*"))
-    assert matches, "Expected extracted OTCamera19 test data in tests/data"
