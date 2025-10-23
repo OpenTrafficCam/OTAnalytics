@@ -377,10 +377,12 @@ class TestProjectInformation:
 
         target.should_contain("Project")
         # Click Open... to import previously saved config
-        assert target.click(
-            resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT)
-        ), "Open button not found"
-        # Verify fields restored to saved values
+        target.click(resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT))
+
+        # Verify fields restored to saved values (wait for inputs to update)
+        target.wait_for(lambda: name_input.get_attribute("value") == saved_name)
+        target.wait_for(lambda: date_input.get_attribute("value") == saved_date)
+        target.wait_for(lambda: time_input.get_attribute("value") == saved_time)
         actual_name, actual_date, actual_time = read_project_form_values(
             name_input, date_input, time_input
         )
@@ -399,6 +401,10 @@ class TestProjectInformation:
         # Import the same saved file; expect fields to match saved_* again
         target.click(resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT))
 
+        # Wait until inputs show the saved values again
+        target.wait_for(lambda: name_input.get_attribute("value") == saved_name)
+        target.wait_for(lambda: date_input.get_attribute("value") == saved_date)
+        target.wait_for(lambda: time_input.get_attribute("value") == saved_time)
         actual_name, actual_date, actual_time = read_project_form_values(
             name_input, date_input, time_input
         )
