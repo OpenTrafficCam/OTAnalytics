@@ -326,7 +326,7 @@ class TestProjectInformation:
         # Helper to read current values
         def read_project_form_values(
             name_input: WebElement, date_input: WebElement, time_input: WebElement
-        ) -> tuple[str, str, str]:
+        ) -> tuple[str | None, str | None, str | None]:
             actual_name = name_input.get_attribute("value")
             actual_date = date_input.get_attribute("value")
             actual_time = time_input.get_attribute("value")
