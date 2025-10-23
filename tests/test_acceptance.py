@@ -15,6 +15,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
 from tests.utils.builders.otanalytics_builders import MultiprocessingWorker
 from tests.utils.ui_helpers import set_input_value
 
+# Global timeout for acceptance tests (seconds)
+TIMEOUT = 300
+
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
 
@@ -31,7 +34,7 @@ class TestProjectInformation:
     by monkeypatching the NiceGUI file dialog methods to return deterministic paths.
     """
 
-    @pytest.mark.timeout(300)
+    @pytest.mark.timeout(TIMEOUT)
     @pytest.mark.asyncio
     async def test_webserver_is_running(
         self,
@@ -45,7 +48,7 @@ class TestProjectInformation:
         target.open(ENDPOINT_MAIN_PAGE)
         target.shot("dummy")
 
-    @pytest.mark.timeout(300)
+    @pytest.mark.timeout(TIMEOUT)
     @pytest.mark.asyncio
     @pytest.mark.skip(reason="Covered by ISO/German format tests; duplicate path")
     async def test_project_information_form(
@@ -96,39 +99,32 @@ class TestProjectInformation:
         )
         set_input_value(target, time_input, time_value)
 
-        # Wait a moment for the UI to update
-        target.wait(0.5)
+        target.should_contain("Project")
 
         # Take a screenshot of the page
         target.shot("project_information_page")
 
         # Verify that the values were correctly set in the form
         # Get the current value of the project name input
-        actual_project_name = target.selenium.execute_script(
-            "return arguments[0].value;", project_name_input
-        )
+        actual_project_name = project_name_input.get_attribute("value")
         assert actual_project_name == project_name, (
             f"Expected project name to be '{project_name}', but got "
             f"'{actual_project_name}'"
         )
 
         # Get the current value of the date input
-        actual_date = target.selenium.execute_script(
-            "return arguments[0].value;", date_input
-        )
+        actual_date = date_input.get_attribute("value")
         assert (
             actual_date == date_value
         ), f"Expected date to be '{date_value}', but got '{actual_date}'"
 
         # Get the current value of the time input
-        actual_time = target.selenium.execute_script(
-            "return arguments[0].value;", time_input
-        )
+        actual_time = time_input.get_attribute("value")
         assert (
             actual_time == time_value
         ), f"Expected time to be '{time_value}', but got '{actual_time}'"
 
-    @pytest.mark.timeout(300)
+    @pytest.mark.timeout(TIMEOUT)
     @pytest.mark.asyncio
     async def test_project_information_iso_format(
         self,
@@ -179,36 +175,29 @@ class TestProjectInformation:
         )
         set_input_value(target, time_input, time_value)
 
-        # Wait a moment for the UI to update
-        target.wait(0.5)
+        target.should_contain("Project")
 
         # Take a screenshot of the page
         target.shot("project_information_iso_format")
 
         # Verify that the values were correctly set in the form
-        actual_project_name = target.selenium.execute_script(
-            "return arguments[0].value;", project_name_input
-        )
+        actual_project_name = project_name_input.get_attribute("value")
         assert actual_project_name == project_name, (
             f"Expected project name to be '{project_name}', but got "
             f"'{actual_project_name}'"
         )
 
-        actual_date = target.selenium.execute_script(
-            "return arguments[0].value;", date_input
-        )
+        actual_date = date_input.get_attribute("value")
         assert (
             actual_date == date_value
         ), f"Expected date to be '{date_value}', but got '{actual_date}'"
 
-        actual_time = target.selenium.execute_script(
-            "return arguments[0].value;", time_input
-        )
+        actual_time = time_input.get_attribute("value")
         assert (
             actual_time == time_value
         ), f"Expected time to be '{time_value}', but got '{actual_time}'"
 
-    @pytest.mark.timeout(300)
+    @pytest.mark.timeout(TIMEOUT)
     @pytest.mark.asyncio
     @pytest.mark.xfail(
         reason=(
@@ -265,36 +254,29 @@ class TestProjectInformation:
         )
         set_input_value(target, time_input, time_value)
 
-        # Wait a moment for the UI to update
-        target.wait(0.5)
+        target.should_contain("Project")
 
         # Take a screenshot of the page
         target.shot("project_information_german_format")
 
         # Verify that the values were correctly set in the form
-        actual_project_name = target.selenium.execute_script(
-            "return arguments[0].value;", project_name_input
-        )
+        actual_project_name = project_name_input.get_attribute("value")
         assert actual_project_name == project_name, (
             f"Expected project name to be '{project_name}', but got "
             f"'{actual_project_name}'"
         )
 
-        actual_date = target.selenium.execute_script(
-            "return arguments[0].value;", date_input
-        )
+        actual_date = date_input.get_attribute("value")
         assert (
             actual_date == date_value
         ), f"Expected date to be '{date_value}', but got '{actual_date}'"
 
-        actual_time = target.selenium.execute_script(
-            "return arguments[0].value;", time_input
-        )
+        actual_time = time_input.get_attribute("value")
         assert (
             actual_time == time_value
         ), f"Expected time to be '{time_value}', but got '{actual_time}'"
 
-    @pytest.mark.timeout(300)
+    @pytest.mark.timeout(TIMEOUT)
     @pytest.mark.asyncio
     async def test_project_information_export_import(
         self,
@@ -345,15 +327,9 @@ class TestProjectInformation:
         def read_project_form_values(
             name_input: WebElement, date_input: WebElement, time_input: WebElement
         ) -> tuple[str, str, str]:
-            actual_name = target.selenium.execute_script(
-                "return arguments[0].value;", name_input
-            )
-            actual_date = target.selenium.execute_script(
-                "return arguments[0].value;", date_input
-            )
-            actual_time = target.selenium.execute_script(
-                "return arguments[0].value;", time_input
-            )
+            actual_name = name_input.get_attribute("value")
+            actual_date = date_input.get_attribute("value")
+            actual_time = time_input.get_attribute("value")
             return actual_name, actual_date, actual_time
 
         # Initial values to save
@@ -363,7 +339,8 @@ class TestProjectInformation:
         name_input, date_input, time_input = fill_project_form(
             saved_name, saved_date, saved_time
         )
-        target.wait(0.3)
+
+        target.wait(0.5)
 
         # Patch NiceGuiUiFactory to bypass dialogs
 
@@ -403,7 +380,8 @@ class TestProjectInformation:
         assert click_by_text(
             resource_manager.get(ProjectKeys.LABEL_QUICK_SAVE)
         ), "Save button not found"
-        target.wait(0.7)
+
+        target.wait(0.5)
         # Ensure file was created (if saving is allowed without sections)
         assert save_path.exists(), f"Expected saved config at {save_path}"
 
@@ -414,14 +392,15 @@ class TestProjectInformation:
         name_input, date_input, time_input = fill_project_form(
             modified_name, modified_date, modified_time
         )
-        target.wait(0.2)
+
+        target.wait(0.5)
 
         # Click Open... to import previously saved config
         assert click_by_text(
             resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT)
         ), "Open button not found"
-        # Wait for UI model to refresh
-        target.wait(0.7)
+
+        target.wait(0.5)
 
         # Verify fields restored to saved values
         actual_name, actual_date, actual_time = read_project_form_values(
@@ -438,13 +417,15 @@ class TestProjectInformation:
         name_input, date_input, time_input = fill_project_form(
             interim_name, interim_date, interim_time
         )
-        target.wait(0.2)
+
+        target.wait(0.5)
 
         # Import the same saved file; expect fields to match saved_* again
         assert click_by_text(
             resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT)
         ), "Open button not found (2nd time)"
-        target.wait(0.7)
+
+        target.wait(0.5)
         actual_name, actual_date, actual_time = read_project_form_values(
             name_input, date_input, time_input
         )
@@ -453,7 +434,7 @@ class TestProjectInformation:
         assert actual_time == saved_time
 
 
-@pytest.mark.timeout(300)
+@pytest.mark.timeout(TIMEOUT)
 def test_download_and_unzip_otcamera19(otcamera19_extracted_dir: Path) -> None:
     """Ensure the OTCamera19 test data can be downloaded and extracted.
 

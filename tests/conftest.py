@@ -145,6 +145,7 @@ async def target(screen: Screen, given_webserver: Webserver) -> Screen:
     given_webserver.build_pages()
     # Set a larger window size for better screenshots
     screen.selenium.set_window_size(1920, 1080)
+
     return screen
 
 
@@ -572,61 +573,3 @@ def assert_shown_files(
     assert (
         len(row_data) == expected_count
     ), f"Expected {expected_count} items, but got {len(row_data)}"
-
-
-# --- Test data download/extraction helpers for acceptance tests ---
-@pytest.fixture(scope="module")
-def otcamera19_extracted_dir(test_data_dir: Path) -> Path:
-    """Ensure the OTCamera19 acceptance test data is available and extracted.
-
-    Attempts to locate extracted content in tests/data. If not present, tries to
-    download the zip asset from the public GitHub releases (latest) and extracts it.
-    If download or extraction fails (e.g., offline), the depending tests will be
-    skipped to avoid flakiness in local environments.
-
-    Returns:
-        Path: directory containing the extracted test data files (tests/data)
-    """
-    asset = "OTCamera19_FR20_2023-05-24_06-00-00_11-45-00.zip"
-    prefix = "OTCamera19_FR20_2023-05-24"
-    test_data_dir.mkdir(parents=True, exist_ok=True)
-    # Heuristics: consider data present if any path starting with prefix exists
-    existing_dirs = [p for p in test_data_dir.glob(f"{prefix}*") if p.exists()]
-    if existing_dirs:
-        return test_data_dir
-
-    zip_path = test_data_dir / asset
-
-    # Try to download the zip from GitHub Releases (latest)
-    try:
-        import ssl
-        import urllib.request
-
-        url = (
-            "https://github.com/platomo/OpenTrafficCam-testdata/releases/latest/download/"  # noqa
-            + asset
-        )
-        ctx = ssl.create_default_context()
-        with (
-            urllib.request.urlopen(url, context=ctx) as resp,
-            open(zip_path, "wb") as f,
-        ):
-            f.write(resp.read())
-    except Exception as e:  # pragma: no cover - network issues not under test
-        pytest.skip(f"Could not download test data asset {asset}: {e}")
-
-    # Unzip the archive
-    try:
-        import zipfile
-
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(test_data_dir)
-        # Cleanup zip after extraction
-        try:
-            zip_path.unlink()
-        except Exception:
-            pass
-    except Exception as e:  # pragma: no cover
-        pytest.skip(f"Could not unzip test data asset {asset}: {e}")
-
-    return test_data_dir
