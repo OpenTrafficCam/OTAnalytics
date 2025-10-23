@@ -340,8 +340,6 @@ class TestProjectInformation:
             saved_name, saved_date, saved_time
         )
 
-        target.wait(0.5)
-
         # Patch NiceGuiUiFactory to bypass dialogs
 
         save_path = _Path(test_data_tmp_dir) / "project_information.otconfig"
@@ -381,7 +379,6 @@ class TestProjectInformation:
             resource_manager.get(ProjectKeys.LABEL_QUICK_SAVE)
         ), "Save button not found"
 
-        target.wait(0.5)
         # Ensure file was created (if saving is allowed without sections)
         assert save_path.exists(), f"Expected saved config at {save_path}"
 
@@ -393,14 +390,10 @@ class TestProjectInformation:
             modified_name, modified_date, modified_time
         )
 
-        target.wait(0.5)
-
         # Click Open... to import previously saved config
         assert click_by_text(
             resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT)
         ), "Open button not found"
-
-        target.wait(0.5)
 
         # Verify fields restored to saved values
         actual_name, actual_date, actual_time = read_project_form_values(
@@ -418,14 +411,11 @@ class TestProjectInformation:
             interim_name, interim_date, interim_time
         )
 
-        target.wait(0.5)
-
         # Import the same saved file; expect fields to match saved_* again
         assert click_by_text(
             resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT)
         ), "Open button not found (2nd time)"
 
-        target.wait(0.5)
         actual_name, actual_date, actual_time = read_project_form_values(
             name_input, date_input, time_input
         )
