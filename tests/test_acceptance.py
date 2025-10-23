@@ -375,10 +375,7 @@ class TestProjectInformation:
             return bool(target.selenium.execute_script(script, label))
 
         # Click Save (quick save) which falls back to Save As if no file exists
-        assert click_by_text(
-            resource_manager.get(ProjectKeys.LABEL_QUICK_SAVE)
-        ), "Save button not found"
-
+        target.click(resource_manager.get(ProjectKeys.LABEL_QUICK_SAVE))
         # Ensure file was created (if saving is allowed without sections)
         assert save_path.exists(), f"Expected saved config at {save_path}"
 
@@ -391,10 +388,9 @@ class TestProjectInformation:
         )
 
         # Click Open... to import previously saved config
-        assert click_by_text(
+        assert target.click(
             resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT)
         ), "Open button not found"
-
         # Verify fields restored to saved values
         actual_name, actual_date, actual_time = read_project_form_values(
             name_input, date_input, time_input
@@ -412,9 +408,7 @@ class TestProjectInformation:
         )
 
         # Import the same saved file; expect fields to match saved_* again
-        assert click_by_text(
-            resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT)
-        ), "Open button not found (2nd time)"
+        target.click(resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT))
 
         actual_name, actual_date, actual_time = read_project_form_values(
             name_input, date_input, time_input
