@@ -22,6 +22,39 @@ T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
 
 
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_runtest_makereport(
+    item: pytest.Item, call: pytest.CallInfo[Any]
+) -> Generator[None, Any, None]:
+    outcome: Any = yield
+    rep = outcome.get_result()
+    setattr(item, "rep_" + rep.when, rep)
+
+
+@pytest.fixture(autouse=True)
+def _acceptance_shot_on_failure(
+    request: pytest.FixtureRequest, target: Screen
+) -> Generator[None, None, None]:
+    # Runs after every test function in this module
+    yield
+
+    rep_setup = getattr(request.node, "rep_setup", None)
+    rep_call = getattr(request.node, "rep_call", None)
+    rep_teardown = getattr(request.node, "rep_teardown", None)
+
+    def is_unexpected_failure(rep: pytest.TestReport | None) -> bool:
+        return bool(rep and rep.failed and not getattr(rep, "wasxfail", False))
+
+    if any(map(is_unexpected_failure, (rep_setup, rep_call, rep_teardown))):
+        try:
+            screen: Screen = request.getfixturevalue(
+                "target"
+            )  # the Screen fixture used here
+        except Exception:
+            return
+        screen.shot(request.node.name)
+
+
 class TestProjectInformation:
     """Tests for the project information form.
 
@@ -46,7 +79,6 @@ class TestProjectInformation:
         if not given_app.is_alive():
             given_app.start()
         target.open(ENDPOINT_MAIN_PAGE)
-        target.shot("dummy")
 
     @pytest.mark.timeout(TIMEOUT)
     @pytest.mark.asyncio
@@ -100,9 +132,6 @@ class TestProjectInformation:
         set_input_value(target, time_input, time_value)
 
         target.should_contain("Project")
-
-        # Take a screenshot of the page
-        target.shot("project_information_page")
 
         # Verify that the values were correctly set in the form
         # Get the current value of the project name input
@@ -176,9 +205,6 @@ class TestProjectInformation:
         set_input_value(target, time_input, time_value)
 
         target.should_contain("Project")
-
-        # Take a screenshot of the page
-        target.shot("project_information_iso_format")
 
         # Verify that the values were correctly set in the form
         actual_project_name = project_name_input.get_attribute("value")
@@ -255,9 +281,6 @@ class TestProjectInformation:
         set_input_value(target, time_input, time_value)
 
         target.should_contain("Project")
-
-        # Take a screenshot of the page
-        target.shot("project_information_german_format")
 
         # Verify that the values were correctly set in the form
         actual_project_name = project_name_input.get_attribute("value")
