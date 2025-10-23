@@ -1,4 +1,5 @@
 from functools import cached_property
+from typing import Protocol
 
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.domain.progress import ProgressbarBuilder
@@ -66,9 +67,21 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
 from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
 
 
+class Webserver(Protocol):
+    def run(self) -> None: ...
+
+    def stop(self) -> None: ...
+
+    def build_pages(self) -> None: ...
+
+
 class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     def start_ui(self) -> None:
+        self.webserver.run()
+
+    @cached_property
+    def webserver(self) -> Webserver:
         from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
         from OTAnalytics.plugin_ui.nicegui_gui.nicegui.nicegui_webserver import (
             NiceguiWebserver,
@@ -93,7 +106,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             layout_components=NiceguiLayoutComponents(),
             hostname="localhost",
             port=5000,
-        ).run()
+        )
 
     @cached_property
     def analysis_form(self) -> AnalysisForm:
