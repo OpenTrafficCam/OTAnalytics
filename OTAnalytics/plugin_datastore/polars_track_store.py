@@ -383,7 +383,11 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     ) -> "PolarsTrackDataset":
         if tracks.is_empty():
             return PolarsTrackDataset(track_geometry_factory)
-        tracks = tracks.drop(ROW_ID, strict=False).with_row_index(ROW_ID)
+        tracks = (
+            tracks.drop(ROW_ID, strict=False)
+            .sort(by=[track.TRACK_ID, track.OCCURRENCE])
+            .with_row_index(ROW_ID)
+        )
         result = _assign_track_classification(tracks, calculator)
         return PolarsTrackDataset(
             track_geometry_factory,
@@ -924,7 +928,8 @@ def _assign_track_classification(
 ) -> pl.DataFrame:
     dropped = _drop_track_classification(data)
     classification_per_track = calculator.calculate(dropped)
-    return dropped.join(classification_per_track, on=track.TRACK_ID, how="left")
+    result = dropped.join(classification_per_track, on=track.TRACK_ID, how="left")
+    return result
 
 
 def _drop_track_classification(data: pl.DataFrame) -> pl.DataFrame:
