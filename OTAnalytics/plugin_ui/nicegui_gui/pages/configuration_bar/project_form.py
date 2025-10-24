@@ -109,6 +109,8 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
             self._quick_save_button.build()
         self._project_name.build()
         self._start_date.build()
+        self._view_model.show_current_project()
+
         return self
 
     def _update_to_model(self, events: ValueChangeEventArguments) -> None:
