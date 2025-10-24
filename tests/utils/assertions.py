@@ -2,8 +2,12 @@ from pathlib import Path
 from typing import Iterable
 from unittest.mock import Mock
 
+import polars as pl
+from polars.testing import assert_frame_equal
+
 from OTAnalytics.domain.track import Detection, Track
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
+from OTAnalytics.plugin_prototypes.eventlist_exporter import eventlist_exporter
 
 
 def assert_equal_detection_properties(actual: Detection, expected: Detection) -> None:
@@ -66,10 +70,10 @@ def assert_two_files_equal_sorted(
 ) -> None:
 
     with open(actual_counts_file, mode="r") as actual:
-        act_lines = sorted([line.split(",", 1)[1] for line in actual.readlines()])
+        act_lines = sorted([line for line in actual.readlines()])
 
         with open(expected_counts_file, mode="r") as expected:
-            exp_lines = sorted([line.split(",", 1)[1] for line in expected.readlines()])
+            exp_lines = sorted([line for line in expected.readlines()])
 
             assert set(act_lines) == set(exp_lines), (
                 f"Sets are not equal [act len: {len(act_lines)}, "
@@ -97,3 +101,28 @@ def assert_two_files_equal_sorted(
                 f"{([a for e, a in zip(exp_lines, act_lines) if e != a] + [None])[0]}\n"
                 f"\n"
             )
+
+
+def assert_equal_event_files(
+    actual_counts_file: Path, expected_counts_file: Path
+) -> None:
+    actual = _read_event_csv(actual_counts_file)
+    expected = _read_event_csv(expected_counts_file)
+    assert_frame_equal(actual, expected)
+
+
+def assert_equal_count_files(
+    actual_counts_file: Path, expected_counts_file: Path
+) -> None:
+    actual = _read_counts_csv(actual_counts_file)
+    expected = _read_counts_csv(expected_counts_file)
+    assert_frame_equal(actual, expected)
+
+
+def _read_counts_csv(file: Path) -> pl.DataFrame:
+    return pl.read_csv(file)
+
+
+def _read_event_csv(file: Path) -> pl.DataFrame:
+    data = pl.read_csv(file)
+    return data.sort(by=eventlist_exporter.EXPORT_COLUMNS)
