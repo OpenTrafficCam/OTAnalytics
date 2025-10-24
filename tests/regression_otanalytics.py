@@ -8,7 +8,11 @@ from OTAnalytics.application.parser.cli_parser import CliMode
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
 from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser
-from tests.utils.assertions import assert_two_files_equal_sorted
+from tests.utils.assertions import (
+    assert_equal_count_files,
+    assert_equal_event_files,
+    assert_two_files_equal_sorted,
+)
 from tests.utils.builders.run_configuration import create_run_config
 
 
@@ -263,14 +267,6 @@ class TestRegressionCompleteApplication:
             cli_chunk_size,
         )
 
-        actual_events_file = Path(test_data_tmp_dir / save_name).with_suffix(
-            ".events.csv"
-        )
-        expected_events_file = Path(test_data_dir / save_name).with_suffix(
-            ".events.csv"
-        )
-        assert_two_files_equal_sorted(actual_events_file, expected_events_file)
-
         actual_counts_file = (
             Path(test_data_tmp_dir / save_name)
             .with_suffix(f".counts_{count_interval}min.csv")
@@ -281,7 +277,16 @@ class TestRegressionCompleteApplication:
             .with_suffix(f".counts_{count_interval}min.csv")
             .absolute()
         )
-        assert_two_files_equal_sorted(actual_counts_file, expected_counts_file)
+        assert_equal_count_files(actual_counts_file, expected_counts_file)
+
+        actual_events_file = Path(test_data_tmp_dir / save_name).with_suffix(
+            ".events.csv"
+        )
+        expected_events_file = Path(test_data_dir / save_name).with_suffix(
+            ".events.csv"
+        )
+        assert_two_files_equal_sorted(actual_events_file, expected_events_file)
+        assert_equal_event_files(actual_events_file, expected_events_file)
 
     def _run_otanalytics(
         self,
