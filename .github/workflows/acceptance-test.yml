@@ -1,0 +1,42 @@
+---
+name: Acceptance Test With Pytest
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_call:
+
+permissions: read-all
+
+jobs:
+  acceptance-test:
+    name: Run pytest Acceptance test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Download test data
+        run: |
+          gh release download \
+          --pattern 'OTCamera19_FR20_2023-05-24_06-00-00_11-45-00.zip' \
+          --pattern 'OTCamera19_FR20_2023-05-24_00-00-00.zip' \
+          -R platomo/OpenTrafficCam-testdata -D tests/data
+        env:
+          GH_TOKEN: ${{ secrets.PLATOMO_OTC_TESTDATA_ACCESS }}
+      - name: Unzip test data
+        run: |
+          cd tests/data
+          unzip ./\*.zip
+          rm ./*.zip
+          cd ..
+      - name: Install the project
+        shell: bash
+        run: uv sync --locked --dev
+      - name: Run acceptance tests
+        run: uv run pytest ./tests/test-acceptance.py

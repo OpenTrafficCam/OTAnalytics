@@ -22,6 +22,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
 )
 
 MARKER_PROJECT_NAME = "marker-project-name"
+MARKER_PROJECT_OPEN = "marker-project-open"
+MARKER_PROJECT_SAVE_AS = "marker-project-save-as"
+MARKER_PROJECT_SAVE = "marker-project-save"
 MARKER_START_DATE = "marker-start-date"
 MARKER_START_TIME = "marker-start-time"
 
@@ -37,6 +40,7 @@ class NiceGuiButtonQuickSaveConfig(AbstractButtonQuickSaveConfig):
 
     def build(self) -> None:
         self._instance = ui.button(self._text, on_click=self._on_click)
+        self._instance.mark(MARKER_PROJECT_SAVE)
 
     def set_state_changed_color(self) -> None:
         if self._instance:
@@ -96,10 +100,12 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
                 self._resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT),
                 on_click=self._open_project,
             )
+            self.open_project_button.mark(MARKER_PROJECT_OPEN)
             self.save_project_button = ui.button(
                 self._resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT),
                 on_click=self._save_project,
             )
+            self.save_project_button.mark(MARKER_PROJECT_SAVE_AS)
             self._quick_save_button.build()
         self._project_name.build()
         self._start_date.build()
