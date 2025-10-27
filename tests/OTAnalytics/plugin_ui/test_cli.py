@@ -335,6 +335,7 @@ def create_run_config(
 class TestOTAnalyticsCli:
     TRACK_PARSER: str = "track_parser"
     EVENT_REPOSITORY: str = "event_repository"
+    ASSIGNMENT_REPOSITORY: str = "assignment_repository"
     ADD_SECTION: str = "add_section"
     GET_ALL_SECTIONS: str = "get_all_sections"
     ADD_FLOW: str = "add_flow"
@@ -370,6 +371,7 @@ class TestOTAnalyticsCli:
     def mock_cli_dependencies(self) -> dict[str, Any]:
         return {
             self.EVENT_REPOSITORY: Mock(spec=EventRepository),
+            self.ASSIGNMENT_REPOSITORY: Mock(spec=RoadUserAssignmentRepository),
             self.ADD_SECTION: Mock(spec=AddSection),
             self.GET_ALL_SECTIONS: Mock(spec=GetAllSections),
             self.ADD_FLOW: Mock(spec=AddFlow),
@@ -621,6 +623,7 @@ class TestOTAnalyticsCli:
         )
         return {
             self.EVENT_REPOSITORY: event_repository,
+            self.ASSIGNMENT_REPOSITORY: assignment_repository,
             self.ADD_SECTION: AddSection(section_repository),
             self.GET_ALL_SECTIONS: GetAllSections(section_repository),
             self.ADD_FLOW: AddFlow(flow_repository),
