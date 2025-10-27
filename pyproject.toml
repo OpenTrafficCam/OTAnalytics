@@ -35,6 +35,7 @@ dependencies = [
     "openpyxl==3.1.5",
     "pandas==2.2.3",
     "pillow==11.1.0",
+    "polars==1.32.3",
     "pywin32==310; sys_platform == 'win32'",
     "requests==2.32.4",
     "seaborn==0.13.2",
