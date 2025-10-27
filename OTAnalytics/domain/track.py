@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable
 
 from PIL import Image
 
@@ -29,6 +28,14 @@ class TrackId:
 
     def __str__(self) -> str:
         return self.id
+
+
+def unpack(track_id: TrackId | str) -> str:
+    return track_id.id if isinstance(track_id, TrackId) else track_id
+
+
+def pack(track_id: TrackId | str) -> TrackId:
+    return track_id if isinstance(track_id, TrackId) else TrackId(track_id)
 
 
 class TrackError(Exception):
@@ -275,19 +282,6 @@ class TrackClassificationCalculator(ABC):
             str: the track's class
         """
         raise NotImplementedError
-
-
-class TrackIdProvider(ABC):
-    """Interface to provide track ids."""
-
-    @abstractmethod
-    def get_ids(self) -> Iterable[TrackId]:
-        """Provide track ids.
-
-        Returns:
-            Iterable[TrackId]: the track ids.
-        """
-        pass
 
 
 class TrackBuilderError(Exception):

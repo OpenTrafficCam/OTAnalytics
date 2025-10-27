@@ -1,5 +1,6 @@
 from OTAnalytics.domain.track import Track
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from tests.utils.assertions import assert_equal_track_properties
 from tests.utils.builders.track_dataset_provider import (
     IMPLEMENTATIONS,
@@ -22,10 +23,12 @@ class TestTrackDataset:
         for target in targets:
             assert len(target) == 4
             actual_dataset, reverted_ids, removed_ids = target.revert_cuts_for(
-                frozenset([first_track_part_1.original_id, uncut_track.original_id])
+                PythonTrackIdSet(
+                    [first_track_part_1.original_id, uncut_track.original_id]
+                )
             )
-            assert reverted_ids == frozenset([first_track_part_1.original_id])
-            assert removed_ids == frozenset(
+            assert reverted_ids == PythonTrackIdSet([first_track_part_1.original_id])
+            assert removed_ids == PythonTrackIdSet(
                 [first_track_part_1.id, first_track_part_2.id]
             )
             assert len(actual_dataset) == 3
@@ -48,10 +51,10 @@ class TestTrackDataset:
         for target in targets:
             assert len(target) == 3
             actual_dataset, removed_ids = target.remove_by_original_ids(
-                frozenset([first_track_part_1.original_id])
+                PythonTrackIdSet([first_track_part_1.original_id])
             )
-            assert actual_dataset.track_ids == frozenset([uncut_track.id])
-            assert removed_ids == frozenset(
+            assert actual_dataset.track_ids == PythonTrackIdSet([uncut_track.id])
+            assert removed_ids == PythonTrackIdSet(
                 [first_track_part_1.id, first_track_part_2.id]
             )
             assert len(actual_dataset) == 1

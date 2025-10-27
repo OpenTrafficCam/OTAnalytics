@@ -6,8 +6,9 @@ from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
-    IntersectionPoint,
+    IntersectionPointsDataset,
     TrackDataset,
+    TrackIdSet,
     TrackSegmentDataset,
 )
 
@@ -18,7 +19,7 @@ class FilteredTrackDataset(TrackDataset):
         raise NotImplementedError
 
     @property
-    def track_ids(self) -> frozenset[TrackId]:
+    def track_ids(self) -> TrackIdSet:
         return self._filter().track_ids
 
     @property
@@ -51,12 +52,12 @@ class FilteredTrackDataset(TrackDataset):
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> set[TrackId]:
+    ) -> TrackIdSet:
         return self._filter().intersecting_tracks(sections, offset)
 
     def intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
+    ) -> IntersectionPointsDataset:
         return self._filter().intersection_points(sections, offset)
 
     def contained_by_sections(
@@ -73,7 +74,7 @@ class FilteredTrackDataset(TrackDataset):
     def get_last_segments(self) -> TrackSegmentDataset:
         return self._filter().get_last_segments()
 
-    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+    def get_max_confidences_for(self, track_ids: TrackIdSet) -> dict[str, float]:
         return self._filter().get_max_confidences_for(track_ids)
 
 

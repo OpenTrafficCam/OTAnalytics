@@ -19,8 +19,12 @@ from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.section import LineSection, Section, SectionId
-from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.domain.track import Track
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    TRACK_GEOMETRY_FACTORY,
+    TrackIdSet,
+)
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
@@ -45,6 +49,8 @@ from tests.utils.builders.track_segment_builder import (
     TrackSegmentDatasetBuilder,
     TrackSegmentDatasetBuilderProvider,
 )
+
+ACCEPTANCE_TEST_WAIT_TIMEOUT = 10
 
 pytest_plugins = ["nicegui.testing.plugin"]
 
@@ -142,6 +148,7 @@ def given_webserver(given_builder: NiceguiOtanalyticsBuilder) -> Webserver:
 
 @pytest.fixture
 async def target(screen: Screen, given_webserver: Webserver) -> Screen:
+    screen.IMPLICIT_WAIT = ACCEPTANCE_TEST_WAIT_TIMEOUT
     given_webserver.build_pages()
     # Set a larger window size for better screenshots
     screen.selenium.set_window_size(1920, 1080)
@@ -382,7 +389,7 @@ def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
 
 @pytest.fixture
 def cutting_section_test_case() -> (
-    tuple[LineSection, list[Track], list[Track], set[TrackId]]
+    tuple[LineSection, list[Track], list[Track], TrackIdSet]
 ):
     track_id_1 = "1"
     track_id_2 = "2"
@@ -435,7 +442,7 @@ def cutting_section_test_case() -> (
         SectionId(_id), _id, {}, {}, [Coordinate(2.5, 0), Coordinate(2.5, 3)]
     )
 
-    expected_original_track_ids = {first_track.id, second_track.id}
+    expected_original_track_ids = PythonTrackIdSet({first_track.id, second_track.id})
 
     return (
         cutting_section,

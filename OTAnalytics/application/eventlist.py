@@ -5,7 +5,9 @@ from OTAnalytics.domain.event import (
     FILE_NAME_PATTERN,
     HOSTNAME,
     Event,
+    EventDataset,
     ImproperFormattedFilename,
+    PythonEventDataset,
 )
 from OTAnalytics.domain.geometry import ImageCoordinate, calculate_direction_vector
 from OTAnalytics.domain.track_dataset.track_dataset import (
@@ -76,13 +78,13 @@ class SceneEventListBuilder:
         segments.apply(self._create_leave_scene_event)
         return self
 
-    def build(self) -> list[Event]:
-        """Create the complete event list.
+    def build(self) -> EventDataset:
+        """Create the complete event dataset.
 
         Returns:
-            list[Event]: complete event list
+            EventDataset: complete event dataset
         """
-        return self._events.copy()
+        return PythonEventDataset(self._events)
 
     def _create_enter_scene_event(self, value: dict) -> None:
         event = self.__create_event(
@@ -144,14 +146,14 @@ class SceneEventListBuilder:
 class SceneActionDetector:
     """Detect when a road user enters or leaves the scene."""
 
-    def detect(self, tracks: TrackDataset) -> list[Event]:
+    def detect(self, tracks: TrackDataset) -> EventDataset:
         """Detect all enter and leave scene events.
 
         Args:
             tracks (Iterable[Track]): the tracks under inspection
 
         Returns:
-            Iterable[Event]: the scene events
+            EventDataset: the scene events
         """
         builder = SceneEventListBuilder()
         builder.add_enter_scene_events(tracks.get_first_segments())

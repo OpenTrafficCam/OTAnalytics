@@ -19,9 +19,15 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
-from OTAnalytics.domain.event import Event, EventRepository
+from OTAnalytics.domain.event import (
+    Event,
+    EventDataset,
+    EventRepository,
+    PythonEventDataset,
+)
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet, TrackIdSetFactory
 from OTAnalytics.domain.types import EventType
 
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
@@ -598,16 +604,23 @@ class RoadUserAssignments:
     """
 
     @property
-    def road_user_ids(self) -> list[str]:
+    def road_user_ids(self) -> TrackIdSet:
         """Returns a sorted list of all road user ids within this group of assignments.
 
         Returns:
             list[str]: the road user ids.
         """
-        return sorted([assignment.road_user for assignment in self._assignments])
+        return self._track_id_set_factory.create(
+            {assignment.road_user for assignment in self._assignments}
+        )
 
-    def __init__(self, assignments: list[RoadUserAssignment]) -> None:
+    def __init__(
+        self,
+        assignments: list[RoadUserAssignment],
+        track_id_set_factory: TrackIdSetFactory,
+    ) -> None:
         self._assignments = assignments.copy()
+        self._track_id_set_factory = track_id_set_factory
 
     def tag(self, by: Tagger) -> TaggedAssignments:
         """
@@ -688,9 +701,9 @@ class FilterBySectionEnterEvent(RoadUserAssignerDecorator):
     """Decorator to filters events by event type section-enter."""
 
     def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
-        section_enter_events: list[Event] = [
-            event for event in events if event.event_type == EventType.SECTION_ENTER
-        ]
+        section_enter_events = PythonEventDataset(
+            [event for event in events if event.event_type == EventType.SECTION_ENTER]
+        )
         return super().assign(section_enter_events, flows)
 
 
@@ -700,7 +713,9 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
     """
 
     def __init__(
-        self, flow_selection: FlowSelection = MaxDurationFlowSelection()
+        self,
+        track_id_set_factory: TrackIdSetFactory,
+        flow_selection: FlowSelection = MaxDurationFlowSelection(),
     ) -> None:
         """
         Initialize the SimpleRoadUserAssigner with a flow selection strategy.
@@ -710,6 +725,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
                 Defaults to MaxDurationFlowSelection.
         """
         self._flow_selection = flow_selection
+        self._track_id_set_factory = track_id_set_factory
 
     def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
         """
@@ -748,7 +764,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
 
     def __group_events_by_road_user(
         self, events: Iterable[Event]
-    ) -> dict[tuple[str, str], list[Event]]:
+    ) -> dict[tuple[str, str], EventDataset]:
         """
         Group events by road user.
 
@@ -756,10 +772,10 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
             events (Iterable[Event]): events of a road user
 
         Returns:
-            dict[tuple[RoadUserId, RoadUserType], list[Event]]: events grouped by user
+            dict[tuple[RoadUserId, RoadUserType], EventDataset]: events grouped by user
         """
-        events_by_road_user: dict[tuple[RoadUserId, RoadUserType], list[Event]] = (
-            defaultdict(list)
+        events_by_road_user: dict[tuple[RoadUserId, RoadUserType], EventDataset] = (
+            defaultdict(PythonEventDataset)
         )
         sorted_events = sorted(
             events, key=lambda _event: _event.interpolated_occurrence
@@ -774,7 +790,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
     def __assign_user_to_flow(
         self,
         flows: dict[tuple[SectionId, SectionId], list[Flow]],
-        events_by_road_user: dict[tuple[str, str], list[Event]],
+        events_by_road_user: dict[tuple[str, str], EventDataset],
     ) -> RoadUserAssignments:
         """
         Assign each user to flows based on the flow selection strategy.
@@ -782,7 +798,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         Args:
             flows (dict[tuple[SectionId, SectionId], list[Flow]]): flows by start and
                 end section
-            events_by_road_user (dict[str, list[Event]]): events by road user
+            events_by_road_user (dict[str, EventDataset]): events by road user
 
         Returns:
             RoadUserAssignments: group of RoadUserAssignment objects
@@ -795,12 +811,12 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
                     road_user_id=road_user_id, road_user_type=road_user_type
                 )
                 assignments.extend(user_assignments)
-        return RoadUserAssignments(assignments)
+        return RoadUserAssignments(assignments, self._track_id_set_factory)
 
     def __create_candidates(
         self,
         flows: dict[tuple[SectionId, SectionId], list[Flow]],
-        events: list[Event],
+        events: EventDataset,
     ) -> list[FlowCandidate]:
         """
         Create flow candidates to select one from in a later step.
@@ -808,7 +824,7 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         Args:
             flows (dict[tuple[SectionId, SectionId], list[Flow]]): flows by start and
                 end section
-            events (list[Event]): events belonging to road user
+            events (EventDataset): events belonging to road user
 
         Returns:
             list[FlowCandidate]: the flow candidates pertaining to road user
@@ -816,14 +832,14 @@ class SimpleRoadUserAssigner(RoadUserAssigner):
         event_pairs = self.__create_event_pairs(events)
         return self.__create_candidate_flows(flows, event_pairs)
 
-    def __create_event_pairs(self, events: list[Event]) -> list[EventPair]:
+    def __create_event_pairs(self, events: EventDataset) -> list[EventPair]:
         """
         Create event pairs.
 
         Requires and assumes events to be sorted by occurrence.
 
         Args:
-            events(list[Event]): events to create the event pairs with
+            events(EventDataset): events to create the event pairs with
 
         Returns:
             list[EventPair]: event pairs

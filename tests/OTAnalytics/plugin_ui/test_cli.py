@@ -80,7 +80,6 @@ from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackIds,
     GetAllTracks,
     GetTracksWithoutSingleDetections,
-    RemoveTracks,
     TrackRepositorySize,
 )
 from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
@@ -92,6 +91,7 @@ from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
 from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSetFactory
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
@@ -422,8 +422,8 @@ class TestOTAnalyticsCli:
         cut_tracks = SimpleCutTracksIntersectingSection(
             GetSectionsById(section_repository),
             get_all_tracks,
+            clear_all_tracks,
             add_all_tracks,
-            RemoveTracks(track_repository),
             RemoveSection(section_repository),
         )
         apply_cli_cuts = ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
@@ -435,7 +435,10 @@ class TestOTAnalyticsCli:
         create_events = CreateEvents(
             clear_all_events, create_intersection_events, create_scene_events
         )
-        assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
+        track_id_set_factory = PolarsTrackIdSetFactory()
+        assigner = FilterBySectionEnterEvent(
+            SimpleRoadUserAssigner(track_id_set_factory)
+        )
         traffic_counting = TrafficCounting(
             event_repository,
             flow_repository,
@@ -520,8 +523,8 @@ class TestOTAnalyticsCli:
         cut_tracks = SimpleCutTracksIntersectingSection(
             GetSectionsById(section_repository),
             get_all_tracks,
+            clear_all_tracks,
             add_all_tracks,
-            RemoveTracks(track_repository),
             RemoveSection(section_repository),
         )
         apply_cli_cuts = ApplyCliCuts(cut_tracks, TrackRepositorySize(track_repository))
@@ -533,7 +536,10 @@ class TestOTAnalyticsCli:
         create_events = CreateEvents(
             clear_all_events, create_intersection_events, create_scene_events
         )
-        assigner = FilterBySectionEnterEvent(SimpleRoadUserAssigner())
+        track_id_set_factory = PolarsTrackIdSetFactory()
+        assigner = FilterBySectionEnterEvent(
+            SimpleRoadUserAssigner(track_id_set_factory)
+        )
         traffic_counting = TrafficCounting(
             event_repository,
             flow_repository,
@@ -551,7 +557,10 @@ class TestOTAnalyticsCli:
         get_all_tracks = GetAllTracks(track_repository)
         get_cutting_sections = GetCuttingSections(section_repository)
         tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
-            SimpleRoadUserAssigner(), event_repository, flow_repository
+            SimpleRoadUserAssigner(track_id_set_factory),
+            event_repository,
+            flow_repository,
+            track_id_set_factory,
         )
         export_track_statistics = ExportTrackStatistics(
             CalculateTrackStatistics(

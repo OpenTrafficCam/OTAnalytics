@@ -1,15 +1,9 @@
-from typing import Iterable
-
 from OTAnalytics.application.use_cases.section_repository import GetCuttingSections
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
-from OTAnalytics.domain.section import (
-    SectionId,
-    SectionListObserver,
-    SectionRepositoryEvent,
-)
-from OTAnalytics.domain.track import TrackId, TrackIdProvider
+from OTAnalytics.domain.section import SectionListObserver, SectionRepositoryEvent
+from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet, TrackIdSet
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
-from OTAnalytics.domain.types import EventType
 
 
 class TrackIdsInsideCuttingSections(TrackIdProvider):
@@ -19,29 +13,13 @@ class TrackIdsInsideCuttingSections(TrackIdProvider):
         self._get_tracks = get_tracks
         self._get_cutting_sections = get_cutting_sections
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         track_dataset = self._get_tracks.as_dataset()
         cutting_sections = self._get_cutting_sections()
         if not cutting_sections:
-            return set()
+            return EmptyTrackIdSet()
 
-        results: set[TrackId] = set()
-        for cutting_section in cutting_sections:
-            offset = cutting_section.get_offset(EventType.SECTION_ENTER)
-            # set of all tracks where at least one coordinate is contained
-            # by at least one cutting section
-            results.update(
-                set(
-                    track_id
-                    for track_id, section_data in (
-                        track_dataset.contained_by_sections(
-                            [cutting_section], offset
-                        ).items()
-                    )
-                    if contains_true(section_data)
-                )
-            )
-        return results
+        return track_dataset.ids_inside(cutting_sections)
 
 
 class CachedTrackIdsInsideCuttingSections(
@@ -53,9 +31,9 @@ class CachedTrackIdsInsideCuttingSections(
         get_cutting_sections: GetCuttingSections,
     ) -> None:
         super().__init__(get_tracks, get_cutting_sections)
-        self._cached_ids: set[TrackId] = self.__get_empty_cache()
+        self._cached_ids: TrackIdSet = self.__get_empty_cache()
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         if self._cached_ids == self.__get_empty_cache():
             self._cached_ids = super().get_ids()
 
@@ -74,15 +52,8 @@ class CachedTrackIdsInsideCuttingSections(
     def _reset_cache(self) -> None:
         self._cached_ids = self.__get_empty_cache()
 
-    def _remove_track_ids(self, remove_track_ids: Iterable[TrackId]) -> None:
-        self._cached_ids = self._cached_ids.difference(set(remove_track_ids))
+    def _remove_track_ids(self, remove_track_ids: TrackIdSet) -> None:
+        self._cached_ids = self._cached_ids.difference(remove_track_ids)
 
-    def __get_empty_cache(self) -> set[TrackId]:
-        return set()
-
-
-def contains_true(section_data: list[tuple[SectionId, list[bool]]]) -> bool:
-    for _, bool_list in section_data:
-        if any(bool_list):
-            return True
-    return False
+    def __get_empty_cache(self) -> TrackIdSet:
+        return EmptyTrackIdSet()

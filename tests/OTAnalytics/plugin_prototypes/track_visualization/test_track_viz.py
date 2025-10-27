@@ -19,14 +19,15 @@ from OTAnalytics.domain.track import (
     Detection,
     Track,
     TrackId,
-    TrackIdProvider,
     TrackImage,
 )
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackRepository, TrackRepositoryEvent
 from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
+    PythonTrackIdSet,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
@@ -252,21 +253,27 @@ class TestCachedPandasTrackProvider:
         """Test clearing cache."""
         provider = self.set_up_provider([track_1], [])
 
-        provider.notify_tracks(TrackRepositoryEvent.create_removed([track_1.id]))
+        provider.notify_tracks(
+            TrackRepositoryEvent.create_removed(PythonTrackIdSet([track_1.id]))
+        )
         self.check_expected_ids(provider, [])
 
     def test_notify_update_add(self, track_1: Track, track_2: Track) -> None:
         """Test adding track to non-empty cache."""
         provider = self.set_up_provider([track_1], [track_2])
 
-        provider.notify_tracks(TrackRepositoryEvent.create_added([track_2.id]))
+        provider.notify_tracks(
+            TrackRepositoryEvent.create_added(PythonTrackIdSet([track_2.id]))
+        )
         self.check_expected_ids(provider, [track_1, track_2])
 
     def test_notify_update_add_first(self, track_2: Track) -> None:
         """Test adding first track to cache."""
         provider = self.set_up_provider([], [track_2])
 
-        provider.notify_tracks(TrackRepositoryEvent.create_added([track_2.id]))
+        provider.notify_tracks(
+            TrackRepositoryEvent.create_added(PythonTrackIdSet([track_2.id]))
+        )
         self.check_expected_ids(provider, [track_2])
 
     def test_notify_update_add_multiple_first(
@@ -276,21 +283,27 @@ class TestCachedPandasTrackProvider:
         provider = self.set_up_provider([], [track_2, track_1])
 
         provider.notify_tracks(
-            TrackRepositoryEvent.create_added([track_2.id, track_1.id])
+            TrackRepositoryEvent.create_added(
+                PythonTrackIdSet([track_2.id, track_1.id])
+            )
         )
         self.check_expected_ids(provider, [track_2, track_1])
 
     def test_notify_update_existing(self, track_1: Track, track_2: Track) -> None:
         provider = self.set_up_provider([track_1, track_2], [track_1])
 
-        provider.notify_tracks(TrackRepositoryEvent.create_added([track_1.id]))
+        provider.notify_tracks(
+            TrackRepositoryEvent.create_added(PythonTrackIdSet([track_1.id]))
+        )
         self.check_expected_ids(provider, [track_1, track_2])
 
     def test_notify_update_mixed(self, track_1: Track, track_2: Track) -> None:
         provider = self.set_up_provider([track_2], [track_1, track_2])
 
         provider.notify_tracks(
-            TrackRepositoryEvent.create_added([track_1.id, track_2.id])
+            TrackRepositoryEvent.create_added(
+                PythonTrackIdSet([track_1.id, track_2.id])
+            )
         )
         self.check_expected_ids(provider, [track_1, track_2])
 

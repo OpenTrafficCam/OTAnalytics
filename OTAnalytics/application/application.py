@@ -83,7 +83,6 @@ from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
 )
-from OTAnalytics.domain.track import TrackId, TrackImage
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
@@ -414,19 +413,6 @@ class OTAnalyticsApplication:
             file (Path): file to save the flows and sections to
         """
         self._save_otflow.save(file)
-
-    def get_image_of_track(self, track_id: TrackId) -> Optional[TrackImage]:
-        """
-        Retrieve an image for the given track.
-
-        Args:
-            track_id (TrackId): identifier for the track
-
-        Returns:
-            Optional[TrackImage]: an image of the track if the track is available and
-            the image can be loaded
-        """
-        return self._datastore.get_image_of_track(track_id)
 
     def create_events(self) -> None:
         """
