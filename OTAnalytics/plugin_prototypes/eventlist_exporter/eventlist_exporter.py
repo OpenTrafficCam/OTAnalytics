@@ -6,6 +6,7 @@ from OTAnalytics.application.config import DEFAULT_EVENTLIST_FILE_TYPE
 from OTAnalytics.application.datastore import EventListParser
 from OTAnalytics.application.export_formats import event_list
 from OTAnalytics.application.export_formats.event_list import (
+    DATE_TIME_FORMAT,
     DIRECTION_VECTOR_X,
     DIRECTION_VECTOR_Y,
     EVENT_COORDINATE_X,
@@ -46,6 +47,20 @@ OTC_OTEVENTS_FORMAT_NAME = "OTEvents (OpenTrafficCam)"
 
 OCCURRENCE_SEC = f"{OCCURRENCE}_sec"
 
+NUMBER_ROUNDED_COLUMNS = {
+    event_list.EVENT_COORDINATE_X: 1,
+    event_list.EVENT_COORDINATE_Y: 1,
+    event_list.INTERPOLATED_EVENT_COORDINATE_X: 1,
+    event_list.INTERPOLATED_EVENT_COORDINATE_Y: 1,
+    event_list.DIRECTION_VECTOR_X: 4,
+    event_list.DIRECTION_VECTOR_Y: 4,
+}
+
+DATETIME_ROUNDED_COLUMNS = {
+    event_list.OCCURRENCE: "ms",
+    event_list.INTERPOLATED_OCCURRENCE: "ms",
+}
+
 EXPORT_COLUMNS = [
     ROAD_USER_ID,
     ROAD_USER_TYPE,
@@ -83,7 +98,20 @@ class EventListDataFrameBuilder:
         self._split_columns_with_lists()
         self._add_section_names()
         self._add_detailed_date_time_columns()
+        self._round()
         return self._df.loc[:, EXPORT_COLUMNS]
+
+    def _round(self) -> None:
+        for column, decimals in NUMBER_ROUNDED_COLUMNS.items():
+            if column in self._df.columns:
+                self._df.loc[:, column] = self._df.loc[:, column].round(decimals)
+        for column, freq in DATETIME_ROUNDED_COLUMNS.items():
+            if column in self._df.columns:
+                self._df.loc[:, column] = (
+                    pd.to_datetime(self._df.loc[:, column])
+                    .dt.round(freq)
+                    .dt.strftime(DATE_TIME_FORMAT)
+                )
 
     def _add_detailed_date_time_columns(self) -> None:
         occurrence_column = pd.to_datetime(self._df[event_list.OCCURRENCE])

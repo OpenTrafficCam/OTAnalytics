@@ -5,8 +5,6 @@ from unittest.mock import Mock
 import polars as pl
 from polars.testing import assert_frame_equal
 
-from OTAnalytics.application.export_formats import event_list
-from OTAnalytics.application.export_formats.event_list import DATE_TIME_FORMAT
 from OTAnalytics.domain.track import Detection, Track
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.plugin_prototypes.eventlist_exporter import eventlist_exporter
@@ -68,6 +66,44 @@ def assert_track_dataset_has_tracks(dataset: TrackDataset, tracks: list[Track]) 
         assert_equal_track_properties(actual, expected)
 
 
+def assert_two_files_equal_sorted(
+    actual_counts_file: Path, expected_counts_file: Path
+) -> None:
+
+    with open(actual_counts_file, mode="r") as actual:
+        act_lines = sorted([line for line in actual.readlines()])
+
+        with open(expected_counts_file, mode="r") as expected:
+            exp_lines = sorted([line for line in expected.readlines()])
+
+            assert set(act_lines) == set(exp_lines), (
+                f"Sets are not equal [act len: {len(act_lines)}, "
+                f"exp len {len(exp_lines)}]:\n"
+                f"actual invents (fst.): "
+                f"{([a for a in act_lines if a not in exp_lines] + [None])[0]}\n"
+                f"actual missing (fst.): "
+                f"{([e for e in exp_lines if e not in act_lines] + [None])[0]}\n"
+                f"actual invents (scnd): "
+                f"{([a for a in act_lines if a not in exp_lines] + [None] * 2)[1]}\n"
+                f"actual missing (scnd): "
+                f"{([e for e in exp_lines if e not in act_lines] + [None] * 2)[1]}\n"
+                f"actual invents (num): "
+                f"{len([a for a in act_lines if a not in exp_lines])}\n"
+                f"actual missing (num): "
+                f"{len([e for e in exp_lines if e not in act_lines])}\n"
+            )
+
+            assert act_lines == exp_lines, (
+                f"First difference of {actual_counts_file.name} ({len(act_lines)}) "
+                f"to expected {expected_counts_file.name} ({len(exp_lines)}):\n"
+                f"exp: "
+                f"{([e for e, a in zip(exp_lines, act_lines) if e != a] + [None])[0]}\n"
+                f"act: "
+                f"{([a for e, a in zip(exp_lines, act_lines) if e != a] + [None])[0]}\n"
+                f"\n"
+            )
+
+
 def assert_equal_event_files(
     actual_counts_file: Path, expected_counts_file: Path
 ) -> None:
@@ -90,13 +126,4 @@ def _read_counts_csv(file: Path) -> pl.DataFrame:
 
 def _read_event_csv(file: Path) -> pl.DataFrame:
     data = pl.read_csv(file)
-    return (
-        data.with_columns(
-            pl.col(event_list.INTERPOLATED_OCCURRENCE)
-            .str.to_datetime(DATE_TIME_FORMAT)
-            .dt.round("1ms")
-        )
-        .with_columns(pl.col(event_list.INTERPOLATED_EVENT_COORDINATE_X).round(3))
-        .with_columns(pl.col(event_list.INTERPOLATED_EVENT_COORDINATE_Y).round(3))
-        .sort(by=eventlist_exporter.EXPORT_COLUMNS)
-    )
+    return data.sort(by=eventlist_exporter.EXPORT_COLUMNS)
