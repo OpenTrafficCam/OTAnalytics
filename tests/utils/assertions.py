@@ -113,6 +113,31 @@ def assert_equal_event_files(
     assert_frame_equal(actual, expected)
 
 
+def debugging_function_compare(actual: pl.DataFrame, expected: pl.DataFrame) -> None:
+    actual_small = actual.select(
+        [eventlist_exporter.ROAD_USER_ID, eventlist_exporter.FRAME_NUMBER]
+    )
+    expected_small = (
+        expected.with_columns(
+            pl.col(eventlist_exporter.ROAD_USER_ID).alias(
+                f"expected_{eventlist_exporter.ROAD_USER_ID}"
+            )
+        )
+        .with_columns(
+            pl.col(eventlist_exporter.FRAME_NUMBER).alias(
+                f"expected_{eventlist_exporter.FRAME_NUMBER}"
+            )
+        )
+        .drop([eventlist_exporter.ROAD_USER_ID, eventlist_exporter.FRAME_NUMBER])
+    )
+    temp = pl.concat([actual_small, expected_small], how="horizontal")
+    filtered = temp.filter(
+        pl.col(f"expected_{eventlist_exporter.FRAME_NUMBER}")
+        != pl.col(eventlist_exporter.FRAME_NUMBER)
+    )
+    print(filtered)
+
+
 def assert_equal_count_files(
     actual_counts_file: Path, expected_counts_file: Path
 ) -> None:
