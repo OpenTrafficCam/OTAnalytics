@@ -5,6 +5,7 @@ from unittest.mock import Mock
 import polars as pl
 from polars.testing import assert_frame_equal
 
+from OTAnalytics.application.export_formats.event_list import DATE_TIME_FORMAT
 from OTAnalytics.domain.track import Detection, Track
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.plugin_prototypes.eventlist_exporter import eventlist_exporter
@@ -126,4 +127,9 @@ def _read_counts_csv(file: Path) -> pl.DataFrame:
 
 def _read_event_csv(file: Path) -> pl.DataFrame:
     data = pl.read_csv(file)
-    return data.sort(by=eventlist_exporter.EXPORT_COLUMNS)
+    return data.with_columns(
+        pl.col(eventlist_exporter.INTERPOLATED_OCCURRENCE)
+        .str.to_datetime(DATE_TIME_FORMAT)
+        .dt.round("1ms")
+        .alias(eventlist_exporter.INTERPOLATED_OCCURRENCE)
+    ).sort(by=eventlist_exporter.EXPORT_COLUMNS)
