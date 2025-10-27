@@ -49,7 +49,7 @@ class PolarsTrackIdSet(TrackIdSet):
             other_strings = {unpack(track_id) for track_id in other}
             intersected_series = self._series.filter(
                 self._series.is_in(list(other_strings))
-            )
+            ).sort()
             return PolarsTrackIdSet(intersected_series)
 
     def union(self, other: "TrackIdSet") -> "TrackIdSet":
