@@ -55,7 +55,7 @@ class FrameFlows(AbstractCTkFrame):
             command=self._edit_selected_flow,
         )
         self.button_remove = CTkButton(
-            master=self, text="Remove", command=self._viewmodel.remove_flows
+            master=self, text="Remove", command=self._remove_flows
         )
 
     def _place_widgets(self) -> None:
@@ -78,6 +78,9 @@ class FrameFlows(AbstractCTkFrame):
 
     def _edit_selected_flow(self) -> None:
         asyncio.run(self._viewmodel.edit_selected_flow())
+
+    def _remove_flows(self) -> None:
+        asyncio.run(self._viewmodel.remove_flows())
 
     def _set_button_state_categories(self) -> None:
         self._general_buttons: list[CTkButton] = []
