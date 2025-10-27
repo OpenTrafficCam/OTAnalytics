@@ -32,3 +32,5 @@ class NiceguiWebserver:
     def build_pages(self) -> None:
         for page_builder in self._page_builders:
             page_builder.build(self._layout_components)
+
+    def stop(self) -> None: ...

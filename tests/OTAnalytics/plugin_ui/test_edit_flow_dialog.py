@@ -91,6 +91,11 @@ def edit_flow_dialog_with_input(
     )
 
 
+@pytest.mark.skip(
+    reason="NiceGUI's user fixture does not work with select elements "
+    "since version 2.13. Ignoring test until issue is solved: "
+    "https://github.com/zauberzeug/nicegui/issues/4894"
+)
 class TestEditFlowDialog:
     @pytest.mark.asyncio
     async def test_dialog_build_up(
