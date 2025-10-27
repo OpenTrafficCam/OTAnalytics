@@ -142,6 +142,7 @@ def given_webserver(given_builder: NiceguiOtanalyticsBuilder) -> Webserver:
 
 @pytest.fixture
 async def target(screen: Screen, given_webserver: Webserver) -> Screen:
+    screen.IMPLICIT_WAIT = 10
     given_webserver.build_pages()
     # Set a larger window size for better screenshots
     screen.selenium.set_window_size(1920, 1080)
