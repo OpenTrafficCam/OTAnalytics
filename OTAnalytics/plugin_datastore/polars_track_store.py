@@ -385,7 +385,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             return PolarsTrackDataset(track_geometry_factory)
         tracks = (
             tracks.drop(ROW_ID, strict=False)
-            .sort(by=[track.TRACK_ID, track.OCCURRENCE])
+            .sort(by=[track.TRACK_ID, track.OCCURRENCE, track.VIDEO_NAME, track.FRAME])
             .with_row_index(ROW_ID)
         )
         result = _assign_track_classification(tracks, calculator)
