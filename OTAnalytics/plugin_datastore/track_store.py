@@ -15,11 +15,7 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import Detection, Track, TrackId
-from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
-    FilterByClassTrackDataset,
-    FilteredTrackDataset,
-)
+from OTAnalytics.domain.track import Detection, Track, TrackId, unpack
 from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
     END_OCCURRENCE,
@@ -32,12 +28,18 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     START_X,
     START_Y,
     TRACK_GEOMETRY_FACTORY,
-    IntersectionPoint,
+    EmptyTrackIdSet,
+    IntersectionPointsDataset,
+    PythonIntersectionPointsDataset,
     TrackDataset,
     TrackDoesNotExistError,
     TrackGeometryDataset,
+    TrackIdSet,
     TrackSegmentDataset,
+    contains_true,
 )
+from OTAnalytics.domain.types import EventType
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from OTAnalytics.plugin_parser import ottrk_dataformat
 
 RANK = "rank"
@@ -250,15 +252,14 @@ class PandasDataFrameProvider:
 
 class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     @property
-    def track_ids(self) -> frozenset[TrackId]:
+    def track_ids(self) -> TrackIdSet:
         if self._dataset.empty:
-            return frozenset()
-        return frozenset(
-            [
-                TrackId(_id)
-                for _id in self._dataset.index.get_level_values(LEVEL_TRACK_ID)
-            ]
-        )
+            return PythonTrackIdSet()
+        track_ids = [
+            TrackId(_id)
+            for _id in self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique()
+        ]
+        return PythonTrackIdSet(track_ids)
 
     @property
     def first_occurrence(self) -> datetime | None:
@@ -393,7 +394,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         if self._dataset.empty:
             return None
         try:
-            return self._create_track_flyweight(id.id)
+            return self._create_track_flyweight(unpack(id))
         except KeyError:
             return None
 
@@ -401,14 +402,14 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return PandasTrackDataset(self.track_geometry_factory)
 
     def remove(self, track_id: TrackId) -> "PandasTrackDataset":
-        remaining_tracks = self._dataset.drop(track_id.id, errors="ignore")
+        remaining_tracks = self._dataset.drop(unpack(track_id), errors="ignore")
         updated_geometry_datasets = self._remove_from_geometry_dataset([track_id.id])
         return PandasTrackDataset.from_dataframe(
             remaining_tracks, self.track_geometry_factory, updated_geometry_datasets
         )
 
-    def remove_multiple(self, track_ids: set[TrackId]) -> "PandasTrackDataset":
-        track_ids_primitive = [track_id.id for track_id in track_ids]
+    def remove_multiple(self, track_ids: TrackIdSet) -> "PandasTrackDataset":
+        track_ids_primitive = [unpack(track_id) for track_id in track_ids]
         remaining_tracks = self._dataset.drop(track_ids_primitive, errors="ignore")
         updated_geometry_datasets = self._remove_from_geometry_dataset(
             track_ids_primitive
@@ -500,9 +501,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> set[TrackId]:
+    ) -> TrackIdSet:
         geometry_dataset = self._get_geometry_dataset_for(offset)
-        return geometry_dataset.intersecting_tracks(sections)
+        intersecting_ids = geometry_dataset.intersecting_tracks(sections)
+        return PythonTrackIdSet(intersecting_ids)
 
     def _get_geometry_dataset_for(
         self, offset: RelativeOffsetCoordinate
@@ -527,15 +529,33 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
     def intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
+    ) -> IntersectionPointsDataset:
         geometry_dataset = self._get_geometry_dataset_for(offset)
-        return geometry_dataset.intersection_points(sections)
+        intersection_data = geometry_dataset.intersection_points(sections)
+        return PythonIntersectionPointsDataset(intersection_data, self)
 
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         geometry_dataset = self._get_geometry_dataset_for(offset)
         return geometry_dataset.contained_by_sections(sections)
+
+    def ids_inside(self, sections: list[Section]) -> TrackIdSet:
+        results: set[TrackId] = set()
+        for cutting_section in sections:
+            offset = cutting_section.get_offset(EventType.SECTION_ENTER)
+            # set of all tracks where at least one coordinate is contained
+            # by at least one cutting section
+            results.update(
+                set(
+                    track_id
+                    for track_id, section_data in (
+                        self.contained_by_sections([cutting_section], offset).items()
+                    )
+                    if contains_true(section_data)
+                )
+            )
+        return PythonTrackIdSet(results)
 
     def calculate_geometries_for(
         self, offsets: Iterable[RelativeOffsetCoordinate]
@@ -604,13 +624,20 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["PandasTrackDataset", set[TrackId]]:
+    ) -> tuple["PandasTrackDataset", TrackIdSet]:
         if len(self) == 0:
             logger().info("No tracks to cut")
-            return self, set()
+            return self, EmptyTrackIdSet()
+
+        # TODO is this only:
+        # - groupby trackid
+        # - shift by 1
+        # - calculate intersects per segment
+        # - cumcount per intersects by track id
+        # - add cumcount to track id
         intersection_points = self.intersection_points([section], offset)
         cut_indices = {
-            track_id.id: [
+            unpack(track_id): [
                 ip[1].upper_index
                 for ip in sorted(intersection_points, key=lambda ip: ip[1])
             ]
@@ -630,9 +657,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         cut_tracks_df.index = MultiIndex.from_frame(
             index_as_df[[track.TRACK_ID, track.OCCURRENCE]]
         )
-        return PandasTrackDataset(self.track_geometry_factory, cut_tracks_df), set(
-            intersection_points.keys()
-        )
+        return PandasTrackDataset(
+            self.track_geometry_factory, cut_tracks_df
+        ), PythonTrackIdSet(intersection_points.keys())
 
     def _create_cut_track_id(self, row: Series, cut_info: dict[str, list[int]]) -> str:
         if (track_id := row[track.TRACK_ID]) in cut_info.keys():
@@ -640,10 +667,11 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             return f"{track_id}_{cut_segment_index}"
         return row[track.TRACK_ID]
 
-    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+    def get_max_confidences_for(self, track_ids: TrackIdSet) -> dict[str, float]:
+        track_id_strings = [track_id.id for track_id in track_ids]
         try:
             return (
-                self._dataset.loc[track_ids][track.CONFIDENCE]
+                self._dataset.loc[track_id_strings][track.CONFIDENCE]
                 .groupby(level=[LEVEL_TRACK_ID])
                 .max()
                 .to_dict()
@@ -654,10 +682,10 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             ) from cause
 
     def revert_cuts_for(
-        self, original_track_ids: frozenset[TrackId]
-    ) -> tuple["PandasTrackDataset", frozenset[TrackId], frozenset[TrackId]]:
+        self, original_track_ids: TrackIdSet
+    ) -> tuple["PandasTrackDataset", TrackIdSet, TrackIdSet]:
         if self._dataset.empty:
-            return self, frozenset(), frozenset()
+            return self, EmptyTrackIdSet(), EmptyTrackIdSet()
         ids_to_revert = self._get_existing_cut_track_ids(original_track_ids)
         result = self._dataset.reset_index()
         mask_ids_to_revert = result[track.TRACK_ID].isin(ids_to_revert)
@@ -673,7 +701,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             calculator=self.calculator,
         )
         removed_ids = to_domain_ids(ids_to_revert)
-        reverted_ids = frozenset(
+        reverted_ids = PythonTrackIdSet(
             TrackId(_id) for _id in col_reverted_track_ids.unique()
         )
         return (
@@ -682,13 +710,13 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             removed_ids,
         )
 
-    def _get_existing_cut_track_ids(self, track_ids: frozenset[TrackId]) -> list[str]:
+    def _get_existing_cut_track_ids(self, track_ids: TrackIdSet) -> list[str]:
         """
         Retrieves a list of unique track IDs from the dataset that exist in the provided
         set of track IDs and that also have undergone cutting operations.
 
         Args:
-            track_ids (frozenset[TrackId]): track IDs to be checked against the dataset.
+            track_ids (TrackIdSet): track IDs to be checked against the dataset.
 
         Returns:
             list[str]: unique track IDs from the dataset that are found in the provided
@@ -709,8 +737,8 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         )
 
     def remove_by_original_ids(
-        self, original_ids: frozenset[TrackId]
-    ) -> tuple["PandasTrackDataset", frozenset[TrackId]]:
+        self, original_ids: TrackIdSet
+    ) -> tuple["PandasTrackDataset", TrackIdSet]:
         raw_ids = to_raw_ids(original_ids)
 
         mask_remove = self._dataset[track.ORIGINAL_TRACK_ID].isin(raw_ids)
@@ -730,312 +758,15 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         )
         removed_track_ids = to_domain_ids(ids_to_remove)
 
-        return updated_track_dataset, removed_track_ids
+        return updated_track_dataset, PythonTrackIdSet(removed_track_ids)
 
 
 def to_raw_ids(track_ids: Iterable[TrackId]) -> frozenset[str]:
     return frozenset((track_id.id for track_id in track_ids))
 
 
-def to_domain_ids(raw_ids: Iterable[str]) -> frozenset[TrackId]:
-    return frozenset((TrackId(raw_id) for raw_id in raw_ids))
-
-
-class FilteredPandasTrackDataset(
-    FilteredTrackDataset, PandasTrackDataset, PandasDataFrameProvider
-):
-
-    @property
-    def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
-        return self._other.track_geometry_factory
-
-    @property
-    def calculator(self) -> PandasTrackClassificationCalculator:
-        return self._other.calculator
-
-    def __init__(self, other: PandasTrackDataset) -> None:
-        self._other = other
-
-    def add_all(self, other: Iterable[Track]) -> PandasTrackDataset:
-        return self.wrap(self._other.add_all(other))
-
-    def remove(self, track_id: TrackId) -> PandasTrackDataset:
-        return self.wrap(self._other.remove(track_id))
-
-    def remove_multiple(self, track_ids: set[TrackId]) -> PandasTrackDataset:
-        return self.wrap(self._other.remove_multiple(track_ids))
-
-    def clear(self) -> PandasTrackDataset:
-        return self.wrap(self._other.clear())
-
-    def split(self, chunks: int) -> Sequence[PandasTrackDataset]:
-        return [self.wrap(dataset) for dataset in self._other.split(chunks)]
-
-    def calculate_geometries_for(
-        self, offsets: Iterable[RelativeOffsetCoordinate]
-    ) -> None:
-        self._other.calculate_geometries_for(offsets)
-
-    def cut_with_section(
-        self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple[PandasTrackDataset, set[TrackId]]:
-        dataset, original_track_ids = self._other.cut_with_section(section, offset)
-        return self.wrap(dataset), original_track_ids
-
-    @abstractmethod
-    def _filter(self) -> PandasTrackDataset:
-        raise NotImplementedError
-
-    @abstractmethod
-    def wrap(self, other: PandasTrackDataset) -> PandasTrackDataset:
-        raise NotImplementedError
-
-    def get_data(self) -> DataFrame:
-        return self._filter().get_data()
-
-    def revert_cuts_for(
-        self, original_track_ids: frozenset[TrackId]
-    ) -> tuple[PandasTrackDataset, frozenset[TrackId], frozenset[TrackId]]:
-        reverted_dataset, reverted_ids, cut_ids = self._other.revert_cuts_for(
-            original_track_ids
-        )
-        return self.wrap(reverted_dataset), reverted_ids, cut_ids
-
-    def remove_by_original_ids(
-        self, original_ids: frozenset[TrackId]
-    ) -> tuple["PandasTrackDataset", frozenset[TrackId]]:
-        updated_dataset, removed_ids = self._other.remove_by_original_ids(original_ids)
-        return self.wrap(updated_dataset), removed_ids
-
-
-class FilterByClassPandasTrackDataset(
-    FilteredPandasTrackDataset, FilterByClassTrackDataset
-):
-    @property
-    def include_classes(self) -> frozenset[str]:
-        return self._include_classes
-
-    @property
-    def exclude_classes(self) -> frozenset[str]:
-        return self._exclude_classes
-
-    def __init__(
-        self,
-        other: PandasTrackDataset,
-        include_classes: frozenset[str],
-        exclude_classes: frozenset[str],
-    ) -> None:
-        super().__init__(other)
-        self._include_classes = include_classes
-        self._exclude_classes = exclude_classes
-        self._cache: PandasTrackDataset | None = None
-
-    def _filter(self) -> PandasTrackDataset:
-        """Filter TrackDataset by classifications.
-
-        IMPORTANT: Classifications contained in the include_classes will not be
-        removed even if they appear in the set of exclude_classes.
-        Furthermore, the whitelist will not be applied if empty.
-
-        Returns:
-            TrackDataset: the filtered dataset.
-        """
-        if not self.include_classes and not self._exclude_classes:
-            return self._other
-
-        if self._cache is not None:
-            return self._cache
-
-        if self.include_classes:
-            logger().info(
-                "Apply 'include-classes' filter to filter tracks: "
-                f"{self.include_classes}"
-                "\n'exclude-classes' filter is not used"
-            )
-            filtered_dataset = self._get_dataset_with_classes(
-                list(self._other.classifications & self.include_classes)
-            )
-        elif self.exclude_classes:
-            logger().info(
-                "Apply 'exclude-classes' filter to filter tracks: "
-                f"{self.exclude_classes}"
-            )
-            filtered_dataset = self._get_dataset_with_classes(
-                list(self._other.classifications - self.exclude_classes)
-            )
-        else:
-            return self._other
-        self._cache = filtered_dataset
-        return filtered_dataset
-
-    def _get_dataset_with_classes(self, classes: list[str]) -> PandasTrackDataset:
-        if self._other.empty:
-            return self._other
-        dataset = self._other.get_data()
-        mask = dataset[track.TRACK_CLASSIFICATION].isin(classes)
-        filtered_df = dataset[mask]
-        # The pandas Index does not implement the Sequence interface, which causes
-        # compatibility issues with the PandasTrackDataset._remove_from_geometry method
-        # when trying to remove geometries for tracks that have been deleted.
-        # To address this, we invalidate the entire geometry cache rather than
-        # attempting selective removal.
-        # This approach is acceptable because track removal only occurs when
-        # cutting tracks, which is a rare use case.
-
-        return PandasTrackDataset(
-            track_geometry_factory=self._other.track_geometry_factory,
-            dataset=filtered_df,
-            geometry_datasets=None,
-            calculator=self._other.calculator,
-        )
-
-    def wrap(self, other: PandasTrackDataset) -> PandasTrackDataset:
-        return FilterByClassPandasTrackDataset(
-            other, self.include_classes, self.exclude_classes
-        )
-
-
-class FilterByIdPandasTrackDataset(FilteredPandasTrackDataset):
-    """
-    Represents a dataset that filters tracks by specific track IDs.
-
-    This class provides functionality to filter a Pandas-based track dataset by a
-    list of track IDs. It utilizes caching to optimize repeated filtering operations,
-    manages dataset consistency, and ensures efficient geometry cache invalidation
-    for cases such as track removal.
-    """
-
-    def __init__(self, other: PandasTrackDataset, track_ids: list[str]) -> None:
-        super().__init__(other)
-        self._included_track_ids = track_ids
-        self._cache: PandasTrackDataset | None = None
-
-    def _filter(self) -> PandasTrackDataset:
-        """
-        Filters the track dataset based on included track IDs.
-
-        This method applies a filter on a dataset to include only the tracks
-        specified in `_included_track_ids`. If there are no specified track IDs,
-        it returns the original dataset (`_other`). It employs caching to store the
-        filtered dataset for future use.
-
-        Returns:
-            TrackDataset: The filtered dataset containing only the specified track IDs.
-                If no track IDs are provided, the original dataset is returned.
-        """
-        if not self._included_track_ids:
-            return self._other
-
-        if self._cache is not None:
-            return self._cache
-
-        if self._included_track_ids:
-            logger().info(
-                "Apply 'track-ids' filter to filter tracks: "
-                f"{self._included_track_ids}"
-            )
-            filtered_dataset = self._get_dataset_with(
-                track_ids=self._included_track_ids
-            )
-        else:
-            return self._other
-        self._cache = filtered_dataset
-        return filtered_dataset
-
-    def _get_dataset_with(self, track_ids: list[str]) -> PandasTrackDataset:
-        if self._other.empty:
-            return self._other
-        dataset = self._other.get_data()
-        filtered_df = get_rows_by_track_ids(dataset, track_ids)
-        # The pandas Index does not implement the Sequence interface, which causes
-        # compatibility issues with the PandasTrackDataset._remove_from_geometry method
-        # when trying to remove geometries for tracks that have been deleted.
-        # To address this, we invalidate the entire geometry cache rather than
-        # attempting selective removal.
-        # This approach is acceptable because track removal only occurs when
-        # cutting tracks, which is a rare use case.
-
-        return PandasTrackDataset(
-            track_geometry_factory=self._other.track_geometry_factory,
-            dataset=filtered_df,
-            geometry_datasets=None,
-            calculator=self._other.calculator,
-        )
-
-    def wrap(self, other: PandasTrackDataset) -> PandasTrackDataset:
-        return FilterByIdPandasTrackDataset(other, self._included_track_ids)
-
-
-class FilterLastNDetectionsPandasTrackDataset(FilteredPandasTrackDataset):
-    def __init__(self, other: PandasTrackDataset, n: int) -> None:
-        super().__init__(other)
-        self._n = n
-        self._cache: PandasTrackDataset | None = None
-
-    def _filter(self) -> PandasTrackDataset:
-        """
-        Filters the track dataset based on included track IDs.
-
-        This method applies a filter on a dataset to include only the tracks
-        specified in `_included_track_ids`. If there are no specified track IDs,
-        it returns the original dataset (`_other`). It employs caching to store the
-        filtered dataset for future use.
-
-        Returns:
-            TrackDataset: The filtered dataset containing only the specified track IDs.
-                If no track IDs are provided, the original dataset is returned.
-        """
-        if self._cache is not None:
-            return self._cache
-
-        logger().info(
-            f"Limit number of detections per track to last {self._n} of them."
-        )
-        filtered_dataset = self._get_filtered_dataset()
-        self._cache = filtered_dataset
-        return filtered_dataset
-
-    def _get_filtered_dataset(self) -> PandasTrackDataset:
-        if self._other.empty:
-            return self._other
-        dataset = self._other.get_data()
-        filtered_df = get_exactly_two_latest_occurrences_per_id(dataset, self._n)
-        # The pandas Index does not implement the Sequence interface, which causes
-        # compatibility issues with the PandasTrackDataset._remove_from_geometry method
-        # when trying to remove geometries for tracks that have been deleted.
-        # To address this, we invalidate the entire geometry cache rather than
-        # attempting selective removal.
-        # This approach is acceptable because track removal only occurs when
-        # cutting tracks, which is a rare use case.
-
-        return PandasTrackDataset(
-            track_geometry_factory=self._other.track_geometry_factory,
-            dataset=filtered_df,
-            geometry_datasets=None,
-            calculator=self._other.calculator,
-        )
-
-    def wrap(self, other: PandasTrackDataset) -> PandasTrackDataset:
-        return FilterLastNDetectionsPandasTrackDataset(other, self._n)
-
-
-def get_latest_occurrences(dataframe: DataFrame, last_n: int) -> DataFrame:
-    index_names = dataframe.index.names
-    result = dataframe.reset_index()
-    result.loc[:, RANK] = result.groupby(track.TRACK_ID)[track.OCCURRENCE].rank(
-        method="first", ascending=False
-    )
-    result = result[result[RANK] <= last_n].drop(RANK, axis=1).reset_index(drop=True)
-    return result.set_index(index_names)
-
-
-def get_exactly_two_latest_occurrences_per_id(
-    dataframe: DataFrame, last_n: int
-) -> DataFrame:
-    counts = dataframe.index.get_level_values(LEVEL_TRACK_ID).value_counts()
-    valid_ids = counts[counts >= MINIMUM_DETECTIONS].index
-    filtered_df = get_rows_by_track_ids(dataframe=dataframe, track_ids=valid_ids)
-    return get_latest_occurrences(filtered_df, last_n=last_n)
+def to_domain_ids(raw_ids: Iterable[str]) -> TrackIdSet:
+    return PythonTrackIdSet((TrackId(raw_id) for raw_id in raw_ids))
 
 
 def _assign_track_classification(

@@ -2,6 +2,8 @@ import pytest
 
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 
 
@@ -27,7 +29,9 @@ def section_id_2() -> SectionId:
 
 class TestPythonIntersectionRepository:
     def test_store(self, section_id_1: SectionId, track_id_1: TrackId) -> None:
-        intersections = {section_id_1: {track_id_1}}
+        intersections: dict[SectionId, TrackIdSet] = {
+            section_id_1: PythonTrackIdSet({track_id_1})
+        }
         repository = PythonIntersectionRepository()
 
         repository.store(intersections)
@@ -36,7 +40,9 @@ class TestPythonIntersectionRepository:
         assert stored_intersections == intersections
 
     def test_clear(self, section_id_1: SectionId, track_id_1: TrackId) -> None:
-        intersections = {section_id_1: {track_id_1}}
+        intersections: dict[SectionId, TrackIdSet] = {
+            section_id_1: PythonTrackIdSet({track_id_1})
+        }
         repository = PythonIntersectionRepository()
         repository.store(intersections)
 
@@ -51,13 +57,16 @@ class TestPythonIntersectionRepository:
         track_id_1: TrackId,
         track_id_2: TrackId,
     ) -> None:
-        intersections = {section_id_1: {track_id_1}, section_id_2: {track_id_2}}
+        intersections: dict[SectionId, TrackIdSet] = {
+            section_id_1: PythonTrackIdSet({track_id_1}),
+            section_id_2: PythonTrackIdSet({track_id_2}),
+        }
         repository = PythonIntersectionRepository()
         repository.store(intersections)
 
         repository.remove({section_id_1})
 
-        assert repository.get_all() == {section_id_2: {track_id_2}}
+        assert repository.get_all() == {section_id_2: PythonTrackIdSet({track_id_2})}
 
     def test_remove_missing(self, section_id_1: SectionId) -> None:
         repository = PythonIntersectionRepository()
@@ -73,7 +82,10 @@ class TestPythonIntersectionRepository:
         track_id_1: TrackId,
         track_id_2: TrackId,
     ) -> None:
-        intersections = {section_id_1: {track_id_1}, section_id_2: {track_id_2}}
+        intersections: dict[SectionId, TrackIdSet] = {
+            section_id_1: PythonTrackIdSet({track_id_1}),
+            section_id_2: PythonTrackIdSet({track_id_2}),
+        }
         repository = PythonIntersectionRepository()
         repository.store(intersections)
         actual = repository.get({section_id_1, section_id_2})
