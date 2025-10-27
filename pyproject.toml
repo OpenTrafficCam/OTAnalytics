@@ -60,6 +60,7 @@ dev = [
     "pytest-benchmark==5.1.0",
     "pytest-cov==6.0.0",
     "pytest-lazy-fixtures==1.1.2",
+    "pytest-timeout==2.4.0",
     "PyYAML==6.0.2",
     "selenium==4.32.0",
     "twine==6.1.0",
