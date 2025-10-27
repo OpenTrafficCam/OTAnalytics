@@ -2,7 +2,6 @@ from typing import Any, Iterable, Self
 
 from nicegui import ui
 from nicegui.elements.button import Button
-from plugin_ui.utils.asyncio_helper import run_async
 
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -17,6 +16,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
     CustomTable,
 )
+from OTAnalytics.plugin_ui.utils.asyncio_helper import run_async
 
 BUTTON_WIDTH = "max-width: 45%; width: 100%"
 BASIC_WIDTH = "width: 100%"
