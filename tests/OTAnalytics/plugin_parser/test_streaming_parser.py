@@ -168,8 +168,8 @@ class TestStreamOttrkParser:
         second_chunk = next(stream).as_list()
 
         assert len(first_chunk) == 4
-        assert len(second_chunk) == 2
-        assert len(expected) == 6
+        assert len(second_chunk) == 3
+        assert len(expected) == 7
         assert set(self.ids_of(expected)) == set(
             self.ids_of(first_chunk + second_chunk)
         )
