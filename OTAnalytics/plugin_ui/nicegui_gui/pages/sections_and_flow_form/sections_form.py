@@ -1,8 +1,8 @@
-import asyncio
 from typing import Any, Iterable, Self
 
 from nicegui import ui
 from nicegui.elements.button import Button
+from plugin_ui.utils.asyncio_helper import run_async
 
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -140,7 +140,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
         self._section_table.select(item_ids)
 
     def remove_sections(self) -> None:
-        asyncio.create_task(self._viewmodel.remove_sections())
+        run_async(self._viewmodel.remove_sections())
 
     def update_items(self) -> None:
         self._section_table.update(map_to_ui(self._viewmodel.get_all_sections()))

@@ -1,9 +1,9 @@
-import asyncio
 from typing import Iterable, Self
 
 from nicegui import ui
 from nicegui.elements.button import Button
 from nicegui.events import ClickEventArguments
+from plugin_ui.utils.asyncio_helper import run_async
 
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
@@ -109,7 +109,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         self._viewmodel.generate_flows()
 
     def remove_flow(self) -> None:
-        asyncio.create_task(self._viewmodel.remove_flows())
+        run_async(self._viewmodel.remove_flows())
 
     async def show_flow_properties(self) -> None:
         await self._viewmodel.edit_selected_flow()
