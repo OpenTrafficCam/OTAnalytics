@@ -46,6 +46,8 @@ from tests.utils.builders.track_segment_builder import (
     TrackSegmentDatasetBuilderProvider,
 )
 
+ACCEPTANCE_TEST_WAIT_TIMEOUT = 10
+
 pytest_plugins = ["nicegui.testing.plugin"]
 
 
@@ -142,7 +144,7 @@ def given_webserver(given_builder: NiceguiOtanalyticsBuilder) -> Webserver:
 
 @pytest.fixture
 async def target(screen: Screen, given_webserver: Webserver) -> Screen:
-    screen.IMPLICIT_WAIT = 10
+    screen.IMPLICIT_WAIT = ACCEPTANCE_TEST_WAIT_TIMEOUT
     given_webserver.build_pages()
     # Set a larger window size for better screenshots
     screen.selenium.set_window_size(1920, 1080)
