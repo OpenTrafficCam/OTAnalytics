@@ -26,9 +26,11 @@ class NiceguiWebserver:
     def run(self) -> None:
         app = FastAPI()
         self.build_pages()
-        ui.run_with(app, favicon="🎬")
+        ui.run_with(app, favicon="📊")
         uvicorn.run(app, host=self._hostname, port=self._port)
 
     def build_pages(self) -> None:
         for page_builder in self._page_builders:
             page_builder.build(self._layout_components)
+
+    def stop(self) -> None: ...

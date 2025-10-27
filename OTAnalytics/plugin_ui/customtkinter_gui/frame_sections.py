@@ -64,7 +64,7 @@ class FrameSections(AbstractCTkFrame):
         self.button_remove = CTkButton(
             master=self,
             text="Remove",
-            command=self._viewmodel.remove_sections,
+            command=self._remove_sections,
         )
 
     def _place_widgets(self) -> None:
@@ -87,6 +87,9 @@ class FrameSections(AbstractCTkFrame):
 
     def _edit_selected_section_metadata(self) -> None:
         asyncio.run(self._viewmodel.edit_selected_section_metadata())
+
+    def _remove_sections(self) -> None:
+        asyncio.run(self._viewmodel.remove_sections())
 
     def _set_button_state_categories(self) -> None:
         self._general_buttons: list[CTkButton] = []

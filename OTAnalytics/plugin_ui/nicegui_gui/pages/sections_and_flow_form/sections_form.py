@@ -16,6 +16,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
     CustomTable,
 )
+from OTAnalytics.plugin_ui.utils.asyncio_helper import run_async
 
 BUTTON_WIDTH = "max-width: 45%; width: 100%"
 BASIC_WIDTH = "width: 100%"
@@ -59,7 +60,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
             columns=create_columns(resource_manager),
             rows=[],
             on_select_method=lambda e: self._select_section(e.selection),
-            selection="single",
+            selection="multiple",
             marker=MARKER_SECTION_TABLE,
         )
         self._toggle = False
@@ -111,7 +112,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
             with ui.row().style(BASIC_WIDTH):
                 self._button_remove = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_REMOVE),
-                    on_click=self._viewmodel.remove_sections,
+                    on_click=self.remove_sections,
                 ).style(BASIC_WIDTH)
                 self._button_remove.mark(MARKER_BUTTON_REMOVE)
         self.update_items()
@@ -138,6 +139,9 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
     def update_selected_items(self, item_ids: list[str]) -> None:
         self._section_table.select(item_ids)
 
+    def remove_sections(self) -> None:
+        run_async(self._viewmodel.remove_sections())
+
     def update_items(self) -> None:
         self._section_table.update(map_to_ui(self._viewmodel.get_all_sections()))
         selected_sections = [
@@ -148,24 +152,28 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
     def disable(self) -> None:
         if (
             self._button_add_line
-            and self._button_add_line
+            and self._button_edit
+            and self._button_properties
             and self._button_add_areas
             and self._button_remove
         ):
             self._button_add_line.disable()
-            self._button_add_line.disable()
+            self._button_edit.disable()
+            self._button_properties.disable()
             self._button_add_areas.disable()
             self._button_remove.disable()
 
     def enable(self) -> None:
         if (
             self._button_add_line
-            and self._button_add_line
+            and self._button_edit
+            and self._button_properties
             and self._button_add_areas
             and self._button_remove
         ):
             self._button_add_line.enable()
-            self._button_add_line.enable()
+            self._button_edit.enable()
+            self._button_properties.enable()
             self._button_add_areas.enable()
             self._button_remove.enable()
 

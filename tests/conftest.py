@@ -1,14 +1,19 @@
+import multiprocessing as py_multiprocessing
+import os
 import shutil
 from pathlib import Path
-from typing import Any, Generator, Sequence, TypeVar
+from typing import Any, Generator, List, Sequence, TypeVar
 from unittest.mock import Mock
 
 import pytest
+from nicegui.testing import Screen
+from selenium import webdriver
 
 from OTAnalytics.application.analysis.traffic_counting import (
     EventPair,
     RoadUserAssignment,
 )
+from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate
@@ -27,7 +32,12 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
+from OTAnalytics.plugin_ui.nicegui_application import Webserver
 from tests.utils.builders.event_builder import EventBuilder
+from tests.utils.builders.otanalytics_builders import (
+    MultiprocessingWorker,
+    NiceguiOtanalyticsBuilder,
+)
 from tests.utils.builders.track_builder import TrackBuilder, create_track
 from tests.utils.builders.track_segment_builder import (
     PANDAS,
@@ -36,10 +46,112 @@ from tests.utils.builders.track_segment_builder import (
     TrackSegmentDatasetBuilderProvider,
 )
 
-pytest_plugins = ["nicegui.testing.user_plugin"]
+pytest_plugins = ["nicegui.testing.plugin"]
+
+
+# --- Acceptance test collection control ---
+# Ensure acceptance tests only run in the dedicated GitHub Actions workflow
+# without modifying workflow files. We detect the workflow via the
+# GITHUB_WORKFLOW environment variable which is automatically set by GitHub.
+# Alternatively, developers can force running acceptance tests locally by setting
+# RUN_ACCEPTANCE=1 in their environment.
+ACCEPTANCE_WORKFLOW_NAME = "Acceptance Test With Pytest"
+
+
+def _is_acceptance_context() -> bool:
+    return (
+        os.environ.get("GITHUB_WORKFLOW") == ACCEPTANCE_WORKFLOW_NAME
+        or os.environ.get("RUN_ACCEPTANCE") == "1"
+    )
+
+
+def pytest_ignore_collect(path: Path, config: pytest.Config) -> bool:  # type: ignore[override] # noqa
+    """Skip collecting acceptance tests unless in acceptance context.
+
+    This prevents acceptance tests from running in the default CI workflow (test.yml)
+    and during regular local runs, while allowing them in the dedicated
+    acceptance-test.yml (based on the workflow name) or when explicitly enabled
+    via RUN_ACCEPTANCE=1.
+    """
+    if _is_acceptance_context():
+        return False
+
+    p = str(path)
+    # Target only the known acceptance test locations
+    name = os.path.basename(p)
+    if name in {"test_acceptance.py", "test-acceptance.py"}:
+        return True
+    if "/acceptance_test/" in p or "\\acceptance_test\\" in p:
+        return True
+
+    return False
+
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
+
+
+@pytest.fixture
+def chrome_options() -> webdriver.ChromeOptions:
+    """Create Chrome options for Selenium testing.
+
+    This fixture creates a ChromeOptions instance that can be used by the
+    nicegui_chrome_options fixture for Selenium testing.
+
+    Sets a larger window size (1920x1080) to capture more content in screenshots.
+
+    Returns:
+        webdriver.ChromeOptions: Chrome options for Selenium testing.
+    """
+    options = webdriver.ChromeOptions()
+    options.add_argument("--window-size=1920,1080")
+    return options
+
+
+@pytest.fixture(scope="session")
+def given_builder() -> NiceguiOtanalyticsBuilder:
+    return NiceguiOtanalyticsBuilder()
+
+
+@pytest.fixture(scope="session")
+def given_app(
+    given_builder: NiceguiOtanalyticsBuilder,
+) -> YieldFixture[MultiprocessingWorker]:
+    # Choose a compatible multiprocessing start method for the current platform
+    # Prefer 'fork' on POSIX for speed, but fall back to 'forkserver' or 'spawn'
+    try:
+        methods = py_multiprocessing.get_all_start_methods()
+        preferred = (
+            "fork"
+            if "fork" in methods
+            else ("forkserver" if "forkserver" in methods else "spawn")
+        )
+        py_multiprocessing.set_start_method(preferred, force=True)
+    except Exception:
+        # If already set or unsupported, continue with the default
+        pass
+    app = given_builder.build()
+    yield app
+    app.stop()
+
+
+@pytest.fixture(scope="session")
+def given_webserver(given_builder: NiceguiOtanalyticsBuilder) -> Webserver:
+    return given_builder.webserver
+
+
+@pytest.fixture
+async def target(screen: Screen, given_webserver: Webserver) -> Screen:
+    given_webserver.build_pages()
+    # Set a larger window size for better screenshots
+    screen.selenium.set_window_size(1920, 1080)
+
+    return screen
+
+
+@pytest.fixture
+def resource_manager() -> ResourceManager:
+    return ResourceManager()
 
 
 @pytest.fixture(scope="module")
@@ -416,3 +528,48 @@ def second_road_user_assignment(
         first_flow,
         EventPair(first_section_event, second_section_event),
     )
+
+
+def assert_shown_files(
+    picker: Any,
+    expected_included: List[str],
+    expected_excluded: List[str],
+    expected_count: int,
+) -> None:
+    """
+    Reusable function to assert which files are shown in a LocalFilePicker.
+
+    Args:
+        picker: The LocalFilePicker instance to test
+        expected_included: List of file names that should be shown
+        expected_excluded: List of file names that should not be shown
+        expected_count: Expected total number of items in the grid
+    """
+    # Get row data from picker grid - handle both access patterns
+    row_data = picker.grid.options.get("rowData", [])
+
+    # Extract shown file names
+    shown_names = []
+    for row in row_data:
+        if isinstance(row, dict):
+            # Handle "name" key access pattern
+            name = row.get("name")
+            if name:
+                shown_names.append(name)
+
+    # Assert included files
+    for file_name in expected_included:
+        assert (
+            file_name in shown_names
+        ), f"Expected file '{file_name}' not found in shown files: {shown_names}"
+
+    # Assert excluded files
+    for file_name in expected_excluded:
+        assert (
+            file_name not in shown_names
+        ), f"Unexpected file '{file_name}' found in shown files: {shown_names}"
+
+    # Assert total count
+    assert (
+        len(row_data) == expected_count
+    ), f"Expected {expected_count} items, but got {len(row_data)}"

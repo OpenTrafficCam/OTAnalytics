@@ -3,7 +3,7 @@ import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Any, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -39,6 +39,7 @@ from OTAnalytics.adapter_ui.flow_adapter import (
     SectionRefPointCalculator,
 )
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
+from OTAnalytics.adapter_ui.helpers import ensure_file_extension_is_present
 from OTAnalytics.adapter_ui.text_resources import (
     COLUMN_NAME,
     ColumnResource,
@@ -138,7 +139,7 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
-SUPPORTED_VIDEO_FILE_TYPES = ["*.avi", "*.mkv", "*.mov", "*.mp4"]
+SUPPORTED_VIDEO_FILE_TYPES = ["*.mp4", "*.avi", "*.mkv", "*.mov"]
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
@@ -160,11 +161,10 @@ def flow_id(from_section: str, to_section: str) -> str:
 
 def action(func: Any) -> Any:
     @functools.wraps(func)
-    def wrapper_decorator(self: Any, *args: Any, **kwargs: Any) -> Any:
+    async def wrapper_decorator(self: Any, *args: Any, **kwargs: Any) -> Any:
         self._start_action()
         try:
-            value = func(self, *args, **kwargs)
-            return value
+            return await func(self, *args, **kwargs)
         finally:
             self._finish_action()
 
@@ -536,7 +536,9 @@ class DummyViewModel(
         self._application.action_state.action_running.set(True)
 
     def _finish_action(self) -> None:
+        self.refresh_items_on_canvas()
         self._application.action_state.action_running.set(False)
+        self._update_enabled_buttons()
 
     def set_window(self, window: AbstractMainWindow) -> None:
         self._window = window
@@ -548,15 +550,28 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
 
     async def add_video(self) -> None:
-        track_files = await self._ui_factory.askopenfilenames(
+        # Generate extension_options dynamically from SUPPORTED_VIDEO_FILE_TYPES
+        extension_options: Dict[str, Optional[List[str]]] = {}
+
+        # Convert "*.ext" format to ".ext" format for extension_options
+        clean_extensions = [ext.replace("*", "") for ext in SUPPORTED_VIDEO_FILE_TYPES]
+
+        # Add "All File Endings" option with all supported extensions
+        extension_options["All File Endings"] = clean_extensions
+
+        # Add individual extension options
+        for ext in clean_extensions:
+            extension_options[ext] = [ext]
+
+        video_files = await self._ui_factory.askopenfilenames(
             title="Load video files",
             filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
+            extension_options=extension_options,
         )
-        if not track_files:
+        if not video_files:
             return
-        logger().info(f"Video files to load: {track_files}")
-        paths = [Path(file) for file in track_files]
-        self._application.add_videos(files=paths)
+        logger().info(f"Video files to load: {video_files}")
+        self._application.add_videos(files=video_files)
 
     def remove_videos(self) -> None:
         self._application.remove_videos()
@@ -606,6 +621,12 @@ class DummyViewModel(
         self._save_otconfig(configuration_file)
 
     def _save_otconfig(self, otconfig_file: Path) -> None:
+        # Ensure the file has the correct extension
+        otconfig_file_str = ensure_file_extension_is_present(
+            str(otconfig_file), [f"*.{OTCONFIG_FILE_TYPE}"], f".{OTCONFIG_FILE_TYPE}"
+        )
+        otconfig_file = Path(otconfig_file_str)
+
         logger().info(f"Config file to save: {otconfig_file}")
         try:
             self._application.save_otconfig(otconfig_file)
@@ -841,7 +862,16 @@ class DummyViewModel(
         )
         if not configuration_file.stem:
             return
-        elif configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
+
+        # Ensure the file has a proper extension before checking
+        configuration_file_str = ensure_file_extension_is_present(
+            str(configuration_file),
+            [f"*.{OTCONFIG_FILE_TYPE}", f"*.{OTFLOW_FILE_TYPE}"],
+            f".{OTCONFIG_FILE_TYPE}",
+        )
+        configuration_file = Path(configuration_file_str)
+
+        if configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
             self._save_otflow(configuration_file)
         elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
             self._save_otconfig(configuration_file)
@@ -855,6 +885,12 @@ class DummyViewModel(
             await self.save_configuration()
 
     def _save_otflow(self, otflow_file: Path) -> None:
+        # Ensure the file has the correct extension
+        otflow_file_str = ensure_file_extension_is_present(
+            str(otflow_file), [f"*.{OTFLOW_FILE_TYPE}"], f".{OTFLOW_FILE_TYPE}"
+        )
+        otflow_file = Path(otflow_file_str)
+
         logger().info(f"Sections file to save: {otflow_file}")
         try:
             self._application.save_otflow(Path(otflow_file))
@@ -1001,7 +1037,7 @@ class DummyViewModel(
             self.treeview_sections.update_selected_items([id.serialize()])
 
     @action
-    def remove_sections(self) -> None:
+    async def remove_sections(self) -> None:
         if not (selected_section_ids := self.get_selected_section_ids()):
             position = self.treeview_sections.get_position()
             self._ui_factory.info_box(
@@ -1128,6 +1164,7 @@ class DummyViewModel(
             flow = await self.__create_flow()
             logger().info(f"Added new flow: {flow.id}")
             self.set_selected_flow_ids([flow.id.serialize()])
+            self.refresh_items_on_canvas()
 
     async def __create_flow(self) -> Flow:
         flow_data = await self._show_flow_popup()
@@ -1220,6 +1257,12 @@ class DummyViewModel(
 
     def generate_flows(self) -> None:
         self._application.generate_flows()
+        # Select all flows so they become visible on canvas
+        all_flow_ids = [
+            flow.id.serialize() for flow in self._application.get_all_flows()
+        ]
+        self.set_selected_flow_ids(all_flow_ids)
+        self.refresh_items_on_canvas()
 
     def __to_resource(self, section: Section) -> ColumnResource:
         values = {COLUMN_NAME: section.name}
@@ -1275,7 +1318,7 @@ class DummyViewModel(
             self.__update_flow_data(flow_data=flow_data)
 
     @action
-    def remove_flows(self) -> None:
+    async def remove_flows(self) -> None:
         if flow_ids := self._application.flow_state.selected_flows.get():
             for flow_id in flow_ids:
                 self._application.remove_flow(flow_id)

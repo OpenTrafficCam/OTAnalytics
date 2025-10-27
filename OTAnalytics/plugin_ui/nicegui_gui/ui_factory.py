@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Literal
+from typing import Any, Iterable
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
@@ -13,10 +13,13 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
-from OTAnalytics.application.application import CancelAddFlow
+from OTAnalytics.application.application import CancelAddFlow, CancelAddSection
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.helpers.file_helpers import (
+    get_all_files_with_correct_file_ending_in_directory,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import EditFlowDialog
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
     EditSectionDialog,
@@ -27,6 +30,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.export_counts_dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
     FileChooserDialog,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import DialogResult
 
 
@@ -61,7 +65,11 @@ class NiceGuiUiFactory(UiFactory):
         return NiceGuiMessageBox()
 
     async def askopenfilename(
-        self, title: str, filetypes: list[tuple[str, str]], defaultextension: str
+        self,
+        title: str,
+        filetypes: list[tuple[str, str]],
+        defaultextension: str,
+        extension_options: dict[str, list[str] | None] | None = None,
     ) -> str:
         # Convert filetypes to the format expected by FileChooserDialog
         file_extensions = {desc: ext.replace(".", "") for desc, ext in filetypes}
@@ -71,6 +79,7 @@ class NiceGuiUiFactory(UiFactory):
             title=title,
             file_extensions=file_extensions,
             initial_file_stem="",
+            extension_options=extension_options,
         )
 
         result = await dialog.result
@@ -82,22 +91,30 @@ class NiceGuiUiFactory(UiFactory):
         self,
         title: str,
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
-    ) -> Literal[""] | tuple[str, ...]:
+        extension_options: dict[str, list[str] | None] | None = None,
+    ) -> list[Path]:
         # For now, we'll just support selecting a single file
         # In a real implementation, this would allow selecting multiple files
         # Convert list/tuple of extensions to individual (desc, ext) pairs
         converted_filetypes = []
         for desc, ext in filetypes:
             if isinstance(ext, str):
-                converted_filetypes.append((desc, ext))
+                converted_filetypes.append(ext)
             elif isinstance(ext, (list, tuple)) and ext:
                 # Use the first extension from the list/tuple
-                converted_filetypes.append((desc, ext[0]))
+                converted_filetypes.append(ext[0])
 
-        file_path = await self.askopenfilename(title, converted_filetypes, "")
-        if file_path:
-            return (file_path,)
-        return ""
+        file_paths = await LocalFilePicker(
+            directory=Path.home(),
+            show_hidden_files=False,
+            show_files_only_of_type=None,  # Show all files
+            show_only_directories=False,
+            extension_options=extension_options,
+            multiple=True,
+        )
+        return get_all_files_with_correct_file_ending_in_directory(
+            file_paths, converted_filetypes
+        )
 
     async def ask_for_save_file_path(
         self,
@@ -189,7 +206,7 @@ class NiceGuiUiFactory(UiFactory):
         result = await dialog.result
         if result == DialogResult.APPLY:
             return dialog.get_section()
-        raise CancelAddFlow()
+        raise CancelAddSection()
 
     async def configure_flow(
         self,

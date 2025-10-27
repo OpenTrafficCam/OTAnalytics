@@ -15,6 +15,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
     CustomTable,
 )
+from OTAnalytics.plugin_ui.utils.asyncio_helper import run_async
 
 BUTTON_WIDTH = "max-width: 45%; width: 100%"
 BASIC_WIDTH = "width: 100%"
@@ -56,7 +57,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             columns=create_columns(resource_manager),
             rows=[],
             on_select_method=lambda e: self._select_flow(e.selection),
-            selection="single",
+            selection="multiple",
             marker=MARKER_FLOW_TABLE,
         )
         self._button_remove: ui.button | None = None
@@ -108,7 +109,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         self._viewmodel.generate_flows()
 
     def remove_flow(self) -> None:
-        self._viewmodel.remove_flows()
+        run_async(self._viewmodel.remove_flows())
 
     async def show_flow_properties(self) -> None:
         await self._viewmodel.edit_selected_flow()
