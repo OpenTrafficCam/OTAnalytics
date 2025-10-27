@@ -213,6 +213,7 @@ class TestProjectInformation:
             f"'{actual_project_name}'"
         )
 
+        target.should_contain_input(date_value)
         actual_date = date_input.get_attribute("value")
         assert (
             actual_date == date_value
