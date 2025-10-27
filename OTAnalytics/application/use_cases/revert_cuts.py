@@ -1,4 +1,4 @@
-from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet
 from OTAnalytics.domain.track_repository import TrackRepository
 
 
@@ -15,14 +15,14 @@ class RevertCuts:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def revert(self, original_ids: frozenset[TrackId]) -> None:
+    def revert(self, original_ids: TrackIdSet) -> None:
         """Revert cuts for tracks with the specified original track IDs.
 
         This method reverts cuts for tracks identified by their original IDs
         by delegating to the track repository.
 
         Args:
-            original_ids (frozenset[TrackId]): original track IDs for which cuts should
+            original_ids (TrackIdSet): original track IDs for which cuts should
                 be reverted.
         """
         self._track_repository.revert_cuts_for(original_ids)

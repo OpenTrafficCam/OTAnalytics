@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.event import Event, PythonEventDataset
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.plugin_intersect_parallelization.multiprocessing import (
@@ -26,7 +26,7 @@ class TestMultiprocessingIntersectParallelization:
         parallelizer = MultiprocessingIntersectParallelization()
         result = parallelizer.execute(cast(Callable, intersect), tasks)
 
-        assert result == [event_1, event_2]
+        assert result == PythonEventDataset([event_1, event_2])
         mock_pool_instance.starmap.assert_called_once_with(intersect, tasks)
 
     @patch("OTAnalytics.plugin_intersect_parallelization.multiprocessing.Pool")
@@ -37,7 +37,7 @@ class TestMultiprocessingIntersectParallelization:
         mock_pool_instance = mock_pool_init.return_value.__enter__.return_value
 
         intersect = Mock()
-        intersect.side_effect = [[event_1, event_2]]
+        intersect.side_effect = [PythonEventDataset([event_1, event_2])]
         track_dataset: TrackDataset = Mock(spec=TrackDataset)
         section = Mock()
         task: tuple[TrackDataset, Iterable[Section]] = (track_dataset, [section])
@@ -45,7 +45,7 @@ class TestMultiprocessingIntersectParallelization:
         parallelizer = MultiprocessingIntersectParallelization(num_processes=1)
         result = parallelizer.execute(cast(Callable, intersect), [task])
 
-        assert result == [event_1, event_2]
+        assert result == PythonEventDataset([event_1, event_2])
         mock_pool_instance.starmap.assert_not_called()
         intersect.assert_called_once_with(track_dataset, [section])
 
@@ -53,10 +53,13 @@ class TestMultiprocessingIntersectParallelization:
         intersect = MultiprocessingIntersectParallelization()
         event_1 = Mock(spec=Event)
         event_2 = Mock(spec=Event)
-        events_to_flatten = [[event_1], [event_2]]
+        events_to_flatten = [
+            PythonEventDataset([event_1]),
+            PythonEventDataset([event_2]),
+        ]
 
-        result = intersect._flatten_events(events_to_flatten)
-        assert result == [event_1, event_2]
+        result = intersect._combine_event_datasets(events_to_flatten)
+        assert result == PythonEventDataset([event_1, event_2])
 
     def test_set_num_processes(self) -> None:
         intersect = MultiprocessingIntersectParallelization(4)

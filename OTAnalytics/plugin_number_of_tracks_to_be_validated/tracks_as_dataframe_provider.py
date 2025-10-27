@@ -1,7 +1,9 @@
 from pandas import DataFrame
 
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks
+from OTAnalytics.domain import track
 from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.plugin_datastore.polars_track_store import PolarsDataFrameProvider
 from OTAnalytics.plugin_datastore.track_store import (
     DEFAULT_CLASSIFICATOR,
     PandasDataFrameProvider,
@@ -28,6 +30,12 @@ class TracksAsDataFrameProvider:
 
         if isinstance(track_dataset, PandasDataFrameProvider):
             return track_dataset.get_data()
+        if isinstance(track_dataset, PolarsDataFrameProvider):
+            return (
+                track_dataset.get_data()
+                .to_pandas()
+                .set_index([track.TRACK_ID, track.OCCURRENCE])
+            )
         return self._convert_tracks_to_data_frame()
 
     def _convert_tracks_to_data_frame(self) -> DataFrame:

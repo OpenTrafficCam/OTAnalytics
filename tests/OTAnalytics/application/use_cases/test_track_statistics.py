@@ -14,7 +14,8 @@ from OTAnalytics.application.use_cases.number_of_tracks_to_be_validated import (
     NumberOfTracksToBeValidated,
 )
 from OTAnalytics.application.use_cases.track_statistics import CalculateTrackStatistics
-from OTAnalytics.domain.track import TrackId, TrackIdProvider
+from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 
 CUTTING_SECTION_NAME: str = "#clicut 0815"
 NUMBER_OF_TRACKS_TO_BE_VALIDATED = 23

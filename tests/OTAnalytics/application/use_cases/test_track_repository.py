@@ -18,9 +18,11 @@ from OTAnalytics.application.use_cases.track_repository import (
     RemoveTracksByOriginalIds,
     TrackRepositorySize,
 )
-from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider
+from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 @pytest.fixture
@@ -52,7 +54,7 @@ def track_file_repository(track_files: list[Mock]) -> Mock:
 
 
 def create_track_ids_from_ids(ids: Iterable[str]) -> Iterable[TrackId]:
-    return [TrackId(id) for id in ids]
+    return PythonTrackIdSet({TrackId(id) for id in ids})
 
 
 @pytest.fixture
@@ -74,7 +76,7 @@ class TestFilteredTrackIdProviderByTrackIdProvider:
         )
         filtered_ids = filtered_provider.get_ids()
 
-        assert filtered_ids == set(track_ids)
+        assert filtered_ids == PythonTrackIdSet(track_ids)
         assert track_id_provider.get_ids.call_count == 2
 
     def test_get_ids(self, track_id_provider: Mock) -> None:
@@ -89,7 +91,7 @@ class TestFilteredTrackIdProviderByTrackIdProvider:
         )
         filtered_ids = filtered_provider.get_ids()
 
-        assert filtered_ids == set(create_track_ids_from_ids(["2", "3"]))
+        assert filtered_ids == PythonTrackIdSet(create_track_ids_from_ids(["2", "3"]))
         track_id_provider.get_ids.assert_called_once()
         filter.get_ids.assert_called_once()
 
@@ -144,10 +146,10 @@ class TestClearAllTracks:
 
 class TestRemoveTracks:
     def test_remove(self, track_repository: Mock) -> None:
-        remove_ids = [TrackId("1"), TrackId("2")]
+        remove_ids = PythonTrackIdSet([TrackId("1"), TrackId("2")])
         remove_tracks = RemoveTracks(track_repository)
         remove_tracks(remove_ids)
-        track_repository.remove_multiple.assert_called_once_with(set(remove_ids))
+        track_repository.remove_multiple.assert_called_once_with(remove_ids)
 
 
 class TestGetTracksFromIds:
@@ -233,7 +235,7 @@ class TestTrackRepositorySize:
 class TestRemoveTracksByOriginalIds:
     def test_remove(self) -> None:
         given_track_repository = Mock()
-        given_original_ids = frozenset([TrackId("1"), TrackId("2")])
+        given_original_ids = PythonTrackIdSet([TrackId("1"), TrackId("2")])
 
         target = RemoveTracksByOriginalIds(given_track_repository)
         target.remove(given_original_ids)

@@ -8,8 +8,8 @@ from OTAnalytics.application.use_cases.section_repository import (
 )
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
+    ClearAllTracks,
     GetTracksWithoutSingleDetections,
-    RemoveTracks,
 )
 from OTAnalytics.domain.section import (
     Area,
@@ -54,34 +54,30 @@ class TestSimpleCutTracksIntersectingSection:
 
         get_sections_by_id = Mock(spec=GetSectionsById)
         get_tracks = Mock(spec=GetTracksWithoutSingleDetections, return_value=[track])
+        clear_all_tracks = Mock(spec=ClearAllTracks)
+        add_all_tracks = Mock(spec=AddAllTracks)
         cut_tracks_dataset = Mock()
         track_dataset = Mock()
         track_dataset.cut_with_section.return_value = (cut_tracks_dataset, {track_id})
         get_tracks.as_dataset.return_value = track_dataset
 
-        add_all_tracks = Mock(spec=AddAllTracks)
-        remove_tracks = Mock(spec=RemoveTracks)
         remove_section = Mock(spec=RemoveSection)
 
         cut_tracks_intersecting_section = SimpleCutTracksIntersectingSection(
             get_sections_by_id,
             get_tracks,
+            clear_all_tracks,
             add_all_tracks,
-            remove_tracks,
             remove_section,
         )
         cut_tracks_intersecting_section(cutting_section, False)
         cut_tracks_intersecting_section(cutting_section, True)
 
         assert get_tracks.as_dataset.call_count == 2
-
+        assert clear_all_tracks.call_count == 2
         assert add_all_tracks.call_args_list == [
             call(cut_tracks_dataset),
             call(cut_tracks_dataset),
-        ]
-        assert remove_tracks.call_args_list == [
-            call({track_id}),
-            call({track_id}),
         ]
         remove_section.assert_called_once_with(cutting_section.id)
 

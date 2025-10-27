@@ -7,21 +7,25 @@ from typing import Iterable, Optional
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.track import Track, TrackId
-from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    EmptyTrackIdSet,
+    TrackDataset,
+    TrackIdSet,
+)
 
 
 @dataclass(frozen=True)
 class TrackRepositoryEvent:
-    added: frozenset[TrackId]
-    removed: frozenset[TrackId]
+    added: TrackIdSet
+    removed: TrackIdSet
 
     @staticmethod
-    def create_added(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
-        return TrackRepositoryEvent(frozenset(tracks), frozenset())
+    def create_added(tracks: TrackIdSet) -> "TrackRepositoryEvent":
+        return TrackRepositoryEvent(tracks, EmptyTrackIdSet())
 
     @staticmethod
-    def create_removed(tracks: Iterable[TrackId]) -> "TrackRepositoryEvent":
-        return TrackRepositoryEvent(frozenset(), frozenset(tracks))
+    def create_removed(tracks: TrackIdSet) -> "TrackRepositoryEvent":
+        return TrackRepositoryEvent(EmptyTrackIdSet(), tracks)
 
 
 class TrackListObserver(ABC):
@@ -166,7 +170,7 @@ class TrackRepository:
         """
         return self._dataset
 
-    def get_all_ids(self) -> Iterable[TrackId]:
+    def get_all_ids(self) -> TrackIdSet:
         """Get all track ids in this repository.
 
         Returns:
@@ -174,27 +178,8 @@ class TrackRepository:
         """
         return self._dataset.track_ids
 
-    def remove(self, track_id: TrackId) -> None:
-        """Remove track by its id and notify observers
-
-        Raises:
-            TrackRemoveError: if track does not exist in repository.
-
-        Args:
-            track_id (TrackId): the id of the track to be removed.
-        """
-        try:
-            self._dataset = self._dataset.remove(track_id)
-        except KeyError:
-            raise TrackRemoveError(
-                track_id, f"Trying to remove non existing track with id '{track_id.id}'"
-            )
-        # TODO: Pass removed track id to notify when moving observers to
-        #  application layer
-        self.observers.notify(TrackRepositoryEvent.create_removed([track_id]))
-
-    def remove_multiple(self, track_ids: set[TrackId]) -> None:
-        not_existing_tracks = track_ids - set(self._dataset.track_ids)
+    def remove_multiple(self, track_ids: TrackIdSet) -> None:
+        not_existing_tracks = track_ids.difference(self._dataset.track_ids)
         if not_existing_tracks:
             logger().warning(
                 f"Trying to remove {len(not_existing_tracks)} "
@@ -214,14 +199,14 @@ class TrackRepository:
         """
         Clear the repository and inform the observers about the empty repository.
         """
-        removed = list(self._dataset.track_ids)
+        removed = self._dataset.track_ids
         self._dataset = self._dataset.clear()
         self.observers.notify(TrackRepositoryEvent.create_removed(removed))
 
     def __len__(self) -> int:
         return len(self._dataset)
 
-    def revert_cuts_for(self, original_ids: frozenset[TrackId]) -> None:
+    def revert_cuts_for(self, original_ids: TrackIdSet) -> None:
         """
         Reverts cuts for tracks associated with the provided original track IDs.
 
@@ -237,7 +222,7 @@ class TrackRepository:
         (the cut versions) and new/updated tracks (the reverted original tracks).
 
         Args:
-            original_ids (frozenset[TrackId]): track IDs representing the
+            original_ids (TrackIdSet): track IDs representing the
                 original tracks for which cuts should be reverted.
         """
 
@@ -249,13 +234,13 @@ class TrackRepository:
             TrackRepositoryEvent(added=reverted_ids, removed=cut_track_ids)
         )
 
-    def remove_by_original_ids(self, original_ids: frozenset[TrackId]) -> None:
+    def remove_by_original_ids(self, original_ids: TrackIdSet) -> None:
         """
         Removes tracks from the repository based on their original IDs and notifies
         observers of the removal event.
 
         Args:
-            original_ids (frozenset[TrackId]): original IDs of the tracks to be removed.
+            original_ids (TrackIdSet): original IDs of the tracks to be removed.
         """
         updated_dataset, removed_ids = self._dataset.remove_by_original_ids(
             original_ids

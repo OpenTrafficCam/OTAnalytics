@@ -29,9 +29,9 @@ from OTAnalytics.application.use_cases.section_repository import (
 )
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
+    ClearAllTracks,
     GetAllTracks,
     GetTracksWithoutSingleDetections,
-    RemoveTracks,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowRepository
@@ -50,33 +50,19 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
-from OTAnalytics.plugin_datastore.python_track_store import (
-    ByMaxConfidence,
-    FilteredPythonTrackDataset,
-    PythonTrackDataset,
+from OTAnalytics.plugin_datastore.polars_track_store import PolarsTrackDataset
+from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
+    PolarsTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
-from OTAnalytics.plugin_datastore.track_store import (
-    FilterByClassPandasTrackDataset,
-    PandasByMaxConfidence,
-    PandasTrackDataset,
-)
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
 )
-from OTAnalytics.plugin_parser.otvision_parser import (
-    OtFlowParser,
-    OttrkParser,
-    PythonDetectionParser,
-)
-from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
+from OTAnalytics.plugin_parser.feathers_parser import FeathersParser
+from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser
 from tests.utils.builders.run_configuration import create_run_config
-
-PYTHON = "PYTHON"
-PANDAS = "PANDAS"
-CURRENT_DATASET_TYPE = PANDAS
 
 EXCLUDE_FILTER = [
     OtcClasses.PEDESTRIAN,
@@ -134,7 +120,6 @@ class UseCaseProvider:
         otflow_file: Path,
         ottrk_files: list[Path],
         save_dir: str,
-        dataset_type: str = CURRENT_DATASET_TYPE,
     ) -> None:
         self._otflow_file = otflow_file
         self._ottrk_files = ottrk_files
@@ -144,7 +129,7 @@ class UseCaseProvider:
         self._flow_parser = OtFlowParser()
         self._starter = OtAnalyticsCliApplicationStarter(self.run_config)
         track_repository, detection_metadata = self.provide_track_repository(
-            self._ottrk_files, dataset_type
+            self._ottrk_files
         )
         self._track_repository = track_repository
         self._detection_metadata = detection_metadata
@@ -180,14 +165,14 @@ class UseCaseProvider:
     def get_cut_tracks(self) -> CutTracksIntersectingSection:
         get_sections_by_id = GetSectionsById(self._section_repository)
         get_tracks = GetAllTracks(self._track_repository)
+        clear_all_tracks = ClearAllTracks(self._track_repository)
         add_all_tracks = AddAllTracks(self._track_repository)
-        remove_tracks = RemoveTracks(self._track_repository)
         remove_section = RemoveSection(self._section_repository)
         return SimpleCutTracksIntersectingSection(
             get_sections_by_id,
             get_tracks,
+            clear_all_tracks,
             add_all_tracks,
-            remove_tracks,
             remove_section,
         )
 
@@ -200,47 +185,17 @@ class UseCaseProvider:
         self._exclude_classes = frozenset(exclude_classes)
 
     def provide_track_repository(
-        self, track_files: list[Path], dataset_type: str
+        self, track_files: list[Path]
     ) -> tuple[TrackRepository, DetectionMetadata]:
-        if dataset_type == PYTHON:
-            repository = TrackRepository(self.provide_python_track_dataset())
-            parser = OttrkParser(self.provide_python_detection_parser(repository))
-        elif dataset_type == PANDAS:
-            repository = TrackRepository(self.provide_pandas_track_dataset())
-            parser = OttrkParser(self.provide_pandas_detection_parser())
-        else:
-            raise ValueError(f"Unknown dataset type {dataset_type}")
+        parser: TrackParser
+        repository = TrackRepository(self.provide_polars_track_dataset())
+        parser = FeathersParser(PolarsTrackGeometryDataset.from_track_dataset)
         detection_metadata = _fill_track_repository(parser, repository, track_files)
         return repository, detection_metadata
 
-    def provide_pandas_track_dataset(self) -> TrackDataset:
-        return FilterByClassPandasTrackDataset(
-            PandasTrackDataset.from_list(
-                [], ShapelyTrackGeometryDataset.from_track_dataset
-            ),
-            self._include_classes,
-            self._exclude_classes,
-        )
-
-    def provide_python_track_dataset(self) -> TrackDataset:
-        return FilteredPythonTrackDataset(
-            PythonTrackDataset(ShapelyTrackGeometryDataset.from_track_dataset),
-            self._include_classes,
-            self._exclude_classes,
-        )
-
-    def provide_python_detection_parser(
-        self, track_repository: TrackRepository
-    ) -> PythonDetectionParser:
-        return PythonDetectionParser(
-            ByMaxConfidence(),
-            track_repository,
-            ShapelyTrackGeometryDataset.from_track_dataset,
-        )
-
-    def provide_pandas_detection_parser(self) -> PandasDetectionParser:
-        return PandasDetectionParser(
-            PandasByMaxConfidence(), ShapelyTrackGeometryDataset.from_track_dataset
+    def provide_polars_track_dataset(self) -> TrackDataset:
+        return PolarsTrackDataset.from_list(
+            [], PolarsTrackGeometryDataset.from_track_dataset
         )
 
     def counting_specification(self, save_dir: Path) -> CountingSpecificationDto:
@@ -273,15 +228,8 @@ class UseCaseProvider:
     def run_cli(self) -> Callable[[], None]:
         return self._starter.start
 
-    def get_track_parser(self, dataset_type: str = CURRENT_DATASET_TYPE) -> TrackParser:
-        if dataset_type == PYTHON:
-            return OttrkParser(
-                self.provide_python_detection_parser(self._track_repository)
-            )
-        elif dataset_type == PANDAS:
-            return OttrkParser(self.provide_pandas_detection_parser())
-        else:
-            raise ValueError(f"Unknown dataset type {dataset_type}")
+    def get_track_parser(self) -> TrackParser:
+        return FeathersParser()
 
 
 def retrieve_cutting_sections(sections: Iterable[Section]) -> list[Section]:
@@ -332,22 +280,8 @@ def cutting_section() -> Section:
 
 
 @pytest.fixture
-def python_track_parser(python_track_repository: TrackRepository) -> TrackParser:
-    detection_parser = PythonDetectionParser(
-        ByMaxConfidence(),
-        python_track_repository,
-        ShapelyTrackGeometryDataset.from_track_dataset,
-    )
-    return OttrkParser(detection_parser)
-
-
-@pytest.fixture
-def pandas_track_parser() -> TrackParser:
-    calculator = PandasByMaxConfidence()
-    detection_parser = PandasDetectionParser(
-        calculator, ShapelyTrackGeometryDataset.from_track_dataset
-    )
-    return OttrkParser(detection_parser)
+def feathers_track_parser() -> TrackParser:
+    return FeathersParser()
 
 
 @pytest.fixture
@@ -412,11 +346,11 @@ class TestBenchmarkTrackParser:
     def test_load_15min(
         self,
         benchmark: BenchmarkFixture,
-        pandas_track_parser: OttrkParser,
+        feathers_track_parser: TrackParser,
         track_file_15min: Path,
     ) -> None:
         benchmark.pedantic(
-            pandas_track_parser.parse,
+            feathers_track_parser.parse,
             args=(track_file_15min,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
@@ -436,6 +370,18 @@ class TestBenchmarkTracksIntersectingSections:
         benchmark.pedantic(
             use_case,
             args=(use_case_provider_15min.sections,),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_2hours(
+        self, benchmark: BenchmarkFixture, use_case_provider_2hours: UseCaseProvider
+    ) -> None:
+        use_case = use_case_provider_2hours.get_tracks_intersecting_sections()
+        benchmark.pedantic(
+            use_case,
+            args=(use_case_provider_2hours.sections,),
             rounds=self.ROUNDS,
             iterations=self.ITERATIONS,
             warmup_rounds=self.WARMUP_ROUNDS,
