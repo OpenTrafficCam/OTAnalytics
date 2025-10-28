@@ -109,10 +109,12 @@ class PandasDetection(Detection):
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, PandasDetection):
             return False
+        # Ensure a builtins.bool is returned (pandas .all() may return numpy.bool_)
+        data_equal: bool = bool((self._data == other._data).all())
         return (
-            self._track_id == other._track_id
-            and self._occurrence == other._occurrence
-            and (self._data == other._data).all()
+            (self._track_id == other._track_id)
+            and (self._occurrence == other._occurrence)
+            and data_equal
         )
 
     def __hash__(self) -> int:
