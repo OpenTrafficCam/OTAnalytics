@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Callable, Iterator
 
+import pandas
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.pyplot import close, subplots
@@ -26,8 +27,52 @@ from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.state import TracksMetadata
 from OTAnalytics.plugin_parser.export import count_dict_to_dataframe
 
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
 BAR_WIDTH_RATIO = 0.6
 DPI = 100
+
+
+@dataclass(frozen=True)
+class FigureTrace:
+    data: DataFrame
+    label: str
+    color: str
+
+    def to_dict(self) -> dict[str, Any]:
+        data = self.data.to_dict("records")
+        return {
+            "data": data,
+            "label": self.label,
+            "color": self.color,
+        }
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, FigureTrace):
+            return False
+        return (
+            self.data.equals(other.data)
+            and self.label == other.label
+            and self.color == other.color
+        )
+
+
+@dataclass(frozen=True)
+class FigureData:
+    name: str
+    traces: list[FigureTrace]
+    x: str
+    y: str
+
+    def to_dict(self) -> dict[str, Any]:
+        all_data = pandas.concat([trace.data for trace in self.traces]).loc[
+            :, ["flow", "start time", "classification", "count"]
+        ]
+        all_data.sort_values(["flow", "start time", "classification"], inplace=True)
+        return {
+            "name": self.name,
+            "data": all_data.to_dict("records"),
+        }
 
 
 class CountPlotter(ABC):
@@ -51,6 +96,11 @@ class CountPlotter(ABC):
         plots = self.plot_count(count, width, height)
 
         return plots
+
+    def prepare(self) -> list[FigureData]:
+        specification = self.get_counting_specification()
+        count = self._traffic_counting.count(specification)
+        return self.prepare_count(count)
 
     @abstractmethod
     def get_counting_specification(self) -> CountingSpecificationDto:
@@ -88,6 +138,10 @@ class CountPlotter(ABC):
         """
         pass
 
+    @abstractmethod
+    def prepare_count(self, count: Count) -> list[FigureData]:
+        pass
+
 
 class MultipleCountPlotters(CountPlotter):
     """
@@ -112,6 +166,9 @@ class MultipleCountPlotters(CountPlotter):
             + "they should be defined per contained plotter!"
         )
 
+    def prepare_count(self, count: Count) -> list[FigureData]:
+        raise NotImplementedError()
+
     def get_counting_specification(self) -> CountingSpecificationDto:
         raise NotImplementedError(
             "get_counting_specification should not be called on "
@@ -127,21 +184,6 @@ class MultipleCountPlotters(CountPlotter):
 
 
 FIGURE_CONSUMER = Callable[[Any, Figure, Axes], None]
-
-
-@dataclass(frozen=True)
-class FigureTrace:
-    data: DataFrame
-    label: str
-    color: str
-
-
-@dataclass(frozen=True)
-class FigureData:
-    name: str
-    traces: list[FigureTrace]
-    x: str
-    y: str
 
 
 class MatplotlibCountPlotStyler:
@@ -280,6 +322,13 @@ class MatplotlibCountPlotter(CountPlotter):
 
         return result
 
+    def prepare_count(self, count: Count) -> list[FigureData]:
+        dataframe = self._prepare_dataframe(count)
+        if dataframe.empty:
+            return []
+
+        return list(self._create_figure_data(dataframe))
+
     @abstractmethod
     def _prepare_dataframe(self, count: Count) -> DataFrame:
         """
@@ -358,7 +407,7 @@ class FlowAndClassOverTimeCountPlotter(MatplotlibCountPlotter, ABC):
             return dataframe
 
         dataframe[LEVEL_START_TIME] = to_datetime(
-            dataframe[LEVEL_START_TIME], format="%Y-%m-%d %H:%M:%S"
+            dataframe[LEVEL_START_TIME], format=DATE_FORMAT
         )
         dataframe = dataframe.sort_values(LEVEL_START_TIME)
 
@@ -376,7 +425,9 @@ class FlowAndClassOverTimeCountPlotter(MatplotlibCountPlotter, ABC):
         # Set index and reindex full DataFrame
         dataframe = dataframe.set_index(multi_index)
         dataframe = dataframe.reindex(full_index, fill_value=0).reset_index()
-
+        dataframe[LEVEL_START_TIME] = dataframe[LEVEL_START_TIME].dt.strftime(
+            DATE_FORMAT
+        )
         return dataframe
 
 

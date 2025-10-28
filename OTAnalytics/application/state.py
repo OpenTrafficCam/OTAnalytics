@@ -225,6 +225,7 @@ class TrackViewState:
         self.skip_time = ObservableProperty[SkipTime](DEFAULT_SKIP_TIME)
 
         self.count_plots = ObservableProperty[list[CountImage]](default=[])
+        self.count_data = ObservableProperty[list](default=[])
 
     def reset(self) -> None:
         """Reset to default settings."""
