@@ -9,6 +9,7 @@ from OTAnalytics.application.use_cases.create_intersection_events import (
     IntersectByIntersectionPoints,
     separate_sections,
 )
+from OTAnalytics.domain.event import EventDataset
 from OTAnalytics.domain.geometry import (
     Coordinate,
     DirectionVector2D,
@@ -25,6 +26,7 @@ from OTAnalytics.domain.section import (
 from OTAnalytics.domain.track import Detection, Track
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IntersectionPoint,
+    PythonIntersectionPointsDataset,
     TrackDataset,
 )
 from OTAnalytics.domain.types import EventType
@@ -70,7 +72,7 @@ class _TestCase:
         self.expected_event_coords = expected_event_coords
         self.direction_vectors = direction_vectors
 
-    def assert_valid(self, event_results: list, event_builder: Mock) -> None:
+    def assert_valid(self, event_results: EventDataset, event_builder: Mock) -> None:
         assert len(event_results) == len(self.expected_event_coords)
         if self.expected_event_coords:
             self._assert_has_calls(event_builder)
@@ -124,11 +126,11 @@ class LineSectionTestCase(_TestCase):
         self.expected_interpolated_occurrences = expected_interpolated_occurrences
         self.expected_interpolated_coords = expected_interpolated_coords
 
-    def assert_valid(self, event_results: list, event_builder: Mock) -> None:
+    def assert_valid(self, event_results: EventDataset, event_builder: Mock) -> None:
         super().assert_valid(event_results, event_builder)
         self._assert_valid(event_results, event_builder)
 
-    def _assert_valid(self, event_results: list, event_builder: Mock) -> None:
+    def _assert_valid(self, event_results: EventDataset, event_builder: Mock) -> None:
         self.track_dataset.intersection_points.assert_called_once_with(
             [self.section], self.section.get_offset(EventType.SECTION_ENTER)
         )
@@ -157,7 +159,7 @@ class AreaSectionTestCase(_TestCase):
             track, track_dataset, section, expected_event_coords, direction_vectors
         )
 
-    def assert_valid(self, event_results: list, event_builder: Mock) -> None:
+    def assert_valid(self, event_results: EventDataset, event_builder: Mock) -> None:
         super().assert_valid(event_results, event_builder)
         self._assert_valid()
 
@@ -248,7 +250,9 @@ def test_case_track_line_section(track: Track) -> _TestCase:
     prev_detection = track.detections[ip.lower_index]
     detection = track.detections[ip.upper_index]
     track_dataset = Mock(spec=TrackDataset)
-    track_dataset.intersection_points.return_value = {track.id: [(section.id, ip)]}
+    track_dataset.intersection_points.return_value = PythonIntersectionPointsDataset(
+        {track.id: [(section.id, ip)]}, track_dataset
+    )
     track_dataset.get_for.return_value = track
     expected_event_coord = _ExpectedEventCoord.from_detection(
         detection,
@@ -294,12 +298,15 @@ def test_case_closed_track_line_section(
 ) -> _TestCase:
     section = create_section([(0, 1.5), (3, 1.5)], SectionType.LINE)
     track_dataset = Mock(spec=TrackDataset)
-    track_dataset.intersection_points.return_value = {
-        closed_track.id: [
-            (section.id, IntersectionPoint(upper_index=2, relative_position=0)),
-            (section.id, IntersectionPoint(upper_index=4, relative_position=0)),
-        ]
-    }
+    track_dataset.intersection_points.return_value = PythonIntersectionPointsDataset(
+        {
+            closed_track.id: [
+                (section.id, IntersectionPoint(upper_index=2, relative_position=0)),
+                (section.id, IntersectionPoint(upper_index=4, relative_position=0)),
+            ]
+        },
+        track_dataset,
+    )
     track_dataset.get_for.return_value = closed_track
     expected_event_coords = [
         _ExpectedEventCoord(2, 2.0, 2.0),
@@ -319,7 +326,9 @@ def test_case_closed_track_line_section(
 def test_case_line_section_no_intersection(track: Track) -> _TestCase:
     section = create_section([(0, 0), (10, 0)], SectionType.LINE)
     track_dataset = Mock(spec=TrackDataset)
-    track_dataset.intersection_points.return_value = {}
+    track_dataset.intersection_points.return_value = PythonIntersectionPointsDataset(
+        {}, track_dataset
+    )
     track_dataset.get_for.return_value = track
 
     return _TestCase(track, track_dataset, section, [], [])

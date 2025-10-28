@@ -1,11 +1,11 @@
 from OTAnalytics.application.use_cases.create_intersection_events import GetTracks
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
-from OTAnalytics.plugin_datastore.pandas_track_dataset_factory import (
-    PandasTrackDatasetFactory,
-)
-from OTAnalytics.plugin_datastore.track_store import (
+from OTAnalytics.plugin_datastore.filter_pandas_track_store import (
     FilterByIdPandasTrackDataset,
     FilterLastNDetectionsPandasTrackDataset,
+)
+from OTAnalytics.plugin_datastore.pandas_track_dataset_factory import (
+    PandasTrackDatasetFactory,
 )
 
 NUMBER_OF_DETECTIONS_TO_FORM_SEGMENT = 2

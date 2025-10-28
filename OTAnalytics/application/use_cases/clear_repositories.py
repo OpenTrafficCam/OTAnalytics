@@ -5,9 +5,6 @@ from OTAnalytics.application.use_cases.intersection_repository import (
 )
 from OTAnalytics.application.use_cases.section_repository import ClearAllSections
 from OTAnalytics.application.use_cases.track_repository import ClearAllTracks
-from OTAnalytics.application.use_cases.track_to_video_repository import (
-    ClearAllTrackToVideos,
-)
 from OTAnalytics.application.use_cases.video_repository import ClearAllVideos
 
 
@@ -30,7 +27,6 @@ class ClearRepositories:
         clear_all_flows: ClearAllFlows,
         clear_all_intersections: ClearAllIntersections,
         clear_all_sections: ClearAllSections,
-        clear_all_track_to_videos: ClearAllTrackToVideos,
         clear_all_tracks: ClearAllTracks,
         clear_all_videos: ClearAllVideos,
     ):
@@ -38,7 +34,6 @@ class ClearRepositories:
         self._clear_all_flows = clear_all_flows
         self._clear_all_intersections = clear_all_intersections
         self._clear_all_sections = clear_all_sections
-        self._clear_all_track_to_videos = clear_all_track_to_videos
         self._clear_all_tracks = clear_all_tracks
         self._clear_all_videos = clear_all_videos
 
@@ -48,6 +43,5 @@ class ClearRepositories:
         self._clear_all_flows()
         self._clear_all_intersections.clear()
         self._clear_all_sections()
-        self._clear_all_track_to_videos()
         self._clear_all_tracks()
         self._clear_all_videos()

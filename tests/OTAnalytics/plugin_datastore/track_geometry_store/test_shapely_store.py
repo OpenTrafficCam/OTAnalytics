@@ -19,6 +19,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     TrackGeometryDataset,
 )
 from OTAnalytics.domain.types import EventType
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     BASE_GEOMETRY,
     COLUMNS,
@@ -645,7 +646,7 @@ class TestShapelyTrackGeometryDataset:
             track_dataset, BASE_GEOMETRY
         )
         result = geometry_dataset.intersecting_tracks(sections)
-        assert result == {first_track.id, second_track.id}
+        assert result == PythonTrackIdSet({first_track.id, second_track.id})
 
     @patch(
         "OTAnalytics.plugin_datastore.track_geometry_store.shapely_store."

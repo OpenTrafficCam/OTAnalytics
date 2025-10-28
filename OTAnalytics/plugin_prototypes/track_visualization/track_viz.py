@@ -40,21 +40,14 @@ from OTAnalytics.domain.section import (
     SectionRepository,
     SectionRepositoryEvent,
 )
-from OTAnalytics.domain.track import (
-    H,
-    Track,
-    TrackId,
-    TrackIdProvider,
-    TrackImage,
-    W,
-    X,
-    Y,
-)
+from OTAnalytics.domain.track import H, Track, TrackId, TrackImage, W, X, Y, unpack
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import (
     TrackListObserver,
     TrackRepository,
     TrackRepositoryEvent,
 )
+from OTAnalytics.plugin_datastore.polars_track_store import PolarsDataFrameProvider
 from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.numpy_image import NumpyImage
@@ -213,7 +206,7 @@ class FilterById(PandasDataFrameProvider):
                 "must be index of DataFrame for filtering to work."
             )
 
-        ids = [track_id.id for track_id in self._filter.get_ids()]
+        ids = [unpack(track_id) for track_id in self._filter.get_ids()]
         intersection_of_ids = data.index.unique(level=track.TRACK_ID).intersection(ids)
         return data.loc[intersection_of_ids]
 
@@ -308,6 +301,12 @@ class PandasTrackProvider(PandasDataFrameProvider):
         tracks = self._track_repository.get_all()
         if isinstance(tracks, PandasDataFrameProvider):
             return tracks.get_data()
+        if isinstance(tracks, PolarsDataFrameProvider):
+            return (
+                tracks.get_data()
+                .to_pandas()
+                .set_index([track.TRACK_ID, track.OCCURRENCE])
+            )
         track_list = tracks.as_list()
         if not track_list:
             return DataFrame()

@@ -30,6 +30,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     START_X,
     START_Y,
     TRACK_GEOMETRY_FACTORY,
+    EmptyTrackIdSet,
     TrackDoesNotExistError,
     TrackGeometryDataset,
 )
@@ -38,6 +39,7 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
+    PythonTrackIdSet,
     PythonTrackSegment,
     PythonTrackSegmentDataset,
     SimpleCutTrackPartBuilder,
@@ -461,7 +463,9 @@ class TestPythonTrackDataset:
         assert list(dataset) == [car_track, pedestrian_track]
         result = cast(
             PythonTrackDataset,
-            dataset.remove_multiple({car_track.id, pedestrian_track.id}),
+            dataset.remove_multiple(
+                PythonTrackIdSet({car_track.id, pedestrian_track.id})
+            ),
         )
         assert list(result) == []
         assert result._geometry_datasets == {
@@ -660,7 +664,7 @@ class TestPythonTrackDataset:
             Mock(), RelativeOffsetCoordinate(0, 0)
         )
         assert cut_track_dataset == dataset
-        assert original_track_ids == set()
+        assert original_track_ids == EmptyTrackIdSet()
 
     def test_track_ids(
         self,
@@ -668,11 +672,11 @@ class TestPythonTrackDataset:
         pedestrian_track: Track,
     ) -> None:
         dataset = PythonTrackDataset(ShapelyTrackGeometryDataset.from_track_dataset)
-        assert dataset.track_ids == frozenset()
+        assert len(dataset.track_ids) == 0
+        assert set(dataset.track_ids) == set()
         updated_dataset = dataset.add_all([car_track, pedestrian_track])
-        assert updated_dataset.track_ids == frozenset(
-            [car_track.id, pedestrian_track.id]
-        )
+        assert len(updated_dataset.track_ids) == 2
+        assert set(updated_dataset.track_ids) == {car_track.id, pedestrian_track.id}
 
     def test_empty(self, car_track: Track) -> None:
         empty_dataset = PythonTrackDataset(
@@ -690,14 +694,16 @@ class TestPythonTrackDataset:
     ) -> None:
         empty_dataset = PythonTrackDataset(track_geometry_factory)
         with pytest.raises(TrackDoesNotExistError):
-            empty_dataset.get_max_confidences_for([car_track.id.id])
+            empty_dataset.get_max_confidences_for(PythonTrackIdSet([car_track.id]))
         filled_dataset = empty_dataset.add_all([car_track, pedestrian_track])
 
-        car_id = car_track.id.id
-        pedestrian_id = pedestrian_track.id.id
+        car_id = car_track.id
+        pedestrian_id = pedestrian_track.id
 
-        result = filled_dataset.get_max_confidences_for([car_id, pedestrian_id])
-        assert result == {car_id: 0.8, pedestrian_id: 0.9}
+        result = filled_dataset.get_max_confidences_for(
+            PythonTrackIdSet([car_id, pedestrian_id])
+        )
+        assert result == {car_id.id: 0.8, pedestrian_id.id: 0.9}
 
 
 class TestSimpleCutTrackSegmentBuilder:

@@ -7,7 +7,6 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import Layer, LayerGroup
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.custom_containers import (
@@ -62,7 +61,6 @@ class FrameTrackPlotting(AbstractFrameTrackPlotting, EmbeddedCTkFrame):
         )
 
     def _create_events(self) -> None:
-        logger().info("Creating events")
         self._viewmodel.create_events()
 
     def introduce_to_viewmodel(self) -> None:

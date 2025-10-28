@@ -225,6 +225,7 @@ class TrackViewState:
         self.skip_time = ObservableProperty[SkipTime](DEFAULT_SKIP_TIME)
 
         self.count_plots = ObservableProperty[list[CountImage]](default=[])
+        self.count_data = ObservableProperty[list](default=[])
 
     def reset(self) -> None:
         """Reset to default settings."""
@@ -382,9 +383,10 @@ class SelectedVideoUpdate(TrackListObserver, VideoListObserver):
     def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
         all_tracks = self._datastore.get_all_tracks()
         if track_event.added:
-            first_track = next(iter(all_tracks))
-            if video := self._datastore.get_video_for(first_track.id):
-                self._track_view_state.selected_videos.set([video])
+            if (track_start := all_tracks.first_occurrence) and (
+                video := self._datastore.get_video_by_date(track_start)
+            ):
+                self._track_view_state.selected_videos.set(video)
 
     def notify_videos(self, videos: list[Video]) -> None:
         if videos:

@@ -4,12 +4,8 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.number_of_tracks_to_be_validated import (
     NumberOfTracksToBeValidated,
 )
-from OTAnalytics.domain.track import (
-    OCCURRENCE,
-    TRACK_CLASSIFICATION,
-    TRACK_ID,
-    TrackIdProvider,
-)
+from OTAnalytics.domain.track import OCCURRENCE, TRACK_CLASSIFICATION, TRACK_ID
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.calculation_strategy import (
     DETECTION_RATE,
     DetectionRateCalculationStrategy,

@@ -1,3 +1,4 @@
+import asyncio
 import tkinter
 from pathlib import Path
 from typing import Any
@@ -34,7 +35,7 @@ class FrameFiles(EmbeddedCTkFrame):
         )
         self.treeview.configure(yscrollcommand=self._treeview_scrollbar.set)
         self.button_add_files = CTkButton(
-            master=self, text="Load", command=self._viewmodel.load_tracks
+            master=self, text="Load", command=self._do_load_tracks
         )
 
     def _place_widgets(self) -> None:
@@ -46,6 +47,10 @@ class FrameFiles(EmbeddedCTkFrame):
             row=0, column=0, columnspan=2, padx=PADX, pady=PADY, sticky=STICKY
         )
         self.button_add_files.grid(row=1, column=0, padx=PADX, pady=PADY, sticky=STICKY)
+
+    def _do_load_tracks(self) -> None:
+        # Run the async load_tracks method in a blocking way for CTkButton
+        asyncio.run(self._viewmodel.load_tracks())
 
 
 COLUMN_FILE = "File"
