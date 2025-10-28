@@ -363,9 +363,10 @@ class FlowAndClassOverTimeCountPlotter(MatplotlibCountPlotter, ABC):
         dataframe = dataframe.sort_values(LEVEL_START_TIME)
 
         # Build full combination index (flow x start time x classification)
-        all_flows = dataframe[LEVEL_FLOW].unique()
-        all_times = dataframe[LEVEL_START_TIME].unique()
-        all_classes = dataframe[LEVEL_CLASSIFICATION].unique()
+        # Convert numpy arrays from .unique() to plain Python lists for type checking
+        all_flows = dataframe[LEVEL_FLOW].unique().tolist()
+        all_times = dataframe[LEVEL_START_TIME].unique().tolist()
+        all_classes = dataframe[LEVEL_CLASSIFICATION].unique().tolist()
         multi_index = [LEVEL_FLOW, LEVEL_START_TIME, LEVEL_CLASSIFICATION]
         full_index = MultiIndex.from_product(
             [all_flows, all_times, all_classes],
