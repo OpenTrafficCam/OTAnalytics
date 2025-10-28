@@ -73,18 +73,18 @@ class ColorPaletteProvider:
 
 def hex_to_rgb_tuple(hex_color: str) -> tuple[int, int, int]:
     """
-    Konvertiert einen Hex-Farbstring in ein RGB-Tupel von Ganzzahlen.
+    Converts a hex color string to an RGB tuple of integers.
 
     Args:
-        hex_color (str): Hex-Farbstring (z.B. "#FF5733" oder "FF5733")
+        hex_color (str): Hex color string (e.g., "#FF5733" or "FF5733")
 
     Returns:
-        tuple: RGB-Tupel (r, g, b) mit Werten von 0-255
+        tuple: RGB tuple (r, g, b) with values from 0-255
     """
-    # Entferne das '#' am Anfang, falls vorhanden
+    # Remove the '#' at the beginning, if present
     hex_color = hex_color.lstrip("#")
 
-    # Konvertiere jeden 2-stelligen Hex-Wert zu int
+    # Convert each two-digit hex value to int
     r = int(hex_color[0:2], 16)
     g = int(hex_color[2:4], 16)
     b = int(hex_color[4:6], 16)
