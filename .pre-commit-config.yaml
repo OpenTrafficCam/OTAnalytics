@@ -24,7 +24,7 @@ repos:
         stages:
           - pre-commit
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.1.1
+    rev: 7.3.0
     hooks:
       - id: flake8
   - repo: https://github.com/pycqa/isort
@@ -59,7 +59,7 @@ repos:
           - numpy==2.1.1
           - opencv-python-headless==4.10.0.84
           - pandas-stubs==2.2.3.241126
-          - pandas==2.2.3
+          - pandas==2.3.3
           - polars==1.32.3
           - pre-commit==4.1.0
           - pyarrow==21.0.0
