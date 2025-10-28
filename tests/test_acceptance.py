@@ -694,6 +694,21 @@ class TestVideoImportAndDisplay:
         target.should_contain(name1)
         target.should_contain(name2)
 
+        # Switch to Project tab and fill minimal required fields for saving
+        target.click(resource_manager.get(TrackFormKeys.TAB_ONE))
+        project_name_input = target.find_by_css(
+            f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_PROJECT_NAME)}"]'
+        )
+        date_input = target.find_by_css(
+            f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_START_DATE)}"]'
+        )
+        time_input = target.find_by_css(
+            f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_START_TIME)}"]'
+        )
+        set_input_value(target, project_name_input, "Acceptance - Videos Export/Import")
+        set_input_value(target, date_input, "2023-05-24")
+        set_input_value(target, time_input, "06:00:00")
+
         # Save project to deterministic path
         save_path = _Path(test_data_tmp_dir) / "videos_imported.otconfig"
 
@@ -716,10 +731,10 @@ class TestVideoImportAndDisplay:
             raising=True,
         )
 
-        # Use Quick Save (falls back to Save as... if needed)
-        print("[TEST] Clicking Quick Save...")
-        target.click(resource_manager.get(ProjectKeys.LABEL_QUICK_SAVE))
-        print("[TEST] Quick Save clicked. Checking file exists...")
+        print("[TEST] Clicking Save As...")
+        target.click(resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT))
+        print("[TEST] Save As clicked. Waiting for file to appear...")
+        target.wait_for(lambda: save_path.exists())
         assert save_path.exists(), f"Expected saved config at {save_path}"
         print(f"[TEST] Save file exists at {save_path}")
 
@@ -728,6 +743,8 @@ class TestVideoImportAndDisplay:
         try:
             target.click("New")
         except Exception:
+            # Switch back to Videos tab to perform removals
+            target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
             # Remove videos individually since the table uses single selection
             from OTAnalytics.application.resources.resource_manager import (
                 AddVideoKeys as _AVK,
@@ -744,6 +761,9 @@ class TestVideoImportAndDisplay:
 
         # Now import previously saved project configuration
         target.click(resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT))
+
+        # Switch to Videos tab to verify
+        target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
 
         # Verify both filenames appear again
         target.should_contain(name1)
