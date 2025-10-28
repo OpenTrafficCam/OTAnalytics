@@ -439,6 +439,124 @@ class TestProjectInformation:
 
 
 class TestVideoImportAndDisplay:
+    @staticmethod
+    def _wait_for_names_present(target: Screen, names: list[str]) -> None:
+        target.wait_for(
+            lambda: all(
+                n in TestVideoImportAndDisplay._table_filenames(target) for n in names
+            )
+        )
+
+    @staticmethod
+    def _table_filenames(target: Screen) -> list[str]:
+        """Return the list of video filenames currently shown in the table."""
+        from selenium.webdriver.common.by import By  # type: ignore
+
+        cells = target.selenium.find_elements(By.CSS_SELECTOR, "table tbody tr td")
+        texts = [c.text.strip() for c in cells if c.text.strip()]
+        video_exts = (".mp4", ".avi", ".mov", ".mkv", ".webm")
+        return [t for t in texts if any(t.lower().endswith(ext) for ext in video_exts)]
+
+    @staticmethod
+    def _click_table_cell_with_text(target: Screen, text: str) -> None:
+        """Click a table cell whose visible text contains `text` (substring match).
+        Uses direct DOM enumeration to avoid brittle generic XPaths and tolerate
+        UI truncation/ellipsis.
+        """
+        import time
+
+        from selenium.webdriver.common.by import By  # type: ignore
+
+        deadline = time.time() + 8.0
+        last_err: Exception | None = None
+        text_norm = text.strip()
+        while time.time() < deadline:
+            try:
+                tds = target.selenium.find_elements(
+                    By.CSS_SELECTOR, "table tbody tr td"
+                )
+                for td in tds:
+                    td_text = td.text.strip()
+                    if text_norm and text_norm in td_text:
+                        target.selenium.execute_script("arguments[0].click();", td)
+                        return
+                time.sleep(0.1)
+            except Exception as e:  # pragma: no cover - transient rendering
+                last_err = e
+                time.sleep(0.1)
+        if last_err:
+            raise last_err
+        raise AssertionError(f"Could not find table cell with text: {text}")
+
+    @staticmethod
+    def _reset_videos_tab(target: Screen, resource_manager: ResourceManager) -> None:
+        """Ensure the Videos tab is in a clean state (no listed videos).
+
+        This mitigates cross-test interference because the NiceGUI app and
+        webserver are session-scoped. Some tests in this class expect an empty
+        list initially. When running the whole suite, previous tests may have
+        left videos in the table which makes strict assertions fail.
+
+        Strategy:
+        - Iteratively remove all rows from the videos table via the UI.
+        """
+        # Remove all rows defensively (if any) using robust table parsing
+        for _ in range(50):  # hard upper bound for safety
+            names = TestVideoImportAndDisplay._table_filenames(target)
+            if not names:
+                break
+            name = names[0]
+            try:
+                TestVideoImportAndDisplay._click_table_cell_with_text(target, name)
+                target.click(resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS))
+                target.wait_for(
+                    lambda: name
+                    not in TestVideoImportAndDisplay._table_filenames(target)
+                )
+            except Exception:
+                try:
+                    names2 = TestVideoImportAndDisplay._table_filenames(target)
+                    if names2 and names2[0] == name:
+                        break
+                except Exception:
+                    break
+
+    @staticmethod
+    def _remove_video_by_name(
+        target: Screen, resource_manager: ResourceManager, filename: str
+    ) -> None:
+        """Robustly remove a video entry by filename from the table with retries."""
+        import time
+
+        from selenium.common.exceptions import (
+            StaleElementReferenceException,  # type: ignore
+        )
+
+        # Wait until filename is present in the table
+        TestVideoImportAndDisplay._wait_for_names_present(target, [filename])
+        deadline = time.time() + 5.0
+        last_err: Exception | None = None
+        while time.time() < deadline:
+            try:
+                # Select row by clicking the table cell containing the filename
+                TestVideoImportAndDisplay._click_table_cell_with_text(target, filename)
+                # Click Remove
+                target.click(resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS))
+                # Wait until it disappears from the table
+                target.wait_for(
+                    lambda: filename
+                    not in TestVideoImportAndDisplay._table_filenames(target)
+                )
+                return
+            except StaleElementReferenceException as e:
+                last_err = e
+                time.sleep(0.1)
+            except Exception as e:
+                last_err = e
+                time.sleep(0.1)
+        if last_err:
+            raise last_err
+
     @pytest.mark.timeout(TIMEOUT)
     @pytest.mark.asyncio
     async def test_add_videos_import_sort_and_display_first_frame(
@@ -465,6 +583,8 @@ class TestVideoImportAndDisplay:
         target.open(ENDPOINT_MAIN_PAGE)
 
         target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+        # Ensure clean slate for this test run
+        self._reset_videos_tab(target, resource_manager)
 
         # Monkeypatch file dialog to return our test videos
         data_dir = Path(__file__).parent / "data"
@@ -666,6 +786,8 @@ class TestVideoImportAndDisplay:
         target.open(ENDPOINT_MAIN_PAGE)
 
         target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+        # Ensure clean slate for this test run
+        self._reset_videos_tab(target, resource_manager)
 
         # Prepare test videos and monkeypatch file dialog
         data_dir = Path(__file__).parent / "data"
@@ -731,33 +853,14 @@ class TestVideoImportAndDisplay:
             raising=True,
         )
 
-        print("[TEST] Clicking Save As...")
         target.click(resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT))
-        print("[TEST] Save As clicked. Waiting for file to appear...")
         target.wait_for(lambda: save_path.exists())
         assert save_path.exists(), f"Expected saved config at {save_path}"
-        print(f"[TEST] Save file exists at {save_path}")
 
-        # Attempt to click a "New" button if present to reset project
-        # Fallback: remove videos via the UI to simulate a fresh project state
-        try:
-            target.click("New")
-        except Exception:
-            # Switch back to Videos tab to perform removals
-            target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
-            # Remove videos individually since the table uses single selection
-            from OTAnalytics.application.resources.resource_manager import (
-                AddVideoKeys as _AVK,
-            )
-
-            # Remove first video
-            target.click(name1)
-            target.click(resource_manager.get(_AVK.BUTTON_REMOVE_VIDEOS))
-            target.wait_for(lambda: name1 not in target.selenium.page_source)
-            # Remove second video
-            target.click(name2)
-            target.click(resource_manager.get(_AVK.BUTTON_REMOVE_VIDEOS))
-            target.wait_for(lambda: name2 not in target.selenium.page_source)
+        # Reset project state by clearing the Videos tab completely to ensure
+        # a clean slate before import (more robust than per-row interactions)
+        target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+        self._reset_videos_tab(target, resource_manager)
 
         # Now import previously saved project configuration
         target.click(resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT))
@@ -810,6 +913,8 @@ class TestVideoImportAndDisplay:
         target.open(ENDPOINT_MAIN_PAGE)
 
         target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+        # Ensure clean slate for this test run
+        self._reset_videos_tab(target, resource_manager)
 
         # Prepare a single test video and monkeypatch file dialog
         data_dir = Path(__file__).parent / "data"
@@ -831,12 +936,12 @@ class TestVideoImportAndDisplay:
         name1 = v1.name
         target.should_contain(name1)
 
-        # Select the video row (single selection table)
-        target.click(name1)
-
-        # Click Remove and wait until the video disappears from the DOM
-        target.click(resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS))
-        target.wait_for(lambda: name1 not in target.selenium.page_source)
+        # Remove the video robustly using helper
+        TestVideoImportAndDisplay._remove_video_by_name(target, resource_manager, name1)
+        # Verify it's gone
+        target.wait_for(
+            lambda: name1 not in TestVideoImportAndDisplay._table_filenames(target)
+        )
 
     @pytest.mark.timeout(TIMEOUT)
     @pytest.mark.asyncio
@@ -861,6 +966,8 @@ class TestVideoImportAndDisplay:
         target.open(ENDPOINT_MAIN_PAGE)
 
         target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+        # Ensure clean slate for this test run
+        self._reset_videos_tab(target, resource_manager)
 
         # Prepare two test videos and monkeypatch file dialog
         data_dir = Path(__file__).parent / "data"
@@ -886,12 +993,14 @@ class TestVideoImportAndDisplay:
         target.should_contain(name2)
 
         # NOTE: The current UI uses single-selection behavior in the videos table.
-        # Remove first video
-        target.click(name1)
-        target.click(resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS))
-        target.wait_for(lambda: name1 not in target.selenium.page_source)
+        # Remove first video robustly
+        TestVideoImportAndDisplay._remove_video_by_name(target, resource_manager, name1)
+        target.wait_for(
+            lambda: name1 not in TestVideoImportAndDisplay._table_filenames(target)
+        )
 
-        # Remove second video
-        target.click(name2)
-        target.click(resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS))
-        target.wait_for(lambda: name2 not in target.selenium.page_source)
+        # Remove second video robustly
+        TestVideoImportAndDisplay._remove_video_by_name(target, resource_manager, name2)
+        target.wait_for(
+            lambda: name2 not in TestVideoImportAndDisplay._table_filenames(target)
+        )
