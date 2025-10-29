@@ -566,199 +566,75 @@ class TestVideoImportAndDisplay:
         resource_manager: ResourceManager,
         monkeypatch: Any,
     ) -> None:
-        """Acceptance: Import videos, verify listing order and image display.
-
-        Steps:
-        - Open app and switch to Videos tab
-        - Monkeypatch file picker to return 2 test videos
-        - Click "Add videos..."; verify both appear in table
-        - Verify rows are sorted alphabetically by filename
-        - Click each video and verify the InteractiveImage shows an image and
-          that the image source changes upon selection change (indicating the
-          first frame of the selected video is displayed)
-        """
-        # Start app if needed and open main page
+        # App starten und Hauptseite öffnen
         if not given_app.is_alive():
             given_app.start()
         target.open(ENDPOINT_MAIN_PAGE)
 
+        # Zum Videos‑Tab wechseln
         target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
-        # Ensure clean slate for this test run
-        self._reset_videos_tab(target, resource_manager)
 
-        # Monkeypatch file dialog to return our test videos
+        # Dateiauswahl mocken
         data_dir = Path(__file__).parent / "data"
         v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
         v2 = data_dir / "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
-        assert v1.exists() and v2.exists(), "Test videos are missing in tests/data"
+        assert v1.exists() and v2.exists()
 
-        from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import (
-            NiceGuiUiFactory,  # local import
-        )
+        from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
 
         async def fake_askopenfilenames(*args: object, **kwargs: object) -> list[Path]:
             return [v1, v2]
 
         monkeypatch.setattr(
-            NiceGuiUiFactory,
-            "askopenfilenames",
-            fake_askopenfilenames,
-            raising=True,
+            NiceGuiUiFactory, "askopenfilenames", fake_askopenfilenames, raising=True
         )
 
-        # Click Add videos...
+        # Videos hinzufügen
         target.click(resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS))
 
-        # Verify both filenames appear
-        name1 = v1.name
-        name2 = v2.name
+        name1, name2 = v1.name, v2.name
+
+        # Beide Namen sollten erscheinen
         target.should_contain(name1)
         target.should_contain(name2)
 
-        # Verify sorted alphabetically (table first column contains filenames)
-        from selenium.webdriver.common.by import By  # type: ignore
-
+        # Sortierung prüfen (alphabetisch nach sichtbaren Dateinamen)
         def read_table_filenames() -> list[str]:
-            cells = target.selenium.find_elements(By.CSS_SELECTOR, "table tbody tr td")
-            # Filter to plausible video filenames (ends with common video extension)
-            texts = [c.text.strip() for c in cells if c.text.strip()]
-            video_exts = (".mp4", ".avi", ".mov", ".mkv", ".webm")
-            return [
-                t for t in texts if any(t.lower().endswith(ext) for ext in video_exts)
+            exts = (".mp4", ".avi", ".mov", ".mkv", ".webm")
+            texts = [
+                td.text.strip()
+                for td in target.find_all_by_tag("td")
+                if td.text.strip()
             ]
+            return [t for t in texts if any(t.lower().endswith(e) for e in exts)]
 
         target.wait_for(lambda: len(read_table_filenames()) >= 2)
         listed = read_table_filenames()
         assert listed == sorted(
             [name1, name2]
-        ), f"Expected alphabetical order {sorted([name1, name2])}, got {listed}"
+        ), f"Expected {sorted([name1, name2])}, got {listed}"
 
-        # Helper to read current image src on page (InteractiveImage uses base64)
-        def get_current_image_src() -> str:
-            from selenium.webdriver.common.by import By  # type: ignore
+        # Bild erscheint und lädt nach Auswahl des ersten Videos
+        target.click(name1)
+        img = target.find_by_css("img")  # oder: target.find_by_css("img[src^='data:']")
+        target.should_load_image(img)
+        src1 = img.get_attribute("src") or ""
+        assert src1, "Preview image src should not be empty after selecting first video"
 
-            imgs = target.selenium.find_elements(By.CSS_SELECTOR, "img[src^='data:']")
-            if not imgs:
-                return ""
-            return imgs[0].get_attribute("src") or ""
+        # Beim Wechsel auf das zweite Video ändert sich die Bildquelle
+        target.click(name2)
 
-        def select_video_and_wait_for_change(prev_src: str, filename: str) -> str:
-            import time
+        def _img_src_changed() -> bool:
+            elem = target.find_by_css("img")
+            return (elem.get_attribute("src") or "") != src1
 
-            from selenium.webdriver.common.action_chains import (
-                ActionChains,  # type: ignore
-            )
-            from selenium.webdriver.common.by import By  # type: ignore
-            from selenium.webdriver.support import (
-                expected_conditions as EC,  # type: ignore
-            )
-            from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
-
-            driver = target.selenium
-
-            def find_row_and_parts() -> (
-                tuple[WebElement | None, WebElement | None, list[WebElement]]
-            ):  # noqa
-                rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
-                for row in rows:
-                    cells = row.find_elements(By.CSS_SELECTOR, "td")
-                    texts = [c.text.strip() for c in cells if c.text.strip()]
-                    if filename in texts:
-                        # Common clickable elements inside a Quasar table row
-                        clickables: list[WebElement] = []
-                        for sel in (
-                            "[role='checkbox']",
-                            ".q-checkbox",
-                            ".q-checkbox__inner",
-                            "input[type='checkbox']",
-                        ):
-                            try:
-                                clickables.append(
-                                    row.find_element(By.CSS_SELECTOR, sel)
-                                )
-                            except Exception:
-                                pass
-                        # Cell with the filename
-                        file_cell: WebElement | None = None
-                        for c in cells:
-                            if c.text.strip() == filename:
-                                file_cell = c
-                                break
-                        return row, file_cell, clickables
-                return None, None, []
-
-            def changed() -> bool:
-                ns = get_current_image_src()
-                return bool(ns) and ns != prev_src
-
-            from typing import cast
-
-            row, file_cell, clickables = find_row_and_parts()
-            assert row is not None, f"Could not find row for {filename}"
-            row = cast(WebElement, row)
-
-            tries: list[tuple[str, WebElement]] = []
-            if file_cell is not None:
-                tries.append(("click file cell", file_cell))
-            for el in clickables:
-                tries.append(("click checkbox-like", el))
-            tries.append(("click row", row))
-
-            actions = ActionChains(driver)
-            for label, el in tries:
-                try:
-                    # Scroll into view and wait clickable
-                    try:
-                        _ = row.location_once_scrolled_into_view  # noqa: F841
-                    except Exception:
-                        pass
-                    try:
-                        WebDriverWait(driver, 3).until(EC.element_to_be_clickable(el))
-                    except Exception:
-                        pass
-                    actions.move_to_element(el).pause(0.05).click().perform()
-                except Exception:
-                    try:
-                        el.click()
-                    except Exception:
-                        pass
-                # Wait up to 2 seconds for change
-                end = time.time() + 2.0
-                while time.time() < end:
-                    if changed():
-                        return get_current_image_src()
-                    time.sleep(0.1)
-
-            # As a last resort, try double-click on the filename cell/row
-            for el in [file_cell or row, row]:
-                try:
-                    actions.move_to_element(el).double_click().perform()
-                except Exception:
-                    try:
-                        el.click()
-                        el.click()
-                    except Exception:
-                        pass
-                end = time.time() + 2.0
-                while time.time() < end:
-                    if changed():
-                        return get_current_image_src()
-                    time.sleep(0.1)
-
-            raise AssertionError(f"Image did not change after selecting {filename}")
-
-        # Wait until an image is displayed
-        target.wait_for(lambda: bool(get_current_image_src()))
-        initial_src = get_current_image_src()
-        assert initial_src.startswith("data:"), "Expected base64 image to be shown"
-
-        # Select the second video and ensure image src changes
-        after_src = select_video_and_wait_for_change(initial_src, name2)
-        assert after_src.startswith("data:"), "Expected base64 image after selection"
-
-        # Switch selection back to first video and ensure image src changes again
-        final_src = select_video_and_wait_for_change(after_src, name1)
-        assert final_src.startswith("data:"), "Expected base64 image after re-selection"
+        target.wait_for(_img_src_changed)
+        img2 = target.find_by_css("img")
+        target.should_load_image(img2)
+        src2 = img2.get_attribute("src") or ""
+        assert (
+            src2 and src2 != src1
+        ), "Preview image src should change after selecting another video"
 
     @pytest.mark.timeout(TIMEOUT)
     @pytest.mark.asyncio

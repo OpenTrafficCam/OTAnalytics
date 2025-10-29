@@ -45,6 +45,8 @@ def map_to_ui(videos: Iterable[Video]) -> list:
     list_of_videos = []
     for video in videos:
         list_of_videos.append(map_video_to_ui(video))
+    # Ensure deterministic alphabetical order by visible filename
+    list_of_videos.sort(key=lambda r: r.get(COLUMN_NAME, "").lower())
     return list_of_videos
 
 
@@ -63,8 +65,9 @@ class AddVideoForm(ButtonForm, AbstractTreeviewInterface):
         self._video_table = CustomTable(
             columns=create_columns(resource_manager),
             rows=[],
-            on_select_method=lambda e: self._select_video(e.selection),
+            on_select_method=lambda e: self._select_video(e),
             selection="multiple",
+            on_row_click_method=lambda e: self._on_row_click(e),
         )
         self.introduce_to_viewmodel()
 
@@ -98,12 +101,62 @@ class AddVideoForm(ButtonForm, AbstractTreeviewInterface):
             return [self._add_video_button, self._remove_video_button]
         return []
 
-    def _select_video(self, e: dict) -> None:
-        selected_videos = [element[COLUMN_ID] for element in e]
-        self._viewmodel.set_selected_videos(selected_videos)
+    def _select_video(self, e: object) -> None:
+        """Handle selection events from the NiceGUI table robustly.
+
+        Accepts either:
+        - an event object with attribute `selection` (NiceGUI)
+        - a dict with key "selection"
+        - a list of selected row dicts directly
+        """
+        selection: list[dict] | None = None
+        # 1) NiceGUI event with attribute
+        sel_attr = getattr(e, "selection", None)
+        if isinstance(sel_attr, list):
+            selection = sel_attr
+        # 2) Dict event shape
+        if selection is None and isinstance(e, dict):
+            maybe = e.get("selection")  # type: ignore[assignment]
+            if isinstance(maybe, list):
+                selection = maybe
+        # 3) Direct list of rows
+        if selection is None and isinstance(e, list):
+            selection = e
+        if not selection:
+            return
+        selected_videos = [
+            element.get(COLUMN_ID, "")
+            for element in selection
+            if isinstance(element, dict)
+        ]
+        self._viewmodel.set_selected_videos([s for s in selected_videos if s])
 
     def _remove_video(self) -> None:
         self._viewmodel.remove_videos()
+
+    def _on_row_click(self, e: object) -> None:
+        """Handle direct row clicks to ensure selection updates.
+
+        NiceGUI passes event args with a 'row' key containing the clicked row dict.
+        We extract the COLUMN_ID from that row and set it as the single selection.
+        """
+        try:
+            row = None
+            if hasattr(e, "args"):
+                if isinstance(e.args, dict):
+                    row = e.args.get("row")
+                elif isinstance(e.args, (list, tuple)) and len(e.args) >= 2:
+                    # NiceGUI forwards Quasar's (evt, row, pageIndex)
+                    row = e.args[1]
+            elif isinstance(e, dict):
+                row = e.get("row")
+            if isinstance(row, dict):
+                vid = row.get(COLUMN_ID)
+                if vid:
+                    self._viewmodel.set_selected_videos([vid])
+        except Exception:
+            # be resilient to event shape differences
+            pass
 
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
         self._viewmodel.set_selected_videos(ids)
