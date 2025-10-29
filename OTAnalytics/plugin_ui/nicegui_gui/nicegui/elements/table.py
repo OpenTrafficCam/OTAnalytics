@@ -88,12 +88,8 @@ class CustomTable:
         ) as table:
             self.__table = table
             self.__table.style("width: 100%")
-            # Register row clicks to make selection robust when clicking cells
             if self._on_row_click_method is not None:
                 table.on("rowClick", self._on_row_click_method)
-                table.on("row-click", self._on_row_click_method)
-                table.on("cellClick", self._on_row_click_method)
-                table.on("cell-click", self._on_row_click_method)
             self._add_header_slot()
             self._add_body_slot()
             self._register_callback()
