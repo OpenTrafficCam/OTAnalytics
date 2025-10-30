@@ -4,6 +4,7 @@ from typing import Any, Generator, TypeVar
 
 import pytest
 from nicegui.testing import Screen
+from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
 from OTAnalytics.application.resources.resource_manager import (
@@ -13,7 +14,11 @@ from OTAnalytics.application.resources.resource_manager import (
     TrackFormKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    MARKER_VIDEO_TABLE,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
+from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
 from tests.utils.builders.otanalytics_builders import MultiprocessingWorker
 from tests.utils.ui_helpers import set_input_value
 
@@ -458,11 +463,15 @@ class TestVideoImportAndDisplay:
         return [t for t in texts if any(t.lower().endswith(ext) for ext in video_exts)]
 
     @staticmethod
-    def _click_table_cell_with_text(target: Screen, text: str) -> None:
+    def _click_table_cell_with_text(
+        target: Screen, text: str, marker: str | None = None
+    ) -> None:
         """Click a table cell whose visible text contains `text` (substring match).
         Uses direct DOM enumeration to avoid brittle generic XPaths and tolerate
         UI truncation/ellipsis.
         """
+        marker_selector = f'[test-id="{marker}"] ' if marker else ""
+        selector = f"{marker_selector}table tbody tr td"
         import time
 
         from selenium.webdriver.common.by import By  # type: ignore
@@ -472,9 +481,7 @@ class TestVideoImportAndDisplay:
         text_norm = text.strip()
         while time.time() < deadline:
             try:
-                tds = target.selenium.find_elements(
-                    By.CSS_SELECTOR, "table tbody tr td"
-                )
+                tds = target.selenium.find_elements(By.CSS_SELECTOR, selector)
                 for td in tds:
                     td_text = td.text.strip()
                     if text_norm and text_norm in td_text:
@@ -486,7 +493,9 @@ class TestVideoImportAndDisplay:
                 time.sleep(0.1)
         if last_err:
             raise last_err
-        raise AssertionError(f"Could not find table cell with text: {text}")
+        if tds is not None:
+            cells = "\n".join([td.text.strip() for td in tds])
+        raise AssertionError(f"Could not find table cell with text: {text} in\n{cells}")
 
     @staticmethod
     def _reset_videos_tab(target: Screen, resource_manager: ResourceManager) -> None:
@@ -534,12 +543,14 @@ class TestVideoImportAndDisplay:
 
         # Wait until filename is present in the table
         TestVideoImportAndDisplay._wait_for_names_present(target, [filename])
-        deadline = time.time() + 5.0
+        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
         last_err: Exception | None = None
         while time.time() < deadline:
             try:
                 # Select row by clicking the table cell containing the filename
-                TestVideoImportAndDisplay._click_table_cell_with_text(target, filename)
+                TestVideoImportAndDisplay._click_table_cell_with_text(
+                    target, filename, marker=MARKER_VIDEO_TABLE
+                )
                 # Click Remove
                 target.click(resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS))
                 # Wait until it disappears from the table
@@ -811,6 +822,9 @@ class TestVideoImportAndDisplay:
         target.click(resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS))
         name1 = v1.name
         target.should_contain(name1)
+        target.selenium.find_element(
+            By.CSS_SELECTOR, f'[test-id="{MARKER_VIDEO_TABLE}"]'
+        )
 
         # Remove the video robustly using helper
         TestVideoImportAndDisplay._remove_video_by_name(target, resource_manager, name1)

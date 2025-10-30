@@ -95,6 +95,7 @@ class CustomTable:
             self._register_callback()
             if self._marker:
                 table.mark(self._marker)
+                table.props(f"test-id={self._marker}")
 
     def _add_header_slot(self) -> None:
         if self._header_slot:

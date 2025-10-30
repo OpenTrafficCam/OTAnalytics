@@ -18,6 +18,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
 )
 
 COLUMN_NAME = "name"
+MARKER_VIDEO_TABLE = "marker-video-table"
 
 
 def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
@@ -68,6 +69,7 @@ class AddVideoForm(ButtonForm, AbstractTreeviewInterface):
             on_select_method=lambda e: self._select_video(e),
             selection="multiple",
             on_row_click_method=lambda e: self._on_row_click(e),
+            marker=MARKER_VIDEO_TABLE,
         )
         self.introduce_to_viewmodel()
 
