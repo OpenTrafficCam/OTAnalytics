@@ -1199,7 +1199,7 @@ class TestTrafficCounting:
         tagged_assignments.count.assert_called_once_with(flows)
 
         args = call(event_types=[EventType.SECTION_ENTER])
-        event_repository.get.assert_has_calls([args, args])
+        event_repository.get.assert_has_calls([args])
         event_repository.get_all.assert_not_called()
 
         # Verify assertions specific to count_all_events setting

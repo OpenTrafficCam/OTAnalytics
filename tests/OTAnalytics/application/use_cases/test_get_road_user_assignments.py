@@ -76,7 +76,7 @@ class TestGetRoadUserAssignments:
         assert actual == assignments_as_list
 
         args = call(event_types=[EventType.SECTION_ENTER])
-        event_repository.get.assert_has_calls([args, args])
+        event_repository.get.assert_has_calls([args])
         event_repository.get_all.assert_not_called()
 
         flow_repository.get_all.assert_called_once()
