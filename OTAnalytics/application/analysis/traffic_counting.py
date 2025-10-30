@@ -9,6 +9,12 @@ from typing import Callable, Iterable, Optional
 
 from PIL.Image import Image
 
+from OTAnalytics.application.analysis.road_user_assignment import (
+    EventPair,
+    RoadUserAssigner,
+    RoadUserAssignment,
+    RoadUserAssignments,
+)
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
     ExportCounts,
@@ -17,17 +23,14 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     FlowNameDto,
 )
 from OTAnalytics.application.export_formats.export_mode import ExportMode
-from OTAnalytics.application.use_cases.create_events import CreateEvents
-from OTAnalytics.application.use_cases.section_repository import GetSectionsById
-from OTAnalytics.domain.event import (
-    Event,
-    EventDataset,
-    EventRepository,
-    PythonEventDataset,
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
 )
+from OTAnalytics.application.use_cases.section_repository import GetSectionsById
+from OTAnalytics.domain.event import Event, EventDataset, PythonEventDataset
 from OTAnalytics.domain.flow import Flow, FlowRepository
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet, TrackIdSetFactory
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSetFactory
 from OTAnalytics.domain.types import EventType
 
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
@@ -42,16 +45,6 @@ UNCLASSIFIED = "unclassified"
 
 RoadUserId = str
 RoadUserType = str
-
-
-@dataclass(frozen=True)
-class EventPair:
-    """
-    Pair of events of one track to find a matching flow.
-    """
-
-    start: Event
-    end: Event
 
 
 @dataclass(frozen=True)
@@ -339,18 +332,6 @@ class AddSectionInformation(CountDecorator):
         return found
 
 
-@dataclass(frozen=True)
-class RoadUserAssignment:
-    """
-    Assignment of a road user to a flow.
-    """
-
-    road_user: str
-    road_user_type: str
-    assignment: Flow
-    events: EventPair
-
-
 @dataclass
 class SelectedFlowCandidates:
     """
@@ -466,6 +447,26 @@ class Tagger(ABC):
         """
         raise NotImplementedError
 
+    def tag(self, assignments: RoadUserAssignments) -> "TaggedAssignments":
+        """
+        Split the given assignments using this tagger. Each assignment is assigned to
+        exactly one part.
+
+        Args:
+            assignments (RoadUserAssignments):
+                RoadUserAssignments to split using this Tagger
+
+        Returns:
+            TaggedAssignments: group of RoadUserAssignments split by tag
+        """
+        tagged: dict[Tag, list[RoadUserAssignment]] = defaultdict(list)
+        for assignment in assignments.as_list():
+            tag = self.create_tag(assignment)
+            tagged[tag].append(assignment)
+        return TaggedAssignments(
+            {key: CountableAssignments(value) for key, value in tagged.items()}
+        )
+
 
 class ModeTagger(Tagger):
     """
@@ -503,6 +504,11 @@ class CountableAssignments:
 
     def __init__(self, assignments: list[RoadUserAssignment]) -> None:
         self._assignments = assignments.copy()
+
+    def filter(
+        self, condition: Callable[[RoadUserAssignment], bool]
+    ) -> "CountableAssignments":
+        return CountableAssignments([a for a in self._assignments if condition(a)])
 
     def count(self, flows: list[Flow]) -> Count:
         """
@@ -597,89 +603,15 @@ class TaggedAssignments:
     def __repr__(self) -> str:
         return TaggedAssignments.__name__ + repr(self._assignments)
 
-
-class RoadUserAssignments:
-    """
-    Represents a group of RoadUserAssignment objects.
-    """
-
-    @property
-    def road_user_ids(self) -> TrackIdSet:
-        """Returns a sorted list of all road user ids within this group of assignments.
-
-        Returns:
-            list[str]: the road user ids.
-        """
-        return self._track_id_set_factory.create(
-            {assignment.road_user for assignment in self._assignments}
-        )
-
-    def __init__(
-        self,
-        assignments: list[RoadUserAssignment],
-        track_id_set_factory: TrackIdSetFactory,
-    ) -> None:
-        self._assignments = assignments.copy()
-        self._track_id_set_factory = track_id_set_factory
-
-    def tag(self, by: Tagger) -> TaggedAssignments:
-        """
-        Split the assignments using the given tagger. Each assignment is assigned to
-        exactly one part.
-
-        Args:
-            by (Tagger): tagger to determine the tag
-
-        Returns:
-            TaggedAssignments: group of RoadUserAssignments split by tag
-        """
-        tagged: dict[Tag, list[RoadUserAssignment]] = defaultdict(list)
-        for assignment in self._assignments:
-            tag = by.create_tag(assignment)
-            tagged[tag].append(assignment)
+    def filter(
+        self, condition: Callable[[RoadUserAssignment], bool]
+    ) -> "TaggedAssignments":
         return TaggedAssignments(
-            {key: CountableAssignments(value) for key, value in tagged.items()}
+            {
+                tag: countable.filter(condition)
+                for tag, countable in self._assignments.items()
+            }
         )
-
-    def as_list(self) -> list[RoadUserAssignment]:
-        """
-        Retrieves a copy of the contained assignments.
-
-        Returns:
-            list[RoadUserAssignment]: a copy of the assignments
-        """
-        return self._assignments.copy()
-
-    def __hash__(self) -> int:
-        return hash(self._assignments)
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, RoadUserAssignments):
-            return self._assignments == other._assignments
-        return False
-
-    def __repr__(self) -> str:
-        return RoadUserAssignments.__name__ + repr(self._assignments)
-
-
-class RoadUserAssigner(ABC):
-    """
-    Class to assign tracks to flows.
-    """
-
-    @abstractmethod
-    def assign(self, events: Iterable[Event], flows: list[Flow]) -> RoadUserAssignments:
-        """
-        Assign each track to exactly one flow.
-
-        Args:
-            events (Iterable[Event]): events to be used during assignment
-            flows (list[Flow]): flows to assign tracks to
-
-        Returns:
-            RoadUserAssignments: group of RoadUserAssignment objects
-        """
-        raise NotImplementedError
 
 
 class RoadUserAssignerDecorator(RoadUserAssigner):
@@ -1018,52 +950,120 @@ def create_export_specification(
     return ExportSpecificationDto(counting_specification, flow_dtos)
 
 
+def start_of(rua: RoadUserAssignment) -> datetime:
+    return rua.events.start.interpolated_occurrence
+
+
+def end_of(rua: RoadUserAssignment) -> datetime:
+    return rua.events.end.interpolated_occurrence
+
+
 class TrafficCounting:
     """
     Use case to produce traffic counts.
+
+    Args:
+        flow_repository (FlowRepository): repository providing flows for counting
+        get_sections_by_id (GetSectionsById): provides sections by id
+        get_assignments (GetRoadUserAssignments): provides assignments from repository
+            and initiates assignment if not yet computed
+        tagger_factory (TaggerFactory):
+            a factory to create a tagger for a given counting specifications
+        filter_lower_bound_strict: whether the (optionally) applied counting interval
+            filter should have a strict lower bound (filtering out assignments starting
+            before that bound). Defaults to True: count only assignments starting inside
+            the counting interval
+        filter_upper_bound_strict: whether the (optionally) applied counting interval
+            filter should have a strict upper bound (filtering out assignments ending
+            after that bound). Defaults to False: count also assignments ending outside
+            the counting interval
     """
 
     def __init__(
         self,
-        event_repository: EventRepository,
         flow_repository: FlowRepository,
         get_sections_by_id: GetSectionsById,
-        create_events: CreateEvents,
-        assigner: RoadUserAssigner,
+        get_assignments: GetRoadUserAssignments,
         tagger_factory: TaggerFactory,
-        enable_event_creation: bool = True,
+        filter_lower_bound_strict: bool = True,
+        filter_upper_bound_strict: bool = False,
     ):
-        self._event_repository = event_repository
         self._flow_repository = flow_repository
+        self._get_assignments = get_assignments
         self._get_sections_by_id = get_sections_by_id
-        self._create_events = create_events
-        self._assigner = assigner
         self._tagger_factory = tagger_factory
-        self._enable_event_creation = enable_event_creation
+        self._filter_lower_bound_strict = filter_lower_bound_strict
+        self._filter_upper_bound_strict = filter_upper_bound_strict
 
     def count(self, specification: CountingSpecificationDto) -> Count:
         """
         Produce traffic counts based on the currently available events and flows.
 
         Args:
-            specification (CountingSpecificationDto): specification of the export
+            specification (CountingSpecificationDto): specification of the counting
         """
-        if self._enable_event_creation and self._event_repository.is_empty():
-            self._create_events()
-
-        if specification.count_all_events:
-            events = self._event_repository.get_all()
-        else:
-            events = self._event_repository.get(
-                start_date=specification.start,
-                end_date=specification.end,
-            )
 
         flows = self.get_flows()
-        assigned_flows = self._assigner.assign(events, flows)
+        assigned_flows = self._get_assignments.get()
         tagger = self._tagger_factory.create_tagger(specification)
-        tagged_assignments = assigned_flows.tag(tagger)
+        tagged_assignments = tagger.tag(assigned_flows)
+
+        if not specification.count_all_events:
+            tagged_assignments = tagged_assignments.filter(
+                self.__assignment_filter_for(specification)
+            )
+
         return tagged_assignments.count(flows)
+
+    def __assignment_filter_for(
+        self,
+        specification: CountingSpecificationDto,
+    ) -> Callable[[RoadUserAssignment], bool]:
+        """Create a filter interval using the given specifications start and end time
+        as lower and upper bounds respectively.
+
+        The resulting filter determines whether RoadUserAssignments fall into the
+        desired observation interval and should be counted.
+
+        The is_upper/lower_strict parameters of this TrafficCounting object
+        can be used to configure the filter.
+        A strict bound does not allow the assignment to overlap the respective bound.
+        The four combinations are as follows (open = '('; closed = '['):
+            - [lower, upper]: both start and end of the rua must be inside the interval
+            - [lower, upper): the start of the rua must be inside the interval
+            - (lower, upper]: the end of the rua must be inside the interval
+            - (lower, upper): either start or end of the rua must be in the interval,
+                or [start, end] must enclose the interval
+
+        Args:
+            specification (CountingSpecificationDto): specification containing the
+                upper and lower bound for filtering
+            is_lower_strict (bool): whether the lower bound is strict
+            is_upper_strict (bool): whether the upper bound is strict
+
+        Returns:
+            Callable[[RoadUserAssignment], bool]: an rua filter
+        """
+        lower = specification.start
+        upper = specification.end
+        is_lower_strict = self._filter_lower_bound_strict
+        is_upper_strict = self._filter_upper_bound_strict
+
+        if is_lower_strict and is_upper_strict:
+            return lambda rua: lower <= start_of(rua) and end_of(rua) <= upper
+
+        elif is_lower_strict and not is_upper_strict:
+            return lambda rua: lower <= start_of(rua) <= upper
+
+        elif not is_lower_strict and is_upper_strict:
+            return lambda rua: lower <= end_of(rua) <= upper
+
+        else:
+            return (
+                lambda rua: lower <= start_of(rua) <= upper
+                or lower <= end_of(rua) <= upper
+                or (start_of(rua) <= lower and upper <= end_of(rua))
+            )
 
     def get_flows(self) -> list[Flow]:
         return self._flow_repository.get_all()
@@ -1072,11 +1072,9 @@ class TrafficCounting:
         self, new_tagger_factory: TaggerFactory
     ) -> "TrafficCounting":
         return TrafficCounting(
-            self._event_repository,
             self._flow_repository,
             self._get_sections_by_id,
-            self._create_events,
-            self._assigner,
+            self._get_assignments,
             new_tagger_factory,
         )
 

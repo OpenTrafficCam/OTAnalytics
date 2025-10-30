@@ -4,10 +4,11 @@ from unittest.mock import Mock, PropertyMock, call, patch
 import pytest
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
-from OTAnalytics.application.analysis.traffic_counting import (
+from OTAnalytics.application.analysis.road_user_assignment import (
     EventPair,
     RoadUserAssigner,
     RoadUserAssignment,
+    RoadUserAssignmentRepository,
     RoadUserAssignments,
 )
 from OTAnalytics.application.state import (
@@ -16,6 +17,15 @@ from OTAnalytics.application.state import (
     SectionState,
     TrackViewState,
 )
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
+)
+from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.create_road_user_assignments import (
+    CreateRoadUserAssignments,
+)
+from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
+from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToSelectedFlows,
@@ -42,6 +52,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
 )
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
@@ -128,7 +139,7 @@ class TestTracksIntersectingSelectedSections:
     ) -> None:
         section_state = Mock(spec=SectionState)
         selected_sections = Mock(spec=ObservableProperty)
-        selected_sections.get.return_value = [(section_2.id)]
+        selected_sections.get.return_value = [section_2.id]
         section_state.selected_sections = selected_sections
 
         get_section_by_id.return_value = [section_2]
@@ -353,7 +364,9 @@ class TestTracksAssignedToSelectedFlows:
 
         event = Mock(spec=Event)
         event_repository = Mock(spec=EventRepository)
-        event_repository.get_all.return_value = [event]
+        event_repository.get.return_value = [event]
+
+        create_events = Mock(spec=CreateEvents)
 
         flow_repository = Mock(spec=FlowRepository)
         flow_repository.get_all.return_value = [first_flow, second_flow]
@@ -362,13 +375,28 @@ class TestTracksAssignedToSelectedFlows:
         mock_factory = Mock(spec=TrackIdSetFactory)
         mock_factory.create.return_value = track_id_set
 
+        rua_repo = RoadUserAssignmentRepository(mock_factory)
+        create_assignments = CreateRoadUserAssignments(
+            GetAllFlows(flow_repository),
+            GetAllEnterSectionEvents(event_repository),
+            create_events,
+            assigner,
+            rua_repo,
+            False,
+        )
+        get_assignments = GetRoadUserAssignments(rua_repo, create_assignments)
+
         tracks_assigned_to_flow = TracksAssignedToSelectedFlows(
-            assigner, event_repository, flow_repository, flow_state, mock_factory
+            get_assignments, flow_state, mock_factory
         )
         track_ids = tracks_assigned_to_flow.get_ids()
 
         assert track_ids == track_id_set
-        event_repository.get_all.assert_called_once()
+        event_repository.get.assert_has_calls(
+            [call(event_types=[EventType.SECTION_ENTER])]
+        )
+        event_repository.get_all.assert_not_called()
+
         flow_repository.get_all.assert_called_once()
         assert selected_flows.get.call_count == 2
         assigner.assign.assert_called_once_with([event], [first_flow, second_flow])

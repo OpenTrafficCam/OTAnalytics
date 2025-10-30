@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 from pandas import DataFrame, read_csv
 
-from OTAnalytics.application.analysis.traffic_counting import (
+from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignment,
     RoadUserAssignments,
 )

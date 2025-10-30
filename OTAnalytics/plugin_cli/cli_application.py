@@ -39,6 +39,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
         cli = OTAnalyticsBulkCli(
             self.run_config,
             self.event_repository,
+            self.assignment_repository,
             self.add_section,
             self.get_all_sections,
             self.add_flow,
@@ -64,6 +65,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
         cli = OTAnalyticsStreamCli(
             self.run_config,
             self.event_repository,
+            self.assignment_repository,
             self.add_section,
             self.get_all_sections,
             self.add_flow,

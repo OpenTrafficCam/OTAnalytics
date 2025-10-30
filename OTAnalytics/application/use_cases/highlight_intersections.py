@@ -3,14 +3,15 @@ from datetime import datetime
 from typing import Iterable, Optional
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
-from OTAnalytics.application.analysis.traffic_counting import RoadUserAssigner
 from OTAnalytics.application.state import FlowState, SectionState, TrackViewState
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.section_repository import (
     GetAllSections,
     GetCuttingSections,
     GetSectionsById,
 )
-from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import FlowId, FlowRepository
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Track, TrackId
@@ -208,32 +209,26 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
     """Returns track ids that are assigned to the currently selected flows.
 
     Args:
-        assigner (RoadUserAssigner): to assign tracks to flows.
-        event_repository (EventRepository): the event repository.
-        flow_repository (FlowRepository): the track repository.
+        get_assignments (GetRoadUserAssignments):
+            use case to get (or create initially) all RoadUserAssignments.
         flow_state (FlowState): the currently selected flows.
     """
 
     def __init__(
         self,
-        assigner: RoadUserAssigner,
-        event_repository: EventRepository,
-        flow_repository: FlowRepository,
+        get_assignments: GetRoadUserAssignments,
         flow_state: FlowState,
         track_id_set_factory: TrackIdSetFactory,
     ) -> None:
-        self._assigner = assigner
-        self._event_repository = event_repository
-        self._flow_repository = flow_repository
+        self._get_assignments = get_assignments
         self._flow_state = flow_state
         self._factory = track_id_set_factory
 
     def get_ids(self) -> TrackIdSet:
-        events = self._event_repository.get_all()
         # All flows must be passed to assigner to ensure that a track potentially
         # belonging to several flows is assigned to the correct one.
-        all_flows = self._flow_repository.get_all()
-        assignments = self._assigner.assign(events, all_flows).as_list()
+        # This happens in the CreateRoadUserAssignments use case in get_assignments.
+        assignments = self._get_assignments.get_as_list()
 
         ids = set()
         for assignment in assignments:
@@ -247,29 +242,25 @@ class TracksAssignedToAllFlows(TrackIdProvider):
     """Returns track ids that are assigned to all flows.
 
     Args:
-        assigner (RoadUserAssigner): to assign tracks to flows.
-        event_repository (EventRepository): the event repository.
+        get_assignments (GetRoadUserAssignments):
+            use case to get (or create initially) all RoadUserAssignments.
         flow_repository (FlowRepository): the track repository.
     """
 
     def __init__(
         self,
-        assigner: RoadUserAssigner,
-        event_repository: EventRepository,
+        get_assignments: GetRoadUserAssignments,
         flow_repository: FlowRepository,
         track_id_set_factory: TrackIdSetFactory,
     ) -> None:
-        self._assigner = assigner
-        self._event_repository = event_repository
+        self._get_assignments = get_assignments
         self._flow_repository = flow_repository
         self._factory = track_id_set_factory
 
     def get_ids(self) -> TrackIdSet:
         all_flow_ids = [flow.id for flow in self._flow_repository.get_all()]
         return TracksAssignedToGivenFlows(
-            self._assigner,
-            self._event_repository,
-            self._flow_repository,
+            self._get_assignments,
             all_flow_ids,
             self._factory,
         ).get_ids()
@@ -279,32 +270,26 @@ class TracksAssignedToGivenFlows(TrackIdProvider):
     """Returns track ids that are assigned to the given flows.
 
     Args:
-        assigner (RoadUserAssigner): to assign tracks to flows.
-        event_repository (EventRepository): the event repository.
-        flow_repository (FlowRepository): the track repository.
+        get_assignments (GetRoadUserAssignments):
+            use case to get (or create initially) all RoadUserAssignments.
         flow_ids (list[FlowId]): the flows to identify assigned tracks for.
     """
 
     def __init__(
         self,
-        assigner: RoadUserAssigner,
-        event_repository: EventRepository,
-        flow_repository: FlowRepository,
+        get_assignments: GetRoadUserAssignments,
         flow_ids: list[FlowId],
         track_id_set_factory: TrackIdSetFactory,
     ) -> None:
-        self._assigner = assigner
-        self._event_repository = event_repository
-        self._flow_repository = flow_repository
+        self._get_assignments = get_assignments
         self._flows = list(flow_ids)
         self._factory = track_id_set_factory
 
     def get_ids(self) -> TrackIdSet:
-        events = self._event_repository.get_all()
         # All flows must be passed to assigner to ensure that a track potentially
         # belonging to several flows is assigned to the correct one.
-        all_flows = self._flow_repository.get_all()
-        assignments = self._assigner.assign(events, all_flows).as_list()
+        # This happens in the CreateRoadUserAssignments use case in get_assignments.
+        assignments = self._get_assignments.get_as_list()
 
         ids = set()
         for assignment in assignments:
