@@ -10,6 +10,9 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     TrackDataset,
     TrackGeometryDataset,
 )
+from OTAnalytics.plugin_datastore.filter_pandas_track_store import (
+    FilterByClassPandasTrackDataset,
+)
 from OTAnalytics.plugin_datastore.python_track_store import (
     FilteredPythonTrackDataset,
     PythonTrackDataset,
@@ -17,10 +20,7 @@ from OTAnalytics.plugin_datastore.python_track_store import (
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
-from OTAnalytics.plugin_datastore.track_store import (
-    FilterByClassPandasTrackDataset,
-    PandasTrackDataset,
-)
+from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 
 
 def create_mock_geometry_dataset(

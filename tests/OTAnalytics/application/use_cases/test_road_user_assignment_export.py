@@ -26,6 +26,7 @@ from OTAnalytics.application.use_cases.road_user_assignment_export import (
     RoadUserAssignmentExporterFactory,
 )
 from OTAnalytics.domain.section import Section
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSetFactory
 from OTAnalytics.domain.types import EventType
 from tests.utils.builders.road_user_assignment import create_road_user_assignment
 
@@ -107,6 +108,7 @@ class TestExportRoadUserAssignments:
         flows = Mock()
         flow_repository.get_all.return_value = flows
 
+        mock_factory = Mock(spec=TrackIdSetFactory)
         assignments = Mock(spec=RoadUserAssignments)
         assignment_list: list[RoadUserAssignment] = []
         assignments.as_list.return_value = assignment_list
@@ -115,7 +117,7 @@ class TestExportRoadUserAssignments:
         exporter = Mock(spec=RoadUserAssignmentExporter)
         exporter_factory.create.return_value = exporter
 
-        rua_repo = RoadUserAssignmentRepository()
+        rua_repo = RoadUserAssignmentRepository(mock_factory)
 
         with mock.patch.object(RoadUserAssignmentRepository, "get_all") as get_all_mock:
             get_all_mock.return_value = assignments

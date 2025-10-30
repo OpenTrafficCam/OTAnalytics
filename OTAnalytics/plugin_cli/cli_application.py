@@ -7,7 +7,7 @@ from OTAnalytics.application.use_cases.create_events import (
 )
 from OTAnalytics.application.use_cases.track_repository import AllTrackIdsProvider
 from OTAnalytics.domain.progress import ProgressbarBuilder
-from OTAnalytics.domain.track import TrackIdProvider
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     provide_available_eventlist_exporter,

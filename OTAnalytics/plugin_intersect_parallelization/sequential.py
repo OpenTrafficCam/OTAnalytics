@@ -1,6 +1,6 @@
 from typing import Callable, Iterable, Sequence
 
-from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.event import EventDataset, PythonEventDataset
 from OTAnalytics.domain.intersect import IntersectParallelizationStrategy
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
@@ -15,14 +15,14 @@ class SequentialIntersect(IntersectParallelizationStrategy):
 
     def execute(
         self,
-        intersect: Callable[[TrackDataset, Iterable[Section]], Iterable[Event]],
+        intersect: Callable[[TrackDataset, Iterable[Section]], EventDataset],
         tasks: Sequence[tuple[TrackDataset, Iterable[Section]]],
-    ) -> list[Event]:
-        events: list[Event] = []
+    ) -> EventDataset:
+        event_dataset = PythonEventDataset()
         for task in tasks:
             track_dataset, sections = task
-            events.extend(intersect(track_dataset, sections))
-        return events
+            event_dataset.extend(intersect(track_dataset, sections))
+        return event_dataset
 
     def set_num_processes(self, value: int) -> None:
         pass

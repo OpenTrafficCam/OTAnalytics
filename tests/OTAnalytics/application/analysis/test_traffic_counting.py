@@ -64,11 +64,12 @@ from OTAnalytics.application.use_cases.create_road_user_assignments import (
 from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
 from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
-from OTAnalytics.domain.event import Event, EventRepository
+from OTAnalytics.domain.event import Event, EventRepository, PythonEventDataset
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet
 from OTAnalytics.domain.types import EventType
 from tests.utils.builders.track_builder import TrackBuilder
 
@@ -82,6 +83,10 @@ def track(track_builder: TrackBuilder) -> Track:
     track_builder.append_detection()
     track_builder.append_detection()
     return track_builder.build_track()
+
+
+def mock_factory() -> Mock:
+    return Mock()
 
 
 @pytest.mark.parametrize(
@@ -334,38 +339,39 @@ class TestCaseBuilder:
 
     def build_assignment_test_cases(
         self,
+        mock_factory: Mock,
     ) -> list[tuple[list[Event], list[Flow], RoadUserAssignments]]:
         return [
-            self.__create_complex_test_case(),
-            self.__create_single_track_multiple_selection(),
-            self.__create_single_track_single_event(),
-            self.__create_tracks_without_match(),
-            self.__create_unordered_events(),
-            self.__create_same_frame_events(),
+            self.__create_complex_test_case(mock_factory),
+            self.__create_single_track_multiple_selection(mock_factory),
+            self.__create_single_track_single_event(mock_factory),
+            self.__create_tracks_without_match(mock_factory),
+            self.__create_unordered_events(mock_factory),
+            self.__create_same_frame_events(mock_factory),
         ]
 
     def __create_single_track_single_event(
-        self,
+        self, mock_factory: Mock
     ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
         events = [
             create_event(self.first_track, self.south_section_id, 0),
         ]
-        expected_result: RoadUserAssignments = RoadUserAssignments([])
+        expected_result: RoadUserAssignments = RoadUserAssignments([], mock_factory)
 
         return (events, self.flows, expected_result)
 
     def __create_tracks_without_match(
-        self,
+        self, mock_factory: Mock
     ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
         events = [
             create_event(self.first_track, self.west_section_id, 0),
             create_event(self.first_track, self.south_section_id, 1),
         ]
-        expected_result = RoadUserAssignments([])
+        expected_result = RoadUserAssignments([], mock_factory)
         return (events, self.flows, expected_result)
 
     def __create_unordered_events(
-        self,
+        self, mock_factory: Mock
     ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
         first_south = create_event(self.first_track, self.south_section_id, 1)
         first_north = create_event(self.first_track, self.north_section_id, 0)
@@ -381,13 +387,14 @@ class TestCaseBuilder:
                     self.north_to_south,
                     EventPair(first_north, first_south),
                 )
-            ]
+            ],
+            mock_factory,
         )
 
         return (events, self.flows, expected_result)
 
     def __create_single_track_multiple_selection(
-        self,
+        self, mock_factory: Mock
     ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
         first_south = create_event(self.first_track, self.south_section_id, 0)
         first_north = create_event(self.first_track, self.north_section_id, 1)
@@ -407,12 +414,13 @@ class TestCaseBuilder:
                     self.south_to_east,
                     EventPair(first_south, first_east),
                 )
-            ]
+            ],
+            mock_factory,
         )
         return (events, self.flows, expected_result)
 
     def __create_complex_test_case(
-        self,
+        self, mock_factory: Mock
     ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
         first_south = create_event(self.first_track, self.south_section_id, 0)
         second_south = create_event(self.second_track, self.south_section_id, 1)
@@ -480,12 +488,13 @@ class TestCaseBuilder:
                     self.north_to_south,
                     EventPair(sixth_north, sixth_south),
                 ),
-            ]
+            ],
+            mock_factory,
         )
         return (events, self.flows, expected_result)
 
     def __create_same_frame_events(
-        self,
+        self, mock_factory: Mock
     ) -> tuple[list[Event], list[Flow], RoadUserAssignments]:
         first_south = create_event(
             track_id=self.first_track,
@@ -511,7 +520,8 @@ class TestCaseBuilder:
                     self.south_to_north,
                     EventPair(first_south, first_north),
                 )
-            ]
+            ],
+            mock_factory,
         )
 
         return events, self.flows, expected_result
@@ -830,10 +840,10 @@ class TestCaseBuilder:
         return self.first_track.id, track_classification, candidates, expected_result
 
 
-def create_assignment_test_cases() -> (
-    list[tuple[list[Event], list[Flow], RoadUserAssignments]]
-):
-    return TestCaseBuilder().build_assignment_test_cases()
+def create_assignment_test_cases(
+    mock_factory: Mock,
+) -> list[tuple[list[Event], list[Flow], RoadUserAssignments]]:
+    return TestCaseBuilder().build_assignment_test_cases(mock_factory)
 
 
 class TestFilterBySectionEnterEvent:
@@ -847,13 +857,17 @@ class TestFilterBySectionEnterEvent:
         road_user_assigner = Mock(spec=RoadUserAssigner)
 
         decorator = FilterBySectionEnterEvent(road_user_assigner)
-        decorator.assign([enter_scene_event, section_enter_event], [flow])
-        road_user_assigner.assign.assert_called_once_with([section_enter_event], [flow])
+        decorator.assign(
+            PythonEventDataset([enter_scene_event, section_enter_event]), [flow]
+        )
+        road_user_assigner.assign.assert_called_once_with(
+            PythonEventDataset([section_enter_event]), [flow]
+        )
 
 
 class TestSimpleRoadUserAssigner:
     @pytest.mark.parametrize(
-        "events, flows, expected_result", create_assignment_test_cases()
+        "events, flows, expected_result", create_assignment_test_cases(mock_factory())
     )
     def test_run(
         self,
@@ -864,7 +878,7 @@ class TestSimpleRoadUserAssigner:
         """
         https://openproject.platomo.de/projects/otanalytics/work_packages/6321/activity
         """
-        analysis = SimpleRoadUserAssigner()
+        analysis = SimpleRoadUserAssigner(mock_factory())
         result = analysis.assign(events, flows)
 
         assert result == expected_result
@@ -894,10 +908,12 @@ class TestSimpleRoadUserAssigner:
         return flow_selection
 
     def _create_target(self, flow_selection: Mock) -> RoadUserAssigner:
-        return SimpleRoadUserAssigner(flow_selection=flow_selection)
+        return SimpleRoadUserAssigner(
+            flow_selection=flow_selection, track_id_set_factory=mock_factory()
+        )
 
     def test_default_flow_selection(self) -> None:
-        target = SimpleRoadUserAssigner()
+        target = SimpleRoadUserAssigner(mock_factory())
 
         assert isinstance(target._flow_selection, MaxDurationFlowSelection)
 
@@ -915,7 +931,9 @@ class TestRoadUserAssignment:
         mode_tagger = MagicMock(spec=Tagger)
         mode_tagger.tag = MethodType(Tagger.tag, mode_tagger)
         mode_tagger.create_tag.side_effect = [first_groupd, second_groupd]
-        assignments = RoadUserAssignments([car_assignment, bike_assignment])
+        assignments = RoadUserAssignments(
+            [car_assignment, bike_assignment], mock_factory()
+        )
 
         tagged = mode_tagger.tag(assignments)
 
@@ -925,6 +943,25 @@ class TestRoadUserAssignment:
                 second_groupd: CountableAssignments([bike_assignment]),
             }
         )
+
+
+class TestRoadUserAssignments:
+    def test_ids(self) -> None:
+        car_id = "car-id"
+        bike_id = "bike-id"
+        car_assignment = Mock(spec=RoadUserAssignment)
+        car_assignment.road_user = car_id
+        bike_assignment = Mock(spec=RoadUserAssignment)
+        bike_assignment.road_user = bike_id
+        track_id_set = Mock(spec=TrackIdSet)
+        factory = mock_factory()
+        factory.create.return_value = track_id_set
+        assignments = RoadUserAssignments([car_assignment, bike_assignment], factory)
+
+        ids = assignments.road_user_ids
+
+        assert ids == track_id_set
+        factory.create.assert_called_once_with({car_id, bike_id})
 
 
 class TestModeTagger:
@@ -1119,7 +1156,7 @@ class TestTrafficCounting:
         tagged_assignments.filter.return_value = tagged_assignments
         tagged_assignments.count.return_value = counts
 
-        rua_repo = RoadUserAssignmentRepository()
+        rua_repo = RoadUserAssignmentRepository(mock_factory())
         create_assignments = CreateRoadUserAssignments(
             GetAllFlows(flow_repository),
             GetAllEnterSectionEvents(event_repository),
@@ -1205,7 +1242,7 @@ class TestTrafficCountingFilterOptions:
         # setup assignment / flow data
         builder = TestCaseBuilder()
         setup: tuple[list[Event], list[Flow], RoadUserAssignments] = (
-            builder.build_assignment_test_cases()[0]
+            builder.build_assignment_test_cases(mock_factory())[0]
         )
         (_, flows, assignments) = setup
 
@@ -1219,7 +1256,7 @@ class TestTrafficCountingFilterOptions:
         create_assignments = Mock(spec=CreateRoadUserAssignments)
 
         # Setup actual environment
-        rua_repo = RoadUserAssignmentRepository()
+        rua_repo = RoadUserAssignmentRepository(mock_factory())
         rua_repo.add_road_user_assignments(assignments)
         tagger_factory = SimpleTaggerFactory()
         get_assignments = GetRoadUserAssignments(rua_repo, create_assignments)

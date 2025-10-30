@@ -1,10 +1,9 @@
-import itertools
 from multiprocessing import Pool
 from typing import Callable, Iterable, Sequence
 
 from OTAnalytics.application.config import DEFAULT_NUM_PROCESSES
 from OTAnalytics.application.logger import logger
-from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.event import EventDataset, PythonEventDataset
 from OTAnalytics.domain.intersect import IntersectParallelizationStrategy
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
@@ -32,19 +31,24 @@ class MultiprocessingIntersectParallelization(IntersectParallelizationStrategy):
 
     def execute(
         self,
-        intersect: Callable[[TrackDataset, Iterable[Section]], Iterable[Event]],
+        intersect: Callable[[TrackDataset, Iterable[Section]], EventDataset],
         tasks: Sequence[tuple[TrackDataset, Iterable[Section]]],
-    ) -> list[Event]:
+    ) -> EventDataset:
         logger().debug(
             f"Start intersection in parallel with {self._num_processes} processes."
         )
         if self._num_processes > 1:
             with Pool(processes=self._num_processes) as pool:
-                events = pool.starmap(intersect, tasks)
+                event_datasets = pool.starmap(intersect, tasks)
         else:
-            events = [intersect(tracks, sections) for tracks, sections in tasks]
+            event_datasets = [intersect(tracks, sections) for tracks, sections in tasks]
 
-        return self._flatten_events(events)
+        return self._combine_event_datasets(event_datasets)
 
-    def _flatten_events(self, events: Iterable[Iterable[Event]]) -> list[Event]:
-        return list(itertools.chain.from_iterable(events))
+    def _combine_event_datasets(
+        self, event_datasets: Iterable[EventDataset]
+    ) -> EventDataset:
+        combined = PythonEventDataset()
+        for dataset in event_datasets:
+            combined.extend(dataset)
+        return combined

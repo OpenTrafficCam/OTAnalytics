@@ -4,11 +4,12 @@ import pytest
 
 from OTAnalytics.application.use_cases.revert_cuts import RevertCuts
 from OTAnalytics.domain.track import TrackId
+from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 
 
 class TestRevertCuts:
     def test_revert(self, track_repository: Mock) -> None:
-        original_ids = frozenset([TrackId("1"), TrackId("2")])
+        original_ids = PythonTrackIdSet([TrackId("1"), TrackId("2")])
         target = RevertCuts(track_repository)
         target.revert(original_ids)
 

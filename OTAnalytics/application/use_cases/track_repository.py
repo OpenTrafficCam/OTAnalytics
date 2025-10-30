@@ -2,8 +2,9 @@ from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application.logger import logger
-from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider
-from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
+from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset, TrackIdSet
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import (
     RemoveMultipleTracksError,
     TrackFileRepository,
@@ -15,7 +16,7 @@ class AllTrackIdsProvider(TrackIdProvider):
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def get_ids(self) -> Iterable[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         return self._track_repository.get_all_ids()
 
 
@@ -24,8 +25,10 @@ class FilteredTrackIdProviderByTrackIdProvider(TrackIdProvider):
         self._other = other
         self._by = by
 
-    def get_ids(self) -> set[TrackId]:
-        return set(self._other.get_ids()).intersection(self._by.get_ids())
+    def get_ids(self) -> TrackIdSet:
+        other_ids = self._other.get_ids()
+        self_ids = self._by.get_ids()
+        return other_ids.intersection(self_ids)
 
 
 class GetAllTracks:
@@ -81,11 +84,11 @@ class GetAllTrackIds:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def __call__(self) -> Iterable[TrackId]:
+    def __call__(self) -> TrackIdSet:
         """Get all track ids from the track repository.
 
         Returns:
-            Iterable[TrackId]: the track ids.
+            TrackIdSet: the track ids.
         """
         return self._track_repository.get_all_ids()
 
@@ -138,16 +141,16 @@ class RemoveTracks:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def __call__(self, track_ids: Iterable[TrackId]) -> None:
+    def __call__(self, track_ids: TrackIdSet) -> None:
         """Remove tracks from track repository.
 
         Tracks that do not exist in the repository will be skipped.
 
         Args:
-            track_ids (Iterable[TrackId]): ids of tracks to be removed.
+            track_ids (TrackIdSet): ids of tracks to be removed.
         """
         try:
-            self._track_repository.remove_multiple(set(track_ids))
+            self._track_repository.remove_multiple(track_ids)
         except RemoveMultipleTracksError as cause:
             logger().info(cause)
 
@@ -217,7 +220,7 @@ class RemoveTracksByOriginalIds:
     def __init__(self, track_repository: TrackRepository) -> None:
         self._track_repository = track_repository
 
-    def remove(self, original_ids: frozenset[TrackId]) -> None:
+    def remove(self, original_ids: TrackIdSet) -> None:
         """
         Removes tracks from the track repository using their original IDs.
 

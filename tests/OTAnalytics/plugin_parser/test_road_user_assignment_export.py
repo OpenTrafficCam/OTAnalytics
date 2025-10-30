@@ -30,6 +30,7 @@ class TestRoadUserAssignmentCsvExporter:
     ) -> None:
         save_path = test_data_tmp_dir / "road_user_assignments.csv"
 
+        mock_factory = Mock()
         section_repository = Mock()
         get_all_tracks = Mock()
         builder = RoadUserAssignmentBuilder()
@@ -52,7 +53,7 @@ class TestRoadUserAssignmentCsvExporter:
         )
         exporter.export(
             RoadUserAssignments(
-                [first_road_user_assignment, second_road_user_assignment]
+                [first_road_user_assignment, second_road_user_assignment], mock_factory
             ),
             OVERWRITE,
         )

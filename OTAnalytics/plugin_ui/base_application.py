@@ -28,7 +28,6 @@ from OTAnalytics.application.datastore import (
     Datastore,
     EventListParser,
     TrackParser,
-    TrackToVideoRepository,
     VideoParser,
 )
 from OTAnalytics.application.eventlist import SceneActionDetector
@@ -177,9 +176,6 @@ from OTAnalytics.application.use_cases.track_statistics_export import (
     ExportTrackStatistics,
     TrackStatisticsExporterFactory,
 )
-from OTAnalytics.application.use_cases.track_to_video_repository import (
-    ClearAllTrackToVideos,
-)
 from OTAnalytics.application.use_cases.update_count_plots import (
     CountPlotSaver,
     CountPlotsUpdater,
@@ -196,22 +192,22 @@ from OTAnalytics.domain.flow import FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import SectionRepository
-from OTAnalytics.domain.track import TrackIdProvider
-from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSetFactory
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
-from OTAnalytics.plugin_datastore.pandas_track_dataset_factory import (
-    PandasTrackDatasetFactory,
-    TypeCheckingPandasTrackDatasetFactory,
+from OTAnalytics.plugin_datastore.filter_polars_track_dataset import (
+    FilterByClassPolarsTrackDataset,
+)
+from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSetFactory
+from OTAnalytics.plugin_datastore.polars_track_store import (
+    POLARS_TRACK_GEOMETRY_FACTORY,
+    PolarsByMaxConfidence,
+    PolarsTrackDataset,
 )
 from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
-from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
-    ShapelyTrackGeometryDataset,
-)
-from OTAnalytics.plugin_datastore.track_store import (
-    FilterByClassPandasTrackDataset,
-    PandasByMaxConfidence,
-    PandasTrackDataset,
+from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
+    PolarsTrackGeometryDataset,
 )
 from OTAnalytics.plugin_intersect.simple.cut_tracks_with_sections import (
     SimpleCutTracksIntersectingSection,
@@ -243,6 +239,7 @@ from OTAnalytics.plugin_parser.export import (
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
+from OTAnalytics.plugin_parser.feathers_parser import FeathersParser
 from OTAnalytics.plugin_parser.json_parser import parse_json
 from OTAnalytics.plugin_parser.otconfig_parser import (
     FixMissingAnalysis,
@@ -256,11 +253,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OtEventListParser,
     OtFlowParser,
     OttrkFormatFixer,
-    OttrkParser,
-    OttrkVideoParser,
     SimpleVideoParser,
 )
-from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from OTAnalytics.plugin_parser.road_user_assignment_export import (
     SimpleRoadUserAssignmentExporterFactory,
 )
@@ -463,10 +457,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     @cached_property
-    def clear_all_track_to_videos(self) -> ClearAllTrackToVideos:
-        return ClearAllTrackToVideos(self.track_to_video_repository)
-
-    @cached_property
     def clear_all_videos(self) -> ClearAllVideos:
         return ClearAllVideos(self.video_repository)
 
@@ -564,7 +554,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def simple_road_user_assigner(self) -> RoadUserAssigner:
-        return SimpleRoadUserAssigner()
+        return SimpleRoadUserAssigner(self.track_id_set_factory)
 
     @cached_property
     def file_state(self) -> FileState:
@@ -602,7 +592,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         """
         track_parser = self._create_track_parser()
         event_list_parser = self._create_event_list_parser()
-        track_video_parser = OttrkVideoParser(self.video_parser)
         return Datastore(
             self.track_repository,
             self.track_file_repository,
@@ -611,10 +600,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.flow_repository,
             self.event_repository,
             event_list_parser,
-            self.track_to_video_repository,
             self.video_repository,
             self.video_parser,
-            track_video_parser,
             self.progressbar_builder,
             self.remark_repository,
         )
@@ -622,11 +609,11 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def track_repository(self) -> TrackRepository:
         return TrackRepository(
-            FilterByClassPandasTrackDataset(
-                PandasTrackDataset.from_list(
+            FilterByClassPolarsTrackDataset(
+                PolarsTrackDataset.from_list(
                     [],
                     self.track_geometry_factory,
-                    self.pandas_by_max_confidence,
+                    self.polars_by_max_confidence,
                 ),
                 self.run_config.include_classes,
                 self.run_config.exclude_classes,
@@ -634,12 +621,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     def _create_track_parser(self) -> TrackParser:
-        detection_parser = PandasDetectionParser(
-            self.pandas_by_max_confidence,
-            self.track_geometry_factory,
-            track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
-        )
-        return OttrkParser(detection_parser)
+        return FeathersParser(self.track_geometry_factory)
 
     def _create_stream_track_parser(self) -> StreamTrackParser:
         return StreamOttrkParser(
@@ -649,10 +631,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             ),
             format_fixer=OttrkFormatFixer(),
             progressbar=TqdmBuilder(),
-            track_dataset_factory=lambda tracks: PandasTrackDataset.from_list(
+            track_dataset_factory=lambda tracks: PolarsTrackDataset.from_list(
                 tracks,
                 self.track_geometry_factory,
-                self.pandas_by_max_confidence,
+                self.polars_by_max_confidence,
             ),
             chunk_size=self.run_config.cli_chunk_size,
         )
@@ -701,6 +683,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.color_palette_provider,
             self.progressbar_builder,
             self.track_image_factory,
+            self.track_id_set_factory,
         )
 
     @cached_property
@@ -817,7 +800,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.clear_all_flows,
             self.clear_all_intersections,
             self.clear_all_sections,
-            self.clear_all_track_to_videos,
             self.clear_all_tracks,
             self.clear_all_videos,
         )
@@ -848,22 +830,20 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return SimpleCutTracksIntersectingSection(
             self.get_sections_by_id,
             self.get_all_tracks,
+            self.clear_all_tracks,
             self.add_all_tracks,
-            self.remove_tracks,
             self.remove_section,
         )
 
     @cached_property
     def load_track_files(self) -> LoadTrackFiles:
         track_parser = self._create_track_parser()
-        track_video_parser = OttrkVideoParser(self.video_parser)
         return LoadTrackFiles(
             track_parser,
-            track_video_parser,
             self.track_repository,
             self.track_file_repository,
             self.video_repository,
-            self.track_to_video_repository,
+            self.video_parser,
             self.progressbar_builder,
             self.tracks_metadata,
             self.videos_metadata,
@@ -880,10 +860,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def video_repository(self) -> VideoRepository:
         return VideoRepository()
-
-    @cached_property
-    def track_to_video_repository(self) -> TrackToVideoRepository:
-        return TrackToVideoRepository()
 
     @cached_property
     def preload_input_files(self) -> PreloadInputFiles:
@@ -912,7 +888,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def assignment_repository(self) -> RoadUserAssignmentRepository:
-        return RoadUserAssignmentRepository()
+        return RoadUserAssignmentRepository(self.track_id_set_factory)
 
     @cached_property
     def get_all_enter_section_events(self) -> GetAllEnterSectionEvents:
@@ -975,7 +951,11 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.all_filtered_track_ids,
         )
         tracks_assigned_to_all_flows = FilteredTrackIdProviderByTrackIdProvider(
-            TracksAssignedToAllFlows(self.get_all_assignments, self.flow_repository),
+            TracksAssignedToAllFlows(
+                self.get_all_assignments,
+                self.flow_repository,
+                self.track_id_set_factory,
+            ),
             self.all_filtered_track_ids,
         )
         track_ids_inside_cutting_sections = FilteredTrackIdProviderByTrackIdProvider(
@@ -1049,18 +1029,16 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return ResourceManager()
 
     @cached_property
-    def pandas_track_dataset_factory(self) -> PandasTrackDatasetFactory:
-        return TypeCheckingPandasTrackDatasetFactory(
-            self.track_geometry_factory, self.pandas_by_max_confidence
-        )
+    def polars_by_max_confidence(self) -> PolarsByMaxConfidence:
+        return PolarsByMaxConfidence()
 
     @cached_property
-    def pandas_by_max_confidence(self) -> PandasByMaxConfidence:
-        return PandasByMaxConfidence()
+    def track_geometry_factory(self) -> POLARS_TRACK_GEOMETRY_FACTORY:
+        return PolarsTrackGeometryDataset.from_track_dataset
 
     @cached_property
-    def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
-        return ShapelyTrackGeometryDataset.from_track_dataset
+    def track_id_set_factory(self) -> TrackIdSetFactory:
+        return PolarsTrackIdSetFactory()
 
     @cached_property
     def remove_events_by_road_user_id(self) -> RemoveEventsByRoadUserId:

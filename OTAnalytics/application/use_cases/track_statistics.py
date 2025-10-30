@@ -7,7 +7,7 @@ from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectio
 from OTAnalytics.application.use_cases.number_of_tracks_to_be_validated import (
     NumberOfTracksToBeValidated,
 )
-from OTAnalytics.domain.track import TrackIdProvider
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 
 
 @dataclass
@@ -89,10 +89,8 @@ class CalculateTrackStatistics:
         self._get_all_enter_section_events = get_all_enter_section_events
 
     def get_statistics(self) -> TrackStatistics:
-        ids_all = set(self._all_tracks.get_ids())
-        ids_inside_cutting_sections = set(
-            self._track_ids_inside_cutting_sections.get_ids()
-        )
+        ids_all = self._all_tracks.get_ids()
+        ids_inside_cutting_sections = self._track_ids_inside_cutting_sections.get_ids()
 
         track_count_inside = len(ids_inside_cutting_sections)
         track_count = len(ids_all)

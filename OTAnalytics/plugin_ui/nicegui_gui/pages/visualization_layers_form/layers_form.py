@@ -7,7 +7,6 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.logger import logger
 from OTAnalytics.application.plotting import LayerGroup
 from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
@@ -54,7 +53,6 @@ class LayersForm(AbstractFrameTrackPlotting):
         return self
 
     def _create_events(self) -> None:
-        logger().info("Creating events")
         self._viewmodel.create_events()
 
     def update(self, name: str, start_date: Optional[datetime]) -> None:

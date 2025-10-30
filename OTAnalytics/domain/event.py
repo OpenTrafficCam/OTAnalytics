@@ -726,3 +726,130 @@ def after_filter(date: datetime) -> Callable[[Event], bool]:
 
 def before_filter(date: datetime) -> Callable[[Event], bool]:
     return lambda actual: actual.occurrence <= date
+
+
+class EventDataset(ABC):
+    """A collection of events."""
+
+    @abstractmethod
+    def __iter__(self) -> Iterator[Event]:
+        """Iterate over the events in the dataset."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __len__(self) -> int:
+        """Return the number of events in the dataset."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __add__(self, other: "EventDataset") -> "EventDataset":
+        """Add two EventDatasets together to create a new combined dataset.
+
+        Args:
+            other: Another EventDataset to combine with this one.
+
+        Returns:
+            A new EventDataset containing events from both datasets.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def __eq__(self, other: object) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def extend(self, other: "EventDataset") -> None:
+        """Extend this dataset with events from another dataset.
+
+        Args:
+            other: Another EventDataset whose events will be added to this dataset.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def append(self, event: Event) -> None:
+        """Add a single event to the dataset.
+
+        Args:
+            event: The event to add to the dataset.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_empty(self) -> bool:
+        """Check if the dataset contains no events.
+
+        Returns:
+            True if the dataset is empty, False otherwise.
+        """
+        raise NotImplementedError
+
+
+class PythonEventDataset(EventDataset):
+    """A dataset wrapper for a collection of events.
+
+    This class wraps a list of events and provides methods for combining
+    multiple datasets and accessing the events.
+    """
+
+    def __init__(self, events: list[Event] | None = None) -> None:
+        """Initialize the EventDataset.
+
+        Args:
+            events: Optional list of events. If None, an empty list is created.
+        """
+        self._events = events if events is not None else []
+
+    def __iter__(self) -> Iterator[Event]:
+        """Iterate over the events in the dataset."""
+        return iter(self._events)
+
+    def __len__(self) -> int:
+        """Return the number of events in the dataset."""
+        return len(self._events)
+
+    def __add__(self, other: "EventDataset") -> "EventDataset":
+        """Add two EventDatasets together to create a new combined dataset.
+
+        Args:
+            other: Another EventDataset to combine with this one.
+
+        Returns:
+            A new EventDataset containing events from both datasets.
+        """
+        if not isinstance(other, PythonEventDataset):
+            raise TypeError()
+        return PythonEventDataset(self._events + other._events)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, PythonEventDataset):
+            return False
+        return self._events == other._events
+
+    def extend(self, other: "EventDataset") -> None:
+        """Extend this dataset with events from another dataset.
+
+        Args:
+            other: Another EventDataset whose events will be added to this dataset.
+        """
+        if isinstance(other, PythonEventDataset):
+            self._events.extend(other._events)
+        else:
+            # Support extending with a list of events for compatibility
+            self._events.extend(other)
+
+    def append(self, event: Event) -> None:
+        """Add a single event to the dataset.
+
+        Args:
+            event: The event to add to the dataset.
+        """
+        self._events.append(event)
+
+    def is_empty(self) -> bool:
+        """Check if the dataset contains no events.
+
+        Returns:
+            True if the dataset is empty, False otherwise.
+        """
+        return len(self._events) == 0

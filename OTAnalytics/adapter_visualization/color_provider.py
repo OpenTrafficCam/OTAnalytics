@@ -1,5 +1,7 @@
 import random
 
+from matplotlib import colors as mcolors
+
 from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.tls8plus1_classes import Tls8plus1Classes
 
@@ -44,11 +46,14 @@ class ColorPaletteProvider:
     def __init__(self, default_palette: dict[str, str]) -> None:
         self._default_palette = default_palette
         self._palette: dict[str, str] = {}
+        self._numeric: dict[str, tuple[int, int, int]] = {}
 
     def update(self, classifications: frozenset[str]) -> None:
         for classification in classifications:
             if classification in self._default_palette.keys():
                 self._palette[classification] = self._default_palette[classification]
+                color = mcolors.CSS4_COLORS.get(self._default_palette[classification])
+                self._numeric[classification] = hex_to_rgb_tuple(str(color))
             else:
                 self._palette[classification] = self._generate_random_color()
 
@@ -61,3 +66,27 @@ class ColorPaletteProvider:
 
     def get(self) -> dict[str, str]:
         return self._palette
+
+    def get_numeric(self) -> dict[str, tuple[int, int, int]]:
+        return self._numeric
+
+
+def hex_to_rgb_tuple(hex_color: str) -> tuple[int, int, int]:
+    """
+    Converts a hex color string to an RGB tuple of integers.
+
+    Args:
+        hex_color (str): Hex color string (e.g., "#FF5733" or "FF5733")
+
+    Returns:
+        tuple: RGB tuple (r, g, b) with values from 0-255
+    """
+    # Remove the '#' at the beginning, if present
+    hex_color = hex_color.lstrip("#")
+
+    # Convert each two-digit hex value to int
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+
+    return r, g, b

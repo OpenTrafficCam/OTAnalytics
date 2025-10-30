@@ -14,15 +14,21 @@ from OTAnalytics.application.use_cases.section_repository import (
 )
 from OTAnalytics.domain.flow import FlowId, FlowRepository
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track import Track, TrackId, TrackIdProvider
+from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    TrackIdSet,
+    TrackIdSetFactory,
+    concat,
+)
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.domain.track_repository import TrackRepository
 
 
 class IntersectionRepository(ABC):
-    def store(self, intersections: dict[SectionId, set[TrackId]]) -> None:
+    def store(self, intersections: dict[SectionId, TrackIdSet]) -> None:
         raise NotImplementedError
 
-    def get(self, sections: set[SectionId]) -> dict[SectionId, set[TrackId]]:
+    def get(self, sections: set[SectionId]) -> dict[SectionId, TrackIdSet]:
         raise NotImplementedError
 
     def clear(self) -> None:
@@ -54,7 +60,7 @@ class TracksIntersectingSelectedSections(TrackIdProvider):
         self._get_section_by_id = get_section_by_id
         self._intersection_repository = intersection_repository
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         currently_selected_sections = self._section_state.selected_sections.get()
         return TracksIntersectingGivenSections(
             set(currently_selected_sections),
@@ -88,7 +94,7 @@ class TracksIntersectingAllNonCuttingSections(TrackIdProvider):
         self._get_section_by_id = get_sections_by_id
         self._intersection_repository = intersection_repository
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         ids_non_cutting_sections = {
             section.id
             for section in self._get_all_sections()
@@ -124,7 +130,7 @@ class TracksIntersectingAllSections(TrackIdProvider):
         self._get_section_by_id = get_section_by_id
         self._intersection_repository = intersection_repository
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         ids_all_sections = {section.id for section in self._get_all_sections()}
         return TracksIntersectingGivenSections(
             ids_all_sections,
@@ -156,22 +162,25 @@ class TracksIntersectingGivenSections(TrackIdProvider):
         self._get_section_by_id = get_section_by_id
         self._intersection_repository = intersection_repository
 
-    def get_ids(self) -> set[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         existing_intersections = self._intersection_repository.get(self._section_ids)
         section_ids_to_process = self._section_ids - existing_intersections.keys()
         new_intersections = self._calculate_new_intersections(section_ids_to_process)
-        return set.union(new_intersections, *existing_intersections.values())
+        result = new_intersections
+        for track_id_set in existing_intersections.values():
+            result = result.union(track_id_set)
+        return result
 
     def _calculate_new_intersections(
         self, section_ids_to_process: set[SectionId]
-    ) -> set[TrackId]:
-        new_intersections: set[TrackId] = set()
+    ) -> TrackIdSet:
+        new_intersections: list[TrackIdSet] = []
         if section_ids_to_process:
             sections = self._get_section_by_id(section_ids_to_process)
             intersections = self._tracks_intersecting_sections(sections)
             self._intersection_repository.store(intersections)
-            new_intersections.update(*intersections.values())
-        return new_intersections
+            new_intersections.extend(intersections.values())
+        return concat(new_intersections)
 
 
 class TracksNotIntersectingSelection(TrackIdProvider):
@@ -190,10 +199,10 @@ class TracksNotIntersectingSelection(TrackIdProvider):
         self._track_id_provider = track_id_provider
         self._track_repository = track_repository
 
-    def get_ids(self) -> Iterable[TrackId]:
-        all_track_ids = {track.id for track in self._track_repository.get_all()}
-        assigned_tracks = set(self._track_id_provider.get_ids())
-        return all_track_ids - assigned_tracks
+    def get_ids(self) -> TrackIdSet:
+        all_track_ids = self._track_repository.get_all_ids()
+        assigned_tracks = self._track_id_provider.get_ids()
+        return all_track_ids.difference(assigned_tracks)
 
 
 class TracksAssignedToSelectedFlows(TrackIdProvider):
@@ -209,11 +218,13 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
         self,
         get_assignments: GetRoadUserAssignments,
         flow_state: FlowState,
+        track_id_set_factory: TrackIdSetFactory,
     ) -> None:
         self._get_assignments = get_assignments
         self._flow_state = flow_state
+        self._factory = track_id_set_factory
 
-    def get_ids(self) -> Iterable[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         # All flows must be passed to assigner to ensure that a track potentially
         # belonging to several flows is assigned to the correct one.
         # This happens in the CreateRoadUserAssignments use case in get_assignments.
@@ -222,9 +233,9 @@ class TracksAssignedToSelectedFlows(TrackIdProvider):
         ids = set()
         for assignment in assignments:
             if assignment.assignment.id in self._flow_state.selected_flows.get():
-                ids.add(TrackId(assignment.road_user))
+                ids.add(assignment.road_user)
         print(f"Tracks assigned to selected flow(s): {len(ids)}")
-        return ids
+        return self._factory.create(ids)
 
 
 class TracksAssignedToAllFlows(TrackIdProvider):
@@ -240,13 +251,19 @@ class TracksAssignedToAllFlows(TrackIdProvider):
         self,
         get_assignments: GetRoadUserAssignments,
         flow_repository: FlowRepository,
+        track_id_set_factory: TrackIdSetFactory,
     ) -> None:
         self._get_assignments = get_assignments
         self._flow_repository = flow_repository
+        self._factory = track_id_set_factory
 
-    def get_ids(self) -> Iterable[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         all_flow_ids = [flow.id for flow in self._flow_repository.get_all()]
-        return TracksAssignedToGivenFlows(self._get_assignments, all_flow_ids).get_ids()
+        return TracksAssignedToGivenFlows(
+            self._get_assignments,
+            all_flow_ids,
+            self._factory,
+        ).get_ids()
 
 
 class TracksAssignedToGivenFlows(TrackIdProvider):
@@ -262,11 +279,13 @@ class TracksAssignedToGivenFlows(TrackIdProvider):
         self,
         get_assignments: GetRoadUserAssignments,
         flow_ids: list[FlowId],
+        track_id_set_factory: TrackIdSetFactory,
     ) -> None:
         self._get_assignments = get_assignments
         self._flows = list(flow_ids)
+        self._factory = track_id_set_factory
 
-    def get_ids(self) -> Iterable[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         # All flows must be passed to assigner to ensure that a track potentially
         # belonging to several flows is assigned to the correct one.
         # This happens in the CreateRoadUserAssignments use case in get_assignments.
@@ -275,8 +294,8 @@ class TracksAssignedToGivenFlows(TrackIdProvider):
         ids = set()
         for assignment in assignments:
             if assignment.assignment.id in self._flows:
-                ids.add(TrackId(assignment.road_user))
-        return ids
+                ids.add(assignment.road_user)
+        return self._factory.create(ids)
 
 
 class TracksOverlapOccurrenceWindow(TrackIdProvider):
@@ -284,6 +303,7 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
         self,
         track_repository: TrackRepository,
         track_view_state: TrackViewState,
+        track_id_set_factory: TrackIdSetFactory,
         other: Optional[TrackIdProvider] = None,
     ) -> None:
         """Returns track ids that overlap with the current date range filter.
@@ -298,16 +318,17 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
         self._other = other
         self._track_repository = track_repository
         self._track_view_state = track_view_state
+        self._factory = track_id_set_factory
 
-    def get_ids(self) -> Iterable[TrackId]:
+    def get_ids(self) -> TrackIdSet:
         if self._other:
-            tracks = self._get_other_track_ids()
+            tracks = self._get_other_track()
         else:
             tracks = self._track_repository.get_all()
 
-        return self._filter(tracks)
+        return self._factory.create(self._filter(tracks))
 
-    def _get_other_track_ids(self) -> Iterable[Track]:
+    def _get_other_track(self) -> Iterable[Track]:
         if self._other:
             track_ids = self._other.get_ids()
             tracks: list[Track] = []
@@ -317,14 +338,14 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
             return tracks
         return []
 
-    def _filter(self, tracks: Iterable[Track]) -> Iterable[TrackId]:
+    def _filter(self, tracks: Iterable[Track]) -> set[TrackId]:
         date_range = self._track_view_state.filter_element.get().date_range
         start_date_filter = date_range.start_date
         end_date_filter = date_range.end_date
 
         match (start_date_filter, end_date_filter):
             case (datetime() as start_date_filter, datetime() as end_date_filter):
-                return [
+                return {
                     track.id
                     for track in tracks
                     if self._has_overlap(
@@ -333,9 +354,9 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
                         track.start,
                         track.end,
                     )
-                ]
+                }
             case (None, datetime() as end_date_filter):
-                return [
+                return {
                     track.id
                     for track in tracks
                     if self._has_overlap(
@@ -344,9 +365,9 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
                         track.start,
                         track.end,
                     )
-                ]
+                }
             case (datetime() as start_date_filter, None):
-                return [
+                return {
                     track.id
                     for track in tracks
                     if self._has_overlap(
@@ -355,9 +376,9 @@ class TracksOverlapOccurrenceWindow(TrackIdProvider):
                         track.start,
                         track.end,
                     )
-                ]
+                }
             case _:
-                return [track.id for track in tracks]
+                return {track.id for track in tracks}
 
     @staticmethod
     def _has_overlap(

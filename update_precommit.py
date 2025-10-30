@@ -134,6 +134,8 @@ def parse_multiple_requirements_file(
 
 def parse_requirements_file(requirements_file: Path) -> set[AdditionalMypyDependency]:
     """Parse requirements.txt and extract package names using regex."""
+    if not requirements_file.exists():
+        return set()
     with open(requirements_file, "r") as file:
         lines = file.readlines()
 

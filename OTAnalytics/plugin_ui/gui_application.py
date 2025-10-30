@@ -13,7 +13,7 @@ from OTAnalytics.application.use_cases.create_events import (
     SectionProvider,
     SimpleCreateIntersectionEvents,
 )
-from OTAnalytics.domain.track import TrackIdProvider
+from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.plugin_filter.pandas_track_id import PandasTrackIdProvider
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,

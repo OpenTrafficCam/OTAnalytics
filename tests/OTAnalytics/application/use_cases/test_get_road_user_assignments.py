@@ -14,6 +14,7 @@ from OTAnalytics.application.use_cases.create_road_user_assignments import (
 )
 from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
 from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSetFactory
 from OTAnalytics.domain.types import EventType
 
 events = [Mock(), Mock()]
@@ -58,8 +59,8 @@ class TestGetRoadUserAssignments:
         road_user_assigner: Mock,
         assignments: Mock,
     ) -> None:
-
-        rua_repo = RoadUserAssignmentRepository()
+        mock_factory = Mock(spec=TrackIdSetFactory)
+        rua_repo = RoadUserAssignmentRepository(mock_factory)
         create_events = Mock(spec=CreateEvents)
 
         create_assignments = CreateRoadUserAssignments(

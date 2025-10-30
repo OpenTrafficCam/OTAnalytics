@@ -2,15 +2,11 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Iterable, Mapping
 
-from OTAnalytics.domain.event import Event
+from OTAnalytics.domain.event import EventDataset
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId
-from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet
 from OTAnalytics.domain.types import EventType
-
-
-class IntersectionError(Exception):
-    pass
 
 
 class RunIntersect(ABC):
@@ -20,13 +16,13 @@ class RunIntersect(ABC):
     """
 
     @abstractmethod
-    def __call__(self, sections: Iterable[Section]) -> list[Event]:
+    def __call__(self, sections: Iterable[Section]) -> EventDataset:
         raise NotImplementedError
 
 
 class TracksIntersectingSections(ABC):
     @abstractmethod
-    def __call__(self, sections: Iterable[Section]) -> dict[SectionId, set[TrackId]]:
+    def __call__(self, sections: Iterable[Section]) -> dict[SectionId, TrackIdSet]:
         raise NotImplementedError
 
 

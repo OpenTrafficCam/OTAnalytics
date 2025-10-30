@@ -8,6 +8,7 @@ from OTAnalytics.application.logger import logger as logging
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.observer import OBSERVER, Subject
+from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet, TrackIdSetFactory
 
 logger = logging()
 
@@ -85,10 +86,12 @@ class RoadUserAssignmentRepository:
 
     def __init__(
         self,
+        track_id_set_factory: TrackIdSetFactory,
         subject: Subject[RoadUserAssignmentRepositoryEvent] = Subject[
             RoadUserAssignmentRepositoryEvent
         ](),
     ):
+        self._track_id_set_factory = track_id_set_factory
         self._subject = subject
         self._assignments: dict[str, dict[FlowId, RoadUserAssignment]] = defaultdict(
             dict
@@ -157,7 +160,7 @@ class RoadUserAssignmentRepository:
         Returns:
             A RoadUserAssignments object containing all assignments in the repository.
         """
-        return RoadUserAssignments(self.get_all_as_list())
+        return RoadUserAssignments(self.get_all_as_list(), self._track_id_set_factory)
 
     def get_all_as_list(
         self,
@@ -235,22 +238,23 @@ class RoadUserAssignments:
     """
 
     @property
-    def road_user_ids(self) -> list[str]:
+    def road_user_ids(self) -> TrackIdSet:
         """Returns a sorted list of all road user ids within this group of assignments.
 
         Returns:
             list[str]: the road user ids.
         """
-        return sorted([assignment.road_user for assignment in self._assignments])
+        return self._track_id_set_factory.create(
+            {assignment.road_user for assignment in self._assignments}
+        )
 
-    def __init__(self, assignments: list[RoadUserAssignment]) -> None:
-        """
-        Initialize a new RoadUserAssignments object.
-
-        Args:
-            assignments: A list of RoadUserAssignment objects to store.
-        """
+    def __init__(
+        self,
+        assignments: list[RoadUserAssignment],
+        track_id_set_factory: TrackIdSetFactory,
+    ) -> None:
         self._assignments = assignments.copy()
+        self._track_id_set_factory = track_id_set_factory
 
     def as_list(self) -> list[RoadUserAssignment]:
         """
@@ -262,38 +266,14 @@ class RoadUserAssignments:
         return self._assignments.copy()
 
     def __hash__(self) -> int:
-        """
-        Calculate the hash value for this object.
-
-        Returns:
-            The hash value based on the contained assignments.
-        """
         return hash(self._assignments)
 
     def __eq__(self, other: object) -> bool:
-        """
-        Check if this object is equal to another object.
-
-        Two RoadUserAssignments objects are considered equal if they contain
-        the same assignments.
-
-        Args:
-            other: The object to compare with.
-
-        Returns:
-            True if the objects are equal, False otherwise.
-        """
         if isinstance(other, RoadUserAssignments):
             return self._assignments == other._assignments
         return False
 
     def __repr__(self) -> str:
-        """
-        Get a string representation of this object.
-
-        Returns:
-            A string representation including the class name and the assignments.
-        """
         return RoadUserAssignments.__name__ + repr(self._assignments)
 
 

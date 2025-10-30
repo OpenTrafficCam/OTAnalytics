@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Callable, Iterable, Optional, Sequence
+from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
 
 from more_itertools import batched
 
@@ -36,12 +36,17 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     START_X,
     START_Y,
     TRACK_GEOMETRY_FACTORY,
-    IntersectionPoint,
+    EmptyTrackIdSet,
+    IntersectionPointsDataset,
+    PythonIntersectionPointsDataset,
     TrackDataset,
     TrackDoesNotExistError,
     TrackGeometryDataset,
+    TrackIdSet,
     TrackSegmentDataset,
+    contains_true,
 )
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_intersect.shapely.mapping import ShapelyMapper
 
 
@@ -384,8 +389,8 @@ class PythonTrackDataset(TrackDataset):
     """Pure Python implementation of a TrackDataset."""
 
     @property
-    def track_ids(self) -> frozenset[TrackId]:
-        return frozenset(self._tracks.keys())
+    def track_ids(self) -> TrackIdSet:
+        return PythonTrackIdSet(self._tracks.keys())
 
     @property
     def first_occurrence(self) -> datetime | None:
@@ -509,12 +514,14 @@ class PythonTrackDataset(TrackDataset):
     def remove(self, track_id: TrackId) -> "PythonTrackDataset":
         new_tracks = self._tracks.copy()
         del new_tracks[track_id]
-        updated_geometry_datasets = self._remove_from_geometry_datasets({track_id})
+        updated_geometry_datasets = self._remove_from_geometry_datasets(
+            PythonTrackIdSet({track_id})
+        )
         return PythonTrackDataset(
             self.track_geometry_factory, new_tracks, updated_geometry_datasets
         )
 
-    def remove_multiple(self, track_ids: set[TrackId]) -> "PythonTrackDataset":
+    def remove_multiple(self, track_ids: TrackIdSet) -> "PythonTrackDataset":
         new_tracks = self._tracks.copy()
         for track_id in track_ids:
             del new_tracks[track_id]
@@ -524,7 +531,7 @@ class PythonTrackDataset(TrackDataset):
         )
 
     def _remove_from_geometry_datasets(
-        self, track_ids: Iterable[TrackId]
+        self, track_ids: TrackIdSet
     ) -> dict[RelativeOffsetCoordinate, TrackGeometryDataset]:
         updated = {}
         for offset, geometry_dataset in self._geometry_datasets.items():
@@ -539,6 +546,8 @@ class PythonTrackDataset(TrackDataset):
 
     def split(self, batches: int) -> Sequence["PythonTrackDataset"]:
         dataset_size = len(self._tracks)
+        if dataset_size == 0:
+            return []
         batch_size = ceil(dataset_size / batches)
 
         dataset_batches = []
@@ -579,9 +588,10 @@ class PythonTrackDataset(TrackDataset):
 
     def intersecting_tracks(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> set[TrackId]:
+    ) -> TrackIdSet:
         geometry_dataset = self._get_geometry_dataset_for(offset)
-        return geometry_dataset.intersecting_tracks(sections)
+        intersecting_ids = geometry_dataset.intersecting_tracks(sections)
+        return PythonTrackIdSet(intersecting_ids)
 
     def _get_geometry_dataset_for(
         self, offset: RelativeOffsetCoordinate
@@ -606,15 +616,31 @@ class PythonTrackDataset(TrackDataset):
 
     def intersection_points(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
-    ) -> dict[TrackId, list[tuple[SectionId, IntersectionPoint]]]:
+    ) -> IntersectionPointsDataset:
         geometry_dataset = self._get_geometry_dataset_for(offset)
-        return geometry_dataset.intersection_points(sections)
+        intersection_data = geometry_dataset.intersection_points(sections)
+        return PythonIntersectionPointsDataset(intersection_data, self)
 
     def contained_by_sections(
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> dict[TrackId, list[tuple[SectionId, list[bool]]]]:
         geometry_dataset = self._get_geometry_dataset_for(offset)
         return geometry_dataset.contained_by_sections(sections)
+
+    def ids_inside(self, sections: list[Section]) -> TrackIdSet:
+        results: set[TrackId] = set()
+        for cutting_section in sections:
+            offset = cutting_section.get_offset(EventType.SECTION_ENTER)
+            results.update(
+                set(
+                    track_id
+                    for track_id, section_data in (
+                        self.contained_by_sections([cutting_section], offset).items()
+                    )
+                    if contains_true(section_data)
+                )
+            )
+        return PythonTrackIdSet(results)
 
     def calculate_geometries_for(
         self, offsets: Iterable[RelativeOffsetCoordinate]
@@ -647,10 +673,10 @@ class PythonTrackDataset(TrackDataset):
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["PythonTrackDataset", set[TrackId]]:
+    ) -> tuple["PythonTrackDataset", TrackIdSet]:
         if len(self) == 0:
             logger().info("No tracks to cut")
-            return self, set()
+            return self, EmptyTrackIdSet()
         shapely_mapper = ShapelyMapper()
 
         intersecting_track_ids = self.intersecting_tracks([section], offset)
@@ -667,22 +693,22 @@ class PythonTrackDataset(TrackDataset):
             intersecting_track_ids,
         )
 
-    def get_max_confidences_for(self, track_ids: list[str]) -> dict[str, float]:
+    def get_max_confidences_for(self, track_ids: TrackIdSet) -> dict[str, float]:
         result: dict[str, float] = {}
         for track_id in track_ids:
-            _track = self.get_for(TrackId(track_id))
+            _track = self.get_for(track_id)
             if not _track:
                 raise TrackDoesNotExistError(f"Track {track_id} not found.")
 
             max_confidence = max(
                 [detection.confidence for detection in _track.detections]
             )
-            result[track_id] = max_confidence
+            result[track_id.id] = max_confidence
         return result
 
     def revert_cuts_for(
-        self, original_track_ids: frozenset[TrackId]
-    ) -> tuple["PythonTrackDataset", frozenset[TrackId], frozenset[TrackId]]:
+        self, original_track_ids: TrackIdSet
+    ) -> tuple["PythonTrackDataset", TrackIdSet, TrackIdSet]:
         # NOTE: This implementation prioritizes maintainability over performance.
         # If performance becomes a concern in high-volume operations, consider
         # implementing a mapping cache of original track IDs to their derived segments.
@@ -698,13 +724,13 @@ class PythonTrackDataset(TrackDataset):
         for original_id, track_part in tracks_to_revert.items():
             reverted_tracks.append(self.__revert_cut_for(original_id, track_part))
 
-        result = self.remove_multiple(track_ids_to_remove)
-        reverted_track_ids = frozenset((track.id for track in reverted_tracks))
+        result = self.remove_multiple(PythonTrackIdSet(track_ids_to_remove))
+        reverted_track_ids = PythonTrackIdSet((track.id for track in reverted_tracks))
 
         return (
             result.add_all(reverted_tracks),
             reverted_track_ids,
-            frozenset(track_ids_to_remove),
+            PythonTrackIdSet(track_ids_to_remove),
         )
 
     def _create_original_track(
@@ -748,10 +774,10 @@ class PythonTrackDataset(TrackDataset):
         return self._create_original_track(original_id, detections)
 
     def remove_by_original_ids(
-        self, original_ids: frozenset[TrackId]
-    ) -> tuple["PythonTrackDataset", frozenset[TrackId]]:
+        self, original_ids: TrackIdSet
+    ) -> tuple["PythonTrackDataset", TrackIdSet]:
         updated_dataset = self._tracks.copy()
-        actual_ids = frozenset(
+        actual_ids = PythonTrackIdSet(
             (
                 track.id
                 for track in updated_dataset.values()
@@ -839,7 +865,7 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
                 tracks_to_remove.append(_track.id)
 
         updated_geometry_datasets = self._other._remove_from_geometry_datasets(
-            tracks_to_remove
+            PythonTrackIdSet(tracks_to_remove)
         )
         return PythonTrackDataset(
             self._other.track_geometry_factory,
@@ -859,7 +885,7 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
     def remove(self, track_id: TrackId) -> "TrackDataset":
         return self.wrap(self._other.remove(track_id))
 
-    def remove_multiple(self, track_ids: set[TrackId]) -> "TrackDataset":
+    def remove_multiple(self, track_ids: TrackIdSet) -> "TrackDataset":
         return self.wrap(self._other.remove_multiple(track_ids))
 
     def clear(self) -> "TrackDataset":
@@ -875,21 +901,21 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
 
     def cut_with_section(
         self, section: Section, offset: RelativeOffsetCoordinate
-    ) -> tuple["TrackDataset", set[TrackId]]:
+    ) -> tuple["TrackDataset", TrackIdSet]:
         dataset, original_track_ids = self._other.cut_with_section(section, offset)
         return self.wrap(dataset), original_track_ids
 
     def revert_cuts_for(
-        self, original_track_ids: frozenset[TrackId]
-    ) -> tuple[TrackDataset, frozenset[TrackId], frozenset[TrackId]]:
+        self, original_track_ids: TrackIdSet
+    ) -> tuple[TrackDataset, TrackIdSet, TrackIdSet]:
         reverted_dataset, reverted_ids, cut_ids = self._other.revert_cuts_for(
             original_track_ids
         )
         return self.wrap(reverted_dataset), reverted_ids, cut_ids
 
     def remove_by_original_ids(
-        self, original_ids: frozenset[TrackId]
-    ) -> tuple["TrackDataset", frozenset[TrackId]]:
+        self, original_ids: TrackIdSet
+    ) -> tuple["TrackDataset", TrackIdSet]:
         updated_dataset, removed_ids = self._other.remove_by_original_ids(original_ids)
         return self.wrap(updated_dataset), removed_ids
 
@@ -977,3 +1003,44 @@ class SimpleCutTrackPartBuilder(TrackBuilder):
 
 def track_is_original(actual: Track) -> bool:
     return actual.id == actual.original_id
+
+
+class PythonTrackIdSet(TrackIdSet):
+    """Pure Python implementation of TrackIdSet using a set for storage."""
+
+    def __init__(self, track_ids: Iterable[TrackId] | None = None):
+        if track_ids is None:
+            self._ids: set[TrackId] = set()
+        else:
+            self._ids = set(track_ids)
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, PythonTrackIdSet):
+            return self._ids == other._ids
+        elif isinstance(other, TrackIdSet):
+            return self._ids == PythonTrackIdSet(other)._ids
+        return False
+
+    def __iter__(self) -> Iterator[TrackId]:
+        return iter(self._ids)
+
+    def __len__(self) -> int:
+        return len(self._ids)
+
+    def intersection(self, other: "TrackIdSet") -> "TrackIdSet":
+        if isinstance(other, PythonTrackIdSet):
+            return PythonTrackIdSet(self._ids & other._ids)
+        else:
+            return PythonTrackIdSet(self._ids & set(other))
+
+    def union(self, other: "TrackIdSet") -> "TrackIdSet":
+        if isinstance(other, PythonTrackIdSet):
+            return PythonTrackIdSet(self._ids | other._ids)
+        else:
+            return PythonTrackIdSet(self._ids | set(other))
+
+    def difference(self, other: "TrackIdSet") -> "TrackIdSet":
+        if isinstance(other, PythonTrackIdSet):
+            return PythonTrackIdSet(self._ids - other._ids)
+        else:
+            return PythonTrackIdSet(self._ids - set(other))
