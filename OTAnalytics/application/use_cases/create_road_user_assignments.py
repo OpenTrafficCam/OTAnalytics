@@ -27,7 +27,7 @@ class CreateRoadUserAssignments:
 
     def __call__(self, overwrite_non_empty_repo: bool = False) -> None:
         # TODO maybe move event creation completely outside of this use case?
-        if self._enable_event_creation and not self._get_all_section_events.get():
+        if self._enable_event_creation:
             self._create_events()
 
         events = self._get_all_section_events.get()
