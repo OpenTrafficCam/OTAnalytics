@@ -6,6 +6,9 @@ from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 
+from OTAnalytics.application.analysis.road_user_assignment import (
+    RoadUserAssignmentRepository,
+)
 from OTAnalytics.application.analysis.traffic_counting import (
     ExportCounts,
     ExportTrafficCounting,
@@ -39,6 +42,9 @@ from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     SimpleCreateIntersectionEvents,
@@ -47,13 +53,20 @@ from OTAnalytics.application.use_cases.create_events import (
 from OTAnalytics.application.use_cases.create_intersection_events import (
     BatchedTracksRunIntersect,
 )
+from OTAnalytics.application.use_cases.create_road_user_assignments import (
+    CreateRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.event_repository import (
     AddEvents,
     ClearAllEvents,
     GetAllEnterSectionEvents,
 )
 from OTAnalytics.application.use_cases.export_events import EventListExporter
-from OTAnalytics.application.use_cases.flow_repository import AddFlow, FlowRepository
+from OTAnalytics.application.use_cases.flow_repository import (
+    AddFlow,
+    FlowRepository,
+    GetAllFlows,
+)
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToAllFlows,
@@ -322,6 +335,7 @@ def create_run_config(
 class TestOTAnalyticsCli:
     TRACK_PARSER: str = "track_parser"
     EVENT_REPOSITORY: str = "event_repository"
+    ASSIGNMENT_REPOSITORY: str = "assignment_repository"
     ADD_SECTION: str = "add_section"
     GET_ALL_SECTIONS: str = "get_all_sections"
     ADD_FLOW: str = "add_flow"
@@ -357,6 +371,7 @@ class TestOTAnalyticsCli:
     def mock_cli_dependencies(self) -> dict[str, Any]:
         return {
             self.EVENT_REPOSITORY: Mock(spec=EventRepository),
+            self.ASSIGNMENT_REPOSITORY: Mock(spec=RoadUserAssignmentRepository),
             self.ADD_SECTION: Mock(spec=AddSection),
             self.GET_ALL_SECTIONS: Mock(spec=GetAllSections),
             self.ADD_FLOW: Mock(spec=AddFlow),
@@ -439,12 +454,22 @@ class TestOTAnalyticsCli:
         assigner = FilterBySectionEnterEvent(
             SimpleRoadUserAssigner(track_id_set_factory)
         )
-        traffic_counting = TrafficCounting(
-            event_repository,
-            flow_repository,
-            GetSectionsById(section_repository),
+
+        assignment_repository = RoadUserAssignmentRepository(track_id_set_factory)
+        create_assignments = CreateRoadUserAssignments(
+            GetAllFlows(flow_repository),
+            GetAllEnterSectionEvents(event_repository),
             create_events,
             assigner,
+            assignment_repository,
+        )
+        get_assignments = GetRoadUserAssignments(
+            assignment_repository, create_assignments
+        )
+        traffic_counting = TrafficCounting(
+            flow_repository,
+            GetSectionsById(section_repository),
+            get_assignments,
             SimpleTaggerFactory(),
         )
         export_counts = ExportTrafficCounting(
@@ -459,10 +484,7 @@ class TestOTAnalyticsCli:
             track_repository, tracks_metadata, videos_metadata
         )
         export_road_user_assignments = ExportRoadUserAssignments(
-            event_repository=event_repository,
-            flow_repository=flow_repository,
-            create_events=create_events,
-            assigner=assigner,
+            get_all_assignments=get_assignments,
             exporter_factory=SimpleRoadUserAssignmentExporterFactory(
                 section_repository, get_all_tracks
             ),
@@ -540,12 +562,24 @@ class TestOTAnalyticsCli:
         assigner = FilterBySectionEnterEvent(
             SimpleRoadUserAssigner(track_id_set_factory)
         )
-        traffic_counting = TrafficCounting(
-            event_repository,
-            flow_repository,
-            GetSectionsById(section_repository),
+
+        assignment_repository = RoadUserAssignmentRepository(track_id_set_factory)
+        create_assignments = CreateRoadUserAssignments(
+            GetAllFlows(flow_repository),
+            GetAllEnterSectionEvents(event_repository),
             create_events,
             assigner,
+            assignment_repository,
+            True,
+        )
+        get_assignments = GetRoadUserAssignments(
+            assignment_repository, create_assignments, True
+        )
+
+        traffic_counting = TrafficCounting(
+            flow_repository,
+            GetSectionsById(section_repository),
+            get_assignments,
             SimpleTaggerFactory(),
         )
         export_counts = ExportTrafficCounting(
@@ -557,8 +591,7 @@ class TestOTAnalyticsCli:
         get_all_tracks = GetAllTracks(track_repository)
         get_cutting_sections = GetCuttingSections(section_repository)
         tracks_assigned_to_all_flows = TracksAssignedToAllFlows(
-            SimpleRoadUserAssigner(track_id_set_factory),
-            event_repository,
+            get_assignments,
             flow_repository,
             track_id_set_factory,
         )
@@ -590,16 +623,14 @@ class TestOTAnalyticsCli:
             track_repository, tracks_metadata, videos_metadata
         )
         export_road_user_assignments = ExportRoadUserAssignments(
-            event_repository=event_repository,
-            flow_repository=flow_repository,
-            create_events=create_events,
-            assigner=assigner,
+            get_all_assignments=get_assignments,
             exporter_factory=SimpleRoadUserAssignmentExporterFactory(
                 section_repository, get_all_tracks
             ),
         )
         return {
             self.EVENT_REPOSITORY: event_repository,
+            self.ASSIGNMENT_REPOSITORY: assignment_repository,
             self.ADD_SECTION: AddSection(section_repository),
             self.GET_ALL_SECTIONS: GetAllSections(section_repository),
             self.ADD_FLOW: AddFlow(flow_repository),

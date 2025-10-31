@@ -97,7 +97,7 @@ class SectionPainter:
                 Shall be unique among all sections on the canvas.
             coordinates (list[tuple[int, int]]): Knob coordinates that define a section.
             section_style (dict): Dict of style options for tkinter canvas items.
-            area_section (bool): True, if the section is an area section.
+            is_area_section (bool): True, if the section is an area section.
                 False if the seciton is a line section.
                 Defaults to False.
             highlighted_knob_index (int | None, optional): Index of a knob coordinate
@@ -343,7 +343,7 @@ class SectionGeometryEditor(CanvasObserver):
         """Receives and reacts to updates issued by the canvas event handler
 
         Args:
-            coordinates (tuple[int, int]): Coordinates clicked on canvas
+            coordinate (tuple[int, int]): Coordinates clicked on canvas
             event_type (str): Type of event while mouse was on canvas.
             key (str | None): Key character that has been pressed while mouse was on
                 canvas.
@@ -650,7 +650,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         """Receives and reacts to updates issued by the canvas event handler
 
         Args:
-            coordinates (tuple[int, int]): Coordinates clicked on canvas
+            coordinate (tuple[int, int]): Coordinates clicked on canvas
             event_type (str): Type of event while mouse was on canvas.
             key (str | None): Key character that has been pressed while mouse was on
                 canvas.
@@ -682,8 +682,7 @@ class SectionBuilder(SectionGeometryBuilderObserver, CanvasObserver):
         further tasks.
 
         Args:
-            start (tuple[int, int]): Tuple of the sections start coordinates
-            end (tuple[int, int]): Tuple of the sections end coordinates
+            coordinates (list[tuple[int, int]]): list of section coordinates
         """
         self._coordinates = coordinates
         self._create_section()

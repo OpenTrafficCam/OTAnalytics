@@ -1,8 +1,17 @@
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock
+from types import MethodType
+from typing import Any
+from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 
+from OTAnalytics.application.analysis.road_user_assignment import (
+    EventPair,
+    RoadUserAssigner,
+    RoadUserAssignment,
+    RoadUserAssignmentRepository,
+    RoadUserAssignments,
+)
 from OTAnalytics.application.analysis.traffic_counting import (
     LEVEL_CLASSIFICATION,
     LEVEL_END_TIME,
@@ -17,7 +26,6 @@ from OTAnalytics.application.analysis.traffic_counting import (
     CountableAssignments,
     CountByFlow,
     CountDecorator,
-    EventPair,
     Exporter,
     ExporterFactory,
     ExportTrafficCounting,
@@ -28,11 +36,9 @@ from OTAnalytics.application.analysis.traffic_counting import (
     MaxDurationFlowSelection,
     ModeTagger,
     MultiTag,
-    RoadUserAssigner,
-    RoadUserAssignment,
-    RoadUserAssignments,
     SelectedFlowCandidates,
     SimpleRoadUserAssigner,
+    SimpleTaggerFactory,
     SingleTag,
     Tag,
     TaggedAssignments,
@@ -48,7 +54,15 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     FlowNameDto,
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
+)
 from OTAnalytics.application.use_cases.create_events import CreateEvents
+from OTAnalytics.application.use_cases.create_road_user_assignments import (
+    CreateRoadUserAssignments,
+)
+from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
+from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.event import Event, EventRepository, PythonEventDataset
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
@@ -914,13 +928,14 @@ class TestRoadUserAssignment:
         second_groupd = SingleTag(level="mode", id="bike")
         car_assignment = Mock(spec=RoadUserAssignment)
         bike_assignment = Mock(spec=RoadUserAssignment)
-        mode = Mock(spec=Tagger)
-        mode.create_tag.side_effect = [first_groupd, second_groupd]
+        mode_tagger = MagicMock(spec=Tagger)
+        mode_tagger.tag = MethodType(Tagger.tag, mode_tagger)
+        mode_tagger.create_tag.side_effect = [first_groupd, second_groupd]
         assignments = RoadUserAssignments(
             [car_assignment, bike_assignment], mock_factory()
         )
 
-        tagged = assignments.tag(by=mode)
+        tagged = mode_tagger.tag(assignments)
 
         assert tagged == TaggedAssignments(
             {
@@ -1115,21 +1130,41 @@ class TestTrafficCounting:
         tagger_factory = Mock(spec=TaggerFactory)
         tagger = Mock(spec=Tagger)
         events: list[Event] = []
-        flows: list[Flow] = []
+        flow = Mock(spec=Flow)
+        flows: list[Flow] = [flow]
         modes: list[str] = []
         assignments = Mock(spec=RoadUserAssignments)
+        assignment = Mock(spec=RoadUserAssignment)
+        assignment_list: list[RoadUserAssignment] = [assignment]
         tagged_assignments = Mock(spec=TaggedAssignments)
         counts = Mock(spec=Count)
 
         # Configure mocks
         event_repository.get_all.return_value = events
+        event_repository.get.return_value = events
         event_repository.is_empty.return_value = True
         flow_repository.get_all.return_value = flows
+        flow.id = FlowId("mock_flow")
         get_sections_by_ids.return_value = []
         road_user_assigner.assign.return_value = assignments
+        assignments.as_list.return_value = assignment_list
+        assignments._assignments = assignment_list
+        assignment.assignment = flow
+        assignment.road_user = "mock_road_user"
         tagger_factory.create_tagger.return_value = tagger
-        assignments.tag.return_value = tagged_assignments
+        tagger.tag.return_value = tagged_assignments
+        tagged_assignments.filter.return_value = tagged_assignments
         tagged_assignments.count.return_value = counts
+
+        rua_repo = RoadUserAssignmentRepository(mock_factory())
+        create_assignments = CreateRoadUserAssignments(
+            GetAllFlows(flow_repository),
+            GetAllEnterSectionEvents(event_repository),
+            create_events,
+            road_user_assigner,
+            rua_repo,
+        )
+        get_assignments = GetRoadUserAssignments(rua_repo, create_assignments)
 
         # Create specification
         start = datetime(2023, 1, 1, 0, 0, 0)
@@ -1146,11 +1181,9 @@ class TestTrafficCounting:
         )
 
         target = TrafficCounting(
-            event_repository,
             flow_repository,
             get_sections_by_ids,
-            create_events,
-            road_user_assigner,
+            get_assignments,
             tagger_factory,
         )
 
@@ -1162,18 +1195,115 @@ class TestTrafficCounting:
         flow_repository.get_all.assert_called()
         create_events.assert_called_once()
         tagger_factory.create_tagger.assert_called_once_with(counting_specification)
-        assignments.tag.assert_called_once_with(tagger)
+        tagger.tag.assert_called_once_with(assignments)
         tagged_assignments.count.assert_called_once_with(flows)
+
+        args = call(event_types=[EventType.SECTION_ENTER])
+        event_repository.get.assert_has_calls([args])
+        event_repository.get_all.assert_not_called()
 
         # Verify assertions specific to count_all_events setting
         if count_all_events:
-            event_repository.get_all.assert_called_once()
-            event_repository.get.assert_not_called()
             road_user_assigner.assign.assert_called_once_with(events, flows)
+            tagged_assignments.filter.assert_not_called()
         else:
-            event_repository.get_all.assert_not_called()
-            event_repository.get.assert_called_once_with(start_date=start, end_date=end)
+            tagged_assignments.filter.assert_called_once()
             road_user_assigner.assign.assert_called_once()
+
+
+class TestTrafficCountingFilterOptions:
+    START_1 = datetime(2000, 1, 1, 0, 0, 3, tzinfo=timezone.utc)
+    START_2 = datetime(2000, 1, 1, 0, 0, 8, tzinfo=timezone.utc)
+    END = datetime(2000, 1, 1, 0, 0, 10, tzinfo=timezone.utc)
+
+    @pytest.mark.parametrize(
+        "count_all_events,start,end,lower,upper,expected",
+        [
+            (True, START_1, END, True, True, [1, 2, 3, 4, 5, 6]),
+            (False, START_1, END, True, True, [4]),
+            (False, START_1, END, False, True, [1, 2, 3, 4]),
+            (False, START_1, END, True, False, [4, 5, 6]),
+            (False, START_1, END, False, False, [1, 2, 3, 4, 5, 6]),
+            (False, START_2, END, True, True, []),
+            (False, START_2, END, False, True, [2, 3, 4]),
+            (False, START_2, END, True, False, []),
+            (False, START_2, END, False, False, [2, 3, 4, 5, 6]),
+        ],
+    )
+    def tests_traffic_counting_filter(
+        self,
+        count_all_events: bool,
+        start: datetime,
+        end: datetime,
+        lower: bool,
+        upper: bool,
+        expected: list[int],
+    ) -> None:
+        # setup assignment / flow data
+        builder = TestCaseBuilder()
+        setup: tuple[list[Event], list[Flow], RoadUserAssignments] = (
+            builder.build_assignment_test_cases(mock_factory())[0]
+        )
+        (_, flows, assignments) = setup
+
+        modes = ["car"]
+
+        # Setup mocked environment
+        flow_repository = Mock(spec=FlowRepository)
+        flow_repository.get_all.return_value = flows
+        get_sections_by_ids = Mock(spec=GetSectionsById)
+        get_sections_by_ids.return_value = []
+        create_assignments = Mock(spec=CreateRoadUserAssignments)
+
+        # Setup actual environment
+        rua_repo = RoadUserAssignmentRepository(mock_factory())
+        rua_repo.add_road_user_assignments(assignments)
+        tagger_factory = SimpleTaggerFactory()
+        get_assignments = GetRoadUserAssignments(rua_repo, create_assignments)
+
+        target = TrafficCounting(
+            flow_repository,
+            get_sections_by_ids,
+            get_assignments,
+            tagger_factory,
+            filter_lower_bound_strict=lower,
+            filter_upper_bound_strict=upper,
+        )
+
+        # Create specification
+        counting_specification = CountingSpecificationDto(
+            start=start,
+            end=end,
+            interval_in_minutes=15,
+            modes=modes,
+            output_format="csv",
+            output_file="counts.csv",
+            export_mode=OVERWRITE,
+            count_all_events=count_all_events,
+        )
+
+        # setup spy to capture tagged assignments after filter & before count
+        filtered_assignments: list[TaggedAssignments] = []
+        original_count = TaggedAssignments.count
+
+        def spy(self: TaggedAssignments, *args: Any, **kwargs: Any) -> Count:
+            filtered_assignments.append(self)
+            return original_count(self, *args, **kwargs)
+
+        # Execute the use case
+        with patch.object(TaggedAssignments, "count", new=spy):
+            result = target.count(counting_specification)
+
+            assert sum(result.to_dict().values()) == len(expected)
+
+        assert len(filtered_assignments) == 1
+        assert expected == sorted(
+            [
+                int(a.road_user)
+                for c in filtered_assignments[0]._assignments.values()
+                for a in c._assignments
+            ]
+        )
 
 
 class TestExportTrafficCounting:

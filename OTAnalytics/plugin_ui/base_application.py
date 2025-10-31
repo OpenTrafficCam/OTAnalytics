@@ -11,10 +11,13 @@ from OTAnalytics.application.analysis.intersect import (
     RunIntersect,
     TracksIntersectingSections,
 )
+from OTAnalytics.application.analysis.road_user_assignment import (
+    RoadUserAssigner,
+    RoadUserAssignmentRepository,
+)
 from OTAnalytics.application.analysis.traffic_counting import (
     ExportTrafficCounting,
     FilterBySectionEnterEvent,
-    RoadUserAssigner,
     SimpleRoadUserAssigner,
     SimpleTaggerFactory,
     TrafficCounting,
@@ -56,6 +59,12 @@ from OTAnalytics.application.ui.frame_control import (
 )
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
+from OTAnalytics.application.use_cases.assignment_repository import (
+    GetRoadUserAssignments,
+    RemoveAssignmentsOfChangedFlow,
+    RemoveAssignmentsOfRemovedEvents,
+    RemoveAssignmentsOfRemovedFlows,
+)
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.config import SaveOtconfig
 from OTAnalytics.application.use_cases.config_has_changed import (
@@ -72,6 +81,9 @@ from OTAnalytics.application.use_cases.create_events import (
 )
 from OTAnalytics.application.use_cases.create_intersection_events import (
     BatchedTracksRunIntersect,
+)
+from OTAnalytics.application.use_cases.create_road_user_assignments import (
+    CreateRoadUserAssignments,
 )
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
@@ -113,9 +125,6 @@ from OTAnalytics.application.use_cases.generate_flows import (
 )
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
-from OTAnalytics.application.use_cases.get_road_user_assignments import (
-    GetRoadUserAssignments,
-)
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToAllFlows,
@@ -323,13 +332,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         self,
     ) -> NumberOfTracksAssignedToEachFlow:
         return NumberOfTracksAssignedToEachFlow(
-            self.get_road_user_assignments, self.flow_repository
-        )
-
-    @cached_property
-    def get_road_user_assignments(self) -> GetRoadUserAssignments:
-        return GetRoadUserAssignments(
-            self.flow_repository, self.event_repository, self.road_user_assigner
+            self.get_all_assignments, self.flow_repository
         )
 
     @cached_property
@@ -687,7 +690,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def layers(self) -> tuple[Sequence[LayerGroup], Sequence[PlottingLayer]]:
         return self.visualization_builder.build(
             self.flow_state,
-            self.road_user_assigner,
+            self.get_all_assignments,
         )
 
     @cached_property
@@ -884,12 +887,52 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     @cached_property
-    def export_road_user_assignments(self) -> ExportRoadUserAssignments:
-        return ExportRoadUserAssignments(
-            self.event_repository,
-            self.flow_repository,
+    def assignment_repository(self) -> RoadUserAssignmentRepository:
+        return RoadUserAssignmentRepository(self.track_id_set_factory)
+
+    @cached_property
+    def get_all_enter_section_events(self) -> GetAllEnterSectionEvents:
+        return GetAllEnterSectionEvents(self.event_repository)
+
+    @cached_property
+    def create_assignments(self) -> CreateRoadUserAssignments:
+        return CreateRoadUserAssignments(
+            self.get_all_flows,
+            self.get_all_enter_section_events,
             self.create_events,
             self.road_user_assigner,
+            self.assignment_repository,
+            enable_event_creation=True,
+        )
+
+    @cached_property
+    def remove_assignments_of_removed_events(self) -> RemoveAssignmentsOfRemovedEvents:
+        return RemoveAssignmentsOfRemovedEvents(
+            self.assignment_repository, self.event_repository
+        )
+
+    @cached_property
+    def remove_assignments_of_removed_flows(self) -> RemoveAssignmentsOfRemovedFlows:
+        return RemoveAssignmentsOfRemovedFlows(
+            self.assignment_repository, self.get_all_flows
+        )
+
+    @cached_property
+    def remove_assignments_of_changed_flows(self) -> RemoveAssignmentsOfChangedFlow:
+        return RemoveAssignmentsOfChangedFlow(self.assignment_repository)
+
+    @cached_property
+    def get_all_assignments(self) -> GetRoadUserAssignments:
+        return GetRoadUserAssignments(
+            self.assignment_repository,
+            self.create_assignments,
+            enable_assignment_creation=True,
+        )
+
+    @cached_property
+    def export_road_user_assignments(self) -> ExportRoadUserAssignments:
+        return ExportRoadUserAssignments(
+            self.get_all_assignments,
             SimpleRoadUserAssignmentExporterFactory(
                 self.section_repository, self.get_all_tracks
             ),
@@ -909,8 +952,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
         tracks_assigned_to_all_flows = FilteredTrackIdProviderByTrackIdProvider(
             TracksAssignedToAllFlows(
-                self.road_user_assigner,
-                self.event_repository,
+                self.get_all_assignments,
                 self.flow_repository,
                 self.track_id_set_factory,
             ),
@@ -1009,11 +1051,9 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def traffic_counting(self) -> TrafficCounting:
         return TrafficCounting(
-            self.event_repository,
             self.flow_repository,
             self.get_sections_by_id,
-            self.create_events,
-            self.road_user_assigner,
+            self.get_all_assignments,
             SimpleTaggerFactory(),
         )
 
