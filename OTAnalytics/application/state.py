@@ -498,8 +498,10 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._section_state = section_state
         self._flow_state = flow_state
         self._plotter = plotter
+        # React to any relevant changes that should affect the background image
         self._track_view_state.track_offset.register(self._notify_track_offset)
         self._track_view_state.filter_element.register(self._notify_filter_element)
+        self._track_view_state.selected_videos.register(self._notify_selected_videos)
         self._section_state.selected_sections.register(self._notify_section_selection)
         self._flow_state.selected_flows.register(self._notify_flow_changed)
 
@@ -565,6 +567,12 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Args:
             _ (bool): whether layer is enabled or disabled.
         """
+        self.update_image()
+
+    def _notify_selected_videos(self, _: list[Video]) -> None:
+        """Update the image when the selected video list changes."""
+        # Force a change notification even if the plotter returns an equal image
+        self._track_view_state.background_image.set(None)
         self.update_image()
 
     def update_image(self) -> None:

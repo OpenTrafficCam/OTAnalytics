@@ -4,14 +4,21 @@ from typing import Any, Generator, TypeVar
 
 import pytest
 from nicegui.testing import Screen
+from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
 from OTAnalytics.application.resources.resource_manager import (
+    AddVideoKeys,
     ProjectKeys,
     ResourceManager,
+    TrackFormKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    MARKER_VIDEO_TABLE,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
+from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
 from tests.utils.builders.otanalytics_builders import MultiprocessingWorker
 from tests.utils.ui_helpers import set_input_value
 
@@ -434,3 +441,456 @@ class TestProjectInformation:
         assert actual_name == saved_name
         assert actual_date == saved_date
         assert actual_time == saved_time
+
+
+class TestVideoImportAndDisplay:
+    @staticmethod
+    def _wait_for_names_present(target: Screen, names: list[str]) -> None:
+        target.wait_for(
+            lambda: all(
+                n in TestVideoImportAndDisplay._table_filenames(target) for n in names
+            )
+        )
+
+    @staticmethod
+    def _table_filenames(target: Screen) -> list[str]:
+        """Return the list of video filenames currently shown in the table."""
+        from selenium.webdriver.common.by import By  # type: ignore
+
+        cells = target.selenium.find_elements(By.CSS_SELECTOR, "table tbody tr td")
+        texts = [c.text.strip() for c in cells if c.text.strip()]
+        video_exts = (".mp4", ".avi", ".mov", ".mkv", ".webm")
+        return [t for t in texts if any(t.lower().endswith(ext) for ext in video_exts)]
+
+    @staticmethod
+    def _click_table_cell_with_text(
+        target: Screen, text: str, marker: str | None = None
+    ) -> None:
+        """Click a table cell whose visible text contains `text` (substring match).
+        Uses direct DOM enumeration to avoid brittle generic XPaths and tolerate
+        UI truncation/ellipsis.
+        """
+        marker_selector = f'[test-id="{marker}"] ' if marker else ""
+        selector = f"{marker_selector}table tbody tr td"
+        import time
+
+        from selenium.webdriver.common.by import By  # type: ignore
+
+        deadline = time.time() + 8.0
+        last_err: Exception | None = None
+        text_norm = text.strip()
+        while time.time() < deadline:
+            try:
+                tds = target.selenium.find_elements(By.CSS_SELECTOR, selector)
+                for td in tds:
+                    td_text = td.text.strip()
+                    if text_norm and text_norm in td_text:
+                        target.selenium.execute_script("arguments[0].click();", td)
+                        return
+                time.sleep(0.1)
+            except Exception as e:  # pragma: no cover - transient rendering
+                last_err = e
+                time.sleep(0.1)
+        if last_err:
+            raise last_err
+        if tds is not None:
+            cells = "\n".join([td.text.strip() for td in tds])
+        raise AssertionError(f"Could not find table cell with text: {text} in\n{cells}")
+
+    @staticmethod
+    def _reset_videos_tab(target: Screen, resource_manager: ResourceManager) -> None:
+        """Ensure the Videos tab is in a clean state (no listed videos).
+
+        This mitigates cross-test interference because the NiceGUI app and
+        webserver are session-scoped. Some tests in this class expect an empty
+        list initially. When running the whole suite, previous tests may have
+        left videos in the table which makes strict assertions fail.
+
+        Strategy:
+        - Iteratively remove all rows from the videos table via the UI.
+        """
+        # Remove all rows defensively (if any) using robust table parsing
+        for _ in range(50):  # hard upper bound for safety
+            names = TestVideoImportAndDisplay._table_filenames(target)
+            if not names:
+                break
+            name = names[0]
+            try:
+                TestVideoImportAndDisplay._click_table_cell_with_text(target, name)
+                target.click(resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS))
+                target.wait_for(
+                    lambda: name
+                    not in TestVideoImportAndDisplay._table_filenames(target)
+                )
+            except Exception:
+                try:
+                    names2 = TestVideoImportAndDisplay._table_filenames(target)
+                    if names2 and names2[0] == name:
+                        break
+                except Exception:
+                    break
+
+    @staticmethod
+    def _remove_video_by_name(
+        target: Screen, resource_manager: ResourceManager, filename: str
+    ) -> None:
+        """Robustly remove a video entry by filename from the table with retries."""
+        import time
+
+        from selenium.common.exceptions import (
+            StaleElementReferenceException,  # type: ignore
+        )
+
+        # Wait until filename is present in the table
+        TestVideoImportAndDisplay._wait_for_names_present(target, [filename])
+        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        last_err: Exception | None = None
+        while time.time() < deadline:
+            try:
+                # Select row by clicking the table cell containing the filename
+                TestVideoImportAndDisplay._click_table_cell_with_text(
+                    target, filename, marker=MARKER_VIDEO_TABLE
+                )
+                # Click Remove
+                target.click(resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS))
+                # Wait until it disappears from the table
+                target.wait_for(
+                    lambda: filename
+                    not in TestVideoImportAndDisplay._table_filenames(target)
+                )
+                return
+            except StaleElementReferenceException as e:
+                last_err = e
+                time.sleep(0.1)
+            except Exception as e:
+                last_err = e
+                time.sleep(0.1)
+        if last_err:
+            raise last_err
+
+    @pytest.mark.timeout(TIMEOUT)
+    @pytest.mark.asyncio
+    async def test_add_videos_import_sort_and_display_first_frame(
+        self,
+        target: Screen,
+        given_app: MultiprocessingWorker,
+        resource_manager: ResourceManager,
+        monkeypatch: Any,
+    ) -> None:
+        # App starten und Hauptseite öffnen
+        if not given_app.is_alive():
+            given_app.start()
+        target.open(ENDPOINT_MAIN_PAGE)
+
+        # Zum Videos‑Tab wechseln
+        target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+
+        # Dateiauswahl mocken
+        data_dir = Path(__file__).parent / "data"
+        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        v2 = data_dir / "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
+        assert v1.exists() and v2.exists()
+
+        from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
+
+        async def fake_askopenfilenames(*args: object, **kwargs: object) -> list[Path]:
+            return [v1, v2]
+
+        monkeypatch.setattr(
+            NiceGuiUiFactory, "askopenfilenames", fake_askopenfilenames, raising=True
+        )
+
+        # Videos hinzufügen
+        target.click(resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS))
+
+        name1, name2 = v1.name, v2.name
+
+        # Beide Namen sollten erscheinen
+        target.should_contain(name1)
+        target.should_contain(name2)
+
+        # Sortierung prüfen (alphabetisch nach sichtbaren Dateinamen)
+        def read_table_filenames() -> list[str]:
+            exts = (".mp4", ".avi", ".mov", ".mkv", ".webm")
+            texts = [
+                td.text.strip()
+                for td in target.find_all_by_tag("td")
+                if td.text.strip()
+            ]
+            return [t for t in texts if any(t.lower().endswith(e) for e in exts)]
+
+        target.wait_for(lambda: len(read_table_filenames()) >= 2)
+        listed = read_table_filenames()
+        assert listed == sorted(
+            [name1, name2]
+        ), f"Expected {sorted([name1, name2])}, got {listed}"
+
+        # Bild erscheint und lädt nach Auswahl des ersten Videos
+        target.click(name1)
+        img = target.find_by_css("img")  # oder: target.find_by_css("img[src^='data:']")
+        target.should_load_image(img)
+        src1 = img.get_attribute("src") or ""
+        assert src1, "Preview image src should not be empty after selecting first video"
+
+        # Beim Wechsel auf das zweite Video ändert sich die Bildquelle
+        target.click(name2)
+
+        def _img_src_changed() -> bool:
+            elem = target.find_by_css("img")
+            return (elem.get_attribute("src") or "") != src1
+
+        target.wait_for(_img_src_changed)
+        img2 = target.find_by_css("img")
+        target.should_load_image(img2)
+        src2 = img2.get_attribute("src") or ""
+        assert (
+            src2 and src2 != src1
+        ), "Preview image src should change after selecting another video"
+
+    @pytest.mark.timeout(TIMEOUT)
+    @pytest.mark.asyncio
+    async def test_export_and_import_videos_via_project_config(
+        self,
+        target: Screen,
+        given_app: MultiprocessingWorker,
+        resource_manager: ResourceManager,
+        test_data_tmp_dir: Path,
+        monkeypatch: Any,
+    ) -> None:
+        """Acceptance: Export and re-import video information.
+
+        Steps:
+        - Open app and switch to Videos tab
+        - Add 2 videos via monkeypatched file picker and verify they appear
+        - Save project information to "videos_imported.otconfig"
+        - Click on "New" (or simulate a clean state by removing videos if "New" is unavailable) # noqa
+        - Import previously saved project information
+        - Verify previously added videos are visible again and selectable
+        """
+        # Start app if needed and open main page
+        if not given_app.is_alive():
+            given_app.start()
+        target.open(ENDPOINT_MAIN_PAGE)
+
+        target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+        # Ensure clean slate for this test run
+        self._reset_videos_tab(target, resource_manager)
+
+        # Prepare test videos and monkeypatch file dialog
+        data_dir = Path(__file__).parent / "data"
+        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        v2 = data_dir / "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
+        assert v1.exists() and v2.exists(), "Test videos are missing in tests/data"
+
+        from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import (
+            NiceGuiUiFactory,  # local import
+        )
+
+        async def fake_askopenfilenames(*args: object, **kwargs: object) -> list[Path]:
+            return [v1, v2]
+
+        monkeypatch.setattr(
+            NiceGuiUiFactory,
+            "askopenfilenames",
+            fake_askopenfilenames,
+            raising=True,
+        )
+
+        # Add videos
+        target.click(resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS))
+        name1 = v1.name
+        name2 = v2.name
+        target.should_contain(name1)
+        target.should_contain(name2)
+
+        # Switch to Project tab and fill minimal required fields for saving
+        target.click(resource_manager.get(TrackFormKeys.TAB_ONE))
+        project_name_input = target.find_by_css(
+            f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_PROJECT_NAME)}"]'
+        )
+        date_input = target.find_by_css(
+            f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_START_DATE)}"]'
+        )
+        time_input = target.find_by_css(
+            f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_START_TIME)}"]'
+        )
+        set_input_value(target, project_name_input, "Acceptance - Videos Export/Import")
+        set_input_value(target, date_input, "2023-05-24")
+        set_input_value(target, time_input, "06:00:00")
+
+        # Save project to deterministic path
+        save_path = _Path(test_data_tmp_dir) / "videos_imported.otconfig"
+
+        async def fake_ask_for_save_file_path(*args: object, **kwargs: object) -> _Path:
+            return save_path
+
+        async def fake_askopenfilename(*args: object, **kwargs: object) -> str:
+            return str(save_path)
+
+        monkeypatch.setattr(
+            NiceGuiUiFactory,
+            "ask_for_save_file_path",
+            fake_ask_for_save_file_path,
+            raising=True,
+        )
+        monkeypatch.setattr(
+            NiceGuiUiFactory,
+            "askopenfilename",
+            fake_askopenfilename,
+            raising=True,
+        )
+
+        target.click(resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT))
+        target.wait_for(lambda: save_path.exists())
+        assert save_path.exists(), f"Expected saved config at {save_path}"
+
+        # Reset project state by clearing the Videos tab completely to ensure
+        # a clean slate before import (more robust than per-row interactions)
+        target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+        self._reset_videos_tab(target, resource_manager)
+
+        # Now import previously saved project configuration
+        target.click(resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT))
+
+        # Switch to Videos tab to verify
+        target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+
+        # Verify both filenames appear again
+        target.should_contain(name1)
+        target.should_contain(name2)
+
+        # Optional: verify selecting a video updates image source as smoke test
+        # Ensure both names are present in the DOM after import
+        target.wait_for(
+            lambda: name1 in target.selenium.page_source
+            and name2 in target.selenium.page_source
+        )
+
+        def get_current_image_src() -> str:
+            js = (
+                "return (Array.from(document.querySelectorAll('img'))"
+                ".find(i => i.src && i.src.startsWith('data:')) || {src: ''}).src;"
+            )
+            return target.selenium.execute_script(js)
+
+        # Click first and ensure an image is shown as a smoke test
+        target.click(name1)
+        target.wait_for(lambda: bool(get_current_image_src()))
+
+    @pytest.mark.timeout(TIMEOUT)
+    @pytest.mark.asyncio
+    async def test_remove_single_video_after_selection(
+        self,
+        target: Screen,
+        given_app: MultiprocessingWorker,
+        resource_manager: ResourceManager,
+        monkeypatch: Any,
+    ) -> None:
+        """Acceptance: Removing videos works for a single selected video file.
+
+        Steps:
+        - Switch to Videos tab
+        - Select a single video file via monkeypatched file picker
+        - Click on "Remove"
+        - Verify the selected video is removed from the list
+        """
+        # Ensure app is running and main page is open
+        if not given_app.is_alive():
+            given_app.start()
+        target.open(ENDPOINT_MAIN_PAGE)
+
+        target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+        # Ensure clean slate for this test run
+        self._reset_videos_tab(target, resource_manager)
+
+        # Prepare a single test video and monkeypatch file dialog
+        data_dir = Path(__file__).parent / "data"
+        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        assert v1.exists(), "Test video is missing in tests/data"
+
+        async def fake_askopenfilenames(*args: object, **kwargs: object) -> list[Path]:
+            return [v1]
+
+        monkeypatch.setattr(
+            NiceGuiUiFactory,
+            "askopenfilenames",
+            fake_askopenfilenames,
+            raising=True,
+        )
+
+        # Add the video via UI
+        target.click(resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS))
+        name1 = v1.name
+        target.should_contain(name1)
+        target.selenium.find_element(
+            By.CSS_SELECTOR, f'[test-id="{MARKER_VIDEO_TABLE}"]'
+        )
+
+        # Remove the video robustly using helper
+        TestVideoImportAndDisplay._remove_video_by_name(target, resource_manager, name1)
+        # Verify it's gone
+        target.wait_for(
+            lambda: name1 not in TestVideoImportAndDisplay._table_filenames(target)
+        )
+
+    @pytest.mark.timeout(TIMEOUT)
+    @pytest.mark.asyncio
+    async def test_remove_multiple_videos_after_selection(
+        self,
+        target: Screen,
+        given_app: MultiprocessingWorker,
+        resource_manager: ResourceManager,
+        monkeypatch: Any,
+    ) -> None:
+        """Acceptance: Removing videos works for multiple selected video files.
+
+        Steps:
+        - Switch to Videos tab
+        - Select multiple video files via monkeypatched file picker
+        - Click on "Remove"
+        - Verify all selected videos are removed from the list
+        """
+        # Ensure app is running and main page is open
+        if not given_app.is_alive():
+            given_app.start()
+        target.open(ENDPOINT_MAIN_PAGE)
+
+        target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+        # Ensure clean slate for this test run
+        self._reset_videos_tab(target, resource_manager)
+
+        # Prepare two test videos and monkeypatch file dialog
+        data_dir = Path(__file__).parent / "data"
+        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        v2 = data_dir / "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
+        assert v1.exists() and v2.exists(), "Test videos are missing in tests/data"
+
+        async def fake_askopenfilenames(*args: object, **kwargs: object) -> list[Path]:
+            return [v1, v2]
+
+        monkeypatch.setattr(
+            NiceGuiUiFactory,
+            "askopenfilenames",
+            fake_askopenfilenames,
+            raising=True,
+        )
+
+        # Add the videos via UI
+        target.click(resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS))
+        name1 = v1.name
+        name2 = v2.name
+        target.should_contain(name1)
+        target.should_contain(name2)
+
+        # NOTE: The current UI uses single-selection behavior in the videos table.
+        # Remove first video robustly
+        TestVideoImportAndDisplay._remove_video_by_name(target, resource_manager, name1)
+        target.wait_for(
+            lambda: name1 not in TestVideoImportAndDisplay._table_filenames(target)
+        )
+
+        # Remove second video robustly
+        TestVideoImportAndDisplay._remove_video_by_name(target, resource_manager, name2)
+        target.wait_for(
+            lambda: name2 not in TestVideoImportAndDisplay._table_filenames(target)
+        )

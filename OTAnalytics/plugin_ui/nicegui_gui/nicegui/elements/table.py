@@ -59,6 +59,7 @@ class CustomTable:
         marker: str | None = None,
         on_select_method: Callable[[Any], None] | None = None,
         selection: Literal["single", "multiple"] | None = None,
+        on_row_click_method: Callable[[Any], None] | None = None,
     ) -> None:
         self._columns = columns
         self._rows = rows
@@ -69,6 +70,7 @@ class CustomTable:
         self._pagination = pagination
         self._marker = marker
         self._on_select_method = on_select_method
+        self._on_row_click_method = on_row_click_method
         self._selection = selection
         self._observers = []
         if observers:
@@ -86,11 +88,14 @@ class CustomTable:
         ) as table:
             self.__table = table
             self.__table.style("width: 100%")
+            if self._on_row_click_method is not None:
+                table.on("rowClick", self._on_row_click_method)
             self._add_header_slot()
             self._add_body_slot()
             self._register_callback()
             if self._marker:
                 table.mark(self._marker)
+                table.props(f"test-id={self._marker}")
 
     def _add_header_slot(self) -> None:
         if self._header_slot:
