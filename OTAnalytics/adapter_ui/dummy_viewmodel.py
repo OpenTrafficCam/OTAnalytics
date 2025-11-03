@@ -139,7 +139,7 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
-SUPPORTED_VIDEO_FILE_TYPES = ["*.mp4", "*.avi", "*.mkv", "*.mov"]
+SUPPORTED_VIDEO_FILE_TYPES = [".mp4", ".avi", ".mkv", ".mov"]
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
@@ -554,7 +554,7 @@ class DummyViewModel(
         extension_options: Dict[str, Optional[List[str]]] = {}
 
         # Convert "*.ext" format to ".ext" format for extension_options
-        clean_extensions = [ext.replace("*", "") for ext in SUPPORTED_VIDEO_FILE_TYPES]
+        clean_extensions = [ext for ext in SUPPORTED_VIDEO_FILE_TYPES]
 
         # Add "All File Endings" option with all supported extensions
         extension_options["All File Endings"] = clean_extensions
