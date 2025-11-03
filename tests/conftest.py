@@ -1,6 +1,8 @@
 import multiprocessing as py_multiprocessing
 import os
 import shutil
+import subprocess
+import time
 from pathlib import Path
 from typing import Any, Generator, List, Sequence, TypeVar
 from unittest.mock import Mock
@@ -36,7 +38,11 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
-from OTAnalytics.plugin_ui.nicegui_application import Webserver
+from OTAnalytics.plugin_ui.nicegui_application import (
+    DEFAULT_HOSTNAME,
+    DEFAULT_PORT,
+    Webserver,
+)
 from tests.utils.builders.event_builder import EventBuilder
 from tests.utils.builders.otanalytics_builders import (
     MultiprocessingWorker,
@@ -50,9 +56,10 @@ from tests.utils.builders.track_segment_builder import (
     TrackSegmentDatasetBuilderProvider,
 )
 
-ACCEPTANCE_TEST_WAIT_TIMEOUT = 10
+ACCEPTANCE_TEST_WAIT_TIMEOUT = 20
+BUFFER_SIZE_100MB = 10**8
 
-pytest_plugins = ["nicegui.testing.plugin"]
+pytest_plugins = ["nicegui.testing.plugin", "pytest_playwright"]
 
 
 # --- Acceptance test collection control ---
@@ -110,7 +117,7 @@ def chrome_options() -> webdriver.ChromeOptions:
         webdriver.ChromeOptions: Chrome options for Selenium testing.
     """
     options = webdriver.ChromeOptions()
-    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--window-size=1920,2160")
     return options
 
 
@@ -151,9 +158,58 @@ async def target(screen: Screen, given_webserver: Webserver) -> Screen:
     screen.IMPLICIT_WAIT = ACCEPTANCE_TEST_WAIT_TIMEOUT
     given_webserver.build_pages()
     # Set a larger window size for better screenshots
-    screen.selenium.set_window_size(1920, 1080)
+    screen.selenium.set_window_size(1920, 2160)
 
     return screen
+
+
+class NiceGUITestServer:
+    """Helper class to manage NiceGUI test server"""
+
+    def __init__(self, port: int = DEFAULT_PORT):
+        self.port = port
+        self.process: subprocess.Popen | None = None
+        self.base_url = f"http://{DEFAULT_HOSTNAME}:{port}"
+
+    def start(self) -> None:
+        """Start NiceGUI server in subprocess"""
+        self.process = subprocess.Popen(
+            ["python", "-m", "OTAnalytics", "--webui"],
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=BUFFER_SIZE_100MB,
+        )
+        # Wait for server to start
+        self._wait_for_server()
+
+    def stop(self) -> None:
+        """Stop NiceGUI server"""
+        if self.process:
+            self.process.terminate()
+            self.process.wait()
+
+    def _wait_for_server(self, timeout: int = 10) -> None:
+        """Wait until server is responding"""
+        import requests
+
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                response = requests.get(self.base_url, timeout=1)
+                if response.status_code == 200:
+                    return
+            except Exception:
+                pass
+            time.sleep(0.1)
+        raise RuntimeError(f"Server did not start within {timeout} seconds")
+
+
+@pytest.fixture(scope="session")
+def external_app() -> YieldFixture[NiceGUITestServer]:
+    app = NiceGUITestServer()
+    app.start()
+    yield app
+    app.stop()
 
 
 @pytest.fixture
