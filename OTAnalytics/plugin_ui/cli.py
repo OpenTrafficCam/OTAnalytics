@@ -4,6 +4,9 @@ from typing import Iterable
 
 from more_itertools import peekable
 
+from OTAnalytics.application.analysis.road_user_assignment import (
+    RoadUserAssignmentRepository,
+)
 from OTAnalytics.application.analysis.traffic_counting import ExportCounts, ExportMode
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
@@ -76,6 +79,7 @@ class OTAnalyticsCli(ABC):
         self,
         run_config: RunConfiguration,
         event_repository: EventRepository,
+        assignement_repository: RoadUserAssignmentRepository,
         add_section: AddSection,
         get_all_sections: GetAllSections,
         add_flow: AddFlow,
@@ -96,6 +100,7 @@ class OTAnalyticsCli(ABC):
         self._run_config = run_config
 
         self._event_repository = event_repository
+        self._assignment_repository = assignement_repository
         self._add_section = add_section
         self._get_all_sections = get_all_sections
         self._add_flow = add_flow
@@ -338,6 +343,7 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
         self,
         run_config: RunConfiguration,
         event_repository: EventRepository,
+        assignment_repository: RoadUserAssignmentRepository,
         add_section: AddSection,
         get_all_sections: GetAllSections,
         add_flow: AddFlow,
@@ -359,6 +365,7 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
         super().__init__(
             run_config,
             event_repository,
+            assignment_repository,
             add_section,
             get_all_sections,
             add_flow,
@@ -410,6 +417,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
         self,
         run_config: RunConfiguration,
         event_repository: EventRepository,
+        assignment_repository: RoadUserAssignmentRepository,
         add_section: AddSection,
         get_all_sections: GetAllSections,
         add_flow: AddFlow,
@@ -430,6 +438,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
         super().__init__(
             run_config,
             event_repository,
+            assignment_repository,
             add_section,
             get_all_sections,
             add_flow,
@@ -480,6 +489,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
 
             self._clear_all_tracks()
             self._event_repository.clear()
+            self._assignment_repository.clear()
 
             is_first = False
 

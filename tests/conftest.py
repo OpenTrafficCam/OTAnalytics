@@ -11,7 +11,7 @@ import pytest
 from nicegui.testing import Screen
 from selenium import webdriver
 
-from OTAnalytics.application.analysis.traffic_counting import (
+from OTAnalytics.application.analysis.road_user_assignment import (
     EventPair,
     RoadUserAssignment,
 )
