@@ -39,7 +39,7 @@ def _table_filenames(page: Page) -> list[str]:
 
 
 def _wait_for_names_present(page: Page, names: Iterable[str]) -> None:
-    deadline = time.time() + 30
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
     names = list(names)
     while time.time() < deadline:
         listed = _table_filenames(page)
@@ -73,7 +73,7 @@ def _reset_videos_tab(page: Page, rm: ResourceManager) -> None:
                 rm.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
             ).click()
             # wait until it's gone
-            deadline = time.time() + 10
+            deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
             while time.time() < deadline:
                 if name not in _table_filenames(page):
                     break
