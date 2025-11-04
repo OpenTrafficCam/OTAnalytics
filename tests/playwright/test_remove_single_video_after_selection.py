@@ -3,10 +3,9 @@ from pathlib import Path
 from typing import Iterable
 
 import pytest
-from adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
-from conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT, NiceGUITestServer
 from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
 
+from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
     AddVideoKeys,
     ResourceManager,
@@ -17,6 +16,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_VIDEO_TABLE,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import BASE_FILE_PICKER_DIRECTORY
+from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT, NiceGUITestServer
 
 playwright = pytest.importorskip(
     "playwright.sync_api", reason="pytest-playwright is required for this test"
