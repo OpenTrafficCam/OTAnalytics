@@ -1,4 +1,3 @@
-import bz2
 from abc import ABC, abstractmethod
 from itertools import islice
 from pathlib import Path
@@ -8,7 +7,8 @@ import ijson
 
 from OTAnalytics.application.datastore import DetectionMetadata, VideoMetadata
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
-from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.application.track_input_source import OttrkFileInputSource
+from OTAnalytics.domain.progress import LazyProgressbarBuilder
 from OTAnalytics.domain.track import (
     Detection,
     Track,
@@ -33,32 +33,11 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     create_python_track,
     parse_python_detection,
 )
-from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
+from OTAnalytics.plugin_progress.lazy_tqdm_progressbar import LazyTqdmBuilder
 
 RawDetectionData = list[dict]
 RawVideoMetadata = dict
 RawFileData = tuple[RawDetectionData, RawVideoMetadata, TrackIdGenerator]
-
-
-def parse_json_bz2_events(path: Path) -> Iterable[tuple[str, str, str]]:
-    """
-    Provide lazy data stream reading the bzip2 compressed file
-    at the given path and interpreting it as json objects.
-    """
-    with bz2.BZ2File(path) as stream:
-        yield from ijson.parse(stream)
-
-
-def metadata_from_json_events(parse_events: Iterable[tuple[str, str, str]]) -> dict:
-    """
-    Extract the metadata block of the ottrk data format
-    from the given json parser event stream.
-    """
-    result: dict
-    for data in ijson.items(parse_events, "metadata"):
-        result = data
-        break
-    return result
 
 
 def detection_stream_from_json_events(parse_events: Any) -> Iterator[dict]:
@@ -183,7 +162,7 @@ class PythonStreamDetectionParser(StreamDetectionParser):
 
 class StreamTrackParser(ABC):
     @abstractmethod
-    def parse(self, files: set[Path]) -> Iterator[TrackDataset]:
+    def parse(self, input_source: OttrkFileInputSource) -> Iterator[TrackDataset]:
         """
         Parse multiple track files and provide
         the parsed Tracks in form of a lazy stream.
@@ -229,9 +208,9 @@ class StreamOttrkParser(StreamTrackParser):
         registered_videos_metadata (list[VideosMetadata], optional):
             VideosMetadata objects to be updated with each parsed files metadata.
             Defaults to [].
-        progressbar (ProgressbarBuilder, optional):
+        progressbar (LazyProgressbarBuilder, optional):
             a progressbar builder to show progress of processed files.
-            Defaults to TqdmBuilder().
+            Defaults to LazyTqdmProgressbarBuilder().
         track_dataset_factory (TrackDataSetFactory, optional):
             a factory to create a new track dataset from a list of Tracks.
             Defaults to PandasTrackDataset.from_list(tracks,
@@ -247,7 +226,7 @@ class StreamOttrkParser(StreamTrackParser):
         format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
         registered_tracks_metadata: list[TracksMetadata] = [],
         registered_videos_metadata: list[VideosMetadata] = [],
-        progressbar: ProgressbarBuilder = TqdmBuilder(),
+        progressbar: LazyProgressbarBuilder = LazyTqdmBuilder(),
         track_dataset_factory: TrackDatasetFactory = default_track_dataset_factory,
         chunk_size: int = 5,
     ) -> None:
@@ -286,8 +265,8 @@ class StreamOttrkParser(StreamTrackParser):
         for videos_metadata in self._registered_videos_metadata:
             videos_metadata.update(new_video_metadata)
 
-    def parse(self, files: set[Path]) -> Iterator[TrackDataset]:
-        iterator = iter(self._parse_tracks(files))
+    def parse(self, input_source: OttrkFileInputSource) -> Iterator[TrackDataset]:
+        iterator = iter(self._parse_tracks(input_source))
         while True:
             chunk = list(islice(iterator, self._chunk_size))
             if chunk:
@@ -295,10 +274,9 @@ class StreamOttrkParser(StreamTrackParser):
             else:
                 return  # explicitly end generator, raises StopIteration exception
 
-    def _parse_tracks(self, files: set[Path]) -> Iterator[Track]:
-        sorted_files = self._sort_files(files)
+    def _parse_tracks(self, input_source: OttrkFileInputSource) -> Iterator[Track]:
         progressbar: Iterable[Path] = self._progressbar(
-            sorted_files, unit="files", description="Processed ottrk files: "
+            input_source.produce(), unit="files", description="Processed ottrk files: "
         )
 
         for ottrk_file in progressbar:
@@ -332,18 +310,3 @@ class StreamOttrkParser(StreamTrackParser):
 
         # after all files are processed, yield remaining, unfinished tracks
         yield from self._detection_parser.get_remaining_tracks()
-
-    def _sort_files(self, files: set[Path]) -> list[Path]:
-        """
-        Sort ottrk files by recorded_start_date in video metadata,
-        only considers files with .ottrk extension
-        """
-        return list(
-            sorted(filter(lambda p: p.is_file(), files), key=self._start_date_metadata)
-        )
-
-    def _start_date_metadata(self, file: Path) -> float:
-        json_events = parse_json_bz2_events(file)
-        metadata = metadata_from_json_events(json_events)
-        metadata = self._format_fixer.fix_metadata(metadata)
-        return float(metadata[ottrk_format.VIDEO][ottrk_format.RECORDED_START_DATE])

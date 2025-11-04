@@ -180,6 +180,7 @@ from OTAnalytics.plugin_ui.cli import (
 )
 from OTAnalytics.plugin_video_processing.video_reader import PyAvVideoReader
 from tests.conftest import YieldFixture
+from tests.utils.builders.ottrk_file_input_source import create_ottrk_file_input_source
 
 # duplicate
 DETECTION_RATE_PERCENTILE_VALUE = 0.9
@@ -1149,9 +1150,12 @@ class TestOTAnalyticsCli:
             dependencies,
             run_config,
         )
+        ottrk_file_input_source = create_ottrk_file_input_source(
+            {second_track_file, first_track_file}
+        )
 
         cli._prepare_analysis(sections, flows)
-        cli._run_analysis({second_track_file, first_track_file})
+        cli._run_analysis(ottrk_file_input_source)
         cli._export_analysis(sections, OVERWRITE)
 
         mock_add_flows.assert_called_once_with(flows)
@@ -1167,18 +1171,14 @@ class TestOTAnalyticsCli:
         )
 
         if mode == CliMode.STREAM:
-            mock_parse_track_stream.assert_called_once_with(
-                {second_track_file, first_track_file}
-            )
+            mock_parse_track_stream.assert_called_once_with(ottrk_file_input_source)
             dependencies[self.CLEAR_ALL_TRACKS].assert_called()
             dependencies[self.EVENT_REPOSITORY].clear.assert_called()
             dependencies[self.APPLY_CLI_CUTS].apply.assert_called_once_with(
                 sections, preserve_cutting_sections=True
             )
         else:
-            mock_parse_tracks.assert_called_once_with(
-                [first_track_file, second_track_file]
-            )
+            mock_parse_tracks.assert_called_once_with(ottrk_file_input_source)
             dependencies[self.CLEAR_ALL_TRACKS].assert_called_once()
             dependencies[self.EVENT_REPOSITORY].clear.assert_called_once()
             dependencies[self.APPLY_CLI_CUTS].apply.assert_called_once_with(
