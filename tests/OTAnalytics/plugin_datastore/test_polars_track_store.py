@@ -8,6 +8,7 @@ from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
 from OTAnalytics.plugin_datastore.polars_track_store import (
     COLUMNS,
@@ -32,6 +33,11 @@ def create_line_section(
     section.get_coordinates.return_value = [
         Coordinate(coord[0], coord[1]) for coord in coordinates
     ]
+    # Provide the relative_offset_coordinates mapping expected by get_section_offset
+    section.relative_offset_coordinates = {
+        EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+    }
+    # Keep legacy helper for any code paths expecting get_offset(event_type)
     section.get_offset.return_value = RelativeOffsetCoordinate(0.0, 0.0)
     section.id = SectionId(section_id)
     return section
@@ -506,6 +512,36 @@ class TestPolarsTrackDataset:
             expected_data = expected_result[track_id]
             assert result_data == expected_data
         assert result == expected_result
+
+    def test_cut_with_section_no_null_track_ids_with_single_detection(
+        self,
+        car_track: Track,
+        single_detection_track: Track,
+    ) -> None:
+        """
+        Regression test for a bug where cut_with_section produced null TRACK_IDs
+        after the join on ROW_ID (notably for single-detection tracks with no segments).
+        Ensure that TRACK_IDs are backfilled and contain no nulls.
+        """
+        dataset = PolarsTrackDataset.from_list(
+            [car_track, single_detection_track],
+            PolarsTrackGeometryDataset.from_track_dataset,
+        )
+
+        # A simple vertical line; intersections are not required for this check,
+        # we only need segment creation to run and the join to occur
+        section = create_line_section("cut", [(2.5, 0.0), (2.5, 3.0)])
+        offset = RelativeOffsetCoordinate(0.0, 0.0)
+
+        result_dataset, _ = dataset.cut_with_section(section, offset)
+        df = result_dataset.get_data()
+
+        # Assert no null TRACK_ID values remain after cut
+        assert df.filter(pl.col(track.TRACK_ID).is_null()).is_empty()
+
+        # And the single-detection track is still present in the result
+        unique_ids = df.get_column(track.TRACK_ID).unique().to_list()
+        assert single_detection_track.id.id in unique_ids
 
 
 def test_convert_tracks() -> None:
