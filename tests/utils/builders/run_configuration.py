@@ -14,6 +14,7 @@ def create_run_config(
     flow_parser: FlowParser = OtFlowParser(),
     start_cli: bool = True,
     start_webui: bool = False,
+    file_picker_directory: str | None = None,
     cli_mode: CliMode = CliMode.BULK,
     cli_chunk_size: int = 5,
     debug: bool = False,
@@ -32,6 +33,7 @@ def create_run_config(
     cli_args = CliArguments(
         start_cli=start_cli,
         start_webui=start_webui,
+        file_picker_directory=file_picker_directory,
         cli_mode=cli_mode,
         cli_chunk_size=cli_chunk_size,
         debug=debug,

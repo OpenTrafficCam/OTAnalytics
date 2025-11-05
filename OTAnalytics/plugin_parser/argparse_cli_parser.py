@@ -57,6 +57,12 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--file-picker-directory",
+            type=str,
+            help="Path to base folder of file picker in webui.",
+            required=False,
+        )
+        self._parser.add_argument(
             "--config",
             type=str,
             help="Path to otconfig file.",
@@ -180,6 +186,7 @@ class ArgparseCliParser(CliParser):
             debug=args.debug,
             logfile_overwrite=args.logfile_overwrite,
             show_svz=args.show_svz,
+            file_picker_directory=args.file_picker_directory,
             config_file=args.config,
             track_files=args.ottrks,
             otflow_file=args.otflow,

@@ -15,8 +15,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_VIDEO_TABLE,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import BASE_FILE_PICKER_DIRECTORY
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT, NiceGUITestServer
+from tests.utils.builders.otanalytics_builders import file_picker_directory
 
 playwright = pytest.importorskip(
     "playwright.sync_api", reason="pytest-playwright is required for this test"
@@ -81,7 +81,7 @@ def _reset_videos_tab(page: Page, rm: ResourceManager) -> None:
 
 def _add_video_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
     page.get_by_text(rm.get(AddVideoKeys.BUTTON_ADD_VIDEOS), exact=True).click()
-    ui_path = path.relative_to(BASE_FILE_PICKER_DIRECTORY)
+    ui_path = path.relative_to(file_picker_directory())
     # Double-click each path segment within the file picker grid (ag-grid)
     for part in ui_path.parts:
         # Use a slightly resilient selection inside the picker grid

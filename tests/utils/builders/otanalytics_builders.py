@@ -62,6 +62,10 @@ class MultiprocessingWorker(Process):
         self._runner.run()
 
 
+def file_picker_directory() -> str:
+    return str(Path().cwd())
+
+
 class NiceguiWorker(Process):
     """A worker that runs a given task in a separate process using the multiprocessing
     library.
@@ -78,6 +82,7 @@ class NiceguiWorker(Process):
             else create_run_config(
                 start_cli=False,
                 start_webui=True,
+                file_picker_directory=file_picker_directory(),
             )
         )
 
