@@ -1,8 +1,8 @@
 import multiprocessing as py_multiprocessing
 import os
 import shutil
-import subprocess
 import time
+from multiprocessing import Process
 from pathlib import Path
 from typing import Any, Generator, List, Sequence, TypeVar
 from unittest.mock import Mock
@@ -169,12 +169,13 @@ class NiceGUITestServer:
 
     def __init__(self, port: int = DEFAULT_PORT):
         self.port = port
-        self.process: subprocess.Popen | None = None
+        self.process: Process | None = None
         self.base_url = f"http://{DEFAULT_HOSTNAME}:{port}"
 
     def start(self) -> None:
         """Start NiceGUI server in subprocess"""
-        NiceguiWorker().start()
+        self.process = NiceguiWorker()
+        self.process.start()
         # Wait for server to start
         self._wait_for_server()
 
@@ -182,7 +183,7 @@ class NiceGUITestServer:
         """Stop NiceGUI server"""
         if self.process:
             self.process.terminate()
-            self.process.wait()
+            self.process.join(ACCEPTANCE_TEST_WAIT_TIMEOUT)
 
     def _wait_for_server(self, timeout: int = 10) -> None:
         """Wait until server is responding"""
