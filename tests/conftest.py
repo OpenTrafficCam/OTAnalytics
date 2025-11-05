@@ -173,7 +173,7 @@ class NiceGUITestServer:
         self.base_url = f"http://{DEFAULT_HOSTNAME}:{port}"
 
     def start(self) -> None:
-        """Start NiceGUI server in subprocess"""
+        """Start NiceGUI server"""
         try:
             self._select_multiprocessing_mode()
             self.process = NiceguiWorker()
