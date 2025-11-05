@@ -537,7 +537,7 @@ class TestPolarsTrackDataset:
         df = result_dataset.get_data()
 
         # Assert no null TRACK_ID values remain after cut
-        assert df.filter(pl.col(track.TRACK_ID).is_null()).height == 0
+        assert df.filter(pl.col(track.TRACK_ID).is_null()).is_empty()
 
         # And the single-detection track is still present in the result
         unique_ids = df.get_column(track.TRACK_ID).unique().to_list()
