@@ -21,17 +21,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-      - name: Set up Python ${{ matrix.py }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.py }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-      - name: Install the project
-        shell: bash
-        run: uv sync --locked --dev ${{ inputs.uv-sync-args }}
       - name: Run Python Tests
         uses: platomo/test-python-app-action@v4
         timeout-minutes: 60
