@@ -92,9 +92,8 @@ class NiceguiWorker(Process):
 
     def stop(self) -> None:
         """Stops the worker process and terminates the task."""
-
         self.terminate()
-        self.join()
+        self.join(10)
 
     def run(self) -> None:
         """Runs the task in the worker process."""
