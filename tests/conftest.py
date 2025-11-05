@@ -174,8 +174,13 @@ class NiceGUITestServer:
 
     def start(self) -> None:
         """Start NiceGUI server in subprocess"""
-        self.process = NiceguiWorker()
-        self.process.start()
+        try:
+            self.process = NiceguiWorker()
+            self.process.start()
+        except Exception:
+            if self.process:
+                self.process.terminate()
+            self.process = None
         # Wait for server to start
         self._wait_for_server()
 
@@ -184,6 +189,7 @@ class NiceGUITestServer:
         if self.process:
             self.process.terminate()
             self.process.join(ACCEPTANCE_TEST_WAIT_TIMEOUT)
+            self.process = None
 
     def _wait_for_server(self, timeout: int = 10) -> None:
         """Wait until server is responding"""
