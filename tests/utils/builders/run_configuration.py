@@ -1,17 +1,19 @@
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.run_configuration import RunConfiguration
+from OTAnalytics.plugin_parser.otvision_parser import OtFlowParser
 
 NUM_PROCESSES = 1
 
 
 def create_run_config(
-    track_files: list[str],
-    otflow_file: str,
-    save_dir: str,
-    event_formats: list[str],
-    flow_parser: FlowParser,
+    track_files: list[str] | None = None,
+    otflow_file: str | None = None,
+    save_dir: str | None = None,
+    event_formats: list[str] | None = None,
+    flow_parser: FlowParser = OtFlowParser(),
     start_cli: bool = True,
+    start_webui: bool = False,
     cli_mode: CliMode = CliMode.BULK,
     cli_chunk_size: int = 5,
     debug: bool = False,
@@ -29,6 +31,7 @@ def create_run_config(
 ) -> RunConfiguration:
     cli_args = CliArguments(
         start_cli=start_cli,
+        start_webui=start_webui,
         cli_mode=cli_mode,
         cli_chunk_size=cli_chunk_size,
         debug=debug,

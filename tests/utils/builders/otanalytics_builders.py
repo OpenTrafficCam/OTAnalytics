@@ -27,6 +27,7 @@ from OTAnalytics.plugin_ui.base_application import (
 from OTAnalytics.plugin_ui.nicegui_application import (
     OtAnalyticsNiceGuiApplicationStarter,
 )
+from tests.utils.builders.run_configuration import create_run_config
 
 
 class Runnable(Protocol):
@@ -59,6 +60,40 @@ class MultiprocessingWorker(Process):
     def run(self) -> None:
         """Runs the task in the worker process."""
         self._runner.run()
+
+
+class NiceguiWorker(Process):
+    """A worker that runs a given task in a separate process using the multiprocessing
+    library.
+
+    Args:
+        runner (Runnable): The task to be run by this worker.
+    """
+
+    def __init__(self, run_config: RunConfiguration | None = None) -> None:
+        super(Process, self).__init__()
+        self._run_config = (
+            run_config
+            if run_config
+            else create_run_config(
+                start_cli=False,
+                start_webui=True,
+            )
+        )
+
+    def start(self) -> None:
+        """Starts the worker process and runs the task."""
+        Process.start(self)
+
+    def stop(self) -> None:
+        """Stops the worker process and terminates the task."""
+
+        self.terminate()
+        self.join()
+
+    def run(self) -> None:
+        """Runs the task in the worker process."""
+        OtAnalyticsNiceGuiApplicationStarter(self._run_config).start()
 
 
 class NiceguiOtanalyticsBuilder(OtAnalyticsNiceGuiApplicationStarter):

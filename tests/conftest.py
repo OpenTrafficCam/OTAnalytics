@@ -47,6 +47,7 @@ from tests.utils.builders.event_builder import EventBuilder
 from tests.utils.builders.otanalytics_builders import (
     MultiprocessingWorker,
     NiceguiOtanalyticsBuilder,
+    NiceguiWorker,
 )
 from tests.utils.builders.track_builder import TrackBuilder, create_track
 from tests.utils.builders.track_segment_builder import (
@@ -173,12 +174,7 @@ class NiceGUITestServer:
 
     def start(self) -> None:
         """Start NiceGUI server in subprocess"""
-        self.process = subprocess.Popen(
-            ["python", "-m", "OTAnalytics", "--webui"],
-            stdin=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=BUFFER_SIZE_100MB,
-        )
+        NiceguiWorker().start()
         # Wait for server to start
         self._wait_for_server()
 
