@@ -175,6 +175,7 @@ class NiceGUITestServer:
     def start(self) -> None:
         """Start NiceGUI server in subprocess"""
         try:
+            self._select_multiprocessing_mode()
             self.process = NiceguiWorker()
             self.process.start()
         except Exception:
@@ -183,6 +184,21 @@ class NiceGUITestServer:
             self.process = None
         # Wait for server to start
         self._wait_for_server()
+
+    def _select_multiprocessing_mode(self) -> None:
+        # Choose a compatible multiprocessing start method for the current platform
+        # Prefer 'fork' on POSIX for speed, but fall back to 'forkserver' or 'spawn'
+        try:
+            methods = py_multiprocessing.get_all_start_methods()
+            preferred = (
+                "fork"
+                if "fork" in methods
+                else ("forkserver" if "forkserver" in methods else "spawn")
+            )
+            py_multiprocessing.set_start_method(preferred, force=True)
+        except Exception:
+            # If already set or unsupported, continue with the default
+            pass
 
     def stop(self) -> None:
         """Stop NiceGUI server"""
