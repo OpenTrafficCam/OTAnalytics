@@ -136,6 +136,7 @@ class OTAnalyticsCli(ABC):
 
         except Exception as cause:
             logger().exception(cause, exc_info=True)
+        self._after()
 
     def _add_sections(self, sections: Iterable[Section]) -> None:
         """Add sections to section repository."""
@@ -370,6 +371,10 @@ class OTAnalyticsCli(ABC):
         self._after_track_statistics_export(track_statistics_path)
 
     def _after_track_statistics_export(self, track_statistics_file: Path) -> None:
+        pass
+
+    def _after(self) -> None:
+        """Hook to execute after everything is done."""
         pass
 
 
