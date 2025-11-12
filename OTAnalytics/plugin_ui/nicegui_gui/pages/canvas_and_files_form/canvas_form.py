@@ -1,9 +1,9 @@
 from typing import Iterable, Optional, Self
 
+from PIL import Image
 from nicegui import events, ui
 from nicegui.elements.interactive_image import InteractiveImage
 from nicegui.events import KeyEventArguments
-from PIL import Image
 
 from OTAnalytics.adapter_ui.abstract_canvas import TAG_SELECTED_SECTION, AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
@@ -34,7 +34,7 @@ EDIT_COLOR = "orange"
 MOVING_COLOR = "blue"
 MOVING_STROKE_WIDTH = 400
 MOVING_STROKE_OPACITY = 0.0
-
+MARKER_INTERACTIVE_IMAGE = "marker-interactive-image"
 
 CLICK = "click"
 POINTER_EVENT_ALL = "all"
@@ -111,6 +111,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._background_image = ui.interactive_image(
             "", on_mouse=self._on_pointer_down, events=[CLICK]
         )
+        self._background_image.props(f"test-id={MARKER_INTERACTIVE_IMAGE}")
         self._background_image.on(
             "svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args)
         )

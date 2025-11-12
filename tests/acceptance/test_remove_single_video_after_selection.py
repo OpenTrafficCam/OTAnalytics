@@ -106,57 +106,65 @@ def _open_part(page: Page, part: str) -> None:
     raise AssertionError(f"Could not find table cell with text: {part}")
 
 
-@pytest.mark.timeout(300)
-@pytest.mark.playwright
-@pytest.mark.usefixtures("external_app")
-def test_remove_single_video_after_selection(
-    page: Page, external_app: NiceGUITestServer, resource_manager: ResourceManager
-) -> None:
-    """Playwright: Removing a single selected video from the Videos tab.
+class TestRemoveSingleVideoAfterSelection:
+    @pytest.mark.timeout(300)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_remove_single_video_after_selection(
+        self,
+        page: Page,
+        external_app: NiceGUITestServer,
+        resource_manager: ResourceManager,
+    ) -> None:
+        """Playwright: Removing a single selected video from the Videos tab.
 
-    Steps:
-    - Open main page, switch to Videos tab
-    - Add a single video via in-app file picker UI
-    - Click on Remove and verify the video disappears from the table
+        Steps:
+        - Open main page, switch to Videos tab
+        - Add a single video via in-app file picker UI
+        - Click on Remove and verify the video disappears from the table
 
-    Prerequisites: pytest-playwright installed and browsers set up.
-    """
-    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")  # fallback
-    page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        Prerequisites: pytest-playwright installed and browsers set up.
+        """
+        base_url = getattr(
+            external_app, "base_url", "http://127.0.0.1:8080"
+        )  # fallback
+        page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-    # Switch to Videos tab
-    page.get_by_text(resource_manager.get(TrackFormKeys.TAB_TWO), exact=True).click()
+        # Switch to Videos tab
+        page.get_by_text(
+            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
+        ).click()
 
-    # Ensure clean slate
-    _reset_videos_tab(page, resource_manager)
+        # Ensure clean slate
+        _reset_videos_tab(page, resource_manager)
 
-    # Prepare test video path from tests/data
-    data_dir = Path(__file__).parents[1] / "data"
-    v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-    assert v1.exists(), f"Test video missing: {v1}"
+        # Prepare test video path from tests/data
+        data_dir = Path(__file__).parents[1] / "data"
+        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        assert v1.exists(), f"Test video missing: {v1}"
 
-    # Add the video
-    _add_video_via_picker(page, resource_manager, v1)
+        # Add the video
+        _add_video_via_picker(page, resource_manager, v1)
 
-    name1 = v1.name
-    # Wait for the filename to appear in table
-    _wait_for_names_present(page, [name1])
-    # Sanity check: the table is present
-    expect(page.locator(f'[test-id="{MARKER_VIDEO_TABLE}"]')).to_be_visible()
+        name1 = v1.name
+        # Wait for the filename to appear in table
+        _wait_for_names_present(page, [name1])
+        # Sanity check: the table is present
+        expect(page.locator(f'[test-id="{MARKER_VIDEO_TABLE}"]')).to_be_visible()
 
-    # Remove the row
-    _click_table_cell_with_text(page, name1)
-    page.get_by_text(
-        resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-    ).click()
+        # Remove the row
+        _click_table_cell_with_text(page, name1)
+        page.get_by_text(
+            resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
+        ).click()
 
-    # Verify it's gone
-    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-    while time.time() < deadline:
-        if name1 not in _table_filenames(page):
-            break
-        time.sleep(0.05)
-    remaining = _table_filenames(page)
-    assert (
-        name1 not in remaining
-    ), f"Video should have been removed, but still present in: {remaining}"
+        # Verify it's gone
+        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        while time.time() < deadline:
+            if name1 not in _table_filenames(page):
+                break
+            time.sleep(0.05)
+        remaining = _table_filenames(page)
+        assert (
+            name1 not in remaining
+        ), f"Video should have been removed, but still present in: {remaining}"

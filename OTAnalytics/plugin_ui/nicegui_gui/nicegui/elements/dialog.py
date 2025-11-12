@@ -21,7 +21,16 @@ class BaseDialog:
 
     @property
     async def result(self) -> DialogResult:
-        return await self.build()
+        """Build, open, and await the dialog, returning the submitted result.
+
+        NiceGUI dialogs must be opened explicitly and awaited to capture the
+        value passed to dialog.submit(...). This method ensures the dialog is
+        shown and returns the DialogResult provided by the Apply/Cancel buttons.
+        """
+        dialog = self.build()
+        dialog.open()
+        # Await the dialog; this resolves with the value passed to dialog.submit
+        return await dialog
 
     def __init__(self, resource_manager: ResourceManager) -> None:
         self.resource_manager = resource_manager
@@ -40,6 +49,13 @@ class BaseDialog:
                 )
                 apply.mark(MARKER_APPLY)
                 cancel.mark(MARKER_CANCEL)
+                # Expose stable test-id attributes for automated tests
+                try:
+                    apply.props(f"test-id={MARKER_APPLY}")
+                    cancel.props(f"test-id={MARKER_CANCEL}")
+                except Exception:
+                    # props may not exist in some NiceGUI versions; ignore gracefully
+                    pass
             return dialog
 
     @abstractmethod
