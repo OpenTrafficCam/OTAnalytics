@@ -244,7 +244,7 @@ class TestAddLineSectionWithDialog:
     @pytest.mark.timeout(450)
     @pytest.mark.playwright
     @pytest.mark.usefixtures("external_app")
-    def test_add_multiple_line_sections_with_dialog(
+    def test_add_flow_remove_flow_and_generate_flow(
         self,
         page: Page,
         external_app: NiceGUITestServer,
@@ -409,3 +409,50 @@ class TestAddLineSectionWithDialog:
         table_text = table.inner_text()
         assert custom_flow_name in table_text
         assert new_flow_name not in table_text
+        page.locator('[test-id="marker-button-properties"]').first.click()
+        # Give the UI a short moment to process the selection
+        time.sleep(0.5)
+
+        name_input = page.locator(f'[test-id="{MARKER_FLOW_NAME}"]').first
+        name_input.wait_for(state="visible")
+        new_flow_name = "My-Flow-Renamed"
+        name_input.fill(new_flow_name)
+        page.locator('[test-id="marker-apply"]').first.click()
+        time.sleep(0.3)
+        # Validate that the flow kept its original name in the table
+        table = page.locator('[test-id="marker-flow-table"]').first
+        table.wait_for(state="visible")
+        table_text = table.inner_text()
+        assert new_flow_name in table_text
+
+        remove_button = page.locator('[test-id="marker-button-remove"]').first
+        remove_button.wait_for(state="visible")
+        remove_button.click()
+        time.sleep(0.3)
+        table = page.locator('[test-id="marker-flow-table"]').first
+        table.wait_for(state="visible")
+        table_text = table.inner_text()
+        assert new_flow_name not in table_text
+
+        generate_button = page.locator('[test-id="marker-button-generate"]').first
+        generate_button.wait_for(state="visible")
+        generate_button.click()
+
+        deadline_gen = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        matched_texts: list[str] = []
+        last_texts: list[str] = []
+        while time.time() < deadline_gen:
+            try:
+                table = page.locator('[test-id="marker-flow-table"]').first
+                table.wait_for(state="visible")
+                rows = table.locator("tbody tr")
+                last_texts = rows.all_text_contents() if rows.count() else []
+                matched_texts = [t for t in last_texts if all(n in t for n in names)]
+                if len(matched_texts) >= 2:
+                    break
+            except Exception:
+                pass
+            time.sleep(0.1)
+        assert (
+            len(matched_texts) >= 2
+        ), f"Expected 2 generated flows containing both section names {names}, but got {len(matched_texts)}. Rows: {last_texts}"  # noqa

@@ -34,6 +34,10 @@ class BaseDialog:
 
     def __init__(self, resource_manager: ResourceManager) -> None:
         self.resource_manager = resource_manager
+        # Optional per-dialog override markers for test-id props
+        # Subclasses may set these attributes to expose dialog-specific test ids
+        self.apply_test_id: str | None = None
+        self.cancel_test_id: str | None = None
 
     def build(self) -> ui.dialog:
         with ui.dialog() as dialog, ui.card().classes("w-96"):
@@ -47,12 +51,19 @@ class BaseDialog:
                     self.resource_manager.get(GeneralKeys.LABEL_CANCEL),
                     on_click=lambda: dialog.submit(DialogResult.CANCEL),
                 )
+                # Keep generic markers for compatibility
                 apply.mark(MARKER_APPLY)
                 cancel.mark(MARKER_CANCEL)
                 # Expose stable test-id attributes for automated tests
                 try:
+                    # Always expose generic ids
                     apply.props(f"test-id={MARKER_APPLY}")
                     cancel.props(f"test-id={MARKER_CANCEL}")
+                    # Additionally expose dialog-specific ids when provided
+                    if self.apply_test_id:
+                        apply.props(f"test-id={self.apply_test_id}")
+                    if self.cancel_test_id:
+                        cancel.props(f"test-id={self.cancel_test_id}")
                 except Exception:
                     # props may not exist in some NiceGUI versions; ignore gracefully
                     pass
