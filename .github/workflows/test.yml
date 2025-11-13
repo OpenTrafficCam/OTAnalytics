@@ -25,12 +25,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.py }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
       - name: Install Playwright browsers (Ubuntu)
         if: runner.os == 'Linux'
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install playwright
-          python -m playwright install --with-deps
+          uv pip install --upgrade pip
+          uv pip install playwright
+          uv run playwright install --with-deps
       - name: Install Playwright browsers (Windows)
         if: runner.os == 'Windows'
         run: |
