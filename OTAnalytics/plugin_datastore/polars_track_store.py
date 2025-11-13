@@ -55,6 +55,7 @@ from OTAnalytics.plugin_parser import ottrk_dataformat
 
 RANK = "rank"
 MINIMUM_DETECTIONS = 2
+OLD_TRACK_ID = "old_track_id"
 
 
 class PolarsDetection(Detection):
@@ -696,10 +697,17 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         original_track_ids = PolarsTrackIdSet(
             self._dataset.get_column(track.TRACK_ID).unique()
         )
-        old_track_ids = self._dataset.rename({track.TRACK_ID: "old_track_id"})
+        old_track_ids = self._dataset.rename({track.TRACK_ID: OLD_TRACK_ID})
 
         result = old_track_ids.join(new_track_ids, on=ROW_ID, how="left")
-        result = result.drop("old_track_id")
+
+        # Keep existing track IDs for rows without a segment match
+        # (single detection track)
+        result = result.with_columns(
+            pl.coalesce([pl.col(track.TRACK_ID), pl.col(OLD_TRACK_ID)]).alias(
+                track.TRACK_ID
+            )
+        ).drop(OLD_TRACK_ID)
         return (
             PolarsTrackDataset.from_dataframe(result, self.track_geometry_factory),
             original_track_ids,
