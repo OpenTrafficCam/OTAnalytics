@@ -40,3 +40,5 @@ jobs:
         run: uv sync --locked --dev
       - name: Run acceptance tests
         run: uv run pytest ./tests/test-acceptance.py
+      - name: Run acceptance tests
+        run: uv run pytest ./tests/acceptance/
