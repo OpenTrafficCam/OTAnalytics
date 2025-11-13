@@ -29,6 +29,9 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+      - name: Install the project
+        shell: bash
+        run: uv sync --locked --dev ${{ inputs.uv-sync-args }}
       - name: Install Playwright browsers (Ubuntu)
         if: runner.os == 'Linux'
         run: |
