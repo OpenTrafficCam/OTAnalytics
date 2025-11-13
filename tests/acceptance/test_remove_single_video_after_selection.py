@@ -27,8 +27,8 @@ playwright = pytest.importorskip(
 def _table_filenames(page: Page) -> list[str]:
     cells = page.locator(f'[test-id="{MARKER_VIDEO_TABLE}"] table tbody tr td')
     texts: list[str] = []
-    for i in range(cells.count()):
-        t = cells.nth(i).inner_text().strip()
+    for cell in cells.all():
+        t = cell.inner_text().strip()
         if t:
             texts.append(t)
     # Filter to plausible video filenames
