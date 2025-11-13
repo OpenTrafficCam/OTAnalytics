@@ -35,11 +35,6 @@ jobs:
           unzip ./\*.zip
           rm ./*.zip
           cd ..
-      - name: Install the project
-        shell: bash
-        run: uv sync --locked --dev
-      - name: Run acceptance tests
-        run: uv run pytest ./tests/test-acceptance.py
       - name: Run acceptance tests
         uses: platomo/test-python-app-action@v4
         timeout-minutes: 20
@@ -48,3 +43,5 @@ jobs:
           package-path: OTAnalytics
           test-path: /tests/acceptance/
           playwright-required: true
+      - name: Run acceptance tests
+        run: uv run pytest ./tests/test-acceptance.py
