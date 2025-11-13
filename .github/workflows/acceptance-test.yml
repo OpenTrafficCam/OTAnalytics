@@ -41,7 +41,7 @@ jobs:
         with:
           py-version: 3.12
           package-path: OTAnalytics
-          test-path: /tests/acceptance/
+          test-path: tests/acceptance
           playwright-required: true
       - name: Run acceptance tests
         run: uv run pytest ./tests/test-acceptance.py
