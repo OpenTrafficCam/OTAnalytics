@@ -56,7 +56,7 @@ from tests.utils.builders.track_segment_builder import (
     TrackSegmentDatasetBuilderProvider,
 )
 
-ACCEPTANCE_TEST_WAIT_TIMEOUT = 20
+ACCEPTANCE_TEST_WAIT_TIMEOUT = 5
 BUFFER_SIZE_100MB = 10**8
 
 pytest_plugins = ["nicegui.testing.plugin", "pytest_playwright"]
