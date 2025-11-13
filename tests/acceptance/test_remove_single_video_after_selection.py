@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Iterable
 
 import pytest
+from playwright._impl import _errors
 from playwright.sync_api import Locator, Page, expect  # type: ignore  # noqa: E402
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
@@ -27,10 +28,13 @@ playwright = pytest.importorskip(
 def _table_filenames(page: Page) -> list[str]:
     cells = page.locator(f'[test-id="{MARKER_VIDEO_TABLE}"] table tbody tr td')
     texts: list[str] = []
-    for cell in cells.all():
-        t = cell.inner_text().strip()
-        if t:
-            texts.append(t)
+    for i in range(cells.count()):
+        try:
+            t = cells.nth(i).inner_text(timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT).strip()
+            if t:
+                texts.append(t)
+        except _errors.TimeoutError:
+            pass
     # Filter to plausible video filenames
     return [
         t
@@ -40,7 +44,7 @@ def _table_filenames(page: Page) -> list[str]:
 
 
 def _wait_for_names_present(page: Page, names: Iterable[str]) -> None:
-    deadline = time.time() + 30
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
     names = list(names)
     while time.time() < deadline:
         listed = _table_filenames(page)
@@ -166,11 +170,17 @@ def test_remove_single_video_after_selection(
     ).click()
 
     # Verify it's gone
+    last_err: Exception | None = None
     deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
     while time.time() < deadline:
-        if name1 not in _table_filenames(page):
-            break
-        time.sleep(0.05)
+        try:
+            if name1 not in _table_filenames(page):
+                break
+        except Exception as e:
+            last_err = e
+        time.sleep(0.5)
+    if last_err:
+        raise last_err
     remaining = _table_filenames(page)
     assert (
         name1 not in remaining
