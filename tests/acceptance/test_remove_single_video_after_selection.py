@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Iterable
 
 import pytest
-from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
+from playwright.sync_api import Locator, Page, expect  # type: ignore  # noqa: E402
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
@@ -11,6 +11,7 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     TrackFormKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import FOLDER_ICON
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_VIDEO_TABLE,
@@ -97,10 +98,16 @@ def _open_part(page: Page, part: str) -> None:
     last_err: Exception | None = None
     while time.time() < deadline:
         try:
-            cell = page.locator(".ag-cell-value", has_text=part).first
-            cell.wait_for(state="visible", timeout=1000)
-            cell.dblclick()
-            return
+            cells = page.locator(".ag-cell-value", has_text=part).all()
+            if not cells:
+                last_cell = page.locator(".ag-cell-value").last
+                last_cell.scroll_into_view_if_needed()
+            for cell in cells:
+                inner_text = get_raw_text(cell)
+                if part == inner_text:
+                    cell.wait_for(state="visible", timeout=1000)
+                    cell.dblclick()
+                    return
         except Exception as e:
             last_cell = page.locator(".ag-cell-value").last
             last_cell.scroll_into_view_if_needed()
@@ -108,6 +115,10 @@ def _open_part(page: Page, part: str) -> None:
     if last_err:
         raise last_err
     raise AssertionError(f"Could not find table cell with text: {part}")
+
+
+def get_raw_text(cell: Locator) -> str:
+    return cell.inner_text().strip(FOLDER_ICON).strip()
 
 
 @pytest.mark.timeout(300)

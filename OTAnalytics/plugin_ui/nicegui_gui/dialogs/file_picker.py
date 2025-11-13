@@ -12,6 +12,7 @@ PATH: str = "path"
 FILE: str = "File"
 ROW_DATA: str = "rowData"
 NULL_TERMINATOR: str = "\000"
+FOLDER_ICON = "📁"
 
 
 class LocalFilePicker(ui.dialog):
@@ -210,7 +211,9 @@ class LocalFilePicker(ui.dialog):
 
         self.grid.options[ROW_DATA] = [
             {
-                NAME: f"📁 <strong>{p.name}</strong>" if p.is_dir() else p.name,
+                NAME: (
+                    f"{FOLDER_ICON} <strong>{p.name}</strong>" if p.is_dir() else p.name
+                ),
                 PATH: self._map_to_ui(p),
             }
             for p in paths
@@ -220,7 +223,7 @@ class LocalFilePicker(ui.dialog):
             self.grid.options[ROW_DATA].insert(
                 0,
                 {
-                    NAME: "📁 <strong>..</strong>",
+                    NAME: f"{FOLDER_ICON} <strong>..</strong>",
                     PATH: self._map_to_ui(self.path.parent),
                 },
             )
