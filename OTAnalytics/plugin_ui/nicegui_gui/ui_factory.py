@@ -33,6 +33,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import DialogResult
 
+BASE_FILE_PICKER_DIRECTORY = Path.home()
+
 
 class NiceGuiMessageBox(MessageBox):
 
@@ -105,7 +107,7 @@ class NiceGuiUiFactory(UiFactory):
                 converted_filetypes.append(ext[0])
 
         file_paths = await LocalFilePicker(
-            directory=Path.home(),
+            directory=BASE_FILE_PICKER_DIRECTORY,
             show_hidden_files=False,
             show_files_only_of_type=None,  # Show all files
             show_only_directories=False,
