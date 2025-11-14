@@ -66,6 +66,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_fo
 from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
 from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
 
+DEFAULT_HOSTNAME = "localhost"
+DEFAULT_PORT = 5000
+
 
 class Webserver(Protocol):
     def run(self) -> None: ...
@@ -104,8 +107,8 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return NiceguiWebserver(
             page_builders=[main_page_builder],
             layout_components=NiceguiLayoutComponents(),
-            hostname="localhost",
-            port=5000,
+            hostname=DEFAULT_HOSTNAME,
+            port=DEFAULT_PORT,
         )
 
     @cached_property

@@ -1,13 +1,11 @@
-import multiprocessing as py_multiprocessing
-import os
 import shutil
+import subprocess
+import time
 from pathlib import Path
 from typing import Any, Generator, List, Sequence, TypeVar
 from unittest.mock import Mock
 
 import pytest
-from nicegui.testing import Screen
-from selenium import webdriver
 
 from OTAnalytics.application.analysis.road_user_assignment import (
     EventPair,
@@ -36,12 +34,8 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
-from OTAnalytics.plugin_ui.nicegui_application import Webserver
+from OTAnalytics.plugin_ui.nicegui_application import DEFAULT_HOSTNAME, DEFAULT_PORT
 from tests.utils.builders.event_builder import EventBuilder
-from tests.utils.builders.otanalytics_builders import (
-    MultiprocessingWorker,
-    NiceguiOtanalyticsBuilder,
-)
 from tests.utils.builders.track_builder import TrackBuilder, create_track
 from tests.utils.builders.track_segment_builder import (
     PANDAS,
@@ -50,9 +44,10 @@ from tests.utils.builders.track_segment_builder import (
     TrackSegmentDatasetBuilderProvider,
 )
 
-ACCEPTANCE_TEST_WAIT_TIMEOUT = 10
+ACCEPTANCE_TEST_WAIT_TIMEOUT = 5
+BUFFER_SIZE_100MB = 10**8
 
-pytest_plugins = ["nicegui.testing.plugin"]
+pytest_plugins = ["nicegui.testing.plugin", "pytest_playwright"]
 
 
 # --- Acceptance test collection control ---
@@ -64,96 +59,57 @@ pytest_plugins = ["nicegui.testing.plugin"]
 ACCEPTANCE_WORKFLOW_NAME = "Acceptance Test With Pytest"
 
 
-def _is_acceptance_context() -> bool:
-    return (
-        os.environ.get("GITHUB_WORKFLOW") == ACCEPTANCE_WORKFLOW_NAME
-        or os.environ.get("RUN_ACCEPTANCE") == "1"
-    )
-
-
-def pytest_ignore_collect(path: Path, config: pytest.Config) -> bool:  # type: ignore[override] # noqa
-    """Skip collecting acceptance tests unless in acceptance context.
-
-    This prevents acceptance tests from running in the default CI workflow (test.yml)
-    and during regular local runs, while allowing them in the dedicated
-    acceptance-test.yml (based on the workflow name) or when explicitly enabled
-    via RUN_ACCEPTANCE=1.
-    """
-    if _is_acceptance_context():
-        return False
-
-    p = str(path)
-    # Target only the known acceptance test locations
-    name = os.path.basename(p)
-    if name in {"test_acceptance.py", "test-acceptance.py"}:
-        return True
-    if "/acceptance_test/" in p or "\\acceptance_test\\" in p:
-        return True
-
-    return False
-
-
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
 
 
-@pytest.fixture
-def chrome_options() -> webdriver.ChromeOptions:
-    """Create Chrome options for Selenium testing.
+class NiceGUITestServer:
+    """Helper class to manage NiceGUI test server"""
 
-    This fixture creates a ChromeOptions instance that can be used by the
-    nicegui_chrome_options fixture for Selenium testing.
+    def __init__(self, port: int = DEFAULT_PORT):
+        self.port = port
+        self.process: subprocess.Popen | None = None
+        self.base_url = f"http://{DEFAULT_HOSTNAME}:{port}"
 
-    Sets a larger window size (1920x1080) to capture more content in screenshots.
-
-    Returns:
-        webdriver.ChromeOptions: Chrome options for Selenium testing.
-    """
-    options = webdriver.ChromeOptions()
-    options.add_argument("--window-size=1920,1080")
-    return options
-
-
-@pytest.fixture(scope="session")
-def given_builder() -> NiceguiOtanalyticsBuilder:
-    return NiceguiOtanalyticsBuilder()
-
-
-@pytest.fixture(scope="session")
-def given_app(
-    given_builder: NiceguiOtanalyticsBuilder,
-) -> YieldFixture[MultiprocessingWorker]:
-    # Choose a compatible multiprocessing start method for the current platform
-    # Prefer 'fork' on POSIX for speed, but fall back to 'forkserver' or 'spawn'
-    try:
-        methods = py_multiprocessing.get_all_start_methods()
-        preferred = (
-            "fork"
-            if "fork" in methods
-            else ("forkserver" if "forkserver" in methods else "spawn")
+    def start(self) -> None:
+        """Start NiceGUI server in subprocess"""
+        self.process = subprocess.Popen(
+            ["python", "-m", "OTAnalytics", "--webui"],
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=BUFFER_SIZE_100MB,
         )
-        py_multiprocessing.set_start_method(preferred, force=True)
-    except Exception:
-        # If already set or unsupported, continue with the default
-        pass
-    app = given_builder.build()
+        # Wait for server to start
+        self._wait_for_server()
+
+    def stop(self) -> None:
+        """Stop NiceGUI server"""
+        if self.process:
+            self.process.terminate()
+            self.process.wait()
+
+    def _wait_for_server(self, timeout: int = 10) -> None:
+        """Wait until server is responding"""
+        import requests
+
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                response = requests.get(self.base_url, timeout=1)
+                if response.status_code == 200:
+                    return
+            except Exception:
+                pass
+            time.sleep(0.1)
+        raise RuntimeError(f"Server did not start within {timeout} seconds")
+
+
+@pytest.fixture(scope="session")
+def external_app() -> YieldFixture[NiceGUITestServer]:
+    app = NiceGUITestServer()
+    app.start()
     yield app
     app.stop()
-
-
-@pytest.fixture(scope="session")
-def given_webserver(given_builder: NiceguiOtanalyticsBuilder) -> Webserver:
-    return given_builder.webserver
-
-
-@pytest.fixture
-async def target(screen: Screen, given_webserver: Webserver) -> Screen:
-    screen.IMPLICIT_WAIT = ACCEPTANCE_TEST_WAIT_TIMEOUT
-    given_webserver.build_pages()
-    # Set a larger window size for better screenshots
-    screen.selenium.set_window_size(1920, 1080)
-
-    return screen
 
 
 @pytest.fixture
