@@ -32,4 +32,3 @@ jobs:
           py-version: ${{ matrix.py }}
           package-path: OTAnalytics
           test-path: tests/OTAnalytics
-          playwright-required: true
