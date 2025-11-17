@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import pytest
 
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
+from OTAnalytics.application.track_input_source import OttrkFileInputSource
 from OTAnalytics.domain.track import Track, TrackClassificationCalculator, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
@@ -36,8 +37,9 @@ from OTAnalytics.plugin_parser.streaming_parser import (
     StreamDetectionParser,
     StreamOttrkParser,
 )
-from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
+from OTAnalytics.plugin_progress.lazy_tqdm_progressbar import LazyTqdmBuilder
 from tests.utils.assertions import assert_equal_track_properties
+from tests.utils.builders.ottrk_file_input_source import create_ottrk_file_input_source
 from tests.utils.builders.track_builder import (
     TrackBuilder,
     append_sample_data,
@@ -62,6 +64,11 @@ def mocked_track_file_repository() -> Mock:
     repository = Mock(spec=TrackRepository)
     repository.get_all.return_value = set()
     return repository
+
+
+@pytest.fixture
+def ottrk_file_input_source(ottrk_path: Path) -> OttrkFileInputSource:
+    return create_ottrk_file_input_source([ottrk_path])
 
 
 def assert_track_stream_equals_dataset(
@@ -141,7 +148,7 @@ class TestStreamOttrkParser:
             format_fixer=OttrkFormatFixer(),
             registered_tracks_metadata=[tracks_metadata],
             registered_videos_metadata=[videos_metadata],
-            progressbar=TqdmBuilder(),
+            progressbar=LazyTqdmBuilder(),
             track_dataset_factory=lambda tracks: PandasTrackDataset.from_list(
                 tracks,
                 ShapelyTrackGeometryDataset.from_track_dataset,
@@ -158,11 +165,12 @@ class TestStreamOttrkParser:
         stream_ottrk_parser: StreamOttrkParser,
         bulk_ottrk_parser: OttrkParser,
         ottrk_path: Path,
+        ottrk_file_input_source: OttrkFileInputSource,
     ) -> None:
         # compare result of streaming parser with original bulk parser
 
         bulk_res = bulk_ottrk_parser.parse(ottrk_path)
-        stream = stream_ottrk_parser.parse({ottrk_path})
+        stream = stream_ottrk_parser.parse(ottrk_file_input_source)
 
         expected = bulk_res.tracks.as_list()
         first_chunk = next(stream).as_list()
@@ -185,11 +193,12 @@ class TestStreamOttrkParser:
         stream_ottrk_parser: StreamOttrkParser,
         bulk_ottrk_parser: OttrkParser,
         ottrk_path: Path,
+        ottrk_file_input_source: OttrkFileInputSource,
     ) -> None:
         # compare result of streaming parser with original bulk parser
 
         bulk_res = bulk_ottrk_parser.parse(ottrk_path)
-        stream_res = stream_ottrk_parser.parse({ottrk_path})
+        stream_res = stream_ottrk_parser.parse(ottrk_file_input_source)
 
         assert_track_stream_equals_dataset(bulk_res.tracks, stream_res)
 
@@ -206,11 +215,12 @@ class TestStreamOttrkParser:
         track_id: str,
     ) -> None:
         ottrk_file = test_data_tmp_dir / "sample_file.ottrk"
+        input_source = create_ottrk_file_input_source({ottrk_file})
         track_builder = track_builder_with_sample_data(input_file=str(ottrk_file))
         track_builder.set_ottrk_version(version)
         ottrk_data = track_builder.build_ottrk()
         write_json_bz2(ottrk_data, ottrk_file)
-        parse_result = stream_ottrk_parser.parse({ottrk_file})
+        parse_result = stream_ottrk_parser.parse(input_source)
 
         example_track_builder = TrackBuilder()
         example_track_builder.add_input_file(str(ottrk_file))
