@@ -41,6 +41,8 @@ class NiceGuiButtonQuickSaveConfig(AbstractButtonQuickSaveConfig):
     def build(self) -> None:
         self._instance = ui.button(self._text, on_click=self._on_click)
         self._instance.mark(MARKER_PROJECT_SAVE)
+        # Expose test-id attribute for Playwright locators (align with FlowForm pattern)
+        self._instance.props(f"test-id={MARKER_PROJECT_SAVE}")
 
     def set_state_changed_color(self) -> None:
         if self._instance:
@@ -101,11 +103,14 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
                 on_click=self._open_project,
             )
             self.open_project_button.mark(MARKER_PROJECT_OPEN)
+            self.open_project_button.props(f"test-id={MARKER_PROJECT_OPEN}")
             self.save_project_button = ui.button(
                 self._resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT),
                 on_click=self._save_project,
             )
             self.save_project_button.mark(MARKER_PROJECT_SAVE_AS)
+            # Mirror marker addition pattern used in flow_form (mark + props)
+            self.save_project_button.props(f"test-id={MARKER_PROJECT_SAVE_AS}")
             self._quick_save_button.build()
         self._project_name.build()
         self._start_date.build()

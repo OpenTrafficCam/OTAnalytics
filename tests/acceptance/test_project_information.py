@@ -9,6 +9,9 @@ from OTAnalytics.application.resources.resource_manager import (
     ProjectKeys,
     ResourceManager,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+    MARKER_FILENAME,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
 from tests.conftest import NiceGUITestServer
@@ -197,7 +200,8 @@ class TestProjectInformationPlaywright:
         saved_time = "06:00:00"
         fill(saved_name, saved_date, saved_time)
 
-        save_path = _Path(test_data_tmp_dir) / "project_information.otconfig"
+        # Use a simple filename as requested by the issue (test_name)
+        save_path = _Path(test_data_tmp_dir) / "test_name.otconfig"
 
         async def fake_ask_for_save_file_path(*args: object, **kwargs: object) -> _Path:
             return save_path
@@ -227,9 +231,9 @@ class TestProjectInformationPlaywright:
         # Wait for Apply button to ensure the dialog is open
         page.locator('[test-id="apply"]').first.wait_for(state="visible")
         dir_label = resource_manager.get(FileChooserDialogKeys.LABEL_DIRECTORY)
-        file_label = resource_manager.get(FileChooserDialogKeys.LABEL_FILENAME)
+        # Set directory via label and set filename via explicit marker as requested
         page.get_by_label(dir_label, exact=True).fill(str(save_path.parent))
-        page.get_by_label(file_label, exact=True).fill(save_path.name)
+        page.locator(f'[test-id="{MARKER_FILENAME}"]').first.fill("test_name")
         # Apply the dialog
         page.locator('[test-id="apply"]').first.click()
 

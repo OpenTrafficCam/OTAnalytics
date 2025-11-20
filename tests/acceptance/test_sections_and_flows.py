@@ -1,3 +1,4 @@
+import json
 import time
 from pathlib import Path
 from typing import Iterable
@@ -8,6 +9,7 @@ from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
 from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
     AddVideoKeys,
+    FileChooserDialogKeys,
     FlowAndSectionKeys,
     FlowKeys,
     ResourceManager,
@@ -26,6 +28,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
     MARKER_NAME as MARKER_SECTION_NAME,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+    MARKER_FILENAME,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
@@ -38,6 +43,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
 )
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT, NiceGUITestServer
 from tests.utils.builders.otanalytics_builders import file_picker_directory
+from tests.utils.playwright_helpers import fill_project_information
 
 playwright = pytest.importorskip(
     "playwright.sync_api", reason="pytest-playwright is required for this test"
@@ -241,106 +247,116 @@ class TestAddLineSectionWithDialog:
             created
         ), "Section with the specified name was not found after applying the dialog"
 
-    @pytest.mark.timeout(450)
-    @pytest.mark.playwright
-    @pytest.mark.usefixtures("external_app")
-    def test_add_flow_remove_flow_and_generate_flow(
+    def _navigate_and_prepare(
         self,
         page: Page,
         external_app: NiceGUITestServer,
         resource_manager: ResourceManager,
     ) -> None:
-        """Playwright: Add multiple line sections via dialog and ensure all appear.
-
-        This test repeats the section-adding interaction twice with unique names
-        to verify the dialog can be used multiple times in a single session.
-        """
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        fill_project_information(
+            page,
+            resource_manager,
+            name="Test Project - Flow E2E",
+            date_value="2023-05-24",
+            time_value="06:00:00",
+        )
 
-        # Videos tab
+    def _goto_sections_with_one_video(
+        self, page: Page, resource_manager: ResourceManager
+    ) -> None:
         page.get_by_text(
             resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
         ).click()
         _reset_videos_tab(page, resource_manager)
-
         data_dir = Path(__file__).parents[1] / "data"
         v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
         assert v1.exists(), f"Test video missing: {v1}"
         _add_video_via_picker(page, resource_manager, v1)
         _wait_for_names_present(page, [v1.name])
         _click_table_cell_with_text(page, v1.name)
-
-        # Sections tab
         page.get_by_text(
             resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
         ).click()
 
+    def _create_section(
+        self, page: Page, resource_manager: ResourceManager, section_name: str
+    ) -> None:
         canvas_locator = page.locator(f'[test-id="{MARKER_INTERACTIVE_IMAGE}"]')
         expect(canvas_locator).to_be_visible()
         img = page.locator(f'[test-id="{MARKER_INTERACTIVE_IMAGE}"] img').first
         target = img if img.count() else canvas_locator
         target.scroll_into_view_if_needed()
-
-        def create_section(section_name: str) -> None:
-            # Activate tool each time to be safe
+        try:
+            page.get_by_text(
+                resource_manager.get(SectionKeys.BUTTON_ADD_LINE), exact=True
+            ).click()
+        except Exception:
+            pass
+        for pos in [(20, 20), (140, 60), (260, 120)]:
             try:
-                page.get_by_text(
-                    resource_manager.get(SectionKeys.BUTTON_ADD_LINE), exact=True
-                ).click()
+                target.click(position={"x": pos[0], "y": pos[1]})
+            except Exception:
+                canvas_locator.click(position={"x": pos[0], "y": pos[1]})
+        page.keyboard.press("Enter")
+        ni = page.locator(f'[test-id="{MARKER_SECTION_NAME}"] input').first
+        if not ni.count():
+            ni = page.locator(f'[test-id="{MARKER_SECTION_NAME}"]').first
+        ni.wait_for(state="visible")
+        ni.fill(section_name)
+        ab = page.locator(f'[test-id="{MARKER_DIALOG_APPLY}"]').first
+        ab.wait_for(state="visible")
+        ab.click()
+        deadline_local = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        while time.time() < deadline_local:
+            try:
+                if section_name in page.content():
+                    return
             except Exception:
                 pass
-            for pos in [(20, 20), (140, 60), (260, 120)]:
-                try:
-                    target.click(position={"x": pos[0], "y": pos[1]})
-                except Exception:
-                    canvas_locator.click(position={"x": pos[0], "y": pos[1]})
-            # Finalize with Enter to open the section dialog
-            page.keyboard.press("Enter")
-            ni = page.locator(f'[test-id="{MARKER_SECTION_NAME}"] input').first
-            if not ni.count():
-                ni = page.locator(f'[test-id="{MARKER_SECTION_NAME}"]').first
-            ni.wait_for(state="visible")
-            ni.fill(section_name)
-            ab = page.locator(f'[test-id="{MARKER_DIALOG_APPLY}"]').first
-            ab.wait_for(state="visible")
-            ab.click()
-            # Wait for the name to appear anywhere in DOM
-            deadline_local = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-            while time.time() < deadline_local:
-                try:
-                    if section_name in page.content():
-                        return
-                except Exception:
-                    pass
-                time.sleep(0.1)
-            raise AssertionError(f"Section name not found after apply: {section_name}")
+            time.sleep(0.1)
+        raise AssertionError(f"Section name not found after apply: {section_name}")
 
+    @pytest.mark.timeout(300)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_create_sections_two_times(
+        self,
+        page: Page,
+        external_app: NiceGUITestServer,
+        resource_manager: ResourceManager,
+    ) -> None:
+        self._navigate_and_prepare(page, external_app, resource_manager)
+        self._goto_sections_with_one_video(page, resource_manager)
         names = ["First-Line", "Second-Line"]
         for n in names:
-            create_section(n)
-
-        # Final check for sections: both names present in the DOM
+            self._create_section(page, resource_manager, n)
         html = page.content()
-        assert all(
-            n in html for n in names
-        ), "Not all section names are present in the page source"
+        assert all(n in html for n in names)
 
-        # Now switch to Flow tab and create a flow using the two sections
+    @pytest.mark.timeout(350)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_create_and_rename_flow_from_sections(
+        self,
+        page: Page,
+        external_app: NiceGUITestServer,
+        resource_manager: ResourceManager,
+    ) -> None:
+        self._navigate_and_prepare(page, external_app, resource_manager)
+        self._goto_sections_with_one_video(page, resource_manager)
+        for n in ["First-Line", "Second-Line"]:
+            self._create_section(page, resource_manager, n)
         page.get_by_text(
             resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
         ).click()
-
-        # Click the 'Add' flow button
         try:
             page.get_by_text(
                 resource_manager.get(FlowKeys.BUTTON_ADD), exact=True
             ).click()
         except Exception:
-            # Fallback to marker if text lookup fails
             page.locator('[test-id="marker-button-add"]').first.click()
-
-        # Ensure the flow dialog opened and both section selects are visible
         page.locator(f'[test-id="{MARKER_FLOW_NAME}"]').first.wait_for(state="visible")
         page.locator(f'[test-id="{MARKER_START_SECTION}"]').first.wait_for(
             state="visible"
@@ -349,102 +365,107 @@ class TestAddLineSectionWithDialog:
             state="visible"
         )
         flow_name_input = page.locator(f'[test-id="{MARKER_FLOW_NAME}"]').first
-        flow_name_input.wait_for(state="visible")
         custom_flow_name = "My-Flow"
         flow_name_input.fill(custom_flow_name)
+        # Select start section (ensure both start and end are chosen)
+        page.locator(f'[test-id="{MARKER_START_SECTION}"]').first.click()
+        page.keyboard.press("ArrowDown")
+        page.keyboard.press("Enter")
+        # Select end section
         page.locator(f'[test-id="{MARKER_END_SECTION}"]').first.click()
-        page.keyboard.press("ArrowDown")  # move from first to second option
-        page.keyboard.press("Enter")  # confirm selection
-
-        # Apply the dialog
-        flow_apply_btn = page.locator(f'[test-id="{MARKER_DIALOG_APPLY}"]').first
-        flow_apply_btn.wait_for(state="visible")
-        flow_apply_btn.click()
-
-        # Verify that the new flow appears in the flow table or DOM
+        page.keyboard.press("ArrowDown")
+        page.keyboard.press("Enter")
+        page.locator(f'[test-id="{MARKER_DIALOG_APPLY}"]').first.click()
+        table = page.locator('[test-id="marker-flow-table"]').first
+        table.wait_for(state="visible")
+        # Wait until the table contains the newly created flow name
         deadline_flow = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        found_flow = False
-        while time.time() < deadline_flow and not found_flow:
+        while time.time() < deadline_flow:
             try:
-                # Prefer checking within the flow table if present
-                table_locator = page.locator('[test-id="marker-flow-table"]')
-                if (
-                    table_locator.count()
-                    and custom_flow_name in table_locator.inner_text()
-                ):
-                    found_flow = True
-                    break
-                if custom_flow_name in page.content():
-                    found_flow = True
+                if custom_flow_name in table.inner_text():
                     break
             except Exception:
                 pass
             time.sleep(0.1)
-        assert found_flow, "Flow was not created or not visible in the UI"
-
-        # Robustly select the newly created flow in the flow table
-        table = page.locator('[test-id="marker-flow-table"]').first
-        table.wait_for(state="visible")
-        # Prefer clicking the actual table row containing the flow name
+        assert custom_flow_name in table.inner_text()
         row = table.locator("tbody tr").filter(has_text=custom_flow_name).first
-        row.wait_for(state="visible")
-        row.scroll_into_view_if_needed()
         row.click()
-
         page.locator('[test-id="marker-button-properties"]').first.click()
-        # Give the UI a short moment to process the selection
-        time.sleep(0.5)
-
         name_input = page.locator(f'[test-id="{MARKER_FLOW_NAME}"]').first
-        name_input.wait_for(state="visible")
         new_flow_name = "My-Flow-Renamed"
         name_input.fill(new_flow_name)
-        # Cancel the dialog via Escape
         page.keyboard.press("Escape")
-        # Wait briefly for the dialog to close
-        time.sleep(0.3)
-        # Validate that the flow kept its original name in the table
-        table = page.locator('[test-id="marker-flow-table"]').first
-        table.wait_for(state="visible")
-        table_text = table.inner_text()
-        assert custom_flow_name in table_text
-        assert new_flow_name not in table_text
+        time.sleep(0.2)
+        assert custom_flow_name in table.inner_text()
+        assert new_flow_name not in table.inner_text()
         page.locator('[test-id="marker-button-properties"]').first.click()
-        # Give the UI a short moment to process the selection
-        time.sleep(0.5)
-
         name_input = page.locator(f'[test-id="{MARKER_FLOW_NAME}"]').first
-        name_input.wait_for(state="visible")
-        new_flow_name = "My-Flow-Renamed"
         name_input.fill(new_flow_name)
         page.locator('[test-id="marker-apply"]').first.click()
-        time.sleep(0.3)
-        # Validate that the flow kept its original name in the table
+        time.sleep(0.2)
+        assert new_flow_name in table.inner_text()
+
+    @pytest.mark.timeout(400)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_remove_flow_and_generate_flows_and_save_project(
+        self,
+        page: Page,
+        external_app: NiceGUITestServer,
+        resource_manager: ResourceManager,
+        test_data_tmp_dir: Path,
+    ) -> None:
+        # Prepare and create sections
+        self._navigate_and_prepare(page, external_app, resource_manager)
+        self._goto_sections_with_one_video(page, resource_manager)
+        names = ["First-Line", "Second-Line"]
+        for n in names:
+            self._create_section(page, resource_manager, n)
+
+        # Create one flow then remove it
+        page.get_by_text(
+            resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
+        ).click()
+        try:
+            page.get_by_text(
+                resource_manager.get(FlowKeys.BUTTON_ADD), exact=True
+            ).click()
+        except Exception:
+            page.locator('[test-id="marker-button-add"]').first.click()
+        page.locator(f'[test-id="{MARKER_FLOW_NAME}"]').first.fill("Temp-Flow")
+        # Select start and end sections before applying
+        page.locator(f'[test-id="{MARKER_START_SECTION}"]').first.click()
+        page.keyboard.press("ArrowDown")
+        page.keyboard.press("Enter")
+        page.locator(f'[test-id="{MARKER_END_SECTION}"]').first.click()
+        page.keyboard.press("ArrowDown")
+        page.keyboard.press("Enter")
+        page.locator(f'[test-id="{MARKER_DIALOG_APPLY}"]').first.click()
         table = page.locator('[test-id="marker-flow-table"]').first
         table.wait_for(state="visible")
-        table_text = table.inner_text()
-        assert new_flow_name in table_text
+        # Wait until the table contains the newly created flow
+        deadline_temp = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        while time.time() < deadline_temp:
+            try:
+                if "Temp-Flow" in table.inner_text():
+                    break
+            except Exception:
+                pass
+            time.sleep(0.1)
+        assert "Temp-Flow" in table.inner_text()
+        row = table.locator("tbody tr").filter(has_text="Temp-Flow").first
+        row.click()
+        page.locator('[test-id="marker-button-remove"]').first.click()
+        time.sleep(0.2)
+        assert "Temp-Flow" not in table.inner_text()
 
-        remove_button = page.locator('[test-id="marker-button-remove"]').first
-        remove_button.wait_for(state="visible")
-        remove_button.click()
-        time.sleep(0.3)
-        table = page.locator('[test-id="marker-flow-table"]').first
-        table.wait_for(state="visible")
-        table_text = table.inner_text()
-        assert new_flow_name not in table_text
-
-        generate_button = page.locator('[test-id="marker-button-generate"]').first
-        generate_button.wait_for(state="visible")
-        generate_button.click()
-
+        # Generate flows from sections and assert at least two are created
+        page.locator('[test-id="marker-button-generate"]').first.click()
         deadline_gen = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
         matched_texts: list[str] = []
         last_texts: list[str] = []
         while time.time() < deadline_gen:
             try:
-                table = page.locator('[test-id="marker-flow-table"]').first
-                table.wait_for(state="visible")
                 rows = table.locator("tbody tr")
                 last_texts = rows.all_text_contents() if rows.count() else []
                 matched_texts = [t for t in last_texts if all(n in t for n in names)]
@@ -455,4 +476,24 @@ class TestAddLineSectionWithDialog:
             time.sleep(0.1)
         assert (
             len(matched_texts) >= 2
-        ), f"Expected 2 generated flows containing both section names {names}, but got {len(matched_texts)}. Rows: {last_texts}"  # noqa
+        ), f"Expected >=2 generated flows with {names}, got {len(matched_texts)}: {last_texts}"  # noqa
+
+        # Save project and compare with reference
+        page.locator('[test-id="marker-project-save-as"]').first.click()
+        page.locator(f'[test-id="{MARKER_DIALOG_APPLY}"]').first.wait_for(
+            state="visible"
+        )
+        dir_label = resource_manager.get(FileChooserDialogKeys.LABEL_DIRECTORY)
+        page.get_by_label(dir_label, exact=True).fill(str(test_data_tmp_dir))
+        page.locator(f'[test-id="{MARKER_FILENAME}"]').first.fill("test_name")
+        page.locator(f'[test-id="{MARKER_DIALOG_APPLY}"]').first.click()
+        saved_path = test_data_tmp_dir / "test_name.otconfig"
+        assert saved_path.exists(), f"Expected saved configuration at {saved_path}"
+        reference_path = Path(__file__).parents[1] / "data" / "test_name.otconfig"
+        with (
+            saved_path.open("r", encoding="utf-8") as fa,
+            reference_path.open("r", encoding="utf-8") as fb,
+        ):
+            ja = json.load(fa)
+            jb = json.load(fb)
+        assert ja == jb, "Saved configuration does not match reference file"

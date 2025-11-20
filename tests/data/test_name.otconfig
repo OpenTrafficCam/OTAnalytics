@@ -1,0 +1,100 @@
+{
+    "project": {
+        "name": "Test Project - Flow E2E",
+        "start_date": 1684908000.0,
+        "metadata": null
+    },
+    "videos": [
+        {
+            "path": "..\/data\/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        }
+    ],
+    "analysis": {
+        "do_events": true,
+        "do_counting": true,
+        "tracks": [],
+        "export": {
+            "save_name": "",
+            "save_suffix": "",
+            "event_formats": [
+                "csv"
+            ],
+            "count_intervals": [
+                15
+            ]
+        },
+        "num_processes": 1,
+        "logfile": "logs"
+    },
+    "sections": [
+        {
+            "id": "1",
+            "name": "First-Line",
+            "type": "line",
+            "relative_offset_coordinates": {
+                "section-enter": {
+                    "x": 0.5,
+                    "y": 0.5
+                }
+            },
+            "coordinates": [
+                {
+                    "x": 20,
+                    "y": 20
+                },
+                {
+                    "x": 140,
+                    "y": 60
+                },
+                {
+                    "x": 260,
+                    "y": 120
+                }
+            ],
+            "plugin_data": {}
+        },
+        {
+            "id": "2",
+            "name": "Second-Line",
+            "type": "line",
+            "relative_offset_coordinates": {
+                "section-enter": {
+                    "x": 0.5,
+                    "y": 0.5
+                }
+            },
+            "coordinates": [
+                {
+                    "x": 20,
+                    "y": 20
+                },
+                {
+                    "x": 140,
+                    "y": 60
+                },
+                {
+                    "x": 260,
+                    "y": 120
+                }
+            ],
+            "plugin_data": {}
+        }
+    ],
+    "flows": [
+        {
+            "id": "2",
+            "name": "First-Line --> Second-Line",
+            "start": "1",
+            "end": "2",
+            "distance": 0
+        },
+        {
+            "id": "3",
+            "name": "Second-Line --> First-Line",
+            "start": "2",
+            "end": "1",
+            "distance": 0
+        }
+    ],
+    "remark": ""
+}
