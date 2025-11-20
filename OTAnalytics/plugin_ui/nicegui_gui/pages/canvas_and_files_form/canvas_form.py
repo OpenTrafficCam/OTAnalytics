@@ -1,9 +1,9 @@
 from typing import Iterable, Optional, Self
 
-from PIL import Image
 from nicegui import events, ui
 from nicegui.elements.interactive_image import InteractiveImage
 from nicegui.events import KeyEventArguments
+from PIL import Image
 
 from OTAnalytics.adapter_ui.abstract_canvas import TAG_SELECTED_SECTION, AbstractCanvas
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
