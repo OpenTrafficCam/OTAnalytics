@@ -268,7 +268,7 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
     CachedTrackStatisticsExporterFactory,
     SimpleTrackStatisticsExporterFactory,
 )
-from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
+from OTAnalytics.plugin_progress.lazy_tqdm_progressbar import LazyTqdmBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     TrackImageFactory,
 )
@@ -630,7 +630,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                 track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
             ),
             format_fixer=OttrkFormatFixer(),
-            progressbar=TqdmBuilder(),
+            progressbar=LazyTqdmBuilder(),
             track_dataset_factory=lambda tracks: PolarsTrackDataset.from_list(
                 tracks,
                 self.track_geometry_factory,
@@ -902,7 +902,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.create_events,
             self.road_user_assigner,
             self.assignment_repository,
-            enable_event_creation=True,
+            enable_event_creation=False,
         )
 
     @cached_property

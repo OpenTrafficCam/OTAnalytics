@@ -25,6 +25,7 @@ from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.cli_parser import CliParseError
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
+from OTAnalytics.application.track_input_source import OttrkFileInputSource
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.export_events import (
@@ -60,8 +61,12 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepositoryEvent
+from OTAnalytics.plugin_parser.otvision_parser import OttrkFormatFixer
 from OTAnalytics.plugin_parser.road_user_assignment_export import CSV_FORMAT
 from OTAnalytics.plugin_parser.streaming_parser import StreamTrackParser
+from OTAnalytics.plugin_track_input_source.single_batch import (
+    SingleBatchOttrkFileInputSource,
+)
 
 
 class SectionsFileDoesNotExist(Exception):
@@ -126,11 +131,12 @@ class OTAnalyticsCli(ABC):
             flows = self._run_config.flows
 
             self._prepare_analysis(sections, flows)
-            self._run_analysis(self._run_config.track_files)
+            self._run_analysis(self.ottrk_file_input_source)
             self._export_analysis(sections, ExportMode.create(True, True))
 
         except Exception as cause:
             logger().exception(cause, exc_info=True)
+        self._after()
 
     def _add_sections(self, sections: Iterable[Section]) -> None:
         """Add sections to section repository."""
@@ -152,7 +158,12 @@ class OTAnalyticsCli(ABC):
         self._add_flows(flows)
 
     @abstractmethod
-    def _run_analysis(self, ottrk_files: set[Path]) -> None:
+    def _run_analysis(self, input_source: OttrkFileInputSource) -> None:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def ottrk_file_input_source(self) -> OttrkFileInputSource:
         raise NotImplementedError
 
     def _export_analysis(
@@ -270,6 +281,7 @@ class OTAnalyticsCli(ABC):
 
             event_list_exporter.export(events, sections, event_export_specification)
             logger().info(f"Event list saved at '{actual_save_path}'")
+            self._after_event_file_export(actual_save_path)
 
         assignment_path = save_path.with_suffix(
             f".{CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS}.csv"
@@ -279,6 +291,17 @@ class OTAnalyticsCli(ABC):
         )
         self._export_road_user_assignments.export(specification)
         logger().info(f"Road user assignment saved at '{assignment_path}'")
+        self._after_road_user_assignment_export(assignment_path)
+
+    def _after_event_file_export(self, event_file: Path) -> None:
+        """Hook to execute after event file export."""
+        pass
+
+    def _after_road_user_assignment_export(
+        self, road_user_assignment_file: Path
+    ) -> None:
+        """Hook to execute after road user assignment export."""
+        pass
 
     def _do_export_counts(self, save_path: Path, export_mode: ExportMode) -> None:
         logger().info("Create counts ...")
@@ -311,6 +334,11 @@ class OTAnalyticsCli(ABC):
                 export_mode=export_mode,
             )
             self._export_counts.export(specification=counting_specification)
+            self._after_count_export(output_file)
+
+    def _after_count_export(self, counts_file: Path) -> None:
+        """Hook to execute after counts export."""
+        pass
 
     def _do_export_tracks(self, save_path: Path, export_mode: ExportMode) -> None:
         logger().info("Start tracks export")
@@ -321,6 +349,11 @@ class OTAnalyticsCli(ABC):
         )
         self._export_tracks.export(specification)
         logger().info("Finished tracks export")
+        self._after_track_export(save_path)
+
+    def _after_track_export(self, track_file: Path) -> None:
+        """Hook to execute after tracks export."""
+        pass
 
     def _do_export_track_statistics(
         self, save_path: Path, export_mode: ExportMode
@@ -335,9 +368,23 @@ class OTAnalyticsCli(ABC):
             export_mode=export_mode,
         )
         self._export_track_statistics.export(specification)
+        self._after_track_statistics_export(track_statistics_path)
+
+    def _after_track_statistics_export(self, track_statistics_file: Path) -> None:
+        pass
+
+    def _after(self) -> None:
+        """Hook to execute after everything is done."""
+        pass
 
 
 class OTAnalyticsBulkCli(OTAnalyticsCli):
+
+    @property
+    def ottrk_file_input_source(self) -> OttrkFileInputSource:
+        return SingleBatchOttrkFileInputSource(
+            format_fixer=OttrkFormatFixer(), track_files=self._run_config.track_files
+        )
 
     def __init__(
         self,
@@ -385,15 +432,9 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
         self._track_parser = track_parser
         self._progressbar = progressbar
 
-    def _run_analysis(
-        self,
-        ottrk_files: set[Path],
-    ) -> None:
+    def _run_analysis(self, input_source: OttrkFileInputSource) -> None:
         """Run analysis."""
-        ottrk_files_sorted: list[Path] = sorted(
-            ottrk_files, key=lambda file: str(file).lower()
-        )
-        self._parse_tracks(ottrk_files_sorted)
+        self._parse_tracks(input_source)
         self._apply_cli_cuts.apply(
             self._get_all_sections(), preserve_cutting_sections=True
         )
@@ -401,8 +442,10 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
         self._create_events()
         logger().info("Event list created.")
 
-    def _parse_tracks(self, track_files: list[Path]) -> None:
-        for track_file in self._progressbar(track_files, "Parsed track files", "files"):
+    def _parse_tracks(self, input_source: OttrkFileInputSource) -> None:
+        for track_file in self._progressbar(
+            list(input_source.produce()), "Parsed track files", "files"
+        ):
             parse_result = self._track_parser.parse(track_file)
             self._add_all_tracks(parse_result.tracks)
             self._tracks_metadata.update_detection_classes(
@@ -412,6 +455,13 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
 
 
 class OTAnalyticsStreamCli(OTAnalyticsCli):
+
+    @property
+    def ottrk_file_input_source(self) -> OttrkFileInputSource:
+        return SingleBatchOttrkFileInputSource(
+            format_fixer=OttrkFormatFixer(),
+            track_files=self._run_config.track_files,
+        )
 
     def __init__(
         self,
@@ -457,18 +507,20 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
         )
         self._track_parser = track_parser
 
-    def _parse_track_stream(self, track_files: set[Path]) -> Iterable[TrackDataset]:
+    def _parse_track_stream(
+        self, input_source: OttrkFileInputSource
+    ) -> Iterable[TrackDataset]:
         self._track_parser.register_tracks_metadata(self._tracks_metadata)
         self._track_parser.register_videos_metadata(self._videos_metadata)
 
-        return self._track_parser.parse(track_files)
+        return self._track_parser.parse(input_source)
 
-    def _run_analysis(self, ottrk_files: set[Path]) -> None:
+    def _run_analysis(self, input_source: OttrkFileInputSource) -> None:
         """Run analysis."""
         sections = self._run_config.sections
         is_first = True
 
-        track_stream = peekable(self._parse_track_stream(ottrk_files))
+        track_stream = peekable(self._parse_track_stream(input_source))
 
         for track_ds in track_stream:
             is_last = track_stream.peek(default=None) is None

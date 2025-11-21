@@ -66,3 +66,19 @@ class ProgressbarBuilder(ABC):
 class NoProgressbarBuilder(ProgressbarBuilder):
     def __call__(self, sequence: Sequence, description: str, unit: str) -> Iterable:
         return iter(sequence)
+
+
+class LazyProgressbarBuilder(ABC):
+    @abstractmethod
+    def __call__(self, iterator: Iterator, description: str, unit: str) -> Iterable:
+        """Acts as the build method providing new Progressbar instances.
+
+        Args:
+            iterator(Iterator): the iterator to be decorated with the progressbar.
+            description (str): the description.
+            unit (str): the unit.
+
+        Returns:
+            Iterable: the progressbar-decorated iterator.
+        """
+        raise NotImplementedError
