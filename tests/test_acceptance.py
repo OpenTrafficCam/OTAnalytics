@@ -5,17 +5,32 @@ from typing import Any, Generator, TypeVar
 import pytest
 from nicegui.testing import Screen
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 
 from OTAnalytics.application.resources.resource_manager import (
     AddVideoKeys,
+    FlowAndSectionKeys,
     ProjectKeys,
     ResourceManager,
+    SectionKeys,
     TrackFormKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
+    MARKER_NAME as MARKER_SECTION_NAME,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+    MARKER_APPLY as MARKER_DIALOG_APPLY,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_VIDEO_TABLE,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+    MARKER_INTERACTIVE_IMAGE,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+    MARKER_TAB_FLOW,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
@@ -894,3 +909,272 @@ class TestVideoImportAndDisplay:
         target.wait_for(
             lambda: name2 not in TestVideoImportAndDisplay._table_filenames(target)
         )
+
+
+class TestSectionsAcceptance:
+    @pytest.mark.timeout(TIMEOUT)
+    @pytest.mark.asyncio
+    async def test_add_line_section_with_dialog(
+        self,
+        target: Screen,
+        given_app: MultiprocessingWorker,
+        resource_manager: ResourceManager,
+        monkeypatch: Any,
+    ) -> None:
+        # Ensure app is running and main page is open
+        if not given_app.is_alive():
+            given_app.start()
+        target.open(ENDPOINT_MAIN_PAGE)
+
+        # Go to Videos tab and add two videos via monkeypatched file dialog
+        target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+        data_dir = Path(__file__).parent / "data"
+        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        v2 = data_dir / "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
+        assert v1.exists() and v2.exists()
+        from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
+
+        async def fake_askopenfilenames(*args: object, **kwargs: object) -> list[Path]:
+            return [v1, v2]
+
+        monkeypatch.setattr(
+            NiceGuiUiFactory, "askopenfilenames", fake_askopenfilenames, raising=True
+        )
+        target.click(resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS))
+
+        # Select the first video to ensure a preview/background is rendered
+        name1 = v1.name
+        target.should_contain(name1)
+        target.click(name1)
+
+        # Switch to Sections tab where the interactive canvas is displayed
+        target.should_contain(resource_manager.get(FlowAndSectionKeys.TAB_SECTION))
+        target.click(resource_manager.get(FlowAndSectionKeys.TAB_SECTION))
+
+        # Ensure the interactive image exists and is visible; scroll it into view
+        canvas_root = target.find_by_css(f'[test-id="{MARKER_INTERACTIVE_IMAGE}"]')
+        target.selenium.execute_script(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            canvas_root,
+        )
+        # Prefer clicking the inner <img> for precise coordinates
+        import time as _t
+
+        from selenium.webdriver.common.by import By
+
+        _deadline = _t.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        inner_img = None
+        while _t.time() < _deadline and inner_img is None:
+            imgs = target.selenium.find_elements(
+                By.CSS_SELECTOR, f'[test-id="{MARKER_INTERACTIVE_IMAGE}"] img'
+            )
+            if imgs:
+                w, h = target.selenium.execute_script(
+                    "const r=arguments[0].getBoundingClientRect(); return [r.width, r.height];",  # noqa
+                    imgs[0],
+                )
+                if w and h and w > 5 and h > 5:
+                    inner_img = imgs[0]
+                    break
+            _t.sleep(0.05)
+        click_target = inner_img or canvas_root
+
+        # Activate "Add line" so the clicks create visible points on the canvas.
+        try:
+            target.click(resource_manager.get(SectionKeys.BUTTON_ADD_LINE))
+        except Exception:
+            pass
+
+        from selenium.webdriver import ActionChains
+
+        actions = ActionChains(target.selenium)
+        # Perform several clicks at different offsets
+        for x, y in [
+            (10, 10),
+            (100, 30),
+            (200, 50),
+            (300, 100),
+            (400, 150),
+            (500, 200),
+        ]:
+            try:
+                actions.move_to_element_with_offset(
+                    click_target, x, y
+                ).click().perform()
+            except Exception:
+                # continue even if a particular click fails (e.g., out of bounds)
+                pass
+        # If drawing tool was active, try to finish the shape so markers persist
+        try:
+            actions.context_click(click_target).perform()
+        except Exception:
+            pass
+        # Press Enter at the end of the test to finalize potential interactions
+        try:
+            target.selenium.switch_to.active_element.send_keys(Keys.ENTER)
+        except Exception:
+            pass
+        try:
+            target.selenium.find_element(By.TAG_NAME, "body").send_keys(Keys.ENTER)
+        except Exception:
+            pass
+
+        # Find the section name input in the dialog via its test-id
+        name_input = target.find_by_css(f'[test-id="{MARKER_SECTION_NAME}"]')
+        set_input_value(target, name_input, "Name")
+        # Press the Apply button in the dialog to confirm the entered name
+        apply_button = target.find_by_css(f'[test-id="{MARKER_DIALOG_APPLY}"]')
+        try:
+            target.selenium.execute_script(
+                "arguments[0].scrollIntoView({block: 'center'});", apply_button
+            )
+        except Exception:
+            pass
+        apply_button.click()
+        import time as _t
+
+        deadline = _t.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        created = False
+        while _t.time() < deadline:
+            if "Name" in target.selenium.page_source:
+                created = True
+                break
+            _t.sleep(0.1)
+        assert (
+            created
+        ), "Section with the specified name was not found after applying the dialog"
+
+    @pytest.mark.timeout(TIMEOUT)
+    @pytest.mark.asyncio
+    async def test_add_multiple_line_sections_with_unique_names(
+        self,
+        target: Screen,
+        given_app: MultiprocessingWorker,
+        resource_manager: ResourceManager,
+        monkeypatch: Any,
+    ) -> None:
+        """Acceptance: Add four line sections with different names using the dialog."""
+        # Ensure app is running and main page is open
+        if not given_app.is_alive():
+            given_app.start()
+        target.open(ENDPOINT_MAIN_PAGE)
+
+        # Go to Videos tab and add two videos via monkeypatched file dialog
+        target.click(resource_manager.get(TrackFormKeys.TAB_TWO))
+        data_dir = Path(__file__).parent / "data"
+        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        v2 = data_dir / "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
+        assert v1.exists() and v2.exists()
+        from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
+
+        async def fake_askopenfilenames(*args: object, **kwargs: object) -> list[Path]:
+            return [v1, v2]
+
+        monkeypatch.setattr(
+            NiceGuiUiFactory, "askopenfilenames", fake_askopenfilenames, raising=True
+        )
+        target.click(resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS))
+
+        # Select the first video to ensure a preview/background is rendered
+        name1 = v1.name
+        target.should_contain(name1)
+        target.click(name1)
+
+        # Switch to Sections tab where the interactive canvas is displayed
+        target.should_contain(resource_manager.get(FlowAndSectionKeys.TAB_SECTION))
+        target.click(resource_manager.get(FlowAndSectionKeys.TAB_SECTION))
+
+        # Ensure the interactive image exists and is visible; scroll it into view
+        canvas_root = target.find_by_css(f'[test-id="{MARKER_INTERACTIVE_IMAGE}"]')
+        try:
+            target.selenium.execute_script(
+                "arguments[0].scrollIntoView({block: 'center'});",
+                canvas_root,
+            )
+        except Exception:
+            pass
+
+        # Prefer clicking the inner <img> for precise coordinates
+        import time as _t
+
+        from selenium.webdriver.common.by import By
+
+        _deadline = _t.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        inner_img = None
+        while _t.time() < _deadline and inner_img is None:
+            imgs = target.selenium.find_elements(
+                By.CSS_SELECTOR, f'[test-id="{MARKER_INTERACTIVE_IMAGE}"] img'
+            )
+            if imgs:
+                w, h = target.selenium.execute_script(
+                    "const r=arguments[0].getBoundingClientRect(); return [r.width, r.height];",  # noqa
+                    imgs[0],
+                )
+                if w and h and w > 5 and h > 5:
+                    inner_img = imgs[0]
+                    break
+            _t.sleep(0.05)
+        click_target = inner_img or canvas_root
+
+        from selenium.webdriver import ActionChains
+
+        names = ["Sec A", "Sec B", "Sec C", "Sec D"]
+        for idx, sec_name in enumerate(names):
+            # Activate Add line each time
+            try:
+                target.click(resource_manager.get(SectionKeys.BUTTON_ADD_LINE))
+            except Exception:
+                pass
+
+            actions = ActionChains(target.selenium)
+            # Click two points to form a line, with slight offset each iteration
+            base = 20 + idx * 30
+            pts = [(base, base), (base + 60, base + 20)]
+            for x, y in pts:
+                try:
+                    actions.move_to_element_with_offset(
+                        click_target, x, y
+                    ).click().perform()
+                except Exception:
+                    pass
+            # Try to finish the drawing
+            try:
+                actions.context_click(click_target).perform()
+            except Exception:
+                pass
+            try:
+                target.selenium.switch_to.active_element.send_keys(Keys.ENTER)
+            except Exception:
+                pass
+            try:
+                target.selenium.find_element(By.TAG_NAME, "body").send_keys(Keys.ENTER)
+            except Exception:
+                pass
+
+            # Fill dialog with section name and apply
+            name_input = target.find_by_css(f'[test-id="{MARKER_SECTION_NAME}"]')
+            set_input_value(target, name_input, sec_name)
+            apply_button = target.find_by_css(f'[test-id="{MARKER_DIALOG_APPLY}"]')
+            try:
+                target.selenium.execute_script(
+                    "arguments[0].scrollIntoView({block: 'center'});", apply_button
+                )
+            except Exception:
+                pass
+            apply_button.click()
+
+            # Wait until the created section name appears in the page
+            deadline = _t.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+            while _t.time() < deadline and sec_name not in target.selenium.page_source:
+                _t.sleep(0.1)
+            assert (
+                sec_name in target.selenium.page_source
+            ), f'Section name "{sec_name}" not found after applying the dialog'
+
+        # Final assertion: all names are present
+        for n in names:
+            assert n in target.selenium.page_source
+
+        flow_tab = target.find_by_css(f'[test-id="{MARKER_TAB_FLOW}"]')
+        flow_tab.click()
+        target.shot("Hello_name")

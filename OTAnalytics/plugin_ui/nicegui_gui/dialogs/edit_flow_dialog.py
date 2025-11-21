@@ -21,6 +21,8 @@ MARKER_NAME = "marker-name"
 MARKER_START_SECTION = "marker-start-section"
 MARKER_END_SECTION = "marker-end-section"
 MARKER_DISTANCE = "marker-distance"
+# Dialog-specific apply button test id for EditFlowDialog (props-based only)
+MARKER_APPLY = "marker-apply"
 
 
 class EditFlowDialog(BaseDialog):
@@ -33,6 +35,10 @@ class EditFlowDialog(BaseDialog):
         show_distance: bool = True,
     ) -> None:
         super().__init__(resource_manager)
+        # Keep the generic dialog apply test-id ("apply") to stay consistent with
+        # other working markers across the UI. Do not override it with a
+        # dialog-specific value, as this prevents Playwright from finding
+        # [test-id="apply"] reliably.
         self._name_generator = name_generator
         self._input_values = input_values
         self._show_distance = show_distance
@@ -82,6 +88,22 @@ class EditFlowDialog(BaseDialog):
         self._end_section.build()
         self._name.build()
         self._distance.build()
+        try:
+            self._name.element.props(f"test-id={MARKER_NAME}")
+        except Exception:
+            pass
+        try:
+            self._start_section.element.props(f"test-id={MARKER_START_SECTION}")
+        except Exception:
+            pass
+        try:
+            self._end_section.element.props(f"test-id={MARKER_END_SECTION}")
+        except Exception:
+            pass
+        try:
+            self._distance.element.props(f"test-id={MARKER_DISTANCE}")
+        except Exception:
+            pass
         self._do_update_name()
 
     def _update_name(self, value: ValueChangeEventArguments) -> None:

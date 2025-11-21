@@ -111,7 +111,15 @@ class FormField(LazyInitializedElement[S], Generic[S, V]):
 
     def _apply_marker(self, element: Element) -> None:
         if self.marker:
+            # Attach a semantic marker and also expose it as a test-id attribute
+            # so that Playwright-based acceptance tests can reliably select the
+            # input elements. This mirrors the pattern used for buttons in the UI.
             element.mark(self.marker)
+            try:
+                element.props(f"test-id={self.marker}")
+            except Exception:
+                # In case a specific element type doesn't support props, ignore.
+                pass
 
     def validate(self) -> bool:
         """Handles the validation logic for an element.
