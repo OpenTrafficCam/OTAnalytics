@@ -320,7 +320,6 @@ class TestAddLineSectionWithDialog:
             time.sleep(0.1)
         raise AssertionError(f"Section name not found after apply: {section_name}")
 
-    @pytest.mark.skip(reason="only works in headed right now")
     @pytest.mark.timeout(300)
     @pytest.mark.playwright
     @pytest.mark.usefixtures("external_app")
@@ -338,6 +337,7 @@ class TestAddLineSectionWithDialog:
         html = page.content()
         assert all(n in html for n in names)
 
+    @pytest.mark.skip(reason="only works in headed right now")
     @pytest.mark.timeout(350)
     @pytest.mark.playwright
     @pytest.mark.usefixtures("external_app")
