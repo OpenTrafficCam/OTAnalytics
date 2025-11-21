@@ -498,7 +498,9 @@ class DummyViewModel(
     def notify_flows(self, flows: list[FlowId]) -> None:
         self.refresh_items_on_canvas()
         self.treeview_flows.update_items()
-        self.update_quick_save_button(flow_id)
+        # We don't need a specific value here; the method ignores the parameter.
+        # Pass the changed flow ids for context.
+        self.update_quick_save_button(flows)
 
     def notify_action_running_state(self, running: bool) -> None:
         self._update_enabled_buttons()

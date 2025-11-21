@@ -108,9 +108,13 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._current_image = self._resource_manager.get_image(CanvasKeys.IMAGE_DEFAULT)
 
     def build(self) -> Self:
+        # In headless environments the inner <img> of InteractiveImage may be
+        # considered not visible when its container has no explicit size.
+        # Provide deterministic minimum dimensions to make visibility checks
+        # reliable in Playwright/Selenium and avoid lazy sizing effects.
         self._background_image = ui.interactive_image(
             "", on_mouse=self._on_pointer_down, events=[CLICK]
-        )
+        ).classes("min-h-[240px] min-w-[320px] h-[240px] w-full")
         self._background_image.props(f"test-id={MARKER_INTERACTIVE_IMAGE}")
         self._background_image.on(
             "svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args)
@@ -260,13 +264,23 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def _change_image(self) -> None:
         if self._current_image and self._background_image:
+            # Ensure the DOM is updated immediately so that the <img src>
+            # attribute is available for headless tests to read.
             self._background_image.set_source(self._current_image)
+            try:
+                self._background_image.update()
+            except Exception:
+                pass
         else:
             self.clear_image()
 
     def clear_image(self) -> None:
         if self._background_image:
             self._background_image.set_source("")
+            try:
+                self._background_image.update()
+            except Exception:
+                pass
 
     def load_sections(self) -> None:
         self._viewmodel.refresh_items_on_canvas()

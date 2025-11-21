@@ -35,8 +35,10 @@ class EditFlowDialog(BaseDialog):
         show_distance: bool = True,
     ) -> None:
         super().__init__(resource_manager)
-        if input_values is not None:
-            self.apply_test_id = MARKER_APPLY
+        # Keep the generic dialog apply test-id ("apply") to stay consistent with
+        # other working markers across the UI. Do not override it with a
+        # dialog-specific value, as this prevents Playwright from finding
+        # [test-id="apply"] reliably.
         self._name_generator = name_generator
         self._input_values = input_values
         self._show_distance = show_distance

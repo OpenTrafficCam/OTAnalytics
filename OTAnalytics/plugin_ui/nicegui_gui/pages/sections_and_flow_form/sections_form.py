@@ -89,6 +89,8 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
                     on_click=self._viewmodel.add_line_section,
                 ).style(BUTTON_WIDTH)
                 self._button_add_line.mark(MARKER_BUTTON_ADD_LINE)
+                # Expose stable test-id attribute for Playwright/Selenium
+                self._button_add_line.props(f"test-id={MARKER_BUTTON_ADD_LINE}")
 
                 self._button_add_areas = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_AREA),

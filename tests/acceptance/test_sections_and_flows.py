@@ -8,13 +8,9 @@ from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
-    AddVideoKeys,
     FileChooserDialogKeys,
     FlowAndSectionKeys,
-    FlowKeys,
     ResourceManager,
-    SectionKeys,
-    TrackFormKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_END_SECTION,
@@ -35,11 +31,19 @@ from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
+    MARKER_TAB_VIDEOS,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    MARKER_ADD_VIDEOS_BUTTON,
+    MARKER_REMOVE_VIDEOS_BUTTON,
     MARKER_VIDEO_TABLE,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     MARKER_INTERACTIVE_IMAGE,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+    MARKER_TAB_SECTION,
 )
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT, NiceGUITestServer
 from tests.utils.builders.otanalytics_builders import file_picker_directory
@@ -92,9 +96,7 @@ def _reset_videos_tab(page: Page, rm: ResourceManager) -> None:
         name = names[0]
         try:
             _click_table_cell_with_text(page, name)
-            page.get_by_text(
-                rm.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-            ).click()
+            page.locator(f'[test-id="{MARKER_REMOVE_VIDEOS_BUTTON}"]').first.click()
             # wait until it's gone
             deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
             while time.time() < deadline:
@@ -107,7 +109,7 @@ def _reset_videos_tab(page: Page, rm: ResourceManager) -> None:
 
 
 def _add_video_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
-    page.get_by_text(rm.get(AddVideoKeys.BUTTON_ADD_VIDEOS), exact=True).click()
+    page.locator(f'[test-id="{MARKER_ADD_VIDEOS_BUTTON}"]').first.click()
     ui_path = path.relative_to(file_picker_directory())
     # Double-click each path segment within the file picker grid (ag-grid)
     for part in ui_path.parts:
@@ -162,9 +164,7 @@ class TestAddLineSectionWithDialog:
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
         # Switch to Videos tab
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
+        page.locator(f'[test-id="{MARKER_TAB_VIDEOS}"]').first.click()
 
         # Ensure clean slate
         _reset_videos_tab(page, resource_manager)
@@ -185,9 +185,7 @@ class TestAddLineSectionWithDialog:
         _click_table_cell_with_text(page, name1)
 
         # Go to Sections tab
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
-        ).click()
+        page.locator(f'[test-id="{MARKER_TAB_SECTION}"]').first.click()
 
         # Ensure the interactive image exists and is visible; prefer inner <img>
         canvas_locator = page.locator(f'[test-id="{MARKER_INTERACTIVE_IMAGE}"]')
@@ -196,17 +194,8 @@ class TestAddLineSectionWithDialog:
         target = img if img.count() else canvas_locator
         target.scroll_into_view_if_needed()
 
-        # Activate "Add line" tool
-        try:
-            page.get_by_text(
-                resource_manager.get(SectionKeys.BUTTON_ADD_LINE), exact=True
-            ).click()
-        except Exception:
-            try:
-                # Fallback to marker if text lookup fails
-                page.locator('[test-id="marker-button-add-line"]').first.click()
-            except Exception:
-                pass
+        # Activate "Add line" tool via stable marker
+        page.locator('[test-id="marker-button-add-line"]').first.click()
 
         # Perform several clicks to create a simple line; finish without right-click
         for pos in [(10, 10), (120, 40), (220, 90)]:
@@ -266,9 +255,7 @@ class TestAddLineSectionWithDialog:
     def _goto_sections_with_one_video(
         self, page: Page, resource_manager: ResourceManager
     ) -> None:
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
+        page.locator(f'[test-id="{MARKER_TAB_VIDEOS}"]').first.click()
         _reset_videos_tab(page, resource_manager)
         data_dir = Path(__file__).parents[1] / "data"
         v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
@@ -276,9 +263,7 @@ class TestAddLineSectionWithDialog:
         _add_video_via_picker(page, resource_manager, v1)
         _wait_for_names_present(page, [v1.name])
         _click_table_cell_with_text(page, v1.name)
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
-        ).click()
+        page.locator(f'[test-id="{MARKER_TAB_SECTION}"]').first.click()
 
     def _create_section(
         self, page: Page, resource_manager: ResourceManager, section_name: str
@@ -288,12 +273,8 @@ class TestAddLineSectionWithDialog:
         img = page.locator(f'[test-id="{MARKER_INTERACTIVE_IMAGE}"] img').first
         target = img if img.count() else canvas_locator
         target.scroll_into_view_if_needed()
-        try:
-            page.get_by_text(
-                resource_manager.get(SectionKeys.BUTTON_ADD_LINE), exact=True
-            ).click()
-        except Exception:
-            pass
+        # Use marker for Add line
+        page.locator('[test-id="marker-button-add-line"]').first.click()
         for pos in [(20, 20), (140, 60), (260, 120)]:
             try:
                 target.click(position={"x": pos[0], "y": pos[1]})
@@ -351,12 +332,8 @@ class TestAddLineSectionWithDialog:
         page.get_by_text(
             resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
         ).click()
-        try:
-            page.get_by_text(
-                resource_manager.get(FlowKeys.BUTTON_ADD), exact=True
-            ).click()
-        except Exception:
-            page.locator('[test-id="marker-button-add"]').first.click()
+        page.locator('[test-id="marker-tab-flow"]').first.click()
+        page.locator('[test-id="marker-button-add"]').first.click()
         page.locator(f'[test-id="{MARKER_FLOW_NAME}"]').first.wait_for(state="visible")
         page.locator(f'[test-id="{MARKER_START_SECTION}"]').first.wait_for(
             state="visible"
@@ -380,6 +357,7 @@ class TestAddLineSectionWithDialog:
         table.wait_for(state="visible")
         # Wait until the table contains the newly created flow name
         deadline_flow = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        time.sleep(10)
         while time.time() < deadline_flow:
             try:
                 if custom_flow_name in table.inner_text():
@@ -387,6 +365,7 @@ class TestAddLineSectionWithDialog:
             except Exception:
                 pass
             time.sleep(0.1)
+
         assert custom_flow_name in table.inner_text()
         row = table.locator("tbody tr").filter(has_text=custom_flow_name).first
         row.click()
@@ -401,8 +380,21 @@ class TestAddLineSectionWithDialog:
         page.locator('[test-id="marker-button-properties"]').first.click()
         name_input = page.locator(f'[test-id="{MARKER_FLOW_NAME}"]').first
         name_input.fill(new_flow_name)
-        page.locator('[test-id="marker-apply"]').first.click()
         time.sleep(0.2)
+        page.locator(f'[test-id="{MARKER_DIALOG_APPLY}"]').first.click()
+        page.locator(f'[test-id="{MARKER_DIALOG_APPLY}"]').wait_for(state="hidden")
+        # Wait until the rename is reflected in the table to avoid flakiness
+        deadline_rename = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        while time.time() < deadline_rename:
+            try:
+                print(table.inner_text())
+                if new_flow_name in table.inner_text(
+                    timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT
+                ):
+                    break
+            except Exception:
+                pass
+            time.sleep(0.1)
         assert new_flow_name in table.inner_text()
 
     @pytest.mark.timeout(400)
@@ -423,15 +415,8 @@ class TestAddLineSectionWithDialog:
             self._create_section(page, resource_manager, n)
 
         # Create one flow then remove it
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
-        ).click()
-        try:
-            page.get_by_text(
-                resource_manager.get(FlowKeys.BUTTON_ADD), exact=True
-            ).click()
-        except Exception:
-            page.locator('[test-id="marker-button-add"]').first.click()
+        page.locator('[test-id="marker-tab-flow"]').first.click()
+        page.locator('[test-id="marker-button-add"]').first.click()
         page.locator(f'[test-id="{MARKER_FLOW_NAME}"]').first.fill("Temp-Flow")
         # Select start and end sections before applying
         page.locator(f'[test-id="{MARKER_START_SECTION}"]').first.click()
