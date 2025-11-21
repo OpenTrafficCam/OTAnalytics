@@ -104,6 +104,7 @@ def _open_part(page: Page, part: str) -> None:
     raise AssertionError(f"Could not find table cell with text: {part}")
 
 
+@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
