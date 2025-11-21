@@ -408,6 +408,7 @@ class TestAddLineSectionWithDialog:
         time.sleep(0.2)
         assert new_flow_name in table.inner_text()
 
+    @pytest.mark.skip(reason="only works in headed right now")
     @pytest.mark.timeout(400)
     @pytest.mark.playwright
     @pytest.mark.usefixtures("external_app")
