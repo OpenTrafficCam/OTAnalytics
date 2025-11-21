@@ -36,6 +36,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
 from OTAnalytics.plugin_ui.nicegui_application import DEFAULT_HOSTNAME, DEFAULT_PORT
 from tests.utils.builders.event_builder import EventBuilder
+from tests.utils.builders.otanalytics_builders import file_picker_directory
 from tests.utils.builders.track_builder import TrackBuilder, create_track
 from tests.utils.builders.track_segment_builder import (
     PANDAS,
@@ -74,7 +75,14 @@ class NiceGUITestServer:
     def start(self) -> None:
         """Start NiceGUI server in subprocess"""
         self.process = subprocess.Popen(
-            ["python", "-m", "OTAnalytics", "--webui"],
+            [
+                "python",
+                "-m",
+                "OTAnalytics",
+                "--webui",
+                "--file-picker-directory",
+                file_picker_directory(),
+            ],
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE,
             bufsize=BUFFER_SIZE_100MB,
