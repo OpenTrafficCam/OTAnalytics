@@ -70,8 +70,10 @@ class TestProjectInformationPlaywright:
         """Open the main page to confirm the server is reachable (Playwright)."""
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
-        # Sanity check: page should contain Project section (pick first occurrence)
-        page.get_by_text("Project").first.wait_for(state="visible", timeout=5000)
+        # Sanity check: wait for any known project marker to appear (save button)
+        page.locator('[test-id="marker-project-save"]').first.wait_for(
+            state="visible", timeout=5000
+        )
 
     @pytest.mark.timeout(300)
     @pytest.mark.playwright
@@ -221,12 +223,8 @@ class TestProjectInformationPlaywright:
         )
 
         # First save must use "Save As" (Quick Save requires an existing file)
-        try:
-            page.locator('[test-id="marker-project-save-as"]').first.click()
-        except Exception:
-            page.get_by_text(
-                resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT), exact=True
-            ).click()
+        # Use explicit marker for Save As
+        page.locator('[test-id="marker-project-save-as"]').first.click()
 
         # Wait for Apply button to ensure the dialog is open
         page.locator('[test-id="apply"]').first.wait_for(state="visible")
@@ -251,12 +249,8 @@ class TestProjectInformationPlaywright:
         fill(modified_name, modified_date, modified_time)
 
         # Import previously saved config
-        try:
-            page.locator('[test-id="marker-project-open"]').first.click()
-        except Exception:
-            page.get_by_text(
-                resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT), exact=True
-            ).click()
+        # Use explicit marker for Open Project
+        page.locator('[test-id="marker-project-open"]').first.click()
 
         # Interact with the FileChooserDialog to choose the saved file
         page.locator('[test-id="apply"]').first.wait_for(state="visible")
@@ -279,12 +273,7 @@ class TestProjectInformationPlaywright:
 
         # Overwrite scenario: change and re-import
         fill("Temp Name Before Import", "2025-08-13", "08:45:00")
-        try:
-            page.locator('[test-id="marker-project-open"]').first.click()
-        except Exception:
-            page.get_by_text(
-                resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT), exact=True
-            ).click()
+        page.locator('[test-id="marker-project-open"]').first.click()
         page.locator('[test-id="apply"]').first.wait_for(state="visible")
         page.get_by_label(dir_label, exact=True).fill(str(save_path.parent))
         page.get_by_label(file_label, exact=True).fill(save_path.name)

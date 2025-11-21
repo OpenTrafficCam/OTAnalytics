@@ -5,13 +5,14 @@ import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
-from OTAnalytics.application.resources.resource_manager import (
-    AddVideoKeys,
-    ResourceManager,
-    TrackFormKeys,
-)
+from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
+    MARKER_TAB_VIDEOS,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    MARKER_ADD_VIDEOS_BUTTON,
+    MARKER_REMOVE_VIDEOS_BUTTON,
     MARKER_VIDEO_TABLE,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
@@ -64,9 +65,7 @@ def _reset_videos_tab(page: Page, rm: ResourceManager) -> None:
         name = names[0]
         try:
             _click_table_cell_with_text(page, name)
-            page.get_by_text(
-                rm.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-            ).click()
+            page.locator(f'[test-id="{MARKER_REMOVE_VIDEOS_BUTTON}"]').first.click()
             # wait until it's gone
             deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
             while time.time() < deadline:
@@ -78,7 +77,7 @@ def _reset_videos_tab(page: Page, rm: ResourceManager) -> None:
 
 
 def _add_video_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
-    page.get_by_text(rm.get(AddVideoKeys.BUTTON_ADD_VIDEOS), exact=True).click()
+    page.locator(f'[test-id="{MARKER_ADD_VIDEOS_BUTTON}"]').first.click()
     ui_path = path.relative_to(file_picker_directory())
     for part in ui_path.parts:
         _open_part(page, part)
@@ -122,9 +121,7 @@ class TestVideoImportAndDisplayPlaywright:
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
         # Switch to Videos tab and ensure clean slate
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
+        page.locator(f'[test-id="{MARKER_TAB_VIDEOS}"]').first.click()
         _reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"
@@ -173,9 +170,7 @@ class TestVideoImportAndDisplayPlaywright:
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
         # Switch to Videos tab and clean slate
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
+        page.locator(f'[test-id="{MARKER_TAB_VIDEOS}"]').first.click()
         _reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"
@@ -190,9 +185,7 @@ class TestVideoImportAndDisplayPlaywright:
 
         # Remove first video
         _click_table_cell_with_text(page, v1.name)
-        page.get_by_text(
-            resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-        ).click()
+        page.locator(f'[test-id="{MARKER_REMOVE_VIDEOS_BUTTON}"]').first.click()
         # Wait gone
         deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
         while time.time() < deadline:
@@ -203,9 +196,7 @@ class TestVideoImportAndDisplayPlaywright:
 
         # Remove second video
         _click_table_cell_with_text(page, v2.name)
-        page.get_by_text(
-            resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-        ).click()
+        page.locator(f'[test-id="{MARKER_REMOVE_VIDEOS_BUTTON}"]').first.click()
         deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
         while time.time() < deadline:
             if v2.name not in _table_filenames(page):

@@ -6,13 +6,14 @@ import pytest
 from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
-from OTAnalytics.application.resources.resource_manager import (
-    AddVideoKeys,
-    ResourceManager,
-    TrackFormKeys,
-)
+from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
+    MARKER_TAB_VIDEOS,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    MARKER_ADD_VIDEOS_BUTTON,
+    MARKER_REMOVE_VIDEOS_BUTTON,
     MARKER_VIDEO_TABLE,
 )
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT, NiceGUITestServer
@@ -65,9 +66,7 @@ def _reset_videos_tab(page: Page, rm: ResourceManager) -> None:
         name = names[0]
         try:
             _click_table_cell_with_text(page, name)
-            page.get_by_text(
-                rm.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-            ).click()
+            page.locator(f'[test-id="{MARKER_REMOVE_VIDEOS_BUTTON}"]').first.click()
             # wait until it's gone
             deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
             while time.time() < deadline:
@@ -80,7 +79,7 @@ def _reset_videos_tab(page: Page, rm: ResourceManager) -> None:
 
 
 def _add_video_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
-    page.get_by_text(rm.get(AddVideoKeys.BUTTON_ADD_VIDEOS), exact=True).click()
+    page.locator(f'[test-id="{MARKER_ADD_VIDEOS_BUTTON}"]').first.click()
     ui_path = path.relative_to(file_picker_directory())
     # Double-click each path segment within the file picker grid (ag-grid)
     for part in ui_path.parts:
@@ -131,9 +130,7 @@ class TestRemoveSingleVideoAfterSelection:
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
         # Switch to Videos tab
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
+        page.locator(f'[test-id="{MARKER_TAB_VIDEOS}"]').first.click()
 
         # Ensure clean slate
         _reset_videos_tab(page, resource_manager)
@@ -154,9 +151,7 @@ class TestRemoveSingleVideoAfterSelection:
 
         # Remove the row
         _click_table_cell_with_text(page, name1)
-        page.get_by_text(
-            resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-        ).click()
+        page.locator(f'[test-id="{MARKER_REMOVE_VIDEOS_BUTTON}"]').first.click()
 
         # Verify it's gone
         deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
