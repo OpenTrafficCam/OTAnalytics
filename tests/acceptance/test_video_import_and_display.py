@@ -19,6 +19,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
 )
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT, NiceGUITestServer
 from tests.utils.builders.otanalytics_builders import file_picker_directory
+from tests.utils.playwright_helpers import test_id
 
 playwright = pytest.importorskip(
     "playwright.sync_api", reason="pytest-playwright is required for this test"
@@ -26,7 +27,7 @@ playwright = pytest.importorskip(
 
 
 def _table_filenames(page: Page) -> list[str]:
-    cells = page.locator(f'[test-id="{MARKER_VIDEO_TABLE}"] table tbody tr td')
+    cells = test_id(page, MARKER_VIDEO_TABLE).locator("table tbody tr td")
     texts = [text.strip() for text in cells.all_inner_texts()]
     return [
         t
@@ -48,9 +49,11 @@ def _wait_for_names_present(page: Page, names: list[str]) -> None:
 
 
 def _click_table_cell_with_text(page: Page, text: str) -> None:
-    cell = page.locator(
-        f'[test-id="{MARKER_VIDEO_TABLE}"] table tbody tr td', has_text=text
-    ).first
+    cell = (
+        test_id(page, MARKER_VIDEO_TABLE)
+        .locator("table tbody tr td", has_text=text)
+        .first
+    )
     cell.wait_for(state="visible")
     cell.click()
 
@@ -146,7 +149,7 @@ class TestVideoImportAndDisplayPlaywright:
 
         # Select first video and ensure preview image becomes visible and has src
         _click_table_cell_with_text(page, v1.name)
-        img = page.locator(f'[test-id="{MARKER_INTERACTIVE_IMAGE}"] img').first
+        img = test_id(page, MARKER_INTERACTIVE_IMAGE).locator("img").first
         img.wait_for(state="visible")
         src1 = img.get_attribute("src") or ""
         assert src1, "Preview image src should not be empty after selecting first video"

@@ -1,3 +1,5 @@
+from typing import Any
+
 from playwright.sync_api import Page
 
 from OTAnalytics.application.resources.resource_manager import (
@@ -41,6 +43,15 @@ def set_input_value(page: Page, selector: str, value: str) -> None:
     )
     # Give the backend a short moment to process the websocket event
     page.wait_for_timeout(50)
+
+
+def test_id(page: Page, marker: str) -> Any:
+    """Return a Playwright locator for elements marked with our `test-id` attribute.
+
+    Usage:
+        test_id(page, MARKER_FILENAME).first.fill("test_name")
+    """
+    return page.locator(f'[test-id="{marker}"]')
 
 
 def fill_project_information(

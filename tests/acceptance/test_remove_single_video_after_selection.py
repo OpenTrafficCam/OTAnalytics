@@ -19,6 +19,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
 )
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT, NiceGUITestServer
 from tests.utils.builders.otanalytics_builders import file_picker_directory
+from tests.utils.playwright_helpers import test_id
 
 playwright = pytest.importorskip(
     "playwright.sync_api", reason="pytest-playwright is required for this test"
@@ -26,7 +27,7 @@ playwright = pytest.importorskip(
 
 
 def _table_filenames(page: Page) -> list[str]:
-    cells = page.locator(f'[test-id="{MARKER_VIDEO_TABLE}"] table tbody tr td')
+    cells = test_id(page, MARKER_VIDEO_TABLE).locator("table tbody tr td")
     texts: list[str] = []
     for i in range(cells.count()):
         try:
@@ -58,9 +59,11 @@ def _wait_for_names_present(page: Page, names: Iterable[str]) -> None:
 
 
 def _click_table_cell_with_text(page: Page, text: str) -> None:
-    cell = page.locator(
-        f'[test-id="{MARKER_VIDEO_TABLE}"] table tbody tr td', has_text=text
-    ).first
+    cell = (
+        test_id(page, MARKER_VIDEO_TABLE)
+        .locator("table tbody tr td", has_text=text)
+        .first
+    )
     cell.wait_for(state="visible")
     cell.click()
 
@@ -169,7 +172,7 @@ class TestRemoveSingleVideoAfterSelection:
         # Wait for the filename to appear in table
         _wait_for_names_present(page, [name1])
         # Sanity check: the table is present
-        expect(page.locator(f'[test-id="{MARKER_VIDEO_TABLE}"]')).to_be_visible()
+        expect(test_id(page, MARKER_VIDEO_TABLE)).to_be_visible()
 
         # Remove the row
         _click_table_cell_with_text(page, name1)

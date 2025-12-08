@@ -15,6 +15,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
 from tests.conftest import NiceGUITestServer
+from tests.utils.playwright_helpers import test_id
 
 # Ensure pytest-playwright is available; otherwise skip this module
 playwright = pytest.importorskip(
@@ -220,22 +221,16 @@ class TestProjectInformationPlaywright:
             NiceGuiUiFactory, "askopenfilename", fake_askopenfilename, raising=True
         )
 
-        # First save must use "Save As" (Quick Save requires an existing file)
-        try:
-            page.locator('[test-id="marker-project-save-as"]').first.click()
-        except Exception:
-            page.get_by_text(
-                resource_manager.get(ProjectKeys.LABEL_SAVE_AS_PROJECT), exact=True
-            ).click()
+        test_id(page, "marker-project-save-as").first.click()
 
         # Wait for Apply button to ensure the dialog is open
-        page.locator('[test-id="apply"]').first.wait_for(state="visible")
+        test_id(page, "apply").first.wait_for(state="visible")
         dir_label = resource_manager.get(FileChooserDialogKeys.LABEL_DIRECTORY)
         # Set directory via label and set filename via explicit marker as requested
         page.get_by_label(dir_label, exact=True).fill(str(save_path.parent))
-        page.locator(f'[test-id="{MARKER_FILENAME}"]').first.fill("test_name")
+        test_id(page, MARKER_FILENAME).first.fill("test_name")
         # Apply the dialog
-        page.locator('[test-id="apply"]').first.click()
+        test_id(page, "apply").first.click()
 
         # Wait until file is created (async server write)
         for _ in range(200):  # up to ~10s
@@ -252,19 +247,19 @@ class TestProjectInformationPlaywright:
 
         # Import previously saved config
         try:
-            page.locator('[test-id="marker-project-open"]').first.click()
+            test_id(page, "marker-project-open").first.click()
         except Exception:
             page.get_by_text(
                 resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT), exact=True
             ).click()
 
         # Interact with the FileChooserDialog to choose the saved file
-        page.locator('[test-id="apply"]').first.wait_for(state="visible")
+        test_id(page, "apply").first.wait_for(state="visible")
         dir_label = resource_manager.get(FileChooserDialogKeys.LABEL_DIRECTORY)
         file_label = resource_manager.get(FileChooserDialogKeys.LABEL_FILENAME)
         page.get_by_label(dir_label, exact=True).fill(str(save_path.parent))
         page.get_by_label(file_label, exact=True).fill(save_path.name)
-        page.locator('[test-id="apply"]').first.click()
+        test_id(page, "apply").first.click()
 
         # Wait for values to change back
         page.wait_for_timeout(150)
@@ -280,15 +275,15 @@ class TestProjectInformationPlaywright:
         # Overwrite scenario: change and re-import
         fill("Temp Name Before Import", "2025-08-13", "08:45:00")
         try:
-            page.locator('[test-id="marker-project-open"]').first.click()
+            test_id(page, "marker-project-open").first.click()
         except Exception:
             page.get_by_text(
                 resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT), exact=True
             ).click()
-        page.locator('[test-id="apply"]').first.wait_for(state="visible")
+        test_id(page, "apply").first.wait_for(state="visible")
         page.get_by_label(dir_label, exact=True).fill(str(save_path.parent))
         page.get_by_label(file_label, exact=True).fill(save_path.name)
-        page.locator('[test-id="apply"]').first.click()
+        test_id(page, "apply").first.click()
 
         for _ in range(120):
             name_v, date_v, time_v = read_values()
