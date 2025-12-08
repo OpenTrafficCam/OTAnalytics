@@ -799,7 +799,11 @@ class DummyViewModel(
     @action
     async def load_tracks(self) -> None:
         track_files = await self._ui_factory.askopenfilenames(
-            title="Load track files", filetypes=[("tracks file", "*.ottrk")]
+            title="Load track files",
+            filetypes=[
+                ("tracks file", "*.ottrk"),
+                ("tracks csv", "*.tracks.csv"),
+            ],
         )
         if not track_files:
             return

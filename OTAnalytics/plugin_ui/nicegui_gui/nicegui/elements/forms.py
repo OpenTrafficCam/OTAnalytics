@@ -117,6 +117,7 @@ class FormField(LazyInitializedElement[S], Generic[S, V]):
             element.mark(self.marker)
             try:
                 element.props(f"test-id={self.marker}")
+                element.props(f"data-testid={self.marker}")
             except Exception:
                 # In case a specific element type doesn't support props, ignore.
                 pass
@@ -749,8 +750,14 @@ class FormFieldCheckbox(LazyInitializedElement[Checkbox]):
     def build(self) -> None:
         """Builds the UI form element."""
         self._instance = ui.checkbox(text=self._label_text, value=self._initial_value)
+        # Apply marker and data-testid for Playwright's get_by_test_id compatibility
         if self._marker:
             self._instance.mark(self._marker)
+            self._instance.props(f"data-testid={self._marker}")
+        # Apply any additional props passed in
+        if self._props:
+            for prop in self._props:
+                self._instance.props(prop)
         if self._on_value_change:
             self._instance.on_value_change(self._on_value_change)
 
