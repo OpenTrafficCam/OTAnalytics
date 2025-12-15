@@ -42,8 +42,6 @@ class TestArgparseCliParser:
             "--count-intervals",
             "1",
             "15",
-            "--num-processes",
-            "3",
             "--no-track-statistics-export",
             "--logfile",
             log_file,
