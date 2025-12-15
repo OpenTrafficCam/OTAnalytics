@@ -73,7 +73,6 @@ class TestArgparseCliParser:
                 save_suffix=save_suffix,
                 event_formats=[csv_format, otevents_format],
                 count_intervals=[1, 15],
-                num_processes=3,
                 log_file=log_file,
                 include_classes=["truck", "car"],
                 exclude_classes=["pedestrian"],

@@ -35,7 +35,6 @@ def cli_args_otconfig() -> CliArguments:
         count_intervals=[6],
         track_export=False,
         track_statistics_export=False,
-        num_processes=8,
         log_file="path/to/cli_log",
         logfile_overwrite=True,
     )
