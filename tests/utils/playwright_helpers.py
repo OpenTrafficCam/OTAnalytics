@@ -1,8 +1,9 @@
+import logging
 import time
 from pathlib import Path
 from typing import Any, Iterable
 
-from playwright.sync_api import Page
+from playwright.sync_api import Error, Page, TimeoutError
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
@@ -27,6 +28,8 @@ from tests.conftest import (
 )
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
+logger = logging.getLogger(__name__)
+
 
 def set_input_value(page: Page, selector: str, value: str) -> None:
     """Robustly set a value on an input and ensure NiceGUI backend receives it.
@@ -39,37 +42,74 @@ def set_input_value(page: Page, selector: str, value: str) -> None:
     loc.wait_for(state="visible")
     try:
         loc.click()
-    except Exception:
-        pass
+    except (TimeoutError, Error) as e:
+        logger.warning(
+            "set_input_value: click() failed for selector %s: %s", selector, e
+        )
     try:
         loc.fill("")
         loc.fill(value)
         try:
             loc.press("Enter")
-        except Exception:
-            pass
-    except Exception:
-        # ignore fill issues, fallback to JS below
-        pass
-    # Fallback: ensure events are dispatched and element is blurred
-    loc.evaluate(
-        "(el, v) => {\n"
-        "  el.value = v;\n"
-        "  el.dispatchEvent(new Event('input', { bubbles: true }));\n"
-        "  el.dispatchEvent(new Event('change', { bubbles: true }));\n"
-        "  if (el.blur) el.blur();\n"
-        "}",
-        value,
-    )
-    # Give the backend a short moment to process the websocket event
+        except (TimeoutError, Error) as e:
+            logger.warning(
+                "set_input_value: press('Enter') failed for selector %s: %s",
+                selector,
+                e,
+            )
+    except (TimeoutError, Error) as e:
+        # ignore fill issues, will fallback to JS below if verification fails
+        logger.warning(
+            "set_input_value: fill() failed for selector %s: %s", selector, e
+        )
+
     page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
 
+    # Verify the value was actually set (short retry to avoid flakiness)
+    def verify(expected: str) -> tuple[bool, str | None]:
+        deadline = time.time() + (PLAYWRIGHT_POLL_INTERVAL_MS / 1000) * 3
+        last_local: str | None = None
+        while time.time() < deadline:
+            try:
+                last_local = loc.input_value()
+            except (TimeoutError, Error) as err:
+                logger.warning(
+                    "set_input_value: input_value() failed for selector %s: %s",
+                    selector,
+                    err,
+                )
+                last_local = None
+            if last_local == expected:
+                return True, last_local
+            page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
+        return False, last_local
 
-def test_id(page: Page, marker: str) -> Any:
+    ok, last = verify(value)
+    if not ok:
+        # Fallback: ensure events are dispatched and element is blurred, then re-verify
+        logger.info("set_input_value: engaging JS fallback for selector %s", selector)
+        loc.evaluate(
+            "(el, v) => {\n"
+            "  el.value = v;\n"
+            "  el.dispatchEvent(new Event('input', { bubbles: true }));\n"
+            "  el.dispatchEvent(new Event('change', { bubbles: true }));\n"
+            "  if (el.blur) el.blur();\n"
+            "}",
+            value,
+        )
+        page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
+        ok, last = verify(value)
+
+    assert (
+        ok and last == value
+    ), f"Failed to set input value: expected '{value}', got '{last}' for selector {selector}"  # noqa
+
+
+def search_for_marker_element(page: Page, marker: str) -> Any:
     """Return a Playwright locator for elements marked with our `test-id` attribute.
 
     Usage:
-        test_id(page, MARKER_FILENAME).first.fill("test_name")
+        search_for_marker_element(page, MARKER_FILENAME).first.fill("test_name")
     """
     return page.locator(f'[test-id="{marker}"]')
 
@@ -97,7 +137,9 @@ def fill_project_information(
 
 def table_filenames(page: Page) -> list[str]:
     """Return list of video file names currently shown in the add-video table."""
-    cells = test_id(page, MARKER_VIDEO_TABLE).locator("table tbody tr td")
+    cells = search_for_marker_element(page, MARKER_VIDEO_TABLE).locator(
+        "table tbody tr td"
+    )
     texts = [text.strip() for text in cells.all_inner_texts()]
     return [
         t
@@ -124,7 +166,7 @@ def wait_for_names_present(page: Page, names: Iterable[str]) -> None:
 def click_table_cell_with_text(page: Page, text: str) -> None:
     """Click the first cell in the video table that contains the given text."""
     cell = (
-        test_id(page, MARKER_VIDEO_TABLE)
+        search_for_marker_element(page, MARKER_VIDEO_TABLE)
         .locator("table tbody tr td", has_text=text)
         .first
     )
@@ -205,15 +247,15 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
 
     # Try marker click first, then label-based fallback
     try:
-        test_id(page, "marker-project-open").first.click()
+        search_for_marker_element(page, "marker-project-open").first.click()
     except Exception:
         page.get_by_text(rm.get(ProjectKeys.LABEL_OPEN_PROJECT), exact=True).click()
 
     # Interact with the FileChooserDialog to choose the file using markers
-    test_id(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
-    test_id(page, MARKER_DIRECTORY).first.fill(str(path.parent))
-    test_id(page, MARKER_FILENAME).first.fill(path.name)
-    test_id(page, MARKER_DIALOG_APPLY).first.click()
+    search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
+    search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
+    search_for_marker_element(page, MARKER_FILENAME).first.fill(path.name)
+    search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
 
 
 # ----------------------

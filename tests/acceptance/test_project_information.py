@@ -26,8 +26,8 @@ from tests.conftest import (
 from tests.utils.playwright_helpers import (
     import_project_and_assert_values,
     open_project_otconfig,
+    search_for_marker_element,
     set_input_value,
-    test_id,
 )
 
 
@@ -170,13 +170,17 @@ class TestProjectInformationPlaywright:
         # Use a simple filename as requested by the issue (test_name)
         save_path = _Path(test_data_tmp_dir) / "test_name.otconfig"
 
-        test_id(page, "marker-project-save-as").first.click()
-        test_id(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
+        search_for_marker_element(page, "marker-project-save-as").first.click()
+        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(
+            state="visible"
+        )
         # Use marker-based fields for directory and filename
-        test_id(page, MARKER_DIRECTORY).first.fill(str(save_path.parent))
-        test_id(page, MARKER_FILENAME).first.fill("test_name")
+        search_for_marker_element(page, MARKER_DIRECTORY).first.fill(
+            str(save_path.parent)
+        )
+        search_for_marker_element(page, MARKER_FILENAME).first.fill("test_name")
         # Apply the dialog using the apply marker
-        test_id(page, MARKER_DIALOG_APPLY).first.click()
+        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
 
         # Wait until file is created (async server write)
         polls = int(10_000 / PLAYWRIGHT_POLL_INTERVAL_MS)

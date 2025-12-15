@@ -23,8 +23,8 @@ from tests.utils.playwright_helpers import (
     add_video_via_picker,
     click_table_cell_with_text,
     reset_videos_tab,
+    search_for_marker_element,
     table_filenames,
-    test_id,
     wait_for_names_present,
 )
 
@@ -126,7 +126,11 @@ class TestVideoImportAndDisplayPlaywright:
 
         # Select first video and ensure preview image becomes visible and has src
         click_table_cell_with_text(page, v1.name)
-        img = test_id(page, MARKER_INTERACTIVE_IMAGE).locator("img").first
+        img = (
+            search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
+            .locator("img")
+            .first
+        )
         img.wait_for(state="visible")
         src1 = img.get_attribute("src") or ""
         assert src1, "Preview image src should not be empty after selecting first video"

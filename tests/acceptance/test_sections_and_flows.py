@@ -46,7 +46,7 @@ from tests.utils.playwright_helpers import (
     click_table_cell_with_text,
     fill_project_information,
     reset_videos_tab,
-    test_id,
+    search_for_marker_element,
     wait_for_names_present,
 )
 
@@ -112,9 +112,13 @@ class TestAddLineSectionWithDialog:
         ).click()
 
         # Ensure the interactive image exists and is visible; prefer inner <img>
-        canvas_locator = test_id(page, MARKER_INTERACTIVE_IMAGE)
+        canvas_locator = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
         expect(canvas_locator).to_be_visible()
-        img = test_id(page, MARKER_INTERACTIVE_IMAGE).locator("img").first
+        img = (
+            search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
+            .locator("img")
+            .first
+        )
         target = img if img.count() else canvas_locator
         target.scroll_into_view_if_needed()
 
@@ -126,7 +130,7 @@ class TestAddLineSectionWithDialog:
         except Exception:
             try:
                 # Fallback to marker if text lookup fails
-                test_id(page, "marker-button-add-line").first.click()
+                search_for_marker_element(page, "marker-button-add-line").first.click()
             except Exception:
                 pass
 
@@ -143,14 +147,16 @@ class TestAddLineSectionWithDialog:
 
         # Fill the section name in the dialog
         # Try input within the marker first, then fallback to the marker element itself
-        name_input = test_id(page, MARKER_SECTION_NAME).locator("input").first
+        name_input = (
+            search_for_marker_element(page, MARKER_SECTION_NAME).locator("input").first
+        )
         if not name_input.count():
-            name_input = test_id(page, MARKER_SECTION_NAME).first
+            name_input = search_for_marker_element(page, MARKER_SECTION_NAME).first
         name_input.wait_for(state="visible")
         name_input.fill("Name")
 
         # Click Apply
-        apply_button = test_id(page, MARKER_DIALOG_APPLY).first
+        apply_button = search_for_marker_element(page, MARKER_DIALOG_APPLY).first
         apply_button.wait_for(state="visible")
         apply_button.click()
 
@@ -205,9 +211,13 @@ class TestAddLineSectionWithDialog:
     def _create_section(
         self, page: Page, resource_manager: ResourceManager, section_name: str
     ) -> None:
-        canvas_locator = test_id(page, MARKER_INTERACTIVE_IMAGE)
+        canvas_locator = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
         expect(canvas_locator).to_be_visible()
-        img = test_id(page, MARKER_INTERACTIVE_IMAGE).locator("img").first
+        img = (
+            search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
+            .locator("img")
+            .first
+        )
         target = img if img.count() else canvas_locator
         target.scroll_into_view_if_needed()
         try:
@@ -222,12 +232,12 @@ class TestAddLineSectionWithDialog:
             except Exception:
                 canvas_locator.click(position={"x": pos[0], "y": pos[1]})
         page.keyboard.press("Enter")
-        ni = test_id(page, MARKER_SECTION_NAME).locator("input").first
+        ni = search_for_marker_element(page, MARKER_SECTION_NAME).locator("input").first
         if not ni.count():
-            ni = test_id(page, MARKER_SECTION_NAME).first
+            ni = search_for_marker_element(page, MARKER_SECTION_NAME).first
         ni.wait_for(state="visible")
         ni.fill(section_name)
-        ab = test_id(page, MARKER_DIALOG_APPLY).first
+        ab = search_for_marker_element(page, MARKER_DIALOG_APPLY).first
         ab.wait_for(state="visible")
         ab.click()
         deadline_local = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
@@ -279,23 +289,29 @@ class TestAddLineSectionWithDialog:
                 resource_manager.get(FlowKeys.BUTTON_ADD), exact=True
             ).click()
         except Exception:
-            test_id(page, "marker-button-add").first.click()
-        test_id(page, MARKER_FLOW_NAME).first.wait_for(state="visible")
-        test_id(page, MARKER_START_SECTION).first.wait_for(state="visible")
-        test_id(page, MARKER_END_SECTION).first.wait_for(state="visible")
-        flow_name_input = test_id(page, MARKER_FLOW_NAME).first
+            search_for_marker_element(page, "marker-button-add").first.click()
+        search_for_marker_element(page, MARKER_FLOW_NAME).first.wait_for(
+            state="visible"
+        )
+        search_for_marker_element(page, MARKER_START_SECTION).first.wait_for(
+            state="visible"
+        )
+        search_for_marker_element(page, MARKER_END_SECTION).first.wait_for(
+            state="visible"
+        )
+        flow_name_input = search_for_marker_element(page, MARKER_FLOW_NAME).first
         custom_flow_name = "My-Flow"
         flow_name_input.fill(custom_flow_name)
         # Select start section (ensure both start and end are chosen)
-        test_id(page, MARKER_START_SECTION).first.click()
+        search_for_marker_element(page, MARKER_START_SECTION).first.click()
         page.keyboard.press("ArrowDown")
         page.keyboard.press("Enter")
         # Select end section
-        test_id(page, MARKER_END_SECTION).first.click()
+        search_for_marker_element(page, MARKER_END_SECTION).first.click()
         page.keyboard.press("ArrowDown")
         page.keyboard.press("Enter")
-        test_id(page, MARKER_DIALOG_APPLY).first.click()
-        table = test_id(page, "marker-flow-table").first
+        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+        table = search_for_marker_element(page, "marker-flow-table").first
         table.wait_for(state="visible")
         # Wait until the table contains the newly created flow name
         deadline_flow = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
@@ -309,18 +325,18 @@ class TestAddLineSectionWithDialog:
         assert custom_flow_name in table.inner_text()
         row = table.locator("tbody tr").filter(has_text=custom_flow_name).first
         row.click()
-        test_id(page, "marker-button-properties").first.click()
-        name_input = test_id(page, MARKER_FLOW_NAME).first
+        search_for_marker_element(page, "marker-button-properties").first.click()
+        name_input = search_for_marker_element(page, MARKER_FLOW_NAME).first
         new_flow_name = "My-Flow-Renamed"
         name_input.fill(new_flow_name)
         page.keyboard.press("Escape")
         time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         assert custom_flow_name in table.inner_text()
         assert new_flow_name not in table.inner_text()
-        test_id(page, "marker-button-properties").first.click()
-        name_input = test_id(page, MARKER_FLOW_NAME).first
+        search_for_marker_element(page, "marker-button-properties").first.click()
+        name_input = search_for_marker_element(page, MARKER_FLOW_NAME).first
         name_input.fill(new_flow_name)
-        test_id(page, "marker-apply").first.click()
+        search_for_marker_element(page, "marker-apply").first.click()
         time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         assert new_flow_name in table.inner_text()
 
@@ -351,17 +367,17 @@ class TestAddLineSectionWithDialog:
                 resource_manager.get(FlowKeys.BUTTON_ADD), exact=True
             ).click()
         except Exception:
-            test_id(page, "marker-button-add").first.click()
-        test_id(page, MARKER_FLOW_NAME).first.fill("Temp-Flow")
+            search_for_marker_element(page, "marker-button-add").first.click()
+        search_for_marker_element(page, MARKER_FLOW_NAME).first.fill("Temp-Flow")
         # Select start and end sections before applying
-        test_id(page, MARKER_START_SECTION).first.click()
+        search_for_marker_element(page, MARKER_START_SECTION).first.click()
         page.keyboard.press("ArrowDown")
         page.keyboard.press("Enter")
-        test_id(page, MARKER_END_SECTION).first.click()
+        search_for_marker_element(page, MARKER_END_SECTION).first.click()
         page.keyboard.press("ArrowDown")
         page.keyboard.press("Enter")
-        test_id(page, MARKER_DIALOG_APPLY).first.click()
-        table = test_id(page, "marker-flow-table").first
+        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+        table = search_for_marker_element(page, "marker-flow-table").first
         table.wait_for(state="visible")
         # Wait until the table contains the newly created flow
         deadline_temp = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
@@ -375,12 +391,12 @@ class TestAddLineSectionWithDialog:
         assert "Temp-Flow" in table.inner_text()
         row = table.locator("tbody tr").filter(has_text="Temp-Flow").first
         row.click()
-        test_id(page, "marker-button-remove").first.click()
+        search_for_marker_element(page, "marker-button-remove").first.click()
         time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         assert "Temp-Flow" not in table.inner_text()
 
         # Generate flows from sections and assert at least two are created
-        test_id(page, "marker-button-generate").first.click()
+        search_for_marker_element(page, "marker-button-generate").first.click()
         deadline_gen = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
         matched_texts: list[str] = []
         last_texts: list[str] = []
@@ -399,12 +415,14 @@ class TestAddLineSectionWithDialog:
         ), f"Expected >=2 generated flows with {names}, got {len(matched_texts)}: {last_texts}"  # noqa
 
         # Save project and compare with reference
-        test_id(page, "marker-project-save-as").first.click()
-        test_id(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
+        search_for_marker_element(page, "marker-project-save-as").first.click()
+        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(
+            state="visible"
+        )
         dir_label = resource_manager.get(FileChooserDialogKeys.LABEL_DIRECTORY)
         page.get_by_label(dir_label, exact=True).fill(str(test_data_tmp_dir))
-        test_id(page, MARKER_FILENAME).first.fill("test_name")
-        test_id(page, MARKER_DIALOG_APPLY).first.click()
+        search_for_marker_element(page, MARKER_FILENAME).first.fill("test_name")
+        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
         saved_path = test_data_tmp_dir / "test_name.otconfig"
         assert saved_path.exists(), f"Expected saved configuration at {saved_path}"
         reference_path = Path(__file__).parents[1] / "data" / "test_name.otconfig"
