@@ -1,14 +1,11 @@
 import json
 import time
 from pathlib import Path
-from typing import Iterable
 
 import pytest
 from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
 
-from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
-    AddVideoKeys,
     FileChooserDialogKeys,
     FlowAndSectionKeys,
     FlowKeys,
@@ -35,112 +32,33 @@ from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
-    MARKER_VIDEO_TABLE,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     MARKER_INTERACTIVE_IMAGE,
 )
-from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT, NiceGUITestServer
-from tests.utils.builders.otanalytics_builders import file_picker_directory
-from tests.utils.playwright_helpers import fill_project_information, test_id
+from tests.conftest import (
+    ACCEPTANCE_TEST_PYTEST_TIMEOUT,
+    ACCEPTANCE_TEST_WAIT_TIMEOUT,
+    PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
+    NiceGUITestServer,
+)
+from tests.utils.playwright_helpers import (
+    add_video_via_picker,
+    click_table_cell_with_text,
+    fill_project_information,
+    reset_videos_tab,
+    test_id,
+    wait_for_names_present,
+)
 
 playwright = pytest.importorskip(
     "playwright.sync_api", reason="pytest-playwright is required for this test"
 )
 
 
-def _table_filenames(page: Page) -> list[str]:
-    cells = test_id(page, MARKER_VIDEO_TABLE).locator("table tbody tr td")
-    texts = [text.strip() for text in cells.all_inner_texts()]
-    # Filter to plausible video filenames
-    return [
-        t
-        for t in texts
-        if any(t.lower().endswith(e) for e in SUPPORTED_VIDEO_FILE_TYPES)
-    ]
-
-
-def _wait_for_names_present(page: Page, names: Iterable[str]) -> None:
-    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-    names = list(names)
-    while time.time() < deadline:
-        listed = _table_filenames(page)
-        if all(n in listed for n in names):
-            return
-        time.sleep(0.05)
-    raise AssertionError(
-        f"Timed out waiting for names to appear: {names}; "
-        f"currently: {_table_filenames(page)}"
-    )
-
-
-def _click_table_cell_with_text(page: Page, text: str) -> None:
-    cell = (
-        test_id(page, MARKER_VIDEO_TABLE)
-        .locator("table tbody tr td", has_text=text)
-        .first
-    )
-    cell.wait_for(state="visible")
-    cell.click()
-
-
-def _reset_videos_tab(page: Page, rm: ResourceManager) -> None:
-    # Iteratively remove all rows if any
-    for _ in range(50):
-        names = _table_filenames(page)
-        if not names:
-            break
-        name = names[0]
-        try:
-            _click_table_cell_with_text(page, name)
-            page.get_by_text(
-                rm.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-            ).click()
-            # wait until it's gone
-            deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-            while time.time() < deadline:
-                if name not in _table_filenames(page):
-                    break
-                time.sleep(0.05)
-        except Exception:
-            # Best-effort cleanup only
-            break
-
-
-def _add_video_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
-    page.get_by_text(rm.get(AddVideoKeys.BUTTON_ADD_VIDEOS), exact=True).click()
-    ui_path = path.relative_to(file_picker_directory())
-    # Double-click each path segment within the file picker grid (ag-grid)
-    for part in ui_path.parts:
-        _open_part(page, part)
-
-
-def _open_part(page: Page, part: str) -> None:
-    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-    last_err: Exception | None = None
-    while time.time() < deadline:
-        try:
-            cell = page.locator(".ag-cell-value", has_text=part).first
-            cell.wait_for(state="visible", timeout=1000)
-            cell.dblclick()
-            return
-        except Exception as e:
-            last_cell = page.locator(".ag-cell-value").last
-            try:
-                last_cell.scroll_into_view_if_needed()
-            except Exception:
-                pass
-            last_err = e
-    if last_err:
-        raise last_err
-    raise AssertionError(f"Could not find table cell with text: {part}")
-
-
 class TestAddLineSectionWithDialog:
 
     @pytest.mark.skip(reason="only works in headed right now")
-    @pytest.mark.timeout(300)
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
     @pytest.mark.usefixtures("external_app")
     def test_add_line_section_with_dialog(
@@ -171,7 +89,7 @@ class TestAddLineSectionWithDialog:
         ).click()
 
         # Ensure clean slate
-        _reset_videos_tab(page, resource_manager)
+        reset_videos_tab(page, resource_manager)
 
         # Prepare test video path from tests/data
         data_dir = Path(__file__).parents[1] / "data"
@@ -179,14 +97,14 @@ class TestAddLineSectionWithDialog:
         assert v1.exists(), f"Test video missing: {v1}"
 
         # Add the video
-        _add_video_via_picker(page, resource_manager, v1)
+        add_video_via_picker(page, resource_manager, v1)
 
         name1 = v1.name
         # Wait for the filename to appear in table
-        _wait_for_names_present(page, [name1])
+        wait_for_names_present(page, [name1])
 
         # Select the first video row to ensure preview rendering
-        _click_table_cell_with_text(page, name1)
+        click_table_cell_with_text(page, name1)
 
         # Go to Sections tab
         page.get_by_text(
@@ -246,7 +164,7 @@ class TestAddLineSectionWithDialog:
                     break
             except Exception:
                 pass
-            time.sleep(0.1)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         assert (
             created
         ), "Section with the specified name was not found after applying the dialog"
@@ -273,13 +191,13 @@ class TestAddLineSectionWithDialog:
         page.get_by_text(
             resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
         ).click()
-        _reset_videos_tab(page, resource_manager)
+        reset_videos_tab(page, resource_manager)
         data_dir = Path(__file__).parents[1] / "data"
         v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
         assert v1.exists(), f"Test video missing: {v1}"
-        _add_video_via_picker(page, resource_manager, v1)
-        _wait_for_names_present(page, [v1.name])
-        _click_table_cell_with_text(page, v1.name)
+        add_video_via_picker(page, resource_manager, v1)
+        wait_for_names_present(page, [v1.name])
+        click_table_cell_with_text(page, v1.name)
         page.get_by_text(
             resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
         ).click()
@@ -319,10 +237,10 @@ class TestAddLineSectionWithDialog:
                     return
             except Exception:
                 pass
-            time.sleep(0.1)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         raise AssertionError(f"Section name not found after apply: {section_name}")
 
-    @pytest.mark.timeout(300)
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
     @pytest.mark.usefixtures("external_app")
     def test_create_sections_two_times(
@@ -340,7 +258,7 @@ class TestAddLineSectionWithDialog:
         assert all(n in html for n in names)
 
     @pytest.mark.skip(reason="only works in headed right now")
-    @pytest.mark.timeout(350)
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
     @pytest.mark.usefixtures("external_app")
     def test_create_and_rename_flow_from_sections(
@@ -387,7 +305,7 @@ class TestAddLineSectionWithDialog:
                     break
             except Exception:
                 pass
-            time.sleep(0.1)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         assert custom_flow_name in table.inner_text()
         row = table.locator("tbody tr").filter(has_text=custom_flow_name).first
         row.click()
@@ -396,18 +314,18 @@ class TestAddLineSectionWithDialog:
         new_flow_name = "My-Flow-Renamed"
         name_input.fill(new_flow_name)
         page.keyboard.press("Escape")
-        time.sleep(0.2)
+        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         assert custom_flow_name in table.inner_text()
         assert new_flow_name not in table.inner_text()
         test_id(page, "marker-button-properties").first.click()
         name_input = test_id(page, MARKER_FLOW_NAME).first
         name_input.fill(new_flow_name)
         test_id(page, "marker-apply").first.click()
-        time.sleep(0.2)
+        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         assert new_flow_name in table.inner_text()
 
     @pytest.mark.skip(reason="only works in headed right now")
-    @pytest.mark.timeout(400)
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
     @pytest.mark.usefixtures("external_app")
     def test_remove_flow_and_generate_flows_and_save_project(
@@ -453,12 +371,12 @@ class TestAddLineSectionWithDialog:
                     break
             except Exception:
                 pass
-            time.sleep(0.1)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         assert "Temp-Flow" in table.inner_text()
         row = table.locator("tbody tr").filter(has_text="Temp-Flow").first
         row.click()
         test_id(page, "marker-button-remove").first.click()
-        time.sleep(0.2)
+        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         assert "Temp-Flow" not in table.inner_text()
 
         # Generate flows from sections and assert at least two are created
@@ -475,7 +393,7 @@ class TestAddLineSectionWithDialog:
                     break
             except Exception:
                 pass
-            time.sleep(0.1)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         assert (
             len(matched_texts) >= 2
         ), f"Expected >=2 generated flows with {names}, got {len(matched_texts)}: {last_texts}"  # noqa

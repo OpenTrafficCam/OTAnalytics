@@ -1,11 +1,31 @@
-from typing import Any
+import time
+from pathlib import Path
+from typing import Any, Iterable
 
 from playwright.sync_api import Page
 
+from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
+    AddVideoKeys,
     ProjectKeys,
     ResourceManager,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    MARKER_VIDEO_TABLE,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
+    MARKER_PROJECT_NAME,
+    MARKER_START_DATE,
+    MARKER_START_TIME,
+)
+from tests.conftest import (
+    ACCEPTANCE_TEST_WAIT_TIMEOUT,
+    IMPORT_VERIFY_MAX_POLLS,
+    PLAYWRIGHT_POLL_INTERVAL_MS,
+    PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS,
+    PLAYWRIGHT_SHORT_WAIT_MS,
+)
+from tests.utils.builders.otanalytics_builders import file_picker_directory
 
 
 def set_input_value(page: Page, selector: str, value: str) -> None:
@@ -42,7 +62,7 @@ def set_input_value(page: Page, selector: str, value: str) -> None:
         value,
     )
     # Give the backend a short moment to process the websocket event
-    page.wait_for_timeout(50)
+    page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
 
 
 def test_id(page: Page, marker: str) -> Any:
@@ -68,3 +88,170 @@ def fill_project_information(
     set_input_value(page, name_sel, name)
     set_input_value(page, date_sel, date_value)
     set_input_value(page, time_sel, time_value)
+
+
+# ----------------------
+# Shared Playwright helpers
+# ----------------------
+
+
+def table_filenames(page: Page) -> list[str]:
+    """Return list of video file names currently shown in the add-video table."""
+    cells = test_id(page, MARKER_VIDEO_TABLE).locator("table tbody tr td")
+    texts = [text.strip() for text in cells.all_inner_texts()]
+    return [
+        t
+        for t in texts
+        if any(t.lower().endswith(e) for e in SUPPORTED_VIDEO_FILE_TYPES)
+    ]
+
+
+def wait_for_names_present(page: Page, names: Iterable[str]) -> None:
+    """Wait until all provided names are present in the video table."""
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    names = list(names)
+    while time.time() < deadline:
+        listed = table_filenames(page)
+        if all(n in listed for n in names):
+            return
+        time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
+    raise AssertionError(
+        f"Timed out waiting for names to appear: {names}; "
+        f"currently: {table_filenames(page)}"
+    )
+
+
+def click_table_cell_with_text(page: Page, text: str) -> None:
+    """Click the first cell in the video table that contains the given text."""
+    cell = (
+        test_id(page, MARKER_VIDEO_TABLE)
+        .locator("table tbody tr td", has_text=text)
+        .first
+    )
+    cell.wait_for(state="visible")
+    cell.click()
+
+
+def reset_videos_tab(page: Page, rm: ResourceManager) -> None:
+    """Remove all videos currently listed in the Videos tab (best effort)."""
+    for _ in range(50):
+        names = table_filenames(page)
+        if not names:
+            break
+        name = names[0]
+        try:
+            click_table_cell_with_text(page, name)
+            page.get_by_text(
+                rm.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
+            ).click()
+            # wait until it's gone
+            deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+            while time.time() < deadline:
+                if name not in table_filenames(page):
+                    break
+                time.sleep(0.05)
+        except Exception:
+            # Best-effort cleanup only
+            break
+
+
+def open_part(page: Page, part: str) -> None:
+    """Double-click a cell in the file picker grid matching the given text."""
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    last_err: Exception | None = None
+    while time.time() < deadline:
+        try:
+            cell = page.locator(".ag-cell-value", has_text=part).first
+            cell.wait_for(state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS)
+            cell.dblclick()
+            return
+        except Exception as e:
+            last_cell = page.locator(".ag-cell-value").last
+            try:
+                last_cell.scroll_into_view_if_needed()
+            except Exception:
+                pass
+            last_err = e
+    if last_err:
+        raise last_err
+    raise AssertionError(f"Could not find table cell with text: {part}")
+
+
+def add_video_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
+    """Open the in-app file picker and navigate to select the given video path."""
+    page.get_by_text(rm.get(AddVideoKeys.BUTTON_ADD_VIDEOS), exact=True).click()
+    ui_path = path.relative_to(file_picker_directory())
+    for part in ui_path.parts:
+        open_part(page, part)
+
+
+def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
+    """Open a project .otconfig file via the NiceGUI file chooser.
+
+    This encapsulates the repeated steps used across acceptance tests to open
+    a project configuration:
+    - Click the project 'Open' action (by marker or label fallback)
+    - Wait for the file chooser dialog
+    - Fill directory and filename via test-id markers
+    - Apply the dialog
+    """
+    from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+        MARKER_DIRECTORY,
+        MARKER_FILENAME,
+    )
+    from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+        MARKER_APPLY as MARKER_DIALOG_APPLY,
+    )
+
+    # Try marker click first, then label-based fallback
+    try:
+        test_id(page, "marker-project-open").first.click()
+    except Exception:
+        page.get_by_text(rm.get(ProjectKeys.LABEL_OPEN_PROJECT), exact=True).click()
+
+    # Interact with the FileChooserDialog to choose the file using markers
+    test_id(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
+    test_id(page, MARKER_DIRECTORY).first.fill(str(path.parent))
+    test_id(page, MARKER_FILENAME).first.fill(path.name)
+    test_id(page, MARKER_DIALOG_APPLY).first.click()
+
+
+# ----------------------
+# Project Information helpers
+# ----------------------
+
+
+def read_project_info_values(page: Page) -> tuple[str, str, str]:
+    """Read current values from the Project form inputs using test-id markers."""
+    name_sel = f'[test-id="{MARKER_PROJECT_NAME}"]'
+    date_sel = f'[test-id="{MARKER_START_DATE}"]'
+    time_sel = f'[test-id="{MARKER_START_TIME}"]'
+    return (
+        page.locator(name_sel).input_value(),
+        page.locator(date_sel).input_value(),
+        page.locator(time_sel).input_value(),
+    )
+
+
+def import_project_and_assert_values(
+    page: Page,
+    rm: ResourceManager,
+    path: Path,
+    expected: tuple[str, str, str],
+) -> None:
+    """Import a project .otconfig and wait until Project form shows expected values.
+
+    - Uses the NiceGUI file chooser via `open_project_otconfig`.
+    - Polls the UI for a short time until the values match `expected`.
+    - Asserts final values equal `expected`.
+    """
+    open_project_otconfig(page, rm, path)
+    # Give backend a moment to propagate values
+    page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
+    name_v, date_v, time_v = read_project_info_values(page)
+    for _ in range(IMPORT_VERIFY_MAX_POLLS):
+        if (name_v, date_v, time_v) == expected:
+            break
+        page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
+        name_v, date_v, time_v = read_project_info_values(page)
+    assert (name_v, date_v, time_v) == expected

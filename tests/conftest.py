@@ -46,6 +46,22 @@ from tests.utils.builders.track_segment_builder import (
 )
 
 ACCEPTANCE_TEST_WAIT_TIMEOUT = 5
+# Centralized timeouts for Playwright-based acceptance tests
+# Pytest per-test timeout (seconds) for slow UI E2E tests
+ACCEPTANCE_TEST_PYTEST_TIMEOUT = 300
+# Playwright explicit wait default for visibility checks (milliseconds)
+PLAYWRIGHT_VISIBLE_TIMEOUT_MS = 5000
+# Quick visible wait (milliseconds) for fast retries in tight loops
+PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS = 1000
+# Short one-off UI settle wait (milliseconds)
+PLAYWRIGHT_SHORT_WAIT_MS = 150
+# Polling intervals (milliseconds)
+PLAYWRIGHT_POLL_INTERVAL_MS = 50
+PLAYWRIGHT_POLL_INTERVAL_SLOW_MS = 100
+# File I/O wait timeout used when waiting for saved files to appear (seconds)
+FILE_IO_WAIT_TIMEOUT_SEC = 10
+# Max polls used in some import/verify loops
+IMPORT_VERIFY_MAX_POLLS = 120
 BUFFER_SIZE_100MB = 10**8
 
 pytest_plugins = ["nicegui.testing.plugin", "pytest_playwright"]
