@@ -40,7 +40,7 @@ playwright = pytest.importorskip(
 @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
-class TestVideoImportAndDisplayPlaywright:
+class TestVideoImportAndDisplay:
     def test_remove_single_video_after_selection(
         self,
         page: Page,

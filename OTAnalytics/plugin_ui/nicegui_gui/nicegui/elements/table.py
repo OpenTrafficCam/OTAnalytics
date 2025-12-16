@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from types import SimpleNamespace
 from typing import Any, Callable, List, Literal
 
 from nicegui import ui
@@ -60,6 +61,7 @@ class CustomTable:
         on_select_method: Callable[[Any], None] | None = None,
         selection: Literal["single", "multiple"] | None = None,
         on_row_click_method: Callable[[Any], None] | None = None,
+        auto_select_on_row_click: bool = False,
     ) -> None:
         self._columns = columns
         self._rows = rows
@@ -73,6 +75,7 @@ class CustomTable:
         self._on_row_click_method = on_row_click_method
         self._selection = selection
         self._observers = []
+        self._auto_select_on_row_click = auto_select_on_row_click
         if observers:
             self._observers = observers
 
@@ -88,6 +91,9 @@ class CustomTable:
         ) as table:
             self.__table = table
             self.__table.style("width: 100%")
+            # Register row click handling
+            if self._auto_select_on_row_click:
+                table.on("rowClick", self._internal_on_row_click)
             if self._on_row_click_method is not None:
                 table.on("rowClick", self._on_row_click_method)
             self._add_header_slot()
@@ -133,3 +139,32 @@ class CustomTable:
 
     def _rows_to_select(self, item_ids: list[str]) -> list[dict]:
         return [row for row in self._rows if row[COLUMN_ID] in item_ids]
+
+    # --- Internal helpers ---
+    def _internal_on_row_click(self, e: Any) -> None:
+        """Default behavior for row clicks: select clicked row and notify.
+
+        Tries to extract the clicked row dict from various possible event shapes
+        and updates the table selection accordingly. If an ``on_select_method``
+        was provided, it is invoked with a minimal event-like object exposing a
+        ``selection`` attribute compatible with existing handlers.
+        """
+        try:
+            row: dict | None = None
+            if hasattr(e, "args"):
+                args = getattr(e, "args")
+                if isinstance(args, dict):
+                    row = args.get("row")  # type: ignore[assignment]
+                elif isinstance(args, (list, tuple)) and len(args) >= 2:
+                    row = args[1]  # (evt, row, ...)
+            elif isinstance(e, dict):
+                row = e.get("row")  # type: ignore[assignment]
+            if isinstance(row, dict):
+                row_id = row.get(COLUMN_ID)
+                if row_id:
+                    self.select([row_id])
+                    if self._on_select_method is not None:
+                        self._on_select_method(SimpleNamespace(selection=[row]))
+        except Exception:
+            # Be resilient to varying event payloads
+            pass

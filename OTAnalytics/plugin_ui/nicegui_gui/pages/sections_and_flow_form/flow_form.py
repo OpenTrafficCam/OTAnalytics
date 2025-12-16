@@ -59,7 +59,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             on_select_method=lambda e: self._select_flow(e.selection),
             selection="multiple",
             marker=MARKER_FLOW_TABLE,
-            on_row_click_method=lambda e: self._on_row_click(e),
+            # Let the table auto-select the row on click and forward selection
+            auto_select_on_row_click=True,
         )
         self._button_remove: ui.button | None = None
         self._button_add: ui.button | None = None
@@ -118,34 +119,6 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
 
     async def show_flow_properties(self) -> None:
         await self._viewmodel.edit_selected_flow()
-
-    def _on_row_click(self, e: object) -> None:
-        """Ensure clicking a row (or its text) selects the flow.
-
-        NiceGUI forwards Quasar's rowClick event where the row dict can be found
-        either at e.args[1] (when args is a tuple) or in e.args['row'] / e['row'].
-        We extract the row, read its COLUMN_ID and notify the viewmodel.
-        """
-        try:
-            row: dict | None = None
-            if hasattr(e, "args"):
-                args = getattr(e, "args")
-                if isinstance(args, dict):
-                    row = args.get("row")  # type: ignore[assignment]
-                elif isinstance(args, (list, tuple)) and len(args) >= 2:
-                    row = args[1]  # (evt, row, ...)
-            elif isinstance(e, dict):
-                row = e.get("row")  # type: ignore[assignment]
-            if isinstance(row, dict):
-                flow_id = row.get(COLUMN_ID)
-                if flow_id:
-                    # Update selection in viewmodel and table
-                    self._viewmodel.set_selected_flow_ids([flow_id])
-                    self._flow_table.select([flow_id])
-                    self._viewmodel.refresh_items_on_canvas()
-        except Exception:
-            # Be resilient to event shape differences
-            pass
 
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
         pass
