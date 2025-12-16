@@ -14,6 +14,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     AddVideoForm,
 )
 
+MARKER_VIDEO_TAB = "marker-video-tab"
+
 
 class TrackForm:
     def __init__(
@@ -38,6 +40,8 @@ class TrackForm:
                     TrackFormKeys.TAB_TWO,
                 )
             )
+            # Expose a stable test-id for Playwright to open the Videos tab reliably
+            video_tab.props(f"test-id={MARKER_VIDEO_TAB}")
         with ui.tab_panels(tabs, value=track_tab).classes("w-full"):
             with ui.tab_panel(track_tab):
                 self.add_tracks_form.build()

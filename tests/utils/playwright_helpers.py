@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 from pathlib import Path
@@ -8,8 +9,14 @@ from playwright.sync_api import Error, Page, TimeoutError
 from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
     AddVideoKeys,
+    FlowAndSectionKeys,
     ProjectKeys,
     ResourceManager,
+    TrackFormKeys,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
+    MARKER_VIDEO_TAB,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_VIDEO_TABLE,
@@ -105,6 +112,30 @@ def set_input_value(page: Page, selector: str, value: str) -> None:
     ), f"Failed to set input value: expected '{value}', got '{last}' for selector {selector}"  # noqa
 
 
+def navigate_and_prepare(
+    page: Page,
+    external_app: object,
+    resource_manager: ResourceManager,
+    *,
+    name: str = "Test Project - Flow E2E",
+    date_value: str = "2023-05-24",
+    time_value: str = "06:00:00",
+) -> None:
+    """Open main page and fill basic project information.
+
+    This consolidates the repeated setup used by acceptance tests.
+    """
+    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
+    page.goto(base_url + ENDPOINT_MAIN_PAGE)
+    fill_project_information(
+        page,
+        resource_manager,
+        name=name,
+        date_value=date_value,
+        time_value=time_value,
+    )
+
+
 def search_for_marker_element(page: Page, marker: str) -> Any:
     """Return a Playwright locator for elements marked with our `test-id` attribute.
 
@@ -197,6 +228,39 @@ def reset_videos_tab(page: Page, rm: ResourceManager) -> None:
             break
 
 
+def go_to_sections_with_one_video(page: Page, rm: ResourceManager) -> None:
+    """Prepare UI with a single video selected and switch to the Sections tab.
+
+    Steps:
+    - Open the Videos tab (by stable marker if available; fallback to tab text)
+    - Reset any existing videos
+    - Add one known test video via the in-app picker
+    - Select the video row to render a frame
+    - Switch to the Sections tab
+    """
+    # Prefer stable marker to open Videos tab; fallback to text if needed
+    try:
+        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+    except Exception:
+        page.get_by_text(rm.get(TrackFormKeys.TAB_TWO), exact=True).click()
+
+    # Ensure a clean slate
+    reset_videos_tab(page, rm)
+
+    # Add a known test video
+    data_dir = Path(__file__).parents[1] / "data"
+    v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+    assert v1.exists(), f"Test video missing: {v1}"
+    add_video_via_picker(page, rm, v1)
+
+    # Wait until it appears and select it
+    wait_for_names_present(page, [v1.name])
+    click_table_cell_with_text(page, v1.name)
+
+    # Switch to Sections tab
+    page.get_by_text(rm.get(FlowAndSectionKeys.TAB_SECTION), exact=True).click()
+
+
 def open_part(page: Page, part: str) -> None:
     """Double-click a cell in the file picker grid matching the given text."""
     deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
@@ -256,6 +320,76 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
     search_for_marker_element(page, MARKER_FILENAME).first.fill(path.name)
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+
+
+# ----------------------
+# Save / Export helpers
+# ----------------------
+
+
+def save_project_as(page: Page, rm: ResourceManager, path: Path) -> None:
+    """Open the Save Project dialog and save to the given ``path``.
+
+    - Click the 'Save project as' action (by marker with label fallback).
+    - Fill the directory and filename in the NiceGUI file chooser via markers.
+    - Apply the dialog.
+    """
+    from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+        MARKER_DIRECTORY,
+        MARKER_FILENAME,
+    )
+    from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+        MARKER_APPLY as MARKER_DIALOG_APPLY,
+    )
+    from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
+        MARKER_PROJECT_SAVE_AS,
+    )
+
+    # Try to open via stable test-id marker first, then fall back to label
+    try:
+        search_for_marker_element(page, MARKER_PROJECT_SAVE_AS).first.click()
+    except Exception:
+        # Fallback to label if marker is not available
+        from OTAnalytics.application.resources.resource_manager import ProjectKeys
+
+        page.get_by_text(rm.get(ProjectKeys.LABEL_SAVE_AS_PROJECT), exact=True).click()
+
+    # Interact with the FileChooserDialog
+    search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
+    # Normalize filename: prefer basename without .otconfig extension if present
+    filename = path.name[:-9] if path.name.endswith(".otconfig") else path.name
+    search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
+    search_for_marker_element(page, MARKER_FILENAME).first.fill(filename)
+    search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+
+
+# ----------------------
+# File comparison helpers
+# ----------------------
+
+
+def compare_json_files(saved_path: Path, reference_path: Path) -> None:
+    """Load two JSON files and assert their content is identical.
+
+    Parameters
+    - saved_path: the path to the produced/output JSON file
+    - reference_path: the path to the expected/reference JSON file
+
+    Raises
+    - AssertionError if files do not exist or JSON payloads differ
+    """
+    assert saved_path.exists(), f"Expected saved configuration at {saved_path}"
+    assert reference_path.exists(), f"Reference configuration missing: {reference_path}"
+    with (
+        saved_path.open("r", encoding="utf-8") as fa,
+        reference_path.open("r", encoding="utf-8") as fb,
+    ):
+        ja = json.load(fa)  # type: ignore[name-defined]
+        jb = json.load(fb)  # type: ignore[name-defined]
+    assert ja == jb, (
+        "Saved configuration does not match reference file\n"
+        f"Saved: {saved_path}\nReference: {reference_path}"
+    )
 
 
 # ----------------------

@@ -10,6 +10,9 @@ from OTAnalytics.application.resources.resource_manager import (
     TrackFormKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
+    MARKER_VIDEO_TAB,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     MARKER_INTERACTIVE_IMAGE,
 )
@@ -54,10 +57,13 @@ class TestVideoImportAndDisplayPlaywright:
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-        # Switch to Videos tab and ensure clean slate
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
+        # Switch to Videos tab and ensure clean slate (prefer marker with fallback)
+        try:
+            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+        except Exception:
+            page.get_by_text(
+                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
+            ).click()
         reset_videos_tab(page, resource_manager)
 
         # Prepare test video path from tests/data
@@ -102,10 +108,13 @@ class TestVideoImportAndDisplayPlaywright:
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-        # Switch to Videos tab and ensure clean slate
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
+        # Switch to Videos tab and ensure clean slate (prefer marker with fallback)
+        try:
+            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+        except Exception:
+            page.get_by_text(
+                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
+            ).click()
         reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"
@@ -157,10 +166,13 @@ class TestVideoImportAndDisplayPlaywright:
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-        # Switch to Videos tab and clean slate
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
+        # Switch to Videos tab and clean slate (prefer marker with fallback)
+        try:
+            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+        except Exception:
+            page.get_by_text(
+                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
+            ).click()
         reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"

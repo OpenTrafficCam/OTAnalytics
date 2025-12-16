@@ -1,4 +1,3 @@
-import json
 import time
 from pathlib import Path
 
@@ -6,12 +5,10 @@ import pytest
 from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import (
-    FileChooserDialogKeys,
     FlowAndSectionKeys,
     FlowKeys,
     ResourceManager,
     SectionKeys,
-    TrackFormKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_END_SECTION,
@@ -25,10 +22,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
     MARKER_NAME as MARKER_SECTION_NAME,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
-    MARKER_FILENAME,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
@@ -42,12 +35,11 @@ from tests.conftest import (
     NiceGUITestServer,
 )
 from tests.utils.playwright_helpers import (
-    add_video_via_picker,
-    click_table_cell_with_text,
-    fill_project_information,
-    reset_videos_tab,
+    compare_json_files,
+    go_to_sections_with_one_video,
+    navigate_and_prepare,
+    save_project_as,
     search_for_marker_element,
-    wait_for_names_present,
 )
 
 playwright = pytest.importorskip(
@@ -78,138 +70,19 @@ class TestAddLineSectionWithDialog:
 
         Prerequisites: pytest-playwright installed and browsers set up.
         """
-        base_url = getattr(
-            external_app, "base_url", "http://127.0.0.1:8080"
-        )  # fallback
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        # Use helpers for navigation and preparing one video, then go to Sections
+        navigate_and_prepare(page, external_app, resource_manager)
+        go_to_sections_with_one_video(page, resource_manager)
 
-        # Switch to Videos tab
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
-
-        # Ensure clean slate
-        reset_videos_tab(page, resource_manager)
-
-        # Prepare test video path from tests/data
-        data_dir = Path(__file__).parents[1] / "data"
-        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-        assert v1.exists(), f"Test video missing: {v1}"
-
-        # Add the video
-        add_video_via_picker(page, resource_manager, v1)
-
-        name1 = v1.name
-        # Wait for the filename to appear in table
-        wait_for_names_present(page, [name1])
-
-        # Select the first video row to ensure preview rendering
-        click_table_cell_with_text(page, name1)
-
-        # Go to Sections tab
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
-        ).click()
-
-        # Ensure the interactive image exists and is visible; prefer inner <img>
-        canvas_locator = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
-        expect(canvas_locator).to_be_visible()
-        img = (
-            search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
-            .locator("img")
-            .first
-        )
-        target = img if img.count() else canvas_locator
-        target.scroll_into_view_if_needed()
-
-        # Activate "Add line" tool
-        try:
-            page.get_by_text(
-                resource_manager.get(SectionKeys.BUTTON_ADD_LINE), exact=True
-            ).click()
-        except Exception:
-            try:
-                # Fallback to marker if text lookup fails
-                search_for_marker_element(page, "marker-button-add-line").first.click()
-            except Exception:
-                pass
-
-        # Perform several clicks to create a simple line; finish without right-click
-        for pos in [(10, 10), (120, 40), (220, 90)]:
-            try:
-                target.click(position={"x": pos[0], "y": pos[1]})
-            except Exception:
-                # Try clicking the wrapper if inner img fails
-                canvas_locator.click(position={"x": pos[0], "y": pos[1]})
-
-        # Finalize the new section with Enter (NiceGUI hotkey) to open the dialog
-        page.keyboard.press("Enter")
-
-        # Fill the section name in the dialog
-        # Try input within the marker first, then fallback to the marker element itself
-        name_input = (
-            search_for_marker_element(page, MARKER_SECTION_NAME).locator("input").first
-        )
-        if not name_input.count():
-            name_input = search_for_marker_element(page, MARKER_SECTION_NAME).first
-        name_input.wait_for(state="visible")
-        name_input.fill("Name")
-
-        # Click Apply
-        apply_button = search_for_marker_element(page, MARKER_DIALOG_APPLY).first
-        apply_button.wait_for(state="visible")
-        apply_button.click()
-
-        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        created = False
-        while time.time() < deadline and not created:
-            try:
-                html = page.content()
-                if "Name" in html:
-                    created = True
-                    break
-            except Exception:
-                pass
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
-        assert (
-            created
-        ), "Section with the specified name was not found after applying the dialog"
-
-    def _navigate_and_prepare(
-        self,
-        page: Page,
-        external_app: NiceGUITestServer,
-        resource_manager: ResourceManager,
-    ) -> None:
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
-        fill_project_information(
-            page,
-            resource_manager,
-            name="Test Project - Flow E2E",
-            date_value="2023-05-24",
-            time_value="06:00:00",
-        )
-
-    def _goto_sections_with_one_video(
-        self, page: Page, resource_manager: ResourceManager
-    ) -> None:
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
-        reset_videos_tab(page, resource_manager)
-        data_dir = Path(__file__).parents[1] / "data"
-        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-        assert v1.exists(), f"Test video missing: {v1}"
-        add_video_via_picker(page, resource_manager, v1)
-        wait_for_names_present(page, [v1.name])
-        click_table_cell_with_text(page, v1.name)
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
-        ).click()
+        # Use the refactored helper to create the section (includes assertions)
+        self._create_section(page, resource_manager, "Name")
 
     def _create_section(
-        self, page: Page, resource_manager: ResourceManager, section_name: str
+        self,
+        page: Page,
+        resource_manager: ResourceManager,
+        section_name: str = "Name",
+        positions: list[tuple[int, int]] = [(20, 20), (140, 60), (260, 120)],
     ) -> None:
         canvas_locator = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
         expect(canvas_locator).to_be_visible()
@@ -226,7 +99,7 @@ class TestAddLineSectionWithDialog:
             ).click()
         except Exception:
             pass
-        for pos in [(20, 20), (140, 60), (260, 120)]:
+        for pos in positions:
             try:
                 target.click(position={"x": pos[0], "y": pos[1]})
             except Exception:
@@ -259,11 +132,18 @@ class TestAddLineSectionWithDialog:
         external_app: NiceGUITestServer,
         resource_manager: ResourceManager,
     ) -> None:
-        self._navigate_and_prepare(page, external_app, resource_manager)
-        self._goto_sections_with_one_video(page, resource_manager)
+        navigate_and_prepare(page, external_app, resource_manager)
+        go_to_sections_with_one_video(page, resource_manager)
         names = ["First-Line", "Second-Line"]
-        for n in names:
-            self._create_section(page, resource_manager, n)
+        # Use different coordinates for each created section
+        coords = [
+            [(20, 20), (140, 60)],
+            [(220, 80), (340, 140)],
+        ]
+        for i, n in enumerate(names):
+            self._create_section(
+                page, resource_manager, n, positions=coords[i % len(coords)]
+            )
         html = page.content()
         assert all(n in html for n in names)
 
@@ -277,10 +157,18 @@ class TestAddLineSectionWithDialog:
         external_app: NiceGUITestServer,
         resource_manager: ResourceManager,
     ) -> None:
-        self._navigate_and_prepare(page, external_app, resource_manager)
-        self._goto_sections_with_one_video(page, resource_manager)
-        for n in ["First-Line", "Second-Line"]:
-            self._create_section(page, resource_manager, n)
+        navigate_and_prepare(page, external_app, resource_manager)
+        go_to_sections_with_one_video(page, resource_manager)
+        names = ["First-Line", "Second-Line"]
+        # Use different coordinates for each created section
+        coords = [
+            [(20, 20), (140, 60)],
+            [(220, 80), (340, 140)],
+        ]
+        for i, n in enumerate(names):
+            self._create_section(
+                page, resource_manager, n, positions=coords[i % len(coords)]
+            )
         page.get_by_text(
             resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
         ).click()
@@ -336,7 +224,7 @@ class TestAddLineSectionWithDialog:
         search_for_marker_element(page, "marker-button-properties").first.click()
         name_input = search_for_marker_element(page, MARKER_FLOW_NAME).first
         name_input.fill(new_flow_name)
-        search_for_marker_element(page, "marker-apply").first.click()
+        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
         time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
         assert new_flow_name in table.inner_text()
 
@@ -352,11 +240,18 @@ class TestAddLineSectionWithDialog:
         test_data_tmp_dir: Path,
     ) -> None:
         # Prepare and create sections
-        self._navigate_and_prepare(page, external_app, resource_manager)
-        self._goto_sections_with_one_video(page, resource_manager)
+        navigate_and_prepare(page, external_app, resource_manager)
+        go_to_sections_with_one_video(page, resource_manager)
         names = ["First-Line", "Second-Line"]
-        for n in names:
-            self._create_section(page, resource_manager, n)
+        # Use different coordinates for each created section
+        coords = [
+            [(20, 20), (140, 60)],
+            [(220, 80), (340, 140)],
+        ]
+        for i, n in enumerate(names):
+            self._create_section(
+                page, resource_manager, n, positions=coords[i % len(coords)]
+            )
 
         # Create one flow then remove it
         page.get_by_text(
@@ -414,22 +309,11 @@ class TestAddLineSectionWithDialog:
             len(matched_texts) >= 2
         ), f"Expected >=2 generated flows with {names}, got {len(matched_texts)}: {last_texts}"  # noqa
 
-        # Save project and compare with reference
-        search_for_marker_element(page, "marker-project-save-as").first.click()
-        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(
-            state="visible"
+        # Save project using shared helper and compare with reference
+        save_project_as(
+            page, resource_manager, test_data_tmp_dir / "test_name.otconfig"
         )
-        dir_label = resource_manager.get(FileChooserDialogKeys.LABEL_DIRECTORY)
-        page.get_by_label(dir_label, exact=True).fill(str(test_data_tmp_dir))
-        search_for_marker_element(page, MARKER_FILENAME).first.fill("test_name")
-        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
         saved_path = test_data_tmp_dir / "test_name.otconfig"
         assert saved_path.exists(), f"Expected saved configuration at {saved_path}"
         reference_path = Path(__file__).parents[1] / "data" / "test_name.otconfig"
-        with (
-            saved_path.open("r", encoding="utf-8") as fa,
-            reference_path.open("r", encoding="utf-8") as fb,
-        ):
-            ja = json.load(fa)
-            jb = json.load(fb)
-        assert ja == jb, "Saved configuration does not match reference file"
+        compare_json_files(saved_path, reference_path)
