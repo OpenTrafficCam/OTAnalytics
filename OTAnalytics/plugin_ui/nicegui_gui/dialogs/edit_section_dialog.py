@@ -45,11 +45,8 @@ class EditSectionDialog(BaseDialog):
 
     def build_content(self) -> None:
         self._name.build()
-        try:
-            self._name.element.props(f"test-id={MARKER_NAME}")
-        except Exception:
-            # .props might not be available in all NiceGUI versions; ignore gracefully
-            pass
+        self._name.element.props(f"test-id={MARKER_NAME}")
+
         self._offset.build()
 
     def get_section(self) -> dict:
