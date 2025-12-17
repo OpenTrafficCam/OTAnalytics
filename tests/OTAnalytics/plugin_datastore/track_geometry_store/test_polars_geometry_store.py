@@ -547,17 +547,35 @@ def setup_track_ids_after_cut(
 class TestTrackIdsAfterCut:
     """Tests for the track_ids_after_cut method of PolarsTrackGeometryDataset."""
 
-    def test_empty_dataset(self) -> None:
-        """Test that an empty dataset raises an error due to missing columns."""
+    def test_single_detection_dataset(self) -> None:
+        """
+        Supporting test case for bug OP#9023
+        """
+        detections = DataFrame(
+            {
+                ROW_ID: [1],
+                TRACK_CLASSIFICATION: ["car"],
+                TRACK_ID: ["track1"],
+                OCCURRENCE: [datetime(2023, 1, 1, 10, 0, 0)],
+                X: [10.0],
+                Y: [10.0],
+                W: [10.0],
+                H: [10.0],
+                FRAME: [1],
+                VIDEO_NAME: ["video_1.mp4"],
+            }
+        )
+        segments_df = create_track_segments(detections)
         given = setup_track_ids_after_cut(
-            segments_df=None,
+            segments_df=segments_df,
             section_coordinates=[(50.0, 0.0), (50.0, 100.0)],
         )
 
         # Empty dataset raises ColumnNotFoundError because the method tries to
         # select ROW_ID from an empty DataFrame without the required columns
-        with pytest.raises(polars.exceptions.ColumnNotFoundError):
-            given.dataset.track_ids_after_cut(given.section)
+        result = given.dataset.track_ids_after_cut(given.section)
+
+        assert result.is_empty()
 
     def test_no_intersections(self) -> None:
         """Test with tracks that don't intersect with the cutting section."""
