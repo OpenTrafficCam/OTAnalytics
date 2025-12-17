@@ -189,12 +189,16 @@ class RoadUserAssignmentRepository:
     def remove_assignments_of_event(self, event: Event) -> None:
         user_assignments = self._assignments[event.road_user_id]
         removed = []
+        flows_to_remove = []
         for flow, assignment in user_assignments.items():
             events = assignment.events
             if event == events.start or event == events.end:
-                del user_assignments[flow]
+                flows_to_remove.append(flow)
                 self._observed_flows[flow] -= 1
                 removed.append(assignment)
+
+        for flow in flows_to_remove:
+            del user_assignments[flow]
 
         if not user_assignments:
             del self._assignments[event.road_user_id]
