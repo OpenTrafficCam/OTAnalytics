@@ -21,8 +21,6 @@ MARKER_NAME = "marker-name"
 MARKER_START_SECTION = "marker-start-section"
 MARKER_END_SECTION = "marker-end-section"
 MARKER_DISTANCE = "marker-distance"
-# Dialog-specific apply button test id for EditFlowDialog (props-based only)
-MARKER_APPLY = "marker-apply"
 
 
 class EditFlowDialog(BaseDialog):
@@ -35,8 +33,6 @@ class EditFlowDialog(BaseDialog):
         show_distance: bool = True,
     ) -> None:
         super().__init__(resource_manager)
-        if input_values is not None:
-            self.apply_test_id = MARKER_APPLY
         self._name_generator = name_generator
         self._input_values = input_values
         self._show_distance = show_distance

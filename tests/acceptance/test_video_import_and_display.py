@@ -62,7 +62,7 @@ class TestVideoImportAndDisplay:
             search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         except Exception:
             page.get_by_text(
-                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
+                resource_manager.get(TrackFormKeys.TAB_VIDEO), exact=True
             ).click()
         reset_videos_tab(page, resource_manager)
 
@@ -113,7 +113,7 @@ class TestVideoImportAndDisplay:
             search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         except Exception:
             page.get_by_text(
-                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
+                resource_manager.get(TrackFormKeys.TAB_VIDEO), exact=True
             ).click()
         reset_videos_tab(page, resource_manager)
 
@@ -171,7 +171,7 @@ class TestVideoImportAndDisplay:
             search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         except Exception:
             page.get_by_text(
-                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
+                resource_manager.get(TrackFormKeys.TAB_VIDEO), exact=True
             ).click()
         reset_videos_tab(page, resource_manager)
 

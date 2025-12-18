@@ -242,7 +242,7 @@ def go_to_sections_with_one_video(page: Page, rm: ResourceManager) -> None:
     try:
         search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
     except Exception:
-        page.get_by_text(rm.get(TrackFormKeys.TAB_TWO), exact=True).click()
+        page.get_by_text(rm.get(TrackFormKeys.TAB_VIDEO), exact=True).click()
 
     # Ensure a clean slate
     reset_videos_tab(page, rm)

@@ -33,11 +33,11 @@ class TrackForm:
     def build(self) -> None:
         with ui.tabs().classes("w-full") as tabs:
             track_tab = ui.tab(
-                self._resource_manager.get(TrackFormKeys.TAB_ONE),
+                self._resource_manager.get(TrackFormKeys.TAB_TRACK),
             )
             video_tab = ui.tab(
                 self._resource_manager.get(
-                    TrackFormKeys.TAB_TWO,
+                    TrackFormKeys.TAB_VIDEO,
                 )
             )
             # Expose a stable test-id for Playwright to open the Videos tab reliably
