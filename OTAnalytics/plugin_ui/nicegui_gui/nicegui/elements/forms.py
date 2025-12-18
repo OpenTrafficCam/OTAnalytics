@@ -121,6 +121,7 @@ class FormField(LazyInitializedElement[S], Generic[S, V]):
             except Exception:
                 # In case a specific element type doesn't support props, ignore.
                 pass
+            element.props(f"test-id={self.marker}")
 
     def validate(self) -> bool:
         """Handles the validation logic for an element.

@@ -86,22 +86,11 @@ class EditFlowDialog(BaseDialog):
         self._end_section.build()
         self._name.build()
         self._distance.build()
-        try:
-            self._name.element.props(f"test-id={MARKER_NAME}")
-        except Exception:
-            pass
-        try:
-            self._start_section.element.props(f"test-id={MARKER_START_SECTION}")
-        except Exception:
-            pass
-        try:
-            self._end_section.element.props(f"test-id={MARKER_END_SECTION}")
-        except Exception:
-            pass
-        try:
-            self._distance.element.props(f"test-id={MARKER_DISTANCE}")
-        except Exception:
-            pass
+        self._name.element.props(f"test-id={MARKER_NAME}")
+        self._start_section.element.props(f"test-id={MARKER_START_SECTION}")
+        self._end_section.element.props(f"test-id={MARKER_END_SECTION}")
+        self._distance.element.props(f"test-id={MARKER_DISTANCE}")
+
         self._do_update_name()
 
     def _update_name(self, value: ValueChangeEventArguments) -> None:

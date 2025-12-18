@@ -4,111 +4,97 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
-from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
     AddVideoKeys,
     ResourceManager,
     TrackFormKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
-    MARKER_VIDEO_TABLE,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
+    MARKER_VIDEO_TAB,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     MARKER_INTERACTIVE_IMAGE,
 )
-from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT, NiceGUITestServer
-from tests.utils.builders.otanalytics_builders import file_picker_directory
+from tests.conftest import (
+    ACCEPTANCE_TEST_PYTEST_TIMEOUT,
+    ACCEPTANCE_TEST_WAIT_TIMEOUT,
+    PLAYWRIGHT_POLL_INTERVAL_MS,
+    NiceGUITestServer,
+)
+from tests.utils.playwright_helpers import (
+    add_video_via_picker,
+    click_table_cell_with_text,
+    reset_videos_tab,
+    search_for_marker_element,
+    table_filenames,
+    wait_for_names_present,
+)
 
 playwright = pytest.importorskip(
     "playwright.sync_api", reason="pytest-playwright is required for this test"
 )
 
 
-def _table_filenames(page: Page) -> list[str]:
-    cells = page.locator(f'[test-id="{MARKER_VIDEO_TABLE}"] table tbody tr td')
-    texts = [text.strip() for text in cells.all_inner_texts()]
-    return [
-        t
-        for t in texts
-        if any(t.lower().endswith(e) for e in SUPPORTED_VIDEO_FILE_TYPES)
-    ]
-
-
-def _wait_for_names_present(page: Page, names: list[str]) -> None:
-    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-    while time.time() < deadline:
-        listed = _table_filenames(page)
-        if all(n in listed for n in names):
-            return
-        time.sleep(0.05)
-    raise AssertionError(
-        f"Timed out waiting for names to appear: {names}; currently: {_table_filenames(page)}"  # noqa
-    )
-
-
-def _click_table_cell_with_text(page: Page, text: str) -> None:
-    cell = page.locator(
-        f'[test-id="{MARKER_VIDEO_TABLE}"] table tbody tr td', has_text=text
-    ).first
-    cell.wait_for(state="visible")
-    cell.click()
-
-
-def _reset_videos_tab(page: Page, rm: ResourceManager) -> None:
-    # Iteratively remove all rows if any
-    for _ in range(50):
-        names = _table_filenames(page)
-        if not names:
-            break
-        name = names[0]
-        try:
-            _click_table_cell_with_text(page, name)
-            page.get_by_text(
-                rm.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-            ).click()
-            # wait until it's gone
-            deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-            while time.time() < deadline:
-                if name not in _table_filenames(page):
-                    break
-                time.sleep(0.05)
-        except Exception:
-            break
-
-
-def _add_video_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
-    page.get_by_text(rm.get(AddVideoKeys.BUTTON_ADD_VIDEOS), exact=True).click()
-    ui_path = path.relative_to(file_picker_directory())
-    for part in ui_path.parts:
-        _open_part(page, part)
-
-
-def _open_part(page: Page, part: str) -> None:
-    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-    last_err: Exception | None = None
-    while time.time() < deadline:
-        try:
-            cell = page.locator(".ag-cell-value", has_text=part).first
-            cell.wait_for(state="visible", timeout=1000)
-            cell.dblclick()
-            return
-        except Exception as e:
-            try:
-                page.locator(".ag-cell-value").last.scroll_into_view_if_needed()
-            except Exception:
-                pass
-            last_err = e
-    if last_err:
-        raise last_err
-    raise AssertionError(f"Could not find table cell with text: {part}")
-
-
 @pytest.mark.skip(reason="only works in headed right now")
-@pytest.mark.timeout(300)
+@pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
-class TestVideoImportAndDisplayPlaywright:
+class TestVideoImportAndDisplay:
+    def test_remove_single_video_after_selection(
+        self,
+        page: Page,
+        external_app: NiceGUITestServer,
+        resource_manager: ResourceManager,
+    ) -> None:
+        """Playwright: Removing a single selected video from the Videos tab.
+
+        Steps:
+        - Open main page, switch to Videos tab
+        - Add a single video via in-app file picker UI
+        - Click on Remove and verify the video disappears from the table
+        """
+        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
+        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+
+        # Switch to Videos tab and ensure clean slate (prefer marker with fallback)
+        try:
+            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+        except Exception:
+            page.get_by_text(
+                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
+            ).click()
+        reset_videos_tab(page, resource_manager)
+
+        # Prepare test video path from tests/data
+        data_dir = Path(__file__).parents[1] / "data"
+        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        assert v1.exists(), f"Test video missing: {v1}"
+
+        # Add the video via in-app picker
+        add_video_via_picker(page, resource_manager, v1)
+
+        # Wait for the filename to appear in table
+        name1 = v1.name
+        wait_for_names_present(page, [name1])
+
+        # Remove the row
+        click_table_cell_with_text(page, name1)
+        page.get_by_text(
+            resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
+        ).click()
+
+        # Verify it's gone
+        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        while time.time() < deadline:
+            if name1 not in table_filenames(page):
+                break
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
+        remaining = table_filenames(page)
+        assert (
+            name1 not in remaining
+        ), f"Video should have been removed, but still present in: {remaining}"
+
     def test_add_videos_import_sort_and_display_first_frame(
         self,
         page: Page,
@@ -122,11 +108,14 @@ class TestVideoImportAndDisplayPlaywright:
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-        # Switch to Videos tab and ensure clean slate
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
-        _reset_videos_tab(page, resource_manager)
+        # Switch to Videos tab and ensure clean slate (prefer marker with fallback)
+        try:
+            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+        except Exception:
+            page.get_by_text(
+                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
+            ).click()
+        reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"
         v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
@@ -134,25 +123,29 @@ class TestVideoImportAndDisplayPlaywright:
         assert v1.exists() and v2.exists(), "Test videos are missing in tests/data"
 
         # Add both videos via in-app picker
-        _add_video_via_picker(page, resource_manager, v1)
-        _add_video_via_picker(page, resource_manager, v2)
+        add_video_via_picker(page, resource_manager, v1)
+        add_video_via_picker(page, resource_manager, v2)
 
         names = [v1.name, v2.name]
-        _wait_for_names_present(page, names)
+        wait_for_names_present(page, names)
 
         # Check sorting (alphabetical by visible filename)
-        listed = _table_filenames(page)
+        listed = table_filenames(page)
         assert listed == sorted(names), f"Expected {sorted(names)}, got {listed}"
 
         # Select first video and ensure preview image becomes visible and has src
-        _click_table_cell_with_text(page, v1.name)
-        img = page.locator(f'[test-id="{MARKER_INTERACTIVE_IMAGE}"] img').first
+        click_table_cell_with_text(page, v1.name)
+        img = (
+            search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
+            .locator("img")
+            .first
+        )
         img.wait_for(state="visible")
         src1 = img.get_attribute("src") or ""
         assert src1, "Preview image src should not be empty after selecting first video"
 
         # Switch selection to second video, expect image src to change
-        _click_table_cell_with_text(page, v2.name)
+        click_table_cell_with_text(page, v2.name)
         deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
         changed = False
         while time.time() < deadline:
@@ -160,7 +153,7 @@ class TestVideoImportAndDisplayPlaywright:
             if src2 and src2 != src1:
                 changed = True
                 break
-            time.sleep(0.05)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
         assert changed, "Preview image src should change after selecting another video"
 
     def test_remove_multiple_videos_after_selection(
@@ -173,11 +166,14 @@ class TestVideoImportAndDisplayPlaywright:
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-        # Switch to Videos tab and clean slate
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-        ).click()
-        _reset_videos_tab(page, resource_manager)
+        # Switch to Videos tab and clean slate (prefer marker with fallback)
+        try:
+            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+        except Exception:
+            page.get_by_text(
+                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
+            ).click()
+        reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"
         v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
@@ -185,31 +181,31 @@ class TestVideoImportAndDisplayPlaywright:
         assert v1.exists() and v2.exists(), "Test videos are missing in tests/data"
 
         # Add videos
-        _add_video_via_picker(page, resource_manager, v1)
-        _add_video_via_picker(page, resource_manager, v2)
-        _wait_for_names_present(page, [v1.name, v2.name])
+        add_video_via_picker(page, resource_manager, v1)
+        add_video_via_picker(page, resource_manager, v2)
+        wait_for_names_present(page, [v1.name, v2.name])
 
         # Remove first video
-        _click_table_cell_with_text(page, v1.name)
+        click_table_cell_with_text(page, v1.name)
         page.get_by_text(
             resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
         ).click()
         # Wait gone
         deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
         while time.time() < deadline:
-            if v1.name not in _table_filenames(page):
+            if v1.name not in table_filenames(page):
                 break
-            time.sleep(0.05)
-        assert v1.name not in _table_filenames(page)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
+        assert v1.name not in table_filenames(page)
 
         # Remove second video
-        _click_table_cell_with_text(page, v2.name)
+        click_table_cell_with_text(page, v2.name)
         page.get_by_text(
             resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
         ).click()
         deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
         while time.time() < deadline:
-            if v2.name not in _table_filenames(page):
+            if v2.name not in table_filenames(page):
                 break
-            time.sleep(0.05)
-        assert v2.name not in _table_filenames(page)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
+        assert v2.name not in table_filenames(page)
