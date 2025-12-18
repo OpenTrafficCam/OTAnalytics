@@ -34,6 +34,33 @@ class TestGetRoadUserAssignments:
         )
         given.assignments.as_list.assert_called_once()
 
+    def test_no_recursion_when_get_called_during_creation(self) -> None:
+        """
+        Fix bug OP#8949
+        Test that recursive calls to get_as_list during assignment creation
+        don't cause infinite recursion.
+        """
+        given = setup()
+        target = create_target(given)
+
+        call_count = 0
+
+        def mock_create_events_side_effect() -> None:
+            nonlocal call_count
+            call_count += 1
+            result = target.get_as_list()
+            assert result == []
+
+        given.create_events.side_effect = mock_create_events_side_effect
+
+        actual = target.get_as_list()
+
+        assert actual == given.assignments_as_list
+        assert call_count == 1
+        given.road_user_assigner.assign.assert_called_once_with(
+            given.events, given.flows
+        )
+
 
 @dataclass
 class Given:
