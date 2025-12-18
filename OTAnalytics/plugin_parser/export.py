@@ -128,6 +128,9 @@ class CsvExport(Exporter):
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
+    def update_end(self, counting_specification: CountingSpecificationDto) -> None:
+        pass
+
 
 class SimpleExporterFactory(ExporterFactory):
     def __init__(self) -> None:
@@ -194,6 +197,10 @@ class FillZerosExporter(Exporter):
         tags = self._tag_exploder.explode()
         self._other.export(FillEmptyCount(counts, tags), export_mode)
 
+    def update_end(self, counting_specification: CountingSpecificationDto) -> None:
+        self._other.update_end(counting_specification)
+        self._tag_exploder.update_end(counting_specification)
+
 
 class FillZerosExporterFactory(ExporterFactory):
     def __init__(self, other: ExporterFactory) -> None:
@@ -219,6 +226,9 @@ class AddSectionInformationExporter(Exporter):
             flow_dto.name: flow_dto for flow_dto in self._specification.flow_name_info
         }
         self._other.export(AddSectionInformation(counts, flow_info_dict), export_mode)
+
+    def update_end(self, counting_specification: CountingSpecificationDto) -> None:
+        self._other.update_end(counting_specification)
 
 
 class AddSectionInformationExporterFactory(ExporterFactory):
@@ -291,6 +301,7 @@ class CachedExporterFactory(ExporterFactory):
                     export_mode,
                 )
             exporter = self._cache[key]
+            exporter.update_end(specification.counting_specification)
 
         if export_mode.is_final_write():
             del self._cache[key]
