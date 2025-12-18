@@ -23,6 +23,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     create_timeslot_tag,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
     ExportFormat,
     ExportSpecificationDto,
 )
@@ -154,6 +155,7 @@ class TagExploder:
 
     def __init__(self, specification: ExportSpecificationDto):
         self._specification = specification
+        self._end = self._specification.counting_specification.end
 
     def explode(self) -> list[Tag]:
         tags = []
@@ -162,7 +164,7 @@ class TagExploder:
                 second=0, microsecond=0
             )
         )
-        maximum = self._specification.counting_specification.end - start_without_seconds
+        maximum = self._end - start_without_seconds
         duration = int(maximum.total_seconds())
         interval = self._specification.counting_specification.interval_in_minutes * 60
         for flow in self._specification.flow_name_info:
@@ -178,6 +180,9 @@ class TagExploder:
                     )
                     tags.append(tag)
         return tags
+
+    def update_end(self, counting_specification: CountingSpecificationDto) -> None:
+        self._end = counting_specification.end
 
 
 class FillZerosExporter(Exporter):
