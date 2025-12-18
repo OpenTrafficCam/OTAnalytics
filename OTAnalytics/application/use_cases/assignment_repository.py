@@ -21,6 +21,7 @@ class GetRoadUserAssignments:
         self._assignment_repository = assignment_repository
         self._create_assignments = create_assignments
         self._enable_assignment_creation = enable_assignment_creation
+        self._is_creating = False
 
     def get_as_list(self) -> list[RoadUserAssignment]:
         self.__check_update()
@@ -31,8 +32,16 @@ class GetRoadUserAssignments:
         return self._assignment_repository.get_all()
 
     def __check_update(self) -> None:
-        if self._assignment_repository.is_empty() and self._enable_assignment_creation:
-            self._create_assignments()
+        if (
+            self._assignment_repository.is_empty()
+            and self._enable_assignment_creation
+            and not self._is_creating
+        ):
+            self._is_creating = True
+            try:
+                self._create_assignments()
+            finally:
+                self._is_creating = False
 
 
 class ClearAllAssignments:
