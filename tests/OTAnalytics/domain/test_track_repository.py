@@ -258,3 +258,16 @@ class TestTrackFileRepository:
         observer.assert_called_once_with(
             TrackFileRepositoryEvent.create_added([mock_file, mock_other_file])
         )
+
+    def test_clear(self, mock_file: Mock) -> None:
+        observer = Mock()
+        repository = TrackFileRepository()
+        repository.add(mock_file)
+        repository.register(observer)
+
+        repository.clear()
+
+        assert repository._files == set()
+        assert observer.call_args_list == [
+            call(TrackFileRepositoryEvent.create_removed([mock_file])),
+        ]

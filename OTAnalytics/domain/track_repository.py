@@ -310,4 +310,6 @@ class TrackFileRepository:
         self._subject.register(observer)
 
     def clear(self) -> None:
-        pass
+        removed_files = self._files.copy()
+        self._files.clear()
+        self._subject.notify(TrackFileRepositoryEvent.create_removed(removed_files))
