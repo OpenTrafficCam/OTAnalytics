@@ -5,7 +5,6 @@ import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import (
-    AddVideoKeys,
     ResourceManager,
     TrackFormKeys,
 )
@@ -44,6 +43,15 @@ playwright = pytest.importorskip(
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
 class TestVideoImportAndDisplay:
+    # small helper to wait until a given video name disappears from the table
+    def remove_video(self, page: Page, v1: Path) -> None:  # type: ignore[override]
+        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+        while time.time() < deadline:
+            if v1.name not in table_filenames(page):
+                break
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
+        assert v1.name not in table_filenames(page)
+
     def test_remove_single_video_after_selection(
         self,
         page: Page,
@@ -168,13 +176,7 @@ class TestVideoImportAndDisplay:
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-        # Switch to Videos tab and clean slate (prefer marker with fallback)
-        try:
-            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
-        except Exception:
-            page.get_by_text(
-                resource_manager.get(TrackFormKeys.TAB_VIDEO), exact=True
-            ).click()
+        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"
@@ -189,25 +191,12 @@ class TestVideoImportAndDisplay:
 
         # Remove first video
         click_table_cell_with_text(page, v1.name)
-        page.get_by_text(
-            resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-        ).click()
+        search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
         # Wait gone
-        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        while time.time() < deadline:
-            if v1.name not in table_filenames(page):
-                break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
-        assert v1.name not in table_filenames(page)
+        self.remove_video(page, v1)
 
         # Remove second video
         click_table_cell_with_text(page, v2.name)
-        page.get_by_text(
-            resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-        ).click()
-        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        while time.time() < deadline:
-            if v2.name not in table_filenames(page):
-                break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
-        assert v2.name not in table_filenames(page)
+        # Prefer marker-based click for Remove button
+        search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
+        self.remove_video(page, v2)
