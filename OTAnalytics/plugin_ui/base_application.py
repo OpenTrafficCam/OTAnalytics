@@ -163,6 +163,7 @@ from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
+    ClearAllTrackFiles,
     ClearAllTracks,
     FilteredTrackIdProviderByTrackIdProvider,
     GetAllTrackFiles,
@@ -725,6 +726,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return GetAllTrackFiles(self.track_file_repository)
 
     @cached_property
+    def clear_all_track_files(self) -> ClearAllTrackFiles:
+        return ClearAllTrackFiles(self.track_file_repository)
+
+    @cached_property
     def flow_generator(self) -> GenerateFlows:
         section_provider = FilterOutCuttingSections(self.get_all_sections)
         id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(self.flow_repository)
@@ -820,6 +825,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.clear_all_intersections,
             self.clear_all_sections,
             self.clear_all_tracks,
+            self.clear_all_track_files,
             self.clear_all_videos,
         )
 

@@ -294,3 +294,6 @@ class TrackFileRepository:
 
     def register(self, observer: OBSERVER[Iterable[Path]]) -> None:
         self._subject.register(observer)
+
+    def clear(self) -> None:
+        pass
