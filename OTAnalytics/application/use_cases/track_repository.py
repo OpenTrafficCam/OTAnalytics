@@ -129,6 +129,20 @@ class GetAllTrackFiles:
         return self._track_file_repository.get_all()
 
 
+class ClearAllTrackFiles:
+    """Clear the track repository.
+
+    Args:
+        track_repository (TrackRepository): the track repository to be cleared.
+    """
+
+    def __init__(self, track_file_repository: TrackFileRepository) -> None:
+        self._track_file_repository = track_file_repository
+
+    def __call__(self) -> None:
+        self._track_file_repository.clear()
+
+
 class RemoveTracks:
     """Use case to remove tracks from track repository.
 
