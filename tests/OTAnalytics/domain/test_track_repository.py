@@ -7,6 +7,7 @@ from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet, TrackDataset
 from OTAnalytics.domain.track_repository import (
     TrackFileRepository,
+    TrackFileRepositoryEvent,
     TrackListObserver,
     TrackObserver,
     TrackRepository,
@@ -242,9 +243,9 @@ class TestTrackFileRepository:
         repository.add(mock_other_file)
         assert repository._files == {mock_file, mock_other_file}
         assert observer.call_args_list == [
-            call([mock_file]),
-            call([mock_file]),
-            call([mock_other_file]),
+            call(TrackFileRepositoryEvent.create_added([mock_file])),
+            call(TrackFileRepositoryEvent.create_added([mock_file])),
+            call(TrackFileRepositoryEvent.create_added([mock_other_file])),
         ]
 
     def test_add_all(self, mock_file: Mock, mock_other_file: Mock) -> None:
@@ -254,4 +255,6 @@ class TestTrackFileRepository:
 
         repository.add_all([mock_file, mock_other_file])
         assert repository._files == {mock_file, mock_other_file}
-        observer.assert_called_once_with([mock_file, mock_other_file])
+        observer.assert_called_once_with(
+            TrackFileRepositoryEvent.create_added([mock_file, mock_other_file])
+        )
