@@ -14,7 +14,14 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     TrackFormKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+    MARKER_DIRECTORY,
+    MARKER_FILENAME,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+    MARKER_APPLY as MARKER_DIALOG_APPLY,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_VIDEO_TAB,
 )
@@ -23,6 +30,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     MARKER_PROJECT_NAME,
+    MARKER_PROJECT_SAVE_AS,
     MARKER_START_DATE,
     MARKER_START_TIME,
 )
@@ -160,6 +168,27 @@ def fill_project_information(
     set_input_value(page, name_sel, name)
     set_input_value(page, date_sel, date_value)
     set_input_value(page, time_sel, time_value)
+
+
+def save_project_otconfig(
+    page: Page, resource_manager: ResourceManager, target_path: Path
+) -> None:
+    """Open the Save As dialog and save the project configuration to target_path.
+
+    This encapsulates the marker-driven dialog interaction to reduce duplication
+    in tests. Filename field expects the name without extension.
+    """
+    # Open Save As dialog
+    search_for_marker_element(page, MARKER_PROJECT_SAVE_AS).first.click()
+    # Wait for dialog to be visible
+    search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
+    # Fill directory and filename (stem without suffix)
+    search_for_marker_element(page, MARKER_DIRECTORY).first.fill(
+        str(target_path.parent)
+    )
+    search_for_marker_element(page, MARKER_FILENAME).first.fill(target_path.stem)
+    # Confirm save
+    search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
 
 
 # ----------------------
