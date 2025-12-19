@@ -14,6 +14,7 @@ from nicegui.events import ValueChangeEventArguments
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     MissingInstanceError,
 )
+from tests.acceptance.conftest import TEST_ID
 
 YEAR_MONTH_DAY_FORMAT = "%Y-%m-%d"
 DAY_MONTH_YEAR_FORMAT = "%d.%m.%Y"
@@ -115,7 +116,7 @@ class FormField(LazyInitializedElement[S], Generic[S, V]):
             # so that Playwright-based acceptance tests can reliably select the
             # input elements. This mirrors the pattern used for buttons in the UI.
             element.mark(self.marker)
-            element.props(f"test-id={self.marker}")
+            element.props(f"{TEST_ID}={self.marker}")
 
     def validate(self) -> bool:
         """Handles the validation logic for an element.

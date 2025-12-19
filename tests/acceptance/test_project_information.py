@@ -17,10 +17,11 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
     MARKER_START_DATE,
     MARKER_START_TIME,
 )
-from tests.conftest import (
+from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
     PLAYWRIGHT_POLL_INTERVAL_MS,
     PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+    TEST_ID,
     NiceGUITestServer,
 )
 from tests.utils.playwright_helpers import (
@@ -77,9 +78,9 @@ class TestProjectInformationPlaywright:
         time_value = "06:00:00"
 
         # Locate inputs via test markers (see test_sections_and_flows usage)
-        name_sel = f'[test-id="{MARKER_PROJECT_NAME}"]'
-        date_sel = f'[test-id="{MARKER_START_DATE}"]'
-        time_sel = f'[test-id="{MARKER_START_TIME}"]'
+        name_sel = f'[{TEST_ID}="{MARKER_PROJECT_NAME}"]'
+        date_sel = f'[{TEST_ID}="{MARKER_START_DATE}"]'
+        time_sel = f'[{TEST_ID}="{MARKER_START_TIME}"]'
 
         set_input_value(page, name_sel, project_name)
         set_input_value(page, date_sel, date_value)
@@ -112,9 +113,9 @@ class TestProjectInformationPlaywright:
         date_value = "24.05.2023"  # German format
         time_value = "06:00:00"
 
-        name_sel = f'[test-id="{MARKER_PROJECT_NAME}"]'
-        date_sel = f'[test-id="{MARKER_START_DATE}"]'
-        time_sel = f'[test-id="{MARKER_START_TIME}"]'
+        name_sel = f'[{TEST_ID}="{MARKER_PROJECT_NAME}"]'
+        date_sel = f'[{TEST_ID}="{MARKER_START_DATE}"]'
+        time_sel = f'[{TEST_ID}="{MARKER_START_TIME}"]'
 
         set_input_value(page, name_sel, project_name)
         set_input_value(page, date_sel, date_value)
@@ -146,9 +147,9 @@ class TestProjectInformationPlaywright:
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-        name_sel = f'[test-id="{MARKER_PROJECT_NAME}"]'
-        date_sel = f'[test-id="{MARKER_START_DATE}"]'
-        time_sel = f'[test-id="{MARKER_START_TIME}"]'
+        name_sel = f'[{TEST_ID}="{MARKER_PROJECT_NAME}"]'
+        date_sel = f'[{TEST_ID}="{MARKER_START_DATE}"]'
+        time_sel = f'[{TEST_ID}="{MARKER_START_TIME}"]'
 
         def fill(name: str, date_str: str, time_str: str) -> None:
             set_input_value(page, name_sel, name)

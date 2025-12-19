@@ -16,6 +16,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.validation import (
     VALIDATION_NUMBER_POSITIVE,
 )
+from tests.acceptance.conftest import TEST_ID
 
 MARKER_NAME = "marker-name"
 MARKER_START_SECTION = "marker-start-section"
@@ -82,10 +83,10 @@ class EditFlowDialog(BaseDialog):
         self._end_section.build()
         self._name.build()
         self._distance.build()
-        self._name.element.props(f"test-id={MARKER_NAME}")
-        self._start_section.element.props(f"test-id={MARKER_START_SECTION}")
-        self._end_section.element.props(f"test-id={MARKER_END_SECTION}")
-        self._distance.element.props(f"test-id={MARKER_DISTANCE}")
+        self._name.element.props(f"{TEST_ID}={MARKER_NAME}")
+        self._start_section.element.props(f"{TEST_ID}={MARKER_START_SECTION}")
+        self._end_section.element.props(f"{TEST_ID}={MARKER_END_SECTION}")
+        self._distance.element.props(f"{TEST_ID}={MARKER_DISTANCE}")
 
         self._do_update_name()
 

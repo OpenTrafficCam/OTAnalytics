@@ -5,6 +5,8 @@ from typing import Any, Callable, List, Literal
 from nicegui import ui
 from nicegui.elements.table import Table
 
+from tests.acceptance.conftest import TEST_ID
+
 HEADER_SLOT = "header"
 BODY_SLOT = "body"
 
@@ -101,7 +103,7 @@ class CustomTable:
             self._register_callback()
             if self._marker:
                 table.mark(self._marker)
-                table.props(f"test-id={self._marker}")
+                table.props(f"{TEST_ID}={self._marker}")
 
     def _add_header_slot(self) -> None:
         if self._header_slot:

@@ -16,7 +16,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     MARKER_INTERACTIVE_IMAGE,
 )
-from tests.conftest import (
+from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     PLAYWRIGHT_POLL_INTERVAL_MS,

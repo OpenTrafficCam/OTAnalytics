@@ -7,6 +7,7 @@ from OTAnalytics.application.resources.resource_manager import (
     GeneralKeys,
     ResourceManager,
 )
+from tests.acceptance.conftest import TEST_ID
 
 MARKER_APPLY = "apply"
 MARKER_CANCEL = "cancel"
@@ -51,8 +52,8 @@ class BaseDialog:
                 apply.mark(MARKER_APPLY)
                 cancel.mark(MARKER_CANCEL)
 
-                apply.props(f"test-id={MARKER_APPLY}")
-                cancel.props(f"test-id={MARKER_CANCEL}")
+                apply.props(f"{TEST_ID}={MARKER_APPLY}")
+                cancel.props(f"{TEST_ID}={MARKER_CANCEL}")
             return dialog
 
     @abstractmethod

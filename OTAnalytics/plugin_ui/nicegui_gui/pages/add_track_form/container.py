@@ -13,6 +13,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.visualization_offset
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     AddVideoForm,
 )
+from tests.acceptance.conftest import TEST_ID
 
 MARKER_VIDEO_TAB = "marker-video-tab"
 
@@ -41,7 +42,7 @@ class TrackForm:
                 )
             )
             # Expose a stable test-id for Playwright to open the Videos tab reliably
-            video_tab.props(f"test-id={MARKER_VIDEO_TAB}")
+            video_tab.props(f"{TEST_ID}={MARKER_VIDEO_TAB}")
         with ui.tab_panels(tabs, value=track_tab).classes("w-full"):
             with ui.tab_panel(track_tab):
                 self.add_tracks_form.build()

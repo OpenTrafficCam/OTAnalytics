@@ -26,12 +26,13 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
     MARKER_START_DATE,
     MARKER_START_TIME,
 )
-from tests.conftest import (
+from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     IMPORT_VERIFY_MAX_POLLS,
     PLAYWRIGHT_POLL_INTERVAL_MS,
     PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
+    TEST_ID,
 )
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
@@ -137,12 +138,12 @@ def navigate_and_prepare(
 
 
 def search_for_marker_element(page: Page, marker: str) -> Any:
-    """Return a Playwright locator for elements marked with our `test-id` attribute.
+    """Return a Playwright locator for elements marked with our test attribute.
 
     Usage:
         search_for_marker_element(page, MARKER_FILENAME).first.fill("test_name")
     """
-    return page.locator(f'[test-id="{marker}"]')
+    return page.locator(f'[{TEST_ID}="{marker}"]')
 
 
 def fill_project_information(
@@ -399,9 +400,9 @@ def compare_json_files(saved_path: Path, reference_path: Path) -> None:
 
 def read_project_info_values(page: Page) -> tuple[str, str, str]:
     """Read current values from the Project form inputs using test-id markers."""
-    name_sel = f'[test-id="{MARKER_PROJECT_NAME}"]'
-    date_sel = f'[test-id="{MARKER_START_DATE}"]'
-    time_sel = f'[test-id="{MARKER_START_TIME}"]'
+    name_sel = f'[{TEST_ID}="{MARKER_PROJECT_NAME}"]'
+    date_sel = f'[{TEST_ID}="{MARKER_START_DATE}"]'
+    time_sel = f'[{TEST_ID}="{MARKER_START_TIME}"]'
     return (
         page.locator(name_sel).input_value(),
         page.locator(date_sel).input_value(),
