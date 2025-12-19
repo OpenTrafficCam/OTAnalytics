@@ -25,7 +25,6 @@ from OTAnalytics.application.config import (
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_EVENTLIST_FILE_TYPE,
-    DEFAULT_NUM_PROCESSES,
     DEFAULT_TRACK_FILE_TYPE,
 )
 from OTAnalytics.application.datastore import TrackParser, VideoParser
@@ -294,7 +293,6 @@ def create_run_config(
     count_intervals: list[int] | None = None,
     track_export: bool = False,
     track_statistics_export: bool = False,
-    num_processes: int = DEFAULT_NUM_PROCESSES,
     logfile: str = str(DEFAULT_LOG_FILE),
     logfile_overwrite: bool = False,
 ) -> RunConfiguration:
@@ -326,7 +324,6 @@ def create_run_config(
         save_suffix=save_suffix,
         event_formats=_event_formats,
         count_intervals=_count_intervals,
-        num_processes=num_processes,
         log_file=logfile,
     )
     run_config = RunConfiguration(flow_parser, cli_args)

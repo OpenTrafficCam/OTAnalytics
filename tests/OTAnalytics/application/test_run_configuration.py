@@ -7,7 +7,6 @@ import pytest
 from OTAnalytics.application.config import (
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     DEFAULT_EVENTLIST_FILE_TYPE,
-    DEFAULT_NUM_PROCESSES,
 )
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode
@@ -35,7 +34,6 @@ def cli_args_otconfig() -> CliArguments:
         count_intervals=[6],
         track_export=False,
         track_statistics_export=False,
-        num_processes=8,
         log_file="path/to/cli_log",
         logfile_overwrite=True,
     )
@@ -328,19 +326,6 @@ class TestRunConfiguration:
         assert build_config(cli_args, None).count_intervals == {
             DEFAULT_COUNTING_INTERVAL_IN_MINUTES
         }
-
-    def test_num_processes(self, cli_args: Mock, otconfig: Mock) -> None:
-        cli_num_processes = 1
-        cli_args.num_processes = cli_num_processes
-
-        analysis = Mock()
-        cfg_num_processes = 4
-        analysis.num_processes = cfg_num_processes
-        otconfig.analysis = analysis
-        assert build_config(cli_args, otconfig).num_processes == cli_num_processes
-        cli_args.num_processes = None
-        assert build_config(cli_args, otconfig).num_processes == cfg_num_processes
-        assert build_config(cli_args, None).num_processes == DEFAULT_NUM_PROCESSES
 
     @pytest.mark.parametrize(
         "cli_argument, config_entry, expected_file",

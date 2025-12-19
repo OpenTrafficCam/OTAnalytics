@@ -23,7 +23,7 @@ class TestMultiprocessingIntersectParallelization:
         intersect = Mock()
         tasks = Mock()
 
-        parallelizer = MultiprocessingIntersectParallelization()
+        parallelizer = MultiprocessingIntersectParallelization(num_processes=2)
         result = parallelizer.execute(cast(Callable, intersect), tasks)
 
         assert result == PythonEventDataset([event_1, event_2])
