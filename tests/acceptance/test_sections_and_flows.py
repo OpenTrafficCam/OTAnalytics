@@ -22,10 +22,14 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
+    MARKER_BUTTON_ADD,
+    MARKER_BUTTON_GENERATE,
     MARKER_BUTTON_PROPERTIES,
+    MARKER_BUTTON_REMOVE,
     MARKER_FLOW_TABLE,
 )
 from tests.acceptance.conftest import (
+    ACCEPTANCE_TEST_FINAL_TIMEOUT_MS,
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
@@ -125,7 +129,7 @@ class TestAddLineSectionWithDialog:
                 resource_manager.get(FlowKeys.BUTTON_ADD), exact=True
             ).click()
         except Exception:
-            search_for_marker_element(page, "marker-button-add").first.click()
+            search_for_marker_element(page, MARKER_BUTTON_ADD).first.click()
         search_for_marker_element(page, MARKER_FLOW_NAME).first.wait_for(
             state="visible"
         )
@@ -157,7 +161,7 @@ class TestAddLineSectionWithDialog:
                     break
             except Exception:
                 pass
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
         assert custom_flow_name in table.inner_text()
         row = table.locator("tbody tr").filter(has_text=custom_flow_name).first
         row.click()
@@ -166,14 +170,14 @@ class TestAddLineSectionWithDialog:
         new_flow_name = "My-Flow-Renamed"
         name_input.fill(new_flow_name)
         page.keyboard.press("Escape")
-        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+        time.sleep(ACCEPTANCE_TEST_FINAL_TIMEOUT_MS)
         assert custom_flow_name in table.inner_text()
         assert new_flow_name not in table.inner_text()
         search_for_marker_element(page, MARKER_BUTTON_PROPERTIES).first.click()
         name_input = search_for_marker_element(page, MARKER_FLOW_NAME).first
         name_input.fill(new_flow_name)
         search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
-        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
         assert new_flow_name in table.inner_text()
 
     @pytest.mark.skip(reason="only works in headed right now")
@@ -208,7 +212,7 @@ class TestAddLineSectionWithDialog:
                 resource_manager.get(FlowKeys.BUTTON_ADD), exact=True
             ).click()
         except Exception:
-            search_for_marker_element(page, "marker-button-add").first.click()
+            search_for_marker_element(page, MARKER_BUTTON_ADD).first.click()
         search_for_marker_element(page, MARKER_FLOW_NAME).first.fill("Temp-Flow")
         # Select start and end sections before applying
         search_for_marker_element(page, MARKER_START_SECTION).first.click()
@@ -228,16 +232,16 @@ class TestAddLineSectionWithDialog:
                     break
             except Exception:
                 pass
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
         assert "Temp-Flow" in table.inner_text()
         row = table.locator("tbody tr").filter(has_text="Temp-Flow").first
         row.click()
-        search_for_marker_element(page, "marker-button-remove").first.click()
-        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+        search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
+        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
         assert "Temp-Flow" not in table.inner_text()
 
         # Generate flows from sections and assert at least two are created
-        search_for_marker_element(page, "marker-button-generate").first.click()
+        search_for_marker_element(page, MARKER_BUTTON_GENERATE).first.click()
         deadline_gen = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
         matched_texts: list[str] = []
         last_texts: list[str] = []
@@ -250,7 +254,7 @@ class TestAddLineSectionWithDialog:
                     break
             except Exception:
                 pass
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
         assert (
             len(matched_texts) >= 2
         ), f"Expected >=2 generated flows with {names}, got {len(matched_texts)}: {last_texts}"  # noqa

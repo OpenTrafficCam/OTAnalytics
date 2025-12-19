@@ -11,9 +11,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
     MARKER_START_TIME,
 )
 from tests.acceptance.conftest import (
+    ACCEPTANCE_TEST_FINAL_TIMEOUT_MS,
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
     PLAYWRIGHT_POLL_INTERVAL_MS,
-    PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
     TEST_ID,
     NiceGUITestServer,
 )
@@ -50,7 +50,7 @@ class TestProjectInformationPlaywright:
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
         # Sanity check: page should contain Project section (pick first occurrence)
         page.get_by_text("Project").first.wait_for(
-            state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS
+            state="visible", timeout=ACCEPTANCE_TEST_FINAL_TIMEOUT_MS
         )
 
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
