@@ -26,6 +26,8 @@ PLAYWRIGHT_SHORT_WAIT_MS = 150
 # Polling intervals (milliseconds)
 PLAYWRIGHT_POLL_INTERVAL_MS = 50
 PLAYWRIGHT_POLL_INTERVAL_SLOW_MS = 100
+# Polling interval (seconds) derived from ms value for use with time.sleep
+PLAYWRIGHT_POLL_INTERVAL_SECONDS = PLAYWRIGHT_POLL_INTERVAL_MS / 1000
 # Unified final timeout for Playwright waiters (milliseconds)
 ACCEPTANCE_TEST_FINAL_TIMEOUT_MS = int(ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
 # Max polls used in some import/verify loops

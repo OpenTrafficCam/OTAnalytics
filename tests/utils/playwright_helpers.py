@@ -42,6 +42,7 @@ from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     IMPORT_VERIFY_MAX_POLLS,
     PLAYWRIGHT_POLL_INTERVAL_MS,
+    PLAYWRIGHT_POLL_INTERVAL_SECONDS,
     PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
     PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
@@ -88,7 +89,7 @@ def set_input_value(page: Page, selector: str, value: str) -> None:
 
     # Verify the value was actually set (short retry to avoid flakiness)
     def verify(expected: str) -> tuple[bool, str | None]:
-        deadline = time.time() + (PLAYWRIGHT_POLL_INTERVAL_MS / 1000) * 3
+        deadline = time.time() + PLAYWRIGHT_POLL_INTERVAL_SECONDS * 3
         last_local: str | None = None
         while time.time() < deadline:
             try:
@@ -222,7 +223,7 @@ def wait_for_names_present(page: Page, names: Iterable[str]) -> None:
         listed = table_filenames(page)
         if all(n in listed for n in names):
             return
-        time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
+        time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
     raise AssertionError(
         f"Timed out waiting for names to appear: {names}; "
         f"currently: {table_filenames(page)}"

@@ -16,10 +16,13 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     MARKER_INTERACTIVE_IMAGE,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
+    MARKER_BUTTON_REMOVE,
+)
 from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
-    PLAYWRIGHT_POLL_INTERVAL_MS,
+    PLAYWRIGHT_POLL_INTERVAL_SECONDS,
     NiceGUITestServer,
 )
 from tests.utils.playwright_helpers import (
@@ -80,16 +83,15 @@ class TestVideoImportAndDisplay:
 
         # Remove the row
         click_table_cell_with_text(page, name1)
-        page.get_by_text(
-            resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-        ).click()
+        # Prefer marker-based click with fallback to label-based selection
+        search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
 
         # Verify it's gone
         deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
         while time.time() < deadline:
             if name1 not in table_filenames(page):
                 break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
         remaining = table_filenames(page)
         assert (
             name1 not in remaining
@@ -153,7 +155,7 @@ class TestVideoImportAndDisplay:
             if src2 and src2 != src1:
                 changed = True
                 break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
         assert changed, "Preview image src should change after selecting another video"
 
     def test_remove_multiple_videos_after_selection(
@@ -195,7 +197,7 @@ class TestVideoImportAndDisplay:
         while time.time() < deadline:
             if v1.name not in table_filenames(page):
                 break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
         assert v1.name not in table_filenames(page)
 
         # Remove second video
@@ -207,5 +209,5 @@ class TestVideoImportAndDisplay:
         while time.time() < deadline:
             if v2.name not in table_filenames(page):
                 break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
         assert v2.name not in table_filenames(page)
