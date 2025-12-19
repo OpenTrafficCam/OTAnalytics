@@ -129,12 +129,6 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
-            "--num-processes",
-            type=int,
-            help="Number of processes to use in multi-processing.",
-            required=False,
-        )
-        self._parser.add_argument(
             "--logfile",
             type=str,
             help="Specify log file directory.",
@@ -190,7 +184,6 @@ class ArgparseCliParser(CliParser):
             count_intervals=args.count_intervals,
             track_export=not args.no_track_export,
             track_statistics_export=not args.no_track_statistics_export,
-            num_processes=args.num_processes,
             log_file=args.logfile,
             include_classes=args.include_classes,
             exclude_classes=args.exclude_classes,
