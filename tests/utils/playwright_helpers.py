@@ -12,6 +12,7 @@ from OTAnalytics.application.resources.resource_manager import (
     FlowAndSectionKeys,
     ProjectKeys,
     ResourceManager,
+    SectionKeys,
     TrackFormKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
@@ -28,6 +29,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_VIDEO_TABLE,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+    MARKER_INTERACTIVE_IMAGE,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     MARKER_PROJECT_NAME,
     MARKER_PROJECT_SAVE_AS,
@@ -38,6 +42,7 @@ from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     IMPORT_VERIFY_MAX_POLLS,
     PLAYWRIGHT_POLL_INTERVAL_MS,
+    PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
     PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
     TEST_ID,
@@ -461,3 +466,86 @@ def import_project_and_assert_values(
         page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
         name_v, date_v, time_v = read_project_info_values(page)
     assert (name_v, date_v, time_v) == expected
+
+
+# ----------------------
+# Sections helpers
+# ----------------------
+
+
+def create_section(
+    page: Page,
+    rm: ResourceManager,
+    section_name: str = "Name",
+    positions: list[tuple[int, int]] | None = None,
+) -> None:
+    """Create a line section on the canvas via dialog and assert it's visible.
+
+    Steps:
+    - Ensure interactive image is visible and scrolled into view
+    - Click the 'Add line' button if present
+    - Click on provided canvas positions to define the line
+    - Press Enter to open the section dialog, fill name and apply
+    - Poll until the section name appears in page content
+    """
+    if positions is None:
+        positions = [(20, 20), (140, 60), (260, 120)]
+
+    canvas_locator = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
+    canvas_locator.wait_for(state="visible")
+    img = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).locator("img").first
+    target = img if img.count() else canvas_locator
+    try:
+        target.scroll_into_view_if_needed()
+    except Exception:
+        pass
+
+    # Try to click the add line button by label
+    try:
+        page.get_by_text(rm.get(SectionKeys.BUTTON_ADD_LINE), exact=True).click()
+    except Exception:
+        # ignore if already active or button not present
+        pass
+
+    # Click the positions on the canvas/image
+    for x, y in positions:
+        try:
+            target.click(position={"x": x, "y": y})
+        except Exception:
+            canvas_locator.click(position={"x": x, "y": y})
+
+    # Confirm to open dialog
+    page.keyboard.press("Enter")
+
+    # Fill name in dialog (input may be wrapped or be the element itself)
+    from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
+        MARKER_NAME as MARKER_SECTION_NAME,
+    )
+
+    ni = search_for_marker_element(page, MARKER_SECTION_NAME).locator("input").first
+    if not ni.count():
+        ni = search_for_marker_element(page, MARKER_SECTION_NAME).first
+    ni.wait_for(state="visible")
+    try:
+        ni.fill(section_name)
+    except Exception:
+        # Fallback via set_input_value if needed
+        sel = ni.selector() if hasattr(ni, "selector") else None
+        if sel:
+            set_input_value(page, sel, section_name)
+        else:
+            ni.fill(section_name)
+    ab = search_for_marker_element(page, MARKER_DIALOG_APPLY).first
+    ab.wait_for(state="visible")
+    ab.click()
+
+    # Wait until section name is present somewhere in the page
+    deadline_local = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    while time.time() < deadline_local:
+        try:
+            if section_name in page.content():
+                return
+        except Exception:
+            pass
+        time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+    raise AssertionError(f"Section name not found after apply: {section_name}")
