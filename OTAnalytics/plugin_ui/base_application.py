@@ -143,7 +143,9 @@ from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFi
 from OTAnalytics.application.use_cases.quick_save_configuration import (
     QuickSaveConfiguration,
 )
+from OTAnalytics.application.use_cases.reset_application import ResetApplication
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
+from OTAnalytics.application.use_cases.reset_state import ResetState
 from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportRoadUserAssignments,
 )
@@ -373,7 +375,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def load_otconfig(self) -> LoadOtconfig:
         return LoadOtconfig(
-            self.clear_all_repositories,
+            self.reset_application,
             self.otconfig_parser,
             self.project_updater,
             AddAllVideos(self.video_repository),
@@ -382,6 +384,23 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.load_track_files,
             self.add_new_remark,
             parse_json,
+        )
+
+    @cached_property
+    def reset_application(self) -> ResetApplication:
+        return ResetApplication(self.clear_all_repositories, self.reset_state)
+
+    @cached_property
+    def reset_state(self) -> ResetState:
+        return ResetState(
+            self.videos_metadata,
+            self.tracks_metadata,
+            self.track_view_state,
+            self.track_state,
+            self.section_state,
+            self.flow_state,
+            self.action_state,
+            self.file_state,
         )
 
     @cached_property

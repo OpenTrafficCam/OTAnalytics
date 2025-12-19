@@ -45,7 +45,7 @@ class TestLoadOtconfig:
         observer.assert_called_once_with(
             ConfigurationFile(file, given.deserialization_result)
         )
-        given.clear_repositories.assert_called_once()
+        given.reset_application.reset.assert_called_once()
         given.remark_repository.add.assert_called_once_with(REMARK)
 
     def test_load_error(self) -> None:
@@ -64,7 +64,7 @@ class TestLoadOtconfig:
         with pytest.raises(UnableToLoadOtconfigFile):
             target.load(file)
 
-        assert given.clear_repositories.call_count == 2
+        assert given.reset_application.reset.call_count == 2
         given.config_parser.parse.assert_called_once_with(file)
         observer.assert_not_called()
         given.remark_repository.add.assert_not_called()
@@ -73,7 +73,7 @@ class TestLoadOtconfig:
 @dataclass
 class Given:
     otconfig: OtConfig
-    clear_repositories: Mock
+    reset_application: Mock
     config_parser: Mock
     update_project: Mock
     add_videos: Mock
@@ -94,7 +94,7 @@ def setup(
 ) -> Given:
     otconfig = create_otconfig(project_name, start_date, track_files, remark)
 
-    clear_repositories = Mock()
+    reset_application = Mock()
     config_parser = Mock()
     config_parser.parse.return_value = otconfig
     update_project = Mock()
@@ -114,7 +114,7 @@ def setup(
 
     return Given(
         otconfig=otconfig,
-        clear_repositories=clear_repositories,
+        reset_application=reset_application,
         config_parser=config_parser,
         update_project=update_project,
         add_videos=add_videos,
@@ -152,7 +152,7 @@ def create_otconfig(
 
 def create_target(given: Given) -> LoadOtconfig:
     return LoadOtconfig(
-        given.clear_repositories,
+        given.reset_application,
         given.config_parser,
         given.update_project,
         given.add_videos,
