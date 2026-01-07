@@ -33,9 +33,9 @@ class GetRoadUserAssignments:
 
     def __check_update(self) -> None:
         if (
-            self._assignment_repository.is_empty()
+            not self._is_creating
             and self._enable_assignment_creation
-            and not self._is_creating
+            and self._assignment_repository.is_empty()
         ):
             self._is_creating = True
             try:
