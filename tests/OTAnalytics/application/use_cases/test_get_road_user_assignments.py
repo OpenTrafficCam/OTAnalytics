@@ -8,11 +8,6 @@ from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
 )
 from OTAnalytics.application.use_cases.create_events import CreateEvents
-from OTAnalytics.application.use_cases.create_road_user_assignments import (
-    CreateRoadUserAssignments,
-)
-from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
-from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSetFactory
 from OTAnalytics.domain.types import EventType
 
@@ -32,6 +27,7 @@ class TestGetRoadUserAssignments:
         given.road_user_assigner.assign.assert_called_once_with(
             given.events, given.flows
         )
+        given.create_events.assert_called_once()
         given.assignments.as_list.assert_called_once()
 
     def test_no_recursion_when_get_called_during_creation(self) -> None:
@@ -60,6 +56,7 @@ class TestGetRoadUserAssignments:
         given.road_user_assigner.assign.assert_called_once_with(
             given.events, given.flows
         )
+        given.create_events.assert_called_once()
 
 
 @dataclass
@@ -73,6 +70,7 @@ class Given:
     road_user_assigner: Mock
     create_events: Mock
     assignment_repository: RoadUserAssignmentRepository
+    create_assignments: Mock
 
 
 def setup() -> Given:
@@ -98,6 +96,8 @@ def setup() -> Given:
     mock_factory = Mock(spec=TrackIdSetFactory)
     assignment_repository = RoadUserAssignmentRepository(mock_factory)
 
+    create_assignments = Mock()
+
     return Given(
         events=events,
         flows=flows,
@@ -108,16 +108,11 @@ def setup() -> Given:
         road_user_assigner=road_user_assigner,
         create_events=create_events,
         assignment_repository=assignment_repository,
+        create_assignments=create_assignments,
     )
 
 
 def create_target(given: Given) -> GetRoadUserAssignments:
-    create_assignments = CreateRoadUserAssignments(
-        GetAllFlows(given.flow_repository),
-        GetAllEnterSectionEvents(given.event_repository),
-        given.create_events,
-        given.road_user_assigner,
-        given.assignment_repository,
+    return GetRoadUserAssignments(
+        given.assignment_repository, given.create_assignments, True
     )
-
-    return GetRoadUserAssignments(given.assignment_repository, create_assignments, True)
