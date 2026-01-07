@@ -4,12 +4,12 @@ from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.parser.deserializer import Deserializer
 from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
-from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.flow_repository import (
     AddAllFlows,
     FlowAlreadyExists,
 )
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
+from OTAnalytics.application.use_cases.reset_application import ResetApplication
 from OTAnalytics.application.use_cases.section_repository import (
     AddAllSections,
     SectionAlreadyExists,
@@ -22,7 +22,7 @@ from OTAnalytics.domain.observer import OBSERVER, Subject
 class LoadOtconfig:
     def __init__(
         self,
-        clear_repositories: ClearRepositories,
+        reset_application: ResetApplication,
         config_parser: ConfigParser,
         update_project: ProjectUpdater,
         add_videos: AddAllVideos,
@@ -33,7 +33,7 @@ class LoadOtconfig:
         deserialize: Deserializer,
     ) -> None:
         self._add_new_remark = add_new_remark
-        self._clear_repositories = clear_repositories
+        self._reset_application = reset_application
         self._config_parser = config_parser
         self._update_project = update_project
         self._add_videos = add_videos
@@ -44,7 +44,7 @@ class LoadOtconfig:
         self._subject = Subject[ConfigurationFile]()
 
     def load(self, file: Path) -> None:
-        self._clear_repositories()
+        self._reset_application.reset()
         config = self._config_parser.parse(file)
         try:
             self._update_project(
@@ -63,7 +63,7 @@ class LoadOtconfig:
                 )
             )
         except (SectionAlreadyExists, FlowAlreadyExists) as cause:
-            self._clear_repositories()
+            self._reset_application.reset()
             raise UnableToLoadOtconfigFile(
                 "Error while loading otconfig file. Abort loading!"
             ) from cause
