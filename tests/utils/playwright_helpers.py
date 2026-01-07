@@ -15,6 +15,9 @@ from OTAnalytics.application.resources.resource_manager import (
     SectionKeys,
     TrackFormKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
+    MARKER_NAME as MARKER_SECTION_NAME,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
     MARKER_DIRECTORY,
     MARKER_FILENAME,
@@ -337,14 +340,6 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     - Fill directory and filename via test-id markers
     - Apply the dialog
     """
-    from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
-        MARKER_DIRECTORY,
-        MARKER_FILENAME,
-    )
-    from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
-        MARKER_APPLY as MARKER_DIALOG_APPLY,
-    )
-
     # Try marker click first, then label-based fallback
     try:
         search_for_marker_element(page, "marker-project-open").first.click()
@@ -370,24 +365,11 @@ def save_project_as(page: Page, rm: ResourceManager, path: Path) -> None:
     - Fill the directory and filename in the NiceGUI file chooser via markers.
     - Apply the dialog.
     """
-    from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
-        MARKER_DIRECTORY,
-        MARKER_FILENAME,
-    )
-    from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
-        MARKER_APPLY as MARKER_DIALOG_APPLY,
-    )
-    from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
-        MARKER_PROJECT_SAVE_AS,
-    )
-
     # Try to open via stable test-id marker first, then fall back to label
     try:
         search_for_marker_element(page, MARKER_PROJECT_SAVE_AS).first.click()
     except Exception:
         # Fallback to label if marker is not available
-        from OTAnalytics.application.resources.resource_manager import ProjectKeys
-
         page.get_by_text(rm.get(ProjectKeys.LABEL_SAVE_AS_PROJECT), exact=True).click()
 
     # Interact with the FileChooserDialog
@@ -519,10 +501,6 @@ def create_section(
     page.keyboard.press("Enter")
 
     # Fill name in dialog (input may be wrapped or be the element itself)
-    from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
-        MARKER_NAME as MARKER_SECTION_NAME,
-    )
-
     ni = search_for_marker_element(page, MARKER_SECTION_NAME).locator("input").first
     if not ni.count():
         ni = search_for_marker_element(page, MARKER_SECTION_NAME).first
