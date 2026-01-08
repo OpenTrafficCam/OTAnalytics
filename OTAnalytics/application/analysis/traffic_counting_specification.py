@@ -27,6 +27,18 @@ class CountingSpecificationDto:
     export_mode: ExportMode
     count_all_events: bool = False
 
+    def with_end(self, end: datetime) -> "CountingSpecificationDto":
+        return CountingSpecificationDto(
+            start=self.start,
+            end=end,
+            interval_in_minutes=self.interval_in_minutes,
+            modes=self.modes,
+            output_format=self.output_format,
+            output_file=self.output_file,
+            export_mode=self.export_mode,
+            count_all_events=self.count_all_events,
+        )
+
 
 @dataclass(frozen=True)
 class FlowNameDto:

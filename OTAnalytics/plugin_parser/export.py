@@ -23,6 +23,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     create_timeslot_tag,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
     ExportFormat,
     ExportSpecificationDto,
 )
@@ -127,6 +128,9 @@ class CsvExport(Exporter):
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
+    def update_end(self, counting_specification: CountingSpecificationDto) -> None:
+        pass
+
 
 class SimpleExporterFactory(ExporterFactory):
     def __init__(self) -> None:
@@ -154,6 +158,7 @@ class TagExploder:
 
     def __init__(self, specification: ExportSpecificationDto):
         self._specification = specification
+        self._end = self._specification.counting_specification.end
 
     def explode(self) -> list[Tag]:
         tags = []
@@ -162,7 +167,7 @@ class TagExploder:
                 second=0, microsecond=0
             )
         )
-        maximum = self._specification.counting_specification.end - start_without_seconds
+        maximum = self._end - start_without_seconds
         duration = int(maximum.total_seconds())
         interval = self._specification.counting_specification.interval_in_minutes * 60
         for flow in self._specification.flow_name_info:
@@ -179,6 +184,9 @@ class TagExploder:
                     tags.append(tag)
         return tags
 
+    def update_end(self, counting_specification: CountingSpecificationDto) -> None:
+        self._end = counting_specification.end
+
 
 class FillZerosExporter(Exporter):
     def __init__(self, other: Exporter, tag_exploder: TagExploder) -> None:
@@ -188,6 +196,10 @@ class FillZerosExporter(Exporter):
     def export(self, counts: Count, export_mode: ExportMode) -> None:
         tags = self._tag_exploder.explode()
         self._other.export(FillEmptyCount(counts, tags), export_mode)
+
+    def update_end(self, counting_specification: CountingSpecificationDto) -> None:
+        self._other.update_end(counting_specification)
+        self._tag_exploder.update_end(counting_specification)
 
 
 class FillZerosExporterFactory(ExporterFactory):
@@ -214,6 +226,9 @@ class AddSectionInformationExporter(Exporter):
             flow_dto.name: flow_dto for flow_dto in self._specification.flow_name_info
         }
         self._other.export(AddSectionInformation(counts, flow_info_dict), export_mode)
+
+    def update_end(self, counting_specification: CountingSpecificationDto) -> None:
+        self._other.update_end(counting_specification)
 
 
 class AddSectionInformationExporterFactory(ExporterFactory):
@@ -286,6 +301,7 @@ class CachedExporterFactory(ExporterFactory):
                     export_mode,
                 )
             exporter = self._cache[key]
+            exporter.update_end(specification.counting_specification)
 
         if export_mode.is_final_write():
             del self._cache[key]
