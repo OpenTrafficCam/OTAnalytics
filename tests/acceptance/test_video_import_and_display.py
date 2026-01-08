@@ -68,13 +68,7 @@ class TestVideoImportAndDisplay:
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-        # Switch to Videos tab and ensure clean slate (prefer marker with fallback)
-        try:
-            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
-        except Exception:
-            page.get_by_text(
-                resource_manager.get(TrackFormKeys.TAB_VIDEO), exact=True
-            ).click()
+        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         reset_videos_tab(page, resource_manager)
 
         # Prepare test video path from tests/data
