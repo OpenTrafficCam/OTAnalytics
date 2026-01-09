@@ -12,11 +12,11 @@ from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_VIDEO_TAB,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    MARKER_BUTTON_REMOVE,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     MARKER_INTERACTIVE_IMAGE,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
-    MARKER_BUTTON_REMOVE,
 )
 from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
@@ -30,6 +30,7 @@ from tests.utils.playwright_helpers import (
     reset_videos_tab,
     search_for_marker_element,
     table_filenames,
+    wait_for_names_gone,
     wait_for_names_present,
 )
 
@@ -45,12 +46,7 @@ playwright = pytest.importorskip(
 class TestVideoImportAndDisplay:
     # small helper to wait until a given video name disappears from the table
     def remove_video(self, page: Page, v1: Path) -> None:  # type: ignore[override]
-        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        while time.time() < deadline:
-            if v1.name not in table_filenames(page):
-                break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
-        assert v1.name not in table_filenames(page)
+        wait_for_names_gone(page, [v1.name])
 
     def test_remove_single_video_after_selection(
         self,
@@ -89,15 +85,7 @@ class TestVideoImportAndDisplay:
         search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
 
         # Verify it's gone
-        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        while time.time() < deadline:
-            if name1 not in table_filenames(page):
-                break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
-        remaining = table_filenames(page)
-        assert (
-            name1 not in remaining
-        ), f"Video should have been removed, but still present in: {remaining}"
+        wait_for_names_gone(page, [name1])
 
     def test_add_videos_import_sort_and_display_first_frame(
         self,

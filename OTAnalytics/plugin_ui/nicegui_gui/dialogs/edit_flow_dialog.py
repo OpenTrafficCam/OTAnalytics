@@ -16,7 +16,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.validation import (
     VALIDATION_NUMBER_POSITIVE,
 )
-from tests.acceptance.conftest import TEST_ID
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_NAME = "marker-name"
 MARKER_START_SECTION = "marker-start-section"

@@ -27,7 +27,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
-from tests.acceptance.conftest import TEST_ID
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 NORMAL_COLOR = "green"
 SELECTED_COLOR = "red"

@@ -5,7 +5,7 @@ from typing import Any, Callable, List, Literal
 from nicegui import ui
 from nicegui.elements.table import Table
 
-from tests.acceptance.conftest import TEST_ID
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 HEADER_SLOT = "header"
 BODY_SLOT = "body"

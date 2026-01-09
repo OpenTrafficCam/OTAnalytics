@@ -14,7 +14,7 @@ from nicegui.events import ValueChangeEventArguments
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     MissingInstanceError,
 )
-from tests.acceptance.conftest import TEST_ID
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 YEAR_MONTH_DAY_FORMAT = "%Y-%m-%d"
 DAY_MONTH_YEAR_FORMAT = "%d.%m.%Y"

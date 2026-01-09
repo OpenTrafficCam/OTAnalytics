@@ -7,7 +7,7 @@ from OTAnalytics.application.resources.resource_manager import (
     GeneralKeys,
     ResourceManager,
 )
-from tests.acceptance.conftest import TEST_ID
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_APPLY = "apply"
 MARKER_CANCEL = "cancel"

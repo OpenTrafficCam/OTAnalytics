@@ -13,7 +13,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.visualization_offset
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     AddVideoForm,
 )
-from tests.acceptance.conftest import TEST_ID
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_VIDEO_TAB = "marker-video-tab"
 

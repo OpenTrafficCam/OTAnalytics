@@ -41,6 +41,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
     MARKER_START_DATE,
     MARKER_START_TIME,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     IMPORT_VERIFY_MAX_POLLS,
@@ -49,7 +50,6 @@ from tests.acceptance.conftest import (
     PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
     PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
-    TEST_ID,
 )
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
@@ -233,6 +233,21 @@ def wait_for_names_present(page: Page, names: Iterable[str]) -> None:
     )
 
 
+def wait_for_names_gone(page: Page, names: Iterable[str]) -> None:
+    """Wait until all provided names are gone from the video table."""
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    names = list(names)
+    while time.time() < deadline:
+        listed = table_filenames(page)
+        if all(n not in listed for n in names):
+            return
+        time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
+    raise AssertionError(
+        f"Timed out waiting for names to disappear: {names}; "
+        f"currently: {table_filenames(page)}"
+    )
+
+
 def click_table_cell_with_text(page: Page, text: str) -> None:
     """Click the first cell in the video table that contains the given text."""
     cell = (
@@ -257,11 +272,7 @@ def reset_videos_tab(page: Page, rm: ResourceManager) -> None:
                 rm.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
             ).click()
             # wait until it's gone
-            deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-            while time.time() < deadline:
-                if name not in table_filenames(page):
-                    break
-                time.sleep(0.05)
+            wait_for_names_gone(page, [name])
         except Exception:
             # Best-effort cleanup only
             break

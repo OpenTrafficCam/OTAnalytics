@@ -10,11 +10,11 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
     MARKER_START_DATE,
     MARKER_START_TIME,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_FINAL_TIMEOUT_MS,
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
     PLAYWRIGHT_POLL_INTERVAL_MS,
-    TEST_ID,
     NiceGUITestServer,
 )
 from tests.utils.playwright_helpers import (

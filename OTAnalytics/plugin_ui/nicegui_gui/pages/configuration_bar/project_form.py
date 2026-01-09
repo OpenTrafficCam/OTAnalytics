@@ -20,7 +20,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     DateTimeForm,
     FormFieldText,
 )
-from tests.acceptance.conftest import TEST_ID
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_PROJECT_NAME = "marker-project-name"
 MARKER_PROJECT_OPEN = "marker-project-open"
