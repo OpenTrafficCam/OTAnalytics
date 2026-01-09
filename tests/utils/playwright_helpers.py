@@ -10,10 +10,20 @@ from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
     AddVideoKeys,
     FlowAndSectionKeys,
+    FlowKeys,
     ProjectKeys,
     ResourceManager,
     SectionKeys,
     TrackFormKeys,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
+    MARKER_END_SECTION,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
+    MARKER_NAME as MARKER_FLOW_NAME,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
+    MARKER_START_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
     MARKER_NAME as MARKER_SECTION_NAME,
@@ -40,6 +50,12 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
     MARKER_PROJECT_SAVE_AS,
     MARKER_START_DATE,
     MARKER_START_TIME,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
+    MARKER_BUTTON_ADD as MARKER_FLOW_ADD,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
+    MARKER_FLOW_TABLE,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 from tests.acceptance.conftest import (
@@ -539,3 +555,52 @@ def create_section(
             pass
         time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
     raise AssertionError(f"Section name not found after apply: {section_name}")
+
+
+def create_flow(
+    page: Page,
+    rm: ResourceManager,
+    flow_name: str,
+    start_section_index: int = 0,
+    end_section_index: int = 1,
+) -> None:
+    """Helper to create a flow through the dialog.
+
+    Assumes we are already on the Flows tab.
+    """
+    try:
+        page.get_by_text(rm.get(FlowKeys.BUTTON_ADD), exact=True).click()
+    except Exception:
+        search_for_marker_element(page, MARKER_FLOW_ADD).first.click()
+
+    search_for_marker_element(page, MARKER_FLOW_NAME).first.wait_for(state="visible")
+    search_for_marker_element(page, MARKER_FLOW_NAME).first.fill(flow_name)
+
+    # Select start section
+    search_for_marker_element(page, MARKER_START_SECTION).first.click()
+    for _ in range(start_section_index + 1):
+        page.keyboard.press("ArrowDown")
+    page.keyboard.press("Enter")
+
+    # Select end section
+    search_for_marker_element(page, MARKER_END_SECTION).first.click()
+    for _ in range(end_section_index + 1):
+        page.keyboard.press("ArrowDown")
+    page.keyboard.press("Enter")
+
+    search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+
+
+def wait_for_flow_present(page: Page, flow_name: str) -> None:
+    """Wait until the flow name appears in the flow table."""
+    table = search_for_marker_element(page, MARKER_FLOW_TABLE).first
+    table.wait_for(state="visible")
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    while time.time() < deadline:
+        try:
+            if flow_name in table.inner_text():
+                return
+        except Exception:
+            pass
+        time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
+    raise AssertionError(f"Flow '{flow_name}' did not appear in table")
