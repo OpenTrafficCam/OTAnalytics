@@ -15,6 +15,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
     CustomTable,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 from OTAnalytics.plugin_ui.utils.asyncio_helper import run_async
 
 BUTTON_WIDTH = "max-width: 45%; width: 100%"
@@ -59,6 +60,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             on_select_method=lambda e: self._select_flow(e.selection),
             selection="multiple",
             marker=MARKER_FLOW_TABLE,
+            # Let the table auto-select the row on click and forward selection
+            auto_select_on_row_click=True,
         )
         self._button_remove: ui.button | None = None
         self._button_add: ui.button | None = None
@@ -82,11 +85,13 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
                 self._resource_manager.get(FlowKeys.BUTTON_ADD), on_click=self.add_flow
             ).style(BUTTON_WIDTH)
             self._button_add.mark(MARKER_BUTTON_ADD)
+            self._button_add.props(f"{TEST_ID}={MARKER_BUTTON_ADD}")
             self._button_generate = ui.button(
                 self._resource_manager.get(FlowKeys.BUTTON_GENERATE),
                 on_click=self.generate_flow,
             ).style(BUTTON_WIDTH)
             self._button_generate.mark(MARKER_BUTTON_GENERATE)
+            self._button_generate.props(f"{TEST_ID}={MARKER_BUTTON_GENERATE}")
 
         with ui.row().style(BASIC_WIDTH):
             self._button_remove = ui.button(
@@ -94,11 +99,13 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
                 on_click=self.remove_flow,
             ).style(BUTTON_WIDTH)
             self._button_remove.mark(MARKER_BUTTON_REMOVE)
+            self._button_remove.props(f"{TEST_ID}={MARKER_BUTTON_REMOVE}")
             self._button_properties = ui.button(
                 self._resource_manager.get(FlowKeys.BUTTON_PROPERTIES),
                 on_click=self.show_flow_properties,
             ).style(BUTTON_WIDTH)
             self._button_properties.mark(MARKER_BUTTON_PROPERTIES)
+            self._button_properties.props(f"{TEST_ID}={MARKER_BUTTON_PROPERTIES}")
         self.update_items()
         return self
 

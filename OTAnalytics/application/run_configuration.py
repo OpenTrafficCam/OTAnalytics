@@ -235,5 +235,11 @@ class RunConfiguration(OtConfigDefaultValueProvider):
     def show_svz(self) -> bool:
         return self._cli_args.show_svz
 
+    @property
+    def file_picker_directory(self) -> Path:
+        if self._cli_args.file_picker_directory:
+            return Path(self._cli_args.file_picker_directory)
+        return Path.home()
+
 
 RunConfigurationBuilder = Callable[[CliArguments, OtConfig | None], RunConfiguration]

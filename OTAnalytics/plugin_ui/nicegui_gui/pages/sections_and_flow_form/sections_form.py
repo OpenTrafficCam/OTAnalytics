@@ -62,6 +62,8 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
             on_select_method=lambda e: self._select_section(e.selection),
             selection="multiple",
             marker=MARKER_SECTION_TABLE,
+            # Let the table auto-select the row on click and forward selection
+            auto_select_on_row_click=True,
         )
         self._toggle = False
         self._button_edit: ui.button | None = None

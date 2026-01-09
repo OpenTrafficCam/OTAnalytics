@@ -53,8 +53,13 @@ class NiceGuiInfoBox(InfoBox):
 
 class NiceGuiUiFactory(UiFactory):
 
-    def __init__(self, resource_manager: ResourceManager) -> None:
+    def __init__(
+        self,
+        resource_manager: ResourceManager,
+        base_directory: Path = BASE_FILE_PICKER_DIRECTORY,
+    ) -> None:
         self._resource_manager = resource_manager
+        self._base_directory = base_directory
 
     def info_box(
         self, message: str, initial_position: tuple[int, int], show_cancel: bool = False
@@ -107,7 +112,7 @@ class NiceGuiUiFactory(UiFactory):
                 converted_filetypes.append(ext[0])
 
         file_paths = await LocalFilePicker(
-            directory=BASE_FILE_PICKER_DIRECTORY,
+            directory=self._base_directory,
             show_hidden_files=False,
             show_files_only_of_type=None,  # Show all files
             show_only_directories=False,

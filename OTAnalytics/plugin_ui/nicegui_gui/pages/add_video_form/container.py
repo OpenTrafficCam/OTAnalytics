@@ -16,9 +16,12 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
     CustomTable,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 COLUMN_NAME = "name"
 MARKER_VIDEO_TABLE = "marker-video-table"
+MARKER_BUTTON_ADD = "marker-button-add"
+MARKER_BUTTON_REMOVE = "marker-button-remove"
 
 
 def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
@@ -91,10 +94,14 @@ class AddVideoForm(ButtonForm, AbstractTreeviewInterface):
             self._resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS),
             on_click=lambda _: self._viewmodel.add_video(),
         )
+        self._add_video_button.mark(MARKER_BUTTON_ADD)
+        self._add_video_button.props(f"{TEST_ID}={MARKER_BUTTON_ADD}")
         self._remove_video_button = ui.button(
             self._resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS),
             on_click=lambda _: self._remove_video(),
         )
+        self._remove_video_button.mark(MARKER_BUTTON_REMOVE)
+        self._remove_video_button.props(f"{TEST_ID}={MARKER_BUTTON_REMOVE}")
         self._update_video_table()
         return self
 

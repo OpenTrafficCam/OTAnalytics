@@ -656,6 +656,7 @@ class DummyViewModel(
         return self.get_position()
 
     def __show_error(self, message: str) -> None:
+        logger().warning(message)
         self._ui_factory.info_box(
             message=message,
             initial_position=self.treeview_sections.get_position(),
