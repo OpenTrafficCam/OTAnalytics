@@ -1,4 +1,6 @@
+from dataclasses import dataclass
 from datetime import datetime
+from unittest.mock import Mock
 
 import polars
 import pytest
@@ -6,8 +8,10 @@ from polars import DataFrame
 from pytest import approx
 
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.section import LineSection, SectionId, SectionType
 from OTAnalytics.domain.track import FRAME, TRACK_CLASSIFICATION, VIDEO_NAME, H, W
 from OTAnalytics.domain.track_dataset.track_dataset import END_FRAME, END_VIDEO_NAME
+from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
     END_H,
     END_OCCURRENCE,
@@ -27,6 +31,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
     START_X,
     START_Y,
     TRACK_ID,
+    PolarsTrackGeometryDataset,
     Polygon,
     X,
     Y,
@@ -463,3 +468,266 @@ def test_check_polygon_intersections_with_intersections() -> None:
 
     # Check the count of intersecting segments
     assert result[INTERSECTS_POLYGON].sum() == 2
+
+
+def _create_cutting_section(
+    section_id: str, coordinates: list[tuple[float, float]]
+) -> Mock:
+    """Helper function to create a mock cutting section for testing."""
+    section = Mock(spec=LineSection)
+    section.get_coordinates.return_value = [
+        Coordinate(coord[0], coord[1]) for coord in coordinates
+    ]
+    section.relative_offset_coordinates = {
+        EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+    }
+    section.get_offset.return_value = RelativeOffsetCoordinate(0.0, 0.0)
+    section.id = SectionId(section_id)
+    section.get_type.return_value = SectionType.CUTTING
+    return section
+
+
+@dataclass
+class TrackIdsAfterCutGiven:
+    """Test data container for track_ids_after_cut tests."""
+
+    dataset: PolarsTrackGeometryDataset
+    section: Mock
+
+
+def create_segments_dataframe(
+    row_ids: list[int],
+    track_ids: list[str],
+    start_x: list[float],
+    start_y: list[float],
+    end_x: list[float],
+    end_y: list[float],
+    start_times: list[datetime],
+    end_times: list[datetime],
+) -> DataFrame:
+    """Create a segments DataFrame with the given data."""
+    num_segments = len(row_ids)
+    return DataFrame(
+        {
+            ROW_ID: row_ids,
+            TRACK_ID: track_ids,
+            TRACK_CLASSIFICATION: ["car"] * num_segments,
+            END_VIDEO_NAME: ["video1"] * num_segments,
+            END_FRAME: list(range(2, num_segments + 2)),
+            START_X: start_x,
+            START_Y: start_y,
+            END_X: end_x,
+            END_Y: end_y,
+            START_W: [0.0] * num_segments,
+            START_H: [0.0] * num_segments,
+            END_W: [0.0] * num_segments,
+            END_H: [0.0] * num_segments,
+            START_OCCURRENCE: start_times,
+            END_OCCURRENCE: end_times,
+        }
+    )
+
+
+def setup_track_ids_after_cut(
+    segments_df: DataFrame | None,
+    section_coordinates: list[tuple[float, float]],
+    section_id: str = "cut1",
+) -> TrackIdsAfterCutGiven:
+    """Set up test data for track_ids_after_cut tests."""
+    if segments_df is None:
+        dataset = PolarsTrackGeometryDataset(RelativeOffsetCoordinate(0.0, 0.0))
+    else:
+        dataset = PolarsTrackGeometryDataset(
+            RelativeOffsetCoordinate(0.0, 0.0), segments_df
+        )
+    section = _create_cutting_section(section_id, section_coordinates)
+    return TrackIdsAfterCutGiven(dataset=dataset, section=section)
+
+
+class TestTrackIdsAfterCut:
+    """Tests for the track_ids_after_cut method of PolarsTrackGeometryDataset."""
+
+    def test_single_detection_dataset(self) -> None:
+        """
+        Supporting test case for bug OP#9023
+        """
+        detections = DataFrame(
+            {
+                ROW_ID: [1],
+                TRACK_CLASSIFICATION: ["car"],
+                TRACK_ID: ["track1"],
+                OCCURRENCE: [datetime(2023, 1, 1, 10, 0, 0)],
+                X: [10.0],
+                Y: [10.0],
+                W: [10.0],
+                H: [10.0],
+                FRAME: [1],
+                VIDEO_NAME: ["video_1.mp4"],
+            }
+        )
+        segments_df = create_track_segments(detections)
+        given = setup_track_ids_after_cut(
+            segments_df=segments_df,
+            section_coordinates=[(50.0, 0.0), (50.0, 100.0)],
+        )
+
+        # Empty dataset raises ColumnNotFoundError because the method tries to
+        # select ROW_ID from an empty DataFrame without the required columns
+        result = given.dataset.track_ids_after_cut(given.section)
+
+        assert result.is_empty()
+
+    def test_no_intersections(self) -> None:
+        """Test with tracks that don't intersect with the cutting section."""
+        segments_df = create_segments_dataframe(
+            row_ids=[1, 2],
+            track_ids=["track1", "track1"],
+            start_x=[10.0, 20.0],
+            start_y=[10.0, 10.0],
+            end_x=[20.0, 30.0],
+            end_y=[10.0, 10.0],
+            start_times=[
+                datetime(2023, 1, 1, 10, 0, 0),
+                datetime(2023, 1, 1, 10, 0, 1),
+            ],
+            end_times=[
+                datetime(2023, 1, 1, 10, 0, 1),
+                datetime(2023, 1, 1, 10, 0, 2),
+            ],
+        )
+        given = setup_track_ids_after_cut(
+            segments_df=segments_df,
+            section_coordinates=[(100.0, 0.0), (100.0, 100.0)],
+        )
+
+        result = given.dataset.track_ids_after_cut(given.section)
+
+        # Method adds one extra row per track (for initial state with ROW_ID - 1)
+        # So 2 segments + 1 initial row = 3 rows
+        assert len(result) == 3
+        # Track IDs should remain unchanged (no suffix added) since no intersection
+        track_ids = result[TRACK_ID].unique().to_list()
+        assert track_ids == ["track1"]
+
+    def test_single_intersection(self) -> None:
+        """Test with a single track that intersects the cutting section once."""
+        segments_df = create_segments_dataframe(
+            row_ids=[1, 2, 3],
+            track_ids=["track1", "track1", "track1"],
+            start_x=[10.0, 40.0, 60.0],
+            start_y=[10.0, 10.0, 10.0],
+            end_x=[40.0, 60.0, 80.0],
+            end_y=[10.0, 10.0, 10.0],
+            start_times=[
+                datetime(2023, 1, 1, 10, 0, 0),
+                datetime(2023, 1, 1, 10, 0, 1),
+                datetime(2023, 1, 1, 10, 0, 2),
+            ],
+            end_times=[
+                datetime(2023, 1, 1, 10, 0, 1),
+                datetime(2023, 1, 1, 10, 0, 2),
+                datetime(2023, 1, 1, 10, 0, 3),
+            ],
+        )
+        given = setup_track_ids_after_cut(
+            segments_df=segments_df,
+            section_coordinates=[(50.0, 0.0), (50.0, 100.0)],
+        )
+
+        result = given.dataset.track_ids_after_cut(given.section)
+
+        # Method adds one extra row per track (for initial state)
+        # So 3 segments + 1 initial row = 4 rows
+        assert len(result) == 4
+
+        # Check that track IDs are modified after the cut
+        # The result is sorted by TRACK_ID, ROW_ID, ORDER
+        # For cut tracks, suffixes _0, _1 are added
+        unique_track_ids = set(result[TRACK_ID].to_list())
+        assert "track1_0" in unique_track_ids
+        assert "track1_1" in unique_track_ids
+
+    def test_multiple_tracks(self) -> None:
+        """Test with multiple tracks where only some intersect the cutting section."""
+        segments_df = create_segments_dataframe(
+            row_ids=[1, 2, 3, 4],
+            track_ids=["track1", "track1", "track2", "track2"],
+            # track1 crosses the cutting line at x=50
+            # track2 stays below x=50
+            start_x=[10.0, 40.0, 10.0, 20.0],
+            start_y=[10.0, 10.0, 50.0, 50.0],
+            end_x=[40.0, 80.0, 20.0, 30.0],
+            end_y=[10.0, 10.0, 50.0, 50.0],
+            start_times=[
+                datetime(2023, 1, 1, 10, 0, 0),
+                datetime(2023, 1, 1, 10, 0, 1),
+                datetime(2023, 1, 1, 10, 0, 0),
+                datetime(2023, 1, 1, 10, 0, 1),
+            ],
+            end_times=[
+                datetime(2023, 1, 1, 10, 0, 1),
+                datetime(2023, 1, 1, 10, 0, 2),
+                datetime(2023, 1, 1, 10, 0, 1),
+                datetime(2023, 1, 1, 10, 0, 2),
+            ],
+        )
+        given = setup_track_ids_after_cut(
+            segments_df=segments_df,
+            section_coordinates=[(50.0, 0.0), (50.0, 30.0)],
+        )
+
+        result = given.dataset.track_ids_after_cut(given.section)
+
+        # Method adds one extra row per track (for initial state)
+        # So 4 segments + 2 initial rows = 6 rows
+        assert len(result) == 6
+
+        # Check results
+        unique_track_ids = set(result[TRACK_ID].to_list())
+        # track1 should be cut (track1_0 and track1_1)
+        assert "track1_0" in unique_track_ids
+        assert "track1_1" in unique_track_ids
+        # track2 should remain unchanged (no suffix)
+        assert "track2" in unique_track_ids
+
+    def test_multiple_intersections(self) -> None:
+        """Test with a track that intersects the cutting section multiple times."""
+        segments_df = create_segments_dataframe(
+            row_ids=[1, 2, 3, 4],
+            track_ids=["track1", "track1", "track1", "track1"],
+            # Track goes: 10->60 (crosses at 50), 60->40 (crosses at 50), 40->30, 30->20
+            start_x=[10.0, 60.0, 40.0, 30.0],
+            start_y=[10.0, 10.0, 10.0, 10.0],
+            end_x=[60.0, 40.0, 30.0, 20.0],
+            end_y=[10.0, 10.0, 10.0, 10.0],
+            start_times=[
+                datetime(2023, 1, 1, 10, 0, 0),
+                datetime(2023, 1, 1, 10, 0, 1),
+                datetime(2023, 1, 1, 10, 0, 2),
+                datetime(2023, 1, 1, 10, 0, 3),
+            ],
+            end_times=[
+                datetime(2023, 1, 1, 10, 0, 1),
+                datetime(2023, 1, 1, 10, 0, 2),
+                datetime(2023, 1, 1, 10, 0, 3),
+                datetime(2023, 1, 1, 10, 0, 4),
+            ],
+        )
+        given = setup_track_ids_after_cut(
+            segments_df=segments_df,
+            section_coordinates=[(50.0, 0.0), (50.0, 100.0)],
+        )
+
+        result = given.dataset.track_ids_after_cut(given.section)
+
+        # Method adds one extra row per track (for initial state)
+        # So 4 segments + 1 initial row = 5 rows
+        assert len(result) == 5
+
+        # Check results - track should be split into 3 parts
+        unique_track_ids = set(result[TRACK_ID].to_list())
+        # First segment crosses -> track1_0 before, track1_1 after
+        # Second segment crosses -> track1_2 after
+        assert "track1_0" in unique_track_ids
+        assert "track1_1" in unique_track_ids
+        assert "track1_2" in unique_track_ids

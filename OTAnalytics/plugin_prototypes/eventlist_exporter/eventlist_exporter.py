@@ -94,6 +94,8 @@ class EventListDataFrameBuilder:
         return pd.DataFrame([event.to_dict() for event in events])
 
     def build(self) -> pd.DataFrame:
+        if len(self._df) == 0:
+            return pd.DataFrame()
         self._convert_occurrence_to_seconds_since_epoch()
         self._split_columns_with_lists()
         self._add_section_names()

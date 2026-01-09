@@ -1362,19 +1362,21 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                 )
 
                 # Add track IDs that intersect with the line to the result set
-                result = (
-                    result.join(
-                        intersections.select([ROW_ID, TRACK_ID, INTERSECTS]), on=ROW_ID
-                    )
-                    .with_columns(
-                        pl.col(INTERSECTS).or_(
-                            pl.col(f"{INTERSECTS}_right")
-                            .fill_null(False)
-                            .alias(INTERSECTS)
+                if not intersections.is_empty():
+                    result = (
+                        result.join(
+                            intersections.select([ROW_ID, TRACK_ID, INTERSECTS]),
+                            on=ROW_ID,
                         )
+                        .with_columns(
+                            pl.col(INTERSECTS).or_(
+                                pl.col(f"{INTERSECTS}_right")
+                                .fill_null(False)
+                                .alias(INTERSECTS)
+                            )
+                        )
+                        .select([ROW_ID, TRACK_ID, INTERSECTS])
                     )
-                    .select([ROW_ID, TRACK_ID, INTERSECTS])
-                )
 
         COLUMN_ORDER = [ROW_ID, TRACK_ID, INTERSECTS, CUM_SUM, ORDER]
         results = (
