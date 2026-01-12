@@ -1,6 +1,5 @@
-from unittest.mock import Mock, call
-
-import pytest
+from dataclasses import dataclass
+from unittest.mock import Mock
 
 from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignmentRepository,
@@ -8,77 +7,77 @@ from OTAnalytics.application.analysis.road_user_assignment import (
 from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
 )
-from OTAnalytics.application.use_cases.create_events import CreateEvents
-from OTAnalytics.application.use_cases.create_road_user_assignments import (
-    CreateRoadUserAssignments,
-)
-from OTAnalytics.application.use_cases.event_repository import GetAllEnterSectionEvents
-from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
-from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSetFactory
-from OTAnalytics.domain.types import EventType
-
-events = [Mock(), Mock()]
-flows = [Mock(), Mock()]
-assignments_as_list = [Mock(), Mock()]
-
-
-@pytest.fixture
-def flow_repository() -> Mock:
-    repository = Mock()
-    repository.get_all.return_value = flows
-    return repository
-
-
-@pytest.fixture
-def event_repository() -> Mock:
-    repository = Mock()
-    repository.get_all.return_value = events
-    repository.get.return_value = events
-    return repository
-
-
-@pytest.fixture
-def assignments() -> Mock:
-    assignments = Mock()
-    assignments.as_list.return_value = assignments_as_list
-    return assignments
-
-
-@pytest.fixture
-def road_user_assigner(assignments: Mock) -> Mock:
-    assigner = Mock()
-    assigner.assign.return_value = assignments
-    return assigner
 
 
 class TestGetRoadUserAssignments:
-    def test_get(
-        self,
-        flow_repository: Mock,
-        event_repository: Mock,
-        road_user_assigner: Mock,
-        assignments: Mock,
-    ) -> None:
-        mock_factory = Mock(spec=TrackIdSetFactory)
-        rua_repo = RoadUserAssignmentRepository(mock_factory)
-        create_events = Mock(spec=CreateEvents)
+    def test_get(self) -> None:
+        given = configure_existing_assignments(setup())
+        target = create_target(given)
 
-        create_assignments = CreateRoadUserAssignments(
-            GetAllFlows(flow_repository),
-            GetAllEnterSectionEvents(event_repository),
-            create_events,
-            road_user_assigner,
-            rua_repo,
-        )
+        actual = target.get_as_list()
 
-        get_assignments = GetRoadUserAssignments(rua_repo, create_assignments, True)
-        actual = get_assignments.get_as_list()
-        assert actual == assignments_as_list
+        assert actual == given.assignments_as_list
+        given.assignment_repository.is_empty.assert_called_once()
+        given.assignment_repository.get_all_as_list.assert_called_once()
+        given.create_assignments.assert_called_once()
 
-        args = call(event_types=[EventType.SECTION_ENTER])
-        event_repository.get.assert_has_calls([args])
-        event_repository.get_all.assert_not_called()
+    def test_no_recursion_when_get_called_during_creation(self) -> None:
+        """
+        Fix bug OP#8949
+        Test that recursive calls to get_as_list during assignment creation
+        don't cause infinite recursion.
+        """
+        given = configure_existing_assignments(setup())
+        target = create_target(given)
 
-        flow_repository.get_all.assert_called_once()
-        road_user_assigner.assign.assert_called_once_with(events, flows)
-        assignments.as_list.assert_called_once()
+        call_count_side_effect = 0
+
+        def mock_create_assignments_side_effect() -> None:
+            nonlocal call_count_side_effect
+            call_count_side_effect += 1
+            result = target.get_as_list()
+            assert result == given.assignments_as_list
+
+        given.create_assignments.side_effect = mock_create_assignments_side_effect
+
+        actual = target.get_as_list()
+
+        assert actual == given.assignments_as_list
+        assert call_count_side_effect == 1
+        given.assignment_repository.is_empty.assert_called_once()
+        assert given.assignment_repository.get_all_as_list.call_count == 2
+        given.create_assignments.assert_called_once()
+
+
+@dataclass
+class Given:
+    assignments_as_list: list[Mock]
+    assignment_repository: Mock
+    create_assignments: Mock
+
+
+def setup() -> Given:
+    assignments_as_list = [Mock(), Mock()]
+
+    assignment_repository = Mock(spec=RoadUserAssignmentRepository)
+    assignment_repository.is_empty.return_value = False
+
+    create_assignments = Mock()
+
+    return Given(
+        assignments_as_list=assignments_as_list,
+        assignment_repository=assignment_repository,
+        create_assignments=create_assignments,
+    )
+
+
+def configure_existing_assignments(given: Given) -> Given:
+    given.assignment_repository.get_all_as_list.return_value = given.assignments_as_list
+    given.assignment_repository.is_empty.return_value = True
+    return given
+
+
+def create_target(given: Given) -> GetRoadUserAssignments:
+    return GetRoadUserAssignments(
+        given.assignment_repository, given.create_assignments, True
+    )
