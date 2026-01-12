@@ -927,7 +927,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.create_events,
             self.road_user_assigner,
             self.assignment_repository,
-            enable_event_creation=False,
+            enable_event_creation=True,
         )
 
     @cached_property
