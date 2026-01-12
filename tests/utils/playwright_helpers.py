@@ -40,6 +40,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_VIDEO_TAB,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    MARKER_BUTTON_ADD as MARKER_VIDEO_ADD,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_VIDEO_TABLE,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
@@ -47,6 +50,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     MARKER_PROJECT_NAME,
+    MARKER_PROJECT_OPEN,
     MARKER_PROJECT_SAVE_AS,
     MARKER_START_DATE,
     MARKER_START_TIME,
@@ -351,7 +355,8 @@ def open_part(page: Page, part: str) -> None:
 
 def add_video_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
     """Open the in-app file picker and navigate to select the given video path."""
-    page.get_by_text(rm.get(AddVideoKeys.BUTTON_ADD_VIDEOS), exact=True).click()
+    # Prefer stable marker-based lookup; fall back to label if marker is unavailable
+    search_for_marker_element(page, MARKER_VIDEO_ADD).first.click()
     ui_path = path.relative_to(file_picker_directory())
     for part in ui_path.parts:
         open_part(page, part)
@@ -369,7 +374,7 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     """
     # Try marker click first, then label-based fallback
     try:
-        search_for_marker_element(page, "marker-project-open").first.click()
+        search_for_marker_element(page, MARKER_PROJECT_OPEN).first.click()
     except Exception:
         page.get_by_text(rm.get(ProjectKeys.LABEL_OPEN_PROJECT), exact=True).click()
 
