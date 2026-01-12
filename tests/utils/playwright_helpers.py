@@ -372,12 +372,8 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     - Fill directory and filename via test-id markers
     - Apply the dialog
     """
-    # Try marker click first, then label-based fallback
-    try:
-        search_for_marker_element(page, MARKER_PROJECT_OPEN).first.click()
-    except Exception:
-        page.get_by_text(rm.get(ProjectKeys.LABEL_OPEN_PROJECT), exact=True).click()
 
+    search_for_marker_element(page, MARKER_PROJECT_OPEN).first.click()
     # Interact with the FileChooserDialog to choose the file using markers
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
@@ -397,12 +393,7 @@ def save_project_as(page: Page, rm: ResourceManager, path: Path) -> None:
     - Fill the directory and filename in the NiceGUI file chooser via markers.
     - Apply the dialog.
     """
-    # Try to open via stable test-id marker first, then fall back to label
-    try:
-        search_for_marker_element(page, MARKER_PROJECT_SAVE_AS).first.click()
-    except Exception:
-        # Fallback to label if marker is not available
-        page.get_by_text(rm.get(ProjectKeys.LABEL_SAVE_AS_PROJECT), exact=True).click()
+    search_for_marker_element(page, MARKER_PROJECT_SAVE_AS).first.click()
 
     # Interact with the FileChooserDialog
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
