@@ -10,4 +10,6 @@ class TestEventListDataFrameBuilder:
         """
         builder = EventListDataFrameBuilder([], [])
 
-        builder.build()
+        actual = builder.build()
+
+        assert actual.empty
