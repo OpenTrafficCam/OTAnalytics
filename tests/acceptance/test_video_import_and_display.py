@@ -5,7 +5,6 @@ import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import (
-    AddVideoKeys,
     ResourceManager,
     TrackFormKeys,
 )
@@ -13,13 +12,16 @@ from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_VIDEO_TAB,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    MARKER_BUTTON_REMOVE,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     MARKER_INTERACTIVE_IMAGE,
 )
-from tests.conftest import (
+from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
-    PLAYWRIGHT_POLL_INTERVAL_MS,
+    PLAYWRIGHT_POLL_INTERVAL_SECONDS,
     NiceGUITestServer,
 )
 from tests.utils.playwright_helpers import (
@@ -28,6 +30,7 @@ from tests.utils.playwright_helpers import (
     reset_videos_tab,
     search_for_marker_element,
     table_filenames,
+    wait_for_names_gone,
     wait_for_names_present,
 )
 
@@ -41,6 +44,10 @@ playwright = pytest.importorskip(
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
 class TestVideoImportAndDisplay:
+    # small helper to wait until a given video name disappears from the table
+    def remove_video(self, page: Page, v1: Path) -> None:  # type: ignore[override]
+        wait_for_names_gone(page, [v1.name])
+
     def test_remove_single_video_after_selection(
         self,
         page: Page,
@@ -57,13 +64,7 @@ class TestVideoImportAndDisplay:
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-        # Switch to Videos tab and ensure clean slate (prefer marker with fallback)
-        try:
-            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
-        except Exception:
-            page.get_by_text(
-                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-            ).click()
+        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         reset_videos_tab(page, resource_manager)
 
         # Prepare test video path from tests/data
@@ -80,20 +81,11 @@ class TestVideoImportAndDisplay:
 
         # Remove the row
         click_table_cell_with_text(page, name1)
-        page.get_by_text(
-            resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-        ).click()
+        # Prefer marker-based click with fallback to label-based selection
+        search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
 
         # Verify it's gone
-        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        while time.time() < deadline:
-            if name1 not in table_filenames(page):
-                break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
-        remaining = table_filenames(page)
-        assert (
-            name1 not in remaining
-        ), f"Video should have been removed, but still present in: {remaining}"
+        wait_for_names_gone(page, [name1])
 
     def test_add_videos_import_sort_and_display_first_frame(
         self,
@@ -113,7 +105,7 @@ class TestVideoImportAndDisplay:
             search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         except Exception:
             page.get_by_text(
-                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
+                resource_manager.get(TrackFormKeys.TAB_VIDEO), exact=True
             ).click()
         reset_videos_tab(page, resource_manager)
 
@@ -153,7 +145,7 @@ class TestVideoImportAndDisplay:
             if src2 and src2 != src1:
                 changed = True
                 break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
         assert changed, "Preview image src should change after selecting another video"
 
     def test_remove_multiple_videos_after_selection(
@@ -166,13 +158,7 @@ class TestVideoImportAndDisplay:
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-        # Switch to Videos tab and clean slate (prefer marker with fallback)
-        try:
-            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
-        except Exception:
-            page.get_by_text(
-                resource_manager.get(TrackFormKeys.TAB_TWO), exact=True
-            ).click()
+        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"
@@ -187,25 +173,12 @@ class TestVideoImportAndDisplay:
 
         # Remove first video
         click_table_cell_with_text(page, v1.name)
-        page.get_by_text(
-            resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-        ).click()
+        search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
         # Wait gone
-        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        while time.time() < deadline:
-            if v1.name not in table_filenames(page):
-                break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
-        assert v1.name not in table_filenames(page)
+        self.remove_video(page, v1)
 
         # Remove second video
         click_table_cell_with_text(page, v2.name)
-        page.get_by_text(
-            resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
-        ).click()
-        deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        while time.time() < deadline:
-            if v2.name not in table_filenames(page):
-                break
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
-        assert v2.name not in table_filenames(page)
+        # Prefer marker-based click for Remove button
+        search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
+        self.remove_video(page, v2)

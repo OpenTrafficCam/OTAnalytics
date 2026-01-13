@@ -16,13 +16,12 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.validation import (
     VALIDATION_NUMBER_POSITIVE,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_NAME = "marker-name"
 MARKER_START_SECTION = "marker-start-section"
 MARKER_END_SECTION = "marker-end-section"
 MARKER_DISTANCE = "marker-distance"
-# Dialog-specific apply button test id for EditFlowDialog (props-based only)
-MARKER_APPLY = "marker-apply"
 
 
 class EditFlowDialog(BaseDialog):
@@ -35,8 +34,6 @@ class EditFlowDialog(BaseDialog):
         show_distance: bool = True,
     ) -> None:
         super().__init__(resource_manager)
-        if input_values is not None:
-            self.apply_test_id = MARKER_APPLY
         self._name_generator = name_generator
         self._input_values = input_values
         self._show_distance = show_distance
@@ -86,10 +83,10 @@ class EditFlowDialog(BaseDialog):
         self._end_section.build()
         self._name.build()
         self._distance.build()
-        self._name.element.props(f"test-id={MARKER_NAME}")
-        self._start_section.element.props(f"test-id={MARKER_START_SECTION}")
-        self._end_section.element.props(f"test-id={MARKER_END_SECTION}")
-        self._distance.element.props(f"test-id={MARKER_DISTANCE}")
+        self._name.element.props(f"{TEST_ID}={MARKER_NAME}")
+        self._start_section.element.props(f"{TEST_ID}={MARKER_START_SECTION}")
+        self._end_section.element.props(f"{TEST_ID}={MARKER_END_SECTION}")
+        self._distance.element.props(f"{TEST_ID}={MARKER_DISTANCE}")
 
         self._do_update_name()
 

@@ -2,33 +2,26 @@ import time
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
+from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import (
     FlowAndSectionKeys,
-    FlowKeys,
     ResourceManager,
-    SectionKeys,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
-    MARKER_END_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_NAME as MARKER_FLOW_NAME,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
-    MARKER_START_SECTION,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
-    MARKER_NAME as MARKER_SECTION_NAME,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
-    MARKER_INTERACTIVE_IMAGE,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
+    MARKER_BUTTON_GENERATE,
+    MARKER_BUTTON_PROPERTIES,
+    MARKER_BUTTON_REMOVE,
+    MARKER_FLOW_TABLE,
 )
-from tests.conftest import (
+from tests.acceptance.conftest import (
+    ACCEPTANCE_TEST_FINAL_TIMEOUT_MS,
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
@@ -36,10 +29,13 @@ from tests.conftest import (
 )
 from tests.utils.playwright_helpers import (
     compare_json_files,
+    create_flow,
+    create_section,
     go_to_sections_with_one_video,
     navigate_and_prepare,
     save_project_as,
     search_for_marker_element,
+    wait_for_flow_present,
 )
 
 playwright = pytest.importorskip(
@@ -74,54 +70,8 @@ class TestAddLineSectionWithDialog:
         navigate_and_prepare(page, external_app, resource_manager)
         go_to_sections_with_one_video(page, resource_manager)
 
-        # Use the refactored helper to create the section (includes assertions)
-        self._create_section(page, resource_manager, "Name")
-
-    def _create_section(
-        self,
-        page: Page,
-        resource_manager: ResourceManager,
-        section_name: str = "Name",
-        positions: list[tuple[int, int]] = [(20, 20), (140, 60), (260, 120)],
-    ) -> None:
-        canvas_locator = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
-        expect(canvas_locator).to_be_visible()
-        img = (
-            search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
-            .locator("img")
-            .first
-        )
-        target = img if img.count() else canvas_locator
-        target.scroll_into_view_if_needed()
-        try:
-            page.get_by_text(
-                resource_manager.get(SectionKeys.BUTTON_ADD_LINE), exact=True
-            ).click()
-        except Exception:
-            pass
-        for pos in positions:
-            try:
-                target.click(position={"x": pos[0], "y": pos[1]})
-            except Exception:
-                canvas_locator.click(position={"x": pos[0], "y": pos[1]})
-        page.keyboard.press("Enter")
-        ni = search_for_marker_element(page, MARKER_SECTION_NAME).locator("input").first
-        if not ni.count():
-            ni = search_for_marker_element(page, MARKER_SECTION_NAME).first
-        ni.wait_for(state="visible")
-        ni.fill(section_name)
-        ab = search_for_marker_element(page, MARKER_DIALOG_APPLY).first
-        ab.wait_for(state="visible")
-        ab.click()
-        deadline_local = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        while time.time() < deadline_local:
-            try:
-                if section_name in page.content():
-                    return
-            except Exception:
-                pass
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
-        raise AssertionError(f"Section name not found after apply: {section_name}")
+        # Use the shared helper to create the section (includes assertions)
+        create_section(page, resource_manager, "Name")
 
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
@@ -141,9 +91,7 @@ class TestAddLineSectionWithDialog:
             [(220, 80), (340, 140)],
         ]
         for i, n in enumerate(names):
-            self._create_section(
-                page, resource_manager, n, positions=coords[i % len(coords)]
-            )
+            create_section(page, resource_manager, n, positions=coords[i % len(coords)])
         html = page.content()
         assert all(n in html for n in names)
 
@@ -166,66 +114,32 @@ class TestAddLineSectionWithDialog:
             [(220, 80), (340, 140)],
         ]
         for i, n in enumerate(names):
-            self._create_section(
-                page, resource_manager, n, positions=coords[i % len(coords)]
-            )
+            create_section(page, resource_manager, n, positions=coords[i % len(coords)])
         page.get_by_text(
             resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
         ).click()
-        try:
-            page.get_by_text(
-                resource_manager.get(FlowKeys.BUTTON_ADD), exact=True
-            ).click()
-        except Exception:
-            search_for_marker_element(page, "marker-button-add").first.click()
-        search_for_marker_element(page, MARKER_FLOW_NAME).first.wait_for(
-            state="visible"
-        )
-        search_for_marker_element(page, MARKER_START_SECTION).first.wait_for(
-            state="visible"
-        )
-        search_for_marker_element(page, MARKER_END_SECTION).first.wait_for(
-            state="visible"
-        )
-        flow_name_input = search_for_marker_element(page, MARKER_FLOW_NAME).first
+
         custom_flow_name = "My-Flow"
-        flow_name_input.fill(custom_flow_name)
-        # Select start section (ensure both start and end are chosen)
-        search_for_marker_element(page, MARKER_START_SECTION).first.click()
-        page.keyboard.press("ArrowDown")
-        page.keyboard.press("Enter")
-        # Select end section
-        search_for_marker_element(page, MARKER_END_SECTION).first.click()
-        page.keyboard.press("ArrowDown")
-        page.keyboard.press("Enter")
-        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
-        table = search_for_marker_element(page, "marker-flow-table").first
-        table.wait_for(state="visible")
-        # Wait until the table contains the newly created flow name
-        deadline_flow = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        while time.time() < deadline_flow:
-            try:
-                if custom_flow_name in table.inner_text():
-                    break
-            except Exception:
-                pass
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+        create_flow(page, resource_manager, custom_flow_name)
+        wait_for_flow_present(page, custom_flow_name)
+
+        table = search_for_marker_element(page, MARKER_FLOW_TABLE).first
         assert custom_flow_name in table.inner_text()
         row = table.locator("tbody tr").filter(has_text=custom_flow_name).first
         row.click()
-        search_for_marker_element(page, "marker-button-properties").first.click()
+        search_for_marker_element(page, MARKER_BUTTON_PROPERTIES).first.click()
         name_input = search_for_marker_element(page, MARKER_FLOW_NAME).first
         new_flow_name = "My-Flow-Renamed"
         name_input.fill(new_flow_name)
         page.keyboard.press("Escape")
-        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+        time.sleep(ACCEPTANCE_TEST_FINAL_TIMEOUT_MS)
         assert custom_flow_name in table.inner_text()
         assert new_flow_name not in table.inner_text()
-        search_for_marker_element(page, "marker-button-properties").first.click()
+        search_for_marker_element(page, MARKER_BUTTON_PROPERTIES).first.click()
         name_input = search_for_marker_element(page, MARKER_FLOW_NAME).first
         name_input.fill(new_flow_name)
         search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
-        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
         assert new_flow_name in table.inner_text()
 
     @pytest.mark.skip(reason="only works in headed right now")
@@ -249,49 +163,27 @@ class TestAddLineSectionWithDialog:
             [(220, 80), (340, 140)],
         ]
         for i, n in enumerate(names):
-            self._create_section(
-                page, resource_manager, n, positions=coords[i % len(coords)]
-            )
+            create_section(page, resource_manager, n, positions=coords[i % len(coords)])
 
-        # Create one flow then remove it
+        # Switch to Flows tab
         page.get_by_text(
             resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
         ).click()
-        try:
-            page.get_by_text(
-                resource_manager.get(FlowKeys.BUTTON_ADD), exact=True
-            ).click()
-        except Exception:
-            search_for_marker_element(page, "marker-button-add").first.click()
-        search_for_marker_element(page, MARKER_FLOW_NAME).first.fill("Temp-Flow")
-        # Select start and end sections before applying
-        search_for_marker_element(page, MARKER_START_SECTION).first.click()
-        page.keyboard.press("ArrowDown")
-        page.keyboard.press("Enter")
-        search_for_marker_element(page, MARKER_END_SECTION).first.click()
-        page.keyboard.press("ArrowDown")
-        page.keyboard.press("Enter")
-        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
-        table = search_for_marker_element(page, "marker-flow-table").first
-        table.wait_for(state="visible")
-        # Wait until the table contains the newly created flow
-        deadline_temp = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-        while time.time() < deadline_temp:
-            try:
-                if "Temp-Flow" in table.inner_text():
-                    break
-            except Exception:
-                pass
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
-        assert "Temp-Flow" in table.inner_text()
-        row = table.locator("tbody tr").filter(has_text="Temp-Flow").first
+
+        # Create one flow then remove it
+        temp_flow_name = "Temp-Flow"
+        create_flow(page, resource_manager, temp_flow_name)
+        wait_for_flow_present(page, temp_flow_name)
+
+        table = search_for_marker_element(page, MARKER_FLOW_TABLE).first
+        row = table.locator("tbody tr").filter(has_text=temp_flow_name).first
         row.click()
-        search_for_marker_element(page, "marker-button-remove").first.click()
-        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
-        assert "Temp-Flow" not in table.inner_text()
+        search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
+        time.sleep(2 * PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
+        assert temp_flow_name not in table.inner_text()
 
         # Generate flows from sections and assert at least two are created
-        search_for_marker_element(page, "marker-button-generate").first.click()
+        search_for_marker_element(page, MARKER_BUTTON_GENERATE).first.click()
         deadline_gen = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
         matched_texts: list[str] = []
         last_texts: list[str] = []
@@ -304,7 +196,7 @@ class TestAddLineSectionWithDialog:
                     break
             except Exception:
                 pass
-            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+            time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
         assert (
             len(matched_texts) >= 2
         ), f"Expected >=2 generated flows with {names}, got {len(matched_texts)}: {last_texts}"  # noqa

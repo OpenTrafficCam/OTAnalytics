@@ -10,26 +10,64 @@ from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
     AddVideoKeys,
     FlowAndSectionKeys,
+    FlowKeys,
     ProjectKeys,
     ResourceManager,
+    SectionKeys,
     TrackFormKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
+    MARKER_END_SECTION,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
+    MARKER_NAME as MARKER_FLOW_NAME,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
+    MARKER_START_SECTION,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
+    MARKER_NAME as MARKER_SECTION_NAME,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+    MARKER_DIRECTORY,
+    MARKER_FILENAME,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+    MARKER_APPLY as MARKER_DIALOG_APPLY,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_VIDEO_TAB,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    MARKER_BUTTON_ADD as MARKER_VIDEO_ADD,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_VIDEO_TABLE,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+    MARKER_INTERACTIVE_IMAGE,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     MARKER_PROJECT_NAME,
+    MARKER_PROJECT_OPEN,
+    MARKER_PROJECT_SAVE_AS,
     MARKER_START_DATE,
     MARKER_START_TIME,
 )
-from tests.conftest import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
+    MARKER_BUTTON_ADD as MARKER_FLOW_ADD,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
+    MARKER_FLOW_TABLE,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
+from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     IMPORT_VERIFY_MAX_POLLS,
     PLAYWRIGHT_POLL_INTERVAL_MS,
+    PLAYWRIGHT_POLL_INTERVAL_SECONDS,
+    PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
     PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
 )
@@ -74,7 +112,7 @@ def set_input_value(page: Page, selector: str, value: str) -> None:
 
     # Verify the value was actually set (short retry to avoid flakiness)
     def verify(expected: str) -> tuple[bool, str | None]:
-        deadline = time.time() + (PLAYWRIGHT_POLL_INTERVAL_MS / 1000) * 3
+        deadline = time.time() + PLAYWRIGHT_POLL_INTERVAL_SECONDS * 3
         last_local: str | None = None
         while time.time() < deadline:
             try:
@@ -137,12 +175,12 @@ def navigate_and_prepare(
 
 
 def search_for_marker_element(page: Page, marker: str) -> Any:
-    """Return a Playwright locator for elements marked with our `test-id` attribute.
+    """Return a Playwright locator for elements marked with our test attribute.
 
     Usage:
         search_for_marker_element(page, MARKER_FILENAME).first.fill("test_name")
     """
-    return page.locator(f'[test-id="{marker}"]')
+    return page.locator(f'[{TEST_ID}="{marker}"]')
 
 
 def fill_project_information(
@@ -159,6 +197,27 @@ def fill_project_information(
     set_input_value(page, name_sel, name)
     set_input_value(page, date_sel, date_value)
     set_input_value(page, time_sel, time_value)
+
+
+def save_project_otconfig(
+    page: Page, resource_manager: ResourceManager, target_path: Path
+) -> None:
+    """Open the Save As dialog and save the project configuration to target_path.
+
+    This encapsulates the marker-driven dialog interaction to reduce duplication
+    in tests. Filename field expects the name without extension.
+    """
+    # Open Save As dialog
+    search_for_marker_element(page, MARKER_PROJECT_SAVE_AS).first.click()
+    # Wait for dialog to be visible
+    search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
+    # Fill directory and filename (stem without suffix)
+    search_for_marker_element(page, MARKER_DIRECTORY).first.fill(
+        str(target_path.parent)
+    )
+    search_for_marker_element(page, MARKER_FILENAME).first.fill(target_path.stem)
+    # Confirm save
+    search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
 
 
 # ----------------------
@@ -187,9 +246,24 @@ def wait_for_names_present(page: Page, names: Iterable[str]) -> None:
         listed = table_filenames(page)
         if all(n in listed for n in names):
             return
-        time.sleep(PLAYWRIGHT_POLL_INTERVAL_MS / 1000)
+        time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
     raise AssertionError(
         f"Timed out waiting for names to appear: {names}; "
+        f"currently: {table_filenames(page)}"
+    )
+
+
+def wait_for_names_gone(page: Page, names: Iterable[str]) -> None:
+    """Wait until all provided names are gone from the video table."""
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    names = list(names)
+    while time.time() < deadline:
+        listed = table_filenames(page)
+        if all(n not in listed for n in names):
+            return
+        time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
+    raise AssertionError(
+        f"Timed out waiting for names to disappear: {names}; "
         f"currently: {table_filenames(page)}"
     )
 
@@ -218,11 +292,7 @@ def reset_videos_tab(page: Page, rm: ResourceManager) -> None:
                 rm.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS), exact=True
             ).click()
             # wait until it's gone
-            deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-            while time.time() < deadline:
-                if name not in table_filenames(page):
-                    break
-                time.sleep(0.05)
+            wait_for_names_gone(page, [name])
         except Exception:
             # Best-effort cleanup only
             break
@@ -242,7 +312,7 @@ def go_to_sections_with_one_video(page: Page, rm: ResourceManager) -> None:
     try:
         search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
     except Exception:
-        page.get_by_text(rm.get(TrackFormKeys.TAB_TWO), exact=True).click()
+        page.get_by_text(rm.get(TrackFormKeys.TAB_VIDEO), exact=True).click()
 
     # Ensure a clean slate
     reset_videos_tab(page, rm)
@@ -285,7 +355,8 @@ def open_part(page: Page, part: str) -> None:
 
 def add_video_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
     """Open the in-app file picker and navigate to select the given video path."""
-    page.get_by_text(rm.get(AddVideoKeys.BUTTON_ADD_VIDEOS), exact=True).click()
+    # Prefer stable marker-based lookup; fall back to label if marker is unavailable
+    search_for_marker_element(page, MARKER_VIDEO_ADD).first.click()
     ui_path = path.relative_to(file_picker_directory())
     for part in ui_path.parts:
         open_part(page, part)
@@ -301,20 +372,8 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     - Fill directory and filename via test-id markers
     - Apply the dialog
     """
-    from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
-        MARKER_DIRECTORY,
-        MARKER_FILENAME,
-    )
-    from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
-        MARKER_APPLY as MARKER_DIALOG_APPLY,
-    )
 
-    # Try marker click first, then label-based fallback
-    try:
-        search_for_marker_element(page, "marker-project-open").first.click()
-    except Exception:
-        page.get_by_text(rm.get(ProjectKeys.LABEL_OPEN_PROJECT), exact=True).click()
-
+    search_for_marker_element(page, MARKER_PROJECT_OPEN).first.click()
     # Interact with the FileChooserDialog to choose the file using markers
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
@@ -334,25 +393,7 @@ def save_project_as(page: Page, rm: ResourceManager, path: Path) -> None:
     - Fill the directory and filename in the NiceGUI file chooser via markers.
     - Apply the dialog.
     """
-    from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
-        MARKER_DIRECTORY,
-        MARKER_FILENAME,
-    )
-    from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
-        MARKER_APPLY as MARKER_DIALOG_APPLY,
-    )
-    from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
-        MARKER_PROJECT_SAVE_AS,
-    )
-
-    # Try to open via stable test-id marker first, then fall back to label
-    try:
-        search_for_marker_element(page, MARKER_PROJECT_SAVE_AS).first.click()
-    except Exception:
-        # Fallback to label if marker is not available
-        from OTAnalytics.application.resources.resource_manager import ProjectKeys
-
-        page.get_by_text(rm.get(ProjectKeys.LABEL_SAVE_AS_PROJECT), exact=True).click()
+    search_for_marker_element(page, MARKER_PROJECT_SAVE_AS).first.click()
 
     # Interact with the FileChooserDialog
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
@@ -399,9 +440,9 @@ def compare_json_files(saved_path: Path, reference_path: Path) -> None:
 
 def read_project_info_values(page: Page) -> tuple[str, str, str]:
     """Read current values from the Project form inputs using test-id markers."""
-    name_sel = f'[test-id="{MARKER_PROJECT_NAME}"]'
-    date_sel = f'[test-id="{MARKER_START_DATE}"]'
-    time_sel = f'[test-id="{MARKER_START_TIME}"]'
+    name_sel = f'[{TEST_ID}="{MARKER_PROJECT_NAME}"]'
+    date_sel = f'[{TEST_ID}="{MARKER_START_DATE}"]'
+    time_sel = f'[{TEST_ID}="{MARKER_START_TIME}"]'
     return (
         page.locator(name_sel).input_value(),
         page.locator(date_sel).input_value(),
@@ -431,3 +472,131 @@ def import_project_and_assert_values(
         page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
         name_v, date_v, time_v = read_project_info_values(page)
     assert (name_v, date_v, time_v) == expected
+
+
+# ----------------------
+# Sections helpers
+# ----------------------
+
+
+def create_section(
+    page: Page,
+    rm: ResourceManager,
+    section_name: str = "Name",
+    positions: list[tuple[int, int]] | None = None,
+) -> None:
+    """Create a line section on the canvas via dialog and assert it's visible.
+
+    Steps:
+    - Ensure interactive image is visible and scrolled into view
+    - Click the 'Add line' button if present
+    - Click on provided canvas positions to define the line
+    - Press Enter to open the section dialog, fill name and apply
+    - Poll until the section name appears in page content
+    """
+    if positions is None:
+        positions = [(20, 20), (140, 60), (260, 120)]
+
+    canvas_locator = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE)
+    canvas_locator.wait_for(state="visible")
+    img = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).locator("img").first
+    target = img if img.count() else canvas_locator
+    try:
+        target.scroll_into_view_if_needed()
+    except Exception:
+        pass
+
+    # Try to click the add line button by label
+    try:
+        page.get_by_text(rm.get(SectionKeys.BUTTON_ADD_LINE), exact=True).click()
+    except Exception:
+        # ignore if already active or button not present
+        pass
+
+    # Click the positions on the canvas/image
+    for x, y in positions:
+        try:
+            target.click(position={"x": x, "y": y})
+        except Exception:
+            canvas_locator.click(position={"x": x, "y": y})
+
+    # Confirm to open dialog
+    page.keyboard.press("Enter")
+
+    # Fill name in dialog (input may be wrapped or be the element itself)
+    ni = search_for_marker_element(page, MARKER_SECTION_NAME).locator("input").first
+    if not ni.count():
+        ni = search_for_marker_element(page, MARKER_SECTION_NAME).first
+    ni.wait_for(state="visible")
+    try:
+        ni.fill(section_name)
+    except Exception:
+        # Fallback via set_input_value if needed
+        sel = ni.selector() if hasattr(ni, "selector") else None
+        if sel:
+            set_input_value(page, sel, section_name)
+        else:
+            ni.fill(section_name)
+    ab = search_for_marker_element(page, MARKER_DIALOG_APPLY).first
+    ab.wait_for(state="visible")
+    ab.click()
+
+    # Wait until section name is present somewhere in the page
+    deadline_local = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    while time.time() < deadline_local:
+        try:
+            if section_name in page.content():
+                return
+        except Exception:
+            pass
+        time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+    raise AssertionError(f"Section name not found after apply: {section_name}")
+
+
+def create_flow(
+    page: Page,
+    rm: ResourceManager,
+    flow_name: str,
+    start_section_index: int = 0,
+    end_section_index: int = 1,
+) -> None:
+    """Helper to create a flow through the dialog.
+
+    Assumes we are already on the Flows tab.
+    """
+    try:
+        page.get_by_text(rm.get(FlowKeys.BUTTON_ADD), exact=True).click()
+    except Exception:
+        search_for_marker_element(page, MARKER_FLOW_ADD).first.click()
+
+    search_for_marker_element(page, MARKER_FLOW_NAME).first.wait_for(state="visible")
+    search_for_marker_element(page, MARKER_FLOW_NAME).first.fill(flow_name)
+
+    # Select start section
+    search_for_marker_element(page, MARKER_START_SECTION).first.click()
+    for _ in range(start_section_index + 1):
+        page.keyboard.press("ArrowDown")
+    page.keyboard.press("Enter")
+
+    # Select end section
+    search_for_marker_element(page, MARKER_END_SECTION).first.click()
+    for _ in range(end_section_index + 1):
+        page.keyboard.press("ArrowDown")
+    page.keyboard.press("Enter")
+
+    search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+
+
+def wait_for_flow_present(page: Page, flow_name: str) -> None:
+    """Wait until the flow name appears in the flow table."""
+    table = search_for_marker_element(page, MARKER_FLOW_TABLE).first
+    table.wait_for(state="visible")
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    while time.time() < deadline:
+        try:
+            if flow_name in table.inner_text():
+                return
+        except Exception:
+            pass
+        time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
+    raise AssertionError(f"Flow '{flow_name}' did not appear in table")

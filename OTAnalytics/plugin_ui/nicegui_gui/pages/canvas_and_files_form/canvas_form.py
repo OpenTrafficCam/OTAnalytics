@@ -27,6 +27,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 NORMAL_COLOR = "green"
 SELECTED_COLOR = "red"
@@ -111,7 +112,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._background_image = ui.interactive_image(
             "", on_mouse=self._on_pointer_down, events=[CLICK]
         )
-        self._background_image.props(f"test-id={MARKER_INTERACTIVE_IMAGE}")
+        self._background_image.props(f"{TEST_ID}={MARKER_INTERACTIVE_IMAGE}")
         self._background_image.on(
             "svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args)
         )
