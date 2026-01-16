@@ -16,9 +16,21 @@ def get_all_files_with_correct_file_ending_in_directory(
                 files_to_save.update(files_in_directory)
                 continue
 
-            if not file_to_save.exists() or file_to_save.suffix != file_type:
+            # Extract extension from glob pattern (e.g., "*.ottrk" → ".ottrk")
+            expected_extension = f".{file_type.lstrip('*.')}"
+
+            # Check existence and extension separately for clear error messages
+            if not file_to_save.exists():
                 logger().warning(
-                    f"Ottrk file'{file_to_save}' does not exist. Skipping file."
+                    f"Track file '{file_to_save}' does not exist. Skipping file."
+                )
+                continue
+
+            if file_to_save.suffix != expected_extension:
+                logger().warning(
+                    f"Track file '{file_to_save}' has wrong extension "
+                    f"'{file_to_save.suffix}' (expected '{expected_extension}'). "
+                    f"Skipping file."
                 )
                 continue
 

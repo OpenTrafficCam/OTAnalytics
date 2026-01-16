@@ -221,12 +221,17 @@ class OTAnalyticsCli(ABC):
                 ottrk_files.update(files_in_directory)
                 continue
 
-            if (
-                not ottrk_file.exists()
-                or ottrk_file.suffix != f".{DEFAULT_TRACK_FILE_TYPE}"
-            ):
+            if not ottrk_file.exists():
                 logger().warning(
-                    f"Ottrk file'{ottrk_file}' does not exist. Skipping file."
+                    f"Track file '{ottrk_file}' does not exist. Skipping file."
+                )
+                continue
+
+            if ottrk_file.suffix != f".{DEFAULT_TRACK_FILE_TYPE}":
+                logger().warning(
+                    f"Track file '{ottrk_file}' has wrong extension "
+                    f"'{ottrk_file.suffix}' (expected '.{DEFAULT_TRACK_FILE_TYPE}'). "
+                    f"Skipping file."
                 )
                 continue
 
