@@ -245,13 +245,14 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._filter_by_class_list = self._viewmodel.get_classes()
         with ui.dialog() as dialog, ui.card():
             for classification_class in self._filter_by_class_list:
-                FormFieldCheckbox(
+                checkbox = FormFieldCheckbox(
                     label_text=classification_class,
                     initial_value=classification_class in self._selected_classes(),
-                    on_value_change=lambda e: self.remove_or_add_class(
-                        classification_class
+                    on_value_change=lambda e, cls=classification_class: (
+                        self.remove_or_add_class(cls)
                     ),
                 )
+                checkbox.build()
             ui.button("Apply", on_click=lambda e: self.apply_new_classification(dialog))
         dialog.open()
 
