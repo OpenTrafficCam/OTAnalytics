@@ -38,7 +38,6 @@ class LoadTrackFiles:
         """
         if not files:
             return
-        parent_folder = files[0].parent
         files_to_load = [
             file for file in files if not self._is_file_already_loaded(file)
         ]
@@ -50,12 +49,21 @@ class LoadTrackFiles:
         for video_metadata in parse_result.videos_metadata:
             self._videos_metadata.update(video_metadata)
 
-        videos = [
-            self._video_parser.parse(
-                parent_folder / video_metadata.path, video_metadata
-            )
-            for video_metadata in parse_result.videos_metadata
-        ]
+        videos = []
+        for i, video_metadata in enumerate(parse_result.videos_metadata):
+            # Use the parent of the corresponding track file
+            file_parent = files_to_load[i].parent
+            video_path = file_parent / video_metadata.path
+            if not video_path.exists():
+                # Fallback: try just the filename in the track file's parent folder
+                alternative_path = file_parent / Path(video_metadata.path).name
+                if alternative_path.exists():
+                    logger().warning(
+                        f"Unable to find video file '{video_path}'. "
+                        f"Using alternative file '{alternative_path}' instead."
+                    )
+                    video_path = alternative_path
+            videos.append(self._video_parser.parse(video_path, video_metadata))
         self._video_repository.add_all(videos)
         self._track_repository.add_all(parse_result.tracks)
         self._track_file_repository.add_all(files_to_load)
