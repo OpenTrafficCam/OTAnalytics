@@ -5,6 +5,7 @@ from typing import Callable, Sequence
 from OTAnalytics.application.config import (
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     DEFAULT_EVENTLIST_FILE_TYPE,
+    DEFAULT_NUM_PARSE_PROCESSES,
     DEFAULT_NUM_PROCESSES,
 )
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
@@ -160,6 +161,12 @@ class RunConfiguration(OtConfigDefaultValueProvider):
     @property
     def num_processes(self) -> int:
         return DEFAULT_NUM_PROCESSES
+
+    @property
+    def parse_processes(self) -> int:
+        if self._cli_args.parse_processes:
+            return self._cli_args.parse_processes
+        return DEFAULT_NUM_PARSE_PROCESSES
 
     @property
     def log_file(self) -> Path:

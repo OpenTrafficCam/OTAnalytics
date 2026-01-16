@@ -74,4 +74,5 @@ class TestArgparseCliParser:
                 log_file=log_file,
                 include_classes=["truck", "car"],
                 exclude_classes=["pedestrian"],
+                parse_processes=1,
             )

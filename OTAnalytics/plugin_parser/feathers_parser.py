@@ -36,6 +36,10 @@ from OTAnalytics.plugin_parser.convert_ottrk_to_feathers import (
     convert_ottrk_to_feather,
 )
 from OTAnalytics.plugin_parser.json_parser import parse_json
+from OTAnalytics.plugin_parser_parallelization import (
+    ParseParallelization,
+    SequentialParseParallelization,
+)
 
 
 def use_feathers_files(files: list[Path]) -> list[Path]:
@@ -81,33 +85,43 @@ class FeathersParser(TrackParser):
     def __init__(
         self,
         track_geometry_factory: Optional[POLARS_TRACK_GEOMETRY_FACTORY] = None,
+        parse_parallelization: Optional[ParseParallelization] = None,
     ) -> None:
         """
         Initialize the FeathersParser.
 
-        Args: track_geometry_factory: Factory for creating track geometry datasets.
-            If None, uses PandasTrackGeometryDataset.from_track_dataset.
+        Args:
+            track_geometry_factory: Factory for creating track geometry datasets.
+                If None, uses PolarsTrackGeometryDataset.from_track_dataset.
+            parse_parallelization: Strategy for parallelizing file conversion.
+                If None, uses SequentialParseParallelization (default behavior).
         """
         if track_geometry_factory is None:
             track_geometry_factory = PolarsTrackGeometryDataset.from_track_dataset
+        if parse_parallelization is None:
+            parse_parallelization = SequentialParseParallelization()
         self._track_geometry_factory = track_geometry_factory
+        self._parse_parallelization = parse_parallelization
 
     def parse_files(self, files: list[Path]) -> TracksParseResult:
         """
-        Parse feather file and its metadata to create TrackParseResult.
+        Parse feather files and their metadata to create TracksParseResult.
+
+        Uses the configured parallelization strategy to convert .ottrk files
+        to .feather format in parallel when possible.
 
         Args:
-            file: Path to the feather file
+            files: Paths to the feather or ottrk files
 
         Returns:
-            TrackParseResult: Contains tracks, detection metadata, and video metadata
+            TracksParseResult: Contains tracks, detection metadata, and video metadata
 
         Raises:
             FileNotFoundError: If the feather file or metadata file is not found
-            ValueError: If the file extension is not .feather
+            ValueError: If the file extension is not .feather or .ottrk
         """
         logger().info(f"Parsing {len(files)} track files...")
-        files_to_process = use_feathers_files(files)
+        files_to_process = self._parse_parallelization.execute(use_feather_file, files)
         videos_metadata = []
         detections_metadata = []
         data_frames = []

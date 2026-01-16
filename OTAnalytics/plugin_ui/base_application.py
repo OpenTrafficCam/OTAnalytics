@@ -271,6 +271,10 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
     CachedTrackStatisticsExporterFactory,
     SimpleTrackStatisticsExporterFactory,
 )
+from OTAnalytics.plugin_parser_parallelization import (
+    MultiprocessingParseParallelization,
+    SequentialParseParallelization,
+)
 from OTAnalytics.plugin_progress.lazy_tqdm_progressbar import LazyTqdmBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     TrackImageFactory,
@@ -641,7 +645,17 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     def _create_track_parser(self) -> TrackParser:
-        return FeathersParser(self.track_geometry_factory)
+        if self.run_config.parse_processes > 1:
+            parse_parallelization = MultiprocessingParseParallelization(
+                self.run_config.parse_processes
+            )
+        else:
+            parse_parallelization = SequentialParseParallelization()
+
+        return FeathersParser(
+            self.track_geometry_factory,
+            parse_parallelization=parse_parallelization,
+        )
 
     def _create_stream_track_parser(self) -> StreamTrackParser:
         return StreamOttrkParser(

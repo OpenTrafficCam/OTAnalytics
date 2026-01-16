@@ -158,6 +158,13 @@ class ArgparseCliParser(CliParser):
             help="Blacklist filter to exclude tracks with given classes.",
             required=False,
         )
+        self._parser.add_argument(
+            "--parse-processes",
+            type=int,
+            default=1,
+            help="Number of processes for parallel file parsing (default: 1).",
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -187,4 +194,5 @@ class ArgparseCliParser(CliParser):
             log_file=args.logfile,
             include_classes=args.include_classes,
             exclude_classes=args.exclude_classes,
+            parse_processes=args.parse_processes,
         )

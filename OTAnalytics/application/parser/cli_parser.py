@@ -51,6 +51,7 @@ class CliArguments:
     log_file: str | None = None
     include_classes: list[str] | None = None
     exclude_classes: list[str] | None = None
+    parse_processes: int | None = None
 
 
 class CliValueProvider(OtConfigDefaultValueProvider):
