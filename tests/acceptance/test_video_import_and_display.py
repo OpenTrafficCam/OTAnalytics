@@ -46,6 +46,8 @@ playwright = pytest.importorskip(
 class TestVideoImportAndDisplay:
     # small helper to wait until a given video name disappears from the table
     def remove_video(self, page: Page, v1: Path) -> None:  # type: ignore[override]
+        click_table_cell_with_text(page, v1.name)
+        search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
         wait_for_names_gone(page, [v1.name])
 
     def test_remove_single_video_after_selection(
@@ -172,13 +174,7 @@ class TestVideoImportAndDisplay:
         wait_for_names_present(page, [v1.name, v2.name])
 
         # Remove first video
-        click_table_cell_with_text(page, v1.name)
-        search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
-        # Wait gone
         self.remove_video(page, v1)
 
         # Remove second video
-        click_table_cell_with_text(page, v2.name)
-        # Prefer marker-based click for Remove button
-        search_for_marker_element(page, MARKER_BUTTON_REMOVE).first.click()
         self.remove_video(page, v2)
