@@ -143,7 +143,9 @@ from OTAnalytics.application.use_cases.preload_input_files import PreloadInputFi
 from OTAnalytics.application.use_cases.quick_save_configuration import (
     QuickSaveConfiguration,
 )
+from OTAnalytics.application.use_cases.reset_application import ResetApplication
 from OTAnalytics.application.use_cases.reset_project_config import ResetProjectConfig
+from OTAnalytics.application.use_cases.reset_state import ResetState
 from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportRoadUserAssignments,
 )
@@ -161,6 +163,7 @@ from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
+    ClearAllTrackFiles,
     ClearAllTracks,
     FilteredTrackIdProviderByTrackIdProvider,
     GetAllTrackFiles,
@@ -373,7 +376,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def load_otconfig(self) -> LoadOtconfig:
         return LoadOtconfig(
-            self.clear_all_repositories,
+            self.reset_application,
             self.otconfig_parser,
             self.project_updater,
             AddAllVideos(self.video_repository),
@@ -382,6 +385,23 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.load_track_files,
             self.add_new_remark,
             parse_json,
+        )
+
+    @cached_property
+    def reset_application(self) -> ResetApplication:
+        return ResetApplication(self.clear_all_repositories, self.reset_state)
+
+    @cached_property
+    def reset_state(self) -> ResetState:
+        return ResetState(
+            self.videos_metadata,
+            self.tracks_metadata,
+            self.track_view_state,
+            self.track_state,
+            self.section_state,
+            self.flow_state,
+            self.action_state,
+            self.file_state,
         )
 
     @cached_property
@@ -706,6 +726,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return GetAllTrackFiles(self.track_file_repository)
 
     @cached_property
+    def clear_all_track_files(self) -> ClearAllTrackFiles:
+        return ClearAllTrackFiles(self.track_file_repository)
+
+    @cached_property
     def flow_generator(self) -> GenerateFlows:
         section_provider = FilterOutCuttingSections(self.get_all_sections)
         id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(self.flow_repository)
@@ -801,6 +825,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.clear_all_intersections,
             self.clear_all_sections,
             self.clear_all_tracks,
+            self.clear_all_track_files,
             self.clear_all_videos,
         )
 
@@ -902,7 +927,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.create_events,
             self.road_user_assigner,
             self.assignment_repository,
-            enable_event_creation=False,
+            enable_event_creation=True,
         )
 
     @cached_property

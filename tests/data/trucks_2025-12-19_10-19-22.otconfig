@@ -1,0 +1,34 @@
+{
+    "project": {
+        "name": "trucks",
+        "start_date": 1735693200.0,
+        "metadata": null
+    },
+    "videos": [
+        {
+            "path": "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
+        }
+    ],
+    "analysis": {
+        "do_events": true,
+        "do_counting": true,
+        "tracks": [
+            "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.ottrk"
+        ],
+        "export": {
+            "save_name": "",
+            "save_suffix": "",
+            "event_formats": [
+                "csv"
+            ],
+            "count_intervals": [
+                15
+            ]
+        },
+        "num_processes": 1,
+        "logfile": "logs"
+    },
+    "sections": [],
+    "flows": [],
+    "remark": ""
+}

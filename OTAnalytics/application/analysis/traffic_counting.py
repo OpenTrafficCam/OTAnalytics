@@ -904,6 +904,17 @@ class Exporter(ABC):
         """
         raise NotImplementedError
 
+    def update_end(self, counting_specification: CountingSpecificationDto) -> None:
+        """
+        Update the counting specification. This happens on stream based processing,
+        where one file is loaded after the other and the end date of the export is not
+        available at the beginning.
+
+        Args:
+            counting_specification:
+        """
+        raise NotImplementedError
+
 
 class ExporterFactory(ABC):
     """
