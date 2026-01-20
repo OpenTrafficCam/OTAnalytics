@@ -174,6 +174,54 @@ class TestTagExploder:
             expected_tags,
         )
 
+    def test_export_update_end(self) -> None:
+        start = datetime(2023, 1, 1, 0, 0, 10)
+        end = datetime(2023, 1, 1, 0, 9, 56)
+        updated_end = end + timedelta(minutes=10)
+        interval_in_minutes = 10
+        modes = ["first-mode"]
+        output_format = "csv"
+        output_file = "output-file.csv"
+        flow_name_dto = FlowNameDto(
+            "from first -> to second", "from first", "to second"
+        )
+
+        flow_names = [flow_name_dto]
+        expected_tags: list[Tag] = [
+            create_flow_tag(flow_name_dto.name)
+            .combine(create_mode_tag("first-mode"))
+            .combine(
+                create_timeslot_tag(start.replace(second=0), timedelta(minutes=10))
+            ),
+        ]
+        expected_updated_tags: list[Tag] = expected_tags + [
+            create_flow_tag(flow_name_dto.name)
+            .combine(create_mode_tag("first-mode"))
+            .combine(
+                create_timeslot_tag(start.replace(minute=10), timedelta(minutes=10))
+            ),
+        ]
+        counting_specification = CountingSpecificationDto(
+            start=start,
+            end=end,
+            interval_in_minutes=interval_in_minutes,
+            modes=modes,
+            output_format=output_format,
+            output_file=output_file,
+            export_mode=OVERWRITE,
+        )
+        specification = ExportSpecificationDto(
+            counting_specification=counting_specification,
+            flow_name_info=flow_names,
+        )
+        updated_specification = counting_specification.with_end(updated_end)
+        exploder = TagExploder(specification)
+        tags = exploder.explode()
+        exploder.update_end(updated_specification)
+        updated_tags = exploder.explode()
+        assert tags == expected_tags
+        assert updated_tags == expected_updated_tags
+
     def test_export_multiple(self) -> None:
         start = datetime(2023, 1, 1, 0, 0, 0)
         end = datetime(2023, 1, 1, 0, 10, 0)

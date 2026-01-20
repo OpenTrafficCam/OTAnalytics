@@ -249,10 +249,24 @@ class TrackRepository:
         self.observers.notify(TrackRepositoryEvent.create_removed(removed_ids))
 
 
+@dataclass(frozen=True)
+class TrackFileRepositoryEvent:
+    added: list[Path]
+    removed: list[Path]
+
+    @staticmethod
+    def create_added(files: Iterable[Path]) -> "TrackFileRepositoryEvent":
+        return TrackFileRepositoryEvent(list(files), [])
+
+    @staticmethod
+    def create_removed(files: Iterable[Path]) -> "TrackFileRepositoryEvent":
+        return TrackFileRepositoryEvent([], list(files))
+
+
 class TrackFileRepository:
     def __init__(self) -> None:
         self._files: set[Path] = set()
-        self._subject = Subject[Iterable[Path]]()
+        self._subject = Subject[TrackFileRepositoryEvent]()
 
     def add(self, file: Path) -> None:
         """
@@ -262,7 +276,7 @@ class TrackFileRepository:
             file (Path): track file to be added.
         """
         self.__add(file)
-        self._subject.notify([file])
+        self._subject.notify(TrackFileRepositoryEvent.create_added([file]))
 
     def __add(self, file: Path) -> None:
         """Add a single track file the repository without notifying observers.
@@ -281,7 +295,7 @@ class TrackFileRepository:
         """
         for file in files:
             self.__add(file)
-        self._subject.notify(files)
+        self._subject.notify(TrackFileRepositoryEvent.create_added(files))
 
     def get_all(self) -> set[Path]:
         """
@@ -294,3 +308,8 @@ class TrackFileRepository:
 
     def register(self, observer: OBSERVER[Iterable[Path]]) -> None:
         self._subject.register(observer)
+
+    def clear(self) -> None:
+        removed_files = self._files.copy()
+        self._files.clear()
+        self._subject.notify(TrackFileRepositoryEvent.create_removed(removed_files))
