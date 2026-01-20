@@ -40,6 +40,7 @@ class CliArguments:
     track_statistics_export: bool
     start_webui: bool = False
     show_svz: bool = False
+    file_picker_directory: str | None = None
     config_file: str | None = None
     track_files: list[str] | None = None
     otflow_file: str | None = None

@@ -1,6 +1,4 @@
 import shutil
-import subprocess
-import time
 from pathlib import Path
 from typing import Any, Generator, List, Sequence, TypeVar
 from unittest.mock import Mock
@@ -34,7 +32,6 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     OttrkParser,
 )
 from OTAnalytics.plugin_parser.pandas_parser import PandasDetectionParser
-from OTAnalytics.plugin_ui.nicegui_application import DEFAULT_HOSTNAME, DEFAULT_PORT
 from tests.utils.builders.event_builder import EventBuilder
 from tests.utils.builders.track_builder import TrackBuilder, create_track
 from tests.utils.builders.track_segment_builder import (
@@ -45,71 +42,16 @@ from tests.utils.builders.track_segment_builder import (
 )
 
 ACCEPTANCE_TEST_WAIT_TIMEOUT = 5
-BUFFER_SIZE_100MB = 10**8
+FILE_IO_WAIT_TIMEOUT_SEC = 10
 
-pytest_plugins = ["nicegui.testing.plugin", "pytest_playwright"]
-
-
-# --- Acceptance test collection control ---
-# Ensure acceptance tests only run in the dedicated GitHub Actions workflow
-# without modifying workflow files. We detect the workflow via the
-# GITHUB_WORKFLOW environment variable which is automatically set by GitHub.
-# Alternatively, developers can force running acceptance tests locally by setting
-# RUN_ACCEPTANCE=1 in their environment.
-ACCEPTANCE_WORKFLOW_NAME = "Acceptance Test With Pytest"
+pytest_plugins = ["nicegui.testing.plugin"]
 
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
 
 
-class NiceGUITestServer:
-    """Helper class to manage NiceGUI test server"""
-
-    def __init__(self, port: int = DEFAULT_PORT):
-        self.port = port
-        self.process: subprocess.Popen | None = None
-        self.base_url = f"http://{DEFAULT_HOSTNAME}:{port}"
-
-    def start(self) -> None:
-        """Start NiceGUI server in subprocess"""
-        self.process = subprocess.Popen(
-            ["python", "-m", "OTAnalytics", "--webui"],
-            stdin=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=BUFFER_SIZE_100MB,
-        )
-        # Wait for server to start
-        self._wait_for_server()
-
-    def stop(self) -> None:
-        """Stop NiceGUI server"""
-        if self.process:
-            self.process.terminate()
-            self.process.wait()
-
-    def _wait_for_server(self, timeout: int = 10) -> None:
-        """Wait until server is responding"""
-        import requests
-
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            try:
-                response = requests.get(self.base_url, timeout=1)
-                if response.status_code == 200:
-                    return
-            except Exception:
-                pass
-            time.sleep(0.1)
-        raise RuntimeError(f"Server did not start within {timeout} seconds")
-
-
-@pytest.fixture(scope="session")
-def external_app() -> YieldFixture[NiceGUITestServer]:
-    app = NiceGUITestServer()
-    app.start()
-    yield app
-    app.stop()
+# Note: Playwright/NiceGUI acceptance fixtures moved to tests/acceptance/conftest.py
 
 
 @pytest.fixture

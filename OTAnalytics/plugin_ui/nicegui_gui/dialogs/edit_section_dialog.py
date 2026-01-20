@@ -12,6 +12,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import (
 from OTAnalytics.plugin_ui.nicegui_gui.forms.offset_slider_form import OffsetSliderForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import FormFieldText
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_NAME = "marker-name"
 MARKER_START_SECTION = "marker-start-section"
@@ -45,6 +46,8 @@ class EditSectionDialog(BaseDialog):
 
     def build_content(self) -> None:
         self._name.build()
+        self._name.element.props(f"{TEST_ID}={MARKER_NAME}")
+
         self._offset.build()
 
     def get_section(self) -> dict:
