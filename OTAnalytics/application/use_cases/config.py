@@ -6,14 +6,6 @@ from OTAnalytics.application.state import ConfigurationFile, FileState
 from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
 
 
-class MissingDate(Exception):
-    pass
-
-
-class MissingProjectName(Exception):
-    pass
-
-
 class ConfigValidationError(Exception):
     """Raised when configuration validation fails."""
 
