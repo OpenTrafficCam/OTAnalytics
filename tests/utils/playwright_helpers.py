@@ -76,6 +76,10 @@ from tests.utils.builders.otanalytics_builders import file_picker_directory
 logger = logging.getLogger(__name__)
 
 
+def set_input_value_via_marker(page: Page, marker: str, value: str) -> None:
+    set_input_value(page, f'[{TEST_ID}="{marker}"]', value)
+
+
 def set_input_value(page: Page, selector: str, value: str) -> None:
     """Robustly set a value on an input and ensure NiceGUI backend receives it.
 
@@ -440,13 +444,10 @@ def compare_json_files(saved_path: Path, reference_path: Path) -> None:
 
 def read_project_info_values(page: Page) -> tuple[str, str, str]:
     """Read current values from the Project form inputs using test-id markers."""
-    name_sel = f'[{TEST_ID}="{MARKER_PROJECT_NAME}"]'
-    date_sel = f'[{TEST_ID}="{MARKER_START_DATE}"]'
-    time_sel = f'[{TEST_ID}="{MARKER_START_TIME}"]'
     return (
-        page.locator(name_sel).input_value(),
-        page.locator(date_sel).input_value(),
-        page.locator(time_sel).input_value(),
+        search_for_marker_element(page, MARKER_PROJECT_NAME).input_value(),
+        search_for_marker_element(page, MARKER_START_DATE).input_value(),
+        search_for_marker_element(page, MARKER_START_TIME).input_value(),
     )
 
 
