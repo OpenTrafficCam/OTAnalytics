@@ -11,7 +11,6 @@ from OTAnalytics.application.resources.resource_manager import (
     AddVideoKeys,
     FlowAndSectionKeys,
     FlowKeys,
-    ProjectKeys,
     ResourceManager,
     SectionKeys,
     TrackFormKeys,
@@ -195,12 +194,9 @@ def fill_project_information(
     time_value: str = "06:00:00",
 ) -> None:
     """Fill the mandatory project information fields on the main page."""
-    name_sel = f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_PROJECT_NAME)}"]'
-    date_sel = f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_START_DATE)}"]'
-    time_sel = f'[aria-label="{resource_manager.get(ProjectKeys.LABEL_START_TIME)}"]'
-    set_input_value(page, name_sel, name)
-    set_input_value(page, date_sel, date_value)
-    set_input_value(page, time_sel, time_value)
+    set_input_value_via_marker(page, MARKER_PROJECT_NAME, name)
+    set_input_value_via_marker(page, MARKER_START_DATE, date_value)
+    set_input_value_via_marker(page, MARKER_START_TIME, time_value)
 
 
 def save_project_otconfig(
