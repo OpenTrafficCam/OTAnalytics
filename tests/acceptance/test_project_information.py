@@ -10,7 +10,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
     MARKER_START_DATE,
     MARKER_START_TIME,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_FINAL_TIMEOUT_MS,
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
@@ -22,6 +21,7 @@ from tests.utils.playwright_helpers import (
     import_project_and_assert_values,
     open_project_otconfig,
     save_project_otconfig,
+    search_for_marker_element,
 )
 
 
@@ -79,14 +79,19 @@ class TestProjectInformationPlaywright:
             time_value=time_value,
         )
 
-        name_sel = f'[{TEST_ID}="{MARKER_PROJECT_NAME}"]'
-        date_sel = f'[{TEST_ID}="{MARKER_START_DATE}"]'
-        time_sel = f'[{TEST_ID}="{MARKER_START_TIME}"]'
-
         # Assertions
-        assert page.locator(name_sel).input_value() == project_name
-        assert page.locator(date_sel).input_value() == date_value
-        assert page.locator(time_sel).input_value() == time_value
+        assert (
+            search_for_marker_element(page, MARKER_PROJECT_NAME).input_value()
+            == project_name
+        )
+        assert (
+            search_for_marker_element(page, MARKER_START_DATE).input_value()
+            == date_value
+        )
+        assert (
+            search_for_marker_element(page, MARKER_START_TIME).input_value()
+            == time_value
+        )
 
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
@@ -119,14 +124,19 @@ class TestProjectInformationPlaywright:
             time_value=time_value,
         )
 
-        name_sel = f'[{TEST_ID}="{MARKER_PROJECT_NAME}"]'
-        date_sel = f'[{TEST_ID}="{MARKER_START_DATE}"]'
-        time_sel = f'[{TEST_ID}="{MARKER_START_TIME}"]'
-
-        assert page.locator(name_sel).input_value() == project_name
+        assert (
+            search_for_marker_element(page, MARKER_PROJECT_NAME).input_value()
+            == project_name
+        )
         # Expected to fail on the following assertion per xfail reason
-        assert page.locator(date_sel).input_value() == date_value
-        assert page.locator(time_sel).input_value() == time_value
+        assert (
+            search_for_marker_element(page, MARKER_START_DATE).input_value()
+            == date_value
+        )
+        assert (
+            search_for_marker_element(page, MARKER_START_TIME).input_value()
+            == time_value
+        )
 
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright

@@ -46,7 +46,6 @@ def create_run_config(
         save_name=save_name,
         count_intervals=count_intervals,
         event_formats=event_formats,
-        num_processes=num_processes,
         config_file=config_file,
         save_suffix=save_suffix,
         log_file=log_file,

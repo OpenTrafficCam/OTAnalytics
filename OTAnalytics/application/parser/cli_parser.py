@@ -49,7 +49,6 @@ class CliArguments:
     save_suffix: str | None = None
     event_formats: list[str] | None = None
     count_intervals: list[int] | None = None
-    num_processes: int | None = None
     log_file: str | None = None
     include_classes: list[str] | None = None
     exclude_classes: list[str] | None = None
@@ -105,11 +104,7 @@ class CliValueProvider(OtConfigDefaultValueProvider):
 
     @property
     def num_processes(self) -> int:
-        return (
-            self._cli_args.num_processes
-            if self._cli_args.num_processes
-            else DEFAULT_NUM_PROCESSES
-        )
+        return DEFAULT_NUM_PROCESSES
 
     @property
     def log_file(self) -> Path:

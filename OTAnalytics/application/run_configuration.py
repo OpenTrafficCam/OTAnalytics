@@ -159,10 +159,6 @@ class RunConfiguration(OtConfigDefaultValueProvider):
 
     @property
     def num_processes(self) -> int:
-        if self._cli_args.num_processes:
-            return self._cli_args.num_processes
-        if self._otconfig:
-            return self._otconfig.analysis.num_processes
         return DEFAULT_NUM_PROCESSES
 
     @property
