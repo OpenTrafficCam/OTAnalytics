@@ -9,10 +9,6 @@ import pytest
 from OTAnalytics.plugin_ui.nicegui_application import DEFAULT_HOSTNAME, DEFAULT_PORT
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
-# Enable pytest-playwright only for acceptance tests
-pytest_plugins = ["pytest_playwright"]
-
-
 # Centralized timeouts and settings used by Playwright-based acceptance tests
 ACCEPTANCE_TEST_WAIT_TIMEOUT = 5
 # Pytest per-test timeout (seconds) for slow UI E2E tests

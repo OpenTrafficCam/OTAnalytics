@@ -44,7 +44,7 @@ from tests.utils.builders.track_segment_builder import (
 ACCEPTANCE_TEST_WAIT_TIMEOUT = 5
 FILE_IO_WAIT_TIMEOUT_SEC = 10
 
-pytest_plugins = ["nicegui.testing.plugin"]
+pytest_plugins = ["nicegui.testing.plugin", "pytest_playwright"]
 
 
 T = TypeVar("T")
