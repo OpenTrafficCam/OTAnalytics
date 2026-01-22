@@ -50,7 +50,7 @@ jobs:
         run: uv build --out-dir ${{ env.out_dir }}
 
       - name: Store the distribution packages
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: python-package-distributions
           path: ${{ env.out_dir }}
