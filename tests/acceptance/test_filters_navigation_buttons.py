@@ -1,22 +1,18 @@
 from pathlib import Path
+from typing import Any
 
 import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
-from OTAnalytics.application.resources.resource_manager import (
-    ResourceManager,
-    TrackFormKeys,
-)
+from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
-    MARKER_INTERACTIVE_IMAGE,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
     MARKER_FILTER_BY_DATE_APPLY_BUTTON,
     MARKER_FILTER_BY_DATE_BUTTON,
     MARKER_FILTER_BY_DATE_CHECKBOX,
     MARKER_FILTER_END_DATE_INPUT,
     MARKER_FILTER_END_TIME_INPUT,
+    MARKER_FILTER_RANGE_LABEL,
     MARKER_FILTER_START_DATE_INPUT,
     MARKER_FILTER_START_TIME_INPUT,
     MARKER_NEXT_DATE_BUTTON,
@@ -34,9 +30,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_fo
 from tests.acceptance.conftest import NiceGUITestServer
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
 from tests.utils.playwright_helpers import (
-    add_track_via_picker,
-    add_video_via_picker,
-    search_for_marker_element,
+    enable_and_apply_date_filter,
+    setup_tracks_display,
+    verify_filter_active,
     wait_for_canvas_change,
 )
 
@@ -49,6 +45,83 @@ TEST_VIDEO_FILENAME = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
 TEST_TRACK_FILENAME = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
 
 
+def _click_navigation_button_and_verify(
+    page: Page,
+    canvas: Any,
+    range_label: Any,
+    test_id: str,
+    button_name: str,
+) -> tuple[bytes, str]:
+    """Click navigation button and verify canvas and label change.
+
+    Args:
+        page: Playwright page object
+        canvas: Canvas locator
+        range_label: Range label locator
+        test_id: Test ID of the button to click
+        button_name: Human-readable button name for error messages
+
+    Returns:
+        Tuple of (new_canvas_screenshot, new_range_label_text)
+    """
+    btn = page.get_by_test_id(test_id)
+    btn.scroll_into_view_if_needed()
+    btn.wait_for(state="visible", timeout=2000)
+
+    old_canvas = canvas.screenshot()
+    old_label = range_label.inner_text()
+
+    btn.click()
+    page.wait_for_timeout(150)
+
+    # Verify canvas changed
+    new_canvas = wait_for_canvas_change(page, canvas, old_canvas)
+    new_label = range_label.inner_text()
+
+    # Verify range label changed
+    assert new_label != old_label, (
+        f"{button_name} button did not update filter range label "
+        f"(was: '{old_label}', still: '{new_label}')"
+    )
+
+    return new_canvas, new_label
+
+
+def _test_navigation_pair(
+    page: Page,
+    canvas: Any,
+    range_label: Any,
+    next_button_id: str,
+    prev_button_id: str,
+    navigation_type: str,
+) -> tuple[bytes, bytes]:
+    """Test a pair of forward/backward navigation buttons.
+
+    Args:
+        page: Playwright page object
+        canvas: Canvas locator
+        range_label: Range label locator
+        next_button_id: Test ID for forward navigation button
+        prev_button_id: Test ID for backward navigation button
+        navigation_type: Type of navigation (e.g., "Date", "Seconds") for assertions
+
+    Returns:
+        Tuple of (forward_canvas, backward_canvas)
+    """
+    canvas_forward, label_forward = _click_navigation_button_and_verify(
+        page, canvas, range_label, next_button_id, f"Next {navigation_type}"
+    )
+    canvas_backward, label_backward = _click_navigation_button_and_verify(
+        page, canvas, range_label, prev_button_id, f"Previous {navigation_type}"
+    )
+
+    assert (
+        label_forward != label_backward
+    ), f"{navigation_type} forward/backward navigation produced same range"
+
+    return canvas_forward, canvas_backward
+
+
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
@@ -58,107 +131,84 @@ def test_filter_navigation_buttons(
     resource_manager: ResourceManager,
 ) -> None:
     """
-    Acceptance (Playwright): Validate navigation buttons around the filter area.
+    Acceptance (Playwright): Validate navigation buttons move filter range correctly.
 
-    We intentionally reproduce the same setup as in the tracks test and end at the
-    same point (after applying then resetting the date filter) before exercising
-    the navigation buttons for Date, Seconds, Frames, and Event.
+    Test Steps:
+    1. Setup: Add video and tracks, enable tracks layer
+    2. Enable "Filter by Date" checkbox and apply a filter
+    3. Test navigation buttons and verify:
+       - ">" right of "Filter By Date" moves filter forward
+       - "<" left of "Filter By Date" moves filter backward
+       - ">" right of Seconds moves filter forward by seconds
+       - "<" left of Seconds moves filter backward by seconds
+       - ">" right of Frames moves filter forward by frames
+       - "<" left of Frames moves filter backward by frames
+       - ">" right of Event moves filter forward by event
+       - "<" left of Event moves filter backward by event
+
+    Expected Results:
+    - Each navigation button changes the canvas (different trajectories/background)
+    - Filter range label updates to reflect movement
+    - Canvas changes are consistent with time progression (forward vs backward)
     """
     base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
     page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
-    # Setup: Add video and tracks
     data_dir = Path(__file__).parents[1] / "data"
     video_file = data_dir / TEST_VIDEO_FILENAME
     track_file = data_dir / TEST_TRACK_FILENAME
     assert video_file.exists(), f"Test video file missing: {video_file}"
     assert track_file.exists(), f"Test track file missing: {track_file}"
 
-    page.get_by_text(resource_manager.get(TrackFormKeys.TAB_VIDEO), exact=True).click()
-    add_video_via_picker(page, resource_manager, video_file)
+    # Setup: Add video, tracks, enable layer, and apply filter
+    canvas = setup_tracks_display(
+        page, resource_manager, video_file, track_file, enable_tracks_layer=True
+    )
+    enable_and_apply_date_filter(page, use_minimal_range=True)
+    verify_filter_active(page)
 
-    # Switch to Tracks tab and add tracks
-    page.get_by_text(resource_manager.get(TrackFormKeys.TAB_TRACK), exact=True).click()
-    add_track_via_picker(page, resource_manager, track_file)
+    # Get range label element
+    range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
+    range_label.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
 
-    # Get canvas reference
-    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
-    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+    # Test all navigation button pairs
+    c1, c2 = _test_navigation_pair(
+        page,
+        canvas,
+        range_label,
+        MARKER_NEXT_DATE_BUTTON,
+        MARKER_PREV_DATE_BUTTON,
+        "date",
+    )
+    c3, c4 = _test_navigation_pair(
+        page,
+        canvas,
+        range_label,
+        MARKER_NEXT_SECONDS_BUTTON,
+        MARKER_PREV_SECONDS_BUTTON,
+        "seconds",
+    )
+    c5, c6 = _test_navigation_pair(
+        page,
+        canvas,
+        range_label,
+        MARKER_NEXT_FRAMES_BUTTON,
+        MARKER_PREV_FRAMES_BUTTON,
+        "frames",
+    )
+    c7, c8 = _test_navigation_pair(
+        page,
+        canvas,
+        range_label,
+        MARKER_NEXT_EVENT_BUTTON,
+        MARKER_PREV_EVENT_BUTTON,
+        "event",
+    )
 
-    # Enable tracks layer
-    checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
-    checkbox.scroll_into_view_if_needed()
-    checkbox.click()
-
-    filter_by_date_checkbox = page.get_by_test_id(MARKER_FILTER_BY_DATE_CHECKBOX)
-    filter_by_date_checkbox.click()
-    filter_by_date_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
-    filter_by_date_button.click()
-
-    start_date_input = page.get_by_test_id(MARKER_FILTER_START_DATE_INPUT)
-    start_time_input = page.get_by_test_id(MARKER_FILTER_START_TIME_INPUT)
-    end_date_input = page.get_by_test_id(MARKER_FILTER_END_DATE_INPUT)
-    end_time_input = page.get_by_test_id(MARKER_FILTER_END_TIME_INPUT)
-    start_date_input.wait_for(state="visible")
-    start_time_input.wait_for(state="visible")
-    end_date_input.wait_for(state="visible")
-    end_time_input.wait_for(state="visible")
-
-    start_date_value = start_date_input.input_value()
-    start_time_value = start_time_input.input_value()
-    end_date_input.fill("")
-    end_date_input.type(start_date_value)
-    end_time_input.fill("")
-    end_time_input.type(start_time_value)
-
-    # Apply and then reset to reach same end state as previous test
-    page.get_by_test_id(MARKER_FILTER_BY_DATE_APPLY_BUTTON).click()
-    page.wait_for_timeout(200)
-    filter_by_date_button.click()
-    page.get_by_text("Reset").click()
-    page.wait_for_timeout(150)
-
-    # From here on, test the navigation buttons using canvas image change as oracle
-    last_img = canvas.screenshot()
-
-    def click_and_expect_change(test_id: str) -> bytes:
-        """Click a navigation button and wait for canvas to change."""
-        btn = page.get_by_test_id(test_id)
-        btn.scroll_into_view_if_needed()
-        # In case button is disabled in some states, try waiting briefly
-        try:
-            btn.wait_for(state="visible", timeout=2000)
-        except Exception:
-            pass
-        btn.click()
-        return wait_for_canvas_change(page, canvas, last_img)
-
-    # Date range arrows
-    after1 = click_and_expect_change(MARKER_NEXT_DATE_BUTTON)
-    last_img = after1
-    after2 = click_and_expect_change(MARKER_PREV_DATE_BUTTON)
-    last_img = after2
-
-    # Seconds arrows
-    after3 = click_and_expect_change(MARKER_NEXT_SECONDS_BUTTON)
-    last_img = after3
-    after4 = click_and_expect_change(MARKER_PREV_SECONDS_BUTTON)
-    last_img = after4
-
-    # Frames arrows
-    after5 = click_and_expect_change(MARKER_NEXT_FRAMES_BUTTON)
-    last_img = after5
-    after6 = click_and_expect_change(MARKER_PREV_FRAMES_BUTTON)
-    last_img = after6
-
-    # Event arrows
-    after7 = click_and_expect_change(MARKER_NEXT_EVENT_BUTTON)
-    last_img = after7
-    after8 = click_and_expect_change(MARKER_PREV_EVENT_BUTTON)
-    last_img = after8
-
-    # Simple sanity: ensure we observed changes (non-empty progression)
-    assert after1 != after2
-    assert after3 != after4
-    assert after5 != after6
-    assert after7 != after8
+    # Verify navigation produced multiple unique canvas states
+    all_canvases = [c1, c2, c3, c4, c5, c6, c7, c8]
+    unique_canvases = len(set(all_canvases))
+    assert unique_canvases >= 4, (
+        f"Expected at least 4 unique canvas states during navigation, "
+        f"got {unique_canvases}"
+    )

@@ -637,6 +637,142 @@ def wait_for_canvas_change(
 # ----------------------
 
 
+def setup_tracks_display(
+    page: Page,
+    rm: ResourceManager,
+    video_file: Path,
+    track_file: Path,
+    enable_tracks_layer: bool = True,
+) -> Any:
+    """Setup for tracks display: add video, tracks, optionally enable layer.
+
+    Args:
+        page: Playwright page object
+        rm: ResourceManager for localized strings
+        video_file: Path to video file
+        track_file: Path to track file
+        enable_tracks_layer: Whether to enable "Show all tracks" layer (default: True)
+
+    Returns:
+        Canvas locator that can be used for screenshots/verification
+    """
+    # Add video
+    page.get_by_text(rm.get(TrackFormKeys.TAB_VIDEO), exact=True).click()
+    add_video_via_picker(page, rm, video_file)
+    page.wait_for_timeout(150)
+
+    # Add tracks
+    page.get_by_text(rm.get(TrackFormKeys.TAB_TRACK), exact=True).click()
+    add_track_via_picker(page, rm, track_file)
+
+    # Get canvas reference
+    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
+    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+
+    # Enable tracks layer if requested
+    if enable_tracks_layer:
+        from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
+            MARKER_VISUALIZATION_LAYERS_ALL,
+        )
+
+        checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+        checkbox.scroll_into_view_if_needed()
+        checkbox.click()
+        page.wait_for_timeout(200)
+
+    return canvas
+
+
+def enable_and_apply_date_filter(
+    page: Page,
+    *,
+    use_minimal_range: bool = True,
+    custom_start_date: str | None = None,
+    custom_start_time: str | None = None,
+    custom_end_date: str | None = None,
+    custom_end_time: str | None = None,
+) -> None:
+    """Enable date filter checkbox, open dialog, configure, and apply.
+
+    Args:
+        page: Playwright page object
+        use_minimal_range: If True, sets end = start for minimal range (default: True)
+        custom_start_date: Optional custom start date (format: YYYY-MM-DD)
+        custom_start_time: Optional custom start time (format: HH:MM:SS)
+        custom_end_date: Optional custom end date (format: YYYY-MM-DD)
+        custom_end_time: Optional custom end time (format: HH:MM:SS)
+    """
+    from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+        MARKER_FILTER_BY_DATE_APPLY_BUTTON,
+        MARKER_FILTER_BY_DATE_BUTTON,
+        MARKER_FILTER_BY_DATE_CHECKBOX,
+        MARKER_FILTER_END_DATE_INPUT,
+        MARKER_FILTER_END_TIME_INPUT,
+        MARKER_FILTER_START_DATE_INPUT,
+        MARKER_FILTER_START_TIME_INPUT,
+    )
+
+    # Enable filter checkbox
+    filter_checkbox = page.get_by_test_id(MARKER_FILTER_BY_DATE_CHECKBOX)
+    filter_checkbox.scroll_into_view_if_needed()
+    filter_checkbox.click()
+
+    # Open filter dialog
+    filter_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
+    filter_button.click()
+
+    # Get input elements
+    start_date_input = page.get_by_test_id(MARKER_FILTER_START_DATE_INPUT)
+    start_time_input = page.get_by_test_id(MARKER_FILTER_START_TIME_INPUT)
+    end_date_input = page.get_by_test_id(MARKER_FILTER_END_DATE_INPUT)
+    end_time_input = page.get_by_test_id(MARKER_FILTER_END_TIME_INPUT)
+
+    start_date_input.wait_for(state="visible")
+    start_time_input.wait_for(state="visible")
+    end_date_input.wait_for(state="visible")
+    end_time_input.wait_for(state="visible")
+
+    # Configure filter range
+    if custom_start_date:
+        start_date_input.fill("")
+        start_date_input.type(custom_start_date)
+    if custom_start_time:
+        start_time_input.fill("")
+        start_time_input.type(custom_start_time)
+
+    if use_minimal_range and not (custom_end_date or custom_end_time):
+        # Set end = start for minimal range
+        start_date_value = start_date_input.input_value()
+        start_time_value = start_time_input.input_value()
+        end_date_input.fill("")
+        end_date_input.type(start_date_value)
+        end_time_input.fill("")
+        end_time_input.type(start_time_value)
+    else:
+        if custom_end_date:
+            end_date_input.fill("")
+            end_date_input.type(custom_end_date)
+        if custom_end_time:
+            end_time_input.fill("")
+            end_time_input.type(custom_end_time)
+
+    # Apply filter
+    apply_btn = page.get_by_test_id(MARKER_FILTER_BY_DATE_APPLY_BUTTON)
+    apply_btn.click()
+    page.wait_for_timeout(200)
+
+
+def verify_filter_active(page: Page) -> None:
+    """Verify that the date filter is active by checking button attribute."""
+    from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+        MARKER_FILTER_BY_DATE_BUTTON,
+    )
+
+    filter_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
+    active_value = filter_button.get_attribute("data-filter-by-date-active")
+    assert active_value == "true", "Filter is not active"
+
+
 def add_track_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
     """Add a track file via the in-app file picker.
 
