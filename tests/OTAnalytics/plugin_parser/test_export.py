@@ -141,6 +141,16 @@ class TestTagExploder:
 
         assert tags == given.expected_tags
 
+    def test_export_short_before_interval_border(self) -> None:
+        """
+        Supporting bug fix OP#9173
+        """
+        given = setup_short_before_interval_border()
+
+        tags = given.exploder.explode()
+
+        assert tags == given.expected_tags
+
 
 @dataclass
 class GivenSingle:
@@ -274,6 +284,64 @@ def setup_multiple() -> GivenMultiple:
         create_flow_tag(second_flow.name)
         .combine(create_mode_tag(second_mode))
         .combine(create_timeslot_tag(start + interval, interval)),
+    ]
+    counting_specification = CountingSpecificationDto(
+        start=start,
+        end=end,
+        interval_in_minutes=interval_in_minutes,
+        modes=modes,
+        output_format=output_format,
+        output_file=output_file,
+        export_mode=OVERWRITE,
+    )
+    specification = ExportSpecificationDto(
+        counting_specification=counting_specification,
+        flow_name_info=flow_names,
+    )
+    exploder = TagExploder(specification)
+    return GivenMultiple(exploder=exploder, expected_tags=expected_tags)
+
+
+def setup_short_before_interval_border() -> GivenMultiple:
+    start = datetime(2023, 1, 1, 11, 59, 59)
+    end = datetime(2023, 1, 1, 12, 0, 10)
+    interval_in_minutes = 5
+    interval = timedelta(minutes=interval_in_minutes)
+    first_slot_start = datetime(2023, 1, 1, 11, 55, 0)
+    second_slot_start = first_slot_start + interval
+    first_mode = "first-mode"
+    second_mode = "second-mode"
+    modes = [first_mode, second_mode]
+    output_format = "csv"
+    output_file = "output-file.csv"
+    first_flow = FlowNameDto("first-flow", "section a", "section b")
+    second_flow = FlowNameDto("second-flow", "section c", "section d")
+    flow_names = [first_flow, second_flow]
+    expected_tags: list[Tag] = [
+        create_flow_tag(first_flow.name)
+        .combine(create_mode_tag(first_mode))
+        .combine(create_timeslot_tag(first_slot_start, interval)),
+        create_flow_tag(first_flow.name)
+        .combine(create_mode_tag(first_mode))
+        .combine(create_timeslot_tag(second_slot_start, interval)),
+        create_flow_tag(first_flow.name)
+        .combine(create_mode_tag(second_mode))
+        .combine(create_timeslot_tag(first_slot_start, interval)),
+        create_flow_tag(first_flow.name)
+        .combine(create_mode_tag(second_mode))
+        .combine(create_timeslot_tag(second_slot_start, interval)),
+        create_flow_tag(second_flow.name)
+        .combine(create_mode_tag(first_mode))
+        .combine(create_timeslot_tag(first_slot_start, interval)),
+        create_flow_tag(second_flow.name)
+        .combine(create_mode_tag(first_mode))
+        .combine(create_timeslot_tag(second_slot_start, interval)),
+        create_flow_tag(second_flow.name)
+        .combine(create_mode_tag(second_mode))
+        .combine(create_timeslot_tag(first_slot_start, interval)),
+        create_flow_tag(second_flow.name)
+        .combine(create_mode_tag(second_mode))
+        .combine(create_timeslot_tag(second_slot_start, interval)),
     ]
     counting_specification = CountingSpecificationDto(
         start=start,
