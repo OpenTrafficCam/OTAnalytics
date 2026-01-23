@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock
@@ -115,16 +116,66 @@ class TestCsvExport:
         return counts
 
 
-def execute_explode(
-    start: datetime,
-    end: datetime,
-    interval_in_minutes: int,
-    flow_names: list[FlowNameDto],
-    modes: list[str],
-    output_file: str,
-    output_format: str,
-    expected_tags: list[Tag],
-) -> None:
+class TestTagExploder:
+    def test_export_single(self) -> None:
+        given = setup_single()
+
+        tags = given.exploder.explode()
+
+        assert tags == given.expected_tags
+
+    def test_export_update_end(self) -> None:
+        given = setup_update_end()
+
+        tags = given.exploder.explode()
+        given.exploder.update_end(given.updated_specification)
+        updated_tags = given.exploder.explode()
+
+        assert tags == given.expected_tags
+        assert updated_tags == given.expected_updated_tags
+
+    def test_export_multiple(self) -> None:
+        given = setup_multiple()
+
+        tags = given.exploder.explode()
+
+        assert tags == given.expected_tags
+
+
+@dataclass
+class GivenSingle:
+    exploder: TagExploder
+    expected_tags: list[Tag]
+
+
+@dataclass
+class GivenUpdateEnd:
+    exploder: TagExploder
+    updated_specification: CountingSpecificationDto
+    expected_tags: list[Tag]
+    expected_updated_tags: list[Tag]
+
+
+@dataclass
+class GivenMultiple:
+    exploder: TagExploder
+    expected_tags: list[Tag]
+
+
+def setup_single() -> GivenSingle:
+    start = datetime(2023, 1, 1, 0, 0, 10)
+    end = datetime(2023, 1, 1, 0, 9, 56)
+    interval_in_minutes = 10
+    modes = ["first-mode"]
+    output_format = "csv"
+    output_file = "output-file.csv"
+    flow_name_dto = FlowNameDto("from first -> to second", "from first", "to second")
+    flow_names = [flow_name_dto]
+    expected_tags: list[Tag] = [
+        create_flow_tag(flow_name_dto.name)
+        .combine(create_mode_tag("first-mode"))
+        .combine(create_timeslot_tag(start.replace(second=0), timedelta(minutes=10)))
+    ]
     counting_specification = CountingSpecificationDto(
         start=start,
         end=end,
@@ -139,138 +190,106 @@ def execute_explode(
         flow_name_info=flow_names,
     )
     exploder = TagExploder(specification)
-    tags = exploder.explode()
-    assert tags == expected_tags
+    return GivenSingle(exploder=exploder, expected_tags=expected_tags)
 
 
-class TestTagExploder:
-    def test_export_single(self) -> None:
-        start = datetime(2023, 1, 1, 0, 0, 10)
-        end = datetime(2023, 1, 1, 0, 9, 56)
-        interval_in_minutes = 10
-        modes = ["first-mode"]
-        output_format = "csv"
-        output_file = "output-file.csv"
-        flow_name_dto = FlowNameDto(
-            "from first -> to second", "from first", "to second"
-        )
+def setup_update_end() -> GivenUpdateEnd:
+    start = datetime(2023, 1, 1, 0, 0, 10)
+    end = datetime(2023, 1, 1, 0, 9, 56)
+    updated_end = end + timedelta(minutes=10)
+    interval_in_minutes = 10
+    modes = ["first-mode"]
+    output_format = "csv"
+    output_file = "output-file.csv"
+    flow_name_dto = FlowNameDto("from first -> to second", "from first", "to second")
+    flow_names = [flow_name_dto]
+    expected_tags: list[Tag] = [
+        create_flow_tag(flow_name_dto.name)
+        .combine(create_mode_tag("first-mode"))
+        .combine(create_timeslot_tag(start.replace(second=0), timedelta(minutes=10))),
+    ]
+    expected_updated_tags: list[Tag] = expected_tags + [
+        create_flow_tag(flow_name_dto.name)
+        .combine(create_mode_tag("first-mode"))
+        .combine(create_timeslot_tag(start.replace(minute=10), timedelta(minutes=10))),
+    ]
+    counting_specification = CountingSpecificationDto(
+        start=start,
+        end=end,
+        interval_in_minutes=interval_in_minutes,
+        modes=modes,
+        output_format=output_format,
+        output_file=output_file,
+        export_mode=OVERWRITE,
+    )
+    specification = ExportSpecificationDto(
+        counting_specification=counting_specification,
+        flow_name_info=flow_names,
+    )
+    updated_specification = counting_specification.with_end(updated_end)
+    exploder = TagExploder(specification)
+    return GivenUpdateEnd(
+        exploder=exploder,
+        updated_specification=updated_specification,
+        expected_tags=expected_tags,
+        expected_updated_tags=expected_updated_tags,
+    )
 
-        flow_names = [flow_name_dto]
-        expected_tags: list[Tag] = [
-            create_flow_tag(flow_name_dto.name)
-            .combine(create_mode_tag("first-mode"))
-            .combine(
-                create_timeslot_tag(start.replace(second=0), timedelta(minutes=10))
-            )
-        ]
-        execute_explode(
-            start,
-            end,
-            interval_in_minutes,
-            flow_names,
-            modes,
-            output_file,
-            output_format,
-            expected_tags,
-        )
 
-    def test_export_update_end(self) -> None:
-        start = datetime(2023, 1, 1, 0, 0, 10)
-        end = datetime(2023, 1, 1, 0, 9, 56)
-        updated_end = end + timedelta(minutes=10)
-        interval_in_minutes = 10
-        modes = ["first-mode"]
-        output_format = "csv"
-        output_file = "output-file.csv"
-        flow_name_dto = FlowNameDto(
-            "from first -> to second", "from first", "to second"
-        )
-
-        flow_names = [flow_name_dto]
-        expected_tags: list[Tag] = [
-            create_flow_tag(flow_name_dto.name)
-            .combine(create_mode_tag("first-mode"))
-            .combine(
-                create_timeslot_tag(start.replace(second=0), timedelta(minutes=10))
-            ),
-        ]
-        expected_updated_tags: list[Tag] = expected_tags + [
-            create_flow_tag(flow_name_dto.name)
-            .combine(create_mode_tag("first-mode"))
-            .combine(
-                create_timeslot_tag(start.replace(minute=10), timedelta(minutes=10))
-            ),
-        ]
-        counting_specification = CountingSpecificationDto(
-            start=start,
-            end=end,
-            interval_in_minutes=interval_in_minutes,
-            modes=modes,
-            output_format=output_format,
-            output_file=output_file,
-            export_mode=OVERWRITE,
-        )
-        specification = ExportSpecificationDto(
-            counting_specification=counting_specification,
-            flow_name_info=flow_names,
-        )
-        updated_specification = counting_specification.with_end(updated_end)
-        exploder = TagExploder(specification)
-        tags = exploder.explode()
-        exploder.update_end(updated_specification)
-        updated_tags = exploder.explode()
-        assert tags == expected_tags
-        assert updated_tags == expected_updated_tags
-
-    def test_export_multiple(self) -> None:
-        start = datetime(2023, 1, 1, 0, 0, 0)
-        end = datetime(2023, 1, 1, 0, 10, 0)
-        interval_in_minutes = 5
-        interval = timedelta(minutes=interval_in_minutes)
-        first_mode = "first-mode"
-        second_mode = "second-mode"
-        modes = [first_mode, second_mode]
-        output_format = "csv"
-        output_file = "output-file.csv"
-        first_flow = FlowNameDto("first-flow", "section a", "section b")
-        second_flow = FlowNameDto("second-flow", "section c", "section d")
-        flow_names = [first_flow, second_flow]
-        expected_tags: list[Tag] = [
-            create_flow_tag(first_flow.name)
-            .combine(create_mode_tag(first_mode))
-            .combine(create_timeslot_tag(start, interval)),
-            create_flow_tag(first_flow.name)
-            .combine(create_mode_tag(first_mode))
-            .combine(create_timeslot_tag(start + interval, interval)),
-            create_flow_tag(first_flow.name)
-            .combine(create_mode_tag(second_mode))
-            .combine(create_timeslot_tag(start, interval)),
-            create_flow_tag(first_flow.name)
-            .combine(create_mode_tag(second_mode))
-            .combine(create_timeslot_tag(start + interval, interval)),
-            create_flow_tag(second_flow.name)
-            .combine(create_mode_tag(first_mode))
-            .combine(create_timeslot_tag(start, interval)),
-            create_flow_tag(second_flow.name)
-            .combine(create_mode_tag(first_mode))
-            .combine(create_timeslot_tag(start + interval, interval)),
-            create_flow_tag(second_flow.name)
-            .combine(create_mode_tag(second_mode))
-            .combine(create_timeslot_tag(start, interval)),
-            create_flow_tag(second_flow.name)
-            .combine(create_mode_tag(second_mode))
-            .combine(create_timeslot_tag(start + interval, interval)),
-        ]
-        execute_explode(
-            start,
-            end,
-            interval_in_minutes,
-            flow_names,
-            modes,
-            output_file,
-            output_format,
-            expected_tags,
-        )
+def setup_multiple() -> GivenMultiple:
+    start = datetime(2023, 1, 1, 0, 0, 0)
+    end = datetime(2023, 1, 1, 0, 10, 0)
+    interval_in_minutes = 5
+    interval = timedelta(minutes=interval_in_minutes)
+    first_mode = "first-mode"
+    second_mode = "second-mode"
+    modes = [first_mode, second_mode]
+    output_format = "csv"
+    output_file = "output-file.csv"
+    first_flow = FlowNameDto("first-flow", "section a", "section b")
+    second_flow = FlowNameDto("second-flow", "section c", "section d")
+    flow_names = [first_flow, second_flow]
+    expected_tags: list[Tag] = [
+        create_flow_tag(first_flow.name)
+        .combine(create_mode_tag(first_mode))
+        .combine(create_timeslot_tag(start, interval)),
+        create_flow_tag(first_flow.name)
+        .combine(create_mode_tag(first_mode))
+        .combine(create_timeslot_tag(start + interval, interval)),
+        create_flow_tag(first_flow.name)
+        .combine(create_mode_tag(second_mode))
+        .combine(create_timeslot_tag(start, interval)),
+        create_flow_tag(first_flow.name)
+        .combine(create_mode_tag(second_mode))
+        .combine(create_timeslot_tag(start + interval, interval)),
+        create_flow_tag(second_flow.name)
+        .combine(create_mode_tag(first_mode))
+        .combine(create_timeslot_tag(start, interval)),
+        create_flow_tag(second_flow.name)
+        .combine(create_mode_tag(first_mode))
+        .combine(create_timeslot_tag(start + interval, interval)),
+        create_flow_tag(second_flow.name)
+        .combine(create_mode_tag(second_mode))
+        .combine(create_timeslot_tag(start, interval)),
+        create_flow_tag(second_flow.name)
+        .combine(create_mode_tag(second_mode))
+        .combine(create_timeslot_tag(start + interval, interval)),
+    ]
+    counting_specification = CountingSpecificationDto(
+        start=start,
+        end=end,
+        interval_in_minutes=interval_in_minutes,
+        modes=modes,
+        output_format=output_format,
+        output_file=output_file,
+        export_mode=OVERWRITE,
+    )
+    specification = ExportSpecificationDto(
+        counting_specification=counting_specification,
+        flow_name_info=flow_names,
+    )
+    exploder = TagExploder(specification)
+    return GivenMultiple(exploder=exploder, expected_tags=expected_tags)
 
 
 class TestFillZerosExporter:
