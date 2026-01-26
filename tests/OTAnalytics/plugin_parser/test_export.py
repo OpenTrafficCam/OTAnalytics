@@ -258,7 +258,7 @@ def setup_update_end() -> GivenUpdateEnd:
 
 def setup_multiple() -> GivenMultiple:
     start = datetime(2023, 1, 1, 0, 0, 0)
-    end = datetime(2023, 1, 1, 0, 10, 0)
+    end = datetime(2023, 1, 1, 0, 9, 0)
     interval_in_minutes = 5
     interval = timedelta(minutes=interval_in_minutes)
     first_mode = "first-mode"

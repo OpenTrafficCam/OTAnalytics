@@ -1273,7 +1273,7 @@ class TestTrafficCountingFilterOptions:
         # Create specification
         counting_specification = CountingSpecificationDto(
             start=start,
-            end=end,
+            end=end + timedelta(milliseconds=1),
             interval_in_minutes=15,
             modes=modes,
             output_format="csv",
