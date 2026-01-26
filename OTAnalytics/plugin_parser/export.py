@@ -178,7 +178,8 @@ class TagExploder:
 
         maximum = self._end - start_at_boundary
         duration = int(maximum.total_seconds())
-
+        if self._end.timestamp() % interval == 0:
+            duration += 1
         for flow in self._specification.flow_name_info:
             for mode in self._specification.counting_specification.modes:
                 for delta in range(0, duration, interval):

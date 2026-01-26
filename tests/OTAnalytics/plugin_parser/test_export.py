@@ -151,6 +151,16 @@ class TestTagExploder:
 
         assert tags == given.expected_tags
 
+    def test_export_on_end_interval_border(self) -> None:
+        """
+        Supporting bug fix OP#9173
+        """
+        given = setup_on_end_interval_border()
+
+        tags = given.exploder.explode()
+
+        assert tags == given.expected_tags
+
 
 @dataclass
 class GivenSingle:
@@ -309,6 +319,41 @@ def setup_short_before_interval_border() -> GivenMultiple:
     interval = timedelta(minutes=interval_in_minutes)
     first_slot_start = datetime(2023, 1, 1, 11, 55, 0)
     second_slot_start = first_slot_start + interval
+
+    return setup_two_slots_test(
+        start=start,
+        end=end,
+        first_slot_start=first_slot_start,
+        second_slot_start=second_slot_start,
+        interval=interval,
+    )
+
+
+def setup_on_end_interval_border() -> GivenMultiple:
+    start = datetime(2023, 1, 1, 12, 0, 5)
+    end = datetime(2023, 1, 1, 12, 5, 0)
+    interval_in_minutes = 5
+    interval = timedelta(minutes=interval_in_minutes)
+    first_slot_start = datetime(2023, 1, 1, 12, 0, 0)
+    second_slot_start = first_slot_start + interval
+
+    return setup_two_slots_test(
+        start=start,
+        end=end,
+        first_slot_start=first_slot_start,
+        second_slot_start=second_slot_start,
+        interval=interval,
+    )
+
+
+def setup_two_slots_test(
+    start: datetime,
+    end: datetime,
+    first_slot_start: datetime,
+    second_slot_start: datetime,
+    interval: timedelta,
+) -> GivenMultiple:
+    interval_in_minutes = int(interval.total_seconds() / 60)
     first_mode = "first-mode"
     second_mode = "second-mode"
     modes = [first_mode, second_mode]
