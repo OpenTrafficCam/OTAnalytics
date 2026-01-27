@@ -14,7 +14,6 @@ from nicegui.events import ValueChangeEventArguments
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     MissingInstanceError,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 YEAR_MONTH_DAY_FORMAT = "%Y-%m-%d"
 DAY_MONTH_YEAR_FORMAT = "%d.%m.%Y"
@@ -116,7 +115,13 @@ class FormField(LazyInitializedElement[S], Generic[S, V]):
             # so that Playwright-based acceptance tests can reliably select the
             # input elements. This mirrors the pattern used for buttons in the UI.
             element.mark(self.marker)
-            element.props(f"{TEST_ID}={self.marker}")
+            try:
+                element.props(f"test-id={self.marker}")
+                element.props(f"data-testid={self.marker}")
+            except Exception:
+                # In case a specific element type doesn't support props, ignore.
+                pass
+            element.props(f"test-id={self.marker}")
 
     def validate(self) -> bool:
         """Handles the validation logic for an element.
@@ -746,8 +751,14 @@ class FormFieldCheckbox(LazyInitializedElement[Checkbox]):
     def build(self) -> None:
         """Builds the UI form element."""
         self._instance = ui.checkbox(text=self._label_text, value=self._initial_value)
+        # Apply marker and data-testid for Playwright's get_by_test_id compatibility
         if self._marker:
             self._instance.mark(self._marker)
+            self._instance.props(f"data-testid={self._marker}")
+        # Apply any additional props passed in
+        if self._props:
+            for prop in self._props:
+                self._instance.props(prop)
         if self._on_value_change:
             self._instance.on_value_change(self._on_value_change)
 
