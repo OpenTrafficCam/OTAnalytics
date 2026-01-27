@@ -1,6 +1,8 @@
 from pathlib import Path
+from typing import Any
 
 import pytest
+from PIL import Image, ImageChops  # type: ignore
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import ResourceManager
@@ -18,7 +20,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.containe
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     MARKER_VISUALIZATION_LAYERS_ALL,
 )
-from tests.acceptance.conftest import NiceGUITestServer
+from tests.acceptance.conftest import PLAYWRIGHT_VISIBLE_TIMEOUT_MS, NiceGUITestServer
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
 from tests.utils.playwright_helpers import (
     enable_and_apply_date_filter,
@@ -26,6 +28,9 @@ from tests.utils.playwright_helpers import (
     verify_filter_active,
     wait_for_canvas_change,
 )
+
+SCREENSHOT_PATH = "screenshots"
+ALL_TRACKS_FILE_NAME = "all_tracks.png"
 
 # Ensure pytest-playwright is available; otherwise skip this module
 playwright = pytest.importorskip(
@@ -91,13 +96,13 @@ def test_add_tracks_and_display_all(
     ), "Canvas did not change after enabling tracks layer - tracks not displayed"
 
 
-@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
 def test_filter_tracks_by_date(
     page: Page,
     external_app: NiceGUITestServer,
+    acceptance_test_data_folder: Path,
     resource_manager: ResourceManager,
 ) -> None:
     """Acceptance (Playwright): Filter displayed tracks by date range.
@@ -118,20 +123,14 @@ def test_filter_tracks_by_date(
     - Filtered view shows fewer/shorter trajectories than unfiltered
     - Background image corresponds to filter end time
     """
-    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-    page.goto(base_url + ENDPOINT_MAIN_PAGE)
+    canvas = get_loaded_tracks_canvas(external_app, page, resource_manager)
+    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    new_path = acceptance_test_data_folder / "new_file.png"
+    canvas_with_all_tracks = canvas.screenshot(path=new_path)
 
-    data_dir = Path(__file__).parents[1] / "data"
-    video_file = data_dir / TEST_VIDEO_FILENAME
-    track_file = data_dir / TEST_TRACK_FILENAME
-    assert video_file.exists(), f"Test video file missing: {video_file}"
-    assert track_file.exists(), f"Test track file missing: {track_file}"
-
-    # Setup: Add video, tracks, and enable tracks layer
-    canvas = setup_tracks_display(
-        page, resource_manager, video_file, track_file, enable_tracks_layer=True
+    assert_screenshot_equal(
+        new_path, acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
     )
-    canvas_with_all_tracks = canvas.screenshot()
 
     # Configure and apply date filter with minimal range
     enable_and_apply_date_filter(page, use_minimal_range=True)
@@ -150,6 +149,81 @@ def test_filter_tracks_by_date(
     assert (
         canvas_with_filtered_tracks != canvas_with_all_tracks
     ), "Canvas did not update after applying date filter - filter not working"
+
+
+def assert_screenshot_equal(
+    actual: Path, expected: Path, tolerance: float = 0.01
+) -> None:
+    """Compare an actual screenshot (bytes) with an expected screenshot file.
+
+    Args:
+        actual: Screenshot data as bytes
+        expected: Path to expected screenshot file. If None, uses ALL_TRACKS_FILE_NAME
+        tolerance: Acceptable difference ratio (0.0 = exact match,
+        1.0 = completely different)
+
+    Raises:
+        AssertionError: If screenshots differ beyond tolerance
+        FileNotFoundError: If expected screenshot file doesn't exist
+    """
+
+    assert expected.exists(), (
+        f"Expected screenshot not found: {expected}\n"
+        f"Generate it first using test_generate_canvas_screenshots"
+    )
+
+    actual_image = Image.open(actual)
+    expected_image = Image.open(expected)
+
+    # Check dimensions match
+    assert actual_image.size == expected_image.size, (
+        f"Screenshot dimensions differ: "
+        f"actual {actual_image.size} vs expected {expected_image.size}"
+    )
+
+    # Compare images
+    diff = ImageChops.difference(actual_image, expected_image)
+    diff_stat = diff.getdata()
+    diff.save("diff.png")
+
+    # Calculate difference ratio
+    pixels_different = sum(1 for pixel in diff_stat if pixel != 0)
+    total_pixels = actual_image.size[0] * actual_image.size[1]
+    diff_ratio = pixels_different / total_pixels if total_pixels > 0 else 0
+
+    assert diff_ratio <= tolerance, (
+        f"Screenshots differ: {diff_ratio:.2%} of pixels are different "
+        f"(tolerance: {tolerance:.2%})"
+    )
+
+
+def get_loaded_tracks_canvas(
+    external_app: NiceGUITestServer, page: Page, resource_manager: ResourceManager
+) -> Any:
+    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
+    page.goto(base_url + ENDPOINT_MAIN_PAGE)
+
+    data_dir = Path(__file__).parents[1] / "data"
+    video_file = data_dir / TEST_VIDEO_FILENAME
+    track_file = data_dir / TEST_TRACK_FILENAME
+    assert video_file.exists(), f"Test video file missing: {video_file}"
+    assert track_file.exists(), f"Test track file missing: {track_file}"
+
+    # Setup: Add video, tracks, and enable tracks layer
+    canvas = setup_tracks_display(
+        page, resource_manager, video_file, track_file, enable_tracks_layer=True
+    )
+    return canvas
+
+
+def test_generate_canvas_screenshots(
+    external_app: NiceGUITestServer,
+    page: Page,
+    resource_manager: ResourceManager,
+    acceptance_test_data_folder: Path,
+) -> None:
+    canvas = get_loaded_tracks_canvas(external_app, page, resource_manager)
+    canvas.screenshot(path=acceptance_test_data_folder / ALL_TRACKS_FILE_NAME)
 
 
 @pytest.mark.skip(reason="only works in headed right now")

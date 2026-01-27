@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import time
+from pathlib import Path
 from typing import Generator, TypeVar
 
 import pytest
@@ -84,3 +85,8 @@ def external_app() -> YieldFixture[NiceGUITestServer]:
         yield server
     finally:
         server.stop()
+
+
+@pytest.fixture
+def acceptance_test_data_folder(test_data_dir: Path) -> Path:
+    return test_data_dir / "acceptance"

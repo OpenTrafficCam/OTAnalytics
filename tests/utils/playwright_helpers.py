@@ -655,6 +655,19 @@ def wait_for_canvas_change(
     raise AssertionError("Canvas did not change within timeout")
 
 
+def compare_screenshots(actual: bytes, expected: bytes) -> bool:
+    """Compare two screenshot byte arrays for equality.
+
+    Args:
+        actual: Actual screenshot bytes to compare
+        expected: Expected screenshot bytes to compare against
+
+    Returns:
+        True if screenshots match, False otherwise
+    """
+    return actual == expected
+
+
 # ----------------------
 # Track helpers
 # ----------------------
