@@ -187,7 +187,7 @@ def assert_screenshot_equal(
     diff.save("diff.png")
 
     # Calculate difference ratio
-    pixels_different = sum(1 for pixel in diff_stat if pixel != 0)
+    pixels_different = sum(1 for pixel in diff_stat if pixel != (0, 0, 0))
     total_pixels = actual_image.size[0] * actual_image.size[1]
     diff_ratio = pixels_different / total_pixels if total_pixels > 0 else 0
 
