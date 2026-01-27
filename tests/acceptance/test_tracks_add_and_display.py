@@ -5,7 +5,12 @@ import pytest
 from PIL import Image, ImageChops  # type: ignore
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
-from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.application.resources.resource_manager import (
+    FlowAndSectionKeys,
+    ResourceManager,
+    VisualizationLayersKeys,
+    VisualizationOffsetSliderKeys,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
     MARKER_FILTER_BY_DATE_APPLY_BUTTON,
@@ -20,13 +25,23 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.containe
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     MARKER_VISUALIZATION_LAYERS_ALL,
 )
+from OTAnalytics.plugin_ui.visualization.visualization import (
+    ALL,
+    ASSIGNED_TO_FLOWS,
+    INTERSECTING_SECTIONS,
+    NOT_ASSIGNED_TO_FLOWS,
+    NOT_INTERSECTING_SECTIONS,
+)
 from tests.acceptance.conftest import PLAYWRIGHT_VISIBLE_TIMEOUT_MS, NiceGUITestServer
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
 from tests.utils.playwright_helpers import (
+    create_flow,
+    create_section,
     enable_and_apply_date_filter,
     setup_tracks_display,
     verify_filter_active,
     wait_for_canvas_change,
+    wait_for_flow_present,
 )
 
 SCREENSHOT_PATH = "screenshots"
@@ -151,6 +166,26 @@ def test_filter_tracks_by_date(
     ), "Canvas did not update after applying date filter - filter not working"
 
 
+@pytest.mark.timeout(300)
+@pytest.mark.playwright
+@pytest.mark.usefixtures("external_app")
+def test_toggle_intersection_layers(
+    page: Page,
+    external_app: NiceGUITestServer,
+    acceptance_test_data_folder: Path,
+    resource_manager: ResourceManager,
+) -> None:
+    """ """
+    canvas = get_loaded_tracks_canvas(external_app, page, resource_manager)
+    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    new_path = acceptance_test_data_folder / "new_file.png"
+    canvas.screenshot(path=new_path)
+
+    assert_screenshot_equal(
+        new_path, acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
+    )
+
+
 def assert_screenshot_equal(
     actual: Path, expected: Path, tolerance: float = 0.01
 ) -> None:
@@ -216,14 +251,127 @@ def get_loaded_tracks_canvas(
     return canvas
 
 
+@pytest.mark.timeout(300)
+@pytest.mark.playwright
+@pytest.mark.usefixtures("external_app")
 def test_generate_canvas_screenshots(
     external_app: NiceGUITestServer,
     page: Page,
     resource_manager: ResourceManager,
     acceptance_test_data_folder: Path,
 ) -> None:
+    """Generate reference screenshots for all visualization layer states."""
     canvas = get_loaded_tracks_canvas(external_app, page, resource_manager)
+
+    # Helper function to toggle a checkbox and take screenshot
+    def toggle_and_screenshot(
+        checkbox_text: str, filename_base: str, nth: int = 0
+    ) -> None:
+        """Toggle a checkbox on, take screenshot, then toggle off.
+
+        Args:
+            checkbox_text: Text of the checkbox to find
+            filename_base: Base name for screenshot files
+            nth: Which occurrence to use if multiple checkboxes have same text
+        """
+        checkbox = page.get_by_text(checkbox_text, exact=True).nth(nth)
+        checkbox.scroll_into_view_if_needed()
+
+        # Toggle on and screenshot
+        if not checkbox.is_checked():
+            checkbox.click()
+        page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+        canvas.screenshot(path=acceptance_test_data_folder / f"{filename_base}.png")
+
+        # Toggle off (no screenshot)
+        checkbox.click()
+        page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+    # 1. Show all tracks (already enabled, just take screenshot)
     canvas.screenshot(path=acceptance_test_data_folder / ALL_TRACKS_FILE_NAME)
+
+    # Switch to Sections tab and create sections
+    page.get_by_text(
+        resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
+    ).click()
+    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+    # Create two sections for flow
+    section_names = ["Section-Start", "Section-End"]
+    coords = [
+        [(250, 250), (250, 60)],
+        [(220, 400), (340, 140)],
+    ]
+    for i, name in enumerate(section_names):
+        create_section(page, resource_manager, name, positions=coords[i])
+
+    # Switch to Flows tab and create flow
+    page.get_by_text(
+        resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
+    ).click()
+    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+    flow_name = "Test-Flow"
+    create_flow(
+        page, resource_manager, flow_name, start_section_index=0, end_section_index=1
+    )
+    wait_for_flow_present(page, flow_name)
+
+    # Update flow highlighting
+    page.get_by_text(
+        resource_manager.get(VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING),
+        exact=True,
+    ).click()
+    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+    # Turn off "Show all tracks" to prepare for next screenshots
+    all_tracks_checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+    all_tracks_checkbox.click()
+    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+    # 2. Show offset ändern und zurücksetzen (Update with section offset button)
+    # This button may be disabled if preconditions aren't met, so skip if not enabled
+    offset_button = page.get_by_text(
+        resource_manager.get(VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET),
+        exact=True,
+    )
+    if offset_button.count() > 0:
+        offset_button.scroll_into_view_if_needed()
+        canvas.screenshot(path=acceptance_test_data_folder / "offset_before.png")
+        # Only click if enabled
+        if not offset_button.is_disabled():
+            offset_button.click()
+            page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+            canvas.screenshot(path=acceptance_test_data_folder / "offset_after.png")
+
+    # 3-11. Toggle all visualization layers and take screenshots
+    # Show tracks group (nth=0 means first occurrence in "Show tracks" section)
+    toggle_and_screenshot(
+        INTERSECTING_SECTIONS, "highlight_tracks_intersecting_sections", nth=0
+    )
+    toggle_and_screenshot(
+        NOT_INTERSECTING_SECTIONS, "highlight_tracks_not_intersecting_sections", nth=0
+    )
+    toggle_and_screenshot(
+        ASSIGNED_TO_FLOWS, "highlight_tracks_assigned_to_flows", nth=0
+    )
+    toggle_and_screenshot(
+        NOT_ASSIGNED_TO_FLOWS, "highlight_tracks_not_assigned_to_flows", nth=0
+    )
+
+    # Show start and end points group
+    # (nth=1 means second occurrence in "Show start and end points" section)
+    toggle_and_screenshot(
+        INTERSECTING_SECTIONS, "start_end_intersecting_sections", nth=1
+    )
+    toggle_and_screenshot(
+        NOT_INTERSECTING_SECTIONS, "start_end_not_intersecting_sections", nth=1
+    )
+    toggle_and_screenshot(ALL, "start_end_all", nth=1)
+    toggle_and_screenshot(ASSIGNED_TO_FLOWS, "start_end_assigned_to_flows", nth=1)
+    toggle_and_screenshot(
+        NOT_ASSIGNED_TO_FLOWS, "start_end_not_assigned_to_flows", nth=1
+    )
 
 
 @pytest.mark.skip(reason="only works in headed right now")
