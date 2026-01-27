@@ -103,6 +103,7 @@ def test_filter_tracks_by_date(
     page: Page,
     external_app: NiceGUITestServer,
     acceptance_test_data_folder: Path,
+    actual_screenshot_path: Path,
     resource_manager: ResourceManager,
 ) -> None:
     """Acceptance (Playwright): Filter displayed tracks by date range.
@@ -125,11 +126,10 @@ def test_filter_tracks_by_date(
     """
     canvas = get_loaded_tracks_canvas(external_app, page, resource_manager)
     page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-    new_path = acceptance_test_data_folder / "new_file.png"
-    canvas_with_all_tracks = canvas.screenshot(path=new_path)
+    canvas_with_all_tracks = canvas.screenshot(path=actual_screenshot_path)
 
     assert_screenshot_equal(
-        new_path, acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
+        actual_screenshot_path, acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
     )
 
     # Configure and apply date filter with minimal range
@@ -184,7 +184,6 @@ def assert_screenshot_equal(
     # Compare images
     diff = ImageChops.difference(actual_image, expected_image)
     diff_stat = diff.getdata()
-    diff.save("diff.png")
 
     # Calculate difference ratio
     pixels_different = sum(1 for pixel in diff_stat if pixel != (0, 0, 0))

@@ -123,3 +123,8 @@ def external_app() -> YieldFixture[NiceGUITestServer]:
 @pytest.fixture
 def acceptance_test_data_folder(test_data_dir: Path) -> Path:
     return test_data_dir / "acceptance"
+
+
+@pytest.fixture
+def actual_screenshot_path(test_data_tmp_dir: Path) -> Path:
+    return test_data_tmp_dir / "acceptance_test_actual_screenshot.png"
