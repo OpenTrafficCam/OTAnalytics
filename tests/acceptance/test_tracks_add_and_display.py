@@ -152,7 +152,7 @@ def test_filter_tracks_by_date(
 
 
 def assert_screenshot_equal(
-    actual: Path, expected: Path, tolerance: float = 0.01
+    actual: Path, expected: Path, tolerance: float = 0.00
 ) -> None:
     """Compare an actual screenshot (bytes) with an expected screenshot file.
 
