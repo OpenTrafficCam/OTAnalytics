@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Generator, TypeVar
 
 import pytest
+import requests
 
 from OTAnalytics.plugin_ui.nicegui_application import DEFAULT_HOSTNAME, DEFAULT_PORT
 from tests.utils.builders.otanalytics_builders import file_picker_directory
@@ -50,7 +52,7 @@ class NiceGUITestServer:
         """Start NiceGUI server in subprocess."""
         self.process = subprocess.Popen(
             [
-                "python",
+                sys.executable,
                 "-m",
                 "OTAnalytics",
                 "--webui",
@@ -58,6 +60,7 @@ class NiceGUITestServer:
                 file_picker_directory(),
             ],
             stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             bufsize=BUFFER_SIZE_100MB,
         )
@@ -74,7 +77,37 @@ class NiceGUITestServer:
 
     def _wait_for_server(self, timeout: int = 10) -> None:
         """Naive wait; rely on later page.goto() for final availability."""
-        time.sleep(min(max(timeout, 1), 10))
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                response = requests.get(self.base_url, timeout=1)
+                if response.status_code == 200:
+                    return
+            except requests.ConnectionError:
+                pass
+            time.sleep(0.5)
+
+        # Collect diagnostic information on timeout
+        error_msg = f"Server was not reachable at {self.base_url} within {timeout}s"
+        if self.process:
+            if self.process.poll() is not None:
+                error_msg += (
+                    f"\nProcess has already terminated with exit code: "
+                    f"{self.process.returncode}"
+                )
+            if self.process.stderr:
+                stderr_output = self.process.stderr.read().decode(
+                    "utf-8", errors="replace"
+                )
+                if stderr_output:
+                    error_msg += f"\nStderr:\n{stderr_output}"
+            if self.process.stdout:
+                stdout_output = self.process.stdout.read().decode(
+                    "utf-8", errors="replace"
+                )
+                if stdout_output:
+                    error_msg += f"\nStdout:\n{stdout_output}"
+        raise TimeoutError(error_msg)
 
 
 @pytest.fixture
