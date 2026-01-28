@@ -167,14 +167,24 @@ class TagExploder:
                 second=0, microsecond=0
             )
         )
-        maximum = self._end - start_without_seconds
-        duration = int(maximum.total_seconds())
         interval = self._specification.counting_specification.interval_in_minutes * 60
+
+        # Round down start time to the nearest interval boundary
+        start_timestamp = start_without_seconds.timestamp()
+        interval_boundary = (start_timestamp // interval) * interval
+        start_at_boundary = start_without_seconds.fromtimestamp(
+            interval_boundary, tz=start_without_seconds.tzinfo
+        )
+
+        maximum = self._end - start_at_boundary
+        duration = int(maximum.total_seconds())
+        if self._end.timestamp() % interval == 0:
+            duration += 1
         for flow in self._specification.flow_name_info:
             for mode in self._specification.counting_specification.modes:
                 for delta in range(0, duration, interval):
                     offset = timedelta(seconds=delta)
-                    start = start_without_seconds + offset
+                    start = start_at_boundary + offset
                     interval_time = timedelta(seconds=interval)
                     tag = (
                         create_flow_tag(flow.name)

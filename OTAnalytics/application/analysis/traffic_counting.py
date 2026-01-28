@@ -1031,7 +1031,10 @@ class TrafficCounting:
         specification: CountingSpecificationDto,
     ) -> Callable[[RoadUserAssignment], bool]:
         """Create a filter interval using the given specifications start and end time
-        as lower and upper bounds respectively.
+        as lower and upper bounds respectively. The interval is always closed at the
+        start time and open at the end time: [specification-start, specification-end).
+        The start time is always inside the interval while the end time is always
+        outside the interval.
 
         The resulting filter determines whether RoadUserAssignments fall into the
         desired observation interval and should be counted.
@@ -1039,11 +1042,11 @@ class TrafficCounting:
         The is_upper/lower_strict parameters of this TrafficCounting object
         can be used to configure the filter.
         A strict bound does not allow the assignment to overlap the respective bound.
-        The four combinations are as follows (open = '('; closed = '['):
-            - [lower, upper]: both start and end of the rua must be inside the interval
-            - [lower, upper): the start of the rua must be inside the interval
-            - (lower, upper]: the end of the rua must be inside the interval
-            - (lower, upper): either start or end of the rua must be in the interval,
+        The four combinations are as follows:
+            - (True, True): both start and end of the rua must be inside the interval
+            - (True, False): the start of the rua must be inside the interval
+            - (False, True): the end of the rua must be inside the interval
+            - (False, False): either start or end of the rua must be in the interval,
                 or [start, end] must enclose the interval
 
         Args:
@@ -1061,18 +1064,18 @@ class TrafficCounting:
         is_upper_strict = self._filter_upper_bound_strict
 
         if is_lower_strict and is_upper_strict:
-            return lambda rua: lower <= start_of(rua) and end_of(rua) <= upper
+            return lambda rua: lower <= start_of(rua) and end_of(rua) < upper
 
         elif is_lower_strict and not is_upper_strict:
-            return lambda rua: lower <= start_of(rua) <= upper
+            return lambda rua: lower <= start_of(rua) < upper
 
         elif not is_lower_strict and is_upper_strict:
-            return lambda rua: lower <= end_of(rua) <= upper
+            return lambda rua: lower <= end_of(rua) < upper
 
         else:
             return (
-                lambda rua: lower <= start_of(rua) <= upper
-                or lower <= end_of(rua) <= upper
+                lambda rua: lower <= start_of(rua) < upper
+                or lower <= end_of(rua) < upper
                 or (start_of(rua) <= lower and upper <= end_of(rua))
             )
 
