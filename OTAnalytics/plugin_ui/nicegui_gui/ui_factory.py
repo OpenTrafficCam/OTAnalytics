@@ -3,6 +3,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
+from nicegui import ui
+
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.info_box import InfoBox
@@ -64,6 +66,15 @@ class NiceGuiUiFactory(UiFactory):
     def info_box(
         self, message: str, initial_position: tuple[int, int], show_cancel: bool = False
     ) -> InfoBox:
+        # Use ui.notify for immediate feedback
+        ui.notify(
+            message,
+            type="negative",
+            position="top",
+            timeout=5000,  # 5 seconds for errors
+            close_button=True,
+            multi_line=True,
+        )
         return NiceGuiInfoBox()
 
     def minimal_info_box(
