@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from shutil import copy2, rmtree
-from typing import Any
+from typing import Any, AsyncIterator
 from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
@@ -912,7 +912,7 @@ class TestOTAnalyticsCli:
         "mode",
         [CliMode.STREAM, CliMode.BULK],
     )
-    def test_start_with_no_video_in_folder(
+    async def test_start_with_no_video_in_folder(
         self,
         mode: CliMode,
         test_data_tmp_dir: Path,
@@ -940,7 +940,7 @@ class TestOTAnalyticsCli:
             mode, cli_bulk_dependencies, cli_stream_dependencies, run_config
         )
 
-        cli.start()
+        await cli.start()
         expected_event_list_file = save_name.with_name(
             f"stem_{save_suffix}.events.{DEFAULT_EVENTLIST_FILE_TYPE}"
         )
@@ -1025,7 +1025,7 @@ class TestOTAnalyticsCli:
         "mode",
         [CliMode.STREAM, CliMode.BULK],
     )
-    def test_cli_with_otconfig_has_expected_output_files(
+    async def test_cli_with_otconfig_has_expected_output_files(
         self,
         mode: CliMode,
         cli_stream_dependencies: dict[str, Any],
@@ -1053,7 +1053,7 @@ class TestOTAnalyticsCli:
             run_config,
         )
 
-        cli.start()
+        await cli.start()
         for event_format in run_config.event_formats:
             expected_events_file = temp_otconfig.with_name(
                 f"my_name_my_suffix.events.{event_format}"
@@ -1073,7 +1073,7 @@ class TestOTAnalyticsCli:
         "mode",
         [CliMode.STREAM, CliMode.BULK],
     )
-    def test_exceptions_are_being_logged(
+    async def test_exceptions_are_being_logged(
         self,
         get_logger: Mock,
         mock_run_analysis: Mock,
@@ -1093,7 +1093,7 @@ class TestOTAnalyticsCli:
             Mock(),
         )
 
-        cli.start()
+        await cli.start()
         logger.exception.assert_called_once_with(exception, exc_info=True)
         mock_run_analysis.assert_called_once()
 
@@ -1107,7 +1107,7 @@ class TestOTAnalyticsCli:
         "mode",
         [CliMode.STREAM, CliMode.BULK],
     )
-    def test_run_analysis(
+    async def test_run_analysis(
         self,
         mock_parse_track_stream: Mock,
         mock_add_flows: Mock,
@@ -1130,7 +1130,12 @@ class TestOTAnalyticsCli:
         sections = [Mock()]
         flows = [Mock()]
         tracks = [Mock()]
-        mock_parse_track_stream.return_value = tracks
+
+        async def async_track_generator() -> AsyncIterator[Any]:
+            for track in tracks:
+                yield track
+
+        mock_parse_track_stream.return_value = async_track_generator()
 
         type(run_config).sections = PropertyMock(return_value=sections)
 
@@ -1152,7 +1157,7 @@ class TestOTAnalyticsCli:
         )
 
         cli._prepare_analysis(sections, flows)
-        cli._run_analysis(ottrk_file_input_source)
+        await cli._run_analysis(ottrk_file_input_source)
         cli._export_analysis(sections, OVERWRITE)
 
         mock_add_flows.assert_called_once_with(flows)

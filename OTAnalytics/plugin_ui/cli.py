@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Iterable
-
-from more_itertools import peekable
+from typing import AsyncIterator, Iterable
 
 from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignmentRepository,
@@ -124,14 +122,14 @@ class OTAnalyticsCli(ABC):
         self._export_road_user_assignments = export_road_user_assignments
         self._export_track_statistics = export_track_statistics
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Start analysis."""
         try:
             sections = self._run_config.sections
             flows = self._run_config.flows
 
             self._prepare_analysis(sections, flows)
-            self._run_analysis(self.ottrk_file_input_source)
+            await self._run_analysis(self.ottrk_file_input_source)
             self._export_analysis(sections, ExportMode.create(True, True))
 
         except Exception as cause:
@@ -158,7 +156,7 @@ class OTAnalyticsCli(ABC):
         self._add_flows(flows)
 
     @abstractmethod
-    def _run_analysis(self, input_source: OttrkFileInputSource) -> None:
+    async def _run_analysis(self, input_source: OttrkFileInputSource) -> None:
         raise NotImplementedError
 
     @property
@@ -433,9 +431,9 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
         self._track_parser = track_parser
         self._progressbar = progressbar
 
-    def _run_analysis(self, input_source: OttrkFileInputSource) -> None:
+    async def _run_analysis(self, input_source: OttrkFileInputSource) -> None:
         """Run analysis."""
-        self._parse_tracks(input_source)
+        await self._parse_tracks(input_source)
         self._apply_cli_cuts.apply(
             self._get_all_sections(), preserve_cutting_sections=True
         )
@@ -443,10 +441,12 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
         self._create_events()
         logger().info("Event list created.")
 
-    def _parse_tracks(self, input_source: OttrkFileInputSource) -> None:
-        for track_file in self._progressbar(
-            list(input_source.produce()), "Parsed track files", "files"
-        ):
+    async def _parse_tracks(self, input_source: OttrkFileInputSource) -> None:
+        track_files = []
+        async for track_file in input_source.produce():
+            track_files.append(track_file)
+
+        for track_file in self._progressbar(track_files, "Parsed track files", "files"):
             parse_result = self._track_parser.parse(track_file)
             self._add_all_tracks(parse_result.tracks)
             self._tracks_metadata.update_detection_classes(
@@ -508,24 +508,22 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
         )
         self._track_parser = track_parser
 
-    def _parse_track_stream(
+    async def _parse_track_stream(
         self, input_source: OttrkFileInputSource
-    ) -> Iterable[TrackDataset]:
+    ) -> AsyncIterator[TrackDataset]:
         self._track_parser.register_tracks_metadata(self._tracks_metadata)
         self._track_parser.register_videos_metadata(self._videos_metadata)
 
         return self._track_parser.parse(input_source)
 
-    def _run_analysis(self, input_source: OttrkFileInputSource) -> None:
+    async def _run_analysis(self, input_source: OttrkFileInputSource) -> None:
         """Run analysis."""
         sections = self._run_config.sections
         is_first = True
 
-        track_stream = peekable(self._parse_track_stream(input_source))
+        track_stream = await self._parse_track_stream(input_source)
 
-        for track_ds in track_stream:
-            is_last = track_stream.peek(default=None) is None
-
+        async for track_ds, is_last in self._iter_with_is_last(track_stream):
             self._add_all_tracks(track_ds)
 
             self._apply_cli_cuts.apply(
@@ -545,6 +543,22 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
             self._assignment_repository.clear()
 
             is_first = False
+            if is_last:
+                logger().info("Stream CLI reached last chunk.")
+
+    @staticmethod
+    async def _iter_with_is_last(
+        stream: AsyncIterator[TrackDataset],
+    ) -> AsyncIterator[tuple[TrackDataset, bool]]:
+        iterator = aiter(stream)
+        try:
+            current = await anext(iterator)
+        except StopAsyncIteration:
+            return
+        async for item in iterator:
+            yield current, False
+            current = item
+        yield current, True
 
     def _export_analysis(
         self, sections: Iterable[Section], export_mode: ExportMode

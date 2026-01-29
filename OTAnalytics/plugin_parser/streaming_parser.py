@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Iterable, Iterator
+from typing import  AsyncIterator
 
 from OTAnalytics.application.datastore import (
-    DetectionMetadata,
-    TrackParser,
-    VideoMetadata,
+    TrackParser
 )
+from tqdm.asyncio import tqdm
+
+from OTAnalytics.application.datastore import DetectionMetadata, VideoMetadata
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.track_input_source import OttrkFileInputSource
 from OTAnalytics.domain.progress import LazyProgressbarBuilder
@@ -16,7 +16,7 @@ from OTAnalytics.plugin_progress.lazy_tqdm_progressbar import LazyTqdmBuilder
 
 class StreamTrackParser(ABC):
     @abstractmethod
-    def parse(self, input_source: OttrkFileInputSource) -> Iterator[TrackDataset]:
+    def parse(self, input_source: OttrkFileInputSource) -> AsyncIterator[TrackDataset]:
         """
         Parse multiple track files and provide
         the parsed Tracks in form of a lazy stream.
@@ -93,18 +93,17 @@ class StreamOttrkParser(StreamTrackParser):
         for videos_metadata in self._registered_videos_metadata:
             videos_metadata.update(new_video_metadata)
 
-    def parse(self, input_source: OttrkFileInputSource) -> Iterator[TrackDataset]:
-        yield from self._parse_tracks(input_source)
-
-    def _parse_tracks(
+    async def parse(
         self, input_source: OttrkFileInputSource
-    ) -> Iterator[TrackDataset]:
-        progressbar: Iterable[Path] = self._progressbar(
-            input_source.produce(), unit="files", description="Processed ottrk files: "
-        )
+    ) -> AsyncIterator[TrackDataset]:
+        async for track_dataset in self._parse_tracks(input_source):
+            yield track_dataset
 
+    async def _parse_tracks(
+        self, input_source: OttrkFileInputSource
+    ) -> AsyncIterator[TrackDataset]:
         remaining_tracks: TrackDataset | None = None
-        for ottrk_file in progressbar:
+        async for ottrk_file in tqdm(input_source.produce(), unit="files", desc="Processed ottrk files: ")
             parse_result = self._track_parser.parse(ottrk_file)
             self._update_registered_metadata_collections(
                 parse_result.detection_metadata, parse_result.video_metadata
