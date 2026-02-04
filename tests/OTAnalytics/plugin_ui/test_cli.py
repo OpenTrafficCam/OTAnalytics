@@ -952,11 +952,12 @@ class TestOTAnalyticsCli:
         assert expected_event_list_file.exists()
         assert expected_counts_file.exists()
 
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "mode",
         [CliMode.STREAM, CliMode.BULK],
     )
-    def test_use_video_start_and_end_for_counting(
+    async def test_use_video_start_and_end_for_counting(
         self,
         mode: CliMode,
         test_data_tmp_dir: Path,
@@ -1007,7 +1008,7 @@ class TestOTAnalyticsCli:
             run_config,
         )
 
-        cli._do_export_counts(test_data_tmp_dir / filename, OVERWRITE)
+        await cli._do_export_counts(test_data_tmp_dir / filename, OVERWRITE)
         export_counts = dependencies[self.EXPORT_COUNTS]
 
         expected_specification = CountingSpecificationDto(
@@ -1107,6 +1108,7 @@ class TestOTAnalyticsCli:
         "mode",
         [CliMode.STREAM, CliMode.BULK],
     )
+    @pytest.mark.asyncio
     async def test_run_analysis(
         self,
         mock_parse_track_stream: Mock,
@@ -1158,7 +1160,7 @@ class TestOTAnalyticsCli:
 
         cli._prepare_analysis(sections, flows)
         await cli._run_analysis(ottrk_file_input_source)
-        cli._export_analysis(sections, OVERWRITE)
+        await cli._export_analysis(sections, OVERWRITE)
 
         mock_add_flows.assert_called_once_with(flows)
         mock_add_sections.assert_called_once_with(sections)
