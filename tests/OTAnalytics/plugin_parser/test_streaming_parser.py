@@ -135,17 +135,22 @@ class TestStreamOttrkParser:
     @pytest.fixture
     def stream_ottrk_parser(
         self,
+        mocked_track_repository: Mock,
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
     ) -> StreamOttrkParser:
         calculator = ByMaxConfidence()
-        stream_detection_parser = PythonStreamDetectionParser(
-            track_classification_calculator=calculator,
-            track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
+        track_parser = OttrkParser(
+            detection_parser=PythonDetectionParser(
+                track_classification_calculator=calculator,
+                track_repository=mocked_track_repository,
+                track_geometry_factory=ShapelyTrackGeometryDataset.from_track_dataset,
+                track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
+            ),
+            format_fixer=OttrkFormatFixer(),
         )
         return StreamOttrkParser(
-            detection_parser=stream_detection_parser,
-            format_fixer=OttrkFormatFixer(),
+            track_parser=track_parser,
             registered_tracks_metadata=[tracks_metadata],
             registered_videos_metadata=[videos_metadata],
             progressbar=LazyTqdmBuilder(),

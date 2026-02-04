@@ -208,7 +208,6 @@ from OTAnalytics.plugin_datastore.polars_track_store import (
     PolarsByMaxConfidence,
     PolarsTrackDataset,
 )
-from OTAnalytics.plugin_datastore.python_track_store import ByMaxConfidence
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
     PolarsTrackGeometryDataset,
 )
@@ -251,18 +250,15 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     OtConfigParser,
 )
 from OTAnalytics.plugin_parser.otvision_parser import (
-    DEFAULT_TRACK_LENGTH_LIMIT,
     CachedVideoParser,
     OtEventListParser,
     OtFlowParser,
-    OttrkFormatFixer,
     SimpleVideoParser,
 )
 from OTAnalytics.plugin_parser.road_user_assignment_export import (
     SimpleRoadUserAssignmentExporterFactory,
 )
 from OTAnalytics.plugin_parser.streaming_parser import (
-    PythonStreamDetectionParser,
     StreamOttrkParser,
     StreamTrackParser,
 )
@@ -645,11 +641,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     def _create_stream_track_parser(self) -> StreamTrackParser:
         return StreamOttrkParser(
-            detection_parser=PythonStreamDetectionParser(
-                track_classification_calculator=ByMaxConfidence(),
-                track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
-            ),
-            format_fixer=OttrkFormatFixer(),
+            track_parser=self._create_track_parser(),
             progressbar=LazyTqdmBuilder(),
             track_dataset_factory=lambda tracks: PolarsTrackDataset.from_list(
                 tracks,
