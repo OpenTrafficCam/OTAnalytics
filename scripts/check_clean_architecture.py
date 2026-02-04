@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 """
-Clean Architecture Import Checker for OTAnalytics
+Clean Architecture Import Checker for OTCloud
 
-This script validates that the OTAnalytics project follows Clean Architecture import
-rules. The architecture has 4 layers:
-1. domain (innermost layer)
-2. application
-3. adapter_*
-4. plugin_* (outermost layer)
+This script validates that the OTCloud project follows Clean Architecture import
+rules. The architecture has 5 layers:
+1. abstraction (innermost layer)
+2. domain
+3. application
+4. adapter_*
+5. plugin_* (outermost layer)
 
 Import Rules:
 - Modules can only import from the same layer or inner (more central) layers
-- Domain can only import from domain and standard libraries
-- Application can import from domain, application, and standard libraries
-- Adapter can import from domain, application, adapter, and standard libraries
-- Plugin can import from all layers and standard libraries
+- Abstraction can only import from abstraction and standard libraries
+- Domain can only import from abstraction, domain, and standard libraries
+- Application can import from abstraction, domain, application, and standard libraries
+- Adapter can import from abstraction, domain, application, adapter, and std libraries
+- Plugin can import from all layers, standard libraries, and external libraries
+- External library dependencies (non-stdlib) are only allowed in the plugin layer
 - NO imports from outer layers to inner layers are allowed
 
 Usage:
@@ -29,10 +32,236 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+# Constants for architectural layers and project configuration
+PROJECT_NAME = "OTCloud"
+LAYER_ABSTRACTION = "abstraction"
+LAYER_DOMAIN = "domain"
+LAYER_APPLICATION = "application"
+LAYER_ADAPTER_PREFIX = "adapter_"
+LAYER_PLUGIN_PREFIX = "plugin_"
+LAYER_HELPERS = "helpers"
+
+# Standard library modules (Python 3.x)
+STDLIB_MODULES = frozenset(
+    {
+        "abc",
+        "aifc",
+        "argparse",
+        "array",
+        "ast",
+        "asynchat",
+        "asyncio",
+        "asyncore",
+        "atexit",
+        "audioop",
+        "base64",
+        "bdb",
+        "binascii",
+        "binhex",
+        "bisect",
+        "builtins",
+        "bz2",
+        "calendar",
+        "cgi",
+        "cgitb",
+        "chunk",
+        "cmath",
+        "cmd",
+        "code",
+        "codecs",
+        "codeop",
+        "collections",
+        "colorsys",
+        "compileall",
+        "concurrent",
+        "configparser",
+        "contextlib",
+        "contextvars",
+        "copy",
+        "copyreg",
+        "cProfile",
+        "crypt",
+        "csv",
+        "ctypes",
+        "curses",
+        "dataclasses",
+        "datetime",
+        "dbm",
+        "decimal",
+        "difflib",
+        "dis",
+        "distutils",
+        "doctest",
+        "email",
+        "encodings",
+        "enum",
+        "errno",
+        "faulthandler",
+        "fcntl",
+        "filecmp",
+        "fileinput",
+        "fnmatch",
+        "formatter",
+        "fractions",
+        "ftplib",
+        "functools",
+        "gc",
+        "getopt",
+        "getpass",
+        "gettext",
+        "glob",
+        "graphlib",
+        "grp",
+        "gzip",
+        "hashlib",
+        "heapq",
+        "hmac",
+        "html",
+        "http",
+        "idlelib",
+        "imaplib",
+        "imghdr",
+        "imp",
+        "importlib",
+        "inspect",
+        "io",
+        "ipaddress",
+        "itertools",
+        "json",
+        "keyword",
+        "lib2to3",
+        "linecache",
+        "locale",
+        "logging",
+        "lzma",
+        "mailbox",
+        "mailcap",
+        "marshal",
+        "math",
+        "mimetypes",
+        "mmap",
+        "modulefinder",
+        "multiprocessing",
+        "netrc",
+        "nis",
+        "nntplib",
+        "numbers",
+        "operator",
+        "optparse",
+        "os",
+        "ossaudiodev",
+        "parser",
+        "pathlib",
+        "pdb",
+        "pickle",
+        "pickletools",
+        "pipes",
+        "pkgutil",
+        "platform",
+        "plistlib",
+        "poplib",
+        "posix",
+        "posixpath",
+        "pprint",
+        "profile",
+        "pstats",
+        "pty",
+        "pwd",
+        "py_compile",
+        "pyclbr",
+        "pydoc",
+        "queue",
+        "quopri",
+        "random",
+        "re",
+        "readline",
+        "reprlib",
+        "resource",
+        "rlcompleter",
+        "runpy",
+        "sched",
+        "secrets",
+        "select",
+        "selectors",
+        "shelve",
+        "shlex",
+        "shutil",
+        "signal",
+        "site",
+        "smtpd",
+        "smtplib",
+        "sndhdr",
+        "socket",
+        "socketserver",
+        "spwd",
+        "sqlite3",
+        "ssl",
+        "stat",
+        "statistics",
+        "string",
+        "stringprep",
+        "struct",
+        "subprocess",
+        "sunau",
+        "symbol",
+        "symtable",
+        "sys",
+        "sysconfig",
+        "syslog",
+        "tabnanny",
+        "tarfile",
+        "telnetlib",
+        "tempfile",
+        "termios",
+        "test",
+        "textwrap",
+        "threading",
+        "time",
+        "timeit",
+        "tkinter",
+        "token",
+        "tokenize",
+        "tomllib",
+        "trace",
+        "traceback",
+        "tracemalloc",
+        "tty",
+        "turtle",
+        "turtledemo",
+        "types",
+        "typing",
+        "unicodedata",
+        "unittest",
+        "urllib",
+        "uu",
+        "uuid",
+        "venv",
+        "warnings",
+        "wave",
+        "weakref",
+        "webbrowser",
+        "winreg",
+        "winsound",
+        "wsgiref",
+        "xdrlib",
+        "xml",
+        "xmlrpc",
+        "zipapp",
+        "zipfile",
+        "zipimport",
+        "zlib",
+        "zoneinfo",
+        "__future__",
+        "__main__",
+        "_thread",
+    }
+)
+
 
 class ArchitecturalLayer(Enum):
     """Defines the architectural layers in order from innermost to outermost"""
 
+    ABSTRACTION = auto()
     DOMAIN = auto()
     APPLICATION = auto()
     ADAPTER = auto()
@@ -55,12 +284,13 @@ class ImportViolation:
 
 
 class CleanArchitectureChecker:
-    def __init__(self, project_root: str = "OTAnalytics"):
+    def __init__(self, project_root: str = PROJECT_NAME):
         self.project_root = Path(project_root)
         self.violations: List[ImportViolation] = []
 
         # Define layer hierarchy (inner to outer)
         self.layer_hierarchy = [
+            ArchitecturalLayer.ABSTRACTION,
             ArchitecturalLayer.DOMAIN,
             ArchitecturalLayer.APPLICATION,
             ArchitecturalLayer.ADAPTER,
@@ -68,37 +298,65 @@ class CleanArchitectureChecker:
             ArchitecturalLayer.HELPERS,
         ]
 
+        # Standard library modules (Python 3.x)
+        self.stdlib_modules = STDLIB_MODULES
+
+    def is_external_library(self, module_name: str) -> bool:
+        """Check if a module is an external (third-party) library"""
+        if module_name == PROJECT_NAME or module_name.startswith(f"{PROJECT_NAME}."):
+            return False
+
+        # Get the top-level module name
+        top_level = module_name.split(".")[0]
+
+        # Check if it's a standard library module
+        if top_level in self.stdlib_modules:
+            return False
+
+        # It's an external library
+        return True
+
     def categorize_module_layer(self, module_name: str) -> ArchitecturalLayer:
         """Determine which architectural layer a module belongs to"""
-        if not module_name.startswith("OTAnalytics"):
+        if not module_name.startswith(f"{PROJECT_NAME}."):
             return ArchitecturalLayer.EXTERNAL
 
         parts = module_name.split(".")
         if len(parts) < 2:
             return ArchitecturalLayer.EXTERNAL
 
-        layer_part = parts[1]  # OTAnalytics.<layer_part>
+        layer_part = parts[1]  # OTCloud.<layer_part>
 
-        if layer_part == "domain":
+        if layer_part == LAYER_ABSTRACTION:
+            return ArchitecturalLayer.ABSTRACTION
+        elif layer_part == LAYER_DOMAIN:
             return ArchitecturalLayer.DOMAIN
-        elif layer_part == "application":
+        elif layer_part == LAYER_APPLICATION:
             return ArchitecturalLayer.APPLICATION
-        elif layer_part.startswith("adapter_"):
+        elif layer_part.startswith(LAYER_ADAPTER_PREFIX):
             return ArchitecturalLayer.ADAPTER
-        elif layer_part.startswith("plugin_"):
+        elif layer_part.startswith(LAYER_PLUGIN_PREFIX):
             return ArchitecturalLayer.PLUGIN
-        elif layer_part == "helpers":
+        elif layer_part == LAYER_HELPERS:
             return ArchitecturalLayer.HELPERS
         else:
-            # Unknown OTAnalytics module, treat as external
+            # Unknown OTCloud module, treat as external
             return ArchitecturalLayer.EXTERNAL
 
     def is_import_allowed(
-        self, source_layer: ArchitecturalLayer, target_layer: ArchitecturalLayer
+        self,
+        source_layer: ArchitecturalLayer,
+        target_layer: ArchitecturalLayer,
+        imported_module: str,
     ) -> bool:
         """Check if importing from target_layer to source_layer is allowed"""
         if target_layer == ArchitecturalLayer.EXTERNAL:
-            return True  # All layers can import external modules
+            # Check if it's an external library (non-stdlib)
+            if self.is_external_library(imported_module):
+                # External libraries are only allowed in plugin layer
+                return source_layer == ArchitecturalLayer.PLUGIN
+            # Standard library is allowed in all layers
+            return True
 
         if target_layer == ArchitecturalLayer.HELPERS:
             return True  # All layers can import from helpers (utility layer)
@@ -149,15 +407,17 @@ class CleanArchitectureChecker:
 
         first_part = parts[0]
 
-        if first_part == "domain":
+        if first_part == LAYER_ABSTRACTION:
+            return ArchitecturalLayer.ABSTRACTION
+        elif first_part == LAYER_DOMAIN:
             return ArchitecturalLayer.DOMAIN
-        elif first_part == "application":
+        elif first_part == LAYER_APPLICATION:
             return ArchitecturalLayer.APPLICATION
-        elif first_part.startswith("adapter_"):
+        elif first_part.startswith(LAYER_ADAPTER_PREFIX):
             return ArchitecturalLayer.ADAPTER
-        elif first_part.startswith("plugin_"):
+        elif first_part.startswith(LAYER_PLUGIN_PREFIX):
             return ArchitecturalLayer.PLUGIN
-        elif first_part == "helpers":
+        elif first_part == LAYER_HELPERS:
             return ArchitecturalLayer.HELPERS
         else:
             return ArchitecturalLayer.EXTERNAL
@@ -176,16 +436,31 @@ class CleanArchitectureChecker:
         for line_number, imported_module in imports:
             target_layer = self.categorize_module_layer(imported_module)
 
-            if not self.is_import_allowed(source_layer, target_layer):
+            if not self.is_import_allowed(source_layer, target_layer, imported_module):
+                # Determine specific reason for violation
+                if (
+                    target_layer == ArchitecturalLayer.EXTERNAL
+                    and self.is_external_library(imported_module)
+                ):
+                    reason = (
+                        f"{source_layer.name} layer cannot import external library "
+                        f"'{imported_module}'. External libraries are only allowed "
+                        f"in PLUGIN layer"
+                    )
+                else:
+                    reason = (
+                        f"{source_layer.name} layer cannot import from "
+                        f"{target_layer.name} layer"
+                    )
+
                 violation = ImportViolation(
-                    file_path=str(file_path.relative_to(self.project_root)),
+                    file_path=str(file_path.absolute()),
                     line_number=line_number,
                     imported_module=imported_module,
                     violating_import=imported_module,
                     source_layer=source_layer,
                     target_layer=target_layer,
-                    reason=f"{source_layer.name} layer cannot import from "
-                    f"{target_layer.name} layer",
+                    reason=reason,
                 )
                 self.violations.append(violation)
 
@@ -232,16 +507,17 @@ class CleanArchitectureChecker:
             violations_by_file[violation.file_path].append(violation)
 
         for file_path in sorted(violations_by_file.keys()):
-            print(f"📄 {file_path}:")
             for violation in violations_by_file[file_path]:
-                print(f"  Line {violation.line_number}: {violation.imported_module}")
+                # PyCharm-compatible clickable link format
+                print(f'  File "{violation.file_path}", line {violation.line_number}')
+                print(f"    Import: {violation.imported_module}")
                 print(f"    ❌ {violation.reason}")
                 if verbose:
                     print(
                         f"    Source: {violation.source_layer.name}, "
                         f"Target: {violation.target_layer.name}"
                     )
-            print()
+                print()
 
     def get_summary(self) -> Dict[str, int]:
         """Get a summary of violations by layer"""
@@ -256,12 +532,12 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Check Clean Architecture compliance for OTAnalytics"
+        description="Check Clean Architecture compliance for OTCloud"
     )
     parser.add_argument(
         "--path",
-        default="OTAnalytics",
-        help="Path to OTAnalytics project directory",
+        default=PROJECT_NAME,
+        help=f"Path to {PROJECT_NAME} project directory",
     )
     parser.add_argument(
         "--verbose",
