@@ -1020,7 +1020,7 @@ class TestOTAnalyticsCli:
             output_file=str(expected_output_file),
             export_mode=OVERWRITE,
         )
-        export_counts.export.assert_called_with(specification=expected_specification)
+        export_counts.export.assert_called_with(expected_specification)
 
     @pytest.mark.parametrize(
         "mode",
