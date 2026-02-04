@@ -281,7 +281,6 @@ def create_run_config(
     flow_parser: FlowParser,
     start_cli: bool = True,
     cli_mode: CliMode = CliMode.BULK,
-    cli_chunk_size: int = 5,
     debug: bool = False,
     config_file: str = CONFIG_FILE,
     track_files: list[str] | None = None,
@@ -311,7 +310,6 @@ def create_run_config(
     cli_args = CliArguments(
         start_cli=start_cli,
         cli_mode=cli_mode,
-        cli_chunk_size=cli_chunk_size,
         debug=debug,
         logfile_overwrite=logfile_overwrite,
         track_export=track_export,
@@ -660,7 +658,6 @@ class TestOTAnalyticsCli:
                 ),
                 registered_tracks_metadata=[tracks_metadata],
                 registered_videos_metadata=[videos_metadata],
-                chunk_size=2,
             ),
             **dependencies,
         }
@@ -1036,7 +1033,6 @@ class TestOTAnalyticsCli:
         cli_args = CliArguments(
             start_cli=True,
             cli_mode=mode,
-            cli_chunk_size=2,
             debug=False,
             logfile_overwrite=False,
             track_export=False,

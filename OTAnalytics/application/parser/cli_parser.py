@@ -33,7 +33,6 @@ class CliParseError(Exception):
 class CliArguments:
     start_cli: bool
     cli_mode: CliMode
-    cli_chunk_size: int
     debug: bool
     logfile_overwrite: bool
     track_export: bool

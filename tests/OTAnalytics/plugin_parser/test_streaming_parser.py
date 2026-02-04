@@ -154,13 +154,9 @@ class TestStreamOttrkParser:
                 ShapelyTrackGeometryDataset.from_track_dataset,
                 PandasByMaxConfidence(),
             ),
-            chunk_size=4,
         )
 
-    def ids_of(self, tracks: list[Track]) -> list[TrackId]:
-        return [t.id for t in tracks]
-
-    def test_parse_chunks(
+    def test_parse_single_dataset_per_file(
         self,
         stream_ottrk_parser: StreamOttrkParser,
         bulk_ottrk_parser: OttrkParser,
@@ -170,23 +166,10 @@ class TestStreamOttrkParser:
         # compare result of streaming parser with original bulk parser
 
         bulk_res = bulk_ottrk_parser.parse(ottrk_path)
-        stream = stream_ottrk_parser.parse(ottrk_file_input_source)
+        stream = list(stream_ottrk_parser.parse(ottrk_file_input_source))
 
-        expected = bulk_res.tracks.as_list()
-        first_chunk = next(stream).as_list()
-        second_chunk = next(stream).as_list()
-
-        assert len(first_chunk) == 4
-        assert len(second_chunk) == 3
-        assert len(expected) == 7
-        assert set(self.ids_of(expected)) == set(
-            self.ids_of(first_chunk + second_chunk)
-        )
-
-        assert (
-            set(self.ids_of(first_chunk)).intersection(set(self.ids_of(second_chunk)))
-            == set()
-        )
+        assert len(stream) == 1
+        assert_track_list_equals_dataset(bulk_res.tracks, stream[0].as_list())
 
     def test_parse_whole_ottrk(
         self,
@@ -255,8 +238,6 @@ class TestStreamOttrkParser:
             number_of_frames=60,
         )
         ottrk_file.unlink()
-
-    # todo test first / last chunk
 
 
 class TestStreamDetectionParser:
