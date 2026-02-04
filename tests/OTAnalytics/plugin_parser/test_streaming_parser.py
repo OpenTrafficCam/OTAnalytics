@@ -154,39 +154,38 @@ class TestStreamOttrkParser:
                 ShapelyTrackGeometryDataset.from_track_dataset,
                 PandasByMaxConfidence(),
             ),
-            chunk_size=4,
         )
 
     def ids_of(self, tracks: list[Track]) -> list[TrackId]:
         return [t.id for t in tracks]
 
-    def test_parse_chunks(
+    def test_parse_by_file(
         self,
         stream_ottrk_parser: StreamOttrkParser,
         bulk_ottrk_parser: OttrkParser,
         ottrk_path: Path,
         ottrk_file_input_source: OttrkFileInputSource,
     ) -> None:
-        # compare result of streaming parser with original bulk parser
+        # Test that the streaming parser yields one TrackDataset per file
+        # In this test case, there is only one ottrk file, so we expect one dataset
 
         bulk_res = bulk_ottrk_parser.parse(ottrk_path)
         stream = stream_ottrk_parser.parse(ottrk_file_input_source)
 
         expected = bulk_res.tracks.as_list()
-        first_chunk = next(stream).as_list()
-        second_chunk = next(stream).as_list()
+        first_dataset = next(stream).as_list()
 
-        assert len(first_chunk) == 4
-        assert len(second_chunk) == 3
+        # All 7 tracks should be in the first (and only) dataset
+        assert len(first_dataset) == 7
         assert len(expected) == 7
-        assert set(self.ids_of(expected)) == set(
-            self.ids_of(first_chunk + second_chunk)
-        )
+        assert set(self.ids_of(expected)) == set(self.ids_of(first_dataset))
 
-        assert (
-            set(self.ids_of(first_chunk)).intersection(set(self.ids_of(second_chunk)))
-            == set()
-        )
+        # No more datasets should be yielded
+        try:
+            next(stream)
+            assert False, "Expected StopIteration"
+        except StopIteration:
+            pass
 
     def test_parse_whole_ottrk(
         self,

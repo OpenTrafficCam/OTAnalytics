@@ -656,7 +656,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                 self.track_geometry_factory,
                 self.polars_by_max_confidence,
             ),
-            chunk_size=self.run_config.cli_chunk_size,
         )
 
     @cached_property

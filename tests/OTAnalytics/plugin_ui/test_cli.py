@@ -660,7 +660,6 @@ class TestOTAnalyticsCli:
                 ),
                 registered_tracks_metadata=[tracks_metadata],
                 registered_videos_metadata=[videos_metadata],
-                chunk_size=2,
             ),
             **dependencies,
         }

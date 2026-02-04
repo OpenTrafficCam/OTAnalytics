@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from itertools import islice
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator
 
@@ -194,7 +193,9 @@ def default_track_dataset_factory(tracks: list[Track]) -> TrackDataset:
 class StreamOttrkParser(StreamTrackParser):
     """
     Parse multiple ottrk files (sorted by 'recorder_start_date' in video metadata).
-    Provides a stream of SingletonTackDatasets each containing a single Track.
+    Provides a stream of TrackDatasets, one per ottrk file containing all finished
+    tracks from that file. After all files are processed, yields one TrackDataset with
+    all unfinished tracks.
     Allows to register TracksMetadata and VideosMetadata objects to be updated
     with new metadata every time a new ottrk file is parsed.
 
@@ -215,9 +216,6 @@ class StreamOttrkParser(StreamTrackParser):
             a factory to create a new track dataset from a list of Tracks.
             Defaults to PandasTrackDataset.from_list(tracks,
             ShapelyTrackGeometryDataset.from_track_dataset, PandasByMaxConfidence()).
-        chunk_size (int, optional): defines the number of tracks to be collected,
-            before yielding a TrackDataset containing at most that many Tracks.
-            Defaults to 1.
     """
 
     def __init__(
@@ -228,7 +226,6 @@ class StreamOttrkParser(StreamTrackParser):
         registered_videos_metadata: list[VideosMetadata] = [],
         progressbar: LazyProgressbarBuilder = LazyTqdmBuilder(),
         track_dataset_factory: TrackDatasetFactory = default_track_dataset_factory,
-        chunk_size: int = 5,
     ) -> None:
         self._detection_parser = detection_parser
         self._tracks_dict: dict[TrackId, list[Detection]] = {}
@@ -241,7 +238,6 @@ class StreamOttrkParser(StreamTrackParser):
         )
         self._progressbar = progressbar
         self._track_dataset_factory = track_dataset_factory
-        self._chunk_size = chunk_size
 
     def register_tracks_metadata(self, tracks_metadata: TracksMetadata) -> None:
         """Register TracksMetadata to be updated when a new ottrk file is parsed."""
@@ -266,15 +262,11 @@ class StreamOttrkParser(StreamTrackParser):
             videos_metadata.update(new_video_metadata)
 
     def parse(self, input_source: OttrkFileInputSource) -> Iterator[TrackDataset]:
-        iterator = iter(self._parse_tracks(input_source))
-        while True:
-            chunk = list(islice(iterator, self._chunk_size))
-            if chunk:
-                yield self._track_dataset_factory(chunk)
-            else:
-                return  # explicitly end generator, raises StopIteration exception
+        yield from self._parse_tracks(input_source)
 
-    def _parse_tracks(self, input_source: OttrkFileInputSource) -> Iterator[Track]:
+    def _parse_tracks(
+        self, input_source: OttrkFileInputSource
+    ) -> Iterator[TrackDataset]:
         progressbar: Iterable[Path] = self._progressbar(
             input_source.produce(), unit="files", description="Processed ottrk files: "
         )
@@ -300,13 +292,20 @@ class StreamOttrkParser(StreamTrackParser):
             del fixed_ottrk
             del metadata
 
-            yield from self._detection_parser.parse_tracks(
-                input_file=str(ottrk_file),
-                detections=det_list,
-                metadata_video=metadata_video,
-                id_generator=id_generator,
+            tracks_in_file = list(
+                self._detection_parser.parse_tracks(
+                    input_file=str(ottrk_file),
+                    detections=det_list,
+                    metadata_video=metadata_video,
+                    id_generator=id_generator,
+                )
             )
             del det_list
 
+            if tracks_in_file:
+                yield self._track_dataset_factory(tracks_in_file)
+
         # after all files are processed, yield remaining, unfinished tracks
-        yield from self._detection_parser.get_remaining_tracks()
+        remaining_tracks = list(self._detection_parser.get_remaining_tracks())
+        if remaining_tracks:
+            yield self._track_dataset_factory(remaining_tracks)
