@@ -234,7 +234,6 @@ class StreamOttrkParser(StreamTrackParser):
         )
         self._progressbar = progressbar
         self._track_dataset_factory = track_dataset_factory
-        self._remaining_tracks: TrackDataset | None = None
 
     def register_tracks_metadata(self, tracks_metadata: TracksMetadata) -> None:
         """Register TracksMetadata to be updated when a new ottrk file is parsed."""
@@ -268,6 +267,8 @@ class StreamOttrkParser(StreamTrackParser):
             input_source.produce(), unit="files", description="Processed ottrk files: "
         )
 
+        remaining_tracks: TrackDataset | None = None
+
         for ottrk_file in progressbar:
             result = self._track_parser.parse(ottrk_file)
 
@@ -277,8 +278,8 @@ class StreamOttrkParser(StreamTrackParser):
 
             # Combine parsed tracks with remaining tracks from previous iteration
             parsed_dataset = result.tracks
-            if self._remaining_tracks is not None and not self._remaining_tracks.empty:
-                combined_dataset = parsed_dataset.add_all(self._remaining_tracks)
+            if remaining_tracks is not None and not remaining_tracks.empty:
+                combined_dataset = parsed_dataset.add_all(remaining_tracks)
             else:
                 combined_dataset = parsed_dataset
 
@@ -289,9 +290,6 @@ class StreamOttrkParser(StreamTrackParser):
             if not finished_tracks.empty:
                 yield finished_tracks
 
-            # Store remaining tracks for next iteration
-            self._remaining_tracks = remaining_tracks
-
         # After loop completes, yield remaining tracks if any exist
-        if self._remaining_tracks is not None and not self._remaining_tracks.empty:
-            yield self._remaining_tracks
+        if remaining_tracks is not None and not remaining_tracks.empty:
+            yield remaining_tracks
