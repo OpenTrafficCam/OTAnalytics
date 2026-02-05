@@ -99,7 +99,7 @@ class UseCaseProvider:
         return create_run_config(
             flow_parser=self._flow_parser,
             start_cli=True,
-            cli_mode=CliMode.BULK,
+            cli_mode=self._cli_mode,
             debug=False,
             logfile_overwrite=True,
             track_export=False,
@@ -120,10 +120,12 @@ class UseCaseProvider:
         otflow_file: Path,
         ottrk_files: list[Path],
         save_dir: str,
+        cli_mode: CliMode = CliMode.BULK,
     ) -> None:
         self._otflow_file = otflow_file
         self._ottrk_files = ottrk_files
         self._save_dir = save_dir
+        self._cli_mode = cli_mode
         self._include_classes: frozenset[str] = frozenset()
         self._exclude_classes: frozenset[str] = frozenset()
         self._flow_parser = OtFlowParser()
@@ -334,6 +336,46 @@ def use_case_provider_empty_filtered(
     otflow_file: Path, test_data_tmp_dir: Path
 ) -> UseCaseProvider:
     use_case_provider = UseCaseProvider(otflow_file, [], str(test_data_tmp_dir))
+    use_case_provider.add_filters([], EXCLUDE_FILTER)
+    return use_case_provider
+
+
+@pytest.fixture
+def use_case_provider_15min_stream(
+    otflow_file: Path, track_file_15min: Path, test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    return UseCaseProvider(
+        otflow_file, [track_file_15min], str(test_data_tmp_dir), CliMode.STREAM
+    )
+
+
+@pytest.fixture
+def use_case_provider_15min_filtered_stream(
+    otflow_file: Path, track_file_15min: Path, test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    use_case_provider = UseCaseProvider(
+        otflow_file, [track_file_15min], str(test_data_tmp_dir), CliMode.STREAM
+    )
+    use_case_provider.add_filters([], EXCLUDE_FILTER)
+    return use_case_provider
+
+
+@pytest.fixture
+def use_case_provider_2hours_stream(
+    otflow_file: Path, track_files_2hours: list[Path], test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    return UseCaseProvider(
+        otflow_file, track_files_2hours, str(test_data_tmp_dir), CliMode.STREAM
+    )
+
+
+@pytest.fixture
+def use_case_provider_2hours_filtered_stream(
+    otflow_file: Path, track_files_2hours: list[Path], test_data_tmp_dir: Path
+) -> UseCaseProvider:
+    use_case_provider = UseCaseProvider(
+        otflow_file, track_files_2hours, str(test_data_tmp_dir), CliMode.STREAM
+    )
     use_case_provider.add_filters([], EXCLUDE_FILTER)
     return use_case_provider
 
@@ -561,6 +603,62 @@ class TestPipelineBenchmark:
         use_case_provider_2hours_filtered: UseCaseProvider,
     ) -> None:
         use_case = use_case_provider_2hours_filtered.run_cli()
+        benchmark.pedantic(
+            use_case,
+            args=(),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_15min_stream(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_15min_stream: UseCaseProvider,
+    ) -> None:
+        use_case = use_case_provider_15min_stream.run_cli()
+        benchmark.pedantic(
+            use_case,
+            args=(),
+            rounds=self.ROUNDS,
+            iterations=5,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_15min_filtered_stream(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_15min_filtered_stream: UseCaseProvider,
+    ) -> None:
+        use_case = use_case_provider_15min_filtered_stream.run_cli()
+        benchmark.pedantic(
+            use_case,
+            args=(),
+            rounds=self.ROUNDS,
+            iterations=5,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_2hours_stream(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_2hours_stream: UseCaseProvider,
+    ) -> None:
+        use_case = use_case_provider_2hours_stream.run_cli()
+        benchmark.pedantic(
+            use_case,
+            args=(),
+            rounds=self.ROUNDS,
+            iterations=self.ITERATIONS,
+            warmup_rounds=self.WARMUP_ROUNDS,
+        )
+
+    def test_2hours_filtered_stream(
+        self,
+        benchmark: BenchmarkFixture,
+        use_case_provider_2hours_filtered_stream: UseCaseProvider,
+    ) -> None:
+        use_case = use_case_provider_2hours_filtered_stream.run_cli()
         benchmark.pedantic(
             use_case,
             args=(),
