@@ -403,6 +403,33 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def clear(self) -> "PandasTrackDataset":
         return PandasTrackDataset(self.track_geometry_factory)
 
+    def split_finished(self) -> tuple[TrackDataset, TrackDataset]:
+        if self._dataset.empty:
+            empty = PandasTrackDataset(self.track_geometry_factory)
+            return empty, empty
+        if ottrk_dataformat.FINISHED not in self._dataset.columns:
+            return self, self.clear()
+
+        finished_mask = self._dataset[ottrk_dataformat.FINISHED] is True
+        finished_ids = (
+            self._dataset.loc[finished_mask]
+            .index.get_level_values(LEVEL_TRACK_ID)
+            .unique()
+        )
+        finished_ids_list = list(finished_ids)
+        if not finished_ids_list:
+            return self.clear(), self
+
+        all_ids = list(self.get_index() or [])
+        finished_id_set = set(finished_ids_list)
+        remaining_ids_list = [
+            track_id for track_id in all_ids if track_id not in finished_id_set
+        ]
+
+        finished_dataset = self._subset_by_ids(finished_ids_list)
+        remaining_dataset = self._subset_by_ids(remaining_ids_list)
+        return finished_dataset, remaining_dataset
+
     def remove(self, track_id: TrackId) -> "PandasTrackDataset":
         remaining_tracks = self._dataset.drop(unpack(track_id), errors="ignore")
         updated_geometry_datasets = self._remove_from_geometry_dataset([track_id.id])
@@ -470,6 +497,18 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             return new_batches
 
         return [self]
+
+    def _subset_by_ids(self, track_ids: list[str]) -> "PandasTrackDataset":
+        if not track_ids:
+            return PandasTrackDataset(self.track_geometry_factory)
+        subset = self._dataset.loc[track_ids]
+        geometries = self._get_geometries_for(track_ids)
+        return PandasTrackDataset.from_dataframe(
+            subset,
+            self.track_geometry_factory,
+            geometries,
+            calculator=self.calculator,
+        )
 
     def get_index(self) -> Index | None:
         if self._dataset.empty:

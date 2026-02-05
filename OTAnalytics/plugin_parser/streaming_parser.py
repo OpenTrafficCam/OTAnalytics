@@ -150,7 +150,8 @@ class StreamTrackParser(ABC):
 class StreamOttrkParser(StreamTrackParser):
     """
     Parse multiple ottrk files (sorted by 'recorder_start_date' in video metadata).
-    Provides a stream of TrackDatasets, one per ottrk file.
+    Provides a stream of TrackDatasets, one per ottrk file, plus a final dataset
+    for unfinished tracks.
     Allows to register TracksMetadata and VideosMetadata objects to be updated
     with new metadata every time a new ottrk file is parsed.
 
@@ -215,9 +216,18 @@ class StreamOttrkParser(StreamTrackParser):
             input_source.produce(), unit="files", description="Processed ottrk files: "
         )
 
+        remaining_tracks: TrackDataset | None = None
         for ottrk_file in progressbar:
             parse_result = self._track_parser.parse(ottrk_file)
             self._update_registered_metadata_collections(
                 parse_result.detection_metadata, parse_result.video_metadata
             )
-            yield parse_result.tracks
+            combined_tracks = parse_result.tracks
+            if remaining_tracks is not None and not remaining_tracks.empty:
+                combined_tracks = remaining_tracks.add_all(parse_result.tracks)
+            finished_tracks, remaining_tracks = combined_tracks.split_finished()
+            if not finished_tracks.empty:
+                yield finished_tracks
+
+        if remaining_tracks is not None and not remaining_tracks.empty:
+            yield remaining_tracks

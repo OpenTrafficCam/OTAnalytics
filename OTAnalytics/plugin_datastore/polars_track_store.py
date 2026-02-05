@@ -445,6 +445,32 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     def clear(self) -> "PolarsTrackDataset":
         return PolarsTrackDataset(self.track_geometry_factory)
 
+    def split_finished(self) -> tuple[TrackDataset, TrackDataset]:
+        if self._dataset.is_empty():
+            empty = PolarsTrackDataset(self.track_geometry_factory)
+            return empty, empty
+        if ottrk_dataformat.FINISHED not in self._dataset.columns:
+            return self, self.clear()
+
+        finished_ids = (
+            self._dataset.filter(pl.col(ottrk_dataformat.FINISHED) is True)
+            .get_column(LEVEL_TRACK_ID)
+            .unique()
+            .to_list()
+        )
+        if not finished_ids:
+            return self.clear(), self
+
+        all_ids = self._dataset.get_column(LEVEL_TRACK_ID).unique().to_list()
+        finished_id_set = set(finished_ids)
+        remaining_ids = [
+            track_id for track_id in all_ids if track_id not in finished_id_set
+        ]
+
+        finished_dataset = self._subset_by_ids(finished_ids)
+        remaining_dataset = self._subset_by_ids(remaining_ids)
+        return finished_dataset, remaining_dataset
+
     def _create_track_flyweight(self, track_id: str) -> Track:
         """Create a Track flyweight object for the given track_id."""
         track_data = self._dataset.filter(pl.col(LEVEL_TRACK_ID) == track_id)
@@ -829,6 +855,18 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                 )
             )
         return new_batches
+
+    def _subset_by_ids(self, track_ids: list[str]) -> "PolarsTrackDataset":
+        if not track_ids:
+            return PolarsTrackDataset(self.track_geometry_factory)
+        subset = self._dataset.filter(pl.col(LEVEL_TRACK_ID).is_in(track_ids))
+        geometries = self._get_geometries_for(track_ids)
+        return PolarsTrackDataset.from_dataframe(
+            subset,
+            self.track_geometry_factory,
+            geometries,
+            calculator=self.calculator,
+        )
 
     def _get_geometries_for(
         self, track_ids: list[str]

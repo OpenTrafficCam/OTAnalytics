@@ -541,6 +541,9 @@ class PythonTrackDataset(TrackDataset):
     def clear(self) -> "PythonTrackDataset":
         return PythonTrackDataset(self.track_geometry_factory)
 
+    def split_finished(self) -> tuple[TrackDataset, TrackDataset]:
+        return self, self.clear()
+
     def as_list(self) -> list[Track]:
         return list(self._tracks.values())
 
