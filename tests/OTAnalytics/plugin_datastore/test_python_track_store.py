@@ -555,6 +555,46 @@ class TestPythonTrackDataset:
         assert finished.track_ids == PythonTrackIdSet({finished_track.id})
         assert remaining.track_ids == PythonTrackIdSet({pedestrian_track.id})
 
+    def test_split_finished_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset(ShapelyTrackGeometryDataset.from_track_dataset)
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.empty
+        assert remaining.empty
+
+    def test_split_finished_without_finished_tracks(
+        self, car_track: Track, pedestrian_track: Track
+    ) -> None:
+        dataset = PythonTrackDataset.from_list(
+            [car_track, pedestrian_track],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.empty
+        assert remaining.track_ids == PythonTrackIdSet(
+            {car_track.id, pedestrian_track.id}
+        )
+
+    def test_split_finished_without_remaining_tracks(
+        self, car_track: Track, pedestrian_track: Track
+    ) -> None:
+        finished_car = mark_last_detection_finished(car_track)
+        finished_pedestrian = mark_last_detection_finished(pedestrian_track)
+        dataset = PythonTrackDataset.from_list(
+            [finished_car, finished_pedestrian],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.track_ids == PythonTrackIdSet(
+            {finished_car.id, finished_pedestrian.id}
+        )
+        assert remaining.empty
+
     def test_filter_by_minimum_detection_length(
         self, car_track: Track, pedestrian_track: Track
     ) -> None:

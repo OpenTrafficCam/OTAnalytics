@@ -228,6 +228,44 @@ class TestPandasTrackDataset:
         assert set(finished.track_ids) == {finished_track.id}
         assert set(remaining.track_ids) == {unfinished_track.id}
 
+    def test_split_finished_empty_dataset(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory)
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.empty
+        assert remaining.empty
+
+    def test_split_finished_without_finished_tracks(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        first_track = self.__build_track("1")
+        second_track = self.__build_track("2")
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.empty
+        assert set(remaining.track_ids) == {first_track.id, second_track.id}
+
+    def test_split_finished_without_remaining_tracks(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        first_track = mark_last_detection_finished(self.__build_track("1"))
+        second_track = mark_last_detection_finished(self.__build_track("2"))
+        dataset = PandasTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        assert set(finished.track_ids) == {first_track.id, second_track.id}
+        assert remaining.empty
+
     def test_add_two_existing_pandas_datasets(
         self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
     ) -> None:
