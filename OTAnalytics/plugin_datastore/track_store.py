@@ -774,7 +774,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         last_detections = self._dataset.groupby(level=LEVEL_TRACK_ID).tail(1)
 
         # Find track_ids where the last detection has finished=True
-        finished_mask = last_detections[ottrk_dataformat.FINISHED] is True
+        finished_mask = last_detections[ottrk_dataformat.FINISHED].eq(True)
         finished_track_ids = last_detections[finished_mask].index.get_level_values(
             LEVEL_TRACK_ID
         )

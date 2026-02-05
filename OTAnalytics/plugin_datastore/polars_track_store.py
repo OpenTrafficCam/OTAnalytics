@@ -877,7 +877,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
         # Find track_ids where the last detection has finished=True
         finished_track_ids = last_detections.filter(
-            pl.col(ottrk_dataformat.FINISHED) is True
+            pl.col(ottrk_dataformat.FINISHED).eq(True)
         ).get_column(track.TRACK_ID)
 
         # Split datasets
@@ -971,7 +971,7 @@ def _convert_tracks(tracks: Iterable[Track]) -> pl.DataFrame:
             dto = detection.to_dict()
             dto[track.ORIGINAL_TRACK_ID] = current_track.original_id.id
             dto[ottrk_dataformat.FIRST] = current_track.first_detection == detection
-            dto[ottrk_dataformat.FINISHED] = current_track.last_detection == detection
+            # Note: FINISHED is already in dto from detection.to_dict()
             prepared.append(dto)
 
     if not prepared:

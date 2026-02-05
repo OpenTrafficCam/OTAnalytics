@@ -727,3 +727,117 @@ class TestSimpleCutTrackSegmentBuilder:
         # Assert track builder is reset after build
         assert track_builder._track_id is None
         assert track_builder._detections == []
+
+    def test_split_finished_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset(ShapelyTrackGeometryDataset.from_track_dataset)
+        finished, remaining = dataset.split_finished()
+        assert finished == dataset
+        assert remaining == dataset
+        assert finished.empty
+        assert remaining.empty
+
+    def test_split_finished_all_tracks_finished(self) -> None:
+        builder = TrackBuilder()
+        builder.add_track_id("1")
+        builder.append_detection()
+        builder.append_detection()
+        builder.append_detection()
+        finished_track = builder.build_track()
+        # Mark last detection as finished
+        last_detection = finished_track.detections[-1]
+        finished_detection = PythonDetection(
+            _classification=last_detection.classification,
+            _confidence=last_detection.confidence,
+            _x=last_detection.x,
+            _y=last_detection.y,
+            _w=last_detection.w,
+            _h=last_detection.h,
+            _frame=last_detection.frame,
+            _occurrence=last_detection.occurrence,
+            _interpolated_detection=last_detection.interpolated_detection,
+            _track_id=last_detection.track_id,
+            _video_name=last_detection.video_name,
+            _input_file=last_detection.input_file,
+            _finished=True,
+        )
+        finished_track = PythonTrack(
+            _id=finished_track.id,
+            _original_id=finished_track.original_id,
+            _classification=finished_track.classification,
+            _detections=list(finished_track.detections[:-1]) + [finished_detection],
+        )
+
+        dataset = PythonTrackDataset.from_list(
+            [finished_track], ShapelyTrackGeometryDataset.from_track_dataset
+        )
+        finished_result, remaining_result = dataset.split_finished()
+
+        assert len(finished_result) == 1
+        assert len(remaining_result) == 0
+        assert list(finished_result)[0] == finished_track
+
+    def test_split_finished_no_tracks_finished(self) -> None:
+        builder = TrackBuilder()
+        builder.add_track_id("1")
+        builder.append_detection()
+        builder.append_detection()
+        builder.append_detection()
+        unfinished_track = builder.build_track()
+
+        dataset = PythonTrackDataset.from_list(
+            [unfinished_track], ShapelyTrackGeometryDataset.from_track_dataset
+        )
+        finished_result, remaining_result = dataset.split_finished()
+
+        assert len(finished_result) == 0
+        assert len(remaining_result) == 1
+        assert list(remaining_result)[0] == unfinished_track
+
+    def test_split_finished_mixed_tracks(self) -> None:
+        # Build finished track
+        builder1 = TrackBuilder()
+        builder1.add_track_id("1")
+        builder1.append_detection()
+        builder1.append_detection()
+        builder1.append_detection()
+        finished_track = builder1.build_track()
+        last_detection = finished_track.detections[-1]
+        finished_detection = PythonDetection(
+            _classification=last_detection.classification,
+            _confidence=last_detection.confidence,
+            _x=last_detection.x,
+            _y=last_detection.y,
+            _w=last_detection.w,
+            _h=last_detection.h,
+            _frame=last_detection.frame,
+            _occurrence=last_detection.occurrence,
+            _interpolated_detection=last_detection.interpolated_detection,
+            _track_id=last_detection.track_id,
+            _video_name=last_detection.video_name,
+            _input_file=last_detection.input_file,
+            _finished=True,
+        )
+        finished_track = PythonTrack(
+            _id=finished_track.id,
+            _original_id=finished_track.original_id,
+            _classification=finished_track.classification,
+            _detections=list(finished_track.detections[:-1]) + [finished_detection],
+        )
+
+        # Build unfinished track
+        builder2 = TrackBuilder()
+        builder2.add_track_id("2")
+        builder2.append_detection()
+        builder2.append_detection()
+        unfinished_track = builder2.build_track()
+
+        dataset = PythonTrackDataset.from_list(
+            [finished_track, unfinished_track],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+        finished_result, remaining_result = dataset.split_finished()
+
+        assert len(finished_result) == 1
+        assert len(remaining_result) == 1
+        assert list(finished_result)[0] == finished_track
+        assert list(remaining_result)[0] == unfinished_track

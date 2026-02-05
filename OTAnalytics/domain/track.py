@@ -20,6 +20,7 @@ TRACK_ID: str = "track_id"
 ORIGINAL_TRACK_ID: str = "original_track_id"
 VIDEO_NAME: str = "video_name"
 INPUT_FILE: str = "input_file"
+FINISHED: str = "finished"
 
 
 @dataclass(frozen=True, order=True)
@@ -128,6 +129,7 @@ class Detection(ABC):
             TRACK_ID: self.track_id.id,
             VIDEO_NAME: self.video_name,
             INPUT_FILE: self.input_file,
+            FINISHED: self.finished,
         }
 
     def get_coordinate(self, offset: RelativeOffsetCoordinate | None) -> Coordinate:

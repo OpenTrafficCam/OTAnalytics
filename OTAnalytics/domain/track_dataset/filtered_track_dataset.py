@@ -78,8 +78,7 @@ class FilteredTrackDataset(TrackDataset):
         return self._filter().get_max_confidences_for(track_ids)
 
     def split_finished(self) -> tuple["TrackDataset", "TrackDataset"]:
-        finished_tracks, remaining_tracks = self._filter().split_finished()
-        return finished_tracks, remaining_tracks
+        return self._filter().split_finished()
 
 
 class FilterByClassTrackDataset(FilteredTrackDataset):

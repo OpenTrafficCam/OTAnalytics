@@ -10,7 +10,11 @@ from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
     FilterByClassTrackDataset,
 )
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDoesNotExistError
-from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
+from OTAnalytics.plugin_datastore.python_track_store import (
+    PythonDetection,
+    PythonTrack,
+    PythonTrackIdSet,
+)
 from tests.utils.assertions import (
     assert_equal_track_properties,
     assert_track_dataset_has_tracks,
@@ -454,3 +458,40 @@ class TestFilteredTrackDataset:
 
             result = filled_dataset.get_max_confidences_for(all_track_ids)
             assert result == expected
+
+    def test_split_finished(self, car_track: Track, bicycle_track: Track) -> None:
+        # Create finished car track
+        last_detection = car_track.detections[-1]
+        finished_detection = PythonDetection(
+            _classification=last_detection.classification,
+            _confidence=last_detection.confidence,
+            _x=last_detection.x,
+            _y=last_detection.y,
+            _w=last_detection.w,
+            _h=last_detection.h,
+            _frame=last_detection.frame,
+            _occurrence=last_detection.occurrence,
+            _interpolated_detection=last_detection.interpolated_detection,
+            _track_id=last_detection.track_id,
+            _video_name=last_detection.video_name,
+            _input_file=last_detection.input_file,
+            _finished=True,
+        )
+        finished_car_track = PythonTrack(
+            _id=car_track.id,
+            _original_id=car_track.original_id,
+            _classification=car_track.classification,
+            _detections=list(car_track.detections[:-1]) + [finished_detection],
+        )
+
+        filtered_datasets = self.get_datasets(
+            [finished_car_track, bicycle_track], [], []
+        )
+
+        for filtered_dataset in filtered_datasets.values():
+            finished_result, remaining_result = filtered_dataset.split_finished()
+
+            assert len(finished_result) == 1
+            assert len(remaining_result) == 1
+            assert_equal_track_properties(list(finished_result)[0], finished_car_track)
+            assert_equal_track_properties(list(remaining_result)[0], bicycle_track)
