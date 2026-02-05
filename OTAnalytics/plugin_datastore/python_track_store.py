@@ -93,6 +93,7 @@ class PythonDetection(Detection, DataclassValidation):
     _track_id: TrackId
     _video_name: str
     _input_file: str
+    _finished: bool = False
 
     @property
     def classification(self) -> str:
@@ -141,6 +142,10 @@ class PythonDetection(Detection, DataclassValidation):
     @property
     def input_file(self) -> str:
         return self._input_file
+
+    @property
+    def finished(self) -> bool:
+        return self._finished
 
     def _validate(self) -> None:
         self._validate_confidence_greater_equal_zero()
@@ -800,21 +805,52 @@ class PythonTrackDataset(TrackDataset):
     ) -> tuple["PythonTrackDataset", "PythonTrackDataset"]:
         """Split dataset into finished and remaining tracks.
 
-        For PythonTrackDataset, since the finished flag is not stored in the
-        in-memory Detection objects, we treat all tracks as finished by default.
-        This is appropriate because PythonTrackDataset typically contains
-        complete tracks that have been fully parsed.
+        A track is considered finished if its last detection has the finished flag
+        set to True.
 
         Returns:
-            tuple containing (all tracks as finished, empty dataset as remaining)
+            tuple containing (finished_tracks, remaining_tracks)
         """
-        empty_dataset = PythonTrackDataset(
+        if self.empty:
+            return self, self
+
+        finished_tracks: dict[TrackId, Track] = {}
+        remaining_tracks: dict[TrackId, Track] = {}
+
+        for track_id, track in self._tracks.items():
+            if track.last_detection.finished:
+                finished_tracks[track_id] = track
+            else:
+                remaining_tracks[track_id] = track
+
+        # Split geometry datasets
+        finished_track_ids = PythonTrackIdSet(finished_tracks.keys())
+        remaining_track_ids = PythonTrackIdSet(remaining_tracks.keys())
+
+        finished_geometry_datasets = {}
+        remaining_geometry_datasets = {}
+        for offset, geometry_dataset in self._geometry_datasets.items():
+            finished_geometry_datasets[offset] = geometry_dataset.get_for(
+                [tid.id for tid in finished_track_ids]
+            )
+            remaining_geometry_datasets[offset] = geometry_dataset.get_for(
+                [tid.id for tid in remaining_track_ids]
+            )
+
+        finished_dataset = PythonTrackDataset(
             self.track_geometry_factory,
-            values={},
-            geometry_datasets={},
+            values=finished_tracks,
+            geometry_datasets=finished_geometry_datasets,
             calculator=self.calculator,
         )
-        return self, empty_dataset
+        remaining_dataset = PythonTrackDataset(
+            self.track_geometry_factory,
+            values=remaining_tracks,
+            geometry_datasets=remaining_geometry_datasets,
+            calculator=self.calculator,
+        )
+
+        return finished_dataset, remaining_dataset
 
 
 class FilteredPythonTrackDataset(FilterByClassTrackDataset):

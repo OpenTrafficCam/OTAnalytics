@@ -109,6 +109,11 @@ class Detection(ABC):
     def input_file(self) -> str:
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def finished(self) -> bool:
+        raise NotImplementedError
+
     def to_dict(self) -> dict:
         return {
             CLASSIFICATION: self.classification,

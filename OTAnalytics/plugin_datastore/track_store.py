@@ -106,6 +106,10 @@ class PandasDetection(Detection):
     def input_file(self) -> str:
         return self.__get_attribute(track.INPUT_FILE)
 
+    @property
+    def finished(self) -> bool:
+        return self.__get_attribute(ottrk_dataformat.FINISHED)
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, PandasDetection):
             return False
