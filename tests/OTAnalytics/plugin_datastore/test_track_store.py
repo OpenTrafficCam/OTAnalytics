@@ -40,7 +40,10 @@ from tests.utils.assertions import (
     assert_track_datasets_equal,
     assert_track_geometry_dataset_add_all_called_correctly,
 )
-from tests.utils.builders.track_builder import TrackBuilder
+from tests.utils.builders.track_builder import (
+    TrackBuilder,
+    mark_last_detection_finished,
+)
 from tests.utils.builders.track_dataset_provider import create_mock_geometry_dataset
 from tests.utils.builders.track_segment_builder import TrackSegmentDatasetBuilder
 
@@ -210,6 +213,20 @@ class TestPandasTrackDataset:
         for actual, expected in zip(merged.as_list(), expected_dataset.as_list()):
             assert_equal_track_properties(actual, expected)
         assert merged._geometry_datasets == {}
+
+    def test_split_finished(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        unfinished_track = self.__build_track("unfinished")
+        finished_track = mark_last_detection_finished(self.__build_track("finished"))
+        dataset = PandasTrackDataset.from_list(
+            [unfinished_track, finished_track], track_geometry_factory
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        assert set(finished.track_ids) == {finished_track.id}
+        assert set(remaining.track_ids) == {unfinished_track.id}
 
     def test_add_two_existing_pandas_datasets(
         self, track_geometry_factory: TRACK_GEOMETRY_FACTORY

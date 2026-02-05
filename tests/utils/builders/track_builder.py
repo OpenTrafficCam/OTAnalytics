@@ -349,3 +349,29 @@ def track_builder_with_sample_data(
         frame_offset=frame_offset,
         microsecond_offset=microsecond_offset,
     )
+
+
+def mark_last_detection_finished(track: Track) -> PythonTrack:
+    last_detection = track.last_detection
+    finished_last_detection = PythonDetection(
+        _classification=last_detection.classification,
+        _confidence=last_detection.confidence,
+        _x=last_detection.x,
+        _y=last_detection.y,
+        _w=last_detection.w,
+        _h=last_detection.h,
+        _frame=last_detection.frame,
+        _occurrence=last_detection.occurrence,
+        _interpolated_detection=last_detection.interpolated_detection,
+        _track_id=last_detection.track_id,
+        _video_name=last_detection.video_name,
+        _input_file=last_detection.input_file,
+        _is_finished=True,
+    )
+    detections = list(track.detections[:-1]) + [finished_last_detection]
+    return PythonTrack(
+        _id=track.id,
+        _original_id=track.original_id,
+        _classification=track.classification,
+        _detections=detections,
+    )

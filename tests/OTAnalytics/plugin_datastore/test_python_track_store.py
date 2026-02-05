@@ -52,7 +52,11 @@ from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from tests.utils.assertions import (
     assert_track_geometry_dataset_add_all_called_correctly,
 )
-from tests.utils.builders.track_builder import TrackBuilder, create_track
+from tests.utils.builders.track_builder import (
+    TrackBuilder,
+    create_track,
+    mark_last_detection_finished,
+)
 from tests.utils.builders.track_dataset_provider import create_mock_geometry_dataset
 from tests.utils.builders.track_segment_builder import TrackSegmentDatasetBuilder
 
@@ -538,6 +542,18 @@ class TestPythonTrackDataset:
             call([car_track.id.id]),
             call([pedestrian_track.id.id]),
         ]
+
+    def test_split_finished(self, car_track: Track, pedestrian_track: Track) -> None:
+        finished_track = mark_last_detection_finished(car_track)
+        dataset = PythonTrackDataset.from_list(
+            [finished_track, pedestrian_track],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.track_ids == PythonTrackIdSet({finished_track.id})
+        assert remaining.track_ids == PythonTrackIdSet({pedestrian_track.id})
 
     def test_filter_by_minimum_detection_length(
         self, car_track: Track, pedestrian_track: Track
