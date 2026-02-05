@@ -27,6 +27,32 @@ from tests.utils.assertions import assert_equal_track_properties
 from tests.utils.builders.track_builder import TrackBuilder
 
 
+def create_finished_track(track: Track) -> Track:
+    """Create a new track with the last detection marked as finished."""
+    last_detection = track.detections[-1]
+    finished_detection = PythonDetection(
+        _classification=last_detection.classification,
+        _confidence=last_detection.confidence,
+        _x=last_detection.x,
+        _y=last_detection.y,
+        _w=last_detection.w,
+        _h=last_detection.h,
+        _frame=last_detection.frame,
+        _occurrence=last_detection.occurrence,
+        _interpolated_detection=last_detection.interpolated_detection,
+        _track_id=last_detection.track_id,
+        _video_name=last_detection.video_name,
+        _input_file=last_detection.input_file,
+        _finished=True,
+    )
+    return PythonTrack(
+        _id=track.id,
+        _original_id=track.original_id,
+        _classification=track.classification,
+        _detections=list(track.detections[:-1]) + [finished_detection],
+    )
+
+
 def create_line_section(
     section_id: str, coordinates: list[tuple[float, float]]
 ) -> Section:
@@ -587,30 +613,8 @@ def test_split_finished_all_tracks_finished(
     builder.append_detection()
     builder.append_detection()
     builder.append_detection()
-    finished_track = builder.build_track()
-    # Mark last detection as finished
-    last_detection = finished_track.detections[-1]
-    finished_detection = PythonDetection(
-        _classification=last_detection.classification,
-        _confidence=last_detection.confidence,
-        _x=last_detection.x,
-        _y=last_detection.y,
-        _w=last_detection.w,
-        _h=last_detection.h,
-        _frame=last_detection.frame,
-        _occurrence=last_detection.occurrence,
-        _interpolated_detection=last_detection.interpolated_detection,
-        _track_id=last_detection.track_id,
-        _video_name=last_detection.video_name,
-        _input_file=last_detection.input_file,
-        _finished=True,
-    )
-    finished_track = PythonTrack(
-        _id=finished_track.id,
-        _original_id=finished_track.original_id,
-        _classification=finished_track.classification,
-        _detections=list(finished_track.detections[:-1]) + [finished_detection],
-    )
+    track = builder.build_track()
+    finished_track = create_finished_track(track)
 
     dataset = PolarsTrackDataset.from_list([finished_track], track_geometry_factory)
     finished_result, remaining_result = dataset.split_finished()
@@ -647,29 +651,8 @@ def test_split_finished_mixed_tracks(
     builder1.append_detection()
     builder1.append_detection()
     builder1.append_detection()
-    finished_track = builder1.build_track()
-    last_detection = finished_track.detections[-1]
-    finished_detection = PythonDetection(
-        _classification=last_detection.classification,
-        _confidence=last_detection.confidence,
-        _x=last_detection.x,
-        _y=last_detection.y,
-        _w=last_detection.w,
-        _h=last_detection.h,
-        _frame=last_detection.frame,
-        _occurrence=last_detection.occurrence,
-        _interpolated_detection=last_detection.interpolated_detection,
-        _track_id=last_detection.track_id,
-        _video_name=last_detection.video_name,
-        _input_file=last_detection.input_file,
-        _finished=True,
-    )
-    finished_track = PythonTrack(
-        _id=finished_track.id,
-        _original_id=finished_track.original_id,
-        _classification=finished_track.classification,
-        _detections=list(finished_track.detections[:-1]) + [finished_detection],
-    )
+    track1 = builder1.build_track()
+    finished_track = create_finished_track(track1)
 
     # Build unfinished track
     builder2 = TrackBuilder()

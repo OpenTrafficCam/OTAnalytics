@@ -28,6 +28,32 @@ from tests.utils.builders.track_segment_builder import (
 )
 
 
+def create_finished_track(track: Track) -> Track:
+    """Create a new track with the last detection marked as finished."""
+    last_detection = track.detections[-1]
+    finished_detection = PythonDetection(
+        _classification=last_detection.classification,
+        _confidence=last_detection.confidence,
+        _x=last_detection.x,
+        _y=last_detection.y,
+        _w=last_detection.w,
+        _h=last_detection.h,
+        _frame=last_detection.frame,
+        _occurrence=last_detection.occurrence,
+        _interpolated_detection=last_detection.interpolated_detection,
+        _track_id=last_detection.track_id,
+        _video_name=last_detection.video_name,
+        _input_file=last_detection.input_file,
+        _finished=True,
+    )
+    return PythonTrack(
+        _id=track.id,
+        _original_id=track.original_id,
+        _classification=track.classification,
+        _detections=list(track.detections[:-1]) + [finished_detection],
+    )
+
+
 class TestFilteredTrackDataset:
     def get_datasets(
         self,
@@ -461,28 +487,7 @@ class TestFilteredTrackDataset:
 
     def test_split_finished(self, car_track: Track, bicycle_track: Track) -> None:
         # Create finished car track
-        last_detection = car_track.detections[-1]
-        finished_detection = PythonDetection(
-            _classification=last_detection.classification,
-            _confidence=last_detection.confidence,
-            _x=last_detection.x,
-            _y=last_detection.y,
-            _w=last_detection.w,
-            _h=last_detection.h,
-            _frame=last_detection.frame,
-            _occurrence=last_detection.occurrence,
-            _interpolated_detection=last_detection.interpolated_detection,
-            _track_id=last_detection.track_id,
-            _video_name=last_detection.video_name,
-            _input_file=last_detection.input_file,
-            _finished=True,
-        )
-        finished_car_track = PythonTrack(
-            _id=car_track.id,
-            _original_id=car_track.original_id,
-            _classification=car_track.classification,
-            _detections=list(car_track.detections[:-1]) + [finished_detection],
-        )
+        finished_car_track = create_finished_track(car_track)
 
         filtered_datasets = self.get_datasets(
             [finished_car_track, bicycle_track], [], []
