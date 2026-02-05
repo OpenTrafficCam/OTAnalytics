@@ -16,6 +16,7 @@ from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignments,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
     CountingSpecificationDto,
     ExportCounts,
     ExportFormat,
@@ -488,12 +489,17 @@ class ModeTagger(Tagger):
 
 
 class TimeslotTagger(Tagger):
-    def __init__(self, interval: timedelta) -> None:
+    def __init__(
+        self,
+        interval: timedelta,
+        counting_event: CountingEvent = CountingEvent.START,
+    ) -> None:
         self._interval = interval
+        self._counting_event = counting_event
 
     def create_tag(self, assignment: RoadUserAssignment) -> Tag:
         return create_timeslot_tag(
-            assignment.events.start.interpolated_occurrence, self._interval
+            aggregation_time(assignment, self._counting_event), self._interval
         )
 
 
@@ -881,7 +887,8 @@ class SimpleTaggerFactory(TaggerFactory):
         """
         mode_tagger = ModeTagger()
         time_tagger = TimeslotTagger(
-            timedelta(minutes=specification.interval_in_minutes)
+            timedelta(minutes=specification.interval_in_minutes),
+            counting_event=specification.counting_event,
         )
         return CombinedTagger(mode_tagger, time_tagger)
 
@@ -967,6 +974,14 @@ def start_of(rua: RoadUserAssignment) -> datetime:
 
 def end_of(rua: RoadUserAssignment) -> datetime:
     return rua.events.end.interpolated_occurrence
+
+
+def aggregation_time(
+    rua: RoadUserAssignment, counting_event: CountingEvent
+) -> datetime:
+    if counting_event == CountingEvent.END:
+        return end_of(rua)
+    return start_of(rua)
 
 
 class TrafficCounting:

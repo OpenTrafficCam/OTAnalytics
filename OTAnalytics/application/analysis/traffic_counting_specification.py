@@ -1,9 +1,29 @@
 from abc import ABC
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 from typing import Iterable
 
 from OTAnalytics.application.export_formats.export_mode import ExportMode
+
+
+class CountingEvent(Enum):
+    START = "start"
+    END = "end"
+
+    def __str__(self) -> str:
+        return self.value
+
+    @staticmethod
+    def parse(value: "CountingEvent | str") -> "CountingEvent":
+        if isinstance(value, CountingEvent):
+            return value
+        normalized = value.lower()
+        for event in CountingEvent:
+            if event.value == normalized:
+                return event
+        valid = ", ".join(sorted(event.value for event in CountingEvent))
+        raise ValueError(f"Invalid counting event '{value}'. Use one of: {valid}.")
 
 
 @dataclass(frozen=True)
@@ -26,6 +46,7 @@ class CountingSpecificationDto:
     output_file: str
     export_mode: ExportMode
     count_all_events: bool = False
+    counting_event: CountingEvent = CountingEvent.START
 
     def with_end(self, end: datetime) -> "CountingSpecificationDto":
         return CountingSpecificationDto(
@@ -37,6 +58,7 @@ class CountingSpecificationDto:
             output_file=self.output_file,
             export_mode=self.export_mode,
             count_all_events=self.count_all_events,
+            counting_event=self.counting_event,
         )
 
 

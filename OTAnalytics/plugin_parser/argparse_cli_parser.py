@@ -1,5 +1,8 @@
 from argparse import ArgumentParser
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode, CliParser
 
 
@@ -123,6 +126,13 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--counting-event",
+            type=str.lower,
+            choices=[event.value for event in CountingEvent],
+            help="Event used for aggregating counts ('start' or 'end').",
+            required=False,
+        )
+        self._parser.add_argument(
             "--no-track-export",
             action="store_true",
             help="Do not export tracks as csv",
@@ -189,6 +199,7 @@ class ArgparseCliParser(CliParser):
             save_suffix=args.save_suffix,
             event_formats=args.event_formats,
             count_intervals=args.count_intervals,
+            counting_event=args.counting_event,
             track_export=not args.no_track_export,
             track_statistics_export=not args.no_track_statistics_export,
             log_file=args.logfile,

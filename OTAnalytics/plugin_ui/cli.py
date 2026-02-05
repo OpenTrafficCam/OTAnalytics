@@ -332,6 +332,7 @@ class OTAnalyticsCli(ABC):
                 output_file=str(output_file),
                 output_format="CSV",
                 export_mode=export_mode,
+                counting_event=self._run_config.counting_event,
             )
             self._export_counts.export(specification=counting_specification)
             self._after_count_export(output_file)

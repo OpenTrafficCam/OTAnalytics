@@ -4,7 +4,11 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 from OTAnalytics.application import project
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_EVENT,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     DEFAULT_DO_COUNTING,
     DEFAULT_DO_EVENTS,
@@ -60,6 +64,7 @@ EVENT_FORMATS = "event_formats"
 SAVE_NAME = "save_name"
 SAVE_SUFFIX = "save_suffix"
 COUNT_INTERVALS = "count_intervals"
+COUNTING_EVENT = "counting_event"
 NUM_PROCESSES = "num_processes"
 LOGFILE = "logfile"
 DEBUG = "debug"
@@ -103,6 +108,7 @@ class FixMissingAnalysis(OtConfigFormatFixer):
                 SAVE_NAME: self._run_config.save_name,
                 SAVE_SUFFIX: self._run_config.save_suffix,
                 COUNT_INTERVALS: self._run_config.count_intervals,
+                COUNTING_EVENT: self._run_config.counting_event.value,
             },
             NUM_PROCESSES: self._run_config.num_processes,
             LOGFILE: self._run_config.log_file,
@@ -233,11 +239,13 @@ class OtConfigParser(ConfigParser):
 
     def _parse_export(self, data: dict) -> ExportConfig:
         _validate_data(data, [SAVE_NAME, SAVE_SUFFIX, EVENT_FORMATS, COUNT_INTERVALS])
+        counting_event = data.get(COUNTING_EVENT, DEFAULT_COUNTING_EVENT)
         export_config = ExportConfig(
             save_name=data[SAVE_NAME],
             save_suffix=data[SAVE_SUFFIX],
             event_formats=set(data[EVENT_FORMATS]),
             count_intervals=set(data[COUNT_INTERVALS]),
+            counting_event=CountingEvent.parse(counting_event),
         )
         return export_config
 
@@ -339,6 +347,7 @@ class OtConfigParser(ConfigParser):
                     SAVE_SUFFIX: DEFAULT_SAVE_SUFFIX,
                     EVENT_FORMATS: list(DEFAULT_EVENT_FORMATS),
                     COUNT_INTERVALS: [DEFAULT_COUNTING_INTERVAL_IN_MINUTES],
+                    COUNTING_EVENT: DEFAULT_COUNTING_EVENT,
                 },
                 NUM_PROCESSES: 1,
                 LOGFILE: str(DEFAULT_LOG_FILE),
