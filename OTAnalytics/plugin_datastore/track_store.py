@@ -95,6 +95,13 @@ class PandasDetection(Detection):
         return self.__get_attribute(track.INTERPOLATED_DETECTION)
 
     @property
+    def is_finished(self) -> bool:
+        if ottrk_dataformat.FINISHED not in self._data.index:
+            return False
+        value = self.__get_attribute(ottrk_dataformat.FINISHED)
+        return bool(value)
+
+    @property
     def track_id(self) -> TrackId:
         return TrackId(self._track_id)
 
@@ -404,11 +411,13 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         return PandasTrackDataset(self.track_geometry_factory)
 
     def split_finished(self) -> tuple[TrackDataset, TrackDataset]:
+        empty = PandasTrackDataset(
+            self.track_geometry_factory, calculator=self.calculator
+        )
         if self._dataset.empty:
-            empty = PandasTrackDataset(self.track_geometry_factory)
             return empty, empty
         if ottrk_dataformat.FINISHED not in self._dataset.columns:
-            return self, self.clear()
+            return self, empty
 
         finished_mask = self._dataset[ottrk_dataformat.FINISHED] is True
         finished_ids = (
@@ -418,7 +427,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         )
         finished_ids_list = list(finished_ids)
         if not finished_ids_list:
-            return self.clear(), self
+            return empty, self
 
         all_ids = list(self.get_index() or [])
         finished_id_set = set(finished_ids_list)
@@ -500,7 +509,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
     def _subset_by_ids(self, track_ids: list[str]) -> "PandasTrackDataset":
         if not track_ids:
-            return PandasTrackDataset(self.track_geometry_factory)
+            return PandasTrackDataset(
+                self.track_geometry_factory, calculator=self.calculator
+            )
         subset = self._dataset.loc[track_ids]
         geometries = self._get_geometries_for(track_ids)
         return PandasTrackDataset.from_dataframe(
@@ -841,6 +852,8 @@ def _convert_tracks(tracks: Iterable[Track]) -> DataFrame:
         for detection in current_track.detections:
             dto = detection.to_dict()
             dto[track.ORIGINAL_TRACK_ID] = current_track.original_id.id
+            dto[ottrk_dataformat.FIRST] = current_track.first_detection == detection
+            dto[ottrk_dataformat.FINISHED] = detection.is_finished
             prepared.append(dto)
 
     if not prepared:

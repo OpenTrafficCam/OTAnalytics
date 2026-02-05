@@ -107,6 +107,12 @@ class PolarsDetection(Detection):
         return self.__get_attribute(track.INTERPOLATED_DETECTION)
 
     @property
+    def is_finished(self) -> bool:
+        if ottrk_dataformat.FINISHED not in self._data:
+            return False
+        return bool(self.__get_attribute(ottrk_dataformat.FINISHED))
+
+    @property
     def track_id(self) -> TrackId:
         return TrackId(self._track_id)
 
@@ -446,11 +452,13 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         return PolarsTrackDataset(self.track_geometry_factory)
 
     def split_finished(self) -> tuple[TrackDataset, TrackDataset]:
+        empty = PolarsTrackDataset(
+            self.track_geometry_factory, calculator=self.calculator
+        )
         if self._dataset.is_empty():
-            empty = PolarsTrackDataset(self.track_geometry_factory)
             return empty, empty
         if ottrk_dataformat.FINISHED not in self._dataset.columns:
-            return self, self.clear()
+            return self, empty
 
         finished_ids = (
             self._dataset.filter(pl.col(ottrk_dataformat.FINISHED) is True)
@@ -459,7 +467,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             .to_list()
         )
         if not finished_ids:
-            return self.clear(), self
+            return empty, self
 
         all_ids = self._dataset.get_column(LEVEL_TRACK_ID).unique().to_list()
         finished_id_set = set(finished_ids)
@@ -858,7 +866,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
     def _subset_by_ids(self, track_ids: list[str]) -> "PolarsTrackDataset":
         if not track_ids:
-            return PolarsTrackDataset(self.track_geometry_factory)
+            return PolarsTrackDataset(
+                self.track_geometry_factory, calculator=self.calculator
+            )
         subset = self._dataset.filter(pl.col(LEVEL_TRACK_ID).is_in(track_ids))
         geometries = self._get_geometries_for(track_ids)
         return PolarsTrackDataset.from_dataframe(
@@ -923,6 +933,8 @@ def create_empty_dataframe() -> pl.DataFrame:
     schema[track.FRAME] = pl.Int64
     schema[track.CONFIDENCE] = pl.Float64
     schema[track.INTERPOLATED_DETECTION] = pl.Boolean
+    schema[ottrk_dataformat.FIRST] = pl.Boolean
+    schema[ottrk_dataformat.FINISHED] = pl.Boolean
     schema[track.OCCURRENCE] = pl.Datetime
 
     return pl.DataFrame(schema=schema)
@@ -947,7 +959,7 @@ def _convert_tracks(tracks: Iterable[Track]) -> pl.DataFrame:
             dto = detection.to_dict()
             dto[track.ORIGINAL_TRACK_ID] = current_track.original_id.id
             dto[ottrk_dataformat.FIRST] = current_track.first_detection == detection
-            dto[ottrk_dataformat.FINISHED] = current_track.last_detection == detection
+            dto[ottrk_dataformat.FINISHED] = detection.is_finished
             prepared.append(dto)
 
     if not prepared:

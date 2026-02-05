@@ -17,7 +17,6 @@ from OTAnalytics.domain.track import (
     TrackId,
 )
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
-from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from OTAnalytics.plugin_parser.otvision_parser import (
     TrackIdGenerator,
     TrackLengthLimit,
@@ -97,7 +96,7 @@ class PythonStreamDetectionParser(StreamDetectionParser):
             self._tracks_dict[det.track_id].append(det)
             # the finished flag indicates the last detection of a track
             # so the detections can be assembled to a track object
-            if det_dict[ottrk_format.FINISHED]:
+            if det.is_finished:
                 track_detections = self._tracks_dict[det.track_id]
                 del self._tracks_dict[det.track_id]
 

@@ -93,6 +93,7 @@ class PythonDetection(Detection, DataclassValidation):
     _track_id: TrackId
     _video_name: str
     _input_file: str
+    _is_finished: bool = False
 
     @property
     def classification(self) -> str:
@@ -129,6 +130,10 @@ class PythonDetection(Detection, DataclassValidation):
     @property
     def interpolated_detection(self) -> bool:
         return self._interpolated_detection
+
+    @property
+    def is_finished(self) -> bool:
+        return self._is_finished
 
     @property
     def track_id(self) -> TrackId:
@@ -542,7 +547,41 @@ class PythonTrackDataset(TrackDataset):
         return PythonTrackDataset(self.track_geometry_factory)
 
     def split_finished(self) -> tuple[TrackDataset, TrackDataset]:
-        return self, self.clear()
+        empty = PythonTrackDataset(
+            self.track_geometry_factory, calculator=self.calculator
+        )
+        if not self._tracks:
+            return empty, empty
+
+        finished_tracks: dict[TrackId, Track] = {}
+        remaining_tracks: dict[TrackId, Track] = {}
+        for track_id, track in self._tracks.items():
+            if track.last_detection.is_finished:
+                finished_tracks[track_id] = track
+            else:
+                remaining_tracks[track_id] = track
+
+        finished_dataset = (
+            PythonTrackDataset(
+                self.track_geometry_factory,
+                finished_tracks,
+                self._get_geometries_for(finished_tracks.keys()),
+                calculator=self.calculator,
+            )
+            if finished_tracks
+            else empty
+        )
+        remaining_dataset = (
+            PythonTrackDataset(
+                self.track_geometry_factory,
+                remaining_tracks,
+                self._get_geometries_for(remaining_tracks.keys()),
+                calculator=self.calculator,
+            )
+            if remaining_tracks
+            else empty
+        )
+        return finished_dataset, remaining_dataset
 
     def as_list(self) -> list[Track]:
         return list(self._tracks.values())
