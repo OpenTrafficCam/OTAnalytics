@@ -7,7 +7,7 @@ import pytest
 
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.track_input_source import OttrkFileInputSource
-from OTAnalytics.domain.track import Track, TrackClassificationCalculator, TrackId
+from OTAnalytics.domain.track import Track
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import VideoMetadata
@@ -19,19 +19,13 @@ from OTAnalytics.plugin_datastore.python_track_store import (
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
-from OTAnalytics.plugin_parser import ottrk_dataformat
 from OTAnalytics.plugin_parser.json_parser import write_json_bz2
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
     OttrkParser,
     PythonDetectionParser,
-    TrackLengthLimit,
 )
-from OTAnalytics.plugin_parser.streaming_parser import (
-    PythonStreamDetectionParser,
-    StreamDetectionParser,
-    StreamOttrkParser,
-)
+from OTAnalytics.plugin_parser.streaming_parser import StreamOttrkParser
 from OTAnalytics.plugin_progress.lazy_tqdm_progressbar import LazyTqdmBuilder
 from tests.utils.assertions import assert_equal_track_properties
 from tests.utils.builders.ottrk_file_input_source import create_ottrk_file_input_source
@@ -232,123 +226,3 @@ class TestStreamOttrkParser:
             number_of_frames=60,
         )
         ottrk_file.unlink()
-
-
-class TestStreamDetectionParser:
-    @pytest.fixture
-    def mocked_classificator(self) -> TrackClassificationCalculator:
-        return Mock(spec=TrackClassificationCalculator)
-
-    @pytest.fixture
-    def parser(
-        self,
-        mocked_track_repository: Mock,
-        mocked_classificator: TrackClassificationCalculator,
-    ) -> StreamDetectionParser:
-        return PythonStreamDetectionParser(
-            track_classification_calculator=mocked_classificator,
-            track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
-        )
-
-    def test_parse_detections_output_has_same_order_as_input(
-        self,
-        track_builder_setup_with_sample_data: TrackBuilder,
-        parser: StreamDetectionParser,
-    ) -> None:
-        input_file = track_builder_setup_with_sample_data.input_file
-        detections: list[dict] = (
-            track_builder_setup_with_sample_data.build_serialized_detections()
-        )
-        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
-            ottrk_dataformat.VIDEO
-        ]
-
-        result_sorted_input = list(
-            parser.parse_tracks(
-                input_file,
-                detections,
-                metadata_video,
-                TrackId,
-            )
-        )
-        unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        result_unsorted_input = list(
-            parser.parse_tracks(
-                input_file,
-                unsorted_detections,
-                metadata_video,
-                TrackId,
-            )
-        )
-
-        expected_sorted = {
-            TrackId("1"): track_builder_setup_with_sample_data.build_detections()
-        }
-
-        assert expected_sorted == {
-            track.id: track.detections for track in result_sorted_input
-        }
-        assert expected_sorted != {
-            track.id: track.detections for track in result_unsorted_input
-        }
-
-    def test_parse_tracks(
-        self,
-        track_builder_setup_with_sample_data: TrackBuilder,
-        mocked_classificator: Mock,
-        parser: StreamDetectionParser,
-    ) -> None:
-        input_file = track_builder_setup_with_sample_data.input_file
-        mocked_classificator.calculate.return_value = "car"
-        detections: list[dict] = (
-            track_builder_setup_with_sample_data.build_serialized_detections()
-        )
-        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
-            ottrk_dataformat.VIDEO
-        ]
-
-        result_sorted_input = list(
-            parser.parse_tracks(input_file, detections, metadata_video)
-        )
-        # streaming parser must assume detections are provided in order!
-        # unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
-        # result_unsorted_input = list(
-        #    parser.parse_tracks(input_file, unsorted_detections, metadata_video)
-        # )
-
-        expected_sorted = PythonTrackDataset.from_list(
-            [track_builder_setup_with_sample_data.build_track()],
-            ShapelyTrackGeometryDataset.from_track_dataset,
-        )
-        assert_track_list_equals_dataset(expected_sorted, result_sorted_input)
-
-    @pytest.mark.parametrize(
-        "track_length_limit",
-        [
-            TrackLengthLimit(20, 12000),
-            TrackLengthLimit(0, 4),
-        ],
-    )
-    def test_parse_tracks_consider_minimum_length(
-        self,
-        track_builder_setup_with_sample_data: TrackBuilder,
-        track_length_limit: TrackLengthLimit,
-    ) -> None:
-        input_file = track_builder_setup_with_sample_data.input_file
-        parser = PythonStreamDetectionParser(
-            track_classification_calculator=ByMaxConfidence(),
-            track_length_limit=track_length_limit,
-        )
-
-        detections: list[dict] = (
-            track_builder_setup_with_sample_data.build_serialized_detections()
-        )
-
-        metadata_video = track_builder_setup_with_sample_data.get_metadata()[
-            ottrk_dataformat.VIDEO
-        ]
-        result_sorted_input = list(
-            parser.parse_tracks(input_file, detections, metadata_video)
-        )
-
-        assert len(result_sorted_input) == 0
