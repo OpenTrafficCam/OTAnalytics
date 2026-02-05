@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator
+from typing import Iterable, Iterator
 
-import ijson
-
-from OTAnalytics.application.datastore import DetectionMetadata, VideoMetadata
+from OTAnalytics.application.datastore import (
+    DetectionMetadata,
+    TrackParser,
+    VideoMetadata,
+)
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.track_input_source import OttrkFileInputSource
 from OTAnalytics.domain.progress import LazyProgressbarBuilder
@@ -15,48 +17,14 @@ from OTAnalytics.domain.track import (
     TrackId,
 )
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
-from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
-    ShapelyTrackGeometryDataset,
-)
-from OTAnalytics.plugin_datastore.track_store import (
-    PandasByMaxConfidence,
-    PandasTrackDataset,
-)
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
-from OTAnalytics.plugin_parser.json_parser import parse_json_bz2
 from OTAnalytics.plugin_parser.otvision_parser import (
-    OttrkFormatFixer,
-    OttrkParser,
     TrackIdGenerator,
     TrackLengthLimit,
     create_python_track,
     parse_python_detection,
 )
 from OTAnalytics.plugin_progress.lazy_tqdm_progressbar import LazyTqdmBuilder
-
-RawDetectionData = list[dict]
-RawVideoMetadata = dict
-RawFileData = tuple[RawDetectionData, RawVideoMetadata, TrackIdGenerator]
-
-
-def detection_stream_from_json_events(parse_events: Any) -> Iterator[dict]:
-    """
-    Extract the detection attributes from the deata.detections block
-    of the ottrk data format from the given json parser event stream.
-    """
-    yield from ijson.items(parse_events, "data.detections.item")
-
-
-def parse_json_bz2_ottrk_bulk(path: Path) -> tuple[dict, Iterator[dict]]:
-    """
-    Extract metadata block and list of detections attributes of the ottrk data format
-    from the bzip2 compressed file at the given path by reading the whole file in bulk.
-    """
-    ottrk_dict = parse_json_bz2(path)
-    dets_list: list[dict] = ottrk_dict[ottrk_format.DATA][ottrk_format.DATA_DETECTIONS]
-    metadata = ottrk_dict[ottrk_format.METADATA]
-
-    return metadata, iter(dets_list)
 
 
 class StreamDetectionParser(ABC):
@@ -154,7 +122,7 @@ class PythonStreamDetectionParser(StreamDetectionParser):
                 detections,
                 self._track_classification_calculator,
                 self._track_length_limit,
-            )  # yield remaining track
+            )
             if track is not None:
                 yield track
 
@@ -179,29 +147,15 @@ class StreamTrackParser(ABC):
         raise NotImplementedError
 
 
-TrackDatasetFactory = Callable[[list[Track]], TrackDataset]
-
-
-def default_track_dataset_factory(tracks: list[Track]) -> TrackDataset:
-    return PandasTrackDataset.from_list(
-        tracks=tracks,
-        track_geometry_factory=ShapelyTrackGeometryDataset.from_track_dataset,
-        calculator=PandasByMaxConfidence(),
-    )
-
-
 class StreamOttrkParser(StreamTrackParser):
     """
     Parse multiple ottrk files (sorted by 'recorder_start_date' in video metadata).
-    Provides a stream of TrackDatasets, one per ottrk file, plus a final dataset
-    for unfinished tracks.
+    Provides a stream of TrackDatasets, one per ottrk file.
     Allows to register TracksMetadata and VideosMetadata objects to be updated
     with new metadata every time a new ottrk file is parsed.
 
     Args:
-        detection_parser (StreamDetectionParser): a stream detection parser
-        format_fixer (OttrkFormatFixer, optional): a format fixer for ottrk files.
-            Defaults to OttrkFormatFixer().
+        track_parser (TrackParser): a track parser used per file.
         registered_tracks_metadata (list[TracksMetadata], optional):
             TracksMetadata objects to be updated with each parsed files metadata.
             Defaults to [].
@@ -211,24 +165,16 @@ class StreamOttrkParser(StreamTrackParser):
         progressbar (LazyProgressbarBuilder, optional):
             a progressbar builder to show progress of processed files.
             Defaults to LazyTqdmProgressbarBuilder().
-        track_dataset_factory (TrackDataSetFactory, optional):
-            a factory to create a new track dataset from a list of Tracks.
-            Defaults to PandasTrackDataset.from_list(tracks,
-            ShapelyTrackGeometryDataset.from_track_dataset, PandasByMaxConfidence()).
     """
 
     def __init__(
         self,
-        detection_parser: StreamDetectionParser,
-        format_fixer: OttrkFormatFixer = OttrkFormatFixer(),
+        track_parser: TrackParser,
         registered_tracks_metadata: list[TracksMetadata] = [],
         registered_videos_metadata: list[VideosMetadata] = [],
         progressbar: LazyProgressbarBuilder = LazyTqdmBuilder(),
-        track_dataset_factory: TrackDatasetFactory = default_track_dataset_factory,
     ) -> None:
-        self._detection_parser = detection_parser
-        self._tracks_dict: dict[TrackId, list[Detection]] = {}
-        self._format_fixer = format_fixer
+        self._track_parser = track_parser
         self._registered_tracks_metadata: set[TracksMetadata] = set(
             registered_tracks_metadata
         )
@@ -236,7 +182,6 @@ class StreamOttrkParser(StreamTrackParser):
             registered_videos_metadata
         )
         self._progressbar = progressbar
-        self._track_dataset_factory = track_dataset_factory
 
     def register_tracks_metadata(self, tracks_metadata: TracksMetadata) -> None:
         """Register TracksMetadata to be updated when a new ottrk file is parsed."""
@@ -271,39 +216,8 @@ class StreamOttrkParser(StreamTrackParser):
         )
 
         for ottrk_file in progressbar:
-            ottrk_dict = parse_json_bz2(ottrk_file)
-
-            fixed_ottrk = self._format_fixer.fix(ottrk_dict)
-            det_list: list[dict] = fixed_ottrk[ottrk_format.DATA][
-                ottrk_format.DATA_DETECTIONS
-            ]
-            metadata = ottrk_dict[ottrk_format.METADATA]
-            metadata_video = metadata[ottrk_format.VIDEO]
-
-            detection_metadata = OttrkParser.parse_metadata(metadata)
-            video_metadata = OttrkParser.parse_video_metadata(metadata_video)
-            id_generator = OttrkParser.create_id_generator_from(metadata)
+            parse_result = self._track_parser.parse(ottrk_file)
             self._update_registered_metadata_collections(
-                detection_metadata, video_metadata
+                parse_result.detection_metadata, parse_result.video_metadata
             )
-
-            del ottrk_dict
-            del fixed_ottrk
-            del metadata
-
-            tracks = list(
-                self._detection_parser.parse_tracks(
-                    input_file=str(ottrk_file),
-                    detections=det_list,
-                    metadata_video=metadata_video,
-                    id_generator=id_generator,
-                )
-            )
-            yield self._track_dataset_factory(tracks)
-            del tracks
-            del det_list
-
-        remaining_tracks = list(self._detection_parser.get_remaining_tracks())
-        if remaining_tracks:
-            yield self._track_dataset_factory(remaining_tracks)
-        del remaining_tracks
+            yield parse_result.tracks

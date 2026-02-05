@@ -19,15 +19,10 @@ from OTAnalytics.plugin_datastore.python_track_store import (
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
-from OTAnalytics.plugin_datastore.track_store import (
-    PandasByMaxConfidence,
-    PandasTrackDataset,
-)
 from OTAnalytics.plugin_parser import ottrk_dataformat
 from OTAnalytics.plugin_parser.json_parser import write_json_bz2
 from OTAnalytics.plugin_parser.otvision_parser import (
     DEFAULT_TRACK_LENGTH_LIMIT,
-    OttrkFormatFixer,
     OttrkParser,
     PythonDetectionParser,
     TrackLengthLimit,
@@ -137,23 +132,22 @@ class TestStreamOttrkParser:
         self,
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
+        mocked_track_repository: Mock,
     ) -> StreamOttrkParser:
         calculator = ByMaxConfidence()
-        stream_detection_parser = PythonStreamDetectionParser(
-            track_classification_calculator=calculator,
-            track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
+        track_parser = OttrkParser(
+            PythonDetectionParser(
+                calculator,
+                mocked_track_repository,
+                ShapelyTrackGeometryDataset.from_track_dataset,
+                track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
+            )
         )
         return StreamOttrkParser(
-            detection_parser=stream_detection_parser,
-            format_fixer=OttrkFormatFixer(),
+            track_parser=track_parser,
             registered_tracks_metadata=[tracks_metadata],
             registered_videos_metadata=[videos_metadata],
             progressbar=LazyTqdmBuilder(),
-            track_dataset_factory=lambda tracks: PandasTrackDataset.from_list(
-                tracks,
-                ShapelyTrackGeometryDataset.from_track_dataset,
-                PandasByMaxConfidence(),
-            ),
         )
 
     def test_parse_single_dataset_per_file(
@@ -316,7 +310,6 @@ class TestStreamDetectionParser:
         result_sorted_input = list(
             parser.parse_tracks(input_file, detections, metadata_video)
         )
-
         # streaming parser must assume detections are provided in order!
         # unsorted_detections = [detections[-1], detections[0]] + detections[1:-1]
         # result_unsorted_input = list(
