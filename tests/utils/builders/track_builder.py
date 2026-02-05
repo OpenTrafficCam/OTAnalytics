@@ -257,10 +257,8 @@ class TrackBuilder:
     def build_serialized_detections(self) -> list[dict]:
         detections: list[dict] = []
         detections.append(self.serialize_detection(self._detections[0], True, False))
-        for detection in self._detections[1:-1]:
+        for detection in self._detections[1:]:
             detections.append(self.serialize_detection(detection, False, False))
-
-        detections.append(self.serialize_detection(self._detections[-1], False, True))
         return detections
 
     def build_ottrk(self) -> dict:
