@@ -23,8 +23,6 @@ class TestArgparseCliParser:
             "--cli",
             "--cli-mode",
             "bulk",
-            "--cli-chunk-size",
-            "5",
             "--config",
             config_file,
             "--ottrks",
