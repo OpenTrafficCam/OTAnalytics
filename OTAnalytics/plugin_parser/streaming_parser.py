@@ -12,12 +12,7 @@ from OTAnalytics.application.datastore import (
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.track_input_source import OttrkFileInputSource
 from OTAnalytics.domain.progress import LazyProgressbarBuilder
-from OTAnalytics.domain.track import (
-    Detection,
-    Track,
-    TrackClassificationCalculator,
-    TrackId,
-)
+from OTAnalytics.domain.track import Track
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
@@ -28,17 +23,7 @@ from OTAnalytics.plugin_datastore.track_store import (
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from OTAnalytics.plugin_parser.json_parser import parse_json_bz2
-from OTAnalytics.plugin_parser.otvision_parser import (
-    TrackIdGenerator,
-    TrackLengthLimit,
-    create_python_track,
-    parse_python_detection,
-)
 from OTAnalytics.plugin_progress.lazy_tqdm_progressbar import LazyTqdmBuilder
-
-RawDetectionData = list[dict]
-RawVideoMetadata = dict
-RawFileData = tuple[RawDetectionData, RawVideoMetadata, TrackIdGenerator]
 
 
 def detection_stream_from_json_events(parse_events: Any) -> Iterator[dict]:
@@ -59,106 +44,6 @@ def parse_json_bz2_ottrk_bulk(path: Path) -> tuple[dict, Iterator[dict]]:
     metadata = ottrk_dict[ottrk_format.METADATA]
 
     return metadata, iter(dets_list)
-
-
-class StreamDetectionParser(ABC):
-    """
-    Parser the detections data in ottrk data format
-    and convert them to a stream of `TrackDataset`s.
-    """
-
-    @abstractmethod
-    def parse_tracks(
-        self,
-        input_file: str,
-        detections: list[dict],
-        metadata_video: dict,
-        id_generator: TrackIdGenerator = TrackId,
-    ) -> Iterator[Track]:
-        """Parse the given detections into a stream of TrackDatasets.
-
-        When Detections with the "finished" flag are parsed,
-        the according Track is assembled and provided via the stream.
-
-        Args:
-            input_file: (str): path of the file tie given detections were read from
-            detections (list[dict]): the detections in dict format.
-            metadata_video (dict): metadata of the track file in dict format.
-            id_generator (TrackIdGenerator): generator used to create track ids.
-
-        Returns:
-            Iterator[TrackDataset]: a stream of TackDatasets, one per Track.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_remaining_tracks(self) -> Iterator[Track]:
-        """Get yet unparsed tracks,
-        that did not show a detection with the "finished" flag."""
-        raise NotImplementedError
-
-
-class PythonStreamDetectionParser(StreamDetectionParser):
-    """
-    A StreamDetectionParser implementation producing SingletonTrackDatasets
-    each containing a single PythonTracks consisting of PythonDetections.
-    """
-
-    def __init__(
-        self,
-        track_classification_calculator: TrackClassificationCalculator,
-        track_length_limit: TrackLengthLimit,
-    ) -> None:
-        self._track_classification_calculator = track_classification_calculator
-        self._track_length_limit = track_length_limit
-        self._tracks_dict: dict[TrackId, list[Detection]] = dict()
-
-    def parse_tracks(
-        self,
-        input_file: str,
-        detections: list[dict],
-        metadata_video: dict,
-        id_generator: TrackIdGenerator = TrackId,
-    ) -> Iterator[Track]:
-        for det_dict in detections:
-            det = parse_python_detection(
-                metadata_video, id_generator, det_dict, input_file
-            )
-
-            # Group detections by track id
-            if not self._tracks_dict.get(det.track_id):
-                self._tracks_dict[det.track_id] = []
-            self._tracks_dict[det.track_id].append(det)
-            # the finished flag indicates the last detection of a track
-            # so the detections can be assembled to a track object
-            if det_dict[ottrk_format.FINISHED]:
-                track_detections = self._tracks_dict[det.track_id]
-                del self._tracks_dict[det.track_id]
-
-                track = create_python_track(
-                    det.track_id,
-                    track_detections,
-                    self._track_classification_calculator,
-                    self._track_length_limit,
-                )  # yield finished track
-                if track is not None:
-                    yield track
-
-    # after all files have been processed,
-    # yield all remaining tracks without finished flag
-    def get_remaining_tracks(self) -> Iterator[Track]:
-        for (
-            track_id,
-            detections,
-        ) in self._tracks_dict.items():
-            track = create_python_track(
-                track_id,
-                detections,
-                self._track_classification_calculator,
-                self._track_length_limit,
-            )  # yield remaining track
-            if track is not None:
-                yield track
 
 
 class StreamTrackParser(ABC):
