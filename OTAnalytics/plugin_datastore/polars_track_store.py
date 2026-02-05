@@ -461,7 +461,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             return self, empty
 
         finished_ids = (
-            self._dataset.filter(pl.col(ottrk_dataformat.FINISHED) is True)
+            self._dataset.filter(
+                pl.col(ottrk_dataformat.FINISHED).fill_null(False).eq(True)
+            )
             .get_column(LEVEL_TRACK_ID)
             .unique()
             .to_list()

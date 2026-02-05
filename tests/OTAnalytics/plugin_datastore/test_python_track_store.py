@@ -36,6 +36,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
 )
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
+    FilteredPythonTrackDataset,
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
@@ -593,6 +594,25 @@ class TestPythonTrackDataset:
         assert finished.track_ids == PythonTrackIdSet(
             {finished_car.id, finished_pedestrian.id}
         )
+        assert remaining.empty
+
+    def test_split_finished_filtered_dataset(
+        self, car_track: Track, pedestrian_track: Track
+    ) -> None:
+        finished_car = mark_last_detection_finished(car_track)
+        dataset = PythonTrackDataset.from_list(
+            [finished_car, pedestrian_track],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+        target = FilteredPythonTrackDataset(
+            dataset,
+            include_classes=frozenset({finished_car.classification}),
+            exclude_classes=frozenset(),
+        )
+
+        finished, remaining = target.split_finished()
+
+        assert finished.track_ids == PythonTrackIdSet({finished_car.id})
         assert remaining.empty
 
     def test_filter_by_minimum_detection_length(

@@ -419,7 +419,9 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         if ottrk_dataformat.FINISHED not in self._dataset.columns:
             return self, empty
 
-        finished_mask = self._dataset[ottrk_dataformat.FINISHED] is True
+        finished_mask = (
+            self._dataset[ottrk_dataformat.FINISHED].fillna(False).astype(bool).eq(True)
+        )
         finished_ids = (
             self._dataset.loc[finished_mask]
             .index.get_level_values(LEVEL_TRACK_ID)
@@ -429,7 +431,8 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         if not finished_ids_list:
             return empty, self
 
-        all_ids = list(self.get_index() or [])
+        index = self.get_index()
+        all_ids = list(index) if index is not None else []
         finished_id_set = set(finished_ids_list)
         remaining_ids_list = [
             track_id for track_id in all_ids if track_id not in finished_id_set
