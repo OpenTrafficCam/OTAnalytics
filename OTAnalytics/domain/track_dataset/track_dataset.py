@@ -368,6 +368,20 @@ class TrackDataset(ABC):
     def ids_inside(self, sections: list[Section]) -> TrackIdSet:
         raise NotImplementedError
 
+    @abstractmethod
+    def split_finished(self) -> tuple["TrackDataset", "TrackDataset"]:
+        """Split dataset into finished and remaining tracks.
+
+        A track is considered finished if its last detection has the FINISHED flag
+        set to True.
+
+        Returns:
+            tuple[TrackDataset, TrackDataset]: A tuple containing:
+                - finished_tracks: Dataset with tracks that are finished
+                - remaining_tracks: Dataset with tracks that are not finished
+        """
+        raise NotImplementedError
+
 
 class TrackGeometryDataset(ABC):
     """Dataset containing track geometries.

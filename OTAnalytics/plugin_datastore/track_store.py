@@ -762,6 +762,56 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
         return updated_track_dataset, PythonTrackIdSet(removed_track_ids)
 
+    def split_finished(self) -> tuple["PandasTrackDataset", "PandasTrackDataset"]:
+        if self._dataset.empty:
+            return self, self
+
+        # Get the last detection for each track (last by occurrence)
+        last_detections = self._dataset.groupby(level=LEVEL_TRACK_ID).tail(1)
+
+        # Find track_ids where the last detection has finished=True
+        finished_mask = last_detections[ottrk_dataformat.FINISHED] is True
+        finished_track_ids = last_detections[finished_mask].index.get_level_values(
+            LEVEL_TRACK_ID
+        )
+
+        # Split datasets
+        finished_dataset = get_rows_by_track_ids(self._dataset, finished_track_ids)
+        remaining_dataset = self._dataset.drop(finished_track_ids, errors="ignore")
+
+        # Split geometry datasets
+        finished_track_ids_list = list(finished_track_ids)
+        remaining_track_ids_list = [
+            tid
+            for tid in self._dataset.index.get_level_values(LEVEL_TRACK_ID).unique()
+            if tid not in finished_track_ids_list
+        ]
+
+        finished_geometry_datasets = {}
+        remaining_geometry_datasets = {}
+        for offset, geometry_dataset in self._geometry_datasets.items():
+            finished_geometry_datasets[offset] = geometry_dataset.get_for(
+                finished_track_ids_list
+            )
+            remaining_geometry_datasets[offset] = geometry_dataset.get_for(
+                remaining_track_ids_list
+            )
+
+        finished_tracks = PandasTrackDataset(
+            dataset=finished_dataset,
+            calculator=self.calculator,
+            track_geometry_factory=self.track_geometry_factory,
+            geometry_datasets=finished_geometry_datasets,
+        )
+        remaining_tracks = PandasTrackDataset(
+            dataset=remaining_dataset,
+            calculator=self.calculator,
+            track_geometry_factory=self.track_geometry_factory,
+            geometry_datasets=remaining_geometry_datasets,
+        )
+
+        return finished_tracks, remaining_tracks
+
 
 def to_raw_ids(track_ids: Iterable[TrackId]) -> frozenset[str]:
     return frozenset((track_id.id for track_id in track_ids))

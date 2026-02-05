@@ -795,6 +795,27 @@ class PythonTrackDataset(TrackDataset):
         )
         return updated_track_dataset, actual_ids
 
+    def split_finished(
+        self,
+    ) -> tuple["PythonTrackDataset", "PythonTrackDataset"]:
+        """Split dataset into finished and remaining tracks.
+
+        For PythonTrackDataset, since the finished flag is not stored in the
+        in-memory Detection objects, we treat all tracks as finished by default.
+        This is appropriate because PythonTrackDataset typically contains
+        complete tracks that have been fully parsed.
+
+        Returns:
+            tuple containing (all tracks as finished, empty dataset as remaining)
+        """
+        empty_dataset = PythonTrackDataset(
+            self.track_geometry_factory,
+            values={},
+            geometry_datasets={},
+            calculator=self.calculator,
+        )
+        return self, empty_dataset
+
 
 class FilteredPythonTrackDataset(FilterByClassTrackDataset):
     @property
@@ -918,6 +939,10 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
     ) -> tuple["TrackDataset", TrackIdSet]:
         updated_dataset, removed_ids = self._other.remove_by_original_ids(original_ids)
         return self.wrap(updated_dataset), removed_ids
+
+    def split_finished(self) -> tuple["TrackDataset", "TrackDataset"]:
+        finished_tracks, remaining_tracks = self._other.split_finished()
+        return self.wrap(finished_tracks), self.wrap(remaining_tracks)
 
 
 class SimpleCutTrackPartBuilder(TrackBuilder):

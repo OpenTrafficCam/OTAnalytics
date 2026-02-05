@@ -860,6 +860,64 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
         return updated_track_dataset, ids_to_remove
 
+    def split_finished(
+        self,
+    ) -> tuple["PolarsTrackDataset", "PolarsTrackDataset"]:
+        if self._dataset.is_empty():
+            return self, self
+
+        # Get last detection for each track (by occurrence)
+        last_detections = (
+            self._dataset.sort(track.OCCURRENCE).group_by(track.TRACK_ID).tail(1)
+        )
+
+        # Find track_ids where the last detection has finished=True
+        finished_track_ids = last_detections.filter(
+            pl.col(ottrk_dataformat.FINISHED) is True
+        ).get_column(track.TRACK_ID)
+
+        # Split datasets
+        finished_dataset = self._dataset.filter(
+            pl.col(track.TRACK_ID).is_in(finished_track_ids)
+        )
+        remaining_dataset = self._dataset.filter(
+            ~pl.col(track.TRACK_ID).is_in(finished_track_ids)
+        )
+
+        # Split geometry datasets
+        finished_track_ids_list = finished_track_ids.to_list()
+        remaining_track_ids = self._dataset.get_column(track.TRACK_ID).unique()
+        remaining_track_ids_list = [
+            tid
+            for tid in remaining_track_ids.to_list()
+            if tid not in finished_track_ids_list
+        ]
+
+        finished_geometry_datasets = {}
+        remaining_geometry_datasets = {}
+        for offset, geometry_dataset in self._geometry_datasets.items():
+            finished_geometry_datasets[offset] = geometry_dataset.get_for(
+                finished_track_ids_list
+            )
+            remaining_geometry_datasets[offset] = geometry_dataset.get_for(
+                remaining_track_ids_list
+            )
+
+        finished_tracks = PolarsTrackDataset(
+            dataset=finished_dataset,
+            calculator=self.calculator,
+            track_geometry_factory=self.track_geometry_factory,
+            geometry_datasets=finished_geometry_datasets,
+        )
+        remaining_tracks = PolarsTrackDataset(
+            dataset=remaining_dataset,
+            calculator=self.calculator,
+            track_geometry_factory=self.track_geometry_factory,
+            geometry_datasets=remaining_geometry_datasets,
+        )
+
+        return finished_tracks, remaining_tracks
+
 
 def create_empty_dataframe() -> pl.DataFrame:
     """Create an empty Polars DataFrame with the required schema."""
