@@ -762,7 +762,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
 
         return updated_track_dataset, PythonTrackIdSet(removed_track_ids)
 
-    def split_finished(self) -> tuple["PandasTrackDataset", "PandasTrackDataset"]:
+    def split_finished(self) -> tuple["TrackDataset", "TrackDataset"]:
         if self._dataset.empty:
             return self, self
 

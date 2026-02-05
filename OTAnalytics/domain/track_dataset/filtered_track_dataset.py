@@ -77,6 +77,10 @@ class FilteredTrackDataset(TrackDataset):
     def get_max_confidences_for(self, track_ids: TrackIdSet) -> dict[str, float]:
         return self._filter().get_max_confidences_for(track_ids)
 
+    def split_finished(self) -> tuple["TrackDataset", "TrackDataset"]:
+        finished_tracks, remaining_tracks = self._filter().split_finished()
+        return finished_tracks, remaining_tracks
+
 
 class FilterByClassTrackDataset(FilteredTrackDataset):
     @property

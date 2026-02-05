@@ -940,10 +940,6 @@ class FilteredPythonTrackDataset(FilterByClassTrackDataset):
         updated_dataset, removed_ids = self._other.remove_by_original_ids(original_ids)
         return self.wrap(updated_dataset), removed_ids
 
-    def split_finished(self) -> tuple["TrackDataset", "TrackDataset"]:
-        finished_tracks, remaining_tracks = self._other.split_finished()
-        return self.wrap(finished_tracks), self.wrap(remaining_tracks)
-
 
 class SimpleCutTrackPartBuilder(TrackBuilder):
     """Build tracks that have been cut with a cutting section.

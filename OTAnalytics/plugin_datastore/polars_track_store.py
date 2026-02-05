@@ -862,7 +862,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
     def split_finished(
         self,
-    ) -> tuple["PolarsTrackDataset", "PolarsTrackDataset"]:
+    ) -> tuple["TrackDataset", "TrackDataset"]:
         if self._dataset.is_empty():
             return self, self
 
