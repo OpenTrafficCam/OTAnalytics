@@ -127,9 +127,10 @@ class ArgparseCliParser(CliParser):
         )
         self._parser.add_argument(
             "--counting-event",
-            type=str.lower,
-            choices=[event.value for event in CountingEvent],
-            help="Event used for aggregating counts ('start' or 'end').",
+            type=CountingEvent,
+            choices=list(CountingEvent),
+            help="Event used for aggregating counts. "
+            + f"Choose from: {list(CountingEvent)}.",
             required=False,
         )
         self._parser.add_argument(

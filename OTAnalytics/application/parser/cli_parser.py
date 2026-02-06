@@ -53,7 +53,7 @@ class CliArguments:
     save_suffix: str | None = None
     event_formats: list[str] | None = None
     count_intervals: list[int] | None = None
-    counting_event: str | None = None
+    counting_event: CountingEvent | None = None
     log_file: str | None = None
     include_classes: list[str] | None = None
     exclude_classes: list[str] | None = None
@@ -110,7 +110,7 @@ class CliValueProvider(OtConfigDefaultValueProvider):
     @property
     def counting_event(self) -> CountingEvent:
         if self._cli_args.counting_event:
-            return CountingEvent.parse(self._cli_args.counting_event)
+            return self._cli_args.counting_event
         return CountingEvent.parse(DEFAULT_COUNTING_EVENT)
 
     @property

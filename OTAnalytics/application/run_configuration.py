@@ -164,7 +164,7 @@ class RunConfiguration(OtConfigDefaultValueProvider):
     @property
     def counting_event(self) -> CountingEvent:
         if self._cli_args.counting_event:
-            return CountingEvent.parse(self._cli_args.counting_event)
+            return self._cli_args.counting_event
         if self._otconfig:
             return CountingEvent.parse(
                 self._otconfig.analysis.export_config.counting_event
