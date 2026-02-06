@@ -95,6 +95,7 @@ class ExportCountsDialogKeys(ResourceKey):
     LABEL_END_DATE = "label-end-date"
     LABEL_END_TIME = "label-end-time"
     LABEL_INTERVAL_MINUTES = "label-interval-minutes"
+    LABEL_COUNTING_EVENT = "label-counting-event"
     LABEL_OUTPUT_FILE = "label-output-file"
 
 
@@ -221,6 +222,7 @@ DEFAULT_RESOURCE_MAP = {
     FileChooserDialogKeys.LABEL_DIRECTORY: "Directory",
     FileChooserDialogKeys.LABEL_BROWSE: "Browse",
     ExportCountsDialogKeys.LABEL_INTERVAL_MINUTES: "Interval (minutes)",
+    ExportCountsDialogKeys.LABEL_COUNTING_EVENT: "Counting Event",
     ExportCountsDialogKeys.LABEL_OUTPUT_FILE: "Output File",
     ExportCountsDialogKeys.LABEL_EXPORT_COUNTS: "Export Counts",
     ExportCountsDialogKeys.LABEL_TIME_RANGE: "Time Range",
