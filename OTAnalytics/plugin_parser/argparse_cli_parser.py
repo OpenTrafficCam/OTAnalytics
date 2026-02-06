@@ -123,13 +123,13 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
-            "--no-track-export",
+            "--track-export",
             action="store_true",
             help="Do not export tracks as csv",
             required=False,
         )
         self._parser.add_argument(
-            "--no-track-statistics-export",
+            "--track-statistics-export",
             action="store_true",
             help="Do not export track statistics as csv",
             required=False,
@@ -189,8 +189,8 @@ class ArgparseCliParser(CliParser):
             save_suffix=args.save_suffix,
             event_formats=args.event_formats,
             count_intervals=args.count_intervals,
-            track_export=not args.no_track_export,
-            track_statistics_export=not args.no_track_statistics_export,
+            track_export=args.track_export,
+            track_statistics_export=args.track_statistics_export,
             log_file=args.logfile,
             include_classes=args.include_classes,
             exclude_classes=args.exclude_classes,
