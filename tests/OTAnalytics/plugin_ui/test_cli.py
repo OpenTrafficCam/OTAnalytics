@@ -108,6 +108,9 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrackDataset,
 )
+from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
+    PolarsTrackGeometryDataset,
+)
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
@@ -140,6 +143,7 @@ from OTAnalytics.plugin_parser.export import (
     FillZerosExporterFactory,
     SimpleExporterFactory,
 )
+from OTAnalytics.plugin_parser.feathers_parser import FeathersParser
 from OTAnalytics.plugin_parser.otconfig_parser import (
     OtConfigFormatFixer,
     OtConfigParser,
@@ -156,7 +160,6 @@ from OTAnalytics.plugin_parser.road_user_assignment_export import (
     SimpleRoadUserAssignmentExporterFactory,
 )
 from OTAnalytics.plugin_parser.streaming_parser import (
-    PythonStreamDetectionParser,
     StreamOttrkParser,
     StreamTrackParser,
 )
@@ -281,7 +284,6 @@ def create_run_config(
     flow_parser: FlowParser,
     start_cli: bool = True,
     cli_mode: CliMode = CliMode.BULK,
-    cli_chunk_size: int = 5,
     debug: bool = False,
     config_file: str = CONFIG_FILE,
     track_files: list[str] | None = None,
@@ -311,7 +313,6 @@ def create_run_config(
     cli_args = CliArguments(
         start_cli=start_cli,
         cli_mode=cli_mode,
-        cli_chunk_size=cli_chunk_size,
         debug=debug,
         logfile_overwrite=logfile_overwrite,
         track_export=track_export,
@@ -653,14 +654,12 @@ class TestOTAnalyticsCli:
         dependencies = cli_dependencies
         tracks_metadata = dependencies[self.TRACKS_METADATA]
         videos_metadata = dependencies[self.VIDEOS_METADATA]
+        track_parser = FeathersParser(PolarsTrackGeometryDataset.from_track_dataset)
         return {
             self.TRACK_PARSER: StreamOttrkParser(
-                PythonStreamDetectionParser(
-                    ByMaxConfidence(), DEFAULT_TRACK_LENGTH_LIMIT
-                ),
+                track_parser=track_parser,
                 registered_tracks_metadata=[tracks_metadata],
                 registered_videos_metadata=[videos_metadata],
-                chunk_size=2,
             ),
             **dependencies,
         }
@@ -1036,7 +1035,6 @@ class TestOTAnalyticsCli:
         cli_args = CliArguments(
             start_cli=True,
             cli_mode=mode,
-            cli_chunk_size=2,
             debug=False,
             logfile_overwrite=False,
             track_export=False,
