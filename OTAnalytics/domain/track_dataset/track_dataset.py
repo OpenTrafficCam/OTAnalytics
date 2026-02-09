@@ -213,6 +213,16 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def split_finished(self) -> tuple["TrackDataset", "TrackDataset"]:
+        """
+        Split this dataset into finished and remaining tracks.
+
+        Returns:
+            tuple[TrackDataset, TrackDataset]: (finished_tracks, remaining_tracks)
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def as_list(self) -> list[Track]:
         raise NotImplementedError
 

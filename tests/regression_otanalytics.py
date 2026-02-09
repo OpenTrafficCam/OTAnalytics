@@ -46,11 +46,6 @@ def otflow_file(test_data_dir: Path) -> str:
     return to_cli_path(test_data_dir, "OTCamera19_FR20_2023-05-24.otflow")
 
 
-@pytest.fixture(scope="module")
-def cli_chunk_size() -> int:
-    return 1000
-
-
 @pytest.fixture
 def otflow_parser() -> FlowParser:
     return OtFlowParser()
@@ -64,7 +59,6 @@ class TestRegressionCompleteApplication:
         otflow_file: str,
         all_track_files_test_dataset: list[Path],
         otflow_parser: FlowParser,
-        cli_chunk_size: int,
     ) -> None:
         for test_file in tqdm(all_track_files_test_dataset, desc="test data file"):
             test_data = test_file
@@ -79,7 +73,6 @@ class TestRegressionCompleteApplication:
                 otflow_parser=otflow_parser,
                 event_formats=("csv", "otevents"),
                 cli_mode=CliMode.BULK,
-                cli_chunk_size=cli_chunk_size,
             )
 
     @pytest.mark.skip
@@ -88,7 +81,6 @@ class TestRegressionCompleteApplication:
         otflow_file: str,
         all_track_files_test_dataset: list[Path],
         otflow_parser: FlowParser,
-        cli_chunk_size: int,
     ) -> None:
         batches = list(chunked(sorted(all_track_files_test_dataset), n=8))
         for test_file in tqdm(batches, desc="test data file"):
@@ -104,7 +96,6 @@ class TestRegressionCompleteApplication:
                 otflow_parser=otflow_parser,
                 event_formats=("csv", "otevents"),
                 cli_mode=CliMode.BULK,
-                cli_chunk_size=cli_chunk_size,
             )
 
     @pytest.mark.skip
@@ -113,7 +104,6 @@ class TestRegressionCompleteApplication:
         otflow_file: str,
         all_track_files_test_dataset: list[Path],
         otflow_parser: FlowParser,
-        cli_chunk_size: int,
     ) -> None:
         batches = list(chunked(sorted(all_track_files_test_dataset), n=8))
         for test_file in tqdm(batches, desc="test data file"):
@@ -129,7 +119,6 @@ class TestRegressionCompleteApplication:
                 otflow_parser=otflow_parser,
                 event_formats=("csv", "otevents"),
                 cli_mode=CliMode.BULK,
-                cli_chunk_size=cli_chunk_size,
             )
 
     @pytest.mark.skip
@@ -138,7 +127,6 @@ class TestRegressionCompleteApplication:
         otflow_file: str,
         all_track_files_test_dataset: list[Path],
         otflow_parser: FlowParser,
-        cli_chunk_size: int,
     ) -> None:
         test_data = all_track_files_test_dataset
         test_interval = "24h"
@@ -152,7 +140,6 @@ class TestRegressionCompleteApplication:
             otflow_parser=otflow_parser,
             event_formats=("csv", "otevents"),
             cli_mode=CliMode.BULK,
-            cli_chunk_size=cli_chunk_size,
         )
 
     @pytest.mark.parametrize(
@@ -167,7 +154,6 @@ class TestRegressionCompleteApplication:
         track_file_15min: list[str],
         otflow_parser: FlowParser,
         cli_mode: CliMode,
-        cli_chunk_size: int,
     ) -> None:
         test_data = track_file_15min
         test_interval = "15min"
@@ -180,7 +166,6 @@ class TestRegressionCompleteApplication:
             otflow_parser,
             count_interval=15,
             cli_mode=cli_mode,
-            cli_chunk_size=cli_chunk_size,
         )
 
     @pytest.mark.parametrize(
@@ -195,7 +180,6 @@ class TestRegressionCompleteApplication:
         track_files_2hours: list[str],
         otflow_parser: FlowParser,
         cli_mode: CliMode,
-        cli_chunk_size: int,
     ) -> None:
         for track_file in track_files_2hours:
             test_data = [track_file]
@@ -209,7 +193,6 @@ class TestRegressionCompleteApplication:
                 otflow_parser,
                 count_interval=15,
                 cli_mode=cli_mode,
-                cli_chunk_size=cli_chunk_size,
             )
 
     @pytest.mark.parametrize(
@@ -224,7 +207,6 @@ class TestRegressionCompleteApplication:
         track_files_2hours: list[str],
         otflow_parser: FlowParser,
         cli_mode: CliMode,
-        cli_chunk_size: int,
     ) -> None:
         test_data = track_files_2hours
         test_interval = "2h"
@@ -237,7 +219,6 @@ class TestRegressionCompleteApplication:
             otflow_parser,
             count_interval=120,
             cli_mode=cli_mode,
-            cli_chunk_size=cli_chunk_size,
         )
 
     def _execute_test(
@@ -250,7 +231,6 @@ class TestRegressionCompleteApplication:
         otflow_parser: FlowParser,
         count_interval: int,
         cli_mode: CliMode,
-        cli_chunk_size: int,
     ) -> None:
         save_name = self._run_otanalytics(
             count_interval,
@@ -260,7 +240,6 @@ class TestRegressionCompleteApplication:
             test_data_tmp_dir,
             test_interval,
             cli_mode,
-            cli_chunk_size,
         )
 
         actual_counts_file = (
@@ -292,7 +271,6 @@ class TestRegressionCompleteApplication:
         save_dir: Path,
         test_interval: str,
         cli_mode: CliMode,
-        cli_chunk_size: int,
         event_formats: tuple[str, ...] = ("csv",),
     ) -> str:
         save_name = f"{Path(test_data[0]).stem}_{test_interval}"
@@ -305,7 +283,6 @@ class TestRegressionCompleteApplication:
             count_intervals=[count_interval],
             flow_parser=otflow_parser,
             cli_mode=cli_mode,
-            cli_chunk_size=cli_chunk_size,
         )
         OtAnalyticsCliApplicationStarter(run_config).start()
         return save_name
