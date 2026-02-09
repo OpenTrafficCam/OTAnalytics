@@ -23,8 +23,6 @@ class TestArgparseCliParser:
             "--cli",
             "--cli-mode",
             "bulk",
-            "--cli-chunk-size",
-            "5",
             "--config",
             config_file,
             "--ottrks",
@@ -58,7 +56,6 @@ class TestArgparseCliParser:
             assert args == CliArguments(
                 start_cli=True,
                 cli_mode=CliMode.BULK,
-                cli_chunk_size=5,
                 debug=False,
                 logfile_overwrite=True,
                 track_export=True,

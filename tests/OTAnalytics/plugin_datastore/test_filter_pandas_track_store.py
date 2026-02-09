@@ -7,6 +7,7 @@ from OTAnalytics.plugin_datastore.filter_pandas_track_store import (
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrack
 from OTAnalytics.plugin_datastore.track_store import PandasTrackDataset
 from tests.utils.assertions import assert_track_datasets_equal
+from tests.utils.builders.track_builder import mark_last_detection_finished
 
 
 class TestFilterByIdPandasTrackDataset:
@@ -44,6 +45,25 @@ class TestFilterByIdPandasTrackDataset:
         target = FilterByIdPandasTrackDataset(dataset, track_ids)
 
         assert_track_datasets_equal(target, expected)
+
+    def test_split_finished(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+        bicycle_track: Track,
+    ) -> None:
+        finished_track = mark_last_detection_finished(car_track)
+        dataset = PandasTrackDataset.from_list(
+            [finished_track, pedestrian_track, bicycle_track], track_geometry_factory
+        )
+        track_ids = [finished_track.id.id, pedestrian_track.id.id]
+        target = FilterByIdPandasTrackDataset(dataset, track_ids)
+
+        finished, remaining = target.split_finished()
+
+        assert set(finished.track_ids) == {finished_track.id}
+        assert set(remaining.track_ids) == {pedestrian_track.id}
 
 
 class TestFilterLastNSegmentsPandasTrackDataset:
