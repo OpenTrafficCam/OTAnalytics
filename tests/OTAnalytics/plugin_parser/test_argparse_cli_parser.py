@@ -40,7 +40,7 @@ class TestArgparseCliParser:
             "--count-intervals",
             "1",
             "15",
-            "--no-track-statistics-export",
+            "--track-export",
             "--logfile",
             log_file,
             "--logfile_overwrite",
