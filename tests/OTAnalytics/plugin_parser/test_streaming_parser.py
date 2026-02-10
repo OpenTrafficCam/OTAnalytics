@@ -146,9 +146,6 @@ class TestStreamOttrkParser:
             progressbar=LazyTqdmBuilder(),
         )
 
-    def ids_of(self, tracks: list[Track]) -> list[TrackId]:
-        return [t.id for t in tracks]
-
     async def test_parse_single_dataset_per_file(
         self,
         stream_ottrk_parser: StreamOttrkParser,
@@ -160,7 +157,8 @@ class TestStreamOttrkParser:
 
         bulk_res = bulk_ottrk_parser.parse(ottrk_path)
         stream = [
-            dataset async for dataset in stream_ottrk_parser.parse(ottrk_file_input_source)
+            dataset
+            async for dataset in stream_ottrk_parser.parse(ottrk_file_input_source)
         ]
 
         assert len(stream) == 1

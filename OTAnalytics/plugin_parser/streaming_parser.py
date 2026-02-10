@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import  AsyncIterator
+from typing import AsyncIterator
 
-from OTAnalytics.application.datastore import (
-    TrackParser
-)
 from tqdm.asyncio import tqdm
 
-from OTAnalytics.application.datastore import DetectionMetadata, VideoMetadata
+from OTAnalytics.application.datastore import (
+    DetectionMetadata,
+    TrackParser,
+    VideoMetadata,
+)
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.track_input_source import OttrkFileInputSource
 from OTAnalytics.domain.progress import LazyProgressbarBuilder
@@ -103,7 +104,9 @@ class StreamOttrkParser(StreamTrackParser):
         self, input_source: OttrkFileInputSource
     ) -> AsyncIterator[TrackDataset]:
         remaining_tracks: TrackDataset | None = None
-        async for ottrk_file in tqdm(input_source.produce(), unit="files", desc="Processed ottrk files: ")
+        async for ottrk_file in tqdm(
+            input_source.produce(), unit="files", desc="Processed ottrk files: "
+        ):
             parse_result = self._track_parser.parse(ottrk_file)
             self._update_registered_metadata_collections(
                 parse_result.detection_metadata, parse_result.video_metadata
