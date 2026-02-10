@@ -23,7 +23,10 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
     PolarsTrackGeometryDataset,
 )
 from tests.utils.assertions import assert_equal_track_properties
-from tests.utils.builders.track_builder import TrackBuilder
+from tests.utils.builders.track_builder import (
+    TrackBuilder,
+    mark_last_detection_finished,
+)
 
 
 def create_line_section(
@@ -267,6 +270,62 @@ class TestPolarsTrackDataset:
         assert len(result) == 3
         track_ids = {track_id.id for track_id in result.track_ids}
         assert track_ids == {"first", "second", "third"}
+
+    def test_split_finished(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        unfinished_track = self.__build_track("unfinished")
+        finished_track = mark_last_detection_finished(self.__build_track("finished"))
+        dataset = PolarsTrackDataset.from_list(
+            [unfinished_track, finished_track], track_geometry_factory
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        finished_ids = {track_id.id for track_id in finished.track_ids}
+        remaining_ids = {track_id.id for track_id in remaining.track_ids}
+        assert finished_ids == {finished_track.id.id}
+        assert remaining_ids == {unfinished_track.id.id}
+
+    def test_split_finished_empty_dataset(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PolarsTrackDataset(track_geometry_factory)
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.empty
+        assert remaining.empty
+
+    def test_split_finished_without_finished_tracks(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        first_track = self.__build_track("1")
+        second_track = self.__build_track("2")
+        dataset = PolarsTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.empty
+        remaining_ids = {track_id.id for track_id in remaining.track_ids}
+        assert remaining_ids == {first_track.id.id, second_track.id.id}
+
+    def test_split_finished_without_remaining_tracks(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        first_track = mark_last_detection_finished(self.__build_track("1"))
+        second_track = mark_last_detection_finished(self.__build_track("2"))
+        dataset = PolarsTrackDataset.from_list(
+            [first_track, second_track], track_geometry_factory
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        finished_ids = {track_id.id for track_id in finished.track_ids}
+        assert finished_ids == {first_track.id.id, second_track.id.id}
+        assert remaining.empty
 
     def test_add_two_existing_polars_datasets(
         self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY

@@ -6,6 +6,9 @@ from unittest.mock import Mock, PropertyMock, call, patch
 
 import pytest
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.config import (
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     DEFAULT_DO_COUNTING,
@@ -33,6 +36,7 @@ from OTAnalytics.plugin_parser.json_parser import parse_json
 from OTAnalytics.plugin_parser.otconfig_parser import (
     ANALYSIS,
     COUNT_INTERVALS,
+    COUNTING_EVENT,
     DEBUG,
     DO_COUNTING,
     DO_EVENTS,
@@ -108,6 +112,7 @@ class TestOtConfigParser:
                     SAVE_SUFFIX: DEFAULT_SAVE_SUFFIX,
                     EVENT_FORMATS: list(DEFAULT_EVENT_FORMATS),
                     COUNT_INTERVALS: [DEFAULT_COUNTING_INTERVAL_IN_MINUTES],
+                    COUNTING_EVENT: CountingEvent.START.value,
                 },
                 NUM_PROCESSES: 1,
                 LOGFILE: str(DEFAULT_LOG_FILE),
@@ -197,6 +202,7 @@ class TestOtConfigParser:
             save_suffix="my_suffix",
             event_formats={"csv", "xlsx"},
             count_intervals={2, 3, 4},
+            counting_event=CountingEvent.START,
         )
         expected_analysis_config = AnalysisConfig(
             do_events=True,
@@ -315,6 +321,7 @@ class TestFixMissingAnalysis:
             SAVE_NAME: save_name,
             SAVE_SUFFIX: save_suffix,
             COUNT_INTERVALS: count_intervals,
+            COUNTING_EVENT: CountingEvent.START.value,
         }
         expected_content = {
             ANALYSIS: {
@@ -340,6 +347,9 @@ class TestFixMissingAnalysis:
         type(value_provider).save_suffix = PropertyMock(return_value=save_suffix)
         type(value_provider).count_intervals = PropertyMock(
             return_value=count_intervals
+        )
+        type(value_provider).counting_event = PropertyMock(
+            return_value=CountingEvent.START
         )
         type(value_provider).num_processes = PropertyMock(return_value=num_processes)
         type(value_provider).log_file = PropertyMock(return_value=logfile)

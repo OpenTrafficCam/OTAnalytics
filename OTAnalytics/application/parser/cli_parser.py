@@ -3,7 +3,11 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_EVENT,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_NUM_PROCESSES,
@@ -33,7 +37,6 @@ class CliParseError(Exception):
 class CliArguments:
     start_cli: bool
     cli_mode: CliMode
-    cli_chunk_size: int
     debug: bool
     logfile_overwrite: bool
     track_export: bool
@@ -49,6 +52,7 @@ class CliArguments:
     save_suffix: str | None = None
     event_formats: list[str] | None = None
     count_intervals: list[int] | None = None
+    counting_event: CountingEvent | None = None
     log_file: str | None = None
     include_classes: list[str] | None = None
     exclude_classes: list[str] | None = None
@@ -101,6 +105,12 @@ class CliValueProvider(OtConfigDefaultValueProvider):
             if self._cli_args.count_intervals
             else {DEFAULT_COUNTING_INTERVAL_IN_MINUTES}
         )
+
+    @property
+    def counting_event(self) -> CountingEvent:
+        if self._cli_args.counting_event:
+            return self._cli_args.counting_event
+        return CountingEvent.parse(DEFAULT_COUNTING_EVENT)
 
     @property
     def num_processes(self) -> int:
