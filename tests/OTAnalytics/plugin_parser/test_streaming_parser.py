@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterator
+from typing import AsyncIterator
 from unittest.mock import Mock
 
 import pytest
@@ -60,10 +60,12 @@ def ottrk_file_input_source(ottrk_path: Path) -> OttrkFileInputSource:
     return create_ottrk_file_input_source([ottrk_path])
 
 
-def assert_track_stream_equals_dataset(
-    bulk_res: TrackDataset, stream_res: Iterator[TrackDataset]
+async def assert_track_stream_equals_dataset(
+    bulk_res: TrackDataset, stream_res: AsyncIterator[TrackDataset]
 ) -> None:
-    stream_tracks = [track for dataset in stream_res for track in dataset.as_list()]
+    stream_tracks = []
+    async for dataset in stream_res:
+        stream_tracks.extend(dataset.as_list())
     assert_track_list_equals_dataset(bulk_res, stream_tracks)
 
 
@@ -144,7 +146,7 @@ class TestStreamOttrkParser:
             progressbar=LazyTqdmBuilder(),
         )
 
-    def test_parse_single_dataset_per_file(
+    async def test_parse_single_dataset_per_file(
         self,
         stream_ottrk_parser: StreamOttrkParser,
         bulk_ottrk_parser: OttrkParser,
@@ -154,12 +156,15 @@ class TestStreamOttrkParser:
         # compare result of streaming parser with original bulk parser
 
         bulk_res = bulk_ottrk_parser.parse(ottrk_path)
-        stream = list(stream_ottrk_parser.parse(ottrk_file_input_source))
+        stream = [
+            dataset
+            async for dataset in stream_ottrk_parser.parse(ottrk_file_input_source)
+        ]
 
         assert len(stream) == 1
         assert_track_list_equals_dataset(bulk_res.tracks, stream[0].as_list())
 
-    def test_parse_whole_ottrk(
+    async def test_parse_whole_ottrk(
         self,
         stream_ottrk_parser: StreamOttrkParser,
         bulk_ottrk_parser: OttrkParser,
@@ -171,12 +176,12 @@ class TestStreamOttrkParser:
         bulk_res = bulk_ottrk_parser.parse(ottrk_path)
         stream_res = stream_ottrk_parser.parse(ottrk_file_input_source)
 
-        assert_track_stream_equals_dataset(bulk_res.tracks, stream_res)
+        await assert_track_stream_equals_dataset(bulk_res.tracks, stream_res)
 
     @pytest.mark.parametrize(
         "version,track_id", [("1.0", "legacy#legacy#1"), ("1.1", "1#1#1")]
     )
-    def test_parse_ottrk_sample(
+    async def test_parse_ottrk_sample(
         self,
         test_data_tmp_dir: Path,
         stream_ottrk_parser: StreamOttrkParser,
@@ -206,7 +211,7 @@ class TestStreamOttrkParser:
             [expected_track],
             ShapelyTrackGeometryDataset.from_track_dataset,
         )
-        assert_track_stream_equals_dataset(expected_dataset, parse_result)
+        await assert_track_stream_equals_dataset(expected_dataset, parse_result)
 
         assert tracks_metadata.detection_classifications == expected_detection_classes
 
