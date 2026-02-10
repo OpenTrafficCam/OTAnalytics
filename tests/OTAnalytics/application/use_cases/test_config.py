@@ -8,7 +8,7 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.state import ConfigurationFile
-from OTAnalytics.application.use_cases.config import MissingDate, SaveOtconfig
+from OTAnalytics.application.use_cases.config import ConfigValidationError, SaveOtconfig
 from OTAnalytics.domain.track_repository import TrackFileRepository
 
 
@@ -47,7 +47,8 @@ class TestSaveOtconfig:
             datastore, config_parser, file_state, get_current_remark
         )
 
-        with pytest.raises(MissingDate):
+        with pytest.raises(ConfigValidationError) as exc_info:
             use_case(output)
+        assert "Start date and time are missing or incomplete" in exc_info.value.errors
         file_state.last_saved_config.set.assert_not_called()
         get_current_remark.get.assert_not_called()
