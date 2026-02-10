@@ -18,6 +18,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     TrafficCounting,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import (
@@ -997,6 +998,7 @@ class TestOTAnalyticsCli:
 
         run_config = Mock()
         run_config.count_intervals = {interval}
+        run_config.counting_event = CountingEvent.START
 
         cli: OTAnalyticsCli = self.init_cli_with(
             mode,

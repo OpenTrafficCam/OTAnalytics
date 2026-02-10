@@ -2,7 +2,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Sequence
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_EVENT,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_NUM_PROCESSES,
@@ -152,6 +156,16 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         if self._otconfig:
             return self._otconfig.analysis.export_config.count_intervals
         return {DEFAULT_COUNTING_INTERVAL_IN_MINUTES}
+
+    @property
+    def counting_event(self) -> CountingEvent:
+        if self._cli_args.counting_event:
+            return self._cli_args.counting_event
+        if self._otconfig:
+            return CountingEvent.parse(
+                self._otconfig.analysis.export_config.counting_event
+            )
+        return CountingEvent.parse(DEFAULT_COUNTING_EVENT)
 
     @property
     def num_processes(self) -> int:

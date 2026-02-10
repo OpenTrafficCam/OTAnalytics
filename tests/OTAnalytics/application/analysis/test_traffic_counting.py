@@ -50,6 +50,7 @@ from OTAnalytics.application.analysis.traffic_counting import (
     create_timeslot_tag,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
     CountingSpecificationDto,
     FlowNameDto,
 )
@@ -996,6 +997,72 @@ class TestTimeTagger:
         group = tagger.create_tag(assignment)
 
         assert group == expected_result
+
+    def test_create_tag_uses_end_event_when_configured(self) -> None:
+        track_id = TrackId("end-event-track")
+        start_event = create_event(track_id, SectionId("south"), 10)
+        end_event = create_event(track_id, SectionId("west"), 90)
+        assignment = RoadUserAssignment(
+            track_id.id,
+            "car",
+            Mock(spec=Flow),
+            EventPair(start_event, end_event),
+        )
+        tagger = TimeslotTagger(
+            interval=timedelta(minutes=1), counting_event=CountingEvent.END
+        )
+
+        group = tagger.create_tag(assignment)
+
+        expected = MultiTag(
+            frozenset(
+                [
+                    SingleTag(level=LEVEL_START_TIME, id="2000-01-01 00:01:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="2000-01-01 00:02:00"),
+                ]
+            )
+        )
+
+        assert group == expected
+
+
+class TestSimpleTaggerFactory:
+    def test_create_tagger_respects_counting_event(self) -> None:
+        track_id = TrackId("end-event-track")
+        start_event = create_event(track_id, SectionId("south"), 10)
+        end_event = create_event(track_id, SectionId("west"), 90)
+        assignment = RoadUserAssignment(
+            track_id.id,
+            "car",
+            Mock(spec=Flow),
+            EventPair(start_event, end_event),
+        )
+        specification = CountingSpecificationDto(
+            start=datetime(2000, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+            end=datetime(2000, 1, 1, 0, 10, 0, tzinfo=timezone.utc),
+            interval_in_minutes=1,
+            modes=[],
+            output_format="csv",
+            output_file="counts.csv",
+            export_mode=OVERWRITE,
+            count_all_events=True,
+            counting_event=CountingEvent.END,
+        )
+
+        tagger = SimpleTaggerFactory().create_tagger(specification)
+        group = tagger.create_tag(assignment)
+
+        expected = MultiTag(
+            frozenset(
+                [
+                    SingleTag(level=LEVEL_CLASSIFICATION, id="car"),
+                    SingleTag(level=LEVEL_START_TIME, id="2000-01-01 00:01:00"),
+                    SingleTag(level=LEVEL_END_TIME, id="2000-01-01 00:02:00"),
+                ]
+            )
+        )
+
+        assert group == expected
 
 
 class TestCombinedTagger:

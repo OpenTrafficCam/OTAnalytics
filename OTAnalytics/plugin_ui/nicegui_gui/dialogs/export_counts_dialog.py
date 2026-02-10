@@ -6,6 +6,7 @@ from nicegui import ui
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import (
@@ -23,6 +24,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     DateTimeForm,
     FormFieldInteger,
+    FormFieldSelect,
     FormFieldText,
 )
 
@@ -33,6 +35,7 @@ MARKER_END_TIME = "marker-end-time"
 MARKER_DIRECTORY = "marker-directory"
 MARKER_FILENAME = "marker-filename"
 MARKER_INTERVAL = "marker-interval"
+MARKER_COUNTING_EVENT = "marker-counting-event"
 
 
 class ExportCountsDialog(BaseDialog):
@@ -131,6 +134,15 @@ class ExportCountsDialog(BaseDialog):
             marker=MARKER_FILENAME,
         )
 
+        self._counting_event_field = FormFieldSelect(
+            label_text=self.resource_manager.get(
+                ExportCountsDialogKeys.LABEL_COUNTING_EVENT
+            ),
+            options=[event.value for event in CountingEvent],
+            initial_value=CountingEvent.START.value,
+            marker=MARKER_COUNTING_EVENT,
+        )
+
     def build_content(self) -> None:
         """Build the dialog content."""
         ui.label(
@@ -145,6 +157,7 @@ class ExportCountsDialog(BaseDialog):
             self._start_datetime.build()
             self._end_datetime.build()
             self._interval.build()
+            self._counting_event_field.build()
 
             # Output file section
             ui.label(
@@ -199,4 +212,5 @@ class ExportCountsDialog(BaseDialog):
             output_format=self._default_format,
             output_file=str(self.get_file_path()),
             export_mode=OVERWRITE,
+            counting_event=CountingEvent.parse(self._counting_event_field.value),
         )

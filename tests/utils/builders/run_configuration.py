@@ -1,3 +1,6 @@
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.run_configuration import RunConfiguration
@@ -22,6 +25,7 @@ def create_run_config(
     track_statistics_export: bool = False,
     num_processes: int = NUM_PROCESSES,
     count_intervals: list[int] | None = None,
+    counting_event: CountingEvent | None = None,
     config_file: str | None = None,
     save_name: str | None = None,
     save_suffix: str | None = None,
@@ -43,6 +47,7 @@ def create_run_config(
         save_dir=save_dir,
         save_name=save_name,
         count_intervals=count_intervals,
+        counting_event=counting_event,
         event_formats=event_formats,
         config_file=config_file,
         save_suffix=save_suffix,
