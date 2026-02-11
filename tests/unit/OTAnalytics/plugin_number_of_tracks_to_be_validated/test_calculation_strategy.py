@@ -11,7 +11,7 @@ from OTAnalytics.plugin_number_of_tracks_to_be_validated.calculation_strategy im
     DetectionRateByMaxConfidence,
     DetectionRateByPercentile,
 )
-from tests.OTAnalytics.plugin_number_of_tracks_to_be_validated.conftest import (
+from tests.unit.OTAnalytics.plugin_number_of_tracks_to_be_validated.conftest import (
     TRACK_ONE_FALSE_DETECTION_CLASS,
     TRACK_PERFECT,
 )
