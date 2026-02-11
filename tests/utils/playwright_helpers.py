@@ -68,6 +68,7 @@ from tests.acceptance.conftest import (
     PLAYWRIGHT_POLL_INTERVAL_SECONDS,
     PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
+    PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
 )
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
@@ -884,7 +885,7 @@ def add_track_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
     file_cell = page.locator(".ag-cell-value", has_text=filename).first
     while time.time() < deadline:
         try:
-            file_cell.wait_for(state="visible", timeout=750)
+            file_cell.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
             break
         except Exception as e:
             last_err = e
@@ -895,7 +896,7 @@ def add_track_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
                 pass
     if last_err:
         try:
-            file_cell.wait_for(state="visible", timeout=250)
+            file_cell.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
         except Exception:
             raise last_err
 
