@@ -351,41 +351,41 @@ def open_part(page: Page, part: str) -> None:
 
             # Now look for the specific row containing our text
             # The file picker shows folders as "📁 <strong>foldername</strong>"
-            row = (
-                page.locator(".ag-center-cols-container .ag-row")
-                .filter(has_text=part)
-                .first
-            )
-            row.wait_for(state="visible", timeout=2000)
-
-            # Get current row count before double-clicking
-            try:
-                current_row_count = page.locator(
-                    ".ag-center-cols-container .ag-row"
-                ).count()
-            except Exception:
-                current_row_count = 0
+            # For files, it might show just the name or with an icon
+            # Use a more robust locator that looks inside .ag-cell-value specifically
+            row = page.locator(".ag-center-cols-container .ag-row", has_text=part).first
+            row.wait_for(state="visible", timeout=5000)  # Increased timeout for CI
 
             row.dblclick()
 
             # Wait for directory to load after double-click
-            # The grid should reload with new content, so wait for row count to change
-            # or stabilize
-            deadline_inner = time.time() + 2.0  # 2 second inner deadline
+            # The grid should reload with new content
+            # In CI environments, file type filters may take longer to apply
+            page.wait_for_timeout(200)  # Initial wait for navigation to start
+
+            # Wait for grid to be stable with filtered content
+            deadline_inner = time.time() + 3.0  # 3 second inner deadline for CI
+            stable_count = 0
+            last_count = -1
+
             while time.time() < deadline_inner:
-                page.wait_for_timeout(100)
                 try:
                     new_row_count = page.locator(
                         ".ag-center-cols-container .ag-row"
                     ).count()
-                    if new_row_count != current_row_count and new_row_count > 0:
-                        # Grid has reloaded with new content
-                        break
+                    if new_row_count == last_count and new_row_count > 0:
+                        stable_count += 1
+                        if stable_count >= 3:  # Grid count stable for 3 checks
+                            break
+                    else:
+                        stable_count = 0
+                        last_count = new_row_count
                 except Exception:
                     pass
+                page.wait_for_timeout(100)
 
-            # Additional wait for grid to fully render
-            page.wait_for_timeout(300)
+            # Additional wait for grid rendering and filters to fully apply
+            page.wait_for_timeout(500)
             return
         except Exception as e:
             # Try to scroll if possible to load more rows
@@ -403,12 +403,36 @@ def open_part(page: Page, part: str) -> None:
             # Get all visible row texts for debugging
             all_rows = page.locator(".ag-center-cols-container .ag-row")
             row_count = all_rows.count()
-            logger.warning(
+
+            # Try to get actual content of rows for debugging
+            row_texts = []
+            try:
+                for i in range(min(row_count, 20)):  # Limit to first 20 rows
+                    row_text = all_rows.nth(i).inner_text()
+                    row_texts.append(row_text[:100])  # Truncate long text
+            except Exception:
+                pass
+
+            logger.error(
                 f"Could not find '{part}' in file picker grid. "
-                f"Grid has {row_count} visible rows."
+                f"Grid has {row_count} visible rows. "
+                f"First few rows: {row_texts}"
             )
-        except Exception:
-            pass
+
+            # Also log the current URL/path shown in the picker if available
+            try:
+                # The file picker might show current path somewhere
+                current_path_elem = page.locator(
+                    'input[placeholder*="path"], input[type="text"]'
+                ).first
+                if current_path_elem.count() > 0:
+                    current_path = current_path_elem.input_value()
+                    logger.error(f"Current path in picker: {current_path}")
+            except Exception:
+                pass
+
+        except Exception as e:
+            logger.error(f"Error while gathering diagnostics: {e}")
         raise last_err
     raise AssertionError(f"Could not find table cell with text: {part}")
 
