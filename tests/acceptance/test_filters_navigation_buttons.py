@@ -132,6 +132,7 @@ def _test_navigation_pair(
     return canvas_forward, canvas_backward
 
 
+@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
