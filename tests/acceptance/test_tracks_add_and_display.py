@@ -218,7 +218,7 @@ def assert_screenshot_equal(
 
     # Compare images
     diff = ImageChops.difference(actual_image, expected_image)
-    diff_stat = diff.getdata()
+    diff_stat = list(diff.getdata())
 
     # Calculate difference ratio
     pixels_different = sum(1 for pixel in diff_stat if pixel != (0, 0, 0))
