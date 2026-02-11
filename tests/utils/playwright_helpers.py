@@ -68,7 +68,6 @@ from tests.acceptance.conftest import (
     PLAYWRIGHT_POLL_INTERVAL_SECONDS,
     PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
-    PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
 )
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
@@ -347,7 +346,8 @@ def open_part(page: Page, part: str) -> None:
             row.wait_for(state="visible", timeout=2000)
             row.dblclick()
             # Wait for directory to load after double-click
-            page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
+            # Use a longer timeout to ensure grid reloads in CI environments
+            page.wait_for_timeout(500)
             return
         except Exception as e:
             # Try to scroll if possible
@@ -857,72 +857,19 @@ def add_track_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
     Steps:
     - Click the "Add Tracks" button
     - Navigate through directory structure in the picker
-    - Select the track file
-    - Confirm selection
+    - Double-click the track file to select and close dialog
 
-    This helper uses multiple fallback strategies to ensure the file is selected
-    reliably across different UI states.
+    This uses the same approach as add_video_via_picker for consistency.
     """
     from OTAnalytics.application.resources.resource_manager import AddTracksKeys
 
     # Open the picker
     page.get_by_text(rm.get(AddTracksKeys.BUTTON_ADD_TRACKS), exact=True).click()
 
-    # Navigate directories, then explicitly select the file
+    # Wait for file picker dialog to open
+    page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
+
+    # Navigate and select file (same as video picker)
     ui_path = path.relative_to(file_picker_directory())
-    parts = list(ui_path.parts)
-    if not parts:
-        raise AssertionError("Resolved UI path has no parts")
-
-    # Open all parent directories
-    for part in parts[:-1]:
+    for part in ui_path.parts:
         open_part(page, part)
-
-    # Explicitly select the file in the grid (resilient lookup with retries)
-    filename = parts[-1]
-    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-    last_err: Exception | None = None
-    file_cell = page.locator(".ag-cell-value", has_text=filename).first
-    while time.time() < deadline:
-        try:
-            file_cell.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-            break
-        except Exception as e:
-            last_err = e
-            # Try to scroll within the grid in case the row is not in view yet
-            try:
-                page.locator(".ag-cell-value").last.scroll_into_view_if_needed()
-            except Exception:
-                pass
-    if last_err:
-        try:
-            file_cell.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-        except Exception:
-            raise last_err
-
-    # Click to select the row
-    try:
-        file_cell.click()
-    except Exception:
-        pass
-
-    # Try to submit by pressing Enter (common in grids)
-    try:
-        file_cell.press("Enter")
-    except Exception:
-        pass
-
-    # Fallback: double-click the file row to submit (picker supports this)
-    try:
-        file_cell.dblclick()
-    except Exception:
-        pass
-
-    # Final fallback: if an OK button is visible, click it
-    try:
-        ok_btn = page.get_by_text("Ok", exact=True)
-        ok_btn.wait_for(state="visible", timeout=1000)
-        ok_btn.click()
-    except Exception:
-        # OK button might not be present or already closed
-        pass
