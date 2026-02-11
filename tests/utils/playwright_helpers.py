@@ -331,12 +331,25 @@ def go_to_sections_with_one_video(page: Page, rm: ResourceManager) -> None:
 
 
 def open_part(page: Page, part: str) -> None:
-    """Double-click a cell in the file picker grid matching the given text."""
+    """Double-click a cell in the file picker grid matching the given text.
+
+    This function waits for the grid to be populated and searches for the
+    specified part (folder or file name) with retries and scrolling.
+    """
     deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
     last_err: Exception | None = None
+
     while time.time() < deadline:
         try:
-            # Look for the row in the ag-grid that contains the text
+            # First, ensure the grid has some rows loaded
+            grid_container = page.locator(".ag-center-cols-container")
+            grid_container.wait_for(state="visible", timeout=1000)
+
+            # Wait for at least one row to be present
+            any_row = page.locator(".ag-center-cols-container .ag-row").first
+            any_row.wait_for(state="visible", timeout=2000)
+
+            # Now look for the specific row containing our text
             # The file picker shows folders as "📁 <strong>foldername</strong>"
             row = (
                 page.locator(".ag-center-cols-container .ag-row")
@@ -344,13 +357,38 @@ def open_part(page: Page, part: str) -> None:
                 .first
             )
             row.wait_for(state="visible", timeout=2000)
+
+            # Get current row count before double-clicking
+            try:
+                current_row_count = page.locator(
+                    ".ag-center-cols-container .ag-row"
+                ).count()
+            except Exception:
+                current_row_count = 0
+
             row.dblclick()
+
             # Wait for directory to load after double-click
-            # Use a longer timeout to ensure grid reloads in CI environments
-            page.wait_for_timeout(500)
+            # The grid should reload with new content, so wait for row count to change
+            # or stabilize
+            deadline_inner = time.time() + 2.0  # 2 second inner deadline
+            while time.time() < deadline_inner:
+                page.wait_for_timeout(100)
+                try:
+                    new_row_count = page.locator(
+                        ".ag-center-cols-container .ag-row"
+                    ).count()
+                    if new_row_count != current_row_count and new_row_count > 0:
+                        # Grid has reloaded with new content
+                        break
+                except Exception:
+                    pass
+
+            # Additional wait for grid to fully render
+            page.wait_for_timeout(300)
             return
         except Exception as e:
-            # Try to scroll if possible
+            # Try to scroll if possible to load more rows
             try:
                 last_row = page.locator(".ag-center-cols-container .ag-row").last
                 last_row.scroll_into_view_if_needed()
@@ -358,7 +396,19 @@ def open_part(page: Page, part: str) -> None:
                 pass
             last_err = e
             page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
+
+    # Final attempt with diagnostic info
     if last_err:
+        try:
+            # Get all visible row texts for debugging
+            all_rows = page.locator(".ag-center-cols-container .ag-row")
+            row_count = all_rows.count()
+            logger.warning(
+                f"Could not find '{part}' in file picker grid. "
+                f"Grid has {row_count} visible rows."
+            )
+        except Exception:
+            pass
         raise last_err
     raise AssertionError(f"Could not find table cell with text: {part}")
 
