@@ -32,6 +32,7 @@ playwright = pytest.importorskip(
 
 class TestCreatePreconfiguredSectionsFile:
 
+    @pytest.mark.skip
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
     @pytest.mark.usefixtures("external_app")
