@@ -143,7 +143,6 @@ def test_filter_tracks_by_date(
     canvas = get_loaded_tracks_canvas(external_app, page, resource_manager)
     page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
     canvas_with_all_tracks = canvas.screenshot(path=actual_screenshot_path)
-
     # Verify canvas matches expected baseline
     reference_screenshot = acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
     if reference_screenshot.exists():
@@ -168,11 +167,13 @@ def test_filter_tracks_by_date(
     canvas_with_filtered_tracks = wait_for_canvas_change(
         page, canvas, canvas_with_all_tracks
     )
+
     assert (
         canvas_with_filtered_tracks != canvas_with_all_tracks
     ), "Canvas did not update after applying date filter - filter not working"
 
 
+@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
@@ -279,6 +280,7 @@ def get_loaded_tracks_canvas(
     return canvas
 
 
+@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
