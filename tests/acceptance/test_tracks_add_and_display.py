@@ -6,7 +6,6 @@ from PIL import Image, ImageChops  # type: ignore
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import (
-    FlowAndSectionKeys,
     ResourceManager,
     VisualizationLayersKeys,
     VisualizationOffsetSliderKeys,
@@ -35,13 +34,12 @@ from OTAnalytics.plugin_ui.visualization.visualization import (
 from tests.acceptance.conftest import PLAYWRIGHT_VISIBLE_TIMEOUT_MS, NiceGUITestServer
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
 from tests.utils.playwright_helpers import (
-    create_flow,
-    create_section,
     enable_and_apply_date_filter,
+    search_for_marker_element,
     setup_tracks_display,
+    setup_with_preconfigured_otconfig,
     verify_filter_active,
     wait_for_canvas_change,
-    wait_for_flow_present,
 )
 
 SCREENSHOT_PATH = "screenshots"
@@ -238,15 +236,26 @@ def get_loaded_tracks_canvas(
     page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
     data_dir = Path(__file__).parents[1] / "data"
-    video_file = data_dir / TEST_VIDEO_FILENAME
-    track_file = data_dir / TEST_TRACK_FILENAME
-    assert video_file.exists(), f"Test video file missing: {video_file}"
-    assert track_file.exists(), f"Test track file missing: {track_file}"
+    otconfig_path = data_dir / "sections_created_test_file.otconfig"
 
-    # Setup: Add video, tracks, and enable tracks layer
-    canvas = setup_tracks_display(
-        page, resource_manager, video_file, track_file, enable_tracks_layer=True
+    # Load preconfigured file with video and tracks already set up
+    setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
+
+    # Get canvas reference
+    from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
+        MARKER_INTERACTIVE_IMAGE,
     )
+
+    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
+    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+
+    # Enable "Show all tracks" layer
+    checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+    checkbox.scroll_into_view_if_needed()
+    if not checkbox.is_checked():
+        checkbox.click()
+        page.wait_for_timeout(200)
+
     return canvas
 
 
@@ -289,34 +298,8 @@ def test_generate_canvas_screenshots(
     # 1. Show all tracks (already enabled, just take screenshot)
     canvas.screenshot(path=acceptance_test_data_folder / ALL_TRACKS_FILE_NAME)
 
-    # Switch to Sections tab and create sections
-    page.get_by_text(
-        resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
-    ).click()
-    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-
-    # Create two sections for flow
-    section_names = ["Section-Start", "Section-End"]
-    coords = [
-        [(250, 250), (250, 60)],
-        [(220, 400), (340, 140)],
-    ]
-    for i, name in enumerate(section_names):
-        create_section(page, resource_manager, name, positions=coords[i])
-
-    # Switch to Flows tab and create flow
-    page.get_by_text(
-        resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
-    ).click()
-    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-
-    flow_name = "Test-Flow"
-    create_flow(
-        page, resource_manager, flow_name, start_section_index=0, end_section_index=1
-    )
-    wait_for_flow_present(page, flow_name)
-
-    # Update flow highlighting
+    # Sections and flows are already loaded from the preconfigured file
+    # Just update flow highlighting
     page.get_by_text(
         resource_manager.get(VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING),
         exact=True,

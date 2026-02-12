@@ -358,6 +358,23 @@ def open_part(page: Page, part: str) -> None:
             last_err = e
             page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
     if last_err:
+        # Try to capture screenshot and grid content for debugging
+        try:
+            screenshot_path = f"/tmp/file_picker_failure_{part}.png"
+            page.screenshot(path=screenshot_path)
+            logger.error(f"Screenshot saved to: {screenshot_path}")
+        except Exception:
+            pass
+
+        try:
+            # Log what's actually in the grid
+            all_cells = page.locator(".ag-cell-value").all_inner_texts()
+            logger.error(
+                f"Grid contains {len(all_cells)} cells. First 20: {all_cells[:20]}"
+            )
+        except Exception:
+            pass
+
         raise last_err
     raise AssertionError(f"Could not find table cell with text: {part}")
 
@@ -853,75 +870,50 @@ def verify_filter_active(page: Page) -> None:
 def add_track_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
     """Add a track file via the in-app file picker.
 
-    Steps:
-    - Click the "Add Tracks" button
-    - Navigate through directory structure in the picker
-    - Select the track file
-    - Confirm selection
-
-    This helper uses multiple fallback strategies to ensure the file is selected
-    reliably across different UI states.
+    Uses the same approach as add_video_via_picker for consistency.
     """
     from OTAnalytics.application.resources.resource_manager import AddTracksKeys
 
     # Open the picker
     page.get_by_text(rm.get(AddTracksKeys.BUTTON_ADD_TRACKS), exact=True).click()
 
-    # Navigate directories, then explicitly select the file
-    ui_path = path.relative_to(file_picker_directory())
-    parts = list(ui_path.parts)
-    if not parts:
-        raise AssertionError("Resolved UI path has no parts")
+    # Wait for file picker dialog to open
+    page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
 
-    # Open all parent directories
-    for part in parts[:-1]:
+    # Navigate and select file (same as video picker)
+    ui_path = path.relative_to(file_picker_directory())
+    for part in ui_path.parts:
         open_part(page, part)
 
-    # Explicitly select the file in the grid (resilient lookup with retries)
-    filename = parts[-1]
-    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
-    last_err: Exception | None = None
-    file_cell = page.locator(".ag-cell-value", has_text=filename).first
-    while time.time() < deadline:
-        try:
-            file_cell.wait_for(state="visible", timeout=750)
-            break
-        except Exception as e:
-            last_err = e
-            # Try to scroll within the grid in case the row is not in view yet
-            try:
-                page.locator(".ag-cell-value").last.scroll_into_view_if_needed()
-            except Exception:
-                pass
-    if last_err:
-        try:
-            file_cell.wait_for(state="visible", timeout=250)
-        except Exception:
-            raise last_err
 
-    # Click to select the row
-    try:
-        file_cell.click()
-    except Exception:
-        pass
+def setup_with_preconfigured_otconfig(
+    page: Page,
+    rm: ResourceManager,
+    otconfig_path: Path,
+) -> None:
+    """Load a pre-configured .otconfig file
+    that already has video, tracks, and sections.
 
-    # Try to submit by pressing Enter (common in grids)
-    try:
-        file_cell.press("Enter")
-    except Exception:
-        pass
+    This skips the individual steps of loading video,
+    adding tracks, and creating sections
+    by loading a configuration file that already contains all of that setup.
 
-    # Fallback: double-click the file row to submit (picker supports this)
-    try:
-        file_cell.dblclick()
-    except Exception:
-        pass
+    Args:
+        page: Playwright page object
+        rm: ResourceManager for localized strings
+        otconfig_path: Path to the pre-configured .otconfig file
+    """
+    # Wait for page to be ready
+    page.get_by_text("Project").first.wait_for(
+        state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000
+    )
 
-    # Final fallback: if an OK button is visible, click it
-    try:
-        ok_btn = page.get_by_text("Ok", exact=True)
-        ok_btn.wait_for(state="visible", timeout=1000)
-        ok_btn.click()
-    except Exception:
-        # OK button might not be present or already closed
-        pass
+    # Load the pre-configured project file
+    open_project_otconfig(page, rm, otconfig_path)
+
+    # Wait for the project to load
+    page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
+
+    # Verify canvas is visible (indicating project loaded successfully)
+    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
+    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)

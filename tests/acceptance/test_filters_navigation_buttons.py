@@ -20,7 +20,11 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.containe
 )
 from tests.acceptance.conftest import NiceGUITestServer
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
-from tests.utils.playwright_helpers import setup_tracks_display, wait_for_canvas_change
+from tests.utils.playwright_helpers import (
+    search_for_marker_element,
+    setup_with_preconfigured_otconfig,
+    wait_for_canvas_change,
+)
 
 playwright = pytest.importorskip(
     "playwright.sync_api", reason="pytest-playwright is required for this test"
@@ -166,15 +170,29 @@ def test_filter_navigation_buttons(
     page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
     data_dir = Path(__file__).parents[1] / "data"
-    video_file = data_dir / TEST_VIDEO_FILENAME
-    track_file = data_dir / TEST_TRACK_FILENAME
-    assert video_file.exists(), f"Test video file missing: {video_file}"
-    assert track_file.exists(), f"Test track file missing: {track_file}"
+    otconfig_path = data_dir / "sections_created_test_file.otconfig"
 
-    # Setup: Add video, tracks, enable layer, and apply filter
-    canvas = setup_tracks_display(
-        page, resource_manager, video_file, track_file, enable_tracks_layer=True
+    # Load preconfigured file with video and tracks already set up
+    setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
+
+    # Get canvas reference
+    from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
+        MARKER_INTERACTIVE_IMAGE,
     )
+
+    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
+    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+
+    # Enable "Show all tracks" layer
+    from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
+        MARKER_VISUALIZATION_LAYERS_ALL,
+    )
+
+    checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+    checkbox.scroll_into_view_if_needed()
+    if not checkbox.is_checked():
+        checkbox.click()
+        page.wait_for_timeout(200)
     # Don't apply any filter - just enable the filter checkbox to activate navigation
     # The default range should include all the track data
     filter_checkbox = page.get_by_test_id(MARKER_FILTER_BY_DATE_CHECKBOX)
@@ -259,15 +277,29 @@ def test_filter_navigation_buttons_with_screenshot(
     page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
     data_dir = Path(__file__).parents[1] / "data"
-    video_file = data_dir / TEST_VIDEO_FILENAME
-    track_file = data_dir / TEST_TRACK_FILENAME
-    assert video_file.exists(), f"Test video file missing: {video_file}"
-    assert track_file.exists(), f"Test track file missing: {track_file}"
+    otconfig_path = data_dir / "sections_created_test_file.otconfig"
 
-    # Setup: Add video, tracks, enable layer
-    canvas = setup_tracks_display(
-        page, resource_manager, video_file, track_file, enable_tracks_layer=True
+    # Load preconfigured file with video and tracks already set up
+    setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
+
+    # Get canvas reference
+    from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
+        MARKER_INTERACTIVE_IMAGE,
     )
+
+    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
+    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+
+    # Enable "Show all tracks" layer
+    from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
+        MARKER_VISUALIZATION_LAYERS_ALL,
+    )
+
+    checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+    checkbox.scroll_into_view_if_needed()
+    if not checkbox.is_checked():
+        checkbox.click()
+        page.wait_for_timeout(200)
 
     # Enable filter checkbox
     filter_checkbox = page.get_by_test_id(MARKER_FILTER_BY_DATE_CHECKBOX)
@@ -342,19 +374,33 @@ def test_filter_navigation_buttons_save_screenshots(
     page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
     data_dir = Path(__file__).parents[1] / "data"
-    video_file = data_dir / TEST_VIDEO_FILENAME
-    track_file = data_dir / TEST_TRACK_FILENAME
-    assert video_file.exists(), f"Test video file missing: {video_file}"
-    assert track_file.exists(), f"Test track file missing: {track_file}"
+    otconfig_path = data_dir / "sections_created_test_file.otconfig"
 
     # Create screenshots directory
     screenshots_dir = Path(__file__).parent / "screenshots" / "filter_navigation"
     screenshots_dir.mkdir(parents=True, exist_ok=True)
 
-    # Setup: Add video, tracks, enable layer
-    canvas = setup_tracks_display(
-        page, resource_manager, video_file, track_file, enable_tracks_layer=True
+    # Load preconfigured file with video and tracks already set up
+    setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
+
+    # Get canvas reference
+    from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
+        MARKER_INTERACTIVE_IMAGE,
     )
+
+    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
+    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+
+    # Enable "Show all tracks" layer
+    from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
+        MARKER_VISUALIZATION_LAYERS_ALL,
+    )
+
+    checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+    checkbox.scroll_into_view_if_needed()
+    if not checkbox.is_checked():
+        checkbox.click()
+        page.wait_for_timeout(200)
 
     # Save screenshot after setup
     screenshot = canvas.screenshot()

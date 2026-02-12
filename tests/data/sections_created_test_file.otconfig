@@ -1,0 +1,87 @@
+{
+    "project": {
+        "name": "Preconfigured Test Project",
+        "start_date": 1577836800.0,
+        "metadata": null
+    },
+    "videos": [
+        {
+            "path": "..\/data\/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        }
+    ],
+    "analysis": {
+        "do_events": true,
+        "do_counting": true,
+        "tracks": [
+            "..\/data\/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
+        ],
+        "export": {
+            "save_name": "",
+            "save_suffix": "",
+            "event_formats": [
+                "csv"
+            ],
+            "count_intervals": [
+                15
+            ]
+        },
+        "num_processes": 1,
+        "logfile": "logs"
+    },
+    "sections": [
+        {
+            "id": "1",
+            "name": "North-Section",
+            "type": "line",
+            "relative_offset_coordinates": {
+                "section-enter": {
+                    "x": 0.5,
+                    "y": 0.5
+                }
+            },
+            "coordinates": [
+                {
+                    "x": 20,
+                    "y": 20
+                },
+                {
+                    "x": 140,
+                    "y": 60
+                }
+            ],
+            "plugin_data": {}
+        },
+        {
+            "id": "2",
+            "name": "South-Section",
+            "type": "line",
+            "relative_offset_coordinates": {
+                "section-enter": {
+                    "x": 0.5,
+                    "y": 0.5
+                }
+            },
+            "coordinates": [
+                {
+                    "x": 220,
+                    "y": 80
+                },
+                {
+                    "x": 340,
+                    "y": 140
+                }
+            ],
+            "plugin_data": {}
+        }
+    ],
+    "flows": [
+        {
+            "id": "1",
+            "name": "Test-Flow",
+            "start": "2",
+            "end": "1",
+            "distance": null
+        }
+    ],
+    "remark": ""
+}
