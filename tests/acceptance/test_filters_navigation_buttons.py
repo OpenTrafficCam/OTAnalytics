@@ -30,10 +30,6 @@ playwright = pytest.importorskip(
     "playwright.sync_api", reason="pytest-playwright is required for this test"
 )
 
-# Test data constants
-TEST_VIDEO_FILENAME = "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
-TEST_TRACK_FILENAME = "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.ottrk"
-
 
 def _click_navigation_button_and_verify(
     page: Page,

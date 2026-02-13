@@ -13,7 +13,12 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     TrackFormKeys,
 )
-from tests.acceptance.conftest import ACCEPTANCE_TEST_PYTEST_TIMEOUT, NiceGUITestServer
+from tests.acceptance.conftest import (
+    ACCEPTANCE_TEST_PYTEST_TIMEOUT,
+    ACCEPTANCE_TEST_TRACK_FILES,
+    ACCEPTANCE_TEST_VIDEO_FILE,
+    NiceGUITestServer,
+)
 from tests.utils.playwright_helpers import (
     add_track_via_picker,
     add_video_via_picker,
@@ -68,11 +73,12 @@ class TestCreatePreconfiguredSectionsFile:
 
         # Setup paths to test data
         data_dir = Path(__file__).parents[1] / "data"
-        video_file = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-        track_file = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
+        video_file = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
+        track_files = [data_dir / filename for filename in ACCEPTANCE_TEST_TRACK_FILES]
 
         assert video_file.exists(), f"Test video missing: {video_file}"
-        assert track_file.exists(), f"Test track file missing: {track_file}"
+        for track_file in track_files:
+            assert track_file.exists(), f"Test track file missing: {track_file}"
 
         # Add video
         try:
@@ -101,7 +107,8 @@ class TestCreatePreconfiguredSectionsFile:
         page.get_by_text(
             resource_manager.get(TrackFormKeys.TAB_TRACK), exact=True
         ).click()
-        add_track_via_picker(page, resource_manager, track_file)
+        for track_file in track_files:
+            add_track_via_picker(page, resource_manager, track_file)
 
         # Switch to Sections tab
         from OTAnalytics.application.resources.resource_manager import (

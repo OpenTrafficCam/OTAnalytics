@@ -31,7 +31,12 @@ from OTAnalytics.plugin_ui.visualization.visualization import (
     NOT_ASSIGNED_TO_FLOWS,
     NOT_INTERSECTING_SECTIONS,
 )
-from tests.acceptance.conftest import PLAYWRIGHT_VISIBLE_TIMEOUT_MS, NiceGUITestServer
+from tests.acceptance.conftest import (
+    ACCEPTANCE_TEST_TRACK_FILES,
+    ACCEPTANCE_TEST_VIDEO_FILE,
+    PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+    NiceGUITestServer,
+)
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
 from tests.utils.playwright_helpers import (
     enable_and_apply_date_filter,
@@ -49,10 +54,6 @@ ALL_TRACKS_FILE_NAME = "all_tracks.png"
 playwright = pytest.importorskip(
     "playwright.sync_api", reason="pytest-playwright is required for this test"
 )
-
-# Test data constants
-TEST_VIDEO_FILENAME = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-TEST_TRACK_FILENAME = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
 
 # Timing constants (milliseconds)
 UI_PROCESSING_GRACE_PERIOD_MS = 150
@@ -85,14 +86,15 @@ def test_add_tracks_and_display_all(
     page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
     data_dir = Path(__file__).parents[1] / "data"
-    video_file = data_dir / TEST_VIDEO_FILENAME
-    track_file = data_dir / TEST_TRACK_FILENAME
+    video_file = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
+    track_files = [data_dir / filename for filename in ACCEPTANCE_TEST_TRACK_FILES]
     assert video_file.exists(), f"Test video file missing: {video_file}"
-    assert track_file.exists(), f"Test track file missing: {track_file}"
+    for track_file in track_files:
+        assert track_file.exists(), f"Test track file missing: {track_file}"
 
     # Take baseline before enabling tracks layer
     canvas = setup_tracks_display(
-        page, resource_manager, video_file, track_file, enable_tracks_layer=False
+        page, resource_manager, video_file, track_files, enable_tracks_layer=False
     )
     canvas_before_tracks = canvas.screenshot()
 
@@ -405,12 +407,12 @@ def test_reset_track_filter(
     page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
     data_dir = Path(__file__).parents[1] / "data"
-    video_file = data_dir / TEST_VIDEO_FILENAME
-    track_file = data_dir / TEST_TRACK_FILENAME
+    video_file = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
+    track_files = [data_dir / filename for filename in ACCEPTANCE_TEST_TRACK_FILES]
 
     # Setup: Add video, tracks, enable tracks layer, and apply filter
     setup_tracks_display(
-        page, resource_manager, video_file, track_file, enable_tracks_layer=True
+        page, resource_manager, video_file, track_files, enable_tracks_layer=True
     )
     enable_and_apply_date_filter(page, use_minimal_range=True)
 

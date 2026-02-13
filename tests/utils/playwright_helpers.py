@@ -694,7 +694,7 @@ def setup_tracks_display(
     page: Page,
     rm: ResourceManager,
     video_file: Path,
-    track_file: Path,
+    track_file: Path | list[Path],
     enable_tracks_layer: bool = True,
 ) -> Any:
     """Setup for tracks display: add video, tracks, optionally enable layer.
@@ -703,7 +703,7 @@ def setup_tracks_display(
         page: Playwright page object
         rm: ResourceManager for localized strings
         video_file: Path to video file
-        track_file: Path to track file
+        track_file: Path to track file or list of track files
         enable_tracks_layer: Whether to enable "Show all tracks" layer (default: True)
 
     Returns:
@@ -724,7 +724,9 @@ def setup_tracks_display(
 
     # Add tracks
     page.get_by_text(rm.get(TrackFormKeys.TAB_TRACK), exact=True).click()
-    add_track_via_picker(page, rm, track_file)
+    track_files = track_file if isinstance(track_file, list) else [track_file]
+    for tf in track_files:
+        add_track_via_picker(page, rm, tf)
 
     # Get canvas reference
     canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first

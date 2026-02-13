@@ -35,6 +35,14 @@ IMPORT_VERIFY_MAX_POLLS = 120
 # Large buffer for webserver process pipes
 BUFFER_SIZE_100MB = 10**8
 
+# Test data file constants - using 30 minutes of OTCamera19 data (2 x 15min files)
+ACCEPTANCE_TEST_VIDEO_FILE = "OTCamera19_FR20_2023-05-24_08-00-00.mp4"
+ACCEPTANCE_TEST_TRACK_FILES = [
+    "OTCamera19_FR20_2023-05-24_08-00-00.ottrk",
+    "OTCamera19_FR20_2023-05-24_08-15-00.ottrk",
+]
+# Second video file for tests that need multiple videos
+ACCEPTANCE_TEST_VIDEO_FILE_2 = "OTCamera19_FR20_2023-05-24_08-15-00.mp4"
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
