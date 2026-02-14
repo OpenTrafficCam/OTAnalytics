@@ -20,6 +20,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
 )
 from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
+    ACCEPTANCE_TEST_VIDEO_FILE,
+    ACCEPTANCE_TEST_VIDEO_FILE_2,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     PLAYWRIGHT_POLL_INTERVAL_SECONDS,
     NiceGUITestServer,
@@ -71,7 +73,7 @@ class TestVideoImportAndDisplay:
 
         # Prepare test video path from tests/data
         data_dir = Path(__file__).parents[1] / "data"
-        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        v1 = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
         assert v1.exists(), f"Test video missing: {v1}"
 
         # Add the video via in-app picker
@@ -112,8 +114,8 @@ class TestVideoImportAndDisplay:
         reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"
-        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-        v2 = data_dir / "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
+        v1 = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
+        v2 = data_dir / ACCEPTANCE_TEST_VIDEO_FILE_2
         assert v1.exists() and v2.exists(), "Test videos are missing in tests/data"
 
         # Add both videos via in-app picker
@@ -164,8 +166,8 @@ class TestVideoImportAndDisplay:
         reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"
-        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-        v2 = data_dir / "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
+        v1 = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
+        v2 = data_dir / ACCEPTANCE_TEST_VIDEO_FILE_2
         assert v1.exists() and v2.exists(), "Test videos are missing in tests/data"
 
         # Add videos
