@@ -1,28 +1,12 @@
 from pathlib import Path
-from typing import Any
 
 import pytest
-from PIL import Image, ImageChops  # type: ignore
-from playwright.sync_api import Page  # type: ignore  # noqa: E402
+from playwright.sync_api import Page  # type: ignore
 
 from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     VisualizationLayersKeys,
     VisualizationOffsetSliderKeys,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
-    MARKER_INTERACTIVE_IMAGE,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
-    MARKER_FILTER_BY_DATE_APPLY_BUTTON,
-    MARKER_FILTER_BY_DATE_BUTTON,
-    MARKER_FILTER_BY_DATE_CHECKBOX,
-    MARKER_FILTER_END_DATE_INPUT,
-    MARKER_FILTER_END_TIME_INPUT,
-    MARKER_FILTER_RANGE_LABEL,
-    MARKER_FILTER_START_DATE_INPUT,
-    MARKER_FILTER_START_TIME_INPUT,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     MARKER_VISUALIZATION_LAYERS_ALL,
@@ -34,19 +18,21 @@ from OTAnalytics.plugin_ui.visualization.visualization import (
     NOT_ASSIGNED_TO_FLOWS,
     NOT_INTERSECTING_SECTIONS,
 )
-from tests.acceptance.conftest import (
-    ACCEPTANCE_TEST_TRACK_FILES,
-    ACCEPTANCE_TEST_VIDEO_FILE,
-    PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
-    NiceGUITestServer,
-)
-from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
+from tests.acceptance.conftest import PLAYWRIGHT_VISIBLE_TIMEOUT_MS, NiceGUITestServer
 from tests.utils.playwright_helpers import (
+    capture_and_verify_baseline,
+    enable_all_tracks_layer,
     enable_and_apply_date_filter,
-    search_for_marker_element,
+    get_loaded_tracks_canvas_from_otconfig,
+    get_test_files_from_data_dir,
+    navigate_to_main_page_with_url,
+    reset_date_filter,
     setup_tracks_display,
-    setup_with_preconfigured_otconfig,
+    verify_canvas_matches_reference,
     verify_filter_active,
+    verify_filter_inactive,
+    verify_filter_range_label_cleared,
+    verify_filter_range_label_visible,
     wait_for_canvas_change,
 )
 
@@ -86,15 +72,11 @@ def test_add_tracks_and_display_all(
     - Canvas shows track trajectories when layer is enabled
     - Canvas image changes after enabling the tracks layer
     """
+    # Setup
     base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-    page.goto(base_url + ENDPOINT_MAIN_PAGE)
-
+    navigate_to_main_page_with_url(page, base_url)
     data_dir = Path(__file__).parents[1] / "data"
-    video_file = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
-    track_files = [data_dir / filename for filename in ACCEPTANCE_TEST_TRACK_FILES]
-    assert video_file.exists(), f"Test video file missing: {video_file}"
-    for track_file in track_files:
-        assert track_file.exists(), f"Test track file missing: {track_file}"
+    video_file, track_files = get_test_files_from_data_dir(data_dir)
 
     # Take baseline before enabling tracks layer
     canvas = setup_tracks_display(
@@ -103,9 +85,7 @@ def test_add_tracks_and_display_all(
     canvas_before_tracks = canvas.screenshot()
 
     # Enable "Show all tracks" layer
-    checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
-    checkbox.scroll_into_view_if_needed()
-    checkbox.click()
+    enable_all_tracks_layer(page)
 
     # Verify trajectories are displayed (canvas changed)
     canvas_with_tracks = wait_for_canvas_change(page, canvas, canvas_before_tracks)
@@ -146,28 +126,27 @@ def test_filter_tracks_by_date(
     Note: Requires reference screenshots to be generated first by running
     test_generate_canvas_screenshots.
     """
-    canvas = get_loaded_tracks_canvas(external_app, page, resource_manager)
-    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-    canvas_with_all_tracks = canvas.screenshot(path=actual_screenshot_path)
-    # Verify canvas matches expected baseline
-    reference_screenshot = acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
-    if reference_screenshot.exists():
-        assert_screenshot_equal(actual_screenshot_path, reference_screenshot)
-    else:
-        pytest.skip(
-            f"Reference screenshot not found: {reference_screenshot}. "
-            "Run test_generate_canvas_screenshots first to generate it."
-        )
+    # Setup: Load tracks with preconfigured file
+    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
+    navigate_to_main_page_with_url(page, base_url)
+    data_dir = Path(__file__).parents[1] / "data"
+    otconfig_path = data_dir / "sections_created_test_file.otconfig"
+    canvas = get_loaded_tracks_canvas_from_otconfig(
+        page, resource_manager, otconfig_path
+    )
 
-    # Configure and apply date filter with minimal range
+    # Capture baseline and verify against reference
+    reference_screenshot = acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
+    canvas_with_all_tracks = capture_and_verify_baseline(
+        page, canvas, actual_screenshot_path, reference_screenshot
+    )
+
+    # Apply date filter
     enable_and_apply_date_filter(page, use_minimal_range=True)
 
-    # Verify filter is active
+    # Verify filter is active and range label is displayed
     verify_filter_active(page)
-
-    # Verify filter range label is displayed
-    range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
-    range_label.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+    verify_filter_range_label_visible(page)
 
     # Verify canvas updates to show filtered tracks
     canvas_with_filtered_tracks = wait_for_canvas_change(
@@ -194,92 +173,20 @@ def test_toggle_intersection_layers(
     Note: Requires reference screenshots to be generated first by running
     test_generate_canvas_screenshots.
     """
-    canvas = get_loaded_tracks_canvas(external_app, page, resource_manager)
-    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-
-    # Take screenshot and verify it matches the expected baseline
-    new_path = acceptance_test_data_folder / "new_file.png"
-    canvas.screenshot(path=new_path)
-
-    reference_screenshot = acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
-    if reference_screenshot.exists():
-        assert_screenshot_equal(new_path, reference_screenshot)
-    else:
-        pytest.skip(
-            f"Reference screenshot not found: {reference_screenshot}. "
-            "Run test_generate_canvas_screenshots first to generate it."
-        )
-
-
-def assert_screenshot_equal(
-    actual: Path, expected: Path, tolerance: float = 0.01
-) -> None:
-    """Compare an actual screenshot (bytes) with an expected screenshot file.
-
-    Args:
-        actual: Screenshot data as bytes
-        expected: Path to expected screenshot file. If None, uses ALL_TRACKS_FILE_NAME
-        tolerance: Acceptable difference ratio (0.0 = exact match,
-        1.0 = completely different)
-
-    Raises:
-        AssertionError: If screenshots differ beyond tolerance
-        FileNotFoundError: If expected screenshot file doesn't exist
-    """
-
-    assert expected.exists(), (
-        f"Expected screenshot not found: {expected}\n"
-        f"Generate it first using test_generate_canvas_screenshots"
-    )
-
-    actual_image = Image.open(actual)
-    expected_image = Image.open(expected)
-
-    # Check dimensions match
-    assert actual_image.size == expected_image.size, (
-        f"Screenshot dimensions differ: "
-        f"actual {actual_image.size} vs expected {expected_image.size}"
-    )
-
-    # Compare images
-    diff = ImageChops.difference(actual_image, expected_image)
-    diff_stat = list(diff.getdata())
-
-    # Calculate difference ratio
-    pixels_different = sum(1 for pixel in diff_stat if pixel != (0, 0, 0))
-    total_pixels = actual_image.size[0] * actual_image.size[1]
-    diff_ratio = pixels_different / total_pixels if total_pixels > 0 else 0
-
-    assert diff_ratio <= tolerance, (
-        f"Screenshots differ: {diff_ratio:.2%} of pixels are different "
-        f"(tolerance: {tolerance:.2%})"
-    )
-
-
-def get_loaded_tracks_canvas(
-    external_app: NiceGUITestServer, page: Page, resource_manager: ResourceManager
-) -> Any:
+    # Setup: Load tracks with preconfigured file
     base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-    page.goto(base_url + ENDPOINT_MAIN_PAGE)
-
+    navigate_to_main_page_with_url(page, base_url)
     data_dir = Path(__file__).parents[1] / "data"
     otconfig_path = data_dir / "sections_created_test_file.otconfig"
+    canvas = get_loaded_tracks_canvas_from_otconfig(
+        page, resource_manager, otconfig_path
+    )
+    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
-    # Load preconfigured file with video and tracks already set up
-    setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
-
-    # Get canvas reference
-    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
-    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
-
-    # Enable "Show all tracks" layer
-    checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
-    checkbox.scroll_into_view_if_needed()
-    if not checkbox.is_checked():
-        checkbox.click()
-        page.wait_for_timeout(200)
-
-    return canvas
+    # Capture screenshot and verify against reference
+    verify_canvas_matches_reference(
+        canvas, acceptance_test_data_folder, ALL_TRACKS_FILE_NAME
+    )
 
 
 @pytest.mark.skip(reason="only works in headed right now")
@@ -293,7 +200,14 @@ def test_generate_canvas_screenshots(
     acceptance_test_data_folder: Path,
 ) -> None:
     """Generate reference screenshots for all visualization layer states."""
-    canvas = get_loaded_tracks_canvas(external_app, page, resource_manager)
+    # Setup: Load tracks with preconfigured file
+    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
+    navigate_to_main_page_with_url(page, base_url)
+    data_dir = Path(__file__).parents[1] / "data"
+    otconfig_path = data_dir / "sections_created_test_file.otconfig"
+    canvas = get_loaded_tracks_canvas_from_otconfig(
+        page, resource_manager, otconfig_path
+    )
 
     # Helper function to toggle a checkbox and take screenshot
     def toggle_and_screenshot(
@@ -410,46 +324,22 @@ def test_reset_track_filter(
     - Filter button shows inactive state
     - Range label is empty after reset
     """
+    # Setup: Load tracks and apply date filter
     base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-    page.goto(base_url + ENDPOINT_MAIN_PAGE)
-
+    navigate_to_main_page_with_url(page, base_url)
     data_dir = Path(__file__).parents[1] / "data"
-    video_file = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
-    track_files = [data_dir / filename for filename in ACCEPTANCE_TEST_TRACK_FILES]
-
-    # Setup: Add video, tracks, enable tracks layer, and apply filter
+    video_file, track_files = get_test_files_from_data_dir(data_dir)
     setup_tracks_display(
         page, resource_manager, video_file, track_files, enable_tracks_layer=True
     )
     enable_and_apply_date_filter(page, use_minimal_range=True)
 
     # Verify filter is active before reset
-    filter_by_date_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
     verify_filter_active(page)
 
-    # Reset filter by clicking Reset button and unchecking the checkbox
-    filter_by_date_button.click()
-    page.get_by_text("Reset").click()
+    # Reset filter
+    reset_date_filter(page)
 
-    # Wait for the dialog to close (reset closes it automatically -
-    # line 137 in container.py)
-    page.wait_for_timeout(FILTER_APPLY_WAIT_MS)
-
-    # Uncheck the filter checkbox to fully deactivate the filter
-    filter_checkbox = page.get_by_test_id(MARKER_FILTER_BY_DATE_CHECKBOX)
-    if filter_checkbox.is_checked():
-        filter_checkbox.click()
-        page.wait_for_timeout(FILTER_APPLY_WAIT_MS)
-
-    # Verify filter is deactivated
-    inactive_value = filter_by_date_button.get_attribute("data-filter-by-date-active")
-    assert (
-        inactive_value == "false"
-    ), f"Filter by date button did not indicate inactive state after reset (value: {inactive_value})"  # noqa
-
-    # Verify range label is cleared
-    range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
-    label_text_after_reset = range_label.inner_text()
-    assert (
-        label_text_after_reset.strip() == ""
-    ), "Date range label not cleared after reset"
+    # Verify filter is deactivated and range label is cleared
+    verify_filter_inactive(page)
+    verify_filter_range_label_cleared(page)

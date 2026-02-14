@@ -4,10 +4,13 @@ import time
 from pathlib import Path
 from typing import Any, Iterable
 
+import pytest
+from PIL import Image, ImageChops  # type: ignore
 from playwright.sync_api import Error, Page, TimeoutError
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
+    AddTracksKeys,
     AddVideoKeys,
     FlowAndSectionKeys,
     FlowKeys,
@@ -60,14 +63,30 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form im
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     MARKER_FLOW_TABLE,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+    MARKER_FILTER_BY_DATE_APPLY_BUTTON,
+    MARKER_FILTER_BY_DATE_BUTTON,
+    MARKER_FILTER_BY_DATE_CHECKBOX,
+    MARKER_FILTER_END_DATE_INPUT,
+    MARKER_FILTER_END_TIME_INPUT,
+    MARKER_FILTER_RANGE_LABEL,
+    MARKER_FILTER_START_DATE_INPUT,
+    MARKER_FILTER_START_TIME_INPUT,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
+    MARKER_VISUALIZATION_LAYERS_ALL,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 from tests.acceptance.conftest import (
+    ACCEPTANCE_TEST_TRACK_FILES,
+    ACCEPTANCE_TEST_VIDEO_FILE,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     IMPORT_VERIFY_MAX_POLLS,
     PLAYWRIGHT_POLL_INTERVAL_MS,
     PLAYWRIGHT_POLL_INTERVAL_SECONDS,
     PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
+    PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
 )
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
@@ -734,10 +753,6 @@ def setup_tracks_display(
 
     # Enable tracks layer if requested
     if enable_tracks_layer:
-        from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
-            MARKER_VISUALIZATION_LAYERS_ALL,
-        )
-
         checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
         checkbox.scroll_into_view_if_needed()
         checkbox.click()
@@ -765,16 +780,6 @@ def enable_and_apply_date_filter(
         custom_end_date: Optional custom end date (format: YYYY-MM-DD)
         custom_end_time: Optional custom end time (format: HH:MM:SS)
     """
-    from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
-        MARKER_FILTER_BY_DATE_APPLY_BUTTON,
-        MARKER_FILTER_BY_DATE_BUTTON,
-        MARKER_FILTER_BY_DATE_CHECKBOX,
-        MARKER_FILTER_END_DATE_INPUT,
-        MARKER_FILTER_END_TIME_INPUT,
-        MARKER_FILTER_START_DATE_INPUT,
-        MARKER_FILTER_START_TIME_INPUT,
-    )
-
     # Enable filter checkbox
     filter_checkbox = page.get_by_test_id(MARKER_FILTER_BY_DATE_CHECKBOX)
     filter_checkbox.scroll_into_view_if_needed()
@@ -846,9 +851,6 @@ def enable_and_apply_date_filter(
 
 def verify_filter_active(page: Page) -> None:
     """Verify that the date filter is active by checking button attribute."""
-    from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
-        MARKER_FILTER_BY_DATE_BUTTON,
-    )
 
     # Wait a bit for filter to be applied
     page.wait_for_timeout(500)
@@ -874,9 +876,6 @@ def add_track_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
 
     Uses the same approach as add_video_via_picker for consistency.
     """
-    from OTAnalytics.application.resources.resource_manager import AddTracksKeys
-
-    # Open the picker
     page.get_by_text(rm.get(AddTracksKeys.BUTTON_ADD_TRACKS), exact=True).click()
 
     # Wait for file picker dialog to open
@@ -919,3 +918,220 @@ def setup_with_preconfigured_otconfig(
     # Verify canvas is visible (indicating project loaded successfully)
     canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
     canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+
+
+# ----------------------
+# Test helper functions for tracks display tests
+# ----------------------
+
+
+def navigate_to_main_page_with_url(page: Page, base_url: str) -> None:
+    """Navigate to the main page of the application."""
+    page.goto(base_url + ENDPOINT_MAIN_PAGE)
+
+
+def get_test_files_from_data_dir(data_dir: Path) -> tuple[Path, list[Path]]:
+    """Get paths to test video and track files.
+
+    Args:
+        data_dir: Path to the data directory containing test files
+
+    Returns:
+        Tuple of (video_file, list of track_files)
+
+    Raises:
+        AssertionError: If test files are missing
+    """
+
+    video_file = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
+    track_files = [data_dir / filename for filename in ACCEPTANCE_TEST_TRACK_FILES]
+    assert video_file.exists(), f"Test video file missing: {video_file}"
+    for track_file in track_files:
+        assert track_file.exists(), f"Test track file missing: {track_file}"
+    return video_file, track_files
+
+
+def enable_all_tracks_layer(page: Page) -> None:
+    """Enable the 'Show all tracks' layer."""
+    checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+    checkbox.scroll_into_view_if_needed()
+    checkbox.click()
+
+
+def capture_and_verify_baseline(
+    page: Page,
+    canvas: Any,
+    actual_screenshot_path: Path,
+    reference_screenshot: Path,
+) -> bytes:
+    """Capture canvas screenshot and verify against reference baseline.
+
+    Args:
+        page: Playwright page object
+        canvas: Canvas locator
+        actual_screenshot_path: Path to save actual screenshot
+        reference_screenshot: Path to reference screenshot file
+
+    Returns:
+        Screenshot bytes
+
+    Raises:
+        pytest.skip: If reference screenshot doesn't exist
+        AssertionError: If screenshots don't match within tolerance
+    """
+    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    canvas_screenshot = canvas.screenshot(path=actual_screenshot_path)
+
+    if reference_screenshot.exists():
+        assert_screenshot_equal(actual_screenshot_path, reference_screenshot)
+    else:
+        pytest.skip(
+            f"Reference screenshot not found: {reference_screenshot}. "
+            "Run test_generate_canvas_screenshots first to generate it."
+        )
+    return canvas_screenshot
+
+
+def verify_filter_range_label_visible(page: Page) -> None:
+    """Verify that the filter range label is visible."""
+    range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
+    range_label.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+
+
+def verify_canvas_matches_reference(
+    canvas: Any, acceptance_test_data_folder: Path, all_tracks_filename: str
+) -> None:
+    """Take screenshot and verify it matches the expected baseline.
+
+    Args:
+        canvas: Canvas locator
+        acceptance_test_data_folder: Path to folder with test data
+        all_tracks_filename: Name of reference screenshot file
+
+    Raises:
+        pytest.skip: If reference screenshot doesn't exist
+        AssertionError: If screenshots don't match within tolerance
+    """
+    import pytest
+
+    new_path = acceptance_test_data_folder / "new_file.png"
+    canvas.screenshot(path=new_path)
+
+    reference_screenshot = acceptance_test_data_folder / all_tracks_filename
+    if reference_screenshot.exists():
+        assert_screenshot_equal(new_path, reference_screenshot)
+    else:
+        pytest.skip(
+            f"Reference screenshot not found: {reference_screenshot}. "
+            "Run test_generate_canvas_screenshots first to generate it."
+        )
+
+
+def reset_date_filter(page: Page) -> None:
+    """Reset the date filter by clicking Reset button and unchecking checkbox."""
+
+    filter_by_date_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
+    filter_by_date_button.click()
+    page.get_by_text("Reset").click()
+
+    # Wait for the dialog to close (reset closes it automatically)
+    page.wait_for_timeout(200)
+
+    # Uncheck the filter checkbox to fully deactivate the filter
+    filter_checkbox = page.get_by_test_id(MARKER_FILTER_BY_DATE_CHECKBOX)
+    if filter_checkbox.is_checked():
+        filter_checkbox.click()
+        page.wait_for_timeout(200)
+
+
+def verify_filter_inactive(page: Page) -> None:
+    """Verify that the filter is deactivated."""
+    filter_by_date_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
+    inactive_value = filter_by_date_button.get_attribute("data-filter-by-date-active")
+    assert inactive_value == "false", (
+        f"Filter by date button did not indicate inactive state after reset "
+        f"(value: {inactive_value})"
+    )
+
+
+def verify_filter_range_label_cleared(page: Page) -> None:
+    """Verify that the filter range label is cleared."""
+    range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
+    label_text_after_reset = range_label.inner_text()
+    assert (
+        label_text_after_reset.strip() == ""
+    ), "Date range label not cleared after reset"
+
+
+def assert_screenshot_equal(
+    actual: Path, expected: Path, tolerance: float = 0.01
+) -> None:
+    """Compare an actual screenshot with an expected screenshot file.
+
+    Args:
+        actual: Path to actual screenshot
+        expected: Path to expected screenshot file
+        tolerance: Acceptable difference ratio (0.0 = exact match,
+        1.0 = completely different)
+
+    Raises:
+        AssertionError: If screenshots differ beyond tolerance
+        FileNotFoundError: If expected screenshot file doesn't exist
+    """
+    assert expected.exists(), (
+        f"Expected screenshot not found: {expected}\n"
+        f"Generate it first using test_generate_canvas_screenshots"
+    )
+
+    actual_image = Image.open(actual)
+    expected_image = Image.open(expected)
+
+    # Check dimensions match
+    assert actual_image.size == expected_image.size, (
+        f"Screenshot dimensions differ: "
+        f"actual {actual_image.size} vs expected {expected_image.size}"
+    )
+
+    # Compare images
+    diff = ImageChops.difference(actual_image, expected_image)
+    diff_stat = list(diff.getdata())
+
+    # Calculate difference ratio
+    pixels_different = sum(1 for pixel in diff_stat if pixel != (0, 0, 0))
+    total_pixels = actual_image.size[0] * actual_image.size[1]
+    diff_ratio = pixels_different / total_pixels if total_pixels > 0 else 0
+
+    assert diff_ratio <= tolerance, (
+        f"Screenshots differ: {diff_ratio:.2%} of pixels are different "
+        f"(tolerance: {tolerance:.2%})"
+    )
+
+
+def get_loaded_tracks_canvas_from_otconfig(
+    page: Page, rm: ResourceManager, otconfig_path: Path
+) -> Any:
+    """Load tracks from preconfigured .otconfig file and return canvas.
+
+    Args:
+        page: Playwright page object
+        rm: ResourceManager for localized strings
+        otconfig_path: Path to pre-configured .otconfig file
+
+    Returns:
+        Canvas locator ready for screenshots/verification
+    """
+    # Load preconfigured file with video and tracks already set up
+    setup_with_preconfigured_otconfig(page, rm, otconfig_path)
+
+    # Get canvas reference
+    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
+    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+
+    # Enable "Show all tracks" layer
+    checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+    checkbox.scroll_into_view_if_needed()
+    if not checkbox.is_checked():
+        checkbox.click()
+        page.wait_for_timeout(200)
+
+    return canvas
