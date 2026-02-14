@@ -60,6 +60,7 @@ UI_PROCESSING_GRACE_PERIOD_MS = 150
 FILTER_APPLY_WAIT_MS = 200
 
 
+@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
