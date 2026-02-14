@@ -11,6 +11,9 @@ from OTAnalytics.application.resources.resource_manager import (
     VisualizationOffsetSliderKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
+    MARKER_INTERACTIVE_IMAGE,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
     MARKER_FILTER_BY_DATE_APPLY_BUTTON,
     MARKER_FILTER_BY_DATE_BUTTON,
@@ -266,10 +269,6 @@ def get_loaded_tracks_canvas(
     setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
 
     # Get canvas reference
-    from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
-        MARKER_INTERACTIVE_IMAGE,
-    )
-
     canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
     canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
 
