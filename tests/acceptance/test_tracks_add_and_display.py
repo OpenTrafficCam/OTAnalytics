@@ -110,6 +110,7 @@ def test_add_tracks_and_display_all(
     ), "Canvas did not change after enabling tracks layer - tracks not displayed"
 
 
+@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
@@ -174,6 +175,7 @@ def test_filter_tracks_by_date(
     ), "Canvas did not update after applying date filter - filter not working"
 
 
+@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
@@ -280,6 +282,7 @@ def get_loaded_tracks_canvas(
     return canvas
 
 
+@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
@@ -384,6 +387,7 @@ def test_generate_canvas_screenshots(
     )
 
 
+@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
