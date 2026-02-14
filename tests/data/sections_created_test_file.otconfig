@@ -6,14 +6,14 @@
     },
     "videos": [
         {
-            "path": "..\/data\/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+            "path": "..\/data\/OTCamera19_FR20_2023-05-24_08-00-00.mp4"
         }
     ],
     "analysis": {
         "do_events": true,
         "do_counting": true,
         "tracks": [
-            "..\/data\/Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.ottrk"
+            "..\/data\/OTCamera19_FR20_2023-05-24_08-00-00.ottrk"
         ],
         "export": {
             "save_name": "",
@@ -41,12 +41,12 @@
             },
             "coordinates": [
                 {
-                    "x": 20,
-                    "y": 20
+                    "x": 22,
+                    "y": 22
                 },
                 {
-                    "x": 140,
-                    "y": 60
+                    "x": 154,
+                    "y": 66
                 }
             ],
             "plugin_data": {}
@@ -63,12 +63,12 @@
             },
             "coordinates": [
                 {
-                    "x": 220,
-                    "y": 80
+                    "x": 242,
+                    "y": 88
                 },
                 {
-                    "x": 340,
-                    "y": 140
+                    "x": 374,
+                    "y": 154
                 }
             ],
             "plugin_data": {}

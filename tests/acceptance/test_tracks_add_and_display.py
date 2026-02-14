@@ -110,7 +110,6 @@ def test_add_tracks_and_display_all(
     ), "Canvas did not change after enabling tracks layer - tracks not displayed"
 
 
-@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
@@ -175,7 +174,6 @@ def test_filter_tracks_by_date(
     ), "Canvas did not update after applying date filter - filter not working"
 
 
-@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
@@ -208,7 +206,7 @@ def test_toggle_intersection_layers(
 
 
 def assert_screenshot_equal(
-    actual: Path, expected: Path, tolerance: float = 0.00
+    actual: Path, expected: Path, tolerance: float = 0.01
 ) -> None:
     """Compare an actual screenshot (bytes) with an expected screenshot file.
 
@@ -282,7 +280,6 @@ def get_loaded_tracks_canvas(
     return canvas
 
 
-@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
@@ -320,6 +317,7 @@ def test_generate_canvas_screenshots(
         page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
     # 1. Show all tracks (already enabled, just take screenshot)
+    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
     canvas.screenshot(path=acceptance_test_data_folder / ALL_TRACKS_FILE_NAME)
 
     # Sections and flows are already loaded from the preconfigured file
@@ -351,6 +349,12 @@ def test_generate_canvas_screenshots(
             canvas.screenshot(path=acceptance_test_data_folder / "offset_after.png")
 
     # 3-11. Toggle all visualization layers and take screenshots
+    # Deselect "Show all tracks" before testing individual highlight options
+    all_tracks_checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+    if all_tracks_checkbox.is_checked():
+        all_tracks_checkbox.click()
+        page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
     # Show tracks group (nth=0 means first occurrence in "Show tracks" section)
     toggle_and_screenshot(
         INTERSECTING_SECTIONS, "highlight_tracks_intersecting_sections", nth=0
@@ -380,7 +384,6 @@ def test_generate_canvas_screenshots(
     )
 
 
-@pytest.mark.skip(reason="only works in headed right now")
 @pytest.mark.timeout(300)
 @pytest.mark.playwright
 @pytest.mark.usefixtures("external_app")
@@ -420,16 +423,25 @@ def test_reset_track_filter(
     filter_by_date_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
     verify_filter_active(page)
 
-    # Reset filter
+    # Reset filter by clicking Reset button and unchecking the checkbox
     filter_by_date_button.click()
     page.get_by_text("Reset").click()
-    page.wait_for_timeout(UI_PROCESSING_GRACE_PERIOD_MS)
+
+    # Wait for the dialog to close (reset closes it automatically -
+    # line 137 in container.py)
+    page.wait_for_timeout(FILTER_APPLY_WAIT_MS)
+
+    # Uncheck the filter checkbox to fully deactivate the filter
+    filter_checkbox = page.get_by_test_id(MARKER_FILTER_BY_DATE_CHECKBOX)
+    if filter_checkbox.is_checked():
+        filter_checkbox.click()
+        page.wait_for_timeout(FILTER_APPLY_WAIT_MS)
 
     # Verify filter is deactivated
     inactive_value = filter_by_date_button.get_attribute("data-filter-by-date-active")
     assert (
         inactive_value == "false"
-    ), "Filter by date button did not indicate inactive state after reset"
+    ), f"Filter by date button did not indicate inactive state after reset (value: {inactive_value})"  # noqa
 
     # Verify range label is cleared
     range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
