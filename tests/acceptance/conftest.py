@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import time
 from typing import Generator, TypeVar
 
@@ -49,7 +50,7 @@ class NiceGUITestServer:
         """Start NiceGUI server in subprocess."""
         self.process = subprocess.Popen(
             [
-                "python",
+                sys.executable,
                 "-m",
                 "OTAnalytics",
                 "--webui",

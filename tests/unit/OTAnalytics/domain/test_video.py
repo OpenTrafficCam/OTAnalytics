@@ -13,7 +13,7 @@ from OTAnalytics.domain.video import (
     VideoReader,
     VideoRepository,
 )
-from tests.OTAnalytics.application.test_datastore import FIRST_START_DATE
+from tests.unit.OTAnalytics.application.test_datastore import FIRST_START_DATE
 
 START_DATE = datetime(2023, 1, 1)
 
