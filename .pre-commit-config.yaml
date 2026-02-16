@@ -71,7 +71,7 @@ repos:
           - types-flake8
           - types-openpyxl
           - types-pillow
-          - types-pywin32
+          - types-pywin32; sys_platform == "win32"
           - types-requests
           - types-seaborn
           - types-selenium
