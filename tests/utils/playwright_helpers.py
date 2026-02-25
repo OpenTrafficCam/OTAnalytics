@@ -614,7 +614,7 @@ def create_section(
                 return
         except Exception:
             pass
-        time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+        time.sleep(ACCEPTANCE_TEST_WAIT_TIMEOUT)
     raise AssertionError(f"Section name not found after apply: {section_name}")
 
 
@@ -773,12 +773,12 @@ def setup_tracks_display(
     """
     # Wait for page to be fully loaded by checking for "Project" text
     page.get_by_text("Project").first.wait_for(
-        state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000
+        state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS
     )
 
     # Add video
     video_tab = page.get_by_text(rm.get(TrackFormKeys.TAB_VIDEO), exact=True)
-    video_tab.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+    video_tab.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
     video_tab.click()
     page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
     add_video_via_picker(page, rm, video_file)
@@ -792,7 +792,7 @@ def setup_tracks_display(
 
     # Get canvas reference
     canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
-    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+    canvas.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
     # Enable tracks layer if requested
     if enable_tracks_layer:
@@ -826,9 +826,7 @@ def enable_and_apply_date_filter(
     # Enable filter checkbox
     filter_checkbox = page.get_by_test_id(MARKER_FILTER_BY_DATE_CHECKBOX)
     filter_checkbox.scroll_into_view_if_needed()
-    filter_checkbox.wait_for(
-        state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000
-    )
+    filter_checkbox.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
     # Check if already checked
     if not filter_checkbox.is_checked():
@@ -838,7 +836,7 @@ def enable_and_apply_date_filter(
     # Open filter dialog
     filter_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
     # Wait for button to be enabled after checkbox is checked
-    filter_button.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+    filter_button.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
     # Wait for button to be enabled (not disabled)
     deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
@@ -899,7 +897,7 @@ def verify_filter_active(page: Page) -> None:
     page.wait_for_timeout(500)
 
     filter_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
-    filter_button.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+    filter_button.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
     # Wait for the attribute to be set
     deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
@@ -949,7 +947,7 @@ def setup_with_preconfigured_otconfig(
     """
     # Wait for page to be ready
     page.get_by_text("Project").first.wait_for(
-        state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000
+        state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS
     )
 
     # Load the pre-configured project file
@@ -960,7 +958,7 @@ def setup_with_preconfigured_otconfig(
 
     # Verify canvas is visible (indicating project loaded successfully)
     canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
-    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+    canvas.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
 
 # ----------------------
