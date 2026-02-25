@@ -1058,11 +1058,35 @@ def click_update_offset_button(
     return False
 
 
+def _verify_screenshot_against_reference(
+    actual_path: Path, reference_path: Path
+) -> None:
+    """Verify screenshot against reference or skip if reference doesn't exist.
+
+    Args:
+        actual_path: Path to actual screenshot
+        reference_path: Path to reference screenshot
+
+    Raises:
+        pytest.skip: If reference screenshot doesn't exist
+        AssertionError: If screenshots don't match within tolerance
+    """
+    if reference_path.exists():
+        assert_screenshot_equal(actual_path, reference_path)
+    else:
+        pytest.skip(
+            f"Reference screenshot not found: {reference_path}. "
+            "Run test_generate_canvas_screenshots first to generate it."
+        )
+
+
 def capture_and_verify_baseline(
     page: Page,
     canvas: Any,
     actual_screenshot_path: Path,
     reference_screenshot: Path,
+    *,
+    timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
 ) -> bytes:
     """Capture canvas screenshot and verify against reference baseline.
 
@@ -1071,6 +1095,7 @@ def capture_and_verify_baseline(
         canvas: Canvas locator
         actual_screenshot_path: Path to save actual screenshot
         reference_screenshot: Path to reference screenshot file
+        timeout_ms: Timeout in milliseconds to wait before taking screenshot
 
     Returns:
         Screenshot bytes
@@ -1079,16 +1104,9 @@ def capture_and_verify_baseline(
         pytest.skip: If reference screenshot doesn't exist
         AssertionError: If screenshots don't match within tolerance
     """
-    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    page.wait_for_timeout(timeout_ms)
     canvas_screenshot = canvas.screenshot(path=actual_screenshot_path)
-
-    if reference_screenshot.exists():
-        assert_screenshot_equal(actual_screenshot_path, reference_screenshot)
-    else:
-        pytest.skip(
-            f"Reference screenshot not found: {reference_screenshot}. "
-            "Run test_generate_canvas_screenshots first to generate it."
-        )
+    _verify_screenshot_against_reference(actual_screenshot_path, reference_screenshot)
     return canvas_screenshot
 
 
@@ -1112,18 +1130,10 @@ def verify_canvas_matches_reference(
         pytest.skip: If reference screenshot doesn't exist
         AssertionError: If screenshots don't match within tolerance
     """
-
-    new_path = acceptance_test_data_folder / "new_file.png"
-    canvas.screenshot(path=new_path)
-
-    reference_screenshot = acceptance_test_data_folder / all_tracks_filename
-    if reference_screenshot.exists():
-        assert_screenshot_equal(new_path, reference_screenshot)
-    else:
-        pytest.skip(
-            f"Reference screenshot not found: {reference_screenshot}. "
-            "Run test_generate_canvas_screenshots first to generate it."
-        )
+    actual_path = acceptance_test_data_folder / "new_file.png"
+    reference_path = acceptance_test_data_folder / all_tracks_filename
+    canvas.screenshot(path=actual_path)
+    _verify_screenshot_against_reference(actual_path, reference_path)
 
 
 def reset_date_filter(page: Page) -> None:
