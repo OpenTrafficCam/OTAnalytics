@@ -5,7 +5,6 @@ import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import ResourceManager
-from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     MARKER_INTERACTIVE_IMAGE,
 )
@@ -27,6 +26,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_fo
 from tests.acceptance.conftest import NiceGUITestServer
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
 from tests.utils.playwright_helpers import (
+    load_main_page,
     search_for_marker_element,
     setup_with_preconfigured_otconfig,
     wait_for_canvas_change,
@@ -168,8 +168,7 @@ def test_filter_navigation_buttons(
     - Filter range label updates to reflect movement
     - Canvas changes are consistent with time progression (forward vs backward)
     """
-    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-    page.goto(base_url + ENDPOINT_MAIN_PAGE)
+    load_main_page(page, external_app)
 
     data_dir = Path(__file__).parents[1] / "data"
     otconfig_path = data_dir / "sections_created_test_file.otconfig"
@@ -267,8 +266,7 @@ def test_filter_navigation_buttons_with_screenshot(
     - Each navigation button changes the visual state of the canvas
     - Screenshots differ from baseline after each navigation action
     """
-    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-    page.goto(base_url + ENDPOINT_MAIN_PAGE)
+    load_main_page(page, external_app)
 
     data_dir = Path(__file__).parents[1] / "data"
     otconfig_path = data_dir / "sections_created_test_file.otconfig"
@@ -356,8 +354,7 @@ def test_filter_navigation_buttons_save_screenshots(
     This test captures and saves screenshots for each navigation button action
     to help with visual debugging and test verification.
     """
-    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-    page.goto(base_url + ENDPOINT_MAIN_PAGE)
+    load_main_page(page, external_app)
 
     data_dir = Path(__file__).parents[1] / "data"
     otconfig_path = data_dir / "sections_created_test_file.otconfig"

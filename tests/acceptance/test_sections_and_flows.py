@@ -11,7 +11,6 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_NAME as MARKER_FLOW_NAME,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
@@ -33,6 +32,7 @@ from tests.utils.playwright_helpers import (
     create_flow,
     create_section,
     go_to_sections_with_one_video,
+    load_main_page,
     navigate_and_prepare,
     save_project_as,
     search_for_marker_element,
@@ -85,8 +85,7 @@ class TestAddLineSectionWithDialog:
         resource_manager: ResourceManager,
     ) -> None:
         # Load preconfigured file with video and tracks already set up
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         data_dir = Path(__file__).parents[1] / "data"
         otconfig_path = data_dir / "sections_created_test_file.otconfig"
@@ -119,8 +118,7 @@ class TestAddLineSectionWithDialog:
         resource_manager: ResourceManager,
     ) -> None:
         # Load preconfigured file with video, tracks, and sections already set up
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         data_dir = Path(__file__).parents[1] / "data"
         otconfig_path = data_dir / "sections_created_test_file.otconfig"
@@ -166,8 +164,7 @@ class TestAddLineSectionWithDialog:
         test_data_tmp_dir: Path,
     ) -> None:
         # Load preconfigured file with video, tracks, and sections already set up
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         data_dir = Path(__file__).parents[1] / "data"
         otconfig_path = data_dir / "sections_created_test_file.otconfig"

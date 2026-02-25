@@ -8,7 +8,6 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     TrackFormKeys,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_VIDEO_TAB,
 )
@@ -29,6 +28,7 @@ from tests.acceptance.conftest import (
 from tests.utils.playwright_helpers import (
     add_video_via_picker,
     click_table_cell_with_text,
+    load_main_page,
     reset_videos_tab,
     search_for_marker_element,
     table_filenames,
@@ -65,8 +65,7 @@ class TestVideoImportAndDisplay:
         - Add a single video via in-app file picker UI
         - Click on Remove and verify the video disappears from the table
         """
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         reset_videos_tab(page, resource_manager)
@@ -101,8 +100,7 @@ class TestVideoImportAndDisplay:
 
         Mirrors tests in TestVideoImportAndDisplay (Selenium-based).
         """
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         # Switch to Videos tab and ensure clean slate (prefer marker with fallback)
         try:
@@ -159,8 +157,7 @@ class TestVideoImportAndDisplay:
         resource_manager: ResourceManager,
     ) -> None:
         """Playwright: Remove two videos sequentially (single-select table)."""
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         reset_videos_tab(page, resource_manager)

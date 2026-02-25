@@ -47,8 +47,8 @@ from tests.utils.playwright_helpers import (
     create_flow,
     create_section,
     get_loaded_tracks_canvas_from_otconfig,
+    load_main_page,
     navigate_and_prepare,
-    navigate_to_main_page_with_url,
     save_project_as,
     search_for_marker_element,
     toggle_and_screenshot,
@@ -185,8 +185,7 @@ class TestCreateImportantTestData:
     ) -> None:
         """Generate reference screenshots for all visualization layer states."""
         # Setup: Load tracks with preconfigured file
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        navigate_to_main_page_with_url(page, base_url)
+        load_main_page(page, external_app)
         data_dir = Path(__file__).parents[1] / "data"
         otconfig_path = data_dir / "sections_created_test_file.otconfig"
         canvas = get_loaded_tracks_canvas_from_otconfig(

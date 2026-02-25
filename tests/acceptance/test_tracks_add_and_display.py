@@ -11,7 +11,7 @@ from tests.utils.playwright_helpers import (
     enable_and_apply_date_filter,
     get_loaded_tracks_canvas_from_otconfig,
     get_test_files_from_data_dir,
-    navigate_to_main_page_with_url,
+    load_main_page,
     reset_date_filter,
     setup_tracks_display,
     verify_canvas_matches_reference,
@@ -61,8 +61,7 @@ def test_add_tracks_and_display_all(
     - Canvas image matches reference screenshot
     """
     # Setup
-    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-    navigate_to_main_page_with_url(page, base_url)
+    load_main_page(page, external_app)
     data_dir = Path(__file__).parents[1] / "data"
     video_file, track_files = get_test_files_from_data_dir(data_dir)
 
@@ -117,8 +116,7 @@ def test_filter_tracks_by_date(
     test_generate_canvas_screenshots.
     """
     # Setup: Load tracks with preconfigured file
-    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-    navigate_to_main_page_with_url(page, base_url)
+    load_main_page(page, external_app)
     data_dir = Path(__file__).parents[1] / "data"
     otconfig_path = data_dir / "sections_created_test_file.otconfig"
     canvas = get_loaded_tracks_canvas_from_otconfig(
@@ -163,8 +161,7 @@ def test_toggle_intersection_layers(
     test_generate_canvas_screenshots.
     """
     # Setup: Load tracks with preconfigured file
-    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-    navigate_to_main_page_with_url(page, base_url)
+    load_main_page(page, external_app)
     data_dir = Path(__file__).parents[1] / "data"
     otconfig_path = data_dir / "sections_created_test_file.otconfig"
     canvas = get_loaded_tracks_canvas_from_otconfig(
@@ -202,8 +199,7 @@ def test_reset_track_filter(
     - Range label is empty after reset
     """
     # Setup: Load tracks and apply date filter
-    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-    navigate_to_main_page_with_url(page, base_url)
+    load_main_page(page, external_app)
     data_dir = Path(__file__).parents[1] / "data"
     video_file, track_files = get_test_files_from_data_dir(data_dir)
     setup_tracks_display(

@@ -968,6 +968,17 @@ def navigate_to_main_page_with_url(page: Page, base_url: str) -> None:
     page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
 
+def load_main_page(page: Page, external_app: Any) -> None:
+    """Load the main page from external_app.
+
+    Args:
+        page: Playwright page object
+        external_app: NiceGUITestServer instance with base_url attribute
+    """
+    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
+    page.goto(base_url + ENDPOINT_MAIN_PAGE)
+
+
 def get_test_files_from_data_dir(data_dir: Path) -> tuple[Path, list[Path]]:
     """Get paths to test video and track files.
 
