@@ -661,9 +661,9 @@ class DummyViewModel(
             )
             self.__show_error(message)
             return
-        except Exception:
+        except Exception as e:
             message = f"{MESSAGE_CONFIGURATION_NOT_SAVED}An unexpected error occurred."
-            logger().exception("Failed to save configuration file")
+            logger().exception("Failed to save configuration file", exc_info=e)
             self.__show_error(message)
             return
 
@@ -916,10 +916,10 @@ class DummyViewModel(
                 initial_position=position,
             )
             return
-        except Exception:
+        except Exception as e:
             position = self.treeview_sections.get_position()
             message = "Failed to save sections file.\nAn unexpected error occurred."
-            logger().exception("Failed to save sections file")
+            logger().exception("Failed to save sections file", exc_info=e)
             self._ui_factory.info_box(
                 message=message,
                 initial_position=position,
