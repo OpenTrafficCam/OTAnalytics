@@ -11,6 +11,7 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_NAME as MARKER_FLOW_NAME,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
@@ -85,8 +86,6 @@ class TestAddLineSectionWithDialog:
     ) -> None:
         # Load preconfigured file with video and tracks already set up
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
-
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
         data_dir = Path(__file__).parents[1] / "data"
@@ -121,8 +120,6 @@ class TestAddLineSectionWithDialog:
     ) -> None:
         # Load preconfigured file with video, tracks, and sections already set up
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
-
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
         data_dir = Path(__file__).parents[1] / "data"
@@ -170,8 +167,6 @@ class TestAddLineSectionWithDialog:
     ) -> None:
         # Load preconfigured file with video, tracks, and sections already set up
         base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
-
         page.goto(base_url + ENDPOINT_MAIN_PAGE)
 
         data_dir = Path(__file__).parents[1] / "data"
