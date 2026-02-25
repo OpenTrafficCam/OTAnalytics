@@ -11,6 +11,7 @@ from nicegui.elements.number import Number
 from nicegui.elements.select import Select
 from nicegui.events import ValueChangeEventArguments
 
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     MissingInstanceError,
 )
@@ -116,12 +117,12 @@ class FormField(LazyInitializedElement[S], Generic[S, V]):
             # input elements. This mirrors the pattern used for buttons in the UI.
             element.mark(self.marker)
             try:
-                element.props(f"test-id={self.marker}")
-                element.props(f"data-testid={self.marker}")
+                element.props(f"{TestIdAttributes.TEST_ID}={self.marker}")
+                element.props(f"{TestIdAttributes.DATA_TESTID}={self.marker}")
             except Exception:
                 # In case a specific element type doesn't support props, ignore.
                 pass
-            element.props(f"test-id={self.marker}")
+            element.props(f"{TestIdAttributes.TEST_ID}={self.marker}")
 
     def validate(self) -> bool:
         """Handles the validation logic for an element.
@@ -754,7 +755,7 @@ class FormFieldCheckbox(LazyInitializedElement[Checkbox]):
         # Apply marker and data-testid for Playwright's get_by_test_id compatibility
         if self._marker:
             self._instance.mark(self._marker)
-            self._instance.props(f"data-testid={self._marker}")
+            self._instance.props(f"{TestIdAttributes.DATA_TESTID}={self._marker}")
         # Apply any additional props passed in
         if self._props:
             for prop in self._props:

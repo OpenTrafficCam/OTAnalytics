@@ -12,6 +12,7 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     VisualizationLayersKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
 from OTAnalytics.plugin_ui.visualization.visualization import ALL
 
 MARKER_PROJECT_NAME = "marker-project-name"
@@ -48,7 +49,9 @@ class LayersForm(AbstractFrameTrackPlotting):
                 )
                 if layer_group.name == "Show tracks" and layer.get_name() == ALL:
                     checkbox.mark(MARKER_VISUALIZATION_LAYERS_ALL)
-                    checkbox.props(f"data-testid={MARKER_VISUALIZATION_LAYERS_ALL}")
+                    checkbox.props(
+                        f"{TestIdAttributes.DATA_TESTID}={MARKER_VISUALIZATION_LAYERS_ALL}"  # noqa
+                    )
         ui.button(
             self._resource_manager.get(
                 VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING
