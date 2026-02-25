@@ -805,7 +805,6 @@ class DummyViewModel(
             title="Load track files",
             filetypes=[
                 ("tracks file", "*.ottrk"),
-                ("tracks csv", "*.tracks.csv"),
             ],
         )
         if not track_files:
