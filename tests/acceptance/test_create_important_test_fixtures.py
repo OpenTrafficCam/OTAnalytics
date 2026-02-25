@@ -1,11 +1,11 @@
-"""Test to create important test fixtures: pre-configured
+"""Test to create important test data files: pre-configured
 .otconfig file and reference screenshots.
 
 This test creates:
 1. A pre-configured .otconfig file with video, tracks, and sections
 2. Reference screenshots for all visualization layer states
 
-These fixtures can be used by other tests to skip setup steps.
+These test data files can be used by other tests to skip setup steps.
 """
 
 from pathlib import Path
@@ -54,7 +54,7 @@ playwright = pytest.importorskip(
 )
 
 
-class TestCreateImportantTestFixtures:
+class TestCreateImportantTestData:
 
     @pytest.mark.skip
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
