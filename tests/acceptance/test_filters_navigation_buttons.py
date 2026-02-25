@@ -6,6 +6,9 @@ from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+    MARKER_INTERACTIVE_IMAGE,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
     MARKER_FILTER_BY_DATE_CHECKBOX,
     MARKER_FILTER_RANGE_LABEL,
@@ -17,6 +20,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.containe
     MARKER_PREV_EVENT_BUTTON,
     MARKER_PREV_FRAMES_BUTTON,
     MARKER_PREV_SECONDS_BUTTON,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
+    MARKER_VISUALIZATION_LAYERS_ALL,
 )
 from tests.acceptance.conftest import NiceGUITestServer
 from tests.conftest import ACCEPTANCE_TEST_WAIT_TIMEOUT
@@ -172,18 +178,10 @@ def test_filter_navigation_buttons(
     setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
 
     # Get canvas reference
-    from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
-        MARKER_INTERACTIVE_IMAGE,
-    )
-
     canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
     canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
 
     # Enable "Show all tracks" layer
-    from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
-        MARKER_VISUALIZATION_LAYERS_ALL,
-    )
-
     checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
     checkbox.scroll_into_view_if_needed()
     if not checkbox.is_checked():
@@ -279,18 +277,10 @@ def test_filter_navigation_buttons_with_screenshot(
     setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
 
     # Get canvas reference
-    from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
-        MARKER_INTERACTIVE_IMAGE,
-    )
-
     canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
     canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
 
     # Enable "Show all tracks" layer
-    from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
-        MARKER_VISUALIZATION_LAYERS_ALL,
-    )
-
     checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
     checkbox.scroll_into_view_if_needed()
     if not checkbox.is_checked():
@@ -380,18 +370,10 @@ def test_filter_navigation_buttons_save_screenshots(
     setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
 
     # Get canvas reference
-    from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
-        MARKER_INTERACTIVE_IMAGE,
-    )
-
     canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
     canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
 
     # Enable "Show all tracks" layer
-    from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
-        MARKER_VISUALIZATION_LAYERS_ALL,
-    )
-
     checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
     checkbox.scroll_into_view_if_needed()
     if not checkbox.is_checked():

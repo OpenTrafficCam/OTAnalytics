@@ -74,6 +74,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.containe
     MARKER_FILTER_START_TIME_INPUT,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
+    MARKER_UPDATE_FLOW_HIGHLIGHTING,
     MARKER_VISUALIZATION_LAYERS_ALL,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
@@ -663,6 +664,40 @@ def wait_for_flow_present(page: Page, flow_name: str) -> None:
 # ----------------------
 
 
+def toggle_and_screenshot(
+    page: Page,
+    canvas: Any,
+    checkbox_text: str,
+    screenshot_folder: Path,
+    filename_base: str,
+    nth: int = 0,
+    timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+) -> None:
+    """Toggle a checkbox on, take screenshot, then toggle off.
+
+    Args:
+        page: Playwright page object
+        canvas: Canvas locator for taking screenshots
+        checkbox_text: Text of the checkbox to find
+        screenshot_folder: Folder where screenshots will be saved
+        filename_base: Base name for screenshot files
+        nth: Which occurrence to use if multiple checkboxes have same text
+        timeout_ms: Timeout in milliseconds to wait after toggling
+    """
+    checkbox = page.get_by_text(checkbox_text, exact=True).nth(nth)
+    checkbox.scroll_into_view_if_needed()
+
+    # Toggle on and screenshot
+    if not checkbox.is_checked():
+        checkbox.click()
+    page.wait_for_timeout(timeout_ms)
+    canvas.screenshot(path=screenshot_folder / f"{filename_base}.png")
+
+    # Toggle off (no screenshot)
+    checkbox.click()
+    page.wait_for_timeout(timeout_ms)
+
+
 def wait_for_canvas_change(
     page: Page, canvas_locator: Any, baseline: bytes, timeout: float | None = None
 ) -> bytes:
@@ -956,6 +991,22 @@ def enable_all_tracks_layer(page: Page) -> None:
     checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
     checkbox.scroll_into_view_if_needed()
     checkbox.click()
+
+
+def update_flow_highlighting(
+    page: Page, timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS
+) -> None:
+    """Click the 'Update flow highlighting' button and wait for processing.
+
+    Args:
+        page: Playwright page object
+        timeout_ms: Timeout in milliseconds to wait after
+        clicking (default: PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    """
+    button = page.get_by_test_id(MARKER_UPDATE_FLOW_HIGHLIGHTING)
+    button.scroll_into_view_if_needed()
+    button.click()
+    page.wait_for_timeout(timeout_ms)
 
 
 def capture_and_verify_baseline(

@@ -18,7 +18,6 @@ from OTAnalytics.application.resources.resource_manager import (
     FlowAndSectionKeys,
     ResourceManager,
     TrackFormKeys,
-    VisualizationLayersKeys,
     VisualizationOffsetSliderKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
@@ -52,6 +51,8 @@ from tests.utils.playwright_helpers import (
     navigate_to_main_page_with_url,
     save_project_as,
     search_for_marker_element,
+    toggle_and_screenshot,
+    update_flow_highlighting,
     wait_for_flow_present,
     wait_for_names_present,
 )
@@ -192,43 +193,13 @@ class TestCreateImportantTestData:
             page, resource_manager, otconfig_path
         )
 
-        # Helper function to toggle a checkbox and take screenshot
-        def toggle_and_screenshot(
-            checkbox_text: str, filename_base: str, nth: int = 0
-        ) -> None:
-            """Toggle a checkbox on, take screenshot, then toggle off.
-
-            Args:
-                checkbox_text: Text of the checkbox to find
-                filename_base: Base name for screenshot files
-                nth: Which occurrence to use if multiple checkboxes have same text
-            """
-            checkbox = page.get_by_text(checkbox_text, exact=True).nth(nth)
-            checkbox.scroll_into_view_if_needed()
-
-            # Toggle on and screenshot
-            if not checkbox.is_checked():
-                checkbox.click()
-            page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-            canvas.screenshot(path=acceptance_test_data_folder / f"{filename_base}.png")
-
-            # Toggle off (no screenshot)
-            checkbox.click()
-            page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-
         # 1. Show all tracks (already enabled, just take screenshot)
         page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
         canvas.screenshot(path=acceptance_test_data_folder / "all_tracks.png")
 
         # Sections and flows are already loaded from the preconfigured file
         # Just update flow highlighting
-        page.get_by_text(
-            resource_manager.get(
-                VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING
-            ),
-            exact=True,
-        ).click()
-        page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+        update_flow_highlighting(page)
 
         # Turn off "Show all tracks" to prepare for next screenshots
         all_tracks_checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
@@ -260,30 +231,72 @@ class TestCreateImportantTestData:
 
         # Show tracks group (nth=0 means first occurrence in "Show tracks" section)
         toggle_and_screenshot(
-            INTERSECTING_SECTIONS, "highlight_tracks_intersecting_sections", nth=0
+            page,
+            canvas,
+            INTERSECTING_SECTIONS,
+            acceptance_test_data_folder,
+            "highlight_tracks_intersecting_sections",
+            nth=0,
         )
         toggle_and_screenshot(
+            page,
+            canvas,
             NOT_INTERSECTING_SECTIONS,
+            acceptance_test_data_folder,
             "highlight_tracks_not_intersecting_sections",
             nth=0,
         )
         toggle_and_screenshot(
-            ASSIGNED_TO_FLOWS, "highlight_tracks_assigned_to_flows", nth=0
+            page,
+            canvas,
+            ASSIGNED_TO_FLOWS,
+            acceptance_test_data_folder,
+            "highlight_tracks_assigned_to_flows",
+            nth=0,
         )
         toggle_and_screenshot(
-            NOT_ASSIGNED_TO_FLOWS, "highlight_tracks_not_assigned_to_flows", nth=0
+            page,
+            canvas,
+            NOT_ASSIGNED_TO_FLOWS,
+            acceptance_test_data_folder,
+            "highlight_tracks_not_assigned_to_flows",
+            nth=0,
         )
 
         # Show start and end points group
         # (nth=1 means second occurrence in "Show start and end points" section)
         toggle_and_screenshot(
-            INTERSECTING_SECTIONS, "start_end_intersecting_sections", nth=1
+            page,
+            canvas,
+            INTERSECTING_SECTIONS,
+            acceptance_test_data_folder,
+            "start_end_intersecting_sections",
+            nth=1,
         )
         toggle_and_screenshot(
-            NOT_INTERSECTING_SECTIONS, "start_end_not_intersecting_sections", nth=1
+            page,
+            canvas,
+            NOT_INTERSECTING_SECTIONS,
+            acceptance_test_data_folder,
+            "start_end_not_intersecting_sections",
+            nth=1,
         )
-        toggle_and_screenshot(ALL, "start_end_all", nth=1)
-        toggle_and_screenshot(ASSIGNED_TO_FLOWS, "start_end_assigned_to_flows", nth=1)
         toggle_and_screenshot(
-            NOT_ASSIGNED_TO_FLOWS, "start_end_not_assigned_to_flows", nth=1
+            page, canvas, ALL, acceptance_test_data_folder, "start_end_all", nth=1
+        )
+        toggle_and_screenshot(
+            page,
+            canvas,
+            ASSIGNED_TO_FLOWS,
+            acceptance_test_data_folder,
+            "start_end_assigned_to_flows",
+            nth=1,
+        )
+        toggle_and_screenshot(
+            page,
+            canvas,
+            NOT_ASSIGNED_TO_FLOWS,
+            acceptance_test_data_folder,
+            "start_end_not_assigned_to_flows",
+            nth=1,
         )

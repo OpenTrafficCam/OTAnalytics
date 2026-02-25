@@ -19,6 +19,7 @@ MARKER_PROJECT_NAME = "marker-project-name"
 MARKER_START_DATE = "marker-start-date"
 MARKER_START_TIME = "marker-start-time"
 MARKER_VISUALIZATION_LAYERS_ALL = "marker-visualization-layers-all"
+MARKER_UPDATE_FLOW_HIGHLIGHTING = "marker-update-flow-highlighting"
 
 
 class LayersForm(AbstractFrameTrackPlotting):
@@ -52,11 +53,15 @@ class LayersForm(AbstractFrameTrackPlotting):
                     checkbox.props(
                         f"{TestIdAttributes.DATA_TESTID}={MARKER_VISUALIZATION_LAYERS_ALL}"  # noqa
                     )
-        ui.button(
+        button = ui.button(
             self._resource_manager.get(
                 VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING
             ),
             on_click=self._create_events,
+        )
+        button.mark(MARKER_UPDATE_FLOW_HIGHLIGHTING)
+        button.props(
+            f"{TestIdAttributes.DATA_TESTID}={MARKER_UPDATE_FLOW_HIGHLIGHTING}"
         )
         return self
 
