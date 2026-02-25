@@ -12,11 +12,9 @@ from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
     AddTracksKeys,
     AddVideoKeys,
-    FlowAndSectionKeys,
     FlowKeys,
     ResourceManager,
     SectionKeys,
-    TrackFormKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_END_SECTION,
@@ -39,6 +37,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
+    MARKER_TRACK_TAB,
     MARKER_VIDEO_TAB,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.visualization_offset_slider_form import (  # noqa
@@ -59,6 +58,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
     MARKER_PROJECT_SAVE_AS,
     MARKER_START_DATE,
     MARKER_START_TIME,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+    MARKER_TAB_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     MARKER_BUTTON_ADD as MARKER_FLOW_ADD,
@@ -331,11 +333,8 @@ def go_to_sections_with_one_video(page: Page, rm: ResourceManager) -> None:
     - Select the video row to render a frame
     - Switch to the Sections tab
     """
-    # Prefer stable marker to open Videos tab; fallback to text if needed
-    try:
-        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
-    except Exception:
-        page.get_by_text(rm.get(TrackFormKeys.TAB_VIDEO), exact=True).click()
+    # Open Videos tab using marker
+    search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
 
     # Ensure a clean slate
     reset_videos_tab(page, rm)
@@ -351,7 +350,7 @@ def go_to_sections_with_one_video(page: Page, rm: ResourceManager) -> None:
     click_table_cell_with_text(page, v1.name)
 
     # Switch to Sections tab
-    page.get_by_text(rm.get(FlowAndSectionKeys.TAB_SECTION), exact=True).click()
+    search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
 
 
 def open_part(page: Page, part: str) -> None:
@@ -777,7 +776,7 @@ def setup_tracks_display(
     )
 
     # Add video
-    video_tab = page.get_by_text(rm.get(TrackFormKeys.TAB_VIDEO), exact=True)
+    video_tab = search_for_marker_element(page, MARKER_VIDEO_TAB).first
     video_tab.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
     video_tab.click()
     page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
@@ -785,7 +784,7 @@ def setup_tracks_display(
     page.wait_for_timeout(150)
 
     # Add tracks
-    page.get_by_text(rm.get(TrackFormKeys.TAB_TRACK), exact=True).click()
+    search_for_marker_element(page, MARKER_TRACK_TAB).first.click()
     track_files = track_file if isinstance(track_file, list) else [track_file]
     for tf in track_files:
         add_track_via_picker(page, rm, tf)
