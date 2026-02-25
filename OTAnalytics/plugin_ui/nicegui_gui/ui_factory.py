@@ -115,14 +115,16 @@ class NiceGuiUiFactory(UiFactory):
                         ext_clean = "." + ext_clean
                     endings.append(ext_clean)
 
-        eo: dict[str, list[str] | None]
+        picker_extension_options: dict[str, list[str] | None]
         if extension_options is not None:
-            eo = extension_options
+            picker_extension_options = extension_options
         else:
-            eo = {"All Files": endings.copy()} if endings else {"All Files": None}
+            picker_extension_options = (
+                {"All Files": endings.copy()} if endings else {"All Files": None}
+            )
             # Also add individual entries for each ending for clarity in the dropdown
             for end in sorted(set(endings)):
-                eo[end] = [end]
+                picker_extension_options[end] = [end]
 
         file_paths = await LocalFilePicker(
             directory=self._base_directory,
@@ -130,7 +132,7 @@ class NiceGuiUiFactory(UiFactory):
             show_files_only_of_type=None,
             show_files_only_of_types=endings if endings else None,
             show_only_directories=False,
-            extension_options=eo,
+            extension_options=picker_extension_options,
             multiple=True,
         )
         return get_all_files_with_correct_file_ending_in_directory(
