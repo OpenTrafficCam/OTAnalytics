@@ -89,6 +89,7 @@ from tests.acceptance.conftest import (
     PLAYWRIGHT_POLL_INTERVAL_MS,
     PLAYWRIGHT_POLL_INTERVAL_SECONDS,
     PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
+    PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
     PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
 )
@@ -366,7 +367,9 @@ def open_part(page: Page, part: str) -> None:
                 .filter(has_text=part)
                 .first
             )
-            row.wait_for(state="visible", timeout=2000)
+            row.wait_for(
+                state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS * 2
+            )
             row.dblclick()
             # Wait for directory to load after double-click
             page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
@@ -407,13 +410,15 @@ def add_video_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
     # Prefer stable marker-based lookup; fall back to label if marker is unavailable
     try:
         add_button = search_for_marker_element(page, MARKER_VIDEO_ADD).first
-        add_button.wait_for(state="visible", timeout=2000)
+        add_button.wait_for(
+            state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS
+        )
     except (TimeoutError, Error):
         # Fallback to searching by button text
         button_text = rm.get(AddVideoKeys.BUTTON_ADD_VIDEOS)
         add_button = page.get_by_text(button_text, exact=True)
         add_button.wait_for(
-            state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000
+            state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS
         )
     add_button.click()
 
@@ -1093,7 +1098,7 @@ def capture_and_verify_baseline(
 def verify_filter_range_label_visible(page: Page) -> None:
     """Verify that the filter range label is visible."""
     range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
-    range_label.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+    range_label.wait_for(state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS)
 
 
 def verify_canvas_matches_reference(
@@ -1110,7 +1115,6 @@ def verify_canvas_matches_reference(
         pytest.skip: If reference screenshot doesn't exist
         AssertionError: If screenshots don't match within tolerance
     """
-    import pytest
 
     new_path = acceptance_test_data_folder / "new_file.png"
     canvas.screenshot(path=new_path)
@@ -1223,7 +1227,7 @@ def get_loaded_tracks_canvas_from_otconfig(
 
     # Get canvas reference
     canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
-    canvas.wait_for(state="visible", timeout=ACCEPTANCE_TEST_WAIT_TIMEOUT * 1000)
+    canvas.wait_for(state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS)
 
     # Enable "Show all tracks" layer
     checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
