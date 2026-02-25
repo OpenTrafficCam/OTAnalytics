@@ -8,16 +8,21 @@ This test creates:
 These test data files can be used by other tests to skip setup steps.
 """
 
+import shutil
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import (
+    FlowAndSectionKeys,
     ResourceManager,
     TrackFormKeys,
     VisualizationLayersKeys,
     VisualizationOffsetSliderKeys,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
+    MARKER_VIDEO_TAB,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     MARKER_VISUALIZATION_LAYERS_ALL,
@@ -39,6 +44,7 @@ from tests.acceptance.conftest import (
 from tests.utils.playwright_helpers import (
     add_track_via_picker,
     add_video_via_picker,
+    click_table_cell_with_text,
     create_flow,
     create_section,
     get_loaded_tracks_canvas_from_otconfig,
@@ -47,6 +53,7 @@ from tests.utils.playwright_helpers import (
     save_project_as,
     search_for_marker_element,
     wait_for_flow_present,
+    wait_for_names_present,
 )
 
 playwright = pytest.importorskip(
@@ -101,10 +108,6 @@ class TestCreateImportantTestData:
 
         # Add video
         try:
-            from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (  # noqa
-                MARKER_VIDEO_TAB,
-            )
-
             search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         except Exception:
             page.get_by_text(
@@ -114,11 +117,6 @@ class TestCreateImportantTestData:
         add_video_via_picker(page, resource_manager, video_file)
 
         # Wait for video to be added and select it
-        from tests.utils.playwright_helpers import (
-            click_table_cell_with_text,
-            wait_for_names_present,
-        )
-
         wait_for_names_present(page, [video_file.name])
         click_table_cell_with_text(page, video_file.name)
 
@@ -130,10 +128,6 @@ class TestCreateImportantTestData:
             add_track_via_picker(page, resource_manager, track_file)
 
         # Switch to Sections tab
-        from OTAnalytics.application.resources.resource_manager import (
-            FlowAndSectionKeys,
-        )
-
         page.get_by_text(
             resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
         ).click()
@@ -173,8 +167,6 @@ class TestCreateImportantTestData:
 
         # Also copy to the main test data directory for reuse
         permanent_path = data_dir / "sections_created_test_file.otconfig"
-        import shutil
-
         shutil.copy(output_path, permanent_path)
 
         print(f"\nPre-configured file created at: {permanent_path}")
