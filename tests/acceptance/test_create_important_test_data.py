@@ -18,7 +18,6 @@ from OTAnalytics.application.resources.resource_manager import (
     FlowAndSectionKeys,
     ResourceManager,
     TrackFormKeys,
-    VisualizationOffsetSliderKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_VIDEO_TAB,
@@ -44,6 +43,7 @@ from tests.utils.playwright_helpers import (
     add_track_via_picker,
     add_video_via_picker,
     click_table_cell_with_text,
+    click_update_offset_button,
     create_flow,
     create_section,
     get_loaded_tracks_canvas_from_otconfig,
@@ -207,20 +207,8 @@ class TestCreateImportantTestData:
         page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
         # 2. Show offset ändern und zurücksetzen (Update with section offset button)
-        # This button may be disabled if preconditions
-        # aren't met, so skip if not enabled
-        offset_button = page.get_by_text(
-            resource_manager.get(VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET),
-            exact=True,
-        )
-        if offset_button.count() > 0:
-            offset_button.scroll_into_view_if_needed()
-            canvas.screenshot(path=acceptance_test_data_folder / "offset_before.png")
-            # Only click if enabled
-            if not offset_button.is_disabled():
-                offset_button.click()
-                page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-                canvas.screenshot(path=acceptance_test_data_folder / "offset_after.png")
+        # This button may be disabled if preconditions aren't met
+        click_update_offset_button(page, canvas, acceptance_test_data_folder)
 
         # 3-11. Toggle all visualization layers and take screenshots
         # Deselect "Show all tracks" before testing individual highlight options

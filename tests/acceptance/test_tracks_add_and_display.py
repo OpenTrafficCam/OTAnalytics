@@ -24,6 +24,7 @@ from tests.utils.playwright_helpers import (
 
 SCREENSHOT_PATH = "screenshots"
 ALL_TRACKS_FILE_NAME = "all_tracks.png"
+FILTERED_TRACKS_FILE_NAME = "filtered_tracks.png"
 
 # Ensure pytest-playwright is available; otherwise skip this module
 playwright = pytest.importorskip(
@@ -43,6 +44,7 @@ def test_add_tracks_and_display_all(
     page: Page,
     external_app: NiceGUITestServer,
     resource_manager: ResourceManager,
+    acceptance_test_data_folder: Path,
 ) -> None:
     """Acceptance (Playwright): Add tracks and display all trajectories.
 
@@ -56,7 +58,7 @@ def test_add_tracks_and_display_all(
     Expected Results:
     - Track file loads without error
     - Canvas shows track trajectories when layer is enabled
-    - Canvas image changes after enabling the tracks layer
+    - Canvas image matches reference screenshot
     """
     # Setup
     base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
@@ -74,10 +76,12 @@ def test_add_tracks_and_display_all(
     enable_all_tracks_layer(page)
 
     # Verify trajectories are displayed (canvas changed)
-    canvas_with_tracks = wait_for_canvas_change(page, canvas, canvas_before_tracks)
-    assert (
-        canvas_with_tracks != canvas_before_tracks
-    ), "Canvas did not change after enabling tracks layer - tracks not displayed"
+    wait_for_canvas_change(page, canvas, canvas_before_tracks)
+
+    # Capture and compare with reference image
+    verify_canvas_matches_reference(
+        canvas, acceptance_test_data_folder, ALL_TRACKS_FILE_NAME
+    )
 
 
 @pytest.mark.skip(reason="only works in headed right now")
@@ -135,13 +139,12 @@ def test_filter_tracks_by_date(
     verify_filter_range_label_visible(page)
 
     # Verify canvas updates to show filtered tracks
-    canvas_with_filtered_tracks = wait_for_canvas_change(
-        page, canvas, canvas_with_all_tracks
-    )
+    wait_for_canvas_change(page, canvas, canvas_with_all_tracks)
 
-    assert (
-        canvas_with_filtered_tracks != canvas_with_all_tracks
-    ), "Canvas did not update after applying date filter - filter not working"
+    # Capture and compare with reference image
+    verify_canvas_matches_reference(
+        canvas, acceptance_test_data_folder, FILTERED_TRACKS_FILE_NAME
+    )
 
 
 @pytest.mark.skip(reason="only works in headed right now")

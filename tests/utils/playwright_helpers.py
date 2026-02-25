@@ -41,6 +41,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_VIDEO_TAB,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.visualization_offset_slider_form import (  # noqa
+    MARKER_UPDATE_OFFSET,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_BUTTON_ADD as MARKER_VIDEO_ADD,
 )
@@ -1007,6 +1010,39 @@ def update_flow_highlighting(
     button.scroll_into_view_if_needed()
     button.click()
     page.wait_for_timeout(timeout_ms)
+
+
+def click_update_offset_button(
+    page: Page,
+    canvas: Any,
+    screenshot_folder: Path,
+    timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+) -> bool:
+    """Click the 'Update offset' button if available and enabled.
+
+    Args:
+        page: Playwright page object
+        canvas: Canvas locator for taking screenshots
+        screenshot_folder: Folder where screenshots will be saved
+        timeout_ms: Timeout in milliseconds to wait after clicking
+
+    Returns:
+        True if button was clicked, False if button was not available or disabled
+    """
+    offset_button = page.get_by_test_id(MARKER_UPDATE_OFFSET)
+
+    if offset_button.count() > 0:
+        offset_button.scroll_into_view_if_needed()
+        canvas.screenshot(path=screenshot_folder / "offset_before.png")
+
+        # Only click if enabled
+        if not offset_button.is_disabled():
+            offset_button.click()
+            page.wait_for_timeout(timeout_ms)
+            canvas.screenshot(path=screenshot_folder / "offset_after.png")
+            return True
+
+    return False
 
 
 def capture_and_verify_baseline(
