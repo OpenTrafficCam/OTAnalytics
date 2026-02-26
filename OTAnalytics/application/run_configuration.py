@@ -2,7 +2,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Sequence
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_EVENT,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_NUM_PROCESSES,
@@ -69,10 +73,6 @@ class RunConfiguration(OtConfigDefaultValueProvider):
     @property
     def cli_stream_mode(self) -> bool:
         return self.start_cli and self._cli_args.cli_mode == CliMode.STREAM
-
-    @property
-    def cli_chunk_size(self) -> int:
-        return self._cli_args.cli_chunk_size
 
     @property
     def debug(self) -> bool:
@@ -158,6 +158,16 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         return {DEFAULT_COUNTING_INTERVAL_IN_MINUTES}
 
     @property
+    def counting_event(self) -> CountingEvent:
+        if self._cli_args.counting_event:
+            return self._cli_args.counting_event
+        if self._otconfig:
+            return CountingEvent.parse(
+                self._otconfig.analysis.export_config.counting_event
+            )
+        return CountingEvent.parse(DEFAULT_COUNTING_EVENT)
+
+    @property
     def num_processes(self) -> int:
         return DEFAULT_NUM_PROCESSES
 
@@ -234,6 +244,12 @@ class RunConfiguration(OtConfigDefaultValueProvider):
     @property
     def show_svz(self) -> bool:
         return self._cli_args.show_svz
+
+    @property
+    def file_picker_directory(self) -> Path:
+        if self._cli_args.file_picker_directory:
+            return Path(self._cli_args.file_picker_directory)
+        return Path.home()
 
 
 RunConfigurationBuilder = Callable[[CliArguments, OtConfig | None], RunConfiguration]

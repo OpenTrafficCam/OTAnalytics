@@ -1,3 +1,4 @@
+import asyncio
 from functools import cached_property
 
 from OTAnalytics.application.use_cases.create_events import (
@@ -26,7 +27,10 @@ from OTAnalytics.plugin_ui.cli import (
 
 class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def start(self) -> None:
-        self.application.start()
+        asyncio.run(self.async_start())
+
+    async def async_start(self) -> None:
+        await self.application.start()
 
     @cached_property
     def application(self) -> OTAnalyticsCli:

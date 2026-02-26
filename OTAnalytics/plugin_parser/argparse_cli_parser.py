@@ -1,5 +1,8 @@
 from argparse import ArgumentParser
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode, CliParser
 
 
@@ -44,16 +47,15 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
-            "--cli-chunk-size",
-            type=int,
-            help="Specify the chunk size for streaming OTAnalytics CLI.",
-            default=10,
-            required=False,
-        )
-        self._parser.add_argument(
             "--show-svz",
             action="store_true",
             help="Show SVZ-Tab in OTAnalytics GUI. If omitted the tab will be hidden.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--file-picker-directory",
+            type=str,
+            help="Path to base folder of file picker in webui.",
             required=False,
         )
         self._parser.add_argument(
@@ -117,13 +119,21 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
-            "--no-track-export",
+            "--counting-event",
+            type=CountingEvent,
+            choices=list(CountingEvent),
+            help="Event used for aggregating counts. "
+            + f"Choose from: {list(CountingEvent)}.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--track-export",
             action="store_true",
             help="Do not export tracks as csv",
             required=False,
         )
         self._parser.add_argument(
-            "--no-track-statistics-export",
+            "--track-statistics-export",
             action="store_true",
             help="Do not export track statistics as csv",
             required=False,
@@ -170,10 +180,10 @@ class ArgparseCliParser(CliParser):
             start_cli=args.cli,
             start_webui=args.webui,
             cli_mode=args.cli_mode,
-            cli_chunk_size=args.cli_chunk_size,
             debug=args.debug,
             logfile_overwrite=args.logfile_overwrite,
             show_svz=args.show_svz,
+            file_picker_directory=args.file_picker_directory,
             config_file=args.config,
             track_files=args.ottrks,
             otflow_file=args.otflow,
@@ -182,8 +192,9 @@ class ArgparseCliParser(CliParser):
             save_suffix=args.save_suffix,
             event_formats=args.event_formats,
             count_intervals=args.count_intervals,
-            track_export=not args.no_track_export,
-            track_statistics_export=not args.no_track_statistics_export,
+            counting_event=args.counting_event,
+            track_export=args.track_export,
+            track_statistics_export=args.track_statistics_export,
             log_file=args.logfile,
             include_classes=args.include_classes,
             exclude_classes=args.exclude_classes,

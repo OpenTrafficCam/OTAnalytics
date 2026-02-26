@@ -11,6 +11,7 @@ from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import DEFAULT_COUNTING_INTERVAL_IN_MINUTES
@@ -25,6 +26,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import (
     MinimalInfoBox,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
+    COUNTING_EVENT,
     END,
     EXPORT_FILE,
     EXPORT_FORMAT,
@@ -133,6 +135,9 @@ class CtkUiFactory(UiFactory):
             viewmodel=viewmodel,
         ).get_data()
         logger().debug(export_values)
+        counting_event_str = export_values.get(
+            COUNTING_EVENT, CountingEvent.START.value
+        )
         return CountingSpecificationDto(
             interval_in_minutes=export_values[INTERVAL],
             start=export_values[START],
@@ -141,6 +146,7 @@ class CtkUiFactory(UiFactory):
             output_format=export_values[EXPORT_FORMAT],
             output_file=export_values[EXPORT_FILE],
             export_mode=OVERWRITE,
+            counting_event=CountingEvent.parse(counting_event_str),
         )
 
     async def configure_section(

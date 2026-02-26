@@ -27,6 +27,7 @@ from OTAnalytics.plugin_ui.base_application import (
 from OTAnalytics.plugin_ui.nicegui_application import (
     OtAnalyticsNiceGuiApplicationStarter,
 )
+from tests.utils.builders.run_configuration import create_run_config
 
 
 class Runnable(Protocol):
@@ -61,6 +62,44 @@ class MultiprocessingWorker(Process):
         self._runner.run()
 
 
+def file_picker_directory() -> str:
+    return str(Path().cwd())
+
+
+class NiceguiWorker(Process):
+    """A worker that runs a given task in a separate process using the multiprocessing
+    library.
+
+    Args:
+        runner (Runnable): The task to be run by this worker.
+    """
+
+    def __init__(self, run_config: RunConfiguration | None = None) -> None:
+        super(Process, self).__init__()
+        self._run_config = (
+            run_config
+            if run_config
+            else create_run_config(
+                start_cli=False,
+                start_webui=True,
+                file_picker_directory=file_picker_directory(),
+            )
+        )
+
+    def start(self) -> None:
+        """Starts the worker process and runs the task."""
+        Process.start(self)
+
+    def stop(self) -> None:
+        """Stops the worker process and terminates the task."""
+        self.terminate()
+        self.join(10)
+
+    def run(self) -> None:
+        """Runs the task in the worker process."""
+        OtAnalyticsNiceGuiApplicationStarter(self._run_config).start()
+
+
 class NiceguiOtanalyticsBuilder(OtAnalyticsNiceGuiApplicationStarter):
 
     def build(self) -> MultiprocessingWorker:
@@ -75,7 +114,6 @@ class NiceguiOtanalyticsBuilder(OtAnalyticsNiceGuiApplicationStarter):
         cli_args = CliArguments(
             start_cli=False,
             cli_mode=CliMode.BULK,
-            cli_chunk_size=1,
             debug=False,
             logfile_overwrite=True,
             track_export=False,

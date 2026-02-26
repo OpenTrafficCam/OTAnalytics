@@ -16,6 +16,7 @@ def create_road_user_assignment(
         ras.FLOW_ID: assignment.assignment.id.id,
         ras.FLOW_NAME: assignment.assignment.name,
         ras.ROAD_USER_ID: assignment.road_user,
+        ras.ROAD_USER_TYPE: assignment.road_user_type,
         ras.MAX_CONFIDENCE: max_confidence,
         ras.START_OCCURRENCE: start_event.occurrence.strftime(ras.DATE_TIME_FORMAT),
         ras.START_OCCURRENCE_DATE: start_event.occurrence.strftime(ras.DATE_FORMAT),
