@@ -29,7 +29,7 @@ dependencies = [
     "ijson==3.3.0",
     "matplotlib==3.10.0",
     "more-itertools==10.7.0",
-    "nicegui==2.24.1",
+    "nicegui==3.8.0",
     "numpy==2.1.1",
     "opencv-python-headless==4.10.0.84",
     "openpyxl==3.1.5",
