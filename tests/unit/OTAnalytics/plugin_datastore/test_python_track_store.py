@@ -36,6 +36,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
 )
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
+    FilteredPythonTrackDataset,
     PythonDetection,
     PythonTrack,
     PythonTrackDataset,
@@ -52,7 +53,11 @@ from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk_format
 from tests.utils.assertions import (
     assert_track_geometry_dataset_add_all_called_correctly,
 )
-from tests.utils.builders.track_builder import TrackBuilder, create_track
+from tests.utils.builders.track_builder import (
+    TrackBuilder,
+    create_track,
+    mark_last_detection_finished,
+)
 from tests.utils.builders.track_dataset_provider import create_mock_geometry_dataset
 from tests.utils.builders.track_segment_builder import TrackSegmentDatasetBuilder
 
@@ -538,6 +543,77 @@ class TestPythonTrackDataset:
             call([car_track.id.id]),
             call([pedestrian_track.id.id]),
         ]
+
+    def test_split_finished(self, car_track: Track, pedestrian_track: Track) -> None:
+        finished_track = mark_last_detection_finished(car_track)
+        dataset = PythonTrackDataset.from_list(
+            [finished_track, pedestrian_track],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.track_ids == PythonTrackIdSet({finished_track.id})
+        assert remaining.track_ids == PythonTrackIdSet({pedestrian_track.id})
+
+    def test_split_finished_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset(ShapelyTrackGeometryDataset.from_track_dataset)
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.empty
+        assert remaining.empty
+
+    def test_split_finished_without_finished_tracks(
+        self, car_track: Track, pedestrian_track: Track
+    ) -> None:
+        dataset = PythonTrackDataset.from_list(
+            [car_track, pedestrian_track],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.empty
+        assert remaining.track_ids == PythonTrackIdSet(
+            {car_track.id, pedestrian_track.id}
+        )
+
+    def test_split_finished_without_remaining_tracks(
+        self, car_track: Track, pedestrian_track: Track
+    ) -> None:
+        finished_car = mark_last_detection_finished(car_track)
+        finished_pedestrian = mark_last_detection_finished(pedestrian_track)
+        dataset = PythonTrackDataset.from_list(
+            [finished_car, finished_pedestrian],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.track_ids == PythonTrackIdSet(
+            {finished_car.id, finished_pedestrian.id}
+        )
+        assert remaining.empty
+
+    def test_split_finished_filtered_dataset(
+        self, car_track: Track, pedestrian_track: Track
+    ) -> None:
+        finished_car = mark_last_detection_finished(car_track)
+        dataset = PythonTrackDataset.from_list(
+            [finished_car, pedestrian_track],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+        target = FilteredPythonTrackDataset(
+            dataset,
+            include_classes=frozenset({finished_car.classification}),
+            exclude_classes=frozenset(),
+        )
+
+        finished, remaining = target.split_finished()
+
+        assert finished.track_ids == PythonTrackIdSet({finished_car.id})
+        assert remaining.empty
 
     def test_filter_by_minimum_detection_length(
         self, car_track: Track, pedestrian_track: Track

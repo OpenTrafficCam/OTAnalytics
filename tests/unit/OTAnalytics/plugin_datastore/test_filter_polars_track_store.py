@@ -14,6 +14,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
     PolarsTrackGeometryDataset,
 )
 from tests.utils.assertions import assert_track_datasets_equal
+from tests.utils.builders.track_builder import mark_last_detection_finished
 
 
 @pytest.fixture
@@ -56,6 +57,27 @@ class TestFilterByIdPolarsTrackDataset:
         target = FilterByIdPolarsTrackDataset(dataset, track_ids)
 
         assert_track_datasets_equal(target, expected)
+
+    def test_split_finished(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+        bicycle_track: Track,
+    ) -> None:
+        finished_track = mark_last_detection_finished(car_track)
+        dataset = PolarsTrackDataset.from_list(
+            [finished_track, pedestrian_track, bicycle_track], track_geometry_factory
+        )
+        track_ids = [finished_track.id.id, pedestrian_track.id.id]
+        target = FilterByIdPolarsTrackDataset(dataset, track_ids)
+
+        finished, remaining = target.split_finished()
+
+        finished_ids = {track_id.id for track_id in finished.track_ids}
+        remaining_ids = {track_id.id for track_id in remaining.track_ids}
+        assert finished_ids == {finished_track.id.id}
+        assert remaining_ids == {pedestrian_track.id.id}
 
 
 class TestFilterLastNSegmentsPolarsTrackDataset:

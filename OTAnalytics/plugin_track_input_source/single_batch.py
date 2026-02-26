@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterator
+from typing import AsyncIterator
 
 from OTAnalytics.plugin_parser.otvision_parser import OttrkFormatFixer
 from OTAnalytics.plugin_track_input_source.template import OttrkFileInputSourceTemplate
@@ -10,5 +10,6 @@ class SingleBatchOttrkFileInputSource(OttrkFileInputSourceTemplate):
         super().__init__(format_fixer)
         self._track_files = track_files
 
-    def produce(self) -> Iterator[Path]:
-        yield from self._sort_files(self._track_files)
+    async def produce(self) -> AsyncIterator[Path]:
+        for file in self._sort_files(self._track_files):
+            yield file

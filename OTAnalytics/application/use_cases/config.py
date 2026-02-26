@@ -6,8 +6,12 @@ from OTAnalytics.application.state import ConfigurationFile, FileState
 from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
 
 
-class MissingDate(Exception):
-    pass
+class ConfigValidationError(Exception):
+    """Raised when configuration validation fails."""
+
+    def __init__(self, errors: list[str]) -> None:
+        self.errors = errors
+        super().__init__("; ".join(errors))
 
 
 class SaveOtconfig:
@@ -24,29 +28,37 @@ class SaveOtconfig:
         self._get_current_remark = get_current_remark
 
     def __call__(self, file: Path) -> None:
-        if self._datastore.project.start_date:
-            project = self._datastore.project
-            video_files = self._datastore.get_all_videos()
-            track_files = self._datastore._track_file_repository.get_all()
-            sections = self._datastore.get_all_sections()
-            flows = self._datastore.get_all_flows()
-            remark = self._get_current_remark.get()
-            self._config_parser.serialize(
-                project=project,
-                video_files=video_files,
-                track_files=track_files,
-                sections=sections,
-                flows=flows,
-                file=file,
-                remark=remark,
+        project = self._datastore.project
+
+        # Collect all validation errors
+        errors = []
+        if not project.name or not project.name.strip():
+            errors.append("Project name is missing or empty")
+        if not project.start_date:
+            errors.append("Start date and time are missing or incomplete")
+
+        if errors:
+            raise ConfigValidationError(errors)
+
+        video_files = self._datastore.get_all_videos()
+        track_files = self._datastore._track_file_repository.get_all()
+        sections = self._datastore.get_all_sections()
+        flows = self._datastore.get_all_flows()
+        remark = self._get_current_remark.get()
+        self._config_parser.serialize(
+            project=project,
+            video_files=video_files,
+            track_files=track_files,
+            sections=sections,
+            flows=flows,
+            file=file,
+            remark=remark,
+        )
+        self._state.last_saved_config.set(
+            ConfigurationFile(
+                file,
+                self._config_parser.convert(
+                    project, video_files, track_files, sections, flows, file, remark
+                ),
             )
-            self._state.last_saved_config.set(
-                ConfigurationFile(
-                    file,
-                    self._config_parser.convert(
-                        project, video_files, track_files, sections, flows, file, remark
-                    ),
-                )
-            )
-        else:
-            raise MissingDate()
+        )

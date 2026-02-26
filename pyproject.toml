@@ -60,13 +60,13 @@ dev = [
     "pytest==8.3.4",
     "pytest-asyncio==0.24.0",
     "pytest-benchmark==5.1.0",
-    "pytest-cov==6.0.0",
-    "pytest-lazy-fixtures==1.1.2",
+    "pytest-cov==7.0.0",
+    "pytest-lazy-fixtures==1.4.0",
     "pytest-playwright==0.7.1",
     "pytest-timeout==2.4.0",
     "PyYAML==6.0.2",
-    "selenium==4.32.0",
-    "twine==6.1.0",
+    "selenium==4.40.0",
+    "twine==6.2.0",
     "yamllint==1.35.1",
 ]
 
@@ -103,3 +103,4 @@ disallow_untyped_defs = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests/unit", "tests/acceptance", "tests/benchmark", "tests/regression"]
