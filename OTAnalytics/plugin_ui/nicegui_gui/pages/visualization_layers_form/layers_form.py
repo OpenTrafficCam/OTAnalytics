@@ -12,10 +12,14 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     VisualizationLayersKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
+from OTAnalytics.plugin_ui.visualization.visualization import ALL
 
 MARKER_PROJECT_NAME = "marker-project-name"
 MARKER_START_DATE = "marker-start-date"
 MARKER_START_TIME = "marker-start-time"
+MARKER_VISUALIZATION_LAYERS_ALL = "marker-visualization-layers-all"
+MARKER_UPDATE_FLOW_HIGHLIGHTING = "marker-update-flow-highlighting"
 
 
 class LayersForm(AbstractFrameTrackPlotting):
@@ -37,18 +41,27 @@ class LayersForm(AbstractFrameTrackPlotting):
         for layer_group in self._layers:
             ui.label(layer_group.name)
             for layer in layer_group.layers:
-                ui.checkbox(
+                checkbox = ui.checkbox(
                     layer.get_name(),
                     value=layer.is_enabled(),
                     on_change=lambda event, current=layer: current.set_enabled(
                         event.value
                     ),
                 )
-        ui.button(
+                if layer_group.name == "Show tracks" and layer.get_name() == ALL:
+                    checkbox.mark(MARKER_VISUALIZATION_LAYERS_ALL)
+                    checkbox.props(
+                        f"{TestIdAttributes.DATA_TESTID}={MARKER_VISUALIZATION_LAYERS_ALL}"  # noqa
+                    )
+        button = ui.button(
             self._resource_manager.get(
                 VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING
             ),
             on_click=self._create_events,
+        )
+        button.mark(MARKER_UPDATE_FLOW_HIGHLIGHTING)
+        button.props(
+            f"{TestIdAttributes.DATA_TESTID}={MARKER_UPDATE_FLOW_HIGHLIGHTING}"
         )
         return self
 

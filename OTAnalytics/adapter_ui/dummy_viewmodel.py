@@ -3,7 +3,7 @@ import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, cast
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -370,7 +370,7 @@ class DummyViewModel(
             frame.set_enabled_general_buttons(general_buttons_enabled)
 
     def _get_frames(self) -> list[AbstractFrame | AbstractFrameProject]:
-        return [
+        frames: list[AbstractFrame | AbstractFrameProject] = [
             self.frame_tracks,
             self.frame_offset,
             self.frame_videos,
@@ -379,6 +379,9 @@ class DummyViewModel(
             self.frame_flows,
             self.frame_analysis,
         ]
+        if self._frame_filter is not None:
+            frames.append(cast(AbstractFrame, self._frame_filter))
+        return frames
 
     def _update_enabled_track_buttons(self) -> None:
         action_running = self._application.action_state.action_running.get()
@@ -814,7 +817,10 @@ class DummyViewModel(
     @action
     async def load_tracks(self) -> None:
         track_files = await self._ui_factory.askopenfilenames(
-            title="Load track files", filetypes=[("tracks file", "*.ottrk")]
+            title="Load track files",
+            filetypes=[
+                ("tracks file", "*.ottrk"),
+            ],
         )
         if not track_files:
             return

@@ -4,16 +4,17 @@ import time
 from pathlib import Path
 from typing import Any, Iterable
 
+import pytest
+from PIL import Image, ImageChops  # type: ignore
 from playwright.sync_api import Error, Page, TimeoutError
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
+    AddTracksKeys,
     AddVideoKeys,
-    FlowAndSectionKeys,
     FlowKeys,
     ResourceManager,
     SectionKeys,
-    TrackFormKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_END_SECTION,
@@ -36,7 +37,11 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
+    MARKER_TRACK_TAB,
     MARKER_VIDEO_TAB,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.visualization_offset_slider_form import (  # noqa
+    MARKER_UPDATE_OFFSET,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_BUTTON_ADD as MARKER_VIDEO_ADD,
@@ -54,14 +59,33 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
     MARKER_START_DATE,
     MARKER_START_TIME,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+    MARKER_TAB_SECTION,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     MARKER_BUTTON_ADD as MARKER_FLOW_ADD,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     MARKER_FLOW_TABLE,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+    MARKER_FILTER_BY_DATE_APPLY_BUTTON,
+    MARKER_FILTER_BY_DATE_BUTTON,
+    MARKER_FILTER_BY_DATE_CHECKBOX,
+    MARKER_FILTER_END_DATE_INPUT,
+    MARKER_FILTER_END_TIME_INPUT,
+    MARKER_FILTER_RANGE_LABEL,
+    MARKER_FILTER_START_DATE_INPUT,
+    MARKER_FILTER_START_TIME_INPUT,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
+    MARKER_UPDATE_FLOW_HIGHLIGHTING,
+    MARKER_VISUALIZATION_LAYERS_ALL,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 from tests.acceptance.conftest import (
+    ACCEPTANCE_TEST_TRACK_FILES,
+    ACCEPTANCE_TEST_VIDEO_FILE,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     IMPORT_VERIFY_MAX_POLLS,
     PLAYWRIGHT_POLL_INTERVAL_MS,
@@ -69,6 +93,7 @@ from tests.acceptance.conftest import (
     PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
     PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
+    PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
 )
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
@@ -308,11 +333,8 @@ def go_to_sections_with_one_video(page: Page, rm: ResourceManager) -> None:
     - Select the video row to render a frame
     - Switch to the Sections tab
     """
-    # Prefer stable marker to open Videos tab; fallback to text if needed
-    try:
-        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
-    except Exception:
-        page.get_by_text(rm.get(TrackFormKeys.TAB_VIDEO), exact=True).click()
+    # Open Videos tab using marker
+    search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
 
     # Ensure a clean slate
     reset_videos_tab(page, rm)
@@ -328,7 +350,7 @@ def go_to_sections_with_one_video(page: Page, rm: ResourceManager) -> None:
     click_table_cell_with_text(page, v1.name)
 
     # Switch to Sections tab
-    page.get_by_text(rm.get(FlowAndSectionKeys.TAB_SECTION), exact=True).click()
+    search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
 
 
 def open_part(page: Page, part: str) -> None:
@@ -337,18 +359,47 @@ def open_part(page: Page, part: str) -> None:
     last_err: Exception | None = None
     while time.time() < deadline:
         try:
-            cell = page.locator(".ag-cell-value", has_text=part).first
-            cell.wait_for(state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS)
-            cell.dblclick()
+            # Look for the row in the ag-grid that contains the text
+            # The file picker shows folders as "📁 <strong>foldername</strong>"
+            row = (
+                page.locator(".ag-center-cols-container .ag-row")
+                .filter(has_text=part)
+                .first
+            )
+            row.wait_for(
+                state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS * 2
+            )
+            row.dblclick()
+            # Wait for directory to load after double-click
+            page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
             return
         except Exception as e:
-            last_cell = page.locator(".ag-cell-value").last
+            # Try to scroll if possible
             try:
-                last_cell.scroll_into_view_if_needed()
+                last_row = page.locator(".ag-center-cols-container .ag-row").last
+                last_row.scroll_into_view_if_needed()
             except Exception:
                 pass
             last_err = e
+            page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
     if last_err:
+        # Try to capture screenshot and grid content for debugging
+        try:
+            screenshot_path = f"/tmp/file_picker_failure_{part}.png"
+            page.screenshot(path=screenshot_path)
+            logger.error(f"Screenshot saved to: {screenshot_path}")
+        except Exception:
+            pass
+
+        try:
+            # Log what's actually in the grid
+            all_cells = page.locator(".ag-cell-value").all_inner_texts()
+            logger.error(
+                f"Grid contains {len(all_cells)} cells. First 20: {all_cells[:20]}"
+            )
+        except Exception:
+            pass
+
         raise last_err
     raise AssertionError(f"Could not find table cell with text: {part}")
 
@@ -356,7 +407,23 @@ def open_part(page: Page, part: str) -> None:
 def add_video_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
     """Open the in-app file picker and navigate to select the given video path."""
     # Prefer stable marker-based lookup; fall back to label if marker is unavailable
-    search_for_marker_element(page, MARKER_VIDEO_ADD).first.click()
+    try:
+        add_button = search_for_marker_element(page, MARKER_VIDEO_ADD).first
+        add_button.wait_for(
+            state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS
+        )
+    except (TimeoutError, Error):
+        # Fallback to searching by button text
+        button_text = rm.get(AddVideoKeys.BUTTON_ADD_VIDEOS)
+        add_button = page.get_by_text(button_text, exact=True)
+        add_button.wait_for(
+            state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS
+        )
+    add_button.click()
+
+    # Wait for file picker dialog to open
+    page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
+
     ui_path = path.relative_to(file_picker_directory())
     for part in ui_path.parts:
         open_part(page, part)
@@ -546,7 +613,7 @@ def create_section(
                 return
         except Exception:
             pass
-        time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+        time.sleep(ACCEPTANCE_TEST_WAIT_TIMEOUT)
     raise AssertionError(f"Section name not found after apply: {section_name}")
 
 
@@ -597,3 +664,564 @@ def wait_for_flow_present(page: Page, flow_name: str) -> None:
             pass
         time.sleep(PLAYWRIGHT_POLL_INTERVAL_SECONDS)
     raise AssertionError(f"Flow '{flow_name}' did not appear in table")
+
+
+# ----------------------
+# Canvas helpers
+# ----------------------
+
+
+def toggle_and_screenshot(
+    page: Page,
+    canvas: Any,
+    checkbox_text: str,
+    screenshot_folder: Path,
+    filename_base: str,
+    nth: int = 0,
+    timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+) -> None:
+    """Toggle a checkbox on, take screenshot, then toggle off.
+
+    Args:
+        page: Playwright page object
+        canvas: Canvas locator for taking screenshots
+        checkbox_text: Text of the checkbox to find
+        screenshot_folder: Folder where screenshots will be saved
+        filename_base: Base name for screenshot files
+        nth: Which occurrence to use if multiple checkboxes have same text
+        timeout_ms: Timeout in milliseconds to wait after toggling
+    """
+    checkbox = page.get_by_text(checkbox_text, exact=True).nth(nth)
+    checkbox.scroll_into_view_if_needed()
+
+    # Toggle on and screenshot
+    if not checkbox.is_checked():
+        checkbox.click()
+    page.wait_for_timeout(timeout_ms)
+    canvas.screenshot(path=screenshot_folder / f"{filename_base}.png")
+
+    # Toggle off (no screenshot)
+    checkbox.click()
+    page.wait_for_timeout(timeout_ms)
+
+
+def wait_for_canvas_change(
+    page: Page, canvas_locator: Any, baseline: bytes, timeout: float | None = None
+) -> bytes:
+    """Wait until canvas image changes from baseline.
+
+    Args:
+        page: Playwright page object
+        canvas_locator: Locator for the canvas element
+        baseline: Baseline screenshot bytes to compare against
+        timeout: Optional timeout in seconds (defaults to ACCEPTANCE_TEST_WAIT_TIMEOUT)
+
+    Returns:
+        The new screenshot bytes after change is detected
+
+    Raises:
+        AssertionError: If canvas does not change within timeout
+    """
+    if timeout is None:
+        timeout = ACCEPTANCE_TEST_WAIT_TIMEOUT
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
+        current = canvas_locator.screenshot()
+        if current != baseline:
+            return current
+    raise AssertionError("Canvas did not change within timeout")
+
+
+def compare_screenshots(actual: bytes, expected: bytes) -> bool:
+    """Compare two screenshot byte arrays for equality.
+
+    Args:
+        actual: Actual screenshot bytes to compare
+        expected: Expected screenshot bytes to compare against
+
+    Returns:
+        True if screenshots match, False otherwise
+    """
+    return actual == expected
+
+
+# ----------------------
+# Track helpers
+# ----------------------
+
+
+def setup_tracks_display(
+    page: Page,
+    rm: ResourceManager,
+    video_file: Path,
+    track_file: Path | list[Path],
+    enable_tracks_layer: bool = True,
+) -> Any:
+    """Setup for tracks display: add video, tracks, optionally enable layer.
+
+    Args:
+        page: Playwright page object
+        rm: ResourceManager for localized strings
+        video_file: Path to video file
+        track_file: Path to track file or list of track files
+        enable_tracks_layer: Whether to enable "Show all tracks" layer (default: True)
+
+    Returns:
+        Canvas locator that can be used for screenshots/verification
+    """
+    # Wait for page to be fully loaded by checking for "Project" text
+    page.get_by_text("Project").first.wait_for(
+        state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS
+    )
+
+    # Add video
+    video_tab = search_for_marker_element(page, MARKER_VIDEO_TAB).first
+    video_tab.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    video_tab.click()
+    page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
+    add_video_via_picker(page, rm, video_file)
+    page.wait_for_timeout(150)
+
+    # Add tracks
+    search_for_marker_element(page, MARKER_TRACK_TAB).first.click()
+    track_files = track_file if isinstance(track_file, list) else [track_file]
+    for tf in track_files:
+        add_track_via_picker(page, rm, tf)
+
+    # Get canvas reference
+    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
+    canvas.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+    # Enable tracks layer if requested
+    if enable_tracks_layer:
+        checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+        checkbox.scroll_into_view_if_needed()
+        checkbox.click()
+        page.wait_for_timeout(200)
+
+    return canvas
+
+
+def enable_and_apply_date_filter(
+    page: Page,
+    *,
+    use_minimal_range: bool = True,
+    custom_start_date: str | None = None,
+    custom_start_time: str | None = None,
+    custom_end_date: str | None = None,
+    custom_end_time: str | None = None,
+) -> None:
+    """Enable date filter checkbox, open dialog, configure, and apply.
+
+    Args:
+        page: Playwright page object
+        use_minimal_range: If True, sets end = start for minimal range (default: True)
+        custom_start_date: Optional custom start date (format: YYYY-MM-DD)
+        custom_start_time: Optional custom start time (format: HH:MM:SS)
+        custom_end_date: Optional custom end date (format: YYYY-MM-DD)
+        custom_end_time: Optional custom end time (format: HH:MM:SS)
+    """
+    # Enable filter checkbox
+    filter_checkbox = page.get_by_test_id(MARKER_FILTER_BY_DATE_CHECKBOX)
+    filter_checkbox.scroll_into_view_if_needed()
+    filter_checkbox.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+    # Check if already checked
+    if not filter_checkbox.is_checked():
+        filter_checkbox.click()
+        page.wait_for_timeout(500)  # Wait for button to become enabled
+
+    # Open filter dialog
+    filter_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
+    # Wait for button to be enabled after checkbox is checked
+    filter_button.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+    # Wait for button to be enabled (not disabled)
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    while time.time() < deadline:
+        disabled_attr = filter_button.get_attribute("disabled")
+        if disabled_attr is None:
+            break
+        page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
+
+    # Force click even if appears disabled (might be a visual state issue)
+    filter_button.click(force=True)
+
+    # Get input elements
+    start_date_input = page.get_by_test_id(MARKER_FILTER_START_DATE_INPUT)
+    start_time_input = page.get_by_test_id(MARKER_FILTER_START_TIME_INPUT)
+    end_date_input = page.get_by_test_id(MARKER_FILTER_END_DATE_INPUT)
+    end_time_input = page.get_by_test_id(MARKER_FILTER_END_TIME_INPUT)
+
+    start_date_input.wait_for(state="visible")
+    start_time_input.wait_for(state="visible")
+    end_date_input.wait_for(state="visible")
+    end_time_input.wait_for(state="visible")
+
+    # Configure filter range
+    if custom_start_date:
+        start_date_input.fill("")
+        start_date_input.type(custom_start_date)
+    if custom_start_time:
+        start_time_input.fill("")
+        start_time_input.type(custom_start_time)
+
+    if use_minimal_range and not (custom_end_date or custom_end_time):
+        # Set end = start for minimal range
+        start_date_value = start_date_input.input_value()
+        start_time_value = start_time_input.input_value()
+        end_date_input.fill("")
+        end_date_input.type(start_date_value)
+        end_time_input.fill("")
+        end_time_input.type(start_time_value)
+    else:
+        if custom_end_date:
+            end_date_input.fill("")
+            end_date_input.type(custom_end_date)
+        if custom_end_time:
+            end_time_input.fill("")
+            end_time_input.type(custom_end_time)
+
+    # Apply filter
+    apply_btn = page.get_by_test_id(MARKER_FILTER_BY_DATE_APPLY_BUTTON)
+    apply_btn.click()
+    page.wait_for_timeout(200)
+
+
+def verify_filter_active(page: Page) -> None:
+    """Verify that the date filter is active by checking button attribute."""
+
+    # Wait a bit for filter to be applied
+    page.wait_for_timeout(500)
+
+    filter_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
+    filter_button.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+    # Wait for the attribute to be set
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    while time.time() < deadline:
+        active_value = filter_button.get_attribute("data-filter-by-date-active")
+        if active_value == "true":
+            return
+        page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
+
+    # Final check
+    active_value = filter_button.get_attribute("data-filter-by-date-active")
+    assert active_value == "true", f"Filter is not active (value: {active_value})"
+
+
+def add_track_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
+    """Add a track file via the in-app file picker.
+
+    Uses the same approach as add_video_via_picker for consistency.
+    """
+    page.get_by_text(rm.get(AddTracksKeys.BUTTON_ADD_TRACKS), exact=True).click()
+
+    # Wait for file picker dialog to open
+    page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
+
+    # Navigate and select file (same as video picker)
+    ui_path = path.relative_to(file_picker_directory())
+    for part in ui_path.parts:
+        open_part(page, part)
+
+
+def setup_with_preconfigured_otconfig(
+    page: Page,
+    rm: ResourceManager,
+    otconfig_path: Path,
+) -> None:
+    """Load a pre-configured .otconfig file
+    that already has video, tracks, and sections.
+
+    This skips the individual steps of loading video,
+    adding tracks, and creating sections
+    by loading a configuration file that already contains all of that setup.
+
+    Args:
+        page: Playwright page object
+        rm: ResourceManager for localized strings
+        otconfig_path: Path to the pre-configured .otconfig file
+    """
+    # Wait for page to be ready
+    page.get_by_text("Project").first.wait_for(
+        state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS
+    )
+
+    # Load the pre-configured project file
+    open_project_otconfig(page, rm, otconfig_path)
+
+    # Wait for the project to load
+    page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
+
+    # Verify canvas is visible (indicating project loaded successfully)
+    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
+    canvas.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+
+# ----------------------
+# Test helper functions for tracks display tests
+# ----------------------
+
+
+def navigate_to_main_page_with_url(page: Page, base_url: str) -> None:
+    """Navigate to the main page of the application."""
+    page.goto(base_url + ENDPOINT_MAIN_PAGE)
+
+
+def load_main_page(page: Page, external_app: Any) -> None:
+    """Load the main page from external_app.
+
+    Args:
+        page: Playwright page object
+        external_app: NiceGUITestServer instance with base_url attribute
+    """
+    base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
+    page.goto(base_url + ENDPOINT_MAIN_PAGE)
+
+
+def get_test_files_from_data_dir(data_dir: Path) -> tuple[Path, list[Path]]:
+    """Get paths to test video and track files.
+
+    Args:
+        data_dir: Path to the data directory containing test files
+
+    Returns:
+        Tuple of (video_file, list of track_files)
+
+    Raises:
+        AssertionError: If test files are missing
+    """
+
+    video_file = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
+    track_files = [data_dir / filename for filename in ACCEPTANCE_TEST_TRACK_FILES]
+    assert video_file.exists(), f"Test video file missing: {video_file}"
+    for track_file in track_files:
+        assert track_file.exists(), f"Test track file missing: {track_file}"
+    return video_file, track_files
+
+
+def enable_all_tracks_layer(page: Page) -> None:
+    """Enable the 'Show all tracks' layer."""
+    checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+    checkbox.scroll_into_view_if_needed()
+    checkbox.click()
+
+
+def update_flow_highlighting(
+    page: Page, timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS
+) -> None:
+    """Click the 'Update flow highlighting' button and wait for processing.
+
+    Args:
+        page: Playwright page object
+        timeout_ms: Timeout in milliseconds to wait after
+        clicking (default: PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    """
+    button = page.get_by_test_id(MARKER_UPDATE_FLOW_HIGHLIGHTING)
+    button.scroll_into_view_if_needed()
+    button.click()
+    page.wait_for_timeout(timeout_ms)
+
+
+def click_update_offset_button(
+    page: Page,
+    canvas: Any,
+    screenshot_folder: Path,
+    timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+) -> bool:
+    """Click the 'Update offset' button if available and enabled.
+
+    Args:
+        page: Playwright page object
+        canvas: Canvas locator for taking screenshots
+        screenshot_folder: Folder where screenshots will be saved
+        timeout_ms: Timeout in milliseconds to wait after clicking
+
+    Returns:
+        True if button was clicked, False if button was not available or disabled
+    """
+    offset_button = page.get_by_test_id(MARKER_UPDATE_OFFSET)
+
+    if offset_button.count() > 0:
+        offset_button.scroll_into_view_if_needed()
+        canvas.screenshot(path=screenshot_folder / "offset_before.png")
+
+        # Only click if enabled
+        if not offset_button.is_disabled():
+            offset_button.click()
+            page.wait_for_timeout(timeout_ms)
+            canvas.screenshot(path=screenshot_folder / "offset_after.png")
+            return True
+
+    return False
+
+
+def _verify_screenshot_against_reference(
+    actual_path: Path, reference_path: Path
+) -> None:
+    """Verify screenshot against reference or skip if reference doesn't exist.
+
+    Args:
+        actual_path: Path to actual screenshot
+        reference_path: Path to reference screenshot
+
+    Raises:
+        pytest.skip: If reference screenshot doesn't exist
+        AssertionError: If screenshots don't match within tolerance
+    """
+    if reference_path.exists():
+        assert_screenshot_equal(actual_path, reference_path)
+    else:
+        pytest.skip(
+            f"Reference screenshot not found: {reference_path}. "
+            "Run test_generate_canvas_screenshots first to generate it."
+        )
+
+
+def capture_and_verify_baseline(
+    canvas: Any,
+    actual_screenshot_path: Path,
+    reference_screenshot: Path,
+    page: Page | None = None,
+    *,
+    timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+) -> bytes:
+    """Capture canvas screenshot and verify against reference baseline.
+
+    Args:
+        canvas: Canvas locator
+        actual_screenshot_path: Path to save actual screenshot
+        reference_screenshot: Path to reference screenshot file
+        page: Optional Playwright page object for timeout
+        timeout_ms: Timeout in milliseconds to wait before taking screenshot
+
+    Returns:
+        Screenshot bytes
+
+    Raises:
+        pytest.skip: If reference screenshot doesn't exist
+        AssertionError: If screenshots don't match within tolerance
+    """
+    if page and timeout_ms:
+        page.wait_for_timeout(timeout_ms)
+    canvas_screenshot = canvas.screenshot(path=actual_screenshot_path)
+    _verify_screenshot_against_reference(actual_screenshot_path, reference_screenshot)
+    return canvas_screenshot
+
+
+def verify_filter_range_label_visible(page: Page) -> None:
+    """Verify that the filter range label is visible."""
+    range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
+    range_label.wait_for(state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS)
+
+
+def reset_date_filter(page: Page) -> None:
+    """Reset the date filter by clicking Reset button and unchecking checkbox."""
+
+    filter_by_date_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
+    filter_by_date_button.click()
+    page.get_by_text("Reset").click()
+
+    # Wait for the dialog to close (reset closes it automatically)
+    page.wait_for_timeout(200)
+
+    # Uncheck the filter checkbox to fully deactivate the filter
+    filter_checkbox = page.get_by_test_id(MARKER_FILTER_BY_DATE_CHECKBOX)
+    if filter_checkbox.is_checked():
+        filter_checkbox.click()
+        page.wait_for_timeout(200)
+
+
+def verify_filter_inactive(page: Page) -> None:
+    """Verify that the filter is deactivated."""
+    filter_by_date_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
+    inactive_value = filter_by_date_button.get_attribute("data-filter-by-date-active")
+    assert inactive_value == "false", (
+        f"Filter by date button did not indicate inactive state after reset "
+        f"(value: {inactive_value})"
+    )
+
+
+def verify_filter_range_label_cleared(page: Page) -> None:
+    """Verify that the filter range label is cleared."""
+    range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
+    label_text_after_reset = range_label.inner_text()
+    assert (
+        label_text_after_reset.strip() == ""
+    ), "Date range label not cleared after reset"
+
+
+def assert_screenshot_equal(
+    actual: Path, expected: Path, tolerance: float = 0.01
+) -> None:
+    """Compare an actual screenshot with an expected screenshot file.
+
+    Args:
+        actual: Path to actual screenshot
+        expected: Path to expected screenshot file
+        tolerance: Acceptable difference ratio (0.0 = exact match,
+        1.0 = completely different)
+
+    Raises:
+        AssertionError: If screenshots differ beyond tolerance
+        FileNotFoundError: If expected screenshot file doesn't exist
+    """
+    assert expected.exists(), (
+        f"Expected screenshot not found: {expected}\n"
+        f"Generate it first using test_generate_canvas_screenshots"
+    )
+
+    actual_image = Image.open(actual)
+    expected_image = Image.open(expected)
+
+    # Check dimensions match
+    assert actual_image.size == expected_image.size, (
+        f"Screenshot dimensions differ: "
+        f"actual {actual_image.size} vs expected {expected_image.size}"
+    )
+
+    # Compare images
+    diff = ImageChops.difference(actual_image, expected_image)
+    diff_stat = list(diff.getdata())
+
+    # Calculate difference ratio
+    pixels_different = sum(1 for pixel in diff_stat if pixel != (0, 0, 0))
+    total_pixels = actual_image.size[0] * actual_image.size[1]
+    diff_ratio = pixels_different / total_pixels if total_pixels > 0 else 0
+
+    assert diff_ratio <= tolerance, (
+        f"Screenshots differ: {diff_ratio:.2%} of pixels are different "
+        f"(tolerance: {tolerance:.2%})"
+    )
+
+
+def get_loaded_tracks_canvas_from_otconfig(
+    page: Page, rm: ResourceManager, otconfig_path: Path
+) -> Any:
+    """Load tracks from preconfigured .otconfig file and return canvas.
+
+    Args:
+        page: Playwright page object
+        rm: ResourceManager for localized strings
+        otconfig_path: Path to pre-configured .otconfig file
+
+    Returns:
+        Canvas locator ready for screenshots/verification
+    """
+    # Load preconfigured file with video and tracks already set up
+    setup_with_preconfigured_otconfig(page, rm, otconfig_path)
+
+    # Get canvas reference
+    canvas = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).first
+    canvas.wait_for(state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS)
+
+    # Enable "Show all tracks" layer
+    checkbox = page.get_by_test_id(MARKER_VISUALIZATION_LAYERS_ALL)
+    checkbox.scroll_into_view_if_needed()
+    if not checkbox.is_checked():
+        checkbox.click()
+        page.wait_for_timeout(200)
+
+    return canvas

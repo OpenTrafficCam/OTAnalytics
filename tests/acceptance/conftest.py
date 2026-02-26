@@ -3,9 +3,11 @@ from __future__ import annotations
 import subprocess
 import sys
 import time
+from pathlib import Path
 from typing import Generator, TypeVar
 
 import pytest
+import requests
 
 from OTAnalytics.plugin_ui.nicegui_application import DEFAULT_HOSTNAME, DEFAULT_PORT
 from tests.utils.builders.otanalytics_builders import file_picker_directory
@@ -33,6 +35,14 @@ IMPORT_VERIFY_MAX_POLLS = 120
 # Large buffer for webserver process pipes
 BUFFER_SIZE_100MB = 10**8
 
+# Test data file constants - using 30 minutes of OTCamera19 data (2 x 15min files)
+ACCEPTANCE_TEST_VIDEO_FILE = "OTCamera19_FR20_2023-05-24_08-00-00.mp4"
+ACCEPTANCE_TEST_TRACK_FILES = [
+    "OTCamera19_FR20_2023-05-24_08-00-00.ottrk",
+    "OTCamera19_FR20_2023-05-24_08-15-00.ottrk",
+]
+# Second video file for tests that need multiple videos
+ACCEPTANCE_TEST_VIDEO_FILE_2 = "OTCamera19_FR20_2023-05-24_08-15-00.mp4"
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]
@@ -58,6 +68,7 @@ class NiceGUITestServer:
                 file_picker_directory(),
             ],
             stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             bufsize=BUFFER_SIZE_100MB,
         )
@@ -74,7 +85,37 @@ class NiceGUITestServer:
 
     def _wait_for_server(self, timeout: int = 10) -> None:
         """Naive wait; rely on later page.goto() for final availability."""
-        time.sleep(min(max(timeout, 1), 10))
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                response = requests.get(self.base_url, timeout=1)
+                if response.status_code == 200:
+                    return
+            except requests.ConnectionError:
+                pass
+            time.sleep(0.5)
+
+        # Collect diagnostic information on timeout
+        error_msg = f"Server was not reachable at {self.base_url} within {timeout}s"
+        if self.process:
+            if self.process.poll() is not None:
+                error_msg += (
+                    f"\nProcess has already terminated with exit code: "
+                    f"{self.process.returncode}"
+                )
+            if self.process.stderr:
+                stderr_output = self.process.stderr.read().decode(
+                    "utf-8", errors="replace"
+                )
+                if stderr_output:
+                    error_msg += f"\nStderr:\n{stderr_output}"
+            if self.process.stdout:
+                stdout_output = self.process.stdout.read().decode(
+                    "utf-8", errors="replace"
+                )
+                if stdout_output:
+                    error_msg += f"\nStdout:\n{stdout_output}"
+        raise TimeoutError(error_msg)
 
 
 @pytest.fixture
@@ -85,3 +126,13 @@ def external_app() -> YieldFixture[NiceGUITestServer]:
         yield server
     finally:
         server.stop()
+
+
+@pytest.fixture
+def acceptance_test_data_folder(test_data_dir: Path) -> Path:
+    return test_data_dir / "acceptance"
+
+
+@pytest.fixture
+def actual_screenshot_path(test_data_tmp_dir: Path) -> Path:
+    return test_data_tmp_dir / "acceptance_test_actual_screenshot.png"

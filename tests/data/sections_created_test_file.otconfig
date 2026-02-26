@@ -1,0 +1,87 @@
+{
+    "project": {
+        "name": "Preconfigured Test Project",
+        "start_date": 1577836800.0,
+        "metadata": null
+    },
+    "videos": [
+        {
+            "path": "..\/data\/OTCamera19_FR20_2023-05-24_08-00-00.mp4"
+        }
+    ],
+    "analysis": {
+        "do_events": true,
+        "do_counting": true,
+        "tracks": [
+            "..\/data\/OTCamera19_FR20_2023-05-24_08-00-00.ottrk"
+        ],
+        "export": {
+            "save_name": "",
+            "save_suffix": "",
+            "event_formats": [
+                "csv"
+            ],
+            "count_intervals": [
+                15
+            ]
+        },
+        "num_processes": 1,
+        "logfile": "logs"
+    },
+    "sections": [
+        {
+            "id": "1",
+            "name": "North-Section",
+            "type": "line",
+            "relative_offset_coordinates": {
+                "section-enter": {
+                    "x": 0.5,
+                    "y": 0.5
+                }
+            },
+            "coordinates": [
+                {
+                    "x": 22,
+                    "y": 22
+                },
+                {
+                    "x": 154,
+                    "y": 66
+                }
+            ],
+            "plugin_data": {}
+        },
+        {
+            "id": "2",
+            "name": "South-Section",
+            "type": "line",
+            "relative_offset_coordinates": {
+                "section-enter": {
+                    "x": 0.5,
+                    "y": 0.5
+                }
+            },
+            "coordinates": [
+                {
+                    "x": 242,
+                    "y": 88
+                },
+                {
+                    "x": 374,
+                    "y": 154
+                }
+            ],
+            "plugin_data": {}
+        }
+    ],
+    "flows": [
+        {
+            "id": "1",
+            "name": "Test-Flow",
+            "start": "2",
+            "end": "1",
+            "distance": null
+        }
+    ],
+    "remark": ""
+}

@@ -111,27 +111,43 @@ class NiceGuiUiFactory(UiFactory):
         filetypes: Iterable[tuple[str, str | list[str] | tuple[str, ...]]],
         extension_options: dict[str, list[str] | None] | None = None,
     ) -> list[Path]:
-        # For now, we'll just support selecting a single file
-        # In a real implementation, this would allow selecting multiple files
-        # Convert list/tuple of extensions to individual (desc, ext) pairs
-        converted_filetypes = []
-        for desc, ext in filetypes:
+        # Build a list of endings (with leading dots) from provided filetypes
+        endings: list[str] = []
+        for _desc, ext in filetypes:
             if isinstance(ext, str):
-                converted_filetypes.append(ext)
-            elif isinstance(ext, (list, tuple)) and ext:
-                # Use the first extension from the list/tuple
-                converted_filetypes.append(ext[0])
+                ext_clean = ext.replace("*", "")
+                if not ext_clean.startswith("."):
+                    ext_clean = "." + ext_clean
+                endings.append(ext_clean)
+            elif isinstance(ext, (list, tuple)):
+                for e in ext:
+                    ext_clean = str(e).replace("*", "")
+                    if not ext_clean.startswith("."):
+                        ext_clean = "." + ext_clean
+                    endings.append(ext_clean)
+
+        picker_extension_options: dict[str, list[str] | None]
+        if extension_options is not None:
+            picker_extension_options = extension_options
+        else:
+            picker_extension_options = (
+                {"All Files": endings.copy()} if endings else {"All Files": None}
+            )
+            # Also add individual entries for each ending for clarity in the dropdown
+            for end in sorted(set(endings)):
+                picker_extension_options[end] = [end]
 
         file_paths = await LocalFilePicker(
             directory=self._base_directory,
             show_hidden_files=False,
-            show_files_only_of_type=None,  # Show all files
+            show_files_only_of_type=None,
+            show_files_only_of_types=endings if endings else None,
             show_only_directories=False,
-            extension_options=extension_options,
+            extension_options=picker_extension_options,
             multiple=True,
         )
         return get_all_files_with_correct_file_ending_in_directory(
-            file_paths, converted_filetypes
+            file_paths, [f"*{e}" for e in endings] if endings else ["*"]
         )
 
     async def ask_for_save_file_path(
