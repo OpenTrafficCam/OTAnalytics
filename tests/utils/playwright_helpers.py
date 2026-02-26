@@ -1081,20 +1081,20 @@ def _verify_screenshot_against_reference(
 
 
 def capture_and_verify_baseline(
-    page: Page,
     canvas: Any,
     actual_screenshot_path: Path,
     reference_screenshot: Path,
+    page: Page | None = None,
     *,
     timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
 ) -> bytes:
     """Capture canvas screenshot and verify against reference baseline.
 
     Args:
-        page: Playwright page object
         canvas: Canvas locator
         actual_screenshot_path: Path to save actual screenshot
         reference_screenshot: Path to reference screenshot file
+        page: Optional Playwright page object for timeout
         timeout_ms: Timeout in milliseconds to wait before taking screenshot
 
     Returns:
@@ -1104,7 +1104,8 @@ def capture_and_verify_baseline(
         pytest.skip: If reference screenshot doesn't exist
         AssertionError: If screenshots don't match within tolerance
     """
-    page.wait_for_timeout(timeout_ms)
+    if page and timeout_ms:
+        page.wait_for_timeout(timeout_ms)
     canvas_screenshot = canvas.screenshot(path=actual_screenshot_path)
     _verify_screenshot_against_reference(actual_screenshot_path, reference_screenshot)
     return canvas_screenshot
@@ -1114,26 +1115,6 @@ def verify_filter_range_label_visible(page: Page) -> None:
     """Verify that the filter range label is visible."""
     range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
     range_label.wait_for(state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS)
-
-
-def verify_canvas_matches_reference(
-    canvas: Any, acceptance_test_data_folder: Path, all_tracks_filename: str
-) -> None:
-    """Take screenshot and verify it matches the expected baseline.
-
-    Args:
-        canvas: Canvas locator
-        acceptance_test_data_folder: Path to folder with test data
-        all_tracks_filename: Name of reference screenshot file
-
-    Raises:
-        pytest.skip: If reference screenshot doesn't exist
-        AssertionError: If screenshots don't match within tolerance
-    """
-    actual_path = acceptance_test_data_folder / "new_file.png"
-    reference_path = acceptance_test_data_folder / all_tracks_filename
-    canvas.screenshot(path=actual_path)
-    _verify_screenshot_against_reference(actual_path, reference_path)
 
 
 def reset_date_filter(page: Page) -> None:
