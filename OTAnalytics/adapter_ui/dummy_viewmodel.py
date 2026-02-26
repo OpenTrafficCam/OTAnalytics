@@ -68,6 +68,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.parser.config_parser import StartDateMissing
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.project import (
@@ -87,7 +88,7 @@ from OTAnalytics.application.project import (
     SvzMetadata,
     WeatherType,
 )
-from OTAnalytics.application.use_cases.config import MissingDate
+from OTAnalytics.application.use_cases.config import ConfigValidationError
 from OTAnalytics.application.use_cases.config_has_changed import NoExistingConfigFound
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.application.use_cases.editor.section_editor import (
@@ -644,11 +645,25 @@ class DummyViewModel(
             )
             self.__show_error(message)
             return
-        except MissingDate:
+        except ConfigValidationError as e:
             message = (
                 f"{MESSAGE_CONFIGURATION_NOT_SAVED}"
-                f"Start date is missing or invalid. Please add a valid start date."
+                f"Please fix the following issues:\n"
+                + "\n".join(f"• {err}" for err in e.errors)
             )
+            self.__show_error(message)
+            return
+        except StartDateMissing:
+            # This comes from parser during serialization
+            message = (
+                f"{MESSAGE_CONFIGURATION_NOT_SAVED}"
+                f"Start date and time are required for saving configuration."
+            )
+            self.__show_error(message)
+            return
+        except Exception as e:
+            message = f"{MESSAGE_CONFIGURATION_NOT_SAVED}An unexpected error occurred."
+            logger().exception("Failed to save configuration file", exc_info=e)
             self.__show_error(message)
             return
 
@@ -899,6 +914,15 @@ class DummyViewModel(
             position = self.treeview_sections.get_position()
             self._ui_factory.info_box(
                 message="No sections to save, please add new sections first",
+                initial_position=position,
+            )
+            return
+        except Exception as e:
+            position = self.treeview_sections.get_position()
+            message = "Failed to save sections file.\nAn unexpected error occurred."
+            logger().exception("Failed to save sections file", exc_info=e)
+            self._ui_factory.info_box(
+                message=message,
                 initial_position=position,
             )
             return
