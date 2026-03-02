@@ -1200,3 +1200,357 @@ class TestCanvasFormImageHandling:
         assert len(canvas_form._sections.lines) == 0
         # CircleResources.clear() only clears the circles dict, not by_section
         assert len(canvas_form._circles.circles) == 0
+
+
+class TestMidpointRendering:
+    """Tests that midpoint affordances are included in SVG output."""
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_midpoints_rendered_in_edit_mode(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+        mock_section: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            current_section=mock_section,
+        )
+        # Simulate two control points for the section
+        c0 = Circle(
+            id="test-section-id-0", x=100, y=100, fill="orange", pointer_event="all"
+        )
+        c1 = Circle(
+            id="test-section-id-1", x=300, y=300, fill="orange", pointer_event="all"
+        )
+        canvas._circles.add("test-section-id", c0)
+        canvas._circles.add("test-section-id", c1)
+
+        svg = canvas._midpoints_svg_for_section()
+
+        assert 'id="mid-test-section-id-0"' in svg
+        assert 'cx="200"' in svg
+        assert 'cy="200"' in svg
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_no_midpoints_rendered_without_current_section(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        svg = canvas._midpoints_svg_for_section()
+        assert svg == ""
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_midpoints_rendered_for_new_section(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas._new_section = True
+        canvas._new_section_points = [
+            Circle(id="new_point-0", x=0, y=0, fill="orange", pointer_event="all"),
+            Circle(
+                id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"
+            ),
+        ]
+
+        svg = canvas._midpoints_svg_for_new_section()
+
+        assert 'id="new-mid-0"' in svg
+        assert 'cx="100"' in svg
+        assert 'cy="0"' in svg
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_no_midpoints_for_new_section_with_one_point(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas._new_section = True
+        canvas._new_section_points = [
+            Circle(id="new_point-0", x=0, y=0, fill="orange", pointer_event="all"),
+        ]
+
+        svg = canvas._midpoints_svg_for_new_section()
+
+        assert svg == ""
+
+
+class TestMidpointInsertEditMode:
+    """Tests for inserting intermediate points into an existing section."""
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_clicking_midpoint_inserts_circle_at_correct_index(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+        mock_section: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            current_section=mock_section,
+        )
+        c0 = Circle(
+            id="test-section-id-0", x=0, y=0, fill="orange", pointer_event="all"
+        )
+        c1 = Circle(
+            id="test-section-id-1", x=200, y=0, fill="orange", pointer_event="all"
+        )
+        canvas._circles.add("test-section-id", c0)
+        canvas._circles.add("test-section-id", c1)
+
+        event = {
+            ELEMENT_ID: "mid-test-section-id-0",
+            IMAGE_X: 100.0,
+            IMAGE_Y: 0.0,
+        }
+        canvas.on_svg_pointer_down(event)
+
+        circles = canvas._circles.by_section["test-section-id"]
+        keys = list(circles.keys())
+        assert len(keys) == 3
+        assert keys[0] == "test-section-id-0"
+        assert keys[2] == "test-section-id-1"
+        # Middle key is the newly inserted circle
+        inserted = circles[keys[1]]
+        assert inserted.x == 100
+        assert inserted.y == 0
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_clicking_midpoint_starts_drag(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+        mock_section: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            current_section=mock_section,
+        )
+        c0 = Circle(
+            id="test-section-id-0", x=0, y=0, fill="orange", pointer_event="all"
+        )
+        c1 = Circle(
+            id="test-section-id-1", x=200, y=0, fill="orange", pointer_event="all"
+        )
+        canvas._circles.add("test-section-id", c0)
+        canvas._circles.add("test-section-id", c1)
+
+        event = {
+            ELEMENT_ID: "mid-test-section-id-0",
+            IMAGE_X: 100.0,
+            IMAGE_Y: 0.0,
+        }
+        canvas.on_svg_pointer_down(event)
+
+        # A drag should have started
+        assert canvas._current_point is not None
+        assert canvas._current_point.x == 100
+        assert canvas._current_point.y == 0
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_non_midpoint_click_still_works_in_edit_mode(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+        mock_section: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            current_section=mock_section,
+        )
+        event = {
+            ELEMENT_ID: "test-section-id-0",
+            IMAGE_X: 50.0,
+            IMAGE_Y: 75.0,
+        }
+        canvas.on_svg_pointer_down(event)
+
+        # Existing drag behavior: _current_point set from event
+        assert canvas._current_point is not None
+        assert canvas._current_point.x == 50
+        assert canvas._current_point.y == 75
+
+
+class TestMidpointInsertNewSectionMode:
+    """Tests for inserting intermediate points while building a new section."""
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_clicking_midpoint_inserts_point_at_correct_index(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas._new_section = True
+        canvas._new_section_points = [
+            Circle(id="new_point-0", x=0, y=0, fill="orange", pointer_event="all"),
+            Circle(
+                id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"
+            ),
+            Circle(
+                id="new_point-2", x=200, y=200, fill="orange", pointer_event="all"
+            ),
+        ]
+
+        event = {
+            ELEMENT_ID: "new-mid-1",
+            IMAGE_X: 200.0,
+            IMAGE_Y: 100.0,
+        }
+        canvas.on_svg_pointer_down(event)
+
+        assert len(canvas._new_section_points) == 4
+        inserted = canvas._new_section_points[2]
+        assert inserted.x == 200
+        assert inserted.y == 100  # midpoint of (200,0) and (200,200)
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_clicking_midpoint_sets_dragging_index(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas._new_section = True
+        canvas._new_section_points = [
+            Circle(id="new_point-0", x=0, y=0, fill="orange", pointer_event="all"),
+            Circle(
+                id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"
+            ),
+        ]
+
+        event = {ELEMENT_ID: "new-mid-0", IMAGE_X: 100.0, IMAGE_Y: 0.0}
+        canvas.on_svg_pointer_down(event)
+
+        assert canvas._new_section_dragging_idx == 1
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_pointermove_updates_dragged_point_position(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas._new_section = True
+        canvas._new_section_points = [
+            Circle(id="new_point-0", x=0, y=0, fill="orange", pointer_event="all"),
+            Circle(
+                id="new_point-inserted",
+                x=100,
+                y=0,
+                fill="orange",
+                pointer_event="all",
+            ),
+            Circle(
+                id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"
+            ),
+        ]
+        canvas._new_section_dragging_idx = 1
+
+        move_event = {ELEMENT_ID: "new_point-inserted", IMAGE_X: 120.0, IMAGE_Y: 50.0}
+        canvas.on_svg_pointer_move(move_event)
+
+        assert canvas._new_section_points[1].x == 120
+        assert canvas._new_section_points[1].y == 50
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_pointerup_clears_dragging_index(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas._new_section = True
+        canvas._new_section_points = [
+            Circle(id="new_point-0", x=0, y=0, fill="orange", pointer_event="all"),
+            Circle(
+                id="new_point-ins", x=100, y=50, fill="orange", pointer_event="all"
+            ),
+            Circle(
+                id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"
+            ),
+        ]
+        canvas._new_section_dragging_idx = 1
+
+        up_event = {ELEMENT_ID: "new_point-ins", IMAGE_X: 150.0, IMAGE_Y: 75.0}
+        canvas.on_svg_pointer_up(up_event)
+
+        assert canvas._new_section_dragging_idx is None
+        assert canvas._new_section_points[1].x == 150
+        assert canvas._new_section_points[1].y == 75
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_reset_editor_clears_dragging_index(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+    ) -> None:
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas._new_section_dragging_idx = 2
+        canvas._cancel_action()
+        assert canvas._new_section_dragging_idx is None

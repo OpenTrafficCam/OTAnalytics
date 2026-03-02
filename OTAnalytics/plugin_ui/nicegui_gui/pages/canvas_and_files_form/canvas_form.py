@@ -120,6 +120,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_section_points: list[Circle] = []
         self._new_section = False
         self._new_area_section = False
+        self._new_section_dragging_idx: int | None = None
         self._sections: SectionResource = SectionResource({})
         self._flows: LineResources = LineResources({})
         self._circles: CircleResources = CircleResources({})
@@ -199,6 +200,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._current_section = None
         self._current_point = None
         self._new_section_points = []
+        self._new_section_dragging_idx = None
 
     async def __get_metadata(self) -> dict:
         title = self._resource_manager.get(
@@ -216,6 +218,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self._background_image.content += self._sections.to_svg()
             self._background_image.content += self._flows.to_svg()
             self._background_image.content += self._circles.to_svg()
+            self._background_image.content += self._midpoints_svg_for_section()
             if self._current_point:
                 self._background_image.content += self._current_point.to_svg()
             if self._new_point:
@@ -233,6 +236,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             line = Polyline(id=NEW_SECTION_ID, points=coordinates, color=EDIT_COLOR)
             if self._background_image:
                 self._background_image.content += line.to_svg()
+        if self._background_image:
+            self._background_image.content += self._midpoints_svg_for_new_section()
 
     def _edit_geometry(self) -> str:
         if self._current_section is None:
@@ -241,6 +246,30 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         return Polyline(
             id=section_id, points=self._current_section_geometry(), color=EDIT_COLOR
         ).to_svg()
+
+    def _midpoints_svg_for_section(self) -> str:
+        """Return SVG for midpoint affordances in edit mode."""
+        if self._current_section is None:
+            return ""
+        section_id = self._current_section.id.id
+        circles = self._circles.by_section.get(section_id, {})
+        points = circle_to_coordinates(circles.values())
+        return "".join(
+            mc.to_svg()
+            for mc in compute_midpoints(
+                points, f"{MIDPOINT_ID_EDIT_PREFIX}-{section_id}"
+            )
+        )
+
+    def _midpoints_svg_for_new_section(self) -> str:
+        """Return SVG for midpoint affordances when building a new section."""
+        if len(self._new_section_points) < 2:
+            return ""
+        points = circle_to_coordinates(self._new_section_points)
+        return "".join(
+            mc.to_svg()
+            for mc in compute_midpoints(points, MIDPOINT_ID_NEW_PREFIX)
+        )
 
     def _on_pointer_down(self, e: events.MouseEventArguments) -> None:
         if self._new_section:
@@ -257,20 +286,99 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self.draw_all()
 
     def on_svg_pointer_down(self, e: dict) -> None:
-        if self._new_section:
+        element_id = e.get(ELEMENT_ID, "")
+        if self._current_section and element_id.startswith(
+            f"{MIDPOINT_ID_EDIT_PREFIX}-{self._current_section.id.id}-"
+        ):
+            self._insert_midpoint_in_edit_mode(e, element_id)
+        elif self._new_section and element_id.startswith(
+            f"{MIDPOINT_ID_NEW_PREFIX}-"
+        ):
+            self._insert_midpoint_in_new_section_mode(element_id)
+        elif self._new_section:
             pass
         elif self._current_section:
             self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
             self.draw_all()
 
+    def _insert_midpoint_in_edit_mode(self, e: dict, element_id: str) -> None:
+        """Insert a new control point at segment midpoint and start dragging it."""
+        section_id = self._current_section.id.id  # type: ignore[union-attr]
+        # ID format: "mid-{section_id}-{segment_idx}"
+        segment_idx = int(element_id.rsplit("-", 1)[-1])
+        circles = self._circles.by_section.get(section_id, {})
+        points = circle_to_coordinates(circles.values())
+        mid_x = (points[segment_idx][0] + points[segment_idx + 1][0]) // 2
+        mid_y = (points[segment_idx][1] + points[segment_idx + 1][1]) // 2
+        new_id = f"{section_id}-inserted-{segment_idx}"
+        new_circle = Circle(
+            id=new_id,
+            x=mid_x,
+            y=mid_y,
+            fill=EDIT_COLOR,
+            pointer_event=POINTER_EVENT_ALL,
+            stroke=MOVING_COLOR,
+            stroke_width=MOVING_STROKE_WIDTH,
+            stroke_opacity=MOVING_STROKE_OPACITY,
+        )
+        updated = insert_circle_at_index(circles, segment_idx + 1, new_circle)
+        self._circles.by_section[section_id] = updated
+        self._circles.circles.update(updated)
+        self._current_point = new_circle
+        self.draw_all()
+
+    def _insert_midpoint_in_new_section_mode(self, element_id: str) -> None:
+        """Insert point at segment midpoint in new-section creation mode and start drag."""
+        # ID format: "new-mid-{segment_idx}"
+        segment_idx = int(element_id.rsplit("-", 1)[-1])
+        p0 = self._new_section_points[segment_idx]
+        p1 = self._new_section_points[segment_idx + 1]
+        mid_x = (p0.x + p1.x) // 2
+        mid_y = (p0.y + p1.y) // 2
+        insert_idx = segment_idx + 1
+        new_circle = Circle(
+            id=f"new_point-inserted-{segment_idx}",
+            x=mid_x,
+            y=mid_y,
+            fill=EDIT_COLOR,
+            pointer_event=POINTER_EVENT_ALL,
+            cursor=CURSOR,
+        )
+        self._new_section_points.insert(insert_idx, new_circle)
+        self._new_section_dragging_idx = insert_idx
+        self.draw_all()
+
     def on_svg_pointer_move(self, e: dict) -> None:
-        if self._current_section and self._current_point:
+        if self._new_section_dragging_idx is not None:
+            idx = self._new_section_dragging_idx
+            self._new_section_points[idx] = Circle(
+                id=self._new_section_points[idx].id,
+                x=round(e[IMAGE_X]),
+                y=round(e[IMAGE_Y]),
+                fill=EDIT_COLOR,
+                pointer_event=POINTER_EVENT_ALL,
+                cursor=CURSOR,
+            )
+            self.draw_all()
+        elif self._current_section and self._current_point:
             self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
             self._circles.add(self._current_section.id.id, self._current_point)
             self.draw_all()
 
     def on_svg_pointer_up(self, e: dict) -> None:
-        if self._new_section:
+        if self._new_section_dragging_idx is not None:
+            idx = self._new_section_dragging_idx
+            self._new_section_points[idx] = Circle(
+                id=self._new_section_points[idx].id,
+                x=round(e[IMAGE_X]),
+                y=round(e[IMAGE_Y]),
+                fill=EDIT_COLOR,
+                pointer_event=POINTER_EVENT_ALL,
+                cursor=CURSOR,
+            )
+            self._new_section_dragging_idx = None
+            self.draw_all()
+        elif self._new_section:
             pass
         elif self._current_section and self._current_point:
             self._circles.add(
