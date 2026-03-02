@@ -117,6 +117,101 @@ def setup_canvas_form_with_mocks(
 class TestCanvasFormHelperFunctions:
     """Test helper functions used by CanvasForm."""
 
+    def test_compute_midpoints_empty(self) -> None:
+        from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+            compute_midpoints,
+        )
+
+        result = compute_midpoints([], "prefix")
+        assert result == []
+
+    def test_compute_midpoints_single_point(self) -> None:
+        from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+            compute_midpoints,
+        )
+
+        result = compute_midpoints([(100, 200)], "prefix")
+        assert result == []
+
+    def test_compute_midpoints_two_points(self) -> None:
+        from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+            compute_midpoints,
+        )
+
+        result = compute_midpoints([(100, 200), (300, 400)], "prefix")
+        assert len(result) == 1
+        assert result[0].id == "prefix-0"
+        assert result[0].x == 200
+        assert result[0].y == 300
+
+    def test_compute_midpoints_three_points(self) -> None:
+        from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+            compute_midpoints,
+        )
+
+        result = compute_midpoints([(0, 0), (100, 0), (100, 100)], "prefix")
+        assert len(result) == 2
+        assert result[0].id == "prefix-0"
+        assert result[0].x == 50
+        assert result[0].y == 0
+        assert result[1].id == "prefix-1"
+        assert result[1].x == 100
+        assert result[1].y == 50
+
+    def test_insert_circle_at_index_beginning(self) -> None:
+        from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+            insert_circle_at_index,
+        )
+
+        existing = {
+            "c-0": Circle(id="c-0", x=0, y=0, fill="green", pointer_event="all"),
+            "c-1": Circle(id="c-1", x=100, y=100, fill="green", pointer_event="all"),
+        }
+        new_circle = Circle(id="c-new", x=50, y=50, fill="orange", pointer_event="all")
+        result = insert_circle_at_index(existing, 0, new_circle)
+        assert list(result.keys()) == ["c-new", "c-0", "c-1"]
+
+    def test_insert_circle_at_index_middle(self) -> None:
+        from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+            insert_circle_at_index,
+        )
+
+        existing = {
+            "c-0": Circle(id="c-0", x=0, y=0, fill="green", pointer_event="all"),
+            "c-1": Circle(id="c-1", x=100, y=100, fill="green", pointer_event="all"),
+            "c-2": Circle(id="c-2", x=200, y=200, fill="green", pointer_event="all"),
+        }
+        new_circle = Circle(id="c-new", x=50, y=50, fill="orange", pointer_event="all")
+        result = insert_circle_at_index(existing, 1, new_circle)
+        assert list(result.keys()) == ["c-0", "c-new", "c-1", "c-2"]
+
+    def test_insert_circle_at_index_end(self) -> None:
+        from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+            insert_circle_at_index,
+        )
+
+        existing = {
+            "c-0": Circle(id="c-0", x=0, y=0, fill="green", pointer_event="all"),
+            "c-1": Circle(id="c-1", x=100, y=100, fill="green", pointer_event="all"),
+        }
+        new_circle = Circle(
+            id="c-new", x=150, y=150, fill="orange", pointer_event="all"
+        )
+        result = insert_circle_at_index(existing, 2, new_circle)
+        assert list(result.keys()) == ["c-0", "c-1", "c-new"]
+
+    def test_insert_circle_at_index_does_not_mutate_original(self) -> None:
+        from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+            insert_circle_at_index,
+        )
+
+        existing = {
+            "c-0": Circle(id="c-0", x=0, y=0, fill="green", pointer_event="all"),
+        }
+        new_circle = Circle(id="c-new", x=50, y=50, fill="orange", pointer_event="all")
+        insert_circle_at_index(existing, 0, new_circle)
+        assert list(existing.keys()) == ["c-0"]
+
     def test_create_circle(self) -> None:
         # Arrange
         event_data = {IMAGE_X: 100.7, IMAGE_Y: 200.3, ELEMENT_ID: "test-element"}

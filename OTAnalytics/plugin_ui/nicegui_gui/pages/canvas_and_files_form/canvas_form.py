@@ -21,6 +21,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle_resources import (
     CircleResources,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.midpoint_circle import MidpointCircle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line_resources import LineResources
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
@@ -46,6 +47,8 @@ ELEMENT_ID = "element_id"
 
 CURSOR = "pointer"
 NEW_SECTION_ID = "new-section-id"
+MIDPOINT_ID_EDIT_PREFIX = "mid"
+MIDPOINT_ID_NEW_PREFIX = "new-mid"
 
 
 def circle_to_coordinates(circles: Iterable[Circle]) -> list[tuple[int, int]]:
@@ -73,6 +76,27 @@ def create_moving_circle(e: dict, fill: str = NORMAL_COLOR) -> Circle:
         stroke_width=MOVING_STROKE_WIDTH,
         stroke_opacity=MOVING_STROKE_OPACITY,
     )
+
+
+def compute_midpoints(
+    points: list[tuple[int, int]], id_prefix: str
+) -> list[MidpointCircle]:
+    """Return one MidpointCircle per consecutive pair of points."""
+    result = []
+    for i in range(len(points) - 1):
+        x = (points[i][0] + points[i + 1][0]) // 2
+        y = (points[i][1] + points[i + 1][1]) // 2
+        result.append(MidpointCircle(id=f"{id_prefix}-{i}", x=x, y=y))
+    return result
+
+
+def insert_circle_at_index(
+    circles: dict[str, Circle], idx: int, circle: Circle
+) -> dict[str, Circle]:
+    """Return a new ordered dict with circle inserted at position idx."""
+    items = list(circles.items())
+    items.insert(idx, (circle.id, circle))
+    return dict(items)
 
 
 class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface):
