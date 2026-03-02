@@ -1082,7 +1082,6 @@ def _verify_screenshot_against_reference(
 
 def capture_and_verify_baseline(
     canvas: Any,
-    actual_screenshot_path: Path,
     reference_screenshot: Path,
     page: Page | None = None,
     *,
@@ -1092,7 +1091,6 @@ def capture_and_verify_baseline(
 
     Args:
         canvas: Canvas locator
-        actual_screenshot_path: Path to save actual screenshot
         reference_screenshot: Path to reference screenshot file
         page: Optional Playwright page object for timeout
         timeout_ms: Timeout in milliseconds to wait before taking screenshot
@@ -1104,6 +1102,9 @@ def capture_and_verify_baseline(
         pytest.skip: If reference screenshot doesn't exist
         AssertionError: If screenshots don't match within tolerance
     """
+    actual_screenshot_path = (
+        reference_screenshot.parent / f"new_{reference_screenshot.name}"
+    )
     if page and timeout_ms:
         page.wait_for_timeout(timeout_ms)
     canvas_screenshot = canvas.screenshot(path=actual_screenshot_path)

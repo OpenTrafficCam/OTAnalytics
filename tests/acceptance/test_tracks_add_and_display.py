@@ -77,9 +77,8 @@ def test_add_tracks_and_display_all(
     wait_for_canvas_change(page, canvas, canvas_before_tracks)
 
     # Capture and compare with reference image
-    actual_path = acceptance_test_data_folder / "new_file.png"
     reference_path = acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
-    capture_and_verify_baseline(canvas, actual_path, reference_path)
+    capture_and_verify_baseline(canvas, reference_path)
 
 
 @pytest.mark.skip(reason="only works in headed right now")
@@ -90,7 +89,6 @@ def test_filter_tracks_by_date(
     page: Page,
     external_app: NiceGUITestServer,
     acceptance_test_data_folder: Path,
-    actual_screenshot_path: Path,
     resource_manager: ResourceManager,
 ) -> None:
     """Acceptance (Playwright): Filter displayed tracks by date range.
@@ -125,7 +123,7 @@ def test_filter_tracks_by_date(
     # Capture baseline and verify against reference
     reference_screenshot = acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
     canvas_with_all_tracks = capture_and_verify_baseline(
-        canvas, actual_screenshot_path, reference_screenshot, page
+        canvas, reference_screenshot, page
     )
 
     # Apply date filter
@@ -139,9 +137,8 @@ def test_filter_tracks_by_date(
     wait_for_canvas_change(page, canvas, canvas_with_all_tracks)
 
     # Capture and compare with reference image
-    filtered_actual_path = acceptance_test_data_folder / "new_filtered_file.png"
     filtered_reference_path = acceptance_test_data_folder / FILTERED_TRACKS_FILE_NAME
-    capture_and_verify_baseline(canvas, filtered_actual_path, filtered_reference_path)
+    capture_and_verify_baseline(canvas, filtered_reference_path)
 
 
 @pytest.mark.skip(reason="only works in headed right now")
@@ -169,9 +166,8 @@ def test_toggle_intersection_layers(
     page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
     # Capture screenshot and verify against reference
-    actual_path = acceptance_test_data_folder / "new_file.png"
     reference_path = acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
-    capture_and_verify_baseline(canvas, actual_path, reference_path)
+    capture_and_verify_baseline(canvas, reference_path)
 
 
 @pytest.mark.skip(reason="only works in headed right now")
