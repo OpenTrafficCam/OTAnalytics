@@ -16,6 +16,7 @@ from OTAnalytics.domain.date import DateRange
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import (
     InvalidDatetimeFormatError,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     DateTimeForm,
@@ -24,6 +25,23 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
 )
 
 MARKER_FILTER_BY_DATE_CHECKBOX = "marker-filter-by-date-checkbox"
+MARKER_FILTER_BY_DATE_BUTTON = "marker-filter-by-date-button"
+MARKER_FILTER_BY_DATE_APPLY_BUTTON = "marker-filter-by-date-apply"
+MARKER_FILTER_START_DATE_INPUT = "marker-filter-start-date"
+MARKER_FILTER_START_TIME_INPUT = "marker-filter-start-time"
+MARKER_FILTER_END_DATE_INPUT = "marker-filter-end-date"
+MARKER_FILTER_END_TIME_INPUT = "marker-filter-end-time"
+MARKER_FILTER_RANGE_LABEL = "marker-filter-range-label"
+
+# Additional navigation markers for Playwright tests
+MARKER_PREV_DATE_BUTTON = "marker-prev-date"
+MARKER_NEXT_DATE_BUTTON = "marker-next-date"
+MARKER_PREV_SECONDS_BUTTON = "marker-prev-seconds"
+MARKER_NEXT_SECONDS_BUTTON = "marker-next-seconds"
+MARKER_PREV_FRAMES_BUTTON = "marker-prev-frames"
+MARKER_NEXT_FRAMES_BUTTON = "marker-next-frames"
+MARKER_PREV_EVENT_BUTTON = "marker-prev-event"
+MARKER_NEXT_EVENT_BUTTON = "marker-next-event"
 
 
 class FilterDateRangeForm:
@@ -37,10 +55,14 @@ class FilterDateRangeForm:
         self._start_date = DateTimeForm(
             self._resource_manager.get(VisualizationFiltersKeys.LABEL_START_DATE),
             self._resource_manager.get(VisualizationFiltersKeys.LABEL_START_TIME),
+            marker_date=MARKER_FILTER_START_DATE_INPUT,
+            marker_time=MARKER_FILTER_START_TIME_INPUT,
         )
         self._end_date = DateTimeForm(
             self._resource_manager.get(VisualizationFiltersKeys.LABEL_END_DATE),
             self._resource_manager.get(VisualizationFiltersKeys.LABEL_END_TIME),
+            marker_date=MARKER_FILTER_END_DATE_INPUT,
+            marker_time=MARKER_FILTER_END_TIME_INPUT,
         )
 
     def open(self) -> None:
@@ -89,9 +111,14 @@ class FilterDateRangeForm:
             ui.label(first_occurrence_info_text)
             ui.label(last_occurrence_info_text)
             with ui.row():
-                ui.button(
+                apply_button = ui.button(
                     self._resource_manager.get(GeneralKeys.LABEL_APPLY),
                     on_click=self._on_apply_button_clicked,
+                )
+                # marker for Playwright: Apply button inside the filter-by-date dialog
+                apply_button.mark(MARKER_FILTER_BY_DATE_APPLY_BUTTON)
+                apply_button.props(
+                    f"{TestIdAttributes.DATA_TESTID}={MARKER_FILTER_BY_DATE_APPLY_BUTTON}"  # noqa
                 )
                 ui.button(
                     self._resource_manager.get(GeneralKeys.LABEL_RESET),
@@ -174,25 +201,55 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
                         ),
                         on_click=self.open_range_dialog,
                     )
+                    # Attach a stable test marker for Playwright selection
+                    self._filter_by_date_button.mark(MARKER_FILTER_BY_DATE_BUTTON)
+                    self._filter_by_date_button.props(
+                        f"{TestIdAttributes.DATA_TESTID}={MARKER_FILTER_BY_DATE_BUTTON}"
+                    )
                     self._filter_by_date_button.disable()
 
                 self._button_previous_second = ui.button(
                     "<", on_click=self._viewmodel.previous_second
                 )
+                self._button_previous_second.mark(MARKER_PREV_SECONDS_BUTTON)
+                self._button_previous_second.props(
+                    f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_SECONDS_BUTTON}"
+                )
                 self._button_previous_frame = ui.button(
                     "<", on_click=self._viewmodel.previous_frame
                 )
+                self._button_previous_frame.mark(MARKER_PREV_FRAMES_BUTTON)
+                self._button_previous_frame.props(
+                    f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_FRAMES_BUTTON}"
+                )
                 self._button_previous_event = ui.button(
                     "<", on_click=self._viewmodel.previous_event
+                )
+                self._button_previous_event.mark(MARKER_PREV_EVENT_BUTTON)
+                self._button_previous_event.props(
+                    f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_EVENT_BUTTON}"
                 )
             with ui.column():
                 with ui.row():
                     self._filter_by_date_button_left = ui.button(
                         "<", on_click=self._viewmodel.switch_to_prev_date_range
                     )
+                    self._filter_by_date_button_left.mark(MARKER_PREV_DATE_BUTTON)
+                    self._filter_by_date_button_left.props(
+                        f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_DATE_BUTTON}"
+                    )
                     self._label_filter_by_date = ui.label()
+                    # Expose the current applied date range for Playwright assertions
+                    self._label_filter_by_date.mark(MARKER_FILTER_RANGE_LABEL)
+                    self._label_filter_by_date.props(
+                        f"{TestIdAttributes.DATA_TESTID}={MARKER_FILTER_RANGE_LABEL}"
+                    )
                     self._filter_by_date_button_right = ui.button(
                         ">", on_click=self._viewmodel.switch_to_next_date_range
+                    )
+                    self._filter_by_date_button_right.mark(MARKER_NEXT_DATE_BUTTON)
+                    self._filter_by_date_button_right.props(
+                        f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_DATE_BUTTON}"
                     )
                     self._filter_by_date_button_left.disable()
                     self._filter_by_date_button_right.disable()
@@ -216,11 +273,23 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
                 self._button_next_second = ui.button(
                     ">", on_click=self._viewmodel.next_second
                 )
+                self._button_next_second.mark(MARKER_NEXT_SECONDS_BUTTON)
+                self._button_next_second.props(
+                    f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_SECONDS_BUTTON}"
+                )
                 self._button_next_frame = ui.button(
                     ">", on_click=self._viewmodel.next_frame
                 )
+                self._button_next_frame.mark(MARKER_NEXT_FRAMES_BUTTON)
+                self._button_next_frame.props(
+                    f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_FRAMES_BUTTON}"
+                )
                 self._button_next_event = ui.button(
                     ">", on_click=self._viewmodel.next_event
+                )
+                self._button_next_event.mark(MARKER_NEXT_EVENT_BUTTON)
+                self._button_next_event.props(
+                    f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_EVENT_BUTTON}"
                 )
         self.set_enabled_general_buttons(False)
 
@@ -275,9 +344,13 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
 
     def set_active_color_on_filter_by_date_button(self) -> None:
         self._filter_by_date_button.props("color=orange")
+        # Expose active state for Playwright assertions
+        self._filter_by_date_button.props("data-filter-by-date-active=true")
 
     def set_inactive_color_on_filter_by_date_button(self) -> None:
         self._filter_by_date_button.props("color=primary")
+        # Expose inactive state for Playwright assertions
+        self._filter_by_date_button.props("data-filter-by-date-active=false")
 
     def set_active_color_on_filter_by_class_button(self) -> None:
         self._filter_by_class_button.props("color=orange")

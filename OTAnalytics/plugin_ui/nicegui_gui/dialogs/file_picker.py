@@ -77,6 +77,8 @@ class LocalFilePicker(ui.dialog):
         # Current selected extension filter from dropdown
         self.current_extension_filter: Optional[List[str]] = None
         self.current_selected_option: str = "All File Endings"
+        if extension_options is not None and "All Files" in self.extension_options:
+            self.current_selected_option = "All Files"
 
         # Set up current_extension_filter based on provided parameters
         if self.show_extension_select:
@@ -97,9 +99,10 @@ class LocalFilePicker(ui.dialog):
                         self.current_selected_option = option_name
                         break
             else:
-                # Apply the default "All File Endings" filter
-                self.current_extension_filter = self.extension_options.get(
-                    "All File Endings"
+                self.current_extension_filter = (
+                    self.extension_options.get("All Files")
+                    if "All Files" in self.extension_options
+                    else self.extension_options.get("All File Endings")
                 )
 
         with self, ui.card().style("max-width: 70%; width: 100%"):
@@ -199,13 +202,12 @@ class LocalFilePicker(ui.dialog):
         ):
             # Filter based on current_extension_filter (handles all extension filtering)
             # Only apply filter if current_extension_filter is not empty
-            paths = [
-                p
-                for p in paths
-                if p.is_file()
-                and p.suffix in self.current_extension_filter
-                or p.is_dir()
-            ]
+            exts: List[str] = list(self.current_extension_filter)
+
+            def matches_any(file_path: Path) -> bool:
+                return any(file_path.name.endswith(ext) for ext in exts)
+
+            paths = [p for p in paths if (p.is_file() and matches_any(p)) or p.is_dir()]
         paths.sort(key=lambda p: p.name.lower())
         paths.sort(key=lambda p: not p.is_dir())
 
@@ -239,8 +241,15 @@ class LocalFilePicker(ui.dialog):
             self.submit([self.path])
 
     async def _handle_ok(self) -> None:
-        rows: List[Dict[str, Any]] = await self.grid.get_selected_rows()
-        paths: List[Path] = [self._map_to_domain(r[PATH]) for r in rows]
+        # NiceGUI may return None when nothing is selected; normalize to an empty list
+        rows: List[Dict[str, Any]] | list = await self.grid.get_selected_rows() or []
+
+        # Build paths only from valid row dicts that contain PATH
+        paths: List[Path] = [
+            self._map_to_domain(r[PATH])
+            for r in rows
+            if isinstance(r, dict) and (PATH in r)
+        ]
 
         # If no rows are selected and we're in directory-only mode, use the current directory # noqa
         if not paths and (self.show_only_directories or self.multiple):

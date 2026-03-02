@@ -32,9 +32,11 @@ from tests.utils.playwright_helpers import (
     create_flow,
     create_section,
     go_to_sections_with_one_video,
+    load_main_page,
     navigate_and_prepare,
     save_project_as,
     search_for_marker_element,
+    setup_with_preconfigured_otconfig,
     wait_for_flow_present,
 )
 
@@ -82,10 +84,20 @@ class TestAddLineSectionWithDialog:
         external_app: NiceGUITestServer,
         resource_manager: ResourceManager,
     ) -> None:
-        navigate_and_prepare(page, external_app, resource_manager)
-        go_to_sections_with_one_video(page, resource_manager)
+        # Load preconfigured file with video and tracks already set up
+        load_main_page(page, external_app)
+
+        data_dir = Path(__file__).parents[1] / "data"
+        otconfig_path = data_dir / "sections_created_test_file.otconfig"
+        setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
+
+        # Switch to Sections tab
+        page.get_by_text(
+            resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
+        ).click()
+
+        # Create two additional sections
         names = ["First-Line", "Second-Line"]
-        # Use different coordinates for each created section
         coords = [
             [(20, 20), (140, 60)],
             [(220, 80), (340, 140)],
@@ -105,16 +117,14 @@ class TestAddLineSectionWithDialog:
         external_app: NiceGUITestServer,
         resource_manager: ResourceManager,
     ) -> None:
-        navigate_and_prepare(page, external_app, resource_manager)
-        go_to_sections_with_one_video(page, resource_manager)
-        names = ["First-Line", "Second-Line"]
-        # Use different coordinates for each created section
-        coords = [
-            [(20, 20), (140, 60)],
-            [(220, 80), (340, 140)],
-        ]
-        for i, n in enumerate(names):
-            create_section(page, resource_manager, n, positions=coords[i % len(coords)])
+        # Load preconfigured file with video, tracks, and sections already set up
+        load_main_page(page, external_app)
+
+        data_dir = Path(__file__).parents[1] / "data"
+        otconfig_path = data_dir / "sections_created_test_file.otconfig"
+        setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
+
+        # Switch to Flows tab (sections already exist from preconfigured file)
         page.get_by_text(
             resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
         ).click()
@@ -153,17 +163,15 @@ class TestAddLineSectionWithDialog:
         resource_manager: ResourceManager,
         test_data_tmp_dir: Path,
     ) -> None:
-        # Prepare and create sections
-        navigate_and_prepare(page, external_app, resource_manager)
-        go_to_sections_with_one_video(page, resource_manager)
-        names = ["First-Line", "Second-Line"]
-        # Use different coordinates for each created section
-        coords = [
-            [(20, 20), (140, 60)],
-            [(220, 80), (340, 140)],
-        ]
-        for i, n in enumerate(names):
-            create_section(page, resource_manager, n, positions=coords[i % len(coords)])
+        # Load preconfigured file with video, tracks, and sections already set up
+        load_main_page(page, external_app)
+
+        data_dir = Path(__file__).parents[1] / "data"
+        otconfig_path = data_dir / "sections_created_test_file.otconfig"
+        setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
+
+        # Get section names from the preconfigured file
+        names = ["North-Section", "South-Section"]
 
         # Switch to Flows tab
         page.get_by_text(
