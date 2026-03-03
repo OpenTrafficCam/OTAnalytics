@@ -7,7 +7,7 @@ class MidpointCircle:
     x: int
     y: int
     color: str = "orange"
-    radius: int = 7
+    radius: int = 14
 
     def to_svg(self) -> str:
         return (

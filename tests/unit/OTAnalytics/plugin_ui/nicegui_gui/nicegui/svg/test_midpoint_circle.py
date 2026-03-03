@@ -8,7 +8,7 @@ class TestMidpointCircle:
         assert mc.x == 100
         assert mc.y == 200
         assert mc.color == "orange"
-        assert mc.radius == 7
+        assert mc.radius == 14
 
     def test_to_svg_contains_circle_element(self) -> None:
         mc = MidpointCircle(id="mid-sec1-0", x=100, y=200)
@@ -16,7 +16,7 @@ class TestMidpointCircle:
         assert '<circle id="mid-sec1-0"' in svg
         assert 'cx="100"' in svg
         assert 'cy="200"' in svg
-        assert 'r="7"' in svg
+        assert 'r="14"' in svg
         assert 'pointer-events="all"' in svg
         assert 'cursor="crosshair"' in svg
 
