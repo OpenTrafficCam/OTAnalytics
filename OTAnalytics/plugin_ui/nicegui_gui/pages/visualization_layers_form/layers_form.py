@@ -13,12 +13,25 @@ from OTAnalytics.application.resources.resource_manager import (
     VisualizationLayersKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
-from OTAnalytics.plugin_ui.visualization.visualization import ALL
+from OTAnalytics.plugin_ui.visualization.visualization import (
+    ALL,
+    INTERSECTING_SECTIONS,
+    NOT_INTERSECTING_SECTIONS,
+)
 
 MARKER_PROJECT_NAME = "marker-project-name"
 MARKER_START_DATE = "marker-start-date"
 MARKER_START_TIME = "marker-start-time"
 MARKER_VISUALIZATION_LAYERS_ALL = "marker-visualization-layers-all"
+MARKER_VISUALIZATION_LAYERS_START_END_POINTS_ALL = (
+    "marker-visualization-layers-start-end-points-all"
+)
+MARKER_VISUALIZATION_LAYERS_INTERSECTING_SECTIONS = (
+    "marker-visualization-layers-intersecting-sections"
+)
+MARKER_VISUALIZATION_LAYERS_NOT_INTERSECTING_SECTIONS = (
+    "marker-visualization-layers-not-intersecting-sections"
+)
 MARKER_UPDATE_FLOW_HIGHLIGHTING = "marker-update-flow-highlighting"
 
 
@@ -52,6 +65,30 @@ class LayersForm(AbstractFrameTrackPlotting):
                     checkbox.mark(MARKER_VISUALIZATION_LAYERS_ALL)
                     checkbox.props(
                         f"{TestIdAttributes.DATA_TESTID}={MARKER_VISUALIZATION_LAYERS_ALL}"  # noqa
+                    )
+                if (
+                    layer_group.name == "Show start and end points"
+                    and layer.get_name() == ALL
+                ):
+                    checkbox.mark(MARKER_VISUALIZATION_LAYERS_START_END_POINTS_ALL)
+                    checkbox.props(
+                        f"{TestIdAttributes.DATA_TESTID}={MARKER_VISUALIZATION_LAYERS_START_END_POINTS_ALL}"  # noqa
+                    )
+                if (
+                    layer_group.name == "Show start and end points"
+                    and layer.get_name() == INTERSECTING_SECTIONS
+                ):
+                    checkbox.mark(MARKER_VISUALIZATION_LAYERS_INTERSECTING_SECTIONS)
+                    checkbox.props(
+                        f"{TestIdAttributes.DATA_TESTID}={MARKER_VISUALIZATION_LAYERS_INTERSECTING_SECTIONS}"  # noqa
+                    )
+                if (
+                    layer_group.name == "Show start and end points"
+                    and layer.get_name() == NOT_INTERSECTING_SECTIONS
+                ):
+                    checkbox.mark(MARKER_VISUALIZATION_LAYERS_NOT_INTERSECTING_SECTIONS)
+                    checkbox.props(
+                        f"{TestIdAttributes.DATA_TESTID}={MARKER_VISUALIZATION_LAYERS_NOT_INTERSECTING_SECTIONS}"  # noqa
                     )
         button = ui.button(
             self._resource_manager.get(
