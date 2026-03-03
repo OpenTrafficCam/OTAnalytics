@@ -21,9 +21,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle_resources import (
     CircleResources,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.midpoint_circle import MidpointCircle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line_resources import LineResources
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.midpoint_circle import MidpointCircle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
@@ -267,8 +267,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             return ""
         points = circle_to_coordinates(self._new_section_points)
         return "".join(
-            mc.to_svg()
-            for mc in compute_midpoints(points, MIDPOINT_ID_NEW_PREFIX)
+            mc.to_svg() for mc in compute_midpoints(points, MIDPOINT_ID_NEW_PREFIX)
         )
 
     def _on_pointer_down(self, e: events.MouseEventArguments) -> None:
@@ -291,9 +290,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             f"{MIDPOINT_ID_EDIT_PREFIX}-{self._current_section.id.id}-"
         ):
             self._insert_midpoint_in_edit_mode(e, element_id)
-        elif self._new_section and element_id.startswith(
-            f"{MIDPOINT_ID_NEW_PREFIX}-"
-        ):
+        elif self._new_section and element_id.startswith(f"{MIDPOINT_ID_NEW_PREFIX}-"):
             self._insert_midpoint_in_new_section_mode(element_id)
         elif self._new_section:
             pass
