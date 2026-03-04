@@ -14,9 +14,9 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page  # type: ignore
 
-from OTAnalytics.application.resources.resource_manager import (
-    AnalysisKeys,
-    ResourceManager,
+from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import (
+    MARKER_BUTTON_EXPORT_TRACK_STATISTICS,
 )
 from tests.acceptance.conftest import PLAYWRIGHT_VISIBLE_TIMEOUT_MS, NiceGUITestServer
 from tests.utils.playwright_helpers import (
@@ -24,6 +24,7 @@ from tests.utils.playwright_helpers import (
     export_file_via_dialog,
     load_main_page,
     open_project_otconfig,
+    search_for_marker_element,
 )
 
 playwright = pytest.importorskip(
@@ -68,10 +69,9 @@ def test_export_track_statistics(
     page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
     # Click "Export track statistics ..." button
-    export_button = page.get_by_text(
-        resource_manager.get(AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS),
-        exact=True,
-    )
+    export_button = search_for_marker_element(
+        page, MARKER_BUTTON_EXPORT_TRACK_STATISTICS
+    ).first
     export_button.click()
 
     # Handle export dialog and get output path
