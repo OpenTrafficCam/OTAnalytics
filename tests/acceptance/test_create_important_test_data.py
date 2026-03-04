@@ -15,12 +15,23 @@ import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import (
+    AnalysisKeys,
     FlowAndSectionKeys,
     ResourceManager,
     TrackFormKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+    MARKER_DIRECTORY,
+    MARKER_FILENAME,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+    MARKER_APPLY as MARKER_DIALOG_APPLY,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_VIDEO_TAB,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
+    MARKER_PROJECT_OPEN,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     MARKER_VISUALIZATION_LAYERS_ALL,
@@ -36,6 +47,7 @@ from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
     ACCEPTANCE_TEST_TRACK_FILES,
     ACCEPTANCE_TEST_VIDEO_FILE,
+    PLAYWRIGHT_SHORT_WAIT_MS,
     PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
     NiceGUITestServer,
 )
@@ -287,3 +299,86 @@ class TestCreateImportantTestData:
             "start_end_not_assigned_to_flows",
             nth=1,
         )
+
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_generate_track_statistics_reference_file(
+        self,
+        external_app: NiceGUITestServer,
+        page: Page,
+        resource_manager: ResourceManager,
+        test_data_tmp_dir: Path,
+    ) -> None:
+        """Generate reference track_statistics.csv file using Desktop GUI.
+
+        This test:
+        - Loads a pre-configured project with video, tracks, sections, and flows
+        - Clicks "Export track statistics ..."
+        - Uses default values in the export dialog
+        - Saves the file
+        - Copies it to the test data directory as reference
+
+        The resulting file can be used by other tests to compare exported output.
+        """
+        # Setup: Load tracks with preconfigured file
+        load_main_page(page, external_app)
+        data_dir = Path(__file__).parents[1] / "data"
+        otconfig_path = data_dir / "sections_created_test_file.otconfig"
+
+        # Load the otconfig file
+        search_for_marker_element(page, MARKER_PROJECT_OPEN).first.click()
+        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(
+            state="visible"
+        )
+        search_for_marker_element(page, MARKER_DIRECTORY).first.fill(
+            str(otconfig_path.parent)
+        )
+        search_for_marker_element(page, MARKER_FILENAME).first.fill(otconfig_path.name)
+        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+
+        # Wait for tracks to load
+        page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+        # Click "Export track statistics ..." button
+        page.get_by_text(
+            resource_manager.get(AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS),
+            exact=True,
+        ).click()
+
+        # Wait for export dialog to appear
+        dialog_apply = search_for_marker_element(page, MARKER_DIALOG_APPLY).first
+        dialog_apply.wait_for(state="visible")
+
+        # Use default values - just set the output directory
+        # IMPORTANT: Create the directory first because the dialog validates it exists
+        output_dir = test_data_tmp_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Get the current filename value to determine output file
+        filename_field = search_for_marker_element(page, MARKER_FILENAME).first
+        page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
+        current_filename = filename_field.input_value()
+
+        # Update directory field using Playwright
+        directory_field = search_for_marker_element(page, MARKER_DIRECTORY).first
+        directory_field.fill(str(output_dir))
+
+        # Wait for the directory field to update
+        page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
+
+        # Click OK/Apply
+        dialog_apply.click()
+
+        # Wait for file to be created (export operation takes several seconds)
+        page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+
+        # The actual output path using the filename from dialog
+        output_path = output_dir / current_filename
+
+        # Verify the file was created
+        assert output_path.exists(), f"Track statistics file not created: {output_path}"
+
+        # Copy to the main test data directory for reuse
+        permanent_path = data_dir / "track_statistics_reference.csv"
+        shutil.copy(output_path, permanent_path)

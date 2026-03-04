@@ -471,9 +471,90 @@ def save_project_as(page: Page, rm: ResourceManager, path: Path) -> None:
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
 
 
+def export_file_via_dialog(page: Page, output_dir: Path) -> Path:
+    """Handle the export file dialog and return the output path.
+
+    This function:
+    - Waits for the export dialog to appear
+    - Creates the output directory if it doesn't exist
+    - Gets the default filename from the dialog
+    - Sets the output directory using JavaScript (to avoid Playwright input issues)
+    - Clicks Apply
+
+    Args:
+        page: The Playwright page object
+        output_dir: Directory where the file should be exported
+
+    Returns:
+        Path to the exported file
+    """
+    # Wait for export dialog to appear
+    dialog_apply = search_for_marker_element(page, MARKER_DIALOG_APPLY).first
+    dialog_apply.wait_for(state="visible")
+
+    # Create the directory first because the dialog validates it exists
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Get the current filename value to determine output file
+    filename_field = search_for_marker_element(page, MARKER_FILENAME).first
+    page.wait_for_timeout(500)
+    current_filename = filename_field.input_value()
+
+    # Update directory field using Playwright
+    directory_field = search_for_marker_element(page, MARKER_DIRECTORY).first
+    directory_field.fill(str(output_dir))
+
+    # Wait for the directory field to update
+    page.wait_for_timeout(500)
+
+    # Click OK/Apply
+    dialog_apply.click()
+
+    # Return the expected output path
+    return output_dir / current_filename
+
+
 # ----------------------
 # File comparison helpers
 # ----------------------
+
+
+def compare_csv_files(exported_path: Path, reference_path: Path) -> None:
+    """Compare two CSV files for equality.
+
+    Args:
+        exported_path: Path to the exported CSV file
+        reference_path: Path to the reference CSV file
+
+    Raises:
+        AssertionError: If files differ
+    """
+    import csv
+
+    assert exported_path.exists(), f"Exported file not found: {exported_path}"
+    assert reference_path.exists(), f"Reference file not found: {reference_path}"
+
+    with open(exported_path, "r", encoding="utf-8") as exported_file:
+        exported_reader = csv.reader(exported_file)
+        exported_rows = list(exported_reader)
+
+    with open(reference_path, "r", encoding="utf-8") as reference_file:
+        reference_reader = csv.reader(reference_file)
+        reference_rows = list(reference_reader)
+
+    assert len(exported_rows) == len(reference_rows), (
+        f"Row count mismatch: exported={len(exported_rows)}, "
+        f"reference={len(reference_rows)}"
+    )
+
+    for i, (exported_row, reference_row) in enumerate(
+        zip(exported_rows, reference_rows)
+    ):
+        assert exported_row == reference_row, (
+            f"Row {i} mismatch:\n"
+            f"  Exported: {exported_row}\n"
+            f"  Reference: {reference_row}"
+        )
 
 
 def compare_json_files(saved_path: Path, reference_path: Path) -> None:
