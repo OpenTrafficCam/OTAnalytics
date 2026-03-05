@@ -10,6 +10,9 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
+
+MARKER_BUTTON_EXPORT_TRACK_STATISTICS = "button-export-track-statistics"
 
 
 class AnalysisForm(ButtonForm, AbstractFrame):
@@ -57,7 +60,7 @@ class AnalysisForm(ButtonForm, AbstractFrame):
                         AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS
                     ),
                     on_click=self._viewmodel.export_track_statistics,
-                )
+                ).props(f"{TEST_ID}={MARKER_BUTTON_EXPORT_TRACK_STATISTICS}")
 
     def get_general_buttons(self) -> list[Button]:
         general_buttons = []
