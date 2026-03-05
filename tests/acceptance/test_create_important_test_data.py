@@ -15,19 +15,9 @@ import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import ResourceManager
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
-    MARKER_DIRECTORY,
-    MARKER_FILENAME,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
-    MARKER_APPLY as MARKER_DIALOG_APPLY,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_TRACK_TAB,
     MARKER_VIDEO_TAB,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import (
-    MARKER_BUTTON_EXPORT_TRACK_STATISTICS,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
     MARKER_TAB_FLOW,
@@ -47,7 +37,6 @@ from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
     ACCEPTANCE_TEST_TRACK_FILES,
     ACCEPTANCE_TEST_VIDEO_FILE,
-    PLAYWRIGHT_SHORT_WAIT_MS,
     PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
     NiceGUITestServer,
 )
@@ -58,10 +47,10 @@ from tests.utils.playwright_helpers import (
     click_update_offset_button,
     create_flow,
     create_section,
+    export_track_statistics,
     get_loaded_tracks_canvas_from_otconfig,
     load_main_page,
     navigate_and_prepare,
-    open_project_otconfig,
     save_project_as,
     search_for_marker_element,
     toggle_and_screenshot,
@@ -311,55 +300,13 @@ class TestCreateImportantTestData:
 
         The resulting file can be used by other tests to compare exported output.
         """
-        # Setup: Load tracks with preconfigured file
-        load_main_page(page, external_app)
         data_dir = Path(__file__).parents[1] / "data"
         otconfig_path = data_dir / "sections_created_test_file.otconfig"
 
-        # Load the otconfig file
-        open_project_otconfig(page, resource_manager, otconfig_path)
-
-        # Wait for tracks to load
-        page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-
-        # Create the directory before clicking export button
-        output_dir = test_data_tmp_dir
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        # Click "Export track statistics ..." button
-        search_for_marker_element(
-            page, MARKER_BUTTON_EXPORT_TRACK_STATISTICS
-        ).first.click()
-
-        # Wait for export dialog to appear
-        dialog_apply = search_for_marker_element(page, MARKER_DIALOG_APPLY).first
-        dialog_apply.wait_for(state="visible")
-
-        # Use default values - just set the output directory
-
-        # Get the current filename value to determine output file
-        filename_field = search_for_marker_element(page, MARKER_FILENAME).first
-        page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
-        current_filename = filename_field.input_value()
-
-        # Update directory field using Playwright
-        directory_field = search_for_marker_element(page, MARKER_DIRECTORY).first
-        directory_field.fill(str(output_dir))
-
-        # Wait for the directory field to update
-        page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
-
-        # Click OK/Apply
-        dialog_apply.click()
-
-        # Wait for file to be created (export operation takes several seconds)
-        page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-
-        # The actual output path using the filename from dialog
-        output_path = output_dir / current_filename
-
-        # Verify the file was created
-        assert output_path.exists(), f"Track statistics file not created: {output_path}"
+        # Export track statistics
+        output_path = export_track_statistics(
+            page, external_app, resource_manager, test_data_tmp_dir, otconfig_path
+        )
 
         # Copy to the main test data directory for reuse
         permanent_path = data_dir / "track_statistics_reference.csv"
