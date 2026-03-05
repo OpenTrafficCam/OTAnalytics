@@ -30,9 +30,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_VIDEO_TAB,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
-    MARKER_PROJECT_OPEN,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     MARKER_VISUALIZATION_LAYERS_ALL,
 )
@@ -61,6 +58,7 @@ from tests.utils.playwright_helpers import (
     get_loaded_tracks_canvas_from_otconfig,
     load_main_page,
     navigate_and_prepare,
+    open_project_otconfig,
     save_project_as,
     search_for_marker_element,
     toggle_and_screenshot,
@@ -327,15 +325,7 @@ class TestCreateImportantTestData:
         otconfig_path = data_dir / "sections_created_test_file.otconfig"
 
         # Load the otconfig file
-        search_for_marker_element(page, MARKER_PROJECT_OPEN).first.click()
-        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(
-            state="visible"
-        )
-        search_for_marker_element(page, MARKER_DIRECTORY).first.fill(
-            str(otconfig_path.parent)
-        )
-        search_for_marker_element(page, MARKER_FILENAME).first.fill(otconfig_path.name)
-        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+        open_project_otconfig(page, resource_manager, otconfig_path)
 
         # Wait for tracks to load
         page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
