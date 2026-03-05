@@ -17,8 +17,9 @@ use it.
 5. [Submitting a Pull Request](#submitting-a-pull-request)
 6. [AI-Assisted Contributions](#ai-assisted-contributions)
 7. [Issue Guidelines](#issue-guidelines)
-8. [Commit Message Format](#commit-message-format)
-9. [Code of Conduct](#code-of-conduct)
+8. [Branch Naming](#branch-naming)
+9. [Commit Message Format](#commit-message-format)
+10. [Code of Conduct](#code-of-conduct)
 
 ---
 
@@ -76,25 +77,85 @@ Key commands (run from the repo root):
 
 ## Code Standards
 
-- **Formatting:** [Black](https://black.readthedocs.io/) for code formatting and [isort](https://pycqa.github.io/isort/) for import ordering.
+### Tooling
+
+- **Formatting:** [Black](https://black.readthedocs.io/) (line length 88) and [isort](https://pycqa.github.io/isort/) for import ordering.
 - **Linting:** [Flake8](https://flake8.pycqa.org/) for style and error checking.
-- **Type hints:** All public functions and methods must have type annotations.
-- **Docstrings:** Google-style docstrings for all public APIs.
-- **No dead code:** Remove unused imports and variables before submitting.
-- **Backwards compatibility:** Do not break public API without a deprecation path and a note in the changelog.
+- **Type checking:** [mypy](https://mypy-lang.org/) — all functions and methods (public and private) must have complete type annotations.
+- **Docstrings:** Google-style docstrings for all public functions, classes, and modules.
+- **Backwards compatibility:** Do not break the public API without a deprecation path and a changelog entry.
+
+### General rules
+
+- No wildcard imports (`from foo import *`).
+- All imports at the top of the file, grouped and sorted by `isort`. No inline or conditional imports except to resolve circular imports (document that case with a comment).
+- Raise specific exception types. No bare `except:` or `except Exception:` without re-raising or logging.
+- Prefer `pathlib.Path` over `os.path` for file operations.
+- Use `logging` (not `print`) for diagnostic output in library code.
+- No dead code — remove unused imports, variables, and commented-out code before submitting.
+
+### Naming
+
+| Construct       | Convention         | Example                  |
+|-----------------|--------------------|--------------------------|
+| Module          | `snake_case`       | `data_loader.py`         |
+| Class           | `PascalCase`       | `DataLoader`             |
+| Function/method | `snake_case`       | `load_records()`         |
+| Constant        | `UPPER_SNAKE_CASE` | `MAX_RETRIES = 3`        |
+| Private         | leading underscore | `_internal_helper()`     |
+| Type alias      | `PascalCase`       | `RecordList = list[...]` |
+
+Beyond casing:
+
+- **Intention-revealing:** names explain *what* and *why*, not *how*. No abbreviations or single-letter names except loop counters (`i`, `j`). `elapsed_time_in_days` not `d`.
+- **No encodings:** no Hungarian notation, no type prefixes, no redundant context. `User.name` not `User.user_name`.
+- **Pronounceable:** names must be speakable. `generation_timestamp` not `gen_ymdhms`.
+- **Searchable:** no bare magic numbers or magic strings — extract into named `UPPER_SNAKE_CASE` constants.
+
+### Clean Code
+
+**Functions:**
+- Do one thing at one level of abstraction. If you can extract a meaningful sub-function, do it.
+- Aim for 0–2 parameters. More than three is a smell — consider a dataclass or value object.
+- No hidden side effects: a function does exactly what its name says and nothing more.
+
+**Classes:**
+- Single Responsibility Principle: one reason to change. If you describe it with "and", split it.
+- Keep classes small (~200 lines is a signal to reconsider).
+- Law of Demeter: talk only to direct collaborators. Avoid chaining through object graphs.
+- Tell, don't ask: tell an object to do something rather than querying its state to decide externally.
+
+**Comments:**
+- Prefer self-documenting code over comments. Comments explain *why*, never *what*.
+- No commented-out code — delete it; version control preserves history.
+- No redundant comments that merely restate the code.
+
+**Constants and duplication:**
+- Extract every magic number and magic string into a named constant.
+- Apply DRY: if the same logic or value appears in two places, extract it.
 
 ---
 
 ## Testing
 
-- Tests live in the `tests/` directory and are written with [pytest](https://docs.pytest.org/).
-- Every bug fix must include a regression test.
-- Every new feature must include unit tests.
-- Aim for meaningful coverage of edge cases, not just the happy path.
+- Tests are written with [pytest](https://docs.pytest.org/) and live under `tests/unit/`, `tests/acceptance/`, `tests/benchmark/`, and `tests/regression/`.
+- Test file names mirror source file names: `OTAnalytics/domain/core.py` → `tests/unit/OTAnalytics/domain/test_core.py`.
+- Every bug fix must include a regression test that fails before the fix and passes after.
+- Every new public function must have at least one happy-path and one edge-case test.
+- Aim for ≥90% coverage on new code.
+- Every test method must have a docstring that references its OpenProject issue using `#Requirement OP#<number>` or `#Bugfix OP#<number>`.
+- Use `pytest.raises` for expected exceptions — never `try/except` in tests.
+- Use `unittest.mock` as the mock library. Mock only external I/O (network, filesystem, time) — do not mock code you own.
+- Use builders in `tests/utils/` for test data creation and fixtures from `conftest.py` where available.
+- Tests must be deterministic. Do not rely on ordering, real timestamps, or network calls.
+
+Unit tests follow the **Stage Play** structure (four named actors: `given`, `target`, `actual`, `expected`;
+module-level `setup()`, `configure_*()`, and `create_target()` functions; test class at the top of the file).
+See [AGENTS.md](./AGENTS.md) for the full structure and examples.
 
 ```bash
 uv run pytest                                             # run all tests
-uv run pytest tests/unit/test_foo.py                     # run a single file
+uv run pytest tests/unit/                                # unit tests only
 uv run pytest -k "test_bar"                              # run tests matching a name
 uv run pytest --cov=OTAnalytics --cov-report=term-missing  # with coverage
 ```
@@ -103,11 +164,20 @@ uv run pytest --cov=OTAnalytics --cov-report=term-missing  # with coverage
 
 ## Submitting a Pull Request
 
-1. Ensure all tests pass and all linters are clean.
-2. Write a clear PR description explaining *what* changed and *why*.
-3. Reference the related issue (e.g., `Closes #42`).
-4. Keep PRs focused: one logical change per PR.
-5. Be responsive to review feedback.
+Before marking a PR as ready, confirm:
+
+- [ ] `uv run pre-commit run --all-files` — all hooks pass (formatting, linting, type checking)
+- [ ] `uv run pytest` — all tests pass
+- [ ] New/changed behaviour is covered by tests
+- [ ] `CHANGELOG.md` updated under `[Unreleased]`
+- [ ] AI disclosure included in the PR description if applicable (see [AI-Assisted Contributions](#ai-assisted-contributions))
+
+In the PR description:
+
+1. Explain *what* changed and *why*.
+2. Reference the OpenProject issue (e.g., `OP#142`).
+3. Keep PRs focused: one logical change per PR.
+4. Be responsive to review feedback.
 
 Maintainers aim to triage new pull requests within **two weeks**. If you have not heard back after that, feel free to
 ping the PR thread.
@@ -238,6 +308,26 @@ If you are filing a bug or feature request and want it to be AI-agent-friendly, 
 - [ ] Existing tests still pass
 - [ ] New tests cover the described behavior
 - [ ] Public API unchanged (or documented as breaking)
+```
+
+---
+
+## Branch Naming
+
+Branch names must include the OpenProject issue number:
+
+```
+<type>/<issue_number>-<short-description>
+```
+
+Types: `task`, `bug`, `feature`, `refactor`
+
+Examples:
+```
+task/9478-add-contributing-markdown-files
+bug/9461-fix-python-version-requirement-in-readme
+feature/142-add-csv-export
+refactor/201-simplify-loader
 ```
 
 ---

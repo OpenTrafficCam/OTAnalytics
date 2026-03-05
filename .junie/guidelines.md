@@ -93,11 +93,37 @@ OTAnalytics/
 
 1. **Code Style**:
 
-- Follow PEP 8 guidelines
 - Use Black for code formatting (line length 88)
 - Sort imports with isort
+- Use Flake8 for linting
 - Use mypy for static type checking
-- Add type hints to all functions and methods
+- Add type hints to all functions and methods (public and private)
+- Google-style docstrings on all public functions, classes, and modules
+- No wildcard imports; all imports at the top of the file
+- Raise specific exception types; no bare `except:`
+- Prefer `pathlib.Path` over `os.path`; use `logging` not `print`
+- No dead code, no commented-out code
+
+**Naming:**
+- Names must be intention-revealing, pronounceable, and searchable
+- No abbreviations, no Hungarian notation, no type prefixes
+- Extract magic numbers and strings into named `UPPER_SNAKE_CASE` constants
+- Apply DRY: if the same logic or value appears in two places, extract it
+
+**Functions:**
+- Do one thing at one level of abstraction
+- Aim for 0–2 parameters; more than three is a smell — use a dataclass
+- No hidden side effects
+
+**Classes:**
+- Single Responsibility Principle: one reason to change
+- Keep classes small (~200 lines is a signal to reconsider)
+- Law of Demeter: talk only to direct collaborators; avoid chaining through object graphs
+- Tell, don't ask: tell an object to do something rather than querying its state
+
+**Comments:**
+- Prefer self-documenting code; comments explain *why*, never *what*
+- No commented-out code; no redundant comments
 
 2. **Testing**:
 
