@@ -3,7 +3,7 @@
 Thank you for your interest in contributing! We welcome contributions from both human developers and AI-assisted
 workflows (Claude Code, GitHub Copilot, Cursor, Codex, etc.).
 
-Not familiar with the project yet? Start with the [README](./README.md) to understand what OTAnalytics does and how to
+Not familiar with the project yet? Start with the [Readme](./README.md) to understand what OTAnalytics does and how to
 use it.
 
 ---
@@ -62,7 +62,7 @@ install_dev.cmd
 This creates a `.venv`, installs all dependencies (including dev extras), installs Playwright browsers,
 and sets up the pre-commit hooks.
 
-Key commands (run from the repo root):
+Key commands (run from the repository root):
 
 | Task         | Command                             |
 |--------------|-------------------------------------|
@@ -148,8 +148,8 @@ Beyond casing:
 
 - Tests are written with [pytest](https://docs.pytest.org/) and live under `tests/unit/`, `tests/acceptance/`,
   `tests/benchmark/`, and `tests/regression/`.
-- Test file names mirror source file names: `OTAnalytics/domain/core.py` → `tests/unit/OTAnalytics/domain/test_core.py`.
-- Every bug fix must include a regression test that fails before the fix and passes after.
+- Test filenames mirror source filenames: `OTAnalytics/domain/core.py` → `tests/unit/OTAnalytics/domain/test_core.py`.
+- Every bugfix must include a regression test that fails before the fix and passes after.
 - Every new public function must have at least one happy-path and one edge-case test.
 - Aim for ≥90% coverage on new code.
 - Every test method must have a docstring that references its OpenProject issue using `#Requirement OP#<number>` or
@@ -220,7 +220,7 @@ Include:
 
 Example PR description footer:
 
-```
+```text
 AI Disclosure: Initial implementation generated with Claude Code (claude-sonnet-4-6).
 Tests and docstrings also AI-assisted. I reviewed all logic, ran the full test suite,
 and manually verified the behavior against the documented requirements.
@@ -246,13 +246,13 @@ assisted by an AI tool.
 
 For fully AI-generated commits, add a `Co-Authored-By` trailer:
 
-```
+```text
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 For commits where AI assisted but a human drove the work, use an `Assisted-by` trailer:
 
-```
+```text
 Assisted-by: GitHub Copilot
 ```
 
@@ -326,7 +326,7 @@ If you are filing a bug or feature request and want it to be AI-agent-friendly, 
 
 Branch names must include the OpenProject issue number:
 
-```
+```text
 <type>/<issue_number>-<short-description>
 ```
 
@@ -334,7 +334,7 @@ Types: `task`, `bug`, `feature`, `refactor`
 
 Examples:
 
-```
+```text
 task/9478-add-contributing-markdown-files
 bug/9461-fix-python-version-requirement-in-readme
 feature/142-add-csv-export
@@ -345,7 +345,7 @@ refactor/201-simplify-loader
 
 ## Commit Message Format
 
-```
+```text
 OP#<issue_number>: <short summary, imperative, max 72 chars>
 
 [optional body: explain WHY, not WHAT]
@@ -358,7 +358,7 @@ starting work.
 
 Examples:
 
-```
+```text
 OP#9478: Add CONTRIBUTING.md and AGENTS.md files
 
 OP#87: Fix empty input raising wrong exception type

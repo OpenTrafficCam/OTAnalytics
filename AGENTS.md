@@ -11,7 +11,7 @@ OTAnalytics is a core module of the [OpenTrafficCam framework](https://github.co
 traffic analysis on trajectories of road users tracked by OTVision or other tools. It processes trajectory data,
 defines and analyzes traffic flows, counts vehicles assigned to flows, and generates event lists and statistics.
 
-```
+```text
 OTAnalytics/          # Main package
   __init__.py         # Public API surface
   __main__.py         # Entry point
@@ -194,9 +194,9 @@ readability.
 
 ## Testing Conventions
 
-- Every bug fix **must** add a regression test that fails before the fix and passes after.
+- Every bugfix **must** add a regression test that fails before the fix and passes after.
 - Every new public function **must** have at least one happy-path and one edge-case test.
-- Test file names mirror source file names: `OTAnalytics/domain/core.py` → `tests/unit/OTAnalytics/domain/test_core.py`.
+- Test filenames mirror source filenames: `OTAnalytics/domain/core.py` → `tests/unit/OTAnalytics/domain/test_core.py`.
 - Every test method must have a docstring linking to its OpenProject issue (see Stage Play rules below).
 - Use `pytest.raises` for expected exceptions — never `try/except` in tests.
 - Use `unittest.mock` as the mock library. Do not mock things you own; mock only external I/O (network,
@@ -309,7 +309,7 @@ justify its existence in its docstring using these conventions:
 - `@lifesaver by <name>` — add this when the test caught a real bug before it reached production.
 - `@regression by <name>` — add this when the test caught a regression (a previously fixed bug returning).
 
-Every test method **must** have a docstring. Requirement tests use `#Requirement`, bug fix tests use
+Every test method **must** have a docstring. Requirement tests use `#Requirement`, bugfix tests use
 `#Bugfix`. Awards are added retrospectively as tests prove their worth.
 
 ---
@@ -391,7 +391,7 @@ If you are acting as a **code reviewer** rather than an implementer, verify the 
 - Bare `except:` swallows errors silently.
 - Untrusted input is passed to `subprocess`, `eval`, `exec`, or `os.system`.
 - New heavyweight dependency added without justification.
-- A regression test is missing for a bug fix.
+- A regression test is missing for a bugfix.
 
 ### Should-flag (leave a comment, but may still approve)
 
@@ -415,7 +415,7 @@ If you are acting as a **code reviewer** rather than an implementer, verify the 
 
 Branch names must include the OpenProject issue number:
 
-```
+```text
 <type>/<issue_number>-<short-description>
 ```
 
@@ -423,7 +423,7 @@ Types: `task`, `bug`, `feature`, `refactor`
 
 Examples:
 
-```
+```text
 task/9478-add-contributing-markdown-files
 bug/9461-fix-python-version-requirement-in-readme
 feature/142-add-csv-export
@@ -437,7 +437,7 @@ confirmation.
 
 ## Commit Message Format
 
-```
+```text
 OP#<issue_number>: <short summary, imperative, max 72 chars>
 
 [optional body: explain WHY, not WHAT]
@@ -457,13 +457,13 @@ Claude Code adds `Co-Authored-By` automatically — keep it. For other tools, ad
 
 Examples:
 
-```
+```text
 OP#9478: Add CONTRIBUTING.md and AGENTS.md files
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
-```
+```text
 OP#87: Fix empty input raising wrong exception type
 
 Assisted-by: GitHub Copilot
