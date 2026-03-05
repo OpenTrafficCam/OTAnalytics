@@ -140,14 +140,7 @@ readability.
 - Every bug fix **must** add a regression test that fails before the fix and passes after.
 - Every new public function **must** have at least one happy-path and one edge-case test.
 - Test file names mirror source file names: `OTAnalytics/domain/core.py` → `tests/unit/OTAnalytics/domain/test_core.py`.
-- Bug fix tests must include the OpenProject issue number in their docstring:
-  ```python
-  def test_empty_input_raises_value_error():
-      """Verify that empty input raises ValueError.
-
-      This test was written to fix OP#87.
-      """
-  ```
+- Every test method must have a docstring linking to its OpenProject issue (see Stage Play rules below).
 - Use `pytest.raises` for expected exceptions — never `try/except` in tests.
 - Use `unittest.mock` as the mock library. Do not mock things you own; mock only external I/O (network,
   filesystem, time).
@@ -159,7 +152,9 @@ readability.
 Unit tests follow the **"Every Unit Test Is a Stage Play"** pattern
 (see [Part I](https://schneide.blog/2024/08/26/every-unit-test-is-a-stage-play-part-i/),
 [Part II](https://schneide.blog/2024/09/02/every-unit-test-is-a-stage-play-part-ii/),
-[Part III](https://schneide.blog/2024/09/30/every-unit-test-is-a-stage-play-part-iii/)).
+[Part III](https://schneide.blog/2024/09/30/every-unit-test-is-a-stage-play-part-iii/),
+[Part IV](https://schneide.blog/2024/10/07/every-unit-test-is-a-stage-play-part-iv/),
+[Part V](https://schneide.blog/2024/11/18/every-unit-test-is-a-stage-play-part-v/)).
 Every test tells a short, readable story using four named actors:
 
 | Actor | Role |
@@ -182,6 +177,10 @@ from OTAnalytics.application.use_cases.foo import DoFoo
 
 class TestDoFoo:
     def test_happy_path(self) -> None:
+        """Verify that existing items are returned.
+
+        #Requirement OP#142
+        """
         given = configure_foo_exists(setup())
         target = create_target(given)
 
@@ -190,10 +189,11 @@ class TestDoFoo:
         assert actual == given.expected_result
         given.repository.find.assert_called_once()
 
-    def test_bug_op_87(self) -> None:
+    def test_empty_input_raises_value_error(self) -> None:
         """Verify that empty input raises ValueError.
 
-        This test was written to fix OP#87.
+        #Bugfix OP#87
+        @lifesaver by alice
         """
         given = setup()
         target = create_target(given)
@@ -223,7 +223,7 @@ def create_target(given: Given) -> DoFoo:
     return DoFoo(given.repository)
 ```
 
-**Rules:**
+**Structure rules (Parts I–III):**
 - `Given` is a `@dataclass` holding all mocks and preconditions for the scenario.
 - `setup()` is a module-level function that creates the base `Given` with sensible defaults.
 - `configure_*()` functions are module-level and adjust `Given` for a specific scenario. They accept
@@ -233,6 +233,25 @@ def create_target(given: Given) -> DoFoo:
   `test_returns_empty_list_when_repository_is_empty` not `test_execute`.
 - Keep the test method body short — extract any complex setup into `configure_*()` helpers.
 - Do not use literal `# Given / # When / # Then` comments; the structure is expressed through naming.
+
+**Story rules — Arrange / Act / Assert (Part IV):**
+- Each test has exactly **one Act** (one call on `target`) and one logical assertion cluster.
+- If you are tempted to add a second act or a second unrelated assertion, split into two tests.
+- Write assertions expressively: prefer `assert actual == [a, b, c]` over separate per-element
+  assertions. The assertion should read as a natural English sentence.
+
+**Docstring and award rules (Part V):**
+
+Tests lack external stakeholders and are read when developers are already frustrated. Make every test
+justify its existence in its docstring using these conventions:
+
+- `#Requirement OP#<number>` — the test covers a requirement from this issue.
+- `#Bugfix OP#<number>` — the test is a regression guard for a bug fixed in this issue.
+- `@lifesaver by <name>` — add this when the test caught a real bug before it reached production.
+- `@regression by <name>` — add this when the test caught a regression (a previously fixed bug returning).
+
+Every test method **must** have a docstring. Requirement tests use `#Requirement`, bug fix tests use
+`#Bugfix`. Awards are added retrospectively as tests prove their worth.
 
 ---
 
