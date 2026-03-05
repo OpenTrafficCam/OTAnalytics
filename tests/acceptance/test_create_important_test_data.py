@@ -322,6 +322,10 @@ class TestCreateImportantTestData:
         # Wait for tracks to load
         page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
+        # Create the directory before clicking export button
+        output_dir = test_data_tmp_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+
         # Click "Export track statistics ..." button
         search_for_marker_element(
             page, MARKER_BUTTON_EXPORT_TRACK_STATISTICS
@@ -332,9 +336,6 @@ class TestCreateImportantTestData:
         dialog_apply.wait_for(state="visible")
 
         # Use default values - just set the output directory
-        # IMPORTANT: Create the directory first because the dialog validates it exists
-        output_dir = test_data_tmp_dir
-        output_dir.mkdir(parents=True, exist_ok=True)
 
         # Get the current filename value to determine output file
         filename_field = search_for_marker_element(page, MARKER_FILENAME).first
