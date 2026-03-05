@@ -1371,6 +1371,52 @@ class TestMidpointRendering:
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
     )
+    def test_midpoints_rendered_after_current_point_in_draw_all(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+        mock_section: Mock,
+    ) -> None:
+        """Midpoint affordances must be last in SVG so they sit on top of the
+        moving circle's large transparent stroke and keep receiving pointer events."""
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            current_section=mock_section,
+        )
+        section_id = mock_section.id.id
+        c0 = Circle(id=f"{section_id}-0", x=10, y=10, fill="orange", pointer_event="all")
+        c1 = Circle(id=f"{section_id}-1", x=15, y=10, fill="orange", pointer_event="all")
+        canvas._circles.add(section_id, c0)
+        canvas._circles.add(section_id, c1)
+        # Simulate an active drag: current_point with the big transparent stroke
+        canvas._current_point = Circle(
+            id=f"{section_id}-0",
+            x=10,
+            y=10,
+            fill="orange",
+            pointer_event="all",
+            stroke_width=400,
+            stroke_opacity=0.0,
+        )
+
+        canvas.draw_all()
+
+        content: str = canvas._background_image.content
+        midpoint_id = f'id="mid-{section_id}-0"'
+        current_point_id = f'id="{section_id}-0"'
+        assert midpoint_id in content, "midpoint affordance must be in SVG"
+        assert current_point_id in content, "current point must be in SVG"
+        # Midpoint must appear AFTER the current-point circle so it is on top
+        assert content.index(midpoint_id) > content.rindex(
+            current_point_id
+        ), "midpoint affordances must be rendered after (on top of) the moving circle"
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
     def test_no_midpoints_for_new_section_with_one_point(
         self,
         mock_ui: Any,

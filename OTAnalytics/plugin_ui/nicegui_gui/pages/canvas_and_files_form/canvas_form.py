@@ -218,11 +218,11 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self._background_image.content += self._sections.to_svg()
             self._background_image.content += self._flows.to_svg()
             self._background_image.content += self._circles.to_svg()
-            self._background_image.content += self._midpoints_svg_for_section()
             if self._current_point:
                 self._background_image.content += self._current_point.to_svg()
             if self._new_point:
                 self._background_image.content += self._new_point.to_svg()
+            self._background_image.content += self._midpoints_svg_for_section()
             self.draw_new_section()
 
     def draw_new_section(self) -> None:
