@@ -615,6 +615,93 @@ class TestCanvasFormPointerEvents:
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
     )
+    def test_on_svg_pointer_move_edit_mode_preserves_original_id_when_cursor_drifts(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+        mock_section: Mock,
+    ) -> None:
+        """When the cursor drifts over a nearby control point during drag,
+        the dragged circle must keep its original id, not adopt the neighbour's id."""
+        # Arrange
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager, current_section=mock_section
+        )
+        section_id = mock_section.id.id
+        dragged_id = "section-1"
+        neighbour_id = "section-0"
+        canvas_form._circles.by_section[section_id][dragged_id] = Circle(
+            id=dragged_id, x=100, y=100, fill=EDIT_COLOR, pointer_event="all"
+        )
+        canvas_form._circles.by_section[section_id][neighbour_id] = Circle(
+            id=neighbour_id, x=102, y=102, fill=EDIT_COLOR, pointer_event="all"
+        )
+        canvas_form._current_point = Circle(
+            id=dragged_id, x=100, y=100, fill=EDIT_COLOR, pointer_event="all"
+        )
+        # Cursor has drifted over the *neighbour* circle
+        move_event = {IMAGE_X: 110, IMAGE_Y: 110, ELEMENT_ID: neighbour_id}
+
+        # Act
+        canvas_form.on_svg_pointer_move(move_event)
+
+        # Assert: dragged circle id preserved, neighbour circle unchanged
+        assert canvas_form._current_point.id == dragged_id
+        assert canvas_form._current_point.x == 110
+        assert canvas_form._current_point.y == 110
+        # Neighbour must not have moved
+        assert canvas_form._circles.by_section[section_id][neighbour_id].x == 102
+        assert canvas_form._circles.by_section[section_id][neighbour_id].y == 102
+        # Dragged circle's position must have been updated under its own id
+        assert canvas_form._circles.by_section[section_id][dragged_id].x == 110
+        assert canvas_form._circles.by_section[section_id][dragged_id].y == 110
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_on_svg_pointer_up_edit_mode_preserves_original_id_when_cursor_drifts(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+        mock_section: Mock,
+    ) -> None:
+        """On pointer-up, the final circle position must be stored under the
+        originally-clicked id, even if the cursor is over a different element."""
+        # Arrange
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager, current_section=mock_section
+        )
+        section_id = mock_section.id.id
+        dragged_id = "section-1"
+        neighbour_id = "section-0"
+        canvas_form._circles.by_section[section_id][dragged_id] = Circle(
+            id=dragged_id, x=100, y=100, fill=EDIT_COLOR, pointer_event="all"
+        )
+        canvas_form._circles.by_section[section_id][neighbour_id] = Circle(
+            id=neighbour_id, x=102, y=102, fill=EDIT_COLOR, pointer_event="all"
+        )
+        canvas_form._current_point = Circle(
+            id=dragged_id, x=100, y=100, fill=EDIT_COLOR, pointer_event="all"
+        )
+        # Release the pointer while over the neighbour circle
+        up_event = {IMAGE_X: 115, IMAGE_Y: 115, ELEMENT_ID: neighbour_id}
+
+        # Act
+        canvas_form.on_svg_pointer_up(up_event)
+
+        # Assert: current_point cleared, dragged circle placed at release position
+        assert canvas_form._current_point is None
+        assert canvas_form._circles.by_section[section_id][dragged_id].x == 115
+        assert canvas_form._circles.by_section[section_id][dragged_id].y == 115
+        # Neighbour circle must be untouched
+        assert canvas_form._circles.by_section[section_id][neighbour_id].x == 102
+        assert canvas_form._circles.by_section[section_id][neighbour_id].y == 102
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
     def test_on_svg_pointer_up_edit_mode(
         self,
         mock_ui: Any,

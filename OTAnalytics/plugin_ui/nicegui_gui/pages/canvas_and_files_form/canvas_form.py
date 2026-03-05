@@ -360,7 +360,16 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             )
             self.draw_all()
         elif self._current_section and self._current_point:
-            self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
+            self._current_point = Circle(
+                id=self._current_point.id,
+                x=round(e[IMAGE_X]),
+                y=round(e[IMAGE_Y]),
+                fill=EDIT_COLOR,
+                pointer_event=POINTER_EVENT_ALL,
+                stroke=MOVING_COLOR,
+                stroke_width=MOVING_STROKE_WIDTH,
+                stroke_opacity=MOVING_STROKE_OPACITY,
+            )
             self._circles.add(self._current_section.id.id, self._current_point)
             self.draw_all()
 
@@ -381,7 +390,14 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             pass
         elif self._current_section and self._current_point:
             self._circles.add(
-                self._current_section.id.id, create_circle(e, fill=EDIT_COLOR)
+                self._current_section.id.id,
+                Circle(
+                    id=self._current_point.id,
+                    x=round(e[IMAGE_X]),
+                    y=round(e[IMAGE_Y]),
+                    fill=EDIT_COLOR,
+                    pointer_event=POINTER_EVENT_ALL,
+                ),
             )
             self._current_point = None
             self.draw_all()
