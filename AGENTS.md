@@ -121,6 +121,62 @@ uv run pytest --tb=short                           # compact tracebacks
 | Private          | leading underscore      | `_internal_helper()`     |
 | Type alias       | `PascalCase`            | `RecordList = list[...]` |
 
+Beyond casing, names must follow these Clean Code rules:
+
+- **Intention-revealing:** names must explain *what* and *why*, not *how*. Avoid abbreviations and
+  single-letter names except for conventional loop counters (`i`, `j`).
+  `elapsed_time_in_days` not `d`; `is_flagged_for_deletion` not `flag`.
+- **No encodings:** no Hungarian notation, no type prefixes, no redundant context.
+  `User.name` not `User.user_name`; `count` not `int_count`.
+- **Pronounceable:** names must be speakable. `generation_timestamp` not `gen_ymdhms`.
+- **Searchable:** never use bare magic numbers or magic strings in non-trivial code — extract them
+  into named constants so they can be searched and changed in one place.
+  `MAX_POLL_INTERVAL_SECONDS = 5` not a bare `5` scattered through the code.
+
+### Clean Code
+
+#### Functions and methods
+
+- **Do one thing:** a function must have a single, clearly nameable purpose at one level of
+  abstraction. If you can extract a sub-function with a meaningful name that is not merely a
+  restatement of the function itself, do it.
+- **One level of abstraction per function:** do not mix high-level orchestration with low-level
+  detail in the same function body.
+- **Prefer fewer arguments:** aim for 0–2 parameters. Three is acceptable with justification. More
+  than three is a smell — consider grouping related parameters into a dataclass or value object.
+- **No hidden side effects:** a function must do exactly what its name says and nothing more. Hidden
+  state mutations that are not reflected in the function name are forbidden.
+
+#### Classes
+
+- **Single Responsibility Principle:** a class has exactly one reason to change. If you describe its
+  purpose using the word "and", it should be split into two classes.
+- **Small classes:** keep classes small. A class growing beyond ~200 lines is a signal to reconsider
+  its responsibilities.
+- **Law of Demeter:** talk only to direct collaborators. Avoid method-call chains that traverse
+  object graphs: `obj.get_a().get_b().do_c()` means your code knows too much about internal
+  structure. Introduce a method on the intermediate object instead.
+- **Tell, don't ask:** do not query an object's state to decide what to do with it externally —
+  tell the object to do it. Querying state to branch on it is a sign the logic belongs inside the
+  object.
+
+#### Comments
+
+- **Prefer self-documenting code over comments.** If a comment is needed to explain *what* code
+  does, rename or extract until the code speaks for itself. Comments explain *why* — the intent,
+  trade-off, or constraint that cannot be expressed in code.
+- **No commented-out code.** Dead code must be deleted, not commented out. Version control preserves
+  history.
+- **No redundant comments.** A comment that merely restates the code (`# increment i` above `i += 1`)
+  adds noise and must be removed.
+
+#### Constants and duplication
+
+- Extract every magic number and magic string into a named constant at the top of the module or
+  class. Constants are `UPPER_SNAKE_CASE`.
+- Apply DRY (Don't Repeat Yourself): if the same logic or value appears in two places, extract it.
+  Duplication is the root of maintenance problems.
+
 ### Imports
 
 Sort order (enforced by `isort --profile black`):
