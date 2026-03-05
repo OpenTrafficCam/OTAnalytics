@@ -14,12 +14,7 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
-from OTAnalytics.application.resources.resource_manager import (
-    AnalysisKeys,
-    FlowAndSectionKeys,
-    ResourceManager,
-    TrackFormKeys,
-)
+from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
     MARKER_DIRECTORY,
     MARKER_FILENAME,
@@ -28,7 +23,15 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
+    MARKER_TRACK_TAB,
     MARKER_VIDEO_TAB,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import (
+    MARKER_BUTTON_EXPORT_TRACK_STATISTICS,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+    MARKER_TAB_FLOW,
+    MARKER_TAB_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     MARKER_VISUALIZATION_LAYERS_ALL,
@@ -118,12 +121,7 @@ class TestCreateImportantTestData:
             assert track_file.exists(), f"Test track file missing: {track_file}"
 
         # Add video
-        try:
-            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
-        except Exception:
-            page.get_by_text(
-                resource_manager.get(TrackFormKeys.TAB_VIDEO), exact=True
-            ).click()
+        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
 
         add_video_via_picker(page, resource_manager, video_file)
 
@@ -132,16 +130,12 @@ class TestCreateImportantTestData:
         click_table_cell_with_text(page, video_file.name)
 
         # Add tracks
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TRACK), exact=True
-        ).click()
+        search_for_marker_element(page, MARKER_TRACK_TAB).first.click()
         for track_file in track_files:
             add_track_via_picker(page, resource_manager, track_file)
 
         # Switch to Sections tab
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
-        ).click()
+        search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
 
         # Create two sections with different names and coordinates
         section_names = ["North-Section", "South-Section"]
@@ -154,9 +148,7 @@ class TestCreateImportantTestData:
             create_section(page, resource_manager, name, positions=coords)
 
         # Switch to Flows tab and create flows
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
-        ).click()
+        search_for_marker_element(page, MARKER_TAB_FLOW).first.click()
 
         # Create a flow between the two sections
         flow_name = "Test-Flow"
@@ -331,10 +323,9 @@ class TestCreateImportantTestData:
         page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
         # Click "Export track statistics ..." button
-        page.get_by_text(
-            resource_manager.get(AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS),
-            exact=True,
-        ).click()
+        search_for_marker_element(
+            page, MARKER_BUTTON_EXPORT_TRACK_STATISTICS
+        ).first.click()
 
         # Wait for export dialog to appear
         dialog_apply = search_for_marker_element(page, MARKER_DIALOG_APPLY).first
