@@ -35,7 +35,7 @@ Contributions are welcome beyond just code. You can help by:
 For code contributions:
 
 1. Fork the repository and clone your fork.
-2. Create a new branch for your change: `git checkout -b feat/your-feature-name`
+2. Create a new branch for your change: `git checkout -b feature/your-feature-name`
 3. Make your changes, add tests, and open a pull request.
 
 For AI agents: also read [AGENTS.md](./AGENTS.md) for machine-readable setup instructions.
@@ -93,10 +93,10 @@ Key commands (run from the repo root):
 - Aim for meaningful coverage of edge cases, not just the happy path.
 
 ```bash
-pytest                        # run all tests
-pytest tests/test_foo.py      # run a single file
-pytest -k "test_bar"          # run tests matching a name
-pytest --cov=src --cov-report=term-missing  # with coverage
+uv run pytest                                             # run all tests
+uv run pytest tests/unit/test_foo.py                     # run a single file
+uv run pytest -k "test_bar"                              # run tests matching a name
+uv run pytest --cov=OTAnalytics --cov-report=term-missing  # with coverage
 ```
 
 ---
@@ -244,24 +244,23 @@ If you are filing a bug or feature request and want it to be AI-agent-friendly, 
 
 ## Commit Message Format
 
-We follow [Conventional Commits](https://www.conventionalcommits.org/):
-
 ```
-<type>(<scope>): <short summary>
+OP#<issue_number>: <short summary, imperative, max 72 chars>
 
-[optional body]
+[optional body: explain WHY, not WHAT]
 
-[optional footer(s)]
+[Co-Authored-By / Assisted-by footer if AI was involved — see above]
 ```
 
-Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`
+Every commit must reference the OpenProject issue it belongs to. If no issue exists, create one before
+starting work.
 
 Examples:
 
 ```
-feat(parser): add support for nested expressions
-fix(cli): handle missing config file gracefully
-docs: update CONTRIBUTING.md with AI contribution policy
+OP#9478: Add CONTRIBUTING.md and AGENTS.md files
+
+OP#87: Fix empty input raising wrong exception type
 ```
 
 ---
