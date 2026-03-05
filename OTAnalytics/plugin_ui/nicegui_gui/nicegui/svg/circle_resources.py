@@ -22,3 +22,4 @@ class CircleResources:
 
     def clear(self) -> None:
         self.circles.clear()
+        self.by_section.clear()

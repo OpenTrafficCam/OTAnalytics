@@ -570,6 +570,11 @@ class TestCanvasFormPointerEvents:
         canvas_form = setup_canvas_form_with_mocks(
             mock_ui, mock_viewmodel, mock_resource_manager, current_section=mock_section
         )
+        # Seed by_section so the guard recognises "test-element" as a control point
+        section_id = mock_section.id.id
+        canvas_form._circles.by_section[section_id]["test-element"] = Circle(
+            id="test-element", x=100, y=200, fill=EDIT_COLOR, pointer_event="all"
+        )
 
         event_data = {IMAGE_X: 100, IMAGE_Y: 200, ELEMENT_ID: "test-element"}
 
@@ -1267,9 +1272,7 @@ class TestMidpointRendering:
         canvas._new_section = True
         canvas._new_section_points = [
             Circle(id="new_point-0", x=0, y=0, fill="orange", pointer_event="all"),
-            Circle(
-                id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"
-            ),
+            Circle(id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"),
         ]
 
         svg = canvas._midpoints_svg_for_new_section()
@@ -1398,6 +1401,11 @@ class TestMidpointInsertEditMode:
             mock_resource_manager,
             current_section=mock_section,
         )
+        # Seed by_section so the guard recognises "test-section-id-0" as a control point
+        section_id = mock_section.id.id
+        canvas._circles.by_section[section_id]["test-section-id-0"] = Circle(
+            id="test-section-id-0", x=50, y=75, fill=EDIT_COLOR, pointer_event="all"
+        )
         event = {
             ELEMENT_ID: "test-section-id-0",
             IMAGE_X: 50.0,
@@ -1429,12 +1437,8 @@ class TestMidpointInsertNewSectionMode:
         canvas._new_section = True
         canvas._new_section_points = [
             Circle(id="new_point-0", x=0, y=0, fill="orange", pointer_event="all"),
-            Circle(
-                id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"
-            ),
-            Circle(
-                id="new_point-2", x=200, y=200, fill="orange", pointer_event="all"
-            ),
+            Circle(id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"),
+            Circle(id="new_point-2", x=200, y=200, fill="orange", pointer_event="all"),
         ]
 
         event = {
@@ -1464,9 +1468,7 @@ class TestMidpointInsertNewSectionMode:
         canvas._new_section = True
         canvas._new_section_points = [
             Circle(id="new_point-0", x=0, y=0, fill="orange", pointer_event="all"),
-            Circle(
-                id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"
-            ),
+            Circle(id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"),
         ]
 
         event = {ELEMENT_ID: "new-mid-0", IMAGE_X: 100.0, IMAGE_Y: 0.0}
@@ -1496,9 +1498,7 @@ class TestMidpointInsertNewSectionMode:
                 fill="orange",
                 pointer_event="all",
             ),
-            Circle(
-                id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"
-            ),
+            Circle(id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"),
         ]
         canvas._new_section_dragging_idx = 1
 
@@ -1523,12 +1523,8 @@ class TestMidpointInsertNewSectionMode:
         canvas._new_section = True
         canvas._new_section_points = [
             Circle(id="new_point-0", x=0, y=0, fill="orange", pointer_event="all"),
-            Circle(
-                id="new_point-ins", x=100, y=50, fill="orange", pointer_event="all"
-            ),
-            Circle(
-                id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"
-            ),
+            Circle(id="new_point-ins", x=100, y=50, fill="orange", pointer_event="all"),
+            Circle(id="new_point-1", x=200, y=0, fill="orange", pointer_event="all"),
         ]
         canvas._new_section_dragging_idx = 1
 

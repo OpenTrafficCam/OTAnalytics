@@ -295,8 +295,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         elif self._new_section:
             pass
         elif self._current_section:
-            self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
-            self.draw_all()
+            section_id = self._current_section.id.id
+            if element_id in self._circles.by_section.get(section_id, {}):
+                self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
+                self.draw_all()
 
     def _insert_midpoint_in_edit_mode(self, e: dict, element_id: str) -> None:
         """Insert a new control point at segment midpoint and start dragging it."""
