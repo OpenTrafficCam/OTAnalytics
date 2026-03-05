@@ -139,7 +139,7 @@ readability.
 
 - Every bug fix **must** add a regression test that fails before the fix and passes after.
 - Every new public function **must** have at least one happy-path and one edge-case test.
-- Test file names mirror source file names: `OTAnalytics/domain/core.py` → `tests/unit/domain/test_core.py`.
+- Test file names mirror source file names: `OTAnalytics/domain/core.py` → `tests/unit/OTAnalytics/domain/test_core.py`.
 - Bug fix tests must include the OpenProject issue number in their docstring:
   ```python
   def test_empty_input_raises_value_error():
@@ -153,6 +153,86 @@ readability.
   filesystem, time).
 - Use builders in `tests/utils/` for test data creation; use fixtures from `conftest.py` where available.
 - Tests must be deterministic. Do not rely on ordering, real timestamps, or network calls.
+
+### Stage Play Test Structure
+
+Unit tests follow the **"Every Unit Test Is a Stage Play"** pattern
+(see [Part I](https://schneide.blog/2024/08/26/every-unit-test-is-a-stage-play-part-i/),
+[Part II](https://schneide.blog/2024/09/02/every-unit-test-is-a-stage-play-part-ii/),
+[Part III](https://schneide.blog/2024/09/30/every-unit-test-is-a-stage-play-part-iii/)).
+Every test tells a short, readable story using four named actors:
+
+| Actor | Role |
+|---|---|
+| `given` | Preconditions, inputs, mocks, and collaborators (instance of a `Given` dataclass) |
+| `target` | The object/code under test |
+| `actual` | The value returned by calling `target` |
+| `expected` | The reference value for the assertion (when needed) |
+
+**File structure** — module-level functions and the `Given` dataclass appear *below* the test class,
+keeping the test methods at the top as the entry point for the reader:
+
+```python
+from dataclasses import dataclass
+from unittest.mock import Mock
+
+from OTAnalytics.domain.foo import FooRepository
+from OTAnalytics.application.use_cases.foo import DoFoo
+
+
+class TestDoFoo:
+    def test_happy_path(self) -> None:
+        given = configure_foo_exists(setup())
+        target = create_target(given)
+
+        actual = target.execute()
+
+        assert actual == given.expected_result
+        given.repository.find.assert_called_once()
+
+    def test_bug_op_87(self) -> None:
+        """Verify that empty input raises ValueError.
+
+        This test was written to fix OP#87.
+        """
+        given = setup()
+        target = create_target(given)
+
+        with pytest.raises(ValueError):
+            target.execute()
+
+
+@dataclass
+class Given:
+    repository: Mock
+    expected_result: list[Mock]
+
+
+def setup() -> Given:
+    repository = Mock(spec=FooRepository)
+    expected_result = [Mock(), Mock()]
+    return Given(repository=repository, expected_result=expected_result)
+
+
+def configure_foo_exists(given: Given) -> Given:
+    given.repository.find.return_value = given.expected_result
+    return given
+
+
+def create_target(given: Given) -> DoFoo:
+    return DoFoo(given.repository)
+```
+
+**Rules:**
+- `Given` is a `@dataclass` holding all mocks and preconditions for the scenario.
+- `setup()` is a module-level function that creates the base `Given` with sensible defaults.
+- `configure_*()` functions are module-level and adjust `Given` for a specific scenario. They accept
+  and return a `Given` so they can be chained: `configure_b(configure_a(setup()))`.
+- `create_target()` is a module-level function that constructs the class under test from `given`.
+- Test method names are snake_case and describe the behaviour, not the implementation:
+  `test_returns_empty_list_when_repository_is_empty` not `test_execute`.
+- Keep the test method body short — extract any complex setup into `configure_*()` helpers.
+- Do not use literal `# Given / # When / # Then` comments; the structure is expressed through naming.
 
 ---
 
