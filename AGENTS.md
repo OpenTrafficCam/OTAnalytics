@@ -149,7 +149,9 @@ readability.
       """
   ```
 - Use `pytest.raises` for expected exceptions — never `try/except` in tests.
-- Do not mock things you own; mock only external I/O (network, filesystem, time).
+- Use `unittest.mock` as the mock library. Do not mock things you own; mock only external I/O (network,
+  filesystem, time).
+- Use builders in `tests/utils/` for test data creation; use fixtures from `conftest.py` where available.
 - Tests must be deterministic. Do not rely on ordering, real timestamps, or network calls.
 
 ---

@@ -18,12 +18,13 @@ OTAnalytics/
 │   ├── plugin_*/             # Plugins for various functionalities
 │   └── helpers/              # Utility functions
 ├── tests/                    # Test suite
-│   ├── OTAnalytics/          # Unit tests mirroring package structure
+│   ├── unit/                 # Unit tests mirroring package structure
+│   ├── acceptance/           # Acceptance / end-to-end tests (Playwright)
+│   ├── benchmark/            # Performance benchmarks
+│   ├── regression/           # Regression tests
 │   ├── utils/                # Test utilities and builders
 │   ├── data/                 # Test data
-│   ├── conftest.py           # Test fixtures
-│   ├── benchmark_*.py        # Benchmark tests
-│   └── regression_*.py       # Regression tests
+│   └── conftest.py           # Test fixtures
 ├── .run/                     # Run configurations
 ├── scripts/                  # Utility scripts
 └── examples/                 # Example files
@@ -31,7 +32,7 @@ OTAnalytics/
 
 ## Tech Stack
 
-- **Language**: Python 3.12+
+- **Language**: Python 3.12 (exact)
 - **GUI Frameworks**: CustomTkinter, NiceGUI
 - **Web Frameworks**: FastAPI, Uvicorn
 - **Data Processing**: Pandas, NumPy, Shapely
@@ -56,7 +57,7 @@ OTAnalytics/
 
 3. **Activate the virtual environment**:
 
-- `source venv/bin/activate`
+- `source .venv/bin/activate`
 
 ## Running the Application
 
@@ -74,18 +75,18 @@ OTAnalytics/
 - **Run all tests**:
 
   ```bash
-  python -m pytest
+  uv run pytest
   ```
 
 - **Run tests with coverage**:
 
   ```bash
-  python -m pytest --cov=OTAnalytics
+  uv run pytest --cov=OTAnalytics --cov-report=term-missing
   ```
 
 - **Run benchmark tests**:
   ```bash
-  python -m pytest tests/benchmark_otanalytics.py
+  uv run pytest tests/benchmark/
   ```
 
 ## Best Practices
