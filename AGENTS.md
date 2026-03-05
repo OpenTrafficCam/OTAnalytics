@@ -112,14 +112,14 @@ uv run pytest --tb=short                           # compact tracebacks
 
 ### Naming
 
-| Construct        | Convention              | Example                  |
-|------------------|-------------------------|--------------------------|
-| Module           | `snake_case`            | `data_loader.py`         |
-| Class            | `PascalCase`            | `DataLoader`             |
-| Function/method  | `snake_case`            | `load_records()`         |
-| Constant         | `UPPER_SNAKE_CASE`      | `MAX_RETRIES = 3`        |
-| Private          | leading underscore      | `_internal_helper()`     |
-| Type alias       | `PascalCase`            | `RecordList = list[...]` |
+| Construct       | Convention         | Example                  |
+|-----------------|--------------------|--------------------------|
+| Module          | `snake_case`       | `data_loader.py`         |
+| Class           | `PascalCase`       | `DataLoader`             |
+| Function/method | `snake_case`       | `load_records()`         |
+| Constant        | `UPPER_SNAKE_CASE` | `MAX_RETRIES = 3`        |
+| Private         | leading underscore | `_internal_helper()`     |
+| Type alias      | `PascalCase`       | `RecordList = list[...]` |
 
 Beyond casing, names must follow these Clean Code rules:
 
@@ -180,6 +180,7 @@ Beyond casing, names must follow these Clean Code rules:
 ### Imports
 
 Sort order (enforced by `isort --profile black`):
+
 1. Standard library
 2. Third-party packages
 3. Local (`from OTAnalytics import ...`)
@@ -213,12 +214,12 @@ Unit tests follow the **"Every Unit Test Is a Stage Play"** pattern
 [Part V](https://schneide.blog/2024/11/18/every-unit-test-is-a-stage-play-part-v/)).
 Every test tells a short, readable story using four named actors:
 
-| Actor | Role |
-|---|---|
-| `given` | Preconditions, inputs, mocks, and collaborators (instance of a `Given` dataclass) |
-| `target` | The object/code under test |
-| `actual` | The value returned by calling `target` |
-| `expected` | The reference value for the assertion (when needed) |
+| Actor      | Role                                                                              |
+|------------|-----------------------------------------------------------------------------------|
+| `given`    | Preconditions, inputs, mocks, and collaborators (instance of a `Given` dataclass) |
+| `target`   | The object/code under test                                                        |
+| `actual`   | The value returned by calling `target`                                            |
+| `expected` | The reference value for the assertion (when needed)                               |
 
 **File structure** — module-level functions and the `Given` dataclass appear *below* the test class,
 keeping the test methods at the top as the entry point for the reader:
@@ -280,6 +281,7 @@ def create_target(given: Given) -> DoFoo:
 ```
 
 **Structure rules (Parts I–III):**
+
 - `Given` is a `@dataclass` holding all mocks and preconditions for the scenario.
 - `setup()` is a module-level function that creates the base `Given` with sensible defaults.
 - `configure_*()` functions are module-level and adjust `Given` for a specific scenario. They accept
@@ -291,6 +293,7 @@ def create_target(given: Given) -> DoFoo:
 - Do not use literal `# Given / # When / # Then` comments; the structure is expressed through naming.
 
 **Story rules — Arrange / Act / Assert (Part IV):**
+
 - Each test has exactly **one Act** (one call on `target`) and one logical assertion cluster.
 - If you are tempted to add a second act or a second unrelated assertion, split into two tests.
 - Write assertions expressively: prefer `assert actual == [a, b, c]` over separate per-element
@@ -316,8 +319,10 @@ Every test method **must** have a docstring. Requirement tests use `#Requirement
 After completing an implementation, **before marking a PR as ready**, a reviewer agent must perform a full code
 review of the diff against this guide. This is not optional.
 
-The reviewer agent must work through every item in the [What a Reviewer Agent Should Check](#what-a-reviewer-agent-should-check)
+The reviewer agent must work through every item in
+the [What a Reviewer Agent Should Check](#what-a-reviewer-agent-should-check)
 section below and report:
+
 - All **must-block** findings (each must be resolved before the PR proceeds)
 - All **should-flag** findings (each must be acknowledged or addressed)
 - A short summary confirming which coding guidelines were verified
@@ -332,36 +337,42 @@ invocations or clearly separated reasoning steps.
 Work through this list before considering an implementation complete.
 
 ### Correctness
+
 - [ ] Does the change fully satisfy the issue's acceptance criteria?
 - [ ] Are all edge cases handled (empty input, `None`, zero, very large values, Unicode)?
 - [ ] Does error handling preserve useful context (error messages, original exceptions via `raise ... from`)?
 - [ ] Are any assumptions about input documented via assertions or docstrings?
 
 ### API & Compatibility
+
 - [ ] Does the change preserve the existing public API? If not, is a deprecation warning added?
 - [ ] Are new public symbols exported in `__init__.py` if appropriate?
 - [ ] Is the change backwards-compatible with Python 3.12?
 
 ### Types
+
 - [ ] Do all new functions have complete type annotations?
 - [ ] Does `uv run mypy OTAnalytics tests` pass with zero new errors?
 
 ### Tests
+
 - [ ] Do all existing tests still pass?
 - [ ] Are new tests added for the changed behaviour?
 - [ ] Is test coverage maintained or improved?
 
 ### Documentation
+
 - [ ] Do new/changed functions have accurate docstrings?
-- [ ] Does the changelog (`CHANGELOG.md`) have an entry under `[Unreleased]`?
 - [ ] If the public API changed, is `docs/` updated?
 
 ### Security
+
 - [ ] Does the change handle untrusted input safely (no shell injection, path traversal, unsafe deserialization)?
 - [ ] Are secrets, tokens, or credentials never hardcoded or logged?
 - [ ] Are new dependencies pinned/vetted? Prefer stdlib or already-used packages.
 
 ### Performance
+
 - [ ] Does the change introduce any O(n²) or worse operations on unbounded input?
 - [ ] Are file handles, database connections, and network sessions closed properly (use `with` blocks)?
 
@@ -411,6 +422,7 @@ Branch names must include the OpenProject issue number:
 Types: `task`, `bug`, `feature`, `refactor`
 
 Examples:
+
 ```
 task/9478-add-contributing-markdown-files
 bug/9461-fix-python-version-requirement-in-readme
@@ -466,7 +478,6 @@ Before marking a PR as ready for review, confirm:
 - [ ] `uv run pre-commit run --all-files` — all hooks pass
 - [ ] `uv run pytest` — all tests pass
 - [ ] New/changed behaviour is covered by tests
-- [ ] `CHANGELOG.md` updated under `[Unreleased]`
 - [ ] AI disclosure included in PR description if applicable (see CONTRIBUTING.md)
 
 ---
@@ -476,7 +487,6 @@ Before marking a PR as ready for review, confirm:
 Do **not** do the following without explicit human instruction:
 
 - Bump dependency versions in `pyproject.toml` or `requirements*.txt`
-- Modify `CHANGELOG.md` sections other than `[Unreleased]`
 - Change CI/CD pipeline files (`.github/workflows/`)
 - Alter license or copyright headers
 - Refactor files unrelated to the current task

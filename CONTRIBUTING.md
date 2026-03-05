@@ -79,16 +79,19 @@ Key commands (run from the repo root):
 
 ### Tooling
 
-- **Formatting:** [Black](https://black.readthedocs.io/) (line length 88) and [isort](https://pycqa.github.io/isort/) for import ordering.
+- **Formatting:** [Black](https://black.readthedocs.io/) (line length 88) and [isort](https://pycqa.github.io/isort/)
+  for import ordering.
 - **Linting:** [Flake8](https://flake8.pycqa.org/) for style and error checking.
-- **Type checking:** [mypy](https://mypy-lang.org/) — all functions and methods (public and private) must have complete type annotations.
+- **Type checking:** [mypy](https://mypy-lang.org/) — all functions and methods (public and private) must have complete
+  type annotations.
 - **Docstrings:** Google-style docstrings for all public functions, classes, and modules.
-- **Backwards compatibility:** Do not break the public API without a deprecation path and a changelog entry.
+- **Backwards compatibility:** Do not break the public API without a deprecation path.
 
 ### General rules
 
 - No wildcard imports (`from foo import *`).
-- All imports at the top of the file, grouped and sorted by `isort`. No inline or conditional imports except to resolve circular imports (document that case with a comment).
+- All imports at the top of the file, grouped and sorted by `isort`. No inline or conditional imports except to resolve
+  circular imports (document that case with a comment).
 - Raise specific exception types. No bare `except:` or `except Exception:` without re-raising or logging.
 - Prefer `pathlib.Path` over `os.path` for file operations.
 - Use `logging` (not `print`) for diagnostic output in library code.
@@ -107,7 +110,8 @@ Key commands (run from the repo root):
 
 Beyond casing:
 
-- **Intention-revealing:** names explain *what* and *why*, not *how*. No abbreviations or single-letter names except loop counters (`i`, `j`). `elapsed_time_in_days` not `d`.
+- **Intention-revealing:** names explain *what* and *why*, not *how*. No abbreviations or single-letter names except
+  loop counters (`i`, `j`). `elapsed_time_in_days` not `d`.
 - **No encodings:** no Hungarian notation, no type prefixes, no redundant context. `User.name` not `User.user_name`.
 - **Pronounceable:** names must be speakable. `generation_timestamp` not `gen_ymdhms`.
 - **Searchable:** no bare magic numbers or magic strings — extract into named `UPPER_SNAKE_CASE` constants.
@@ -115,22 +119,26 @@ Beyond casing:
 ### Clean Code
 
 **Functions:**
+
 - Do one thing at one level of abstraction. If you can extract a meaningful sub-function, do it.
 - Aim for 0–2 parameters. More than three is a smell — consider a dataclass or value object.
 - No hidden side effects: a function does exactly what its name says and nothing more.
 
 **Classes:**
+
 - Single Responsibility Principle: one reason to change. If you describe it with "and", split it.
 - Keep classes small (~200 lines is a signal to reconsider).
 - Law of Demeter: talk only to direct collaborators. Avoid chaining through object graphs.
 - Tell, don't ask: tell an object to do something rather than querying its state to decide externally.
 
 **Comments:**
+
 - Prefer self-documenting code over comments. Comments explain *why*, never *what*.
 - No commented-out code — delete it; version control preserves history.
 - No redundant comments that merely restate the code.
 
 **Constants and duplication:**
+
 - Extract every magic number and magic string into a named constant.
 - Apply DRY: if the same logic or value appears in two places, extract it.
 
@@ -138,14 +146,17 @@ Beyond casing:
 
 ## Testing
 
-- Tests are written with [pytest](https://docs.pytest.org/) and live under `tests/unit/`, `tests/acceptance/`, `tests/benchmark/`, and `tests/regression/`.
+- Tests are written with [pytest](https://docs.pytest.org/) and live under `tests/unit/`, `tests/acceptance/`,
+  `tests/benchmark/`, and `tests/regression/`.
 - Test file names mirror source file names: `OTAnalytics/domain/core.py` → `tests/unit/OTAnalytics/domain/test_core.py`.
 - Every bug fix must include a regression test that fails before the fix and passes after.
 - Every new public function must have at least one happy-path and one edge-case test.
 - Aim for ≥90% coverage on new code.
-- Every test method must have a docstring that references its OpenProject issue using `#Requirement OP#<number>` or `#Bugfix OP#<number>`.
+- Every test method must have a docstring that references its OpenProject issue using `#Requirement OP#<number>` or
+  `#Bugfix OP#<number>`.
 - Use `pytest.raises` for expected exceptions — never `try/except` in tests.
-- Use `unittest.mock` as the mock library. Mock only external I/O (network, filesystem, time) — do not mock code you own.
+- Use `unittest.mock` as the mock library. Mock only external I/O (network, filesystem, time) — do not mock code you
+  own.
 - Use builders in `tests/utils/` for test data creation and fixtures from `conftest.py` where available.
 - Tests must be deterministic. Do not rely on ordering, real timestamps, or network calls.
 
@@ -169,8 +180,8 @@ Before marking a PR as ready, confirm:
 - [ ] `uv run pre-commit run --all-files` — all hooks pass (formatting, linting, type checking)
 - [ ] `uv run pytest` — all tests pass
 - [ ] New/changed behaviour is covered by tests
-- [ ] `CHANGELOG.md` updated under `[Unreleased]`
-- [ ] AI disclosure included in the PR description if applicable (see [AI-Assisted Contributions](#ai-assisted-contributions))
+- [ ] AI disclosure included in the PR description if applicable (
+  see [AI-Assisted Contributions](#ai-assisted-contributions))
 
 In the PR description:
 
@@ -185,7 +196,6 @@ ping the PR thread.
 Pull requests that fail CI checks will not be merged.
 
 All merged contributors are automatically listed in the [GitHub contributors graph](../../graphs/contributors).
-Significant contributions are also noted in the changelog.
 
 By submitting a pull request you confirm that your contribution may be distributed under the project's
 [GPL-3.0 License](./LICENSE).
@@ -323,6 +333,7 @@ Branch names must include the OpenProject issue number:
 Types: `task`, `bug`, `feature`, `refactor`
 
 Examples:
+
 ```
 task/9478-add-contributing-markdown-files
 bug/9461-fix-python-version-requirement-in-readme
@@ -358,7 +369,8 @@ OP#87: Fix empty input raising wrong exception type
 ## Code of Conduct
 
 This project follows the [Contributor Covenant Code of Conduct](./CODE_OF_CONDUCT.md).
-By participating you agree to abide by its terms. Report violations to [team@opentrafficcam.org](mailto:team@opentrafficcam.org).
+By participating you agree to abide by its terms. Report violations
+to [team@opentrafficcam.org](mailto:team@opentrafficcam.org).
 
 ---
 
