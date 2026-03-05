@@ -14,10 +14,10 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_fo
 )
 from tests.acceptance.conftest import PLAYWRIGHT_SHORT_WAIT_MS, NiceGUITestServer
 from tests.utils.playwright_helpers import (
+    capture_and_verify_baseline,
     get_loaded_tracks_canvas_from_otconfig,
     load_main_page,
     search_for_marker_element,
-    wait_for_canvas_change,
 )
 
 # Ensure pytest-playwright is available; otherwise skip this module
@@ -61,9 +61,6 @@ def test_show_start_end_points_intersecting_sections(
         page, resource_manager, otconfig_path
     )
 
-    # Capture baseline without start/end points
-    canvas_baseline = canvas.screenshot()
-
     # Click "Intersecting sections" checkbox (using marker)
     intersecting_sections_checkbox = page.get_by_test_id(
         MARKER_VISUALIZATION_LAYERS_INTERSECTING_SECTIONS
@@ -77,25 +74,31 @@ def test_show_start_end_points_intersecting_sections(
     sections_table.wait_for(state="visible")
     first_section_row = sections_table.locator("tbody tr").first
     first_section_row.click()
-    page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
 
-    # Verify canvas changed (start/end points for section 1 shown)
-    canvas_with_section1 = wait_for_canvas_change(page, canvas, canvas_baseline)
+    # Verify canvas shows start/end points for section 1
+    reference_path = (
+        data_dir / "test_show_start_end_points_intersecting_sections_section1.png"
+    )
+    capture_and_verify_baseline(canvas, reference_path, page)
 
     # Select section 2 (click second section in sections table)
     second_section_row = sections_table.locator("tbody tr").nth(1)
     second_section_row.click()
-    page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
 
-    # Verify canvas changed (start/end points for section 2 shown)
-    canvas_with_section2 = wait_for_canvas_change(page, canvas, canvas_with_section1)
+    # Verify canvas shows start/end points for section 2
+    reference_path = (
+        data_dir / "test_show_start_end_points_intersecting_sections_section2.png"
+    )
+    capture_and_verify_baseline(canvas, reference_path, page)
 
     # Uncheck "Intersecting sections" checkbox
     intersecting_sections_checkbox.click()
-    page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
 
-    # Verify canvas changed back (no start/end points shown)
-    wait_for_canvas_change(page, canvas, canvas_with_section2)
+    # Verify canvas no longer shows start/end points
+    reference_path = (
+        data_dir / "test_show_start_end_points_intersecting_sections_unchecked.png"
+    )
+    capture_and_verify_baseline(canvas, reference_path, page)
 
 
 @pytest.mark.skip(reason="only works in headed right now")
@@ -136,9 +139,6 @@ def test_show_start_end_points_not_intersecting_sections(
         page, resource_manager, otconfig_path
     )
 
-    # Capture baseline without start/end points
-    canvas_baseline = canvas.screenshot()
-
     # Click "Not intersecting sections" checkbox (using marker)
     not_intersecting_sections_checkbox = page.get_by_test_id(
         MARKER_VISUALIZATION_LAYERS_NOT_INTERSECTING_SECTIONS
@@ -152,27 +152,31 @@ def test_show_start_end_points_not_intersecting_sections(
     sections_table.wait_for(state="visible")
     first_section_row = sections_table.locator("tbody tr").first
     first_section_row.click()
-    page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
 
-    # Verify canvas changed (start/end points for tracks
-    # NOT intersecting section 1 shown)
-    canvas_with_section1 = wait_for_canvas_change(page, canvas, canvas_baseline)
+    # Verify canvas shows start/end points for tracks NOT intersecting section 1
+    reference_path = (
+        data_dir / "test_show_start_end_points_not_intersecting_sections_section1.png"
+    )
+    capture_and_verify_baseline(canvas, reference_path, page)
 
     # Select section 2 (click second section in sections table)
     second_section_row = sections_table.locator("tbody tr").nth(1)
     second_section_row.click()
-    page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
 
-    # Verify canvas changed (start/end points for tracks
-    # NOT intersecting section 2 shown)
-    canvas_with_section2 = wait_for_canvas_change(page, canvas, canvas_with_section1)
+    # Verify canvas shows start/end points for tracks NOT intersecting section 2
+    reference_path = (
+        data_dir / "test_show_start_end_points_not_intersecting_sections_section2.png"
+    )
+    capture_and_verify_baseline(canvas, reference_path, page)
 
     # Uncheck "Not intersecting sections" checkbox
     not_intersecting_sections_checkbox.click()
-    page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
 
-    # Verify canvas changed back (no start/end points shown)
-    wait_for_canvas_change(page, canvas, canvas_with_section2)
+    # Verify canvas no longer shows start/end points
+    reference_path = (
+        data_dir / "test_show_start_end_points_not_intersecting_sections_unchecked.png"
+    )
+    capture_and_verify_baseline(canvas, reference_path, page)
 
 
 @pytest.mark.skip(reason="only works in headed right now")
@@ -205,23 +209,20 @@ def test_show_all_start_end_points(
         page, resource_manager, otconfig_path
     )
 
-    # Capture baseline without start/end points
-    canvas_baseline = canvas.screenshot()
-
     # Click "All" checkbox for start and end points (using marker)
     all_start_end_points_checkbox = page.get_by_test_id(
         MARKER_VISUALIZATION_LAYERS_START_END_POINTS_ALL
     )
     all_start_end_points_checkbox.scroll_into_view_if_needed()
     all_start_end_points_checkbox.click()
-    page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
 
-    # Verify canvas changed (start/end points of all tracks shown)
-    canvas_with_all_points = wait_for_canvas_change(page, canvas, canvas_baseline)
+    # Verify canvas shows start/end points of all tracks
+    reference_path = data_dir / "test_show_all_start_end_points_all_checked.png"
+    capture_and_verify_baseline(canvas, reference_path, page)
 
     # Uncheck "All" checkbox
     all_start_end_points_checkbox.click()
-    page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
 
-    # Verify canvas changed back (no start/end points shown)
-    wait_for_canvas_change(page, canvas, canvas_with_all_points)
+    # Verify canvas no longer shows start/end points
+    reference_path = data_dir / "test_show_all_start_end_points_unchecked.png"
+    capture_and_verify_baseline(canvas, reference_path, page)
