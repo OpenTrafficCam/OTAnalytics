@@ -14,13 +14,14 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
-from OTAnalytics.application.resources.resource_manager import (
-    FlowAndSectionKeys,
-    ResourceManager,
-    TrackFormKeys,
-)
+from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
+    MARKER_TRACK_TAB,
     MARKER_VIDEO_TAB,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+    MARKER_TAB_FLOW,
+    MARKER_TAB_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
     MARKER_VISUALIZATION_LAYERS_ALL,
@@ -46,6 +47,7 @@ from tests.utils.playwright_helpers import (
     click_update_offset_button,
     create_flow,
     create_section,
+    export_track_statistics,
     get_loaded_tracks_canvas_from_otconfig,
     load_main_page,
     navigate_and_prepare,
@@ -108,12 +110,7 @@ class TestCreateImportantTestData:
             assert track_file.exists(), f"Test track file missing: {track_file}"
 
         # Add video
-        try:
-            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
-        except Exception:
-            page.get_by_text(
-                resource_manager.get(TrackFormKeys.TAB_VIDEO), exact=True
-            ).click()
+        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
 
         add_video_via_picker(page, resource_manager, video_file)
 
@@ -122,16 +119,12 @@ class TestCreateImportantTestData:
         click_table_cell_with_text(page, video_file.name)
 
         # Add tracks
-        page.get_by_text(
-            resource_manager.get(TrackFormKeys.TAB_TRACK), exact=True
-        ).click()
+        search_for_marker_element(page, MARKER_TRACK_TAB).first.click()
         for track_file in track_files:
             add_track_via_picker(page, resource_manager, track_file)
 
         # Switch to Sections tab
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
-        ).click()
+        search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
 
         # Create two sections with different names and coordinates
         section_names = ["North-Section", "South-Section"]
@@ -144,9 +137,7 @@ class TestCreateImportantTestData:
             create_section(page, resource_manager, name, positions=coords)
 
         # Switch to Flows tab and create flows
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
-        ).click()
+        search_for_marker_element(page, MARKER_TAB_FLOW).first.click()
 
         # Create a flow between the two sections
         flow_name = "Test-Flow"
@@ -295,3 +286,36 @@ class TestCreateImportantTestData:
             "start_end_not_assigned_to_flows",
             nth=1,
         )
+
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_generate_track_statistics_reference_file(
+        self,
+        external_app: NiceGUITestServer,
+        page: Page,
+        resource_manager: ResourceManager,
+        test_data_tmp_dir: Path,
+    ) -> None:
+        """Generate reference track_statistics.csv file using Desktop GUI.
+
+        This test:
+        - Loads a pre-configured project with video, tracks, sections, and flows
+        - Clicks "Export track statistics ..."
+        - Uses default values in the export dialog
+        - Saves the file
+        - Copies it to the test data directory as reference
+
+        The resulting file can be used by other tests to compare exported output.
+        """
+        data_dir = Path(__file__).parents[1] / "data"
+        otconfig_path = data_dir / "sections_created_test_file.otconfig"
+
+        # Export track statistics
+        output_path = export_track_statistics(
+            page, external_app, resource_manager, test_data_tmp_dir, otconfig_path
+        )
+
+        # Copy to the main test data directory for reuse
+        permanent_path = data_dir / "track_statistics_reference.csv"
+        shutil.copy(output_path, permanent_path)
