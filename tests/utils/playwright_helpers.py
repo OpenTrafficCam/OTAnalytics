@@ -50,6 +50,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_VIDEO_TABLE,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import (
+    MARKER_BUTTON_EXPORT_COUNTS,
     MARKER_BUTTON_EXPORT_TRACK_STATISTICS,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
@@ -572,13 +573,127 @@ def export_track_statistics(
     return output_path
 
 
+def export_counts(
+    page: Page,
+    external_app: Any,
+    resource_manager: Any,
+    test_data_tmp_dir: Path,
+    otconfig_path: Path,
+) -> Path:
+    """Export counts from a pre-configured project.
+
+    This function:
+    - Loads the main page
+    - Opens the specified otconfig file
+    - Clicks the export counts button
+    - Handles the export dialog
+    - Returns the path to the exported file
+
+    Args:
+        page: The Playwright page object
+        external_app: The NiceGUI test server
+        resource_manager: The resource manager for localized text
+        test_data_tmp_dir: Directory where the file should be exported
+        otconfig_path: Path to the otconfig file to load
+
+    Returns:
+        Path to the exported counts file
+    """
+    # Setup: Load tracks with preconfigured file
+    load_main_page(page, external_app)
+
+    # Load the otconfig file
+    open_project_otconfig(page, resource_manager, otconfig_path)
+
+    # Click "Export counts ..." button
+    export_button = search_for_marker_element(page, MARKER_BUTTON_EXPORT_COUNTS).first
+    export_button.click()
+
+    # Handle export dialog and get output path
+    output_path = export_file_via_dialog(page, test_data_tmp_dir)
+
+    # Verify the file was created
+    assert output_path.exists(), f"Counts file not created: {output_path}"
+
+    return output_path
+
+
 # ----------------------
 # File comparison helpers
 # ----------------------
 
 
+def compare_counts_csv_files(exported_path: Path, reference_path: Path) -> None:
+    """Compare two counts CSV files, ignoring the classification column.
+
+    The classification column is ignored because the export may return different
+    classifications on each run depending on the track data aggregation.
+
+    Args:
+        exported_path: Path to the exported CSV file
+        reference_path: Path to the reference CSV file
+
+    Raises:
+        AssertionError: If files differ (excluding classification)
+    """
+    import csv
+
+    assert exported_path.exists(), f"Exported file not found: {exported_path}"
+    assert reference_path.exists(), f"Reference file not found: {reference_path}"
+
+    with open(exported_path, "r", encoding="utf-8") as exported_file:
+        exported_reader = csv.DictReader(exported_file)
+        exported_rows = list(exported_reader)
+
+    with open(reference_path, "r", encoding="utf-8") as reference_file:
+        reference_reader = csv.DictReader(reference_file)
+        reference_rows = list(reference_reader)
+
+    # Compare headers
+    assert exported_reader.fieldnames == reference_reader.fieldnames, (
+        f"Header mismatch:\n"
+        f"  Exported: {exported_reader.fieldnames}\n"
+        f"  Reference: {reference_reader.fieldnames}"
+    )
+
+    # Ensure fieldnames is not None
+    assert exported_reader.fieldnames is not None, "Exported CSV has no header"
+    assert reference_reader.fieldnames is not None, "Reference CSV has no header"
+
+    # Compare row count
+    assert len(exported_rows) == len(reference_rows), (
+        f"Row count mismatch: exported={len(exported_rows)}, "
+        f"reference={len(reference_rows)}"
+    )
+
+    # Compare all columns except 'classification'
+    columns_to_compare = [
+        col for col in exported_reader.fieldnames if col != "classification"
+    ]
+
+    # Create tuples of values for comparison (excluding classification)
+    exported_data = sorted(
+        [tuple(row[col] for col in columns_to_compare) for row in exported_rows]
+    )
+    reference_data = sorted(
+        [tuple(row[col] for col in columns_to_compare) for row in reference_rows]
+    )
+
+    for i, (exported_vals, reference_vals) in enumerate(
+        zip(exported_data, reference_data)
+    ):
+        assert exported_vals == reference_vals, (
+            f"Row {i + 1} mismatch (after sorting, excluding classification):\n"
+            f"  Exported: {dict(zip(columns_to_compare, exported_vals))}\n"
+            f"  Reference: {dict(zip(columns_to_compare, reference_vals))}"
+        )
+
+
 def compare_csv_files(exported_path: Path, reference_path: Path) -> None:
     """Compare two CSV files for equality.
+
+    Compares CSV files by sorting rows (excluding header) before comparison
+    to handle potential ordering differences between exports.
 
     Args:
         exported_path: Path to the exported CSV file
@@ -605,11 +720,22 @@ def compare_csv_files(exported_path: Path, reference_path: Path) -> None:
         f"reference={len(reference_rows)}"
     )
 
+    # Compare headers (first row)
+    assert exported_rows[0] == reference_rows[0], (
+        f"Header mismatch:\n"
+        f"  Exported: {exported_rows[0]}\n"
+        f"  Reference: {reference_rows[0]}"
+    )
+
+    # Sort data rows (excluding header) for consistent comparison
+    exported_data = sorted(exported_rows[1:])
+    reference_data = sorted(reference_rows[1:])
+
     for i, (exported_row, reference_row) in enumerate(
-        zip(exported_rows, reference_rows)
+        zip(exported_data, reference_data)
     ):
         assert exported_row == reference_row, (
-            f"Row {i} mismatch:\n"
+            f"Row {i + 1} mismatch (after sorting):\n"
             f"  Exported: {exported_row}\n"
             f"  Reference: {reference_row}"
         )
