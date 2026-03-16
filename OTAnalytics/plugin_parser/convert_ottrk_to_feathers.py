@@ -99,6 +99,7 @@ def convert_ottrk_to_feather(input_file: Path) -> None:
 
     # Get the pandas DataFrame
     df = pandas_dataset.get_data()
+    df = df[sorted(df.columns)]
     logger().info(f"DataFrame shape: {df.shape}")
 
     # Save DataFrame to feather format
