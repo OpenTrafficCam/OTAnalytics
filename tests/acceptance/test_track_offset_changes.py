@@ -15,6 +15,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_fo
 )
 from tests.acceptance.conftest import PLAYWRIGHT_VISIBLE_TIMEOUT_MS, NiceGUITestServer
 from tests.utils.playwright_helpers import (
+    click_slider_at_position,
     get_loaded_tracks_canvas_from_otconfig,
     load_main_page,
     wait_for_canvas_change,
@@ -25,8 +26,9 @@ playwright = pytest.importorskip(
     "playwright.sync_api", reason="pytest-playwright is required for this test"
 )
 
-# Timing constants (milliseconds)
-UI_PROCESSING_GRACE_PERIOD_MS = 150
+
+# Configure all tests in this module to run in headed mode
+pytestmark = pytest.mark.headed
 
 
 @pytest.mark.timeout(300)
@@ -70,69 +72,30 @@ def test_track_offset_x_and_y_changes(
         all_tracks_checkbox.click()
         page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
-    canvas_with_all_tracks = canvas.screenshot()
+    # Get slider locators
+    x_slider = page.locator(".q-slider__track-container").first
+    y_slider = page.locator(".q-slider__track-container").nth(1)
 
-    # Step 2: Change Offset X to 0.8
-    canvas_before_x_change = canvas.screenshot()
+    # Step 2: Change Offset X to 0.8 and verify
+    before = canvas.screenshot()
+    click_slider_at_position(page, x_slider, 0.8, PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    wait_for_canvas_change(page, canvas, before)
 
-    # Locate X slider (first slider on the page)
-    x_slider_track = page.locator(".q-slider__track-container").first
-    x_slider_track.scroll_into_view_if_needed()
+    # Step 3: Change Offset Y to 0.8 and verify
+    before = canvas.screenshot()
+    click_slider_at_position(page, y_slider, 0.8, PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    wait_for_canvas_change(page, canvas, before)
 
-    # Click at 80% position on the slider track to set value to 0.8
-    bbox = x_slider_track.bounding_box()
-    if bbox:
-        x_slider_track.click(
-            position={"x": bbox["width"] * 0.8, "y": bbox["height"] / 2}
-        )
-    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-
-    # Verify canvas changed after X offset change
-    wait_for_canvas_change(page, canvas, canvas_before_x_change)
-
-    # Step 3: Change Offset Y to 0.8
-    canvas_before_y_change = canvas.screenshot()
-
-    # Locate Y slider (second slider on the page)
-    y_slider_track = page.locator(".q-slider__track-container").nth(1)
-    y_slider_track.scroll_into_view_if_needed()
-
-    # Click at 80% position on the slider track to set value to 0.8
-    bbox = y_slider_track.bounding_box()
-    if bbox:
-        y_slider_track.click(
-            position={"x": bbox["width"] * 0.8, "y": bbox["height"] / 2}
-        )
-    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-
-    # Verify canvas changed after Y offset change
-    wait_for_canvas_change(page, canvas, canvas_before_y_change)
-
-    # Step 4: Reset offset to X: 0.5, Y: 0.5
-    canvas_before_reset = canvas.screenshot()
-
-    # Reset X to 0.5 (click at 50% position)
-    bbox = x_slider_track.bounding_box()
-    if bbox:
-        x_slider_track.click(
-            position={"x": bbox["width"] * 0.5, "y": bbox["height"] / 2}
-        )
-    page.wait_for_timeout(UI_PROCESSING_GRACE_PERIOD_MS)
-
-    # Reset Y to 0.5 (click at 50% position)
-    bbox = y_slider_track.bounding_box()
-    if bbox:
-        y_slider_track.click(
-            position={"x": bbox["width"] * 0.5, "y": bbox["height"] / 2}
-        )
-    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-
-    # Verify canvas changed after reset
-    wait_for_canvas_change(page, canvas, canvas_before_reset)
+    # Step 4: Reset both offsets to 0.5 and verify
+    before = canvas.screenshot()
+    click_slider_at_position(page, x_slider, 0.5, PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    click_slider_at_position(page, y_slider, 0.5, PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    wait_for_canvas_change(page, canvas, before)
 
     # Step 5: Click "Show all tracks" to hide trajectories
+    canvas_before_hide = canvas.screenshot()
     all_tracks_checkbox.click()
     page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
-    # Verify no trajectories are shown
-    wait_for_canvas_change(page, canvas, canvas_with_all_tracks)
+    # Verify no trajectories are shown (canvas should change)
+    wait_for_canvas_change(page, canvas, canvas_before_hide)
