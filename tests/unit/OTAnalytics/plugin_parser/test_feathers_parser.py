@@ -13,11 +13,13 @@ import polars
 import pytest
 
 from OTAnalytics.application.datastore import DetectionMetadata, TrackParseResult
+from OTAnalytics.domain import track
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import PolarsTrackDataset
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
     PolarsTrackGeometryDataset,
 )
+from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk
 from OTAnalytics.plugin_parser.feathers_parser import FeathersParser
 
 
@@ -279,58 +281,58 @@ class TestFeathersParser:
         """
 
         columns_order_a = [
-            "classification",
-            "confidence",
-            "x",
-            "y",
-            "w",
-            "h",
-            "interpolated_detection",
-            "first",
-            "finished",
-            "frame",  # swapped
-            "video_name",
-            "input_file",
-            "original_track_id",
-            "track_classification",
-            "track_id",
-            "occurrence",
+            track.CLASSIFICATION,
+            track.CONFIDENCE,
+            track.X,
+            track.Y,
+            track.W,
+            track.H,
+            track.INTERPOLATED_DETECTION,
+            ottrk.FIRST,
+            ottrk.FINISHED,
+            track.FRAME,  # swapped
+            track.VIDEO_NAME,
+            track.INPUT_FILE,
+            track.ORIGINAL_TRACK_ID,
+            track.TRACK_CLASSIFICATION,
+            track.TRACK_ID,
+            track.OCCURRENCE,
         ]
         columns_order_b = [
-            "classification",
-            "confidence",
-            "x",
-            "y",
-            "w",
-            "h",
-            "frame",  # swapped
-            "interpolated_detection",
-            "first",
-            "finished",
-            "video_name",
-            "input_file",
-            "track_classification",
-            "original_track_id",
-            "track_id",
-            "occurrence",
+            track.CLASSIFICATION,
+            track.CONFIDENCE,
+            track.X,
+            track.Y,
+            track.W,
+            track.H,
+            track.FRAME,  # swapped
+            track.INTERPOLATED_DETECTION,
+            ottrk.FIRST,
+            ottrk.FINISHED,
+            track.VIDEO_NAME,
+            track.INPUT_FILE,
+            track.TRACK_CLASSIFICATION,
+            track.ORIGINAL_TRACK_ID,
+            track.TRACK_ID,
+            track.OCCURRENCE,
         ]
         row = {
-            "classification": "car",
-            "confidence": 0.9,
-            "x": 100.0,
-            "y": 100.0,
-            "w": 50.0,
-            "h": 80.0,
-            "frame": 1,
-            "interpolated_detection": False,
-            "first": True,
-            "finished": False,
-            "video_name": "test.mp4",
-            "input_file": "test.ottrk",
-            "original_track_id": "1",
-            "track_classification": "car",
-            "track_id": "1",
-            "occurrence": datetime(2023, 1, 1, 10, 0, 0),
+            track.CLASSIFICATION: "car",
+            track.CONFIDENCE: 0.9,
+            track.X: 100.0,
+            track.Y: 100.0,
+            track.W: 50.0,
+            track.H: 80.0,
+            track.FRAME: 1,
+            track.INTERPOLATED_DETECTION: False,
+            ottrk.FIRST: True,
+            ottrk.FINISHED: False,
+            track.VIDEO_NAME: "test.mp4",
+            track.INPUT_FILE: "test.ottrk",
+            track.ORIGINAL_TRACK_ID: "1",
+            track.TRACK_CLASSIFICATION: "car",
+            track.TRACK_ID: "1",
+            track.OCCURRENCE: datetime(2023, 1, 1, 10, 0, 0),
         }
         df_a = polars.DataFrame(row).select(columns_order_a)
         df_b = polars.DataFrame(row).select(columns_order_b)
