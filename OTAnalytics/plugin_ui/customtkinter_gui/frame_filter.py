@@ -115,11 +115,8 @@ class FrameFilter(AbstractCTkFrame, AbstractFrameFilter):
         self._get_widgets()
         self._place_widgets()
 
-    def _introduce_to_viewmodel(self) -> None:
-        self._viewmodel.set_filter_frame(self)
-
     def introduce_to_viewmodel(self) -> None:
-        self._introduce_to_viewmodel()
+        self._viewmodel.set_filter_frame(self)
 
     def set_active_color_on_filter_by_date_button(self) -> None:
         self.filter_by_date_button.set_color(COLOR_ORANGE)
