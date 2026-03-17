@@ -50,6 +50,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_VIDEO_TABLE,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import (
+    MARKER_BUTTON_EXPORT_EVENT_LIST,
     MARKER_BUTTON_EXPORT_TRACK_STATISTICS,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
@@ -523,6 +524,53 @@ def export_file_via_dialog(page: Page, output_dir: Path) -> Path:
 
     # Return the expected output path
     return output_dir / current_filename
+
+
+def export_event_list(
+    page: Page,
+    external_app: Any,
+    resource_manager: Any,
+    test_data_tmp_dir: Path,
+    otconfig_path: Path,
+) -> Path:
+    """Export event list from a pre-configured project.
+
+    This function:
+    - Loads the main page
+    - Opens the specified otconfig file
+    - Clicks the export event list button
+    - Handles the export dialog
+    - Returns the path to the exported file
+
+    Args:
+        page: The Playwright page object
+        external_app: The NiceGUI test server
+        resource_manager: The resource manager for localized text
+        test_data_tmp_dir: Directory where the file should be exported
+        otconfig_path: Path to the otconfig file to load
+
+    Returns:
+        Path to the exported event list file
+    """
+    # Setup: Load tracks with preconfigured file
+    load_main_page(page, external_app)
+
+    # Load the otconfig file
+    open_project_otconfig(page, resource_manager, otconfig_path)
+
+    # Click "Export eventlist ..." button
+    export_button = search_for_marker_element(
+        page, MARKER_BUTTON_EXPORT_EVENT_LIST
+    ).first
+    export_button.click()
+
+    # Handle export dialog and get output path
+    output_path = export_file_via_dialog(page, test_data_tmp_dir)
+
+    # Verify the file was created
+    assert output_path.exists(), f"Event list file not created: {output_path}"
+
+    return output_path
 
 
 def export_track_statistics(
