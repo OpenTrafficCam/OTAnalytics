@@ -12,6 +12,7 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
+MARKER_BUTTON_EXPORT_COUNTS = "button-export-counts"
 MARKER_BUTTON_EXPORT_TRACK_STATISTICS = "button-export-track-statistics"
 
 
@@ -46,7 +47,7 @@ class AnalysisForm(ButtonForm, AbstractFrame):
                 self._button_export_counts = ui.button(
                     self._resource_manager.get(AnalysisKeys.BUTTON_TEXT_EXPORT_COUNTS),
                     on_click=self._viewmodel.export_counts,
-                )
+                ).props(f"{TEST_ID}={MARKER_BUTTON_EXPORT_COUNTS}")
             with ui.row():
                 self._button_export_road_user_assignment = ui.button(
                     self._resource_manager.get(
