@@ -273,6 +273,7 @@ class TestFeathersParser:
         mock_parse_json: Mock,
         parser: FeathersParser,
         sample_metadata: dict[str, Any],
+        test_data_tmp_dir: Path,
     ) -> None:
         """Regression test: parse_files must handle feather files with different
         column orders without raising polars ShapeError.
@@ -340,20 +341,19 @@ class TestFeathersParser:
         mock_parse_json.return_value = sample_metadata
         mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
+        tmpdir_path = test_data_tmp_dir
 
-            file_a = tmpdir_path / "file_a.feather"
-            file_b = tmpdir_path / "file_b.feather"
-            df_a.write_ipc(file_a)
-            df_b.write_ipc(file_b)
+        file_a = tmpdir_path / "file_a.feather"
+        file_b = tmpdir_path / "file_b.feather"
+        df_a.write_ipc(file_a)
+        df_b.write_ipc(file_b)
 
-            for stem in ["file_a", "file_b"]:
-                metadata_path = tmpdir_path / f"{stem}_metadata.json"
-                metadata_path.write_text('{"test": "data"}')
+        for stem in ["file_a", "file_b"]:
+            metadata_path = tmpdir_path / f"{stem}_metadata.json"
+            metadata_path.write_text('{"test": "data"}')
 
-            parser.parse_files([file_a, file_b])
+        parser.parse_files([file_a, file_b])
 
-            concat_df = mock_from_dataframe.call_args[0][0]
-            assert concat_df.shape[0] == 2
-            assert set(concat_df.columns) == set(columns_order_a)
+        concat_df = mock_from_dataframe.call_args[0][0]
+        assert concat_df.shape[0] == 2
+        assert set(concat_df.columns) == set(columns_order_a)
