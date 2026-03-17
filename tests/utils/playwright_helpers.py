@@ -1365,3 +1365,23 @@ def get_loaded_tracks_canvas_from_otconfig(
         page.wait_for_timeout(200)
 
     return canvas
+
+
+def click_slider_at_position(
+    page: Page, slider_locator: Any, position: float, wait_ms: int = 500
+) -> None:
+    """Click a slider track at a specific position (0.0 to 1.0).
+
+    Args:
+        page: Playwright page object
+        slider_locator: Locator for the slider track element
+        position: Position to click (0.0 = start, 1.0 = end)
+        wait_ms: Milliseconds to wait after clicking (default: 500)
+    """
+    slider_locator.scroll_into_view_if_needed()
+    bbox = slider_locator.bounding_box()
+    if bbox:
+        slider_locator.click(
+            position={"x": bbox["width"] * position, "y": bbox["height"] / 2}
+        )
+    page.wait_for_timeout(wait_ms)
