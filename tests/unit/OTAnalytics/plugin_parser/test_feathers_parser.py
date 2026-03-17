@@ -9,6 +9,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pandas as pd
+import polars
 import pytest
 
 from OTAnalytics.application.datastore import DetectionMetadata, TrackParseResult
@@ -276,7 +277,6 @@ class TestFeathersParser:
 
         See: https://openproject.platomo.de/work_packages/9514
         """
-        import polars as pl
 
         columns_order_a = [
             "classification",
@@ -332,8 +332,8 @@ class TestFeathersParser:
             "track_id": "1",
             "occurrence": datetime(2023, 1, 1, 10, 0, 0),
         }
-        df_a = pl.DataFrame(row).select(columns_order_a)
-        df_b = pl.DataFrame(row).select(columns_order_b)
+        df_a = polars.DataFrame(row).select(columns_order_a)
+        df_b = polars.DataFrame(row).select(columns_order_b)
 
         mock_parse_json.return_value = sample_metadata
         mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
