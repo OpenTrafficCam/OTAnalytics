@@ -9,14 +9,17 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pandas as pd
+import polars
 import pytest
 
 from OTAnalytics.application.datastore import DetectionMetadata, TrackParseResult
+from OTAnalytics.domain import track
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import PolarsTrackDataset
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
     PolarsTrackGeometryDataset,
 )
+from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk
 from OTAnalytics.plugin_parser.feathers_parser import FeathersParser
 
 
@@ -258,3 +261,99 @@ class TestFeathersParser:
 
         assert isinstance(result, DetectionMetadata)
         assert result.detection_classes == frozenset()
+
+    @patch("OTAnalytics.plugin_parser.feathers_parser.parse_json")
+    @patch(
+        "OTAnalytics.plugin_datastore.polars_track_store."
+        "PolarsTrackDataset.from_dataframe"
+    )
+    def test_parse_files_with_different_column_order(
+        self,
+        mock_from_dataframe: Mock,
+        mock_parse_json: Mock,
+        parser: FeathersParser,
+        sample_metadata: dict[str, Any],
+        test_data_tmp_dir: Path,
+    ) -> None:
+        """Regression test: parse_files must handle feather files with different
+        column orders without raising polars ShapeError.
+
+        See: https://openproject.platomo.de/work_packages/9514
+        """
+
+        columns_order_a = [
+            track.CLASSIFICATION,
+            track.CONFIDENCE,
+            track.X,
+            track.Y,
+            track.W,
+            track.H,
+            track.INTERPOLATED_DETECTION,
+            ottrk.FIRST,
+            ottrk.FINISHED,
+            track.FRAME,  # swapped
+            track.VIDEO_NAME,
+            track.INPUT_FILE,
+            track.ORIGINAL_TRACK_ID,
+            track.TRACK_CLASSIFICATION,
+            track.TRACK_ID,
+            track.OCCURRENCE,
+        ]
+        columns_order_b = [
+            track.CLASSIFICATION,
+            track.CONFIDENCE,
+            track.X,
+            track.Y,
+            track.W,
+            track.H,
+            track.FRAME,  # swapped
+            track.INTERPOLATED_DETECTION,
+            ottrk.FIRST,
+            ottrk.FINISHED,
+            track.VIDEO_NAME,
+            track.INPUT_FILE,
+            track.TRACK_CLASSIFICATION,
+            track.ORIGINAL_TRACK_ID,
+            track.TRACK_ID,
+            track.OCCURRENCE,
+        ]
+        row = {
+            track.CLASSIFICATION: "car",
+            track.CONFIDENCE: 0.9,
+            track.X: 100.0,
+            track.Y: 100.0,
+            track.W: 50.0,
+            track.H: 80.0,
+            track.FRAME: 1,
+            track.INTERPOLATED_DETECTION: False,
+            ottrk.FIRST: True,
+            ottrk.FINISHED: False,
+            track.VIDEO_NAME: "test.mp4",
+            track.INPUT_FILE: "test.ottrk",
+            track.ORIGINAL_TRACK_ID: "1",
+            track.TRACK_CLASSIFICATION: "car",
+            track.TRACK_ID: "1",
+            track.OCCURRENCE: datetime(2023, 1, 1, 10, 0, 0),
+        }
+        df_a = polars.DataFrame(row).select(columns_order_a)
+        df_b = polars.DataFrame(row).select(columns_order_b)
+
+        mock_parse_json.return_value = sample_metadata
+        mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
+
+        tmpdir_path = test_data_tmp_dir
+
+        file_a = tmpdir_path / "file_a.feather"
+        file_b = tmpdir_path / "file_b.feather"
+        df_a.write_ipc(file_a)
+        df_b.write_ipc(file_b)
+
+        for stem in ["file_a", "file_b"]:
+            metadata_path = tmpdir_path / f"{stem}_metadata.json"
+            metadata_path.write_text('{"test": "data"}')
+
+        parser.parse_files([file_a, file_b])
+
+        concat_df = mock_from_dataframe.call_args[0][0]
+        assert concat_df.shape[0] == 2
+        assert set(concat_df.columns) == set(columns_order_a)
