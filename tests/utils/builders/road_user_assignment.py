@@ -1,5 +1,8 @@
 from OTAnalytics.application.analysis.road_user_assignment import RoadUserAssignment
 from OTAnalytics.application.export_formats import road_user_assignments as ras
+from OTAnalytics.application.use_cases.road_user_assignment_export import (
+    compute_road_user_assignment_flow_metrics,
+)
 from OTAnalytics.domain.section import Section
 
 
@@ -11,6 +14,13 @@ def create_road_user_assignment(
 ) -> dict:
     start_event = assignment.events.start
     end_event = assignment.events.end
+    flow_distance_m, travel_time_s, avg_speed_mps = (
+        compute_road_user_assignment_flow_metrics(
+            assignment.assignment.distance,
+            start_event.interpolated_occurrence,
+            end_event.interpolated_occurrence,
+        )
+    )
 
     return {
         ras.FLOW_ID: assignment.assignment.id.id,
@@ -36,10 +46,10 @@ def create_road_user_assignment(
         ras.START_EVENT_COORDINATE_Y: start_event.event_coordinate.y,
         ras.END_EVENT_COORDINATE_X: end_event.event_coordinate.x,
         ras.END_EVENT_COORDINATE_Y: end_event.event_coordinate.y,
-        ras.START_DIRECTION_VECTOR_X: start_event.event_coordinate.x,
-        ras.START_DIRECTION_VECTOR_Y: start_event.event_coordinate.y,
-        ras.END_DIRECTION_VECTOR_X: end_event.event_coordinate.x,
-        ras.END_DIRECTION_VECTOR_Y: end_event.event_coordinate.y,
+        ras.START_DIRECTION_VECTOR_X: start_event.direction_vector.x1,
+        ras.START_DIRECTION_VECTOR_Y: start_event.direction_vector.x2,
+        ras.END_DIRECTION_VECTOR_X: end_event.direction_vector.x1,
+        ras.END_DIRECTION_VECTOR_Y: end_event.direction_vector.x2,
         ras.HOSTNAME: start_event.hostname,
         ras.START_INTERPOLATED_OCCURRENCE: start_event.interpolated_occurrence.strftime(
             ras.DATE_TIME_FORMAT
@@ -51,4 +61,7 @@ def create_road_user_assignment(
         ras.START_INTERPOLATED_EVENT_COORD_Y: start_event.interpolated_event_coordinate.y,  # noqa
         ras.END_INTERPOLATED_EVENT_COORD_X: end_event.interpolated_event_coordinate.x,
         ras.END_INTERPOLATED_EVENT_COORD_Y: end_event.interpolated_event_coordinate.y,
+        ras.FLOW_DISTANCE_M: flow_distance_m,
+        ras.TRAVEL_TIME_S: travel_time_s,
+        ras.AVG_SPEED_MPS: avg_speed_mps,
     }

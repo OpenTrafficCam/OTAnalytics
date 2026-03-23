@@ -79,4 +79,8 @@ class TestRoadUserAssignmentCsvExporter:
         actual[ras.START_SECTION_NAME] = actual[ras.START_SECTION_NAME].astype(str)
         actual[ras.END_SECTION_NAME] = actual[ras.END_SECTION_NAME].astype(str)
 
+        for col in (ras.FLOW_DISTANCE_M, ras.TRAVEL_TIME_S, ras.AVG_SPEED_MPS):
+            expected[col] = expected[col].astype("float64")
+            actual[col] = actual[col].astype("float64")
+
         assert actual.equals(expected)
