@@ -269,8 +269,8 @@ class OTAnalyticsCli(ABC):
 
         for event_format in self._run_config.event_formats:
             event_list_exporter = self._provide_eventlist_exporter(event_format)
-            actual_save_path = save_path.with_suffix(
-                f".events{event_list_exporter.get_extension()}"
+            actual_save_path = save_path.parent / (
+                save_path.name + f".events{event_list_exporter.get_extension()}"
             )
 
             event_export_specification = EventExportSpecification(
@@ -284,8 +284,8 @@ class OTAnalyticsCli(ABC):
             logger().info(f"Event list saved at '{actual_save_path}'")
             await self._after_event_file_export(actual_save_path)
 
-        assignment_path = save_path.with_suffix(
-            f".{CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS}.csv"
+        assignment_path = save_path.parent / (
+            save_path.name + f".{CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS}.csv"
         )
         specification = ExportSpecification(
             save_path=assignment_path, format=CSV_FORMAT.name, mode=export_mode
@@ -322,10 +322,9 @@ class OTAnalyticsCli(ABC):
         if modes is None:
             raise ValueError("modes is None but has to be defined for exporting counts")
         for count_interval in self._run_config.count_intervals:
-            output_file = save_path.with_suffix(
-                f".{CONTEXT_FILE_TYPE_COUNTS}_{count_interval}"
-                f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}."
-                f"{DEFAULT_COUNTS_FILE_TYPE}"
+            output_file = save_path.parent / (
+                save_path.name + f".{CONTEXT_FILE_TYPE_COUNTS}_{count_interval}"
+                f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}.{DEFAULT_COUNTS_FILE_TYPE}"
             )
             counting_specification = CountingSpecificationDto(
                 start=start,
@@ -363,8 +362,8 @@ class OTAnalyticsCli(ABC):
         self, save_path: Path, export_mode: ExportMode
     ) -> None:
         logger().info("Create track statistics ...")
-        track_statistics_path = save_path.with_suffix(
-            f".{CONTEXT_FILE_TYPE_TRACK_STATISTICS}.csv"
+        track_statistics_path = save_path.parent / (
+            save_path.name + f".{CONTEXT_FILE_TYPE_TRACK_STATISTICS}.csv"
         )
         specification = TrackStatisticsExportSpecification(
             save_path=track_statistics_path,
