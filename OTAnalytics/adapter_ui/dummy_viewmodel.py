@@ -3,7 +3,7 @@ import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Any, Dict, Iterable, List, Optional, cast
+from typing import Any, Dict, Iterable, List, Optional
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -378,9 +378,8 @@ class DummyViewModel(
             self.frame_sections,
             self.frame_flows,
             self.frame_analysis,
+            self.frame_filter,
         ]
-        if self._frame_filter is not None:
-            frames.append(cast(AbstractFrame, self._frame_filter))
         return frames
 
     def _update_enabled_track_buttons(self) -> None:
