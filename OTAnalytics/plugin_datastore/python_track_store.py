@@ -79,6 +79,8 @@ class PythonDetection(Detection, DataclassValidation):
         _interpolated_detection (bool): whether this detection is interpolated.
         _track_id (TrackId): the track id this detection belongs to.
         _video_name (str): name of video that this detection belongs.
+        _geo_x (float | None): optional geo x coordinate. Defaults to None.
+        _geo_y (float | None): optional geo y coordinate. Defaults to None.
     """
 
     _classification: str
@@ -94,6 +96,8 @@ class PythonDetection(Detection, DataclassValidation):
     _video_name: str
     _input_file: str
     _is_finished: bool = False
+    _geo_x: float | None = None
+    _geo_y: float | None = None
 
     @property
     def classification(self) -> str:
@@ -146,6 +150,14 @@ class PythonDetection(Detection, DataclassValidation):
     @property
     def input_file(self) -> str:
         return self._input_file
+
+    @property
+    def geo_x(self) -> float | None:
+        return self._geo_x
+
+    @property
+    def geo_y(self) -> float | None:
+        return self._geo_y
 
     def _validate(self) -> None:
         self._validate_confidence_greater_equal_zero()

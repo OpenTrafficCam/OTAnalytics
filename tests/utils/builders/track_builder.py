@@ -104,6 +104,8 @@ class TrackBuilder:
             _track_id=TrackId(self.track_id),
             _video_name=self.video_name,
             _input_file=self.input_file,
+            _geo_x=self.geo_x,
+            _geo_y=self.geo_y,
         )
 
     def add_track_id(self, id: str) -> Self:
