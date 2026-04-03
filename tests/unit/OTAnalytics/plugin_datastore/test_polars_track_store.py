@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from unittest.mock import Mock, call
 
 import polars as pl
@@ -624,3 +625,55 @@ def test_create_empty_dataframe() -> None:
     expected_columns = set(COLUMNS)
     actual_columns = set(result.columns)
     assert actual_columns == expected_columns
+
+
+@dataclass
+class PolarsDetectionGeoGiven:
+    """Holds PolarsDetection instances for geo coordinate tests."""
+
+    detection_with_geo: PolarsDetection
+    detection_without_geo: PolarsDetection
+
+
+def create_polars_detection_geo_given() -> PolarsDetectionGeoGiven:
+    """Creates a PolarsDetectionGeoGiven with and without geo keys in row data."""
+    occurrence = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    row_with = {
+        track.CLASSIFICATION: "car",
+        track.CONFIDENCE: 0.9,
+        track.X: 100.0,
+        track.Y: 200.0,
+        track.W: 0.0,
+        track.H: 0.0,
+        track.FRAME: 1,
+        track.INTERPOLATED_DETECTION: False,
+        track.VIDEO_NAME: "cam.mp4",
+        track.INPUT_FILE: "cam.otdet",
+        track.GEO_X: 449245.82,
+        track.GEO_Y: 5699325.96,
+    }
+    row_without = {
+        k: v for k, v in row_with.items() if k not in (track.GEO_X, track.GEO_Y)
+    }
+    return PolarsDetectionGeoGiven(
+        detection_with_geo=PolarsDetection("track-1", row_with, occurrence),
+        detection_without_geo=PolarsDetection("track-1", row_without, occurrence),
+    )
+
+
+class TestPolarsDetectionGeoCoordinates:
+    def test_geo_x_returns_value_when_key_present(self) -> None:
+        given = create_polars_detection_geo_given()
+        assert given.detection_with_geo.geo_x == 449245.82
+
+    def test_geo_y_returns_value_when_key_present(self) -> None:
+        given = create_polars_detection_geo_given()
+        assert given.detection_with_geo.geo_y == 5699325.96
+
+    def test_geo_x_returns_none_when_key_absent(self) -> None:
+        given = create_polars_detection_geo_given()
+        assert given.detection_without_geo.geo_x is None
+
+    def test_geo_y_returns_none_when_key_absent(self) -> None:
+        given = create_polars_detection_geo_given()
+        assert given.detection_without_geo.geo_y is None

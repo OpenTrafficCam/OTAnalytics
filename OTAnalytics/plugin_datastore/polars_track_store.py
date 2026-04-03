@@ -124,6 +124,14 @@ class PolarsDetection(Detection):
     def input_file(self) -> str:
         return self.__get_attribute(track.INPUT_FILE)
 
+    @property
+    def geo_x(self) -> float | None:
+        return self._data.get(track.GEO_X)
+
+    @property
+    def geo_y(self) -> float | None:
+        return self._data.get(track.GEO_Y)
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, PolarsDetection):
             return False
