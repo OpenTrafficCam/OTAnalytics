@@ -1,7 +1,10 @@
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import cast
 from unittest.mock import Mock, call
 
 import numpy
+import pandas as pd
 import pytest
 from pandas import DataFrame, Series
 
@@ -721,3 +724,69 @@ class TestPandasTrackDataset:
         assert actual.index.names == INDEX_NAMES
         assert INDEX_NAMES not in actual.columns.to_list()
         assert set(COLUMNS) - set(INDEX_NAMES) == set(actual.columns.to_list())
+
+
+@dataclass
+class PandasDetectionGeoGiven:
+    """Holds PandasDetection instances for geo coordinate tests."""
+
+    detection_with_geo: PandasDetection
+    detection_without_geo: PandasDetection
+
+
+def create_pandas_detection_geo_given() -> PandasDetectionGeoGiven:
+    """Creates a PandasDetectionGeoGiven with and without geo columns."""
+    data_with = pd.Series(
+        {
+            track.CLASSIFICATION: "car",
+            track.CONFIDENCE: 0.9,
+            track.X: 100.0,
+            track.Y: 200.0,
+            track.W: 0.0,
+            track.H: 0.0,
+            track.FRAME: 1,
+            track.INTERPOLATED_DETECTION: False,
+            track.VIDEO_NAME: "cam.mp4",
+            track.INPUT_FILE: "cam.otdet",
+            track.GEO_X: 449245.82,
+            track.GEO_Y: 5699325.96,
+        },
+        name=(datetime(2024, 1, 1, tzinfo=timezone.utc),),
+    )
+    data_without = pd.Series(
+        {
+            track.CLASSIFICATION: "car",
+            track.CONFIDENCE: 0.9,
+            track.X: 100.0,
+            track.Y: 200.0,
+            track.W: 0.0,
+            track.H: 0.0,
+            track.FRAME: 1,
+            track.INTERPOLATED_DETECTION: False,
+            track.VIDEO_NAME: "cam.mp4",
+            track.INPUT_FILE: "cam.otdet",
+        },
+        name=(datetime(2024, 1, 1, tzinfo=timezone.utc),),
+    )
+    return PandasDetectionGeoGiven(
+        detection_with_geo=PandasDetection("track-1", data_with),
+        detection_without_geo=PandasDetection("track-1", data_without),
+    )
+
+
+class TestPandasDetectionGeoCoordinates:
+    def test_geo_x_returns_value_when_column_present(self) -> None:
+        given = create_pandas_detection_geo_given()
+        assert given.detection_with_geo.geo_x == 449245.82
+
+    def test_geo_y_returns_value_when_column_present(self) -> None:
+        given = create_pandas_detection_geo_given()
+        assert given.detection_with_geo.geo_y == 5699325.96
+
+    def test_geo_x_returns_none_when_column_absent(self) -> None:
+        given = create_pandas_detection_geo_given()
+        assert given.detection_without_geo.geo_x is None
+
+    def test_geo_y_returns_none_when_column_absent(self) -> None:
+        given = create_pandas_detection_geo_given()
+        assert given.detection_without_geo.geo_y is None

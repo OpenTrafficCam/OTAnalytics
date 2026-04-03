@@ -113,6 +113,18 @@ class PandasDetection(Detection):
     def input_file(self) -> str:
         return self.__get_attribute(track.INPUT_FILE)
 
+    @property
+    def geo_x(self) -> float | None:
+        if track.GEO_X not in self._data.index:
+            return None
+        return self.__get_attribute(track.GEO_X)
+
+    @property
+    def geo_y(self) -> float | None:
+        if track.GEO_Y not in self._data.index:
+            return None
+        return self.__get_attribute(track.GEO_Y)
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, PandasDetection):
             return False
