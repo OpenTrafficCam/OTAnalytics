@@ -2,21 +2,25 @@ from dataclasses import dataclass
 from datetime import datetime
 from unittest.mock import Mock
 
-import polars
 import polars as pl
 import pytest
 from polars import DataFrame
 from pytest import approx
 
 from OTAnalytics.domain import track
+from OTAnalytics.domain.event import SECTION_ID
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection, SectionId, SectionType
 from OTAnalytics.domain.track import FRAME, TRACK_CLASSIFICATION, VIDEO_NAME, H, W
 from OTAnalytics.domain.track_dataset.track_dataset import (
+    CURRENT_X,
+    CURRENT_Y,
     END_FRAME,
     END_GEO_X,
     END_GEO_Y,
     END_VIDEO_NAME,
+    PREVIOUS_X,
+    PREVIOUS_Y,
     START_GEO_X,
     START_GEO_Y,
 )
@@ -35,6 +39,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
     INTERSECTS,
     INTERSECTS_POLYGON,
     OCCURRENCE,
+    RELATIVE_POSITION,
     ROW_ID,
     START_H,
     START_OCCURRENCE,
@@ -339,7 +344,7 @@ def test_create_track_segments_multiple_tracks() -> None:
     assert len(result) == 2  # Should have 2 segments (1 for each track)
 
     # Check track1 segment
-    track1_segment = result.filter(polars.col(TRACK_ID) == "track1").row(0, named=True)
+    track1_segment = result.filter(pl.col(TRACK_ID) == "track1").row(0, named=True)
     assert track1_segment[START_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 0)
     assert track1_segment[END_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 1)
     assert track1_segment[START_X] == 10.0
@@ -352,7 +357,7 @@ def test_create_track_segments_multiple_tracks() -> None:
     assert track1_segment[END_H] == 16.0
 
     # Check track2 segment
-    track2_segment = result.filter(polars.col(TRACK_ID) == "track2").row(0, named=True)
+    track2_segment = result.filter(pl.col(TRACK_ID) == "track2").row(0, named=True)
     assert track2_segment[START_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 0)
     assert track2_segment[END_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 1)
     assert track2_segment[START_X] == 100.0
@@ -969,11 +974,13 @@ class TestGeoInterpolationAtIntersection:
 
 @dataclass
 class CreateEventsGeoGiven:
+    """Holds intersection point datasets for geo coordinate event creation tests."""
+
     points_with_geo: PolarsIntersectionPointsDataset
     points_without_geo: PolarsIntersectionPointsDataset
 
 
-def _base_points_dict() -> dict:
+def _base_points_dict() -> dict[str, list]:
     return {
         TRACK_ID: ["t1"],
         TRACK_CLASSIFICATION: ["car"],
@@ -981,16 +988,22 @@ def _base_points_dict() -> dict:
         END_FRAME: [2],
         END_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 1)],
         START_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 0)],
-        "section_id": ["s1"],
-        "current_x": [5.0],
-        "current_y": [5.0],
-        "previous_x": [0.0],
-        "previous_y": [5.0],
-        "relative_position": [0.5],
+        SECTION_ID: ["s1"],
+        CURRENT_X: [5.0],
+        CURRENT_Y: [5.0],
+        PREVIOUS_X: [0.0],
+        PREVIOUS_Y: [5.0],
+        RELATIVE_POSITION: [0.5],
     }
 
 
 def create_create_events_geo_given() -> CreateEventsGeoGiven:
+    """Build a ``CreateEventsGeoGiven`` with and without geo coordinate columns.
+
+    Returns:
+        A ``CreateEventsGeoGiven`` containing two ``PolarsIntersectionPointsDataset``
+        instances: one with geo coordinate columns and one without.
+    """
     base = _base_points_dict()
     without_geo = pl.DataFrame(base)
     with_geo = without_geo.with_columns(
@@ -1006,6 +1019,8 @@ def create_create_events_geo_given() -> CreateEventsGeoGiven:
 
 
 class TestCreateEventsGeoCoordinates:
+    """Tests that ``create_events`` propagates geo coordinates onto produced events."""
+
     def test_events_carry_geo_coordinates_when_present(self) -> None:
         given = create_create_events_geo_given()
         offset = RelativeOffsetCoordinate(0.0, 0.0)
