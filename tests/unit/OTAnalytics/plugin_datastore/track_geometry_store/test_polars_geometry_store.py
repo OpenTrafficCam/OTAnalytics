@@ -3,14 +3,23 @@ from datetime import datetime
 from unittest.mock import Mock
 
 import polars
+import polars as pl
 import pytest
 from polars import DataFrame
 from pytest import approx
 
+from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.section import LineSection, SectionId, SectionType
 from OTAnalytics.domain.track import FRAME, TRACK_CLASSIFICATION, VIDEO_NAME, H, W
-from OTAnalytics.domain.track_dataset.track_dataset import END_FRAME, END_VIDEO_NAME
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    END_FRAME,
+    END_GEO_X,
+    END_GEO_Y,
+    END_VIDEO_NAME,
+    START_GEO_X,
+    START_GEO_Y,
+)
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
     END_H,
@@ -731,3 +740,68 @@ class TestTrackIdsAfterCut:
         assert "track1_0" in unique_track_ids
         assert "track1_1" in unique_track_ids
         assert "track1_2" in unique_track_ids
+
+
+@dataclass
+class SegmentGeoGiven:
+    """Holds DataFrames for geo segment tests."""
+
+    df_with_geo: pl.DataFrame
+    df_without_geo: pl.DataFrame
+
+
+def create_segment_geo_given() -> SegmentGeoGiven:
+    """Creates a SegmentGeoGiven with two DataFrames, with and without geo columns."""
+    base = {
+        ROW_ID: [1, 2, 3],
+        TRACK_ID: ["t1", "t1", "t1"],
+        TRACK_CLASSIFICATION: ["car", "car", "car"],
+        X: [10.0, 20.0, 30.0],
+        Y: [10.0, 20.0, 30.0],
+        W: [0.0, 0.0, 0.0],
+        H: [0.0, 0.0, 0.0],
+        FRAME: [1, 2, 3],
+        OCCURRENCE: [
+            datetime(2024, 1, 1, 0, 0, 0),
+            datetime(2024, 1, 1, 0, 0, 1),
+            datetime(2024, 1, 1, 0, 0, 2),
+        ],
+        VIDEO_NAME: ["cam.mp4", "cam.mp4", "cam.mp4"],
+    }
+    df_without_geo = pl.DataFrame(base)
+    df_with_geo = df_without_geo.with_columns(
+        [
+            pl.Series(track.GEO_X, [449200.0, 449210.0, 449220.0]),
+            pl.Series(track.GEO_Y, [5699300.0, 5699310.0, 5699320.0]),
+        ]
+    )
+    return SegmentGeoGiven(df_with_geo=df_with_geo, df_without_geo=df_without_geo)
+
+
+class TestCreateTrackSegmentsGeoCoordinates:
+    def test_segments_include_geo_columns_when_both_present(self) -> None:
+        given = create_segment_geo_given()
+        result = create_track_segments(given.df_with_geo)
+        assert START_GEO_X in result.columns
+        assert START_GEO_Y in result.columns
+        assert END_GEO_X in result.columns
+        assert END_GEO_Y in result.columns
+
+    def test_start_geo_x_is_previous_row_geo_x(self) -> None:
+        given = create_segment_geo_given()
+        result = create_track_segments(given.df_with_geo)
+        # First segment: start=row0 (449200), end=row1 (449210)
+        assert result[START_GEO_X][0] == 449200.0
+        assert result[END_GEO_X][0] == 449210.0
+
+    def test_segments_omit_geo_columns_when_absent(self) -> None:
+        given = create_segment_geo_given()
+        result = create_track_segments(given.df_without_geo)
+        assert START_GEO_X not in result.columns
+        assert END_GEO_X not in result.columns
+
+    def test_segments_omit_geo_columns_when_only_geo_x_present(self) -> None:
+        given = create_segment_geo_given()
+        df_only_x = given.df_with_geo.drop(track.GEO_Y)
+        result = create_track_segments(df_only_x)
+        assert START_GEO_X not in result.columns

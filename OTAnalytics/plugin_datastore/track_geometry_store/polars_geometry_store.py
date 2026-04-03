@@ -37,6 +37,8 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     CURRENT_X,
     CURRENT_Y,
     END_FRAME,
+    END_GEO_X,
+    END_GEO_Y,
     END_H,
     END_OCCURRENCE,
     END_VIDEO_NAME,
@@ -45,6 +47,8 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     END_Y,
     PREVIOUS_X,
     PREVIOUS_Y,
+    START_GEO_X,
+    START_GEO_Y,
     START_H,
     START_OCCURRENCE,
     START_W,
@@ -135,13 +139,27 @@ def create_track_segments(df: pl.DataFrame) -> pl.DataFrame:
 
     Returns:
         pl.DataFrame: DataFrame with columns TRACK_ID, START_OCCURRENCE, END_OCCURRENCE,
-            START_X, START_Y, START_W, START_H, END_X, END_Y, END_W, END_H.
+            START_X, START_Y, START_W, START_H, END_X, END_Y, END_W, END_H,
+            and optionally START_GEO_X/Y, END_GEO_X/Y when geo columns are present.
     """
     if df.is_empty():
         return pl.DataFrame()
 
+    has_geo = track.GEO_X in df.columns and track.GEO_Y in df.columns
+
     # Sort by track_id and occurrence for efficient window operations
     df_sorted = df.sort([TRACK_ID, OCCURRENCE])
+
+    geo_columns = (
+        [
+            pl.col(track.GEO_X).alias(END_GEO_X),
+            pl.col(track.GEO_Y).alias(END_GEO_Y),
+            pl.col(track.GEO_X).shift(1).over(TRACK_ID).alias(START_GEO_X),
+            pl.col(track.GEO_Y).shift(1).over(TRACK_ID).alias(START_GEO_Y),
+        ]
+        if has_geo
+        else []
+    )
 
     # Use window functions to create segments - this is much more efficient in polars
     segments = df_sorted.with_columns(
@@ -161,7 +179,10 @@ def create_track_segments(df: pl.DataFrame) -> pl.DataFrame:
             pl.col(W).shift(1).over(TRACK_ID).alias(START_W),
             pl.col(H).shift(1).over(TRACK_ID).alias(START_H),
         ]
+        + geo_columns
     ).drop_nulls()  # Remove rows where shift resulted in null (first rows per track)
+
+    geo_select = [END_GEO_X, END_GEO_Y, START_GEO_X, START_GEO_Y] if has_geo else []
 
     # Select only the required columns in the exact order that pandas produces
     segments = segments.select(
@@ -182,6 +203,7 @@ def create_track_segments(df: pl.DataFrame) -> pl.DataFrame:
             START_W,
             START_H,
         ]
+        + geo_select
     )
 
     return segments

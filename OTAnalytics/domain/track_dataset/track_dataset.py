@@ -37,6 +37,10 @@ CURRENT_X: str = "current_x"
 CURRENT_Y: str = "current_y"
 PREVIOUS_X: str = "previous_x"
 PREVIOUS_Y: str = "previous_y"
+START_GEO_X: str = "start_geo_x"
+START_GEO_Y: str = "start_geo_y"
+END_GEO_X: str = "end_geo_x"
+END_GEO_Y: str = "end_geo_y"
 
 
 class TrackDoesNotExistError(Exception):
