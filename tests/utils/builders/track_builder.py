@@ -42,6 +42,8 @@ class TrackBuilder:
     video_name: str = DEFAULT_VIDEO_NAME
     input_file: str = DEFAULT_INPUT_FILE
     interpolated_detection: bool = False
+    geo_x: float | None = None
+    geo_y: float | None = None
 
     def __post_init__(self) -> None:
         self._detections: list[Detection] = []
