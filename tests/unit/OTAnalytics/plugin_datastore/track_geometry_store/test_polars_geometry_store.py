@@ -27,6 +27,8 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
     END_W,
     END_X,
     END_Y,
+    INTERPOLATED_GEO_X,
+    INTERPOLATED_GEO_Y,
     INTERSECTION_LINE_ID,
     INTERSECTION_X,
     INTERSECTION_Y,
@@ -40,6 +42,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
     START_X,
     START_Y,
     TRACK_ID,
+    PolarsIntersectionPointsDataset,
     PolarsTrackGeometryDataset,
     Polygon,
     X,
@@ -879,3 +882,86 @@ class TestFindLineIntersectionsGeoPassthrough:
         )
         assert START_GEO_X not in result.columns
         assert END_GEO_X not in result.columns
+
+
+@dataclass
+class GeoInterpolationGiven:
+    """Holds datasets for geo interpolation at intersection tests."""
+
+    dataset_with_geo: PolarsTrackGeometryDataset
+    dataset_without_geo: PolarsTrackGeometryDataset
+    section: LineSection
+
+
+def create_geo_interpolation_given() -> GeoInterpolationGiven:
+    """Creates datasets for testing geo interpolation at track-section intersection."""
+    offset = RelativeOffsetCoordinate(0.0, 0.0)
+    # Track goes horizontally from (0,5) to (10,5)
+    # Section cuts vertically at x=5 — intersection at (5,5), relative_position=0.5
+    base_segments = {
+        ROW_ID: [1],
+        TRACK_ID: ["t1"],
+        TRACK_CLASSIFICATION: ["car"],
+        END_VIDEO_NAME: ["myhostname_cam.mp4"],
+        END_FRAME: [2],
+        START_X: [0.0],
+        START_Y: [5.0],
+        END_X: [10.0],
+        END_Y: [5.0],
+        START_W: [0.0],
+        START_H: [0.0],
+        END_W: [0.0],
+        END_H: [0.0],
+        START_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 0)],
+        END_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 2)],
+    }
+    without_geo_df = pl.DataFrame(base_segments)
+    with_geo_df = without_geo_df.with_columns(
+        [
+            pl.Series(START_GEO_X, [449200.0]),
+            pl.Series(START_GEO_Y, [5699300.0]),
+            pl.Series(END_GEO_X, [449220.0]),
+            pl.Series(END_GEO_Y, [5699320.0]),
+        ]
+    )
+    section = LineSection(
+        id=SectionId("s1"),
+        name="s1",
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+        },
+        plugin_data={},
+        coordinates=[Coordinate(5.0, 0.0), Coordinate(5.0, 10.0)],
+    )
+    return GeoInterpolationGiven(
+        dataset_with_geo=PolarsTrackGeometryDataset(offset, with_geo_df),
+        dataset_without_geo=PolarsTrackGeometryDataset(offset, without_geo_df),
+        section=section,
+    )
+
+
+class TestGeoInterpolationAtIntersection:
+    def test_interpolated_geo_x_at_midpoint(self) -> None:
+        given = create_geo_interpolation_given()
+        result = given.dataset_with_geo.wrap_intersection_points([given.section])
+        assert isinstance(result, PolarsIntersectionPointsDataset)
+        points = result._points
+        assert INTERPOLATED_GEO_X in points.columns
+        # relative_position=0.5, start=449200, end=449220 → expected=449210
+        assert points[INTERPOLATED_GEO_X][0] == pytest.approx(449210.0, abs=0.01)
+
+    def test_interpolated_geo_y_at_midpoint(self) -> None:
+        given = create_geo_interpolation_given()
+        result = given.dataset_with_geo.wrap_intersection_points([given.section])
+        assert isinstance(result, PolarsIntersectionPointsDataset)
+        points = result._points
+        assert INTERPOLATED_GEO_Y in points.columns
+        assert points[INTERPOLATED_GEO_Y][0] == pytest.approx(5699310.0, abs=0.01)
+
+    def test_no_geo_columns_when_segments_lack_geo(self) -> None:
+        given = create_geo_interpolation_given()
+        result = given.dataset_without_geo.wrap_intersection_points([given.section])
+        assert isinstance(result, PolarsIntersectionPointsDataset)
+        points = result._points
+        assert INTERPOLATED_GEO_X not in points.columns
+        assert INTERPOLATED_GEO_Y not in points.columns

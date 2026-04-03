@@ -75,6 +75,8 @@ INTERSECTION_LENGTH_X = "intersection_length_x"
 INTERSECTION_LENGTH_Y = "intersection_length_y"
 INTERSECTION_LENGTH = "intersection_length"
 RELATIVE_POSITION = "relative_position"
+INTERPOLATED_GEO_X: str = "interpolated_geo_x"
+INTERPOLATED_GEO_Y: str = "interpolated_geo_y"
 
 # Column names for track segments
 ROW_ID = "row_id"
@@ -1302,6 +1304,25 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                     )
                     .with_columns(pl.lit(section.id.id).alias(SECTION_ID))
                 )
+
+                if (
+                    START_GEO_X in intersecting_segments.columns
+                    and START_GEO_Y in intersecting_segments.columns
+                ):
+                    intersection_points = intersection_points.with_columns(
+                        [
+                            (
+                                pl.col(START_GEO_X)
+                                + pl.col(RELATIVE_POSITION)
+                                * (pl.col(END_GEO_X) - pl.col(START_GEO_X))
+                            ).alias(INTERPOLATED_GEO_X),
+                            (
+                                pl.col(START_GEO_Y)
+                                + pl.col(RELATIVE_POSITION)
+                                * (pl.col(END_GEO_Y) - pl.col(START_GEO_Y))
+                            ).alias(INTERPOLATED_GEO_Y),
+                        ]
+                    )
 
                 if len(intersecting_segments) > 0:
                     result_df.append(intersection_points)
