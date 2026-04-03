@@ -965,3 +965,61 @@ class TestGeoInterpolationAtIntersection:
         points = result._points
         assert INTERPOLATED_GEO_X not in points.columns
         assert INTERPOLATED_GEO_Y not in points.columns
+
+
+@dataclass
+class CreateEventsGeoGiven:
+    points_with_geo: PolarsIntersectionPointsDataset
+    points_without_geo: PolarsIntersectionPointsDataset
+
+
+def _base_points_dict() -> dict:
+    return {
+        TRACK_ID: ["t1"],
+        TRACK_CLASSIFICATION: ["car"],
+        END_VIDEO_NAME: ["myhostname_cam.mp4"],
+        END_FRAME: [2],
+        END_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 1)],
+        START_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 0)],
+        "section_id": ["s1"],
+        "current_x": [5.0],
+        "current_y": [5.0],
+        "previous_x": [0.0],
+        "previous_y": [5.0],
+        "relative_position": [0.5],
+    }
+
+
+def create_create_events_geo_given() -> CreateEventsGeoGiven:
+    base = _base_points_dict()
+    without_geo = pl.DataFrame(base)
+    with_geo = without_geo.with_columns(
+        [
+            pl.Series(INTERPOLATED_GEO_X, [449210.0]),
+            pl.Series(INTERPOLATED_GEO_Y, [5699310.0]),
+        ]
+    )
+    return CreateEventsGeoGiven(
+        points_with_geo=PolarsIntersectionPointsDataset(with_geo),
+        points_without_geo=PolarsIntersectionPointsDataset(without_geo),
+    )
+
+
+class TestCreateEventsGeoCoordinates:
+    def test_events_carry_geo_coordinates_when_present(self) -> None:
+        given = create_create_events_geo_given()
+        offset = RelativeOffsetCoordinate(0.0, 0.0)
+        event_dataset = given.points_with_geo.create_events(offset)
+        events = list(event_dataset)
+        assert len(events) == 1
+        assert events[0].geo_x == pytest.approx(449210.0)
+        assert events[0].geo_y == pytest.approx(5699310.0)
+
+    def test_events_have_none_geo_when_no_geo_columns(self) -> None:
+        given = create_create_events_geo_given()
+        offset = RelativeOffsetCoordinate(0.0, 0.0)
+        event_dataset = given.points_without_geo.create_events(offset)
+        events = list(event_dataset)
+        assert len(events) == 1
+        assert events[0].geo_x is None
+        assert events[0].geo_y is None

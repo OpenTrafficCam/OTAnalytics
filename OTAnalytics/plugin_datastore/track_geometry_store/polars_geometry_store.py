@@ -638,6 +638,8 @@ class PolarsEventDataset(EventDataset):
                     row[INTERPOLATED_EVENT_COORDINATE_X],
                     row[INTERPOLATED_EVENT_COORDINATE_Y],
                 ),
+                geo_x=row.get(event.GEO_X),
+                geo_y=row.get(event.GEO_Y),
             )
 
     def __len__(self) -> int:
@@ -755,25 +757,41 @@ class PolarsIntersectionPointsDataset(IntersectionPointsDataset):
                     .alias(DIRECTION_VECTOR_Y),
                 ]
             )
-            .select(
+        )
+        if (
+            INTERPOLATED_GEO_X in events.columns
+            and INTERPOLATED_GEO_Y in events.columns
+        ):
+            events = events.with_columns(
                 [
-                    event.ROAD_USER_ID,
-                    event.ROAD_USER_TYPE,
-                    event.HOSTNAME,
-                    event.OCCURRENCE,
-                    event.FRAME_NUMBER,
-                    event.SECTION_ID,
-                    EVENT_COORDINATE_X,
-                    EVENT_COORDINATE_Y,
-                    event.EVENT_TYPE,
-                    DIRECTION_VECTOR_X,
-                    DIRECTION_VECTOR_Y,
-                    event.VIDEO_NAME,
-                    event.INTERPOLATED_OCCURRENCE,
-                    INTERPOLATED_EVENT_COORDINATE_X,
-                    INTERPOLATED_EVENT_COORDINATE_Y,
+                    pl.col(INTERPOLATED_GEO_X).alias(event.GEO_X),
+                    pl.col(INTERPOLATED_GEO_Y).alias(event.GEO_Y),
                 ]
             )
+        geo_event_cols = (
+            [event.GEO_X, event.GEO_Y]
+            if event.GEO_X in events.columns and event.GEO_Y in events.columns
+            else []
+        )
+        events = events.select(
+            [
+                event.ROAD_USER_ID,
+                event.ROAD_USER_TYPE,
+                event.HOSTNAME,
+                event.OCCURRENCE,
+                event.FRAME_NUMBER,
+                event.SECTION_ID,
+                EVENT_COORDINATE_X,
+                EVENT_COORDINATE_Y,
+                event.EVENT_TYPE,
+                DIRECTION_VECTOR_X,
+                DIRECTION_VECTOR_Y,
+                event.VIDEO_NAME,
+                event.INTERPOLATED_OCCURRENCE,
+                INTERPOLATED_EVENT_COORDINATE_X,
+                INTERPOLATED_EVENT_COORDINATE_Y,
+            ]
+            + geo_event_cols
         )
         return PolarsEventDataset(events)
 
