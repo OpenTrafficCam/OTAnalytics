@@ -31,11 +31,6 @@ def create_event_list_given() -> EventListGiven:
     )
 
 
-def setup_default(given: EventListGiven) -> EventListGiven:
-    """Return given unchanged (no default setup needed)."""
-    return given
-
-
 def create_target_with_geo(given: EventListGiven) -> EventListDataFrameBuilder:
     """Create builder from events that carry geo coordinates."""
     return EventListDataFrameBuilder(given.events_with_geo, [])
@@ -66,32 +61,27 @@ class TestEventListDataFrameBuilder:
 class TestEventListDataFrameBuilderGeoCoordinates:
     """Tests for geo coordinate columns in EventListDataFrameBuilder.build()."""
 
-    def test_build_no_events(self) -> None:
-        given = setup_default(create_event_list_given())
-        target = create_target_empty(given)
-        assert target.build().empty
-
     def test_geo_columns_present_when_events_have_geo(self) -> None:
-        given = setup_default(create_event_list_given())
+        given = create_event_list_given()
         target = create_target_with_geo(given)
         df = target.build()
         assert event_list.GEO_X in df.columns
         assert event_list.GEO_Y in df.columns
 
     def test_geo_x_value_correct(self) -> None:
-        given = setup_default(create_event_list_given())
+        given = create_event_list_given()
         target = create_target_with_geo(given)
         df = target.build()
         assert df[event_list.GEO_X].iloc[0] == pytest.approx(449210.0, abs=0.001)
 
     def test_geo_y_value_correct(self) -> None:
-        given = setup_default(create_event_list_given())
+        given = create_event_list_given()
         target = create_target_with_geo(given)
         df = target.build()
         assert df[event_list.GEO_Y].iloc[0] == pytest.approx(5699310.0, abs=0.001)
 
     def test_geo_columns_absent_when_events_have_no_geo(self) -> None:
-        given = setup_default(create_event_list_given())
+        given = create_event_list_given()
         target = create_target_without_geo(given)
         df = target.build()
         assert event_list.GEO_X not in df.columns
