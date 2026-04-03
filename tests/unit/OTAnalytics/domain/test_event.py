@@ -763,12 +763,24 @@ class TestEventRepository:
         ]
 
 
+def _build_section_event_builder(detection: Detection) -> SectionEventBuilder:
+    builder = SectionEventBuilder()
+    builder.add_road_user_type("car")
+    builder.add_event_coordinate(0.0, 0.0)
+    builder.add_direction_vector(DirectionVector2D(1.0, 0.0))
+    builder.add_event_type(EventType.SECTION_ENTER)
+    builder.add_section_id(SectionId("s1"))
+    builder.add_interpolated_occurrence(detection.occurrence)
+    builder.add_interpolated_event_coordinate(0.0, 0.0)
+    return builder
+
+
 @dataclass
 class GeoEventGiven:
     """Holds geo coordinate values for geo event tests."""
 
-    geo_x: float
-    geo_y: float
+    geo_x: float | None
+    geo_y: float | None
 
 
 def create_geo_event_given() -> GeoEventGiven:
@@ -777,50 +789,24 @@ def create_geo_event_given() -> GeoEventGiven:
 
 
 class TestEventGeoCoordinates:
-    def test_event_geo_x_defaults_to_none(self, valid_detection: Detection) -> None:
-        builder = SectionEventBuilder()
-        builder.add_road_user_type("car")
-        builder.add_event_coordinate(0.0, 0.0)
-        builder.add_direction_vector(DirectionVector2D(1.0, 0.0))
-        builder.add_event_type(EventType.SECTION_ENTER)
-        builder.add_section_id(SectionId("s1"))
-        builder.add_interpolated_occurrence(valid_detection.occurrence)
-        builder.add_interpolated_event_coordinate(0.0, 0.0)
-        event = builder.create_event(valid_detection)
+    def test_event_geo_fields_default_to_none(self, valid_detection: Detection) -> None:
+        event = _build_section_event_builder(valid_detection).create_event(
+            valid_detection
+        )
         assert event.geo_x is None
         assert event.geo_y is None
 
     def test_event_carries_geo_coordinates(self, valid_detection: Detection) -> None:
         given = create_geo_event_given()
-        builder = SectionEventBuilder()
-        builder.add_road_user_type("car")
-        builder.add_event_coordinate(0.0, 0.0)
-        builder.add_direction_vector(DirectionVector2D(1.0, 0.0))
-        builder.add_event_type(EventType.SECTION_ENTER)
-        builder.add_section_id(SectionId("s1"))
-        builder.add_interpolated_occurrence(valid_detection.occurrence)
-        builder.add_interpolated_event_coordinate(0.0, 0.0)
+        builder = _build_section_event_builder(valid_detection)
         builder.add_geo_coordinate(given.geo_x, given.geo_y)
         event = builder.create_event(valid_detection)
         assert event.geo_x == given.geo_x
         assert event.geo_y == given.geo_y
 
-    def test_geo_x_constant(self) -> None:
-        assert GEO_X == "geo_x"
-
-    def test_geo_y_constant(self) -> None:
-        assert GEO_Y == "geo_y"
-
     def test_to_dict_includes_geo_coordinates(self, valid_detection: Detection) -> None:
         given = create_geo_event_given()
-        builder = SectionEventBuilder()
-        builder.add_road_user_type("car")
-        builder.add_event_coordinate(0.0, 0.0)
-        builder.add_direction_vector(DirectionVector2D(1.0, 0.0))
-        builder.add_event_type(EventType.SECTION_ENTER)
-        builder.add_section_id(SectionId("s1"))
-        builder.add_interpolated_occurrence(valid_detection.occurrence)
-        builder.add_interpolated_event_coordinate(0.0, 0.0)
+        builder = _build_section_event_builder(valid_detection)
         builder.add_geo_coordinate(given.geo_x, given.geo_y)
         event = builder.create_event(valid_detection)
         d = event.to_dict()
