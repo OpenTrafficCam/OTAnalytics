@@ -805,3 +805,77 @@ class TestCreateTrackSegmentsGeoCoordinates:
         df_only_x = given.df_with_geo.drop(track.GEO_Y)
         result = create_track_segments(df_only_x)
         assert START_GEO_X not in result.columns
+
+
+@dataclass
+class LineIntersectionGeoGiven:
+    """Holds segment DataFrames for geo passthrough tests."""
+
+    segments_with_geo: pl.DataFrame
+    segments_without_geo: pl.DataFrame
+
+
+def create_line_intersection_geo_given() -> LineIntersectionGeoGiven:
+    """Creates DataFrames for geo column passthrough tests."""
+    base = {
+        ROW_ID: [1],
+        TRACK_ID: ["t1"],
+        TRACK_CLASSIFICATION: ["car"],
+        END_VIDEO_NAME: ["cam.mp4"],
+        END_FRAME: [2],
+        START_X: [0.0],
+        START_Y: [5.0],
+        END_X: [10.0],
+        END_Y: [5.0],
+        START_W: [0.0],
+        START_H: [0.0],
+        END_W: [0.0],
+        END_H: [0.0],
+        START_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 0)],
+        END_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 1)],
+    }
+    without_geo = pl.DataFrame(base)
+    with_geo = without_geo.with_columns(
+        [
+            pl.Series(START_GEO_X, [449200.0]),
+            pl.Series(START_GEO_Y, [5699300.0]),
+            pl.Series(END_GEO_X, [449210.0]),
+            pl.Series(END_GEO_Y, [5699310.0]),
+        ]
+    )
+    return LineIntersectionGeoGiven(
+        segments_with_geo=with_geo,
+        segments_without_geo=without_geo,
+    )
+
+
+class TestFindLineIntersectionsGeoPassthrough:
+    def test_geo_columns_present_in_output_when_present_in_input(self) -> None:
+        given = create_line_intersection_geo_given()
+        result = find_line_intersections(
+            given.segments_with_geo,
+            "line-1",
+            5.0,
+            0.0,
+            5.0,
+            10.0,
+            RelativeOffsetCoordinate(0.0, 0.0),
+        )
+        assert START_GEO_X in result.columns
+        assert START_GEO_Y in result.columns
+        assert END_GEO_X in result.columns
+        assert END_GEO_Y in result.columns
+
+    def test_geo_columns_absent_from_output_when_absent_in_input(self) -> None:
+        given = create_line_intersection_geo_given()
+        result = find_line_intersections(
+            given.segments_without_geo,
+            "line-1",
+            5.0,
+            0.0,
+            5.0,
+            10.0,
+            RelativeOffsetCoordinate(0.0, 0.0),
+        )
+        assert START_GEO_X not in result.columns
+        assert END_GEO_X not in result.columns

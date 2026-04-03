@@ -423,6 +423,11 @@ def find_line_intersections(
     )
 
     # Add line ID for intersecting segments
+    geo_cols = (
+        [START_GEO_X, START_GEO_Y, END_GEO_X, END_GEO_Y]
+        if START_GEO_X in segments_df.columns and START_GEO_Y in segments_df.columns
+        else []
+    )
     result_df = result_df.with_columns(
         [
             pl.when(pl.col(INTERSECTS))
@@ -452,6 +457,7 @@ def find_line_intersections(
             INTERSECTION_Y,
             INTERSECTION_LINE_ID,
         ]
+        + geo_cols
     )
 
     return result_df
