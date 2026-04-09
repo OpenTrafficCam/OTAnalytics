@@ -424,11 +424,19 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             new_tracks, self.calculator
         )
 
-        # Get all tracks (existing + new) and assign classification
+        # Get all tracks (existing + new) and assign classification.
+        # Preserve optional geo columns when both DataFrames carry them.
+        geo_cols = [
+            c
+            for c in [track.GEO_X, track.GEO_Y]
+            if c in self._dataset.columns
+            and c in new_tracks_with_classification.columns
+        ]
+        selected_columns = COLUMNS + geo_cols
         combined_tracks = pl.concat(
             [
-                drop_row_id(self._dataset).select(COLUMNS),
-                drop_row_id(new_tracks_with_classification).select(COLUMNS),
+                drop_row_id(self._dataset).select(selected_columns),
+                drop_row_id(new_tracks_with_classification).select(selected_columns),
             ]
         ).sort(INDEX_NAMES)
 
