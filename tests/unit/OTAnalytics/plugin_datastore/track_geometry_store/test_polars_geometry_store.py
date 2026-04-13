@@ -10,6 +10,7 @@ from pytest import approx
 from OTAnalytics.domain import track
 from OTAnalytics.domain.event import SECTION_ID
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.otfusion import OtfusionMetadata
 from OTAnalytics.domain.section import LineSection, SectionId, SectionType
 from OTAnalytics.domain.track import FRAME, TRACK_CLASSIFICATION, VIDEO_NAME, H, W
 from OTAnalytics.domain.track_dataset.track_dataset import (
@@ -1109,3 +1110,104 @@ class TestFindLineIntersectionsUseGeo:
             use_geo=True,
         )
         assert result.filter(pl.col(INTERSECTS)).is_empty()
+
+
+class TestWrapIntersectionPointsWithGeo:
+    """When otfusion_metadata is provided and segments have geo columns,
+    section pixel coords are converted to geo and intersection uses geo math."""
+
+    def _make_geometry_dataset(self) -> PolarsTrackGeometryDataset:
+        """Single track: pixel (100, 0) -> (100, 200).
+
+        Geo: (449250, 5699320) -> (449250, 5699340).
+        """
+        from datetime import timezone
+
+        occ_start = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        occ_end = datetime(2023, 1, 1, 0, 0, 1, tzinfo=timezone.utc)
+        segments = pl.DataFrame(
+            {
+                ROW_ID: [1],
+                TRACK_ID: ["t1"],
+                "track_classification": ["car"],
+                END_VIDEO_NAME: ["v.mp4"],
+                END_FRAME: [1],
+                START_X: [100.0],
+                START_Y: [0.0],
+                END_X: [100.0],
+                END_Y: [200.0],
+                START_W: [0.0],
+                START_H: [0.0],
+                END_W: [0.0],
+                END_H: [0.0],
+                START_OCCURRENCE: [occ_start],
+                END_OCCURRENCE: [occ_end],
+                START_GEO_X: [449250.0],
+                START_GEO_Y: [5699320.0],
+                END_GEO_X: [449250.0],
+                END_GEO_Y: [5699340.0],
+            }
+        )
+        return PolarsTrackGeometryDataset(
+            offset=RelativeOffsetCoordinate(0.0, 0.0),
+            segments_df=segments,
+        )
+
+    def _make_otfusion_metadata(self) -> OtfusionMetadata:
+        """Metadata where pixel (100, 100) maps to geo (449250, 5699325).
+
+        Using:
+          scale_x = (449300 - 449200) / (200 - 40) = 100 / 160 = 0.625
+          scale_y = (5699350 - 5699300) / (200 - 40) = 50 / 160 = 0.3125
+          pixel_x=100 -> geo_x = 449200 + (100-20)*0.625 = 449200 + 50 = 449250  ✓
+          pixel_y=100 -> geo_y = 5699350 - (100-20)*0.3125 = 5699350 - 25 = 5699325  ✓
+        """
+        return OtfusionMetadata(
+            geo_min_x=449200.0,
+            geo_min_y=5699300.0,
+            geo_max_x=449300.0,
+            geo_max_y=5699350.0,
+            bev_width=200,
+            bev_height=200,
+            padding=20,
+        )
+
+    def _make_section(
+        self, pixel_start: tuple[float, float], pixel_end: tuple[float, float]
+    ) -> LineSection:
+        section = Mock(spec=LineSection)
+        section.id = SectionId("s1")
+        section.get_coordinates.return_value = [
+            Coordinate(pixel_start[0], pixel_start[1]),
+            Coordinate(pixel_end[0], pixel_end[1]),
+        ]
+        section.relative_offset_coordinates = {
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+        }
+        section.get_type.return_value = SectionType.LINE
+        return section
+
+    def test_geo_intersection_uses_converted_section_coordinates(self) -> None:
+        # Section at pixel (80, 100) -> (120, 100), which converts to geo:
+        # pixel (80,100)→(120,100) converts to geo y=5699325, x=[449237.5, 449262.5]
+        # This horizontal geo line crosses the vertical geo track at (449250, 5699325)
+        geometry_dataset = self._make_geometry_dataset()
+        section = self._make_section(pixel_start=(80, 100), pixel_end=(120, 100))
+        metadata = self._make_otfusion_metadata()
+
+        result = geometry_dataset.wrap_intersection_points([section], metadata)
+
+        assert not result.empty
+        events = list(result.create_events(RelativeOffsetCoordinate(0.0, 0.0)))
+        assert len(events) == 1
+        evt = events[0]
+        assert evt.geo_x == approx(449250.0, rel=1e-4)
+        assert evt.geo_y == approx(5699325.0, rel=1e-4)
+
+    def test_no_geo_metadata_falls_back_to_pixel_intersection(self) -> None:
+        # Without metadata, section pixel coords used for pixel intersection
+        # Section (0, 100) -> (200, 100) crosses pixel track (100,0)-(100,200)
+        geometry_dataset = self._make_geometry_dataset()
+        section = self._make_section(pixel_start=(0, 100), pixel_end=(200, 100))
+        result = geometry_dataset.wrap_intersection_points([section], None)
+        assert not result.empty

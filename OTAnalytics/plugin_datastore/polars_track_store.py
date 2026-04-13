@@ -611,7 +611,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> IntersectionPointsDataset:
         geometry_dataset = self._get_geometry_dataset_for(offset)
-        return geometry_dataset.wrap_intersection_points(sections)
+        return geometry_dataset.wrap_intersection_points(
+            sections, self._otfusion_metadata
+        )
 
     def ids_inside(self, sections: list[Section]) -> TrackIdSet:
         result: TrackIdSet = PolarsTrackIdSet()

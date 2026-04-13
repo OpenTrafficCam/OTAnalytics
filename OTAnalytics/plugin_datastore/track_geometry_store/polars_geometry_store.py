@@ -19,6 +19,7 @@ from OTAnalytics.domain.geometry import (
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
+from OTAnalytics.domain.otfusion import OtfusionMetadata, pixel_to_geo
 from OTAnalytics.domain.section import Section, SectionId, SectionType
 from OTAnalytics.domain.track import (
     FRAME,
@@ -1306,12 +1307,20 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
         return result
 
     def wrap_intersection_points(
-        self, sections: list[Section]
+        self,
+        sections: list[Section],
+        otfusion_metadata: OtfusionMetadata | None = None,
     ) -> IntersectionPointsDataset:
         """Return the intersection points from tracks and the given sections.
 
+        When otfusion_metadata is provided and the segments DataFrame contains
+        geo columns, section pixel coordinates are converted to geo space and
+        intersection detection uses geo coordinates.
+
         Args:
-            sections (list[Section]): the sections to intersect with.
+            sections: The sections to intersect with.
+            otfusion_metadata: OTFusion geo-referencing metadata. When present
+                and geo columns exist, enables geo-space intersection detection.
 
         Returns:
             IntersectionPointsDataset: the intersection points.
@@ -1331,6 +1340,12 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
         if not line_sections:
             return PolarsIntersectionPointsDataset()
 
+        use_geo = (
+            otfusion_metadata is not None
+            and not self._segments_df.is_empty()
+            and START_GEO_X in self._segments_df.columns
+        )
+
         result_df: list[pl.DataFrame] = []
         # For each line section, find intersections with track segments
         for section in line_sections:
@@ -1340,104 +1355,46 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
 
             # Process each leg of the section (consecutive pair of coordinates)
             for i in range(len(coordinates) - 1):
-                start_x, start_y = coordinates[i].x, coordinates[i].y
-                end_x, end_y = coordinates[i + 1].x, coordinates[i + 1].y
+                if use_geo:
+                    assert otfusion_metadata is not None
+                    leg_start_x, leg_start_y = pixel_to_geo(
+                        coordinates[i].x, coordinates[i].y, otfusion_metadata
+                    )
+                    leg_end_x, leg_end_y = pixel_to_geo(
+                        coordinates[i + 1].x,
+                        coordinates[i + 1].y,
+                        otfusion_metadata,
+                    )
+                else:
+                    leg_start_x, leg_start_y = coordinates[i].x, coordinates[i].y
+                    leg_end_x, leg_end_y = (
+                        coordinates[i + 1].x,
+                        coordinates[i + 1].y,
+                    )
 
                 # Find intersections with this leg of the line
                 intersections = find_line_intersections(
                     self._segments_df,
                     section.id.serialize(),
-                    start_x,
-                    start_y,
-                    end_x,
-                    end_y,
+                    leg_start_x,
+                    leg_start_y,
+                    leg_end_x,
+                    leg_end_y,
                     offset,
+                    use_geo=use_geo,
                 )
 
                 # Filter to only include segments that intersect with the line
                 intersecting_segments = intersections.filter(pl.col(INTERSECTS))
 
-                intersection_points = (
-                    intersecting_segments.with_columns(
-                        [
-                            (pl.col(END_X) + pl.col(END_W) * offset.x).alias(CURRENT_X),
-                            (pl.col(END_Y) + pl.col(END_H) * offset.y).alias(CURRENT_Y),
-                            (pl.col(START_X) + pl.col(START_W) * offset.x).alias(
-                                PREVIOUS_X
-                            ),
-                            (pl.col(START_Y) + pl.col(START_H) * offset.y).alias(
-                                PREVIOUS_Y
-                            ),
-                        ]
+                if use_geo:
+                    intersection_points = self._compute_intersection_points_geo(
+                        intersecting_segments, offset, section
                     )
-                    .with_columns(
-                        [
-                            (pl.col(CURRENT_X) - pl.col(PREVIOUS_X)).alias(
-                                SEGMENT_LENGTH_X
-                            ),
-                            (pl.col(CURRENT_Y) - pl.col(PREVIOUS_Y)).alias(
-                                SEGMENT_LENGTH_Y
-                            ),
-                        ]
+                else:
+                    intersection_points = self._compute_intersection_points_pixel(
+                        intersecting_segments, offset, section
                     )
-                    .with_columns(
-                        [
-                            (
-                                pl.col(SEGMENT_LENGTH_X) ** 2
-                                + pl.col(SEGMENT_LENGTH_Y) ** 2
-                            )
-                            .sqrt()
-                            .alias(SEGMENT_LENGTH)
-                        ]
-                    )
-                    .with_columns(
-                        [
-                            (
-                                pl.col(INTERSECTION_X)
-                                - (pl.col(START_X) + pl.col(START_W) * offset.x)
-                            ).alias(INTERSECTION_LENGTH_X),
-                            (
-                                pl.col(INTERSECTION_Y)
-                                - (pl.col(START_Y) + pl.col(START_H) * offset.y)
-                            ).alias(INTERSECTION_LENGTH_Y),
-                        ]
-                    )
-                    .with_columns(
-                        [
-                            (
-                                pl.col(INTERSECTION_LENGTH_X) ** 2
-                                + pl.col(INTERSECTION_LENGTH_Y) ** 2
-                            )
-                            .sqrt()
-                            .alias(INTERSECTION_LENGTH)
-                        ]
-                    )
-                    .with_columns(
-                        [
-                            pl.when(
-                                (pl.col(SEGMENT_LENGTH_X) == 0)
-                                & (pl.col(SEGMENT_LENGTH_Y) == 0)
-                            )
-                            .then(None)
-                            .otherwise(
-                                pl.col(INTERSECTION_LENGTH) / pl.col(SEGMENT_LENGTH)
-                            )
-                            .alias(RELATIVE_POSITION)
-                        ]
-                    )
-                    .filter(pl.col(RELATIVE_POSITION).is_not_null())
-                    .drop(
-                        [
-                            SEGMENT_LENGTH_X,
-                            SEGMENT_LENGTH_Y,
-                            SEGMENT_LENGTH,
-                            INTERSECTION_LENGTH_X,
-                            INTERSECTION_LENGTH_Y,
-                            INTERSECTION_LENGTH,
-                        ]
-                    )
-                    .with_columns(pl.lit(section.id.id).alias(SECTION_ID))
-                )
 
                 if (
                     START_GEO_X in intersecting_segments.columns
@@ -1464,6 +1421,178 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
         if result_df:
             return PolarsIntersectionPointsDataset(pl.concat(result_df))
         return PolarsIntersectionPointsDataset()
+
+    def _compute_intersection_points_pixel(
+        self,
+        intersecting_segments: pl.DataFrame,
+        offset: RelativeOffsetCoordinate,
+        section: Section,
+    ) -> pl.DataFrame:
+        """Compute RELATIVE_POSITION using pixel-space distances.
+
+        Args:
+            intersecting_segments: Segments that intersect the section leg.
+            offset: Relative offset for bounding-box adjustment.
+            section: The section being intersected.
+
+        Returns:
+            DataFrame with RELATIVE_POSITION and SECTION_ID columns added.
+        """
+        return (
+            intersecting_segments.with_columns(
+                [
+                    (pl.col(END_X) + pl.col(END_W) * offset.x).alias(CURRENT_X),
+                    (pl.col(END_Y) + pl.col(END_H) * offset.y).alias(CURRENT_Y),
+                    (pl.col(START_X) + pl.col(START_W) * offset.x).alias(PREVIOUS_X),
+                    (pl.col(START_Y) + pl.col(START_H) * offset.y).alias(PREVIOUS_Y),
+                ]
+            )
+            .with_columns(
+                [
+                    (pl.col(CURRENT_X) - pl.col(PREVIOUS_X)).alias(SEGMENT_LENGTH_X),
+                    (pl.col(CURRENT_Y) - pl.col(PREVIOUS_Y)).alias(SEGMENT_LENGTH_Y),
+                ]
+            )
+            .with_columns(
+                [
+                    (pl.col(SEGMENT_LENGTH_X) ** 2 + pl.col(SEGMENT_LENGTH_Y) ** 2)
+                    .sqrt()
+                    .alias(SEGMENT_LENGTH)
+                ]
+            )
+            .with_columns(
+                [
+                    (
+                        pl.col(INTERSECTION_X)
+                        - (pl.col(START_X) + pl.col(START_W) * offset.x)
+                    ).alias(INTERSECTION_LENGTH_X),
+                    (
+                        pl.col(INTERSECTION_Y)
+                        - (pl.col(START_Y) + pl.col(START_H) * offset.y)
+                    ).alias(INTERSECTION_LENGTH_Y),
+                ]
+            )
+            .with_columns(
+                [
+                    (
+                        pl.col(INTERSECTION_LENGTH_X) ** 2
+                        + pl.col(INTERSECTION_LENGTH_Y) ** 2
+                    )
+                    .sqrt()
+                    .alias(INTERSECTION_LENGTH)
+                ]
+            )
+            .with_columns(
+                [
+                    pl.when(
+                        (pl.col(SEGMENT_LENGTH_X) == 0)
+                        & (pl.col(SEGMENT_LENGTH_Y) == 0)
+                    )
+                    .then(None)
+                    .otherwise(pl.col(INTERSECTION_LENGTH) / pl.col(SEGMENT_LENGTH))
+                    .alias(RELATIVE_POSITION)
+                ]
+            )
+            .filter(pl.col(RELATIVE_POSITION).is_not_null())
+            .drop(
+                [
+                    SEGMENT_LENGTH_X,
+                    SEGMENT_LENGTH_Y,
+                    SEGMENT_LENGTH,
+                    INTERSECTION_LENGTH_X,
+                    INTERSECTION_LENGTH_Y,
+                    INTERSECTION_LENGTH,
+                ]
+            )
+            .with_columns(pl.lit(section.id.id).alias(SECTION_ID))
+        )
+
+    def _compute_intersection_points_geo(
+        self,
+        intersecting_segments: pl.DataFrame,
+        offset: RelativeOffsetCoordinate,
+        section: Section,
+    ) -> pl.DataFrame:
+        """Compute RELATIVE_POSITION using geo-space distances.
+
+        Used when intersection was computed in geo space. INTERSECTION_X/Y
+        are in geo coordinates, so SEGMENT_LENGTH and INTERSECTION_LENGTH
+        must also use geo columns.
+
+        Args:
+            intersecting_segments: Segments that intersect the section leg.
+            offset: Relative offset (used for CURRENT_X/Y, PREVIOUS_X/Y only).
+            section: The section being intersected.
+
+        Returns:
+            DataFrame with RELATIVE_POSITION and SECTION_ID columns added.
+        """
+        return (
+            intersecting_segments.with_columns(
+                [
+                    (pl.col(END_X) + pl.col(END_W) * offset.x).alias(CURRENT_X),
+                    (pl.col(END_Y) + pl.col(END_H) * offset.y).alias(CURRENT_Y),
+                    (pl.col(START_X) + pl.col(START_W) * offset.x).alias(PREVIOUS_X),
+                    (pl.col(START_Y) + pl.col(START_H) * offset.y).alias(PREVIOUS_Y),
+                ]
+            )
+            .with_columns(
+                [
+                    (pl.col(END_GEO_X) - pl.col(START_GEO_X)).alias(SEGMENT_LENGTH_X),
+                    (pl.col(END_GEO_Y) - pl.col(START_GEO_Y)).alias(SEGMENT_LENGTH_Y),
+                ]
+            )
+            .with_columns(
+                [
+                    (pl.col(SEGMENT_LENGTH_X) ** 2 + pl.col(SEGMENT_LENGTH_Y) ** 2)
+                    .sqrt()
+                    .alias(SEGMENT_LENGTH)
+                ]
+            )
+            .with_columns(
+                [
+                    (pl.col(INTERSECTION_X) - pl.col(START_GEO_X)).alias(
+                        INTERSECTION_LENGTH_X
+                    ),
+                    (pl.col(INTERSECTION_Y) - pl.col(START_GEO_Y)).alias(
+                        INTERSECTION_LENGTH_Y
+                    ),
+                ]
+            )
+            .with_columns(
+                [
+                    (
+                        pl.col(INTERSECTION_LENGTH_X) ** 2
+                        + pl.col(INTERSECTION_LENGTH_Y) ** 2
+                    )
+                    .sqrt()
+                    .alias(INTERSECTION_LENGTH)
+                ]
+            )
+            .with_columns(
+                [
+                    pl.when(
+                        (pl.col(SEGMENT_LENGTH_X) == 0)
+                        & (pl.col(SEGMENT_LENGTH_Y) == 0)
+                    )
+                    .then(None)
+                    .otherwise(pl.col(INTERSECTION_LENGTH) / pl.col(SEGMENT_LENGTH))
+                    .alias(RELATIVE_POSITION)
+                ]
+            )
+            .filter(pl.col(RELATIVE_POSITION).is_not_null())
+            .drop(
+                [
+                    SEGMENT_LENGTH_X,
+                    SEGMENT_LENGTH_Y,
+                    SEGMENT_LENGTH,
+                    INTERSECTION_LENGTH_X,
+                    INTERSECTION_LENGTH_Y,
+                    INTERSECTION_LENGTH,
+                ]
+            )
+            .with_columns(pl.lit(section.id.id).alias(SECTION_ID))
+        )
 
     def contained_by_sections(
         self, sections: list[Section]
