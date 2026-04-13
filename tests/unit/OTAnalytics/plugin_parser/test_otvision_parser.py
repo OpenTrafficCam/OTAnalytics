@@ -14,6 +14,7 @@ from OTAnalytics.domain.geometry import (
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
+from OTAnalytics.domain.otfusion import OtfusionMetadata
 from OTAnalytics.domain.section import (
     SECTIONS,
     Area,
@@ -263,6 +264,39 @@ class TestOttrkParser:
             number_of_frames=60,
         )
         ottrk_file.unlink()
+
+
+SAMPLE_OTFUSION_METADATA_DICT = {
+    ottrk_dataformat.OTFUSION: {
+        ottrk_dataformat.GEO_BOUNDS: {
+            ottrk_dataformat.GEO_BOUNDS_MIN_X: 449199.096512522,
+            ottrk_dataformat.GEO_BOUNDS_MIN_Y: 5699274.275524861,
+            ottrk_dataformat.GEO_BOUNDS_MAX_X: 449294.8688478645,
+            ottrk_dataformat.GEO_BOUNDS_MAX_Y: 5699370.047860203,
+        },
+        ottrk_dataformat.BEV_SIZE: [983, 983],
+        ottrk_dataformat.BEV_PADDING: 20,
+        ottrk_dataformat.CRS: "EPSG:25833",
+    }
+}
+
+
+class TestParseOtfusionMetadata:
+    def test_returns_metadata_when_otfusion_block_present(self) -> None:
+        result = OttrkParser._parse_otfusion_metadata(SAMPLE_OTFUSION_METADATA_DICT)
+        assert result == OtfusionMetadata(
+            geo_min_x=449199.096512522,
+            geo_min_y=5699274.275524861,
+            geo_max_x=449294.8688478645,
+            geo_max_y=5699370.047860203,
+            bev_width=983,
+            bev_height=983,
+            padding=20,
+        )
+
+    def test_returns_none_when_otfusion_block_absent(self) -> None:
+        result = OttrkParser._parse_otfusion_metadata({"video": {}})
+        assert result is None
 
 
 class TestPythonDetectionParser:

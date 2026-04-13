@@ -18,6 +18,7 @@ from OTAnalytics.domain.flow import (
     FlowListObserver,
     FlowRepository,
 )
+from OTAnalytics.domain.otfusion import OtfusionMetadata
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import (
@@ -51,6 +52,7 @@ class TrackParseResult:
     tracks: TrackDataset
     detection_metadata: DetectionMetadata
     video_metadata: VideoMetadata
+    otfusion_metadata: OtfusionMetadata | None = None
 
 
 @dataclass(frozen=True)
@@ -58,6 +60,7 @@ class TracksParseResult:
     tracks: TrackDataset
     detections_metadata: list[DetectionMetadata]
     videos_metadata: list[VideoMetadata]
+    otfusion_metadata: OtfusionMetadata | None = None
 
 
 def combine_track_datasets(results: list[TrackParseResult]) -> TrackDataset:
@@ -77,7 +80,13 @@ class TrackParser(ABC):
         tracks = combine_track_datasets(results)
         detections_metadata = [result.detection_metadata for result in results]
         videos_metadata = [result.video_metadata for result in results]
-        return TracksParseResult(tracks, detections_metadata, videos_metadata)
+        otfusion_metadata = next(
+            (r.otfusion_metadata for r in results if r.otfusion_metadata is not None),
+            None,
+        )
+        return TracksParseResult(
+            tracks, detections_metadata, videos_metadata, otfusion_metadata
+        )
 
     @abstractmethod
     def parse(self, file: Path) -> TrackParseResult:

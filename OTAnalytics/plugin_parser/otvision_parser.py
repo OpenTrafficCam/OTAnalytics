@@ -24,6 +24,7 @@ from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.otfusion import OtfusionMetadata
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     Detection,
@@ -601,7 +602,12 @@ class OttrkParser(TrackParser):
             dets_list, metadata_video, str(ottrk_file), id_generator
         )
         detection_metadata = self.parse_metadata(ottrk_dict[ottrk_format.METADATA])
-        return TrackParseResult(tracks, detection_metadata, video_metadata)
+        otfusion_metadata = self._parse_otfusion_metadata(
+            ottrk_dict[ottrk_format.METADATA]
+        )
+        return TrackParseResult(
+            tracks, detection_metadata, video_metadata, otfusion_metadata
+        )
 
     @classmethod
     def parse_video_metadata(cls, metadata_video: dict) -> VideoMetadata:
@@ -639,6 +645,31 @@ class OttrkParser(TrackParser):
         tracking_run_id = tracking_metadata[ottrk_format.TRACKING_RUN_ID]
         frame_group = tracking_metadata[ottrk_format.FRAME_GROUP]
         return lambda id: TrackId(f"{tracking_run_id}#{frame_group}#{id}")
+
+    @classmethod
+    def _parse_otfusion_metadata(cls, metadata: dict) -> OtfusionMetadata | None:
+        """Parse the OTFusion geo-referencing block from ottrk metadata.
+
+        Args:
+            metadata: The full metadata dict from an ottrk file.
+
+        Returns:
+            OtfusionMetadata if the otfusion block is present, otherwise None.
+        """
+        otfusion = metadata.get(ottrk_format.OTFUSION)
+        if otfusion is None:
+            return None
+        bounds = otfusion[ottrk_format.GEO_BOUNDS]
+        bev_size = otfusion[ottrk_format.BEV_SIZE]
+        return OtfusionMetadata(
+            geo_min_x=bounds[ottrk_format.GEO_BOUNDS_MIN_X],
+            geo_min_y=bounds[ottrk_format.GEO_BOUNDS_MIN_Y],
+            geo_max_x=bounds[ottrk_format.GEO_BOUNDS_MAX_X],
+            geo_max_y=bounds[ottrk_format.GEO_BOUNDS_MAX_Y],
+            bev_width=bev_size[0],
+            bev_height=bev_size[1],
+            padding=otfusion[ottrk_format.BEV_PADDING],
+        )
 
     @classmethod
     def parse_metadata(cls, metadata_detection: dict) -> DetectionMetadata:
