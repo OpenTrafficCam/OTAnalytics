@@ -392,6 +392,111 @@ def calculate_intersection_points(
     return result_df
 
 
+def _calculate_intersection_points_geo(
+    segments_df: pl.DataFrame,
+    line_x1: float,
+    line_y1: float,
+    line_x2: float,
+    line_y2: float,
+) -> pl.DataFrame:
+    """Intersection math using START_GEO_X/Y and END_GEO_X/Y without offset.
+
+    Mirrors calculate_intersection_points() but operates on geo columns.
+    No offset is applied because point-based OTFusion detections have w=h=0.
+
+    Args:
+        segments_df: DataFrame containing START_GEO_X/Y and END_GEO_X/Y columns.
+        line_x1: Section line start x in geo space.
+        line_y1: Section line start y in geo space.
+        line_x2: Section line end x in geo space.
+        line_y2: Section line end y in geo space.
+
+    Returns:
+        DataFrame with INTERSECTS, INTERSECTION_X, INTERSECTION_Y columns
+        (coordinates are in geo space).
+    """
+    line_dx = line_x2 - line_x1
+    line_dy = line_y2 - line_y1
+
+    result_df = segments_df.with_columns(
+        [
+            pl.col(START_GEO_X).alias("seg_x1"),
+            pl.col(START_GEO_Y).alias("seg_y1"),
+            pl.col(END_GEO_X).alias("seg_x2"),
+            pl.col(END_GEO_Y).alias("seg_y2"),
+        ]
+    )
+    result_df = result_df.with_columns(
+        [
+            pl.lit(line_dx).alias("line_dx"),
+            pl.lit(line_dy).alias("line_dy"),
+            (pl.col("seg_x2") - pl.col("seg_x1")).alias("seg_dx"),
+            (pl.col("seg_y2") - pl.col("seg_y1")).alias("seg_dy"),
+        ]
+    )
+    result_df = result_df.with_columns(
+        [
+            (
+                -pl.col("line_dx") * pl.col("seg_dy")
+                + pl.col("line_dy") * pl.col("seg_dx")
+            ).alias(DENOMINATOR)
+        ]
+    )
+    result_df = result_df.with_columns(
+        [(pl.col(DENOMINATOR).abs() > 1e-10).alias(NON_PARALLEL)]
+    )
+    result_df = result_df.with_columns(
+        [
+            pl.when(pl.col(NON_PARALLEL))
+            .then(
+                (
+                    -(pl.col("seg_x1") - line_x1) * pl.col("seg_dy")
+                    + (pl.col("seg_y1") - line_y1) * pl.col("seg_dx")
+                )
+                / pl.col(DENOMINATOR)
+            )
+            .otherwise(None)
+            .alias(UA),
+            pl.when(pl.col(NON_PARALLEL))
+            .then(
+                (
+                    pl.col("line_dx") * (pl.col("seg_y1") - line_y1)
+                    - pl.col("line_dy") * (pl.col("seg_x1") - line_x1)
+                )
+                / pl.col(DENOMINATOR)
+            )
+            .otherwise(None)
+            .alias(UB),
+        ]
+    )
+    result_df = result_df.with_columns(
+        [
+            (
+                pl.col(NON_PARALLEL)
+                & pl.col(UA).is_not_null()
+                & pl.col(UB).is_not_null()
+                & (pl.col(UA) >= 0)
+                & (pl.col(UA) <= 1)
+                & (pl.col(UB) >= 0)
+                & (pl.col(UB) <= 1)
+            ).alias(INTERSECTS)
+        ]
+    )
+    result_df = result_df.with_columns(
+        [
+            pl.when(pl.col(INTERSECTS))
+            .then(line_x1 + pl.col(UA) * line_dx)
+            .otherwise(None)
+            .alias(INTERSECTION_X),
+            pl.when(pl.col(INTERSECTS))
+            .then(line_y1 + pl.col(UA) * line_dy)
+            .otherwise(None)
+            .alias(INTERSECTION_Y),
+        ]
+    )
+    return result_df
+
+
 def find_line_intersections(
     segments_df: pl.DataFrame,
     line_id: str,
@@ -400,18 +505,25 @@ def find_line_intersections(
     end_x: float,
     end_y: float,
     offset: RelativeOffsetCoordinate | None = None,
+    use_geo: bool = False,
 ) -> pl.DataFrame:
-    """
-    Find intersections between track segments and a line segment.
+    """Find intersections between track segments and a line segment.
 
     Args:
-        segments_df (pl.DataFrame): DataFrame with track segments.
-        line_id (str): Identifier for the line.
-        start_x, start_y, end_x, end_y (float): Line segment coordinates.
-        offset (RelativeOffsetCoordinate, optional): Offset for segment endpoints.
+        segments_df: DataFrame with track segments.
+        line_id: Identifier for the line.
+        start_x: Line segment start x. In geo space when use_geo is True.
+        start_y: Line segment start y. In geo space when use_geo is True.
+        end_x: Line segment end x. In geo space when use_geo is True.
+        end_y: Line segment end y. In geo space when use_geo is True.
+        offset: Offset for segment endpoints. Ignored when use_geo is True
+            because point-based geo detections carry no bounding box.
+        use_geo: When True, use START_GEO_X/Y and END_GEO_X/Y columns from
+            segments_df for intersection math instead of START_X/Y and
+            END_X/Y. Requires geo columns to be present.
 
     Returns:
-        pl.DataFrame: DataFrame with intersection information and points.
+        DataFrame with intersection information and points.
     """
     if segments_df.is_empty():
         return segments_df
@@ -419,10 +531,14 @@ def find_line_intersections(
     if offset is None:
         offset = RelativeOffsetCoordinate(x=0.0, y=0.0)
 
-    # Calculate intersection points
-    result_df = calculate_intersection_points(
-        segments_df, start_x, start_y, end_x, end_y, offset
-    )
+    if use_geo:
+        result_df = _calculate_intersection_points_geo(
+            segments_df, start_x, start_y, end_x, end_y
+        )
+    else:
+        result_df = calculate_intersection_points(
+            segments_df, start_x, start_y, end_x, end_y, offset
+        )
 
     # Add line ID for intersecting segments
     geo_cols = (

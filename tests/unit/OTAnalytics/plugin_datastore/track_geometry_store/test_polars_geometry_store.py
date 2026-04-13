@@ -1038,3 +1038,74 @@ class TestCreateEventsGeoCoordinates:
         assert len(events) == 1
         assert events[0].geo_x is None
         assert events[0].geo_y is None
+
+
+def _create_segments_df_with_geo() -> pl.DataFrame:
+    """Single track segment in both pixel and geo coordinate space.
+
+    Pixel: (100, 0) -> (100, 200)  — vertical segment at x=100
+    Geo:   (449250.0, 5699320.0) -> (449250.0, 5699340.0) — vertical geo segment
+    """
+    from datetime import timezone
+
+    occ_start = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    occ_end = datetime(2023, 1, 1, 0, 0, 1, tzinfo=timezone.utc)
+    return pl.DataFrame(
+        {
+            ROW_ID: [1],
+            TRACK_ID: ["track_1"],
+            "track_classification": ["car"],
+            END_VIDEO_NAME: ["video.mp4"],
+            END_FRAME: [1],
+            START_X: [100.0],
+            START_Y: [0.0],
+            END_X: [100.0],
+            END_Y: [200.0],
+            START_W: [0.0],
+            START_H: [0.0],
+            END_W: [0.0],
+            END_H: [0.0],
+            START_OCCURRENCE: [occ_start],
+            END_OCCURRENCE: [occ_end],
+            START_GEO_X: [449250.0],
+            START_GEO_Y: [5699320.0],
+            END_GEO_X: [449250.0],
+            END_GEO_Y: [5699340.0],
+        }
+    )
+
+
+class TestFindLineIntersectionsUseGeo:
+    def test_intersects_in_geo_space(self) -> None:
+        segments_df = _create_segments_df_with_geo()
+        # Horizontal section line in geo space crossing the vertical track segment
+        result = find_line_intersections(
+            segments_df,
+            line_id="section_1",
+            start_x=449240.0,
+            start_y=5699325.0,
+            end_x=449260.0,
+            end_y=5699325.0,
+            offset=RelativeOffsetCoordinate(0.0, 0.0),
+            use_geo=True,
+        )
+        intersecting = result.filter(pl.col(INTERSECTS))
+        assert len(intersecting) == 1
+        row = intersecting.row(0, named=True)
+        assert row[INTERSECTION_X] == approx(449250.0, rel=1e-6)
+        assert row[INTERSECTION_Y] == approx(5699325.0, rel=1e-6)
+
+    def test_no_intersection_in_geo_space_when_lines_miss(self) -> None:
+        segments_df = _create_segments_df_with_geo()
+        # Section line that does NOT cross the track segment in geo space
+        result = find_line_intersections(
+            segments_df,
+            line_id="section_1",
+            start_x=449260.0,
+            start_y=5699345.0,
+            end_x=449280.0,
+            end_y=5699345.0,
+            offset=RelativeOffsetCoordinate(0.0, 0.0),
+            use_geo=True,
+        )
+        assert result.filter(pl.col(INTERSECTS)).is_empty()
