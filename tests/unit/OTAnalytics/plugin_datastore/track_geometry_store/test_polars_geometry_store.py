@@ -1211,3 +1211,56 @@ class TestWrapIntersectionPointsWithGeo:
         section = self._make_section(pixel_start=(0, 100), pixel_end=(200, 100))
         result = geometry_dataset.wrap_intersection_points([section], None)
         assert not result.empty
+
+
+class TestWrapIntersectionPointsFallback:
+    """Ensures non-fusion files (no geo columns, no OtfusionMetadata) are unaffected."""
+
+    def test_no_metadata_no_geo_columns_uses_pixel_intersection(self) -> None:
+        """Standard pixel-space intersection still works when no otfusion metadata."""
+        from datetime import timezone
+
+        occ_start = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        occ_end = datetime(2023, 1, 1, 0, 0, 1, tzinfo=timezone.utc)
+        segments = pl.DataFrame(
+            {
+                ROW_ID: [1],
+                TRACK_ID: ["t1"],
+                "track_classification": ["car"],
+                END_VIDEO_NAME: ["v.mp4"],
+                END_FRAME: [1],
+                START_X: [100.0],
+                START_Y: [0.0],
+                END_X: [100.0],
+                END_Y: [200.0],
+                START_W: [0.0],
+                START_H: [0.0],
+                END_W: [0.0],
+                END_H: [0.0],
+                START_OCCURRENCE: [occ_start],
+                END_OCCURRENCE: [occ_end],
+            }
+        )
+        geometry_dataset = PolarsTrackGeometryDataset(
+            offset=RelativeOffsetCoordinate(0.0, 0.0),
+            segments_df=segments,
+        )
+        section = Mock(spec=LineSection)
+        section.id = SectionId("s1")
+        section.get_coordinates.return_value = [
+            Coordinate(0.0, 100.0),
+            Coordinate(200.0, 100.0),
+        ]
+        section.relative_offset_coordinates = {
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+        }
+        section.get_type.return_value = SectionType.LINE
+
+        result = geometry_dataset.wrap_intersection_points([section], None)
+
+        assert not result.empty
+        events = list(result.create_events(RelativeOffsetCoordinate(0.0, 0.0)))
+        assert len(events) == 1
+        evt = events[0]
+        assert evt.geo_x is None
+        assert evt.geo_y is None
