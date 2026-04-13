@@ -7,6 +7,7 @@ import pytest
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.otfusion import OtfusionMetadata
 from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.types import EventType
@@ -677,3 +678,36 @@ class TestPolarsDetectionGeoCoordinates:
     def test_geo_y_returns_none_when_key_absent(self) -> None:
         given = create_polars_detection_geo_given()
         assert given.detection_without_geo.geo_y is None
+
+
+SAMPLE_OTFUSION_METADATA = OtfusionMetadata(
+    geo_min_x=449199.0,
+    geo_min_y=5699274.0,
+    geo_max_x=449294.0,
+    geo_max_y=5699370.0,
+    bev_width=983,
+    bev_height=983,
+    padding=20,
+)
+
+
+class TestPolarsTrackDatasetOtfusionMetadata:
+    def test_otfusion_metadata_is_none_by_default(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PolarsTrackDataset(track_geometry_factory=track_geometry_factory)
+        assert dataset.otfusion_metadata is None
+
+    def test_with_otfusion_metadata_returns_new_dataset_with_metadata(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PolarsTrackDataset(track_geometry_factory=track_geometry_factory)
+        updated = dataset.with_otfusion_metadata(SAMPLE_OTFUSION_METADATA)
+        assert updated.otfusion_metadata == SAMPLE_OTFUSION_METADATA
+
+    def test_with_otfusion_metadata_does_not_mutate_original(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PolarsTrackDataset(track_geometry_factory=track_geometry_factory)
+        dataset.with_otfusion_metadata(SAMPLE_OTFUSION_METADATA)
+        assert dataset.otfusion_metadata is None

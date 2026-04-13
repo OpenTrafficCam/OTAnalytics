@@ -6,6 +6,7 @@ from typing import Iterable, Optional
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.observer import OBSERVER, Subject
+from OTAnalytics.domain.otfusion import OtfusionMetadata
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
     EmptyTrackIdSet,
@@ -148,6 +149,18 @@ class TrackRepository:
         if len(tracks):
             self._dataset = self._dataset.add_all(tracks)
             self.observers.notify(TrackRepositoryEvent.create_added(tracks.track_ids))
+
+    def apply_otfusion_metadata(self, metadata: OtfusionMetadata | None) -> None:
+        """Attach OTFusion geo-referencing metadata to the track dataset.
+
+        Args:
+            metadata: Geo-referencing metadata parsed from an OTFusion ottrk
+                file. If None, this call has no effect.
+        """
+        if metadata is None:
+            return
+        if hasattr(self._dataset, "with_otfusion_metadata"):
+            self._dataset = self._dataset.with_otfusion_metadata(metadata)
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
