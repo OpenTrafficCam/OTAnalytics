@@ -10,7 +10,7 @@ from pytest import approx
 from OTAnalytics.domain import track
 from OTAnalytics.domain.event import SECTION_ID
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.otfusion import OtfusionMetadata
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import LineSection, SectionId, SectionType
 from OTAnalytics.domain.track import FRAME, TRACK_CLASSIFICATION, VIDEO_NAME, H, W
 from OTAnalytics.domain.track_dataset.track_dataset import (
@@ -1113,7 +1113,7 @@ class TestFindLineIntersectionsUseGeo:
 
 
 class TestWrapIntersectionPointsWithGeo:
-    """When otfusion_metadata is provided and segments have geo columns,
+    """When georeference_metadata is provided and segments have geo columns,
     section pixel coords are converted to geo and intersection uses geo math."""
 
     def _make_geometry_dataset(self) -> PolarsTrackGeometryDataset:
@@ -1153,7 +1153,7 @@ class TestWrapIntersectionPointsWithGeo:
             segments_df=segments,
         )
 
-    def _make_otfusion_metadata(self) -> OtfusionMetadata:
+    def _make_georeference_metadata(self) -> GeoreferenceMetadata:
         """Metadata where pixel (100, 100) maps to geo (449250, 5699325).
 
         Using:
@@ -1162,7 +1162,7 @@ class TestWrapIntersectionPointsWithGeo:
           pixel_x=100 -> geo_x = 449200 + (100-20)*0.625 = 449200 + 50 = 449250  ✓
           pixel_y=100 -> geo_y = 5699350 - (100-20)*0.3125 = 5699350 - 25 = 5699325  ✓
         """
-        return OtfusionMetadata(
+        return GeoreferenceMetadata(
             geo_min_x=449200.0,
             geo_min_y=5699300.0,
             geo_max_x=449300.0,
@@ -1170,6 +1170,7 @@ class TestWrapIntersectionPointsWithGeo:
             bev_width=200,
             bev_height=200,
             padding=20,
+            crs="EPSG:25833",
         )
 
     def _make_section(
@@ -1193,7 +1194,7 @@ class TestWrapIntersectionPointsWithGeo:
         # This horizontal geo line crosses the vertical geo track at (449250, 5699325)
         geometry_dataset = self._make_geometry_dataset()
         section = self._make_section(pixel_start=(80, 100), pixel_end=(120, 100))
-        metadata = self._make_otfusion_metadata()
+        metadata = self._make_georeference_metadata()
 
         result = geometry_dataset.wrap_intersection_points([section], metadata)
 
@@ -1214,7 +1215,8 @@ class TestWrapIntersectionPointsWithGeo:
 
 
 class TestWrapIntersectionPointsFallback:
-    """Ensures non-fusion files (no geo columns, no OtfusionMetadata) are unaffected."""
+    """Ensures non-fusion files (no geo columns, no GeoreferenceMetadata) are
+    unaffected."""
 
     def test_no_metadata_no_geo_columns_uses_pixel_intersection(self) -> None:
         """Standard pixel-space intersection still works when no otfusion metadata."""

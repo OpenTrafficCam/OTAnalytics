@@ -25,7 +25,7 @@ from shapely.vectorized import contains
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.domain.otfusion import OtfusionMetadata
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId, pack, unpack
 from OTAnalytics.domain.track_dataset.track_dataset import (
@@ -350,27 +350,27 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         return self._calculator
 
     @property
-    def otfusion_metadata(self) -> OtfusionMetadata | None:
-        """OTFusion geo-referencing metadata, or None for non-fusion datasets."""
-        return self._otfusion_metadata
+    def georeference_metadata(self) -> GeoreferenceMetadata | None:
+        """Geo-referencing metadata, or None for non-fusion datasets."""
+        return self._georeference_metadata
 
-    def with_otfusion_metadata(
-        self, metadata: OtfusionMetadata | None
+    def with_georeference_metadata(
+        self, metadata: GeoreferenceMetadata | None
     ) -> "PolarsTrackDataset":
-        """Return a new dataset with the given OtfusionMetadata attached.
+        """Return a new dataset with the given GeoreferenceMetadata attached.
 
         Args:
-            metadata: Geo-referencing metadata for BEV pixel → UTM conversion.
+            metadata: The georeference metadata to attach.
 
         Returns:
-            New PolarsTrackDataset with all existing data and the provided metadata.
+            A new PolarsTrackDataset with the metadata attached.
         """
         return PolarsTrackDataset(
             track_geometry_factory=self._track_geometry_factory,
             dataset=self._dataset,
             geometry_datasets=self._geometry_datasets,
             calculator=self._calculator,
-            otfusion_metadata=metadata,
+            georeference_metadata=metadata,
         )
 
     def __init__(
@@ -381,7 +381,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             dict[RelativeOffsetCoordinate, PolarsTrackGeometryDataset] | None
         ) = None,
         calculator: PolarsTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
-        otfusion_metadata: OtfusionMetadata | None = None,
+        georeference_metadata: GeoreferenceMetadata | None = None,
     ):
         if dataset is not None:
             self._dataset: pl.DataFrame = dataset
@@ -396,7 +396,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             ]()
         else:
             self._geometry_datasets = geometry_datasets
-        self._otfusion_metadata = otfusion_metadata
+        self._georeference_metadata = georeference_metadata
 
     def __iter__(self) -> Iterator[Track]:
         yield from self.as_generator()
@@ -616,7 +616,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     ) -> IntersectionPointsDataset:
         geometry_dataset = self._get_geometry_dataset_for(offset)
         return geometry_dataset.wrap_intersection_points(
-            sections, self._otfusion_metadata
+            sections, self._georeference_metadata
         )
 
     def ids_inside(self, sections: list[Section]) -> TrackIdSet:

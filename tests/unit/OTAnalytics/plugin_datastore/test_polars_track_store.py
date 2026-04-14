@@ -7,7 +7,7 @@ import pytest
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.otfusion import OtfusionMetadata
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
@@ -687,7 +687,7 @@ class TestPolarsDetectionGeoCoordinates:
         assert given.detection_without_geo.geo_y is None
 
 
-SAMPLE_OTFUSION_METADATA = OtfusionMetadata(
+SAMPLE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
     geo_min_x=449199.0,
     geo_min_y=5699274.0,
     geo_max_x=449294.0,
@@ -695,29 +695,30 @@ SAMPLE_OTFUSION_METADATA = OtfusionMetadata(
     bev_width=983,
     bev_height=983,
     padding=20,
+    crs="EPSG:25833",
 )
 
 
-class TestPolarsTrackDatasetOtfusionMetadata:
-    def test_otfusion_metadata_is_none_by_default(
+class TestPolarsTrackDatasetGeoreferenceMetadata:
+    def test_georeference_metadata_is_none_by_default(
         self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
     ) -> None:
         dataset = PolarsTrackDataset(track_geometry_factory=track_geometry_factory)
-        assert dataset.otfusion_metadata is None
+        assert dataset.georeference_metadata is None
 
-    def test_with_otfusion_metadata_returns_new_dataset_with_metadata(
+    def test_with_georeference_metadata_returns_new_dataset_with_metadata(
         self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
     ) -> None:
         dataset = PolarsTrackDataset(track_geometry_factory=track_geometry_factory)
-        updated = dataset.with_otfusion_metadata(SAMPLE_OTFUSION_METADATA)
-        assert updated.otfusion_metadata == SAMPLE_OTFUSION_METADATA
+        updated = dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        assert updated.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
 
-    def test_with_otfusion_metadata_does_not_mutate_original(
+    def test_with_georeference_metadata_does_not_mutate_original(
         self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
     ) -> None:
         dataset = PolarsTrackDataset(track_geometry_factory=track_geometry_factory)
-        dataset.with_otfusion_metadata(SAMPLE_OTFUSION_METADATA)
-        assert dataset.otfusion_metadata is None
+        dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        assert dataset.georeference_metadata is None
 
 
 GEO_X_VALUES = [449250.0, 449260.0, 449270.0]

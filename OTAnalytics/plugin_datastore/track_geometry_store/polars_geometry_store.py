@@ -20,7 +20,7 @@ from OTAnalytics.domain.geometry import (
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
-from OTAnalytics.domain.otfusion import OtfusionMetadata, pixel_to_geo
+from OTAnalytics.domain.georeference import GeoreferenceMetadata, pixel_to_geo
 from OTAnalytics.domain.section import Section, SectionId, SectionType
 from OTAnalytics.domain.track import (
     FRAME,
@@ -1310,17 +1310,17 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
     def wrap_intersection_points(
         self,
         sections: list[Section],
-        otfusion_metadata: OtfusionMetadata | None = None,
+        georeference_metadata: GeoreferenceMetadata | None = None,
     ) -> IntersectionPointsDataset:
         """Return the intersection points from tracks and the given sections.
 
-        When otfusion_metadata is provided and the segments DataFrame contains
+        When georeference_metadata is provided and the segments DataFrame contains
         geo columns, section pixel coordinates are converted to geo space and
         intersection detection uses geo coordinates.
 
         Args:
             sections: The sections to intersect with.
-            otfusion_metadata: OTFusion geo-referencing metadata. When present
+            georeference_metadata: Geo-referencing metadata. When present
                 and geo columns exist, enables geo-space intersection detection.
 
         Returns:
@@ -1342,7 +1342,7 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
             return PolarsIntersectionPointsDataset()
 
         use_geo = (
-            otfusion_metadata is not None
+            georeference_metadata is not None
             and not self._segments_df.is_empty()
             and START_GEO_X in self._segments_df.columns
         )
@@ -1359,14 +1359,14 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
             # Process each leg of the section (consecutive pair of coordinates)
             for i in range(len(coordinates) - 1):
                 if use_geo:
-                    assert otfusion_metadata is not None
+                    assert georeference_metadata is not None
                     leg_start_x, leg_start_y = pixel_to_geo(
-                        coordinates[i].x, coordinates[i].y, otfusion_metadata
+                        coordinates[i].x, coordinates[i].y, georeference_metadata
                     )
                     leg_end_x, leg_end_y = pixel_to_geo(
                         coordinates[i + 1].x,
                         coordinates[i + 1].y,
-                        otfusion_metadata,
+                        georeference_metadata,
                     )
                 else:
                     leg_start_x, leg_start_y = coordinates[i].x, coordinates[i].y

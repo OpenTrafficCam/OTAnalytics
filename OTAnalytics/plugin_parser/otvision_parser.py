@@ -24,7 +24,7 @@ from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.otfusion import OtfusionMetadata
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     Detection,
@@ -602,11 +602,11 @@ class OttrkParser(TrackParser):
             dets_list, metadata_video, str(ottrk_file), id_generator
         )
         detection_metadata = self.parse_metadata(ottrk_dict[ottrk_format.METADATA])
-        otfusion_metadata = self._parse_otfusion_metadata(
+        georeference_metadata = self._parse_georeference_metadata(
             ottrk_dict[ottrk_format.METADATA]
         )
         return TrackParseResult(
-            tracks, detection_metadata, video_metadata, otfusion_metadata
+            tracks, detection_metadata, video_metadata, georeference_metadata
         )
 
     @classmethod
@@ -647,28 +647,31 @@ class OttrkParser(TrackParser):
         return lambda id: TrackId(f"{tracking_run_id}#{frame_group}#{id}")
 
     @classmethod
-    def _parse_otfusion_metadata(cls, metadata: dict) -> OtfusionMetadata | None:
-        """Parse the OTFusion geo-referencing block from ottrk metadata.
+    def _parse_georeference_metadata(
+        cls, metadata: dict
+    ) -> GeoreferenceMetadata | None:
+        """Parse the georeference block from ottrk metadata.
 
         Args:
             metadata: The full metadata dict from an ottrk file.
 
         Returns:
-            OtfusionMetadata if the otfusion block is present, otherwise None.
+            GeoreferenceMetadata if the georeference block is present, otherwise None.
         """
-        otfusion = metadata.get(ottrk_format.OTFUSION)
-        if otfusion is None:
+        georeference = metadata.get(ottrk_format.GEOREFERENCE)
+        if georeference is None:
             return None
-        bounds = otfusion[ottrk_format.GEO_BOUNDS]
-        bev_size = otfusion[ottrk_format.BEV_SIZE]
-        return OtfusionMetadata(
+        bounds = georeference[ottrk_format.GEO_BOUNDS]
+        bev_size = georeference[ottrk_format.BIRDS_EYE_VIEW_SIZE]
+        return GeoreferenceMetadata(
             geo_min_x=bounds[ottrk_format.GEO_BOUNDS_MIN_X],
             geo_min_y=bounds[ottrk_format.GEO_BOUNDS_MIN_Y],
             geo_max_x=bounds[ottrk_format.GEO_BOUNDS_MAX_X],
             geo_max_y=bounds[ottrk_format.GEO_BOUNDS_MAX_Y],
-            bev_width=bev_size[0],
-            bev_height=bev_size[1],
-            padding=otfusion[ottrk_format.BEV_PADDING],
+            bev_width=bev_size[ottrk_format.BIRDS_EYE_VIEW_WIDTH],
+            bev_height=bev_size[ottrk_format.BIRDS_EYE_VIEW_HEIGHT],
+            padding=georeference[ottrk_format.BEV_PADDING],
+            crs=georeference[ottrk_format.CRS],
         )
 
     @classmethod
