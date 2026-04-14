@@ -1,10 +1,10 @@
-"""Domain model for OTFusion BEV coordinate metadata."""
+"""Domain model for georeference BEV coordinate metadata."""
 
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class OtfusionMetadata:
+class GeoreferenceMetadata:
     """Geo-referencing metadata from an OTFusion ottrk file.
 
     Describes the affine mapping between BEV pixel coordinates and UTM
@@ -18,6 +18,7 @@ class OtfusionMetadata:
         bev_width: Width of the BEV image in pixels.
         bev_height: Height of the BEV image in pixels.
         padding: Pixel padding applied to all edges of the BEV image.
+        crs: Coordinate reference system as a WKT or authority string.
     """
 
     geo_min_x: float
@@ -27,15 +28,18 @@ class OtfusionMetadata:
     bev_width: int
     bev_height: int
     padding: int
+    crs: str
 
 
-def pixel_to_geo(x: float, y: float, metadata: OtfusionMetadata) -> tuple[float, float]:
+def pixel_to_geo(
+    x: float, y: float, metadata: GeoreferenceMetadata
+) -> tuple[float, float]:
     """Convert a BEV pixel coordinate to UTM geo coordinate.
 
     Args:
         x: Pixel x coordinate (column, increases rightward).
         y: Pixel y coordinate (row, increases downward).
-        metadata: OTFusion metadata containing geo bounds and image size.
+        metadata: Georeference metadata containing geo bounds and image size.
 
     Returns:
         Tuple (geo_x, geo_y) in the same UTM coordinate system as the
