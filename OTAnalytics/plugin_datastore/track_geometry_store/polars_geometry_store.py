@@ -4,6 +4,7 @@ from typing import Any, Iterable, Iterator, Optional, Sequence
 
 import polars as pl
 
+from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import event, track
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import (
@@ -1345,6 +1346,8 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
             and not self._segments_df.is_empty()
             and START_GEO_X in self._segments_df.columns
         )
+        coordinate_space = "geo coordinates" if use_geo else "image coordinates"
+        logger().debug(f"Creating intersection events using {coordinate_space}.")
 
         result_df: list[pl.DataFrame] = []
         # For each line section, find intersections with track segments
