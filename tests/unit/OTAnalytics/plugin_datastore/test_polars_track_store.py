@@ -10,6 +10,12 @@ from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
 from OTAnalytics.domain.otfusion import OtfusionMetadata
 from OTAnalytics.domain.section import LineSection, Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    END_GEO_X,
+    END_GEO_Y,
+    START_GEO_X,
+    START_GEO_Y,
+)
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
 from OTAnalytics.plugin_datastore.polars_track_store import (
@@ -24,6 +30,7 @@ from OTAnalytics.plugin_datastore.polars_track_store import (
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
     PolarsTrackGeometryDataset,
 )
+from OTAnalytics.plugin_parser import ottrk_dataformat
 from tests.utils.assertions import assert_equal_track_properties
 from tests.utils.builders.track_builder import (
     TrackBuilder,
@@ -711,3 +718,133 @@ class TestPolarsTrackDatasetOtfusionMetadata:
         dataset = PolarsTrackDataset(track_geometry_factory=track_geometry_factory)
         dataset.with_otfusion_metadata(SAMPLE_OTFUSION_METADATA)
         assert dataset.otfusion_metadata is None
+
+
+GEO_X_VALUES = [449250.0, 449260.0, 449270.0]
+GEO_Y_VALUES = [5855000.0, 5855010.0, 5855020.0]
+VIDEO_NAME_VALUE = "myhostname_something.mp4"
+INPUT_FILE_VALUE = "myhostname_something.ottrk"
+
+
+def _build_dataset_with_geo(
+    track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+) -> PolarsTrackDataset:
+    """Build a PolarsTrackDataset whose internal DataFrame includes geo columns."""
+    df = pl.DataFrame(
+        {
+            track.TRACK_ID: ["1", "1", "1"],
+            track.TRACK_CLASSIFICATION: ["car", "car", "car"],
+            track.CLASSIFICATION: ["car", "car", "car"],
+            track.CONFIDENCE: [0.9, 0.9, 0.9],
+            track.X: [10.0, 20.0, 30.0],
+            track.Y: [5.0, 5.0, 5.0],
+            track.W: [5.0, 5.0, 5.0],
+            track.H: [5.0, 5.0, 5.0],
+            track.FRAME: [1, 2, 3],
+            track.OCCURRENCE: [
+                datetime(2022, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+                datetime(2022, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
+                datetime(2022, 1, 1, 0, 0, 2, tzinfo=timezone.utc),
+            ],
+            track.INTERPOLATED_DETECTION: [False, False, False],
+            track.VIDEO_NAME: [VIDEO_NAME_VALUE] * 3,
+            track.INPUT_FILE: [INPUT_FILE_VALUE] * 3,
+            track.ORIGINAL_TRACK_ID: ["1", "1", "1"],
+            ottrk_dataformat.FIRST: [True, False, False],
+            ottrk_dataformat.FINISHED: [False, False, True],
+            track.GEO_X: GEO_X_VALUES,
+            track.GEO_Y: GEO_Y_VALUES,
+        }
+    )
+    return PolarsTrackDataset.from_dataframe(df, track_geometry_factory)
+
+
+def _build_dataset_without_geo(
+    track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+) -> PolarsTrackDataset:
+    """Build a PolarsTrackDataset without geo columns."""
+    df = pl.DataFrame(
+        {
+            track.TRACK_ID: ["1", "1", "1"],
+            track.TRACK_CLASSIFICATION: ["car", "car", "car"],
+            track.CLASSIFICATION: ["car", "car", "car"],
+            track.CONFIDENCE: [0.9, 0.9, 0.9],
+            track.X: [10.0, 20.0, 30.0],
+            track.Y: [5.0, 5.0, 5.0],
+            track.W: [5.0, 5.0, 5.0],
+            track.H: [5.0, 5.0, 5.0],
+            track.FRAME: [1, 2, 3],
+            track.OCCURRENCE: [
+                datetime(2022, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+                datetime(2022, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
+                datetime(2022, 1, 1, 0, 0, 2, tzinfo=timezone.utc),
+            ],
+            track.INTERPOLATED_DETECTION: [False, False, False],
+            track.VIDEO_NAME: [VIDEO_NAME_VALUE] * 3,
+            track.INPUT_FILE: [INPUT_FILE_VALUE] * 3,
+            track.ORIGINAL_TRACK_ID: ["1", "1", "1"],
+            ottrk_dataformat.FIRST: [True, False, False],
+            ottrk_dataformat.FINISHED: [False, False, True],
+        }
+    )
+    return PolarsTrackDataset.from_dataframe(df, track_geometry_factory)
+
+
+@dataclass
+class GivenSegmentGeo:
+    dataset_with_geo: PolarsTrackDataset
+    dataset_without_geo: PolarsTrackDataset
+
+
+def create_given_segment_geo(
+    track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+) -> GivenSegmentGeo:
+    return GivenSegmentGeo(
+        dataset_with_geo=_build_dataset_with_geo(track_geometry_factory),
+        dataset_without_geo=_build_dataset_without_geo(track_geometry_factory),
+    )
+
+
+def setup_default_segment_geo(given: GivenSegmentGeo) -> GivenSegmentGeo:
+    return given
+
+
+class TestGetSegmentsPreservesGeoColumns:
+    def test_first_segments_include_start_geo_columns(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        given = setup_default_segment_geo(
+            create_given_segment_geo(track_geometry_factory)
+        )
+
+        rows: list[dict] = []
+        given.dataset_with_geo.get_first_segments().apply(rows.append)
+
+        assert rows[0][START_GEO_X] == GEO_X_VALUES[0]
+        assert rows[0][START_GEO_Y] == GEO_Y_VALUES[0]
+
+    def test_last_segments_include_end_geo_columns(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        given = setup_default_segment_geo(
+            create_given_segment_geo(track_geometry_factory)
+        )
+
+        rows: list[dict] = []
+        given.dataset_with_geo.get_last_segments().apply(rows.append)
+
+        assert rows[0][END_GEO_X] == GEO_X_VALUES[-1]
+        assert rows[0][END_GEO_Y] == GEO_Y_VALUES[-1]
+
+    def test_segments_without_geo_data_have_no_geo_keys(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        given = setup_default_segment_geo(
+            create_given_segment_geo(track_geometry_factory)
+        )
+
+        rows: list[dict] = []
+        given.dataset_without_geo.get_first_segments().apply(rows.append)
+
+        assert START_GEO_X not in rows[0]
+        assert START_GEO_Y not in rows[0]

@@ -30,11 +30,15 @@ from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId, pack, unpack
 from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
+    END_GEO_X,
+    END_GEO_Y,
     END_OCCURRENCE,
     END_VIDEO_NAME,
     END_X,
     END_Y,
     START_FRAME,
+    START_GEO_X,
+    START_GEO_Y,
     START_OCCURRENCE,
     START_VIDEO_NAME,
     START_X,
@@ -708,8 +712,19 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             return pl.DataFrame(schema=schema)
 
         data = self._dataset.sort([LEVEL_TRACK_ID, LEVEL_OCCURRENCE])
+        has_geo = track.GEO_X in data.columns and track.GEO_Y in data.columns
 
-        # Create shifted columns for start positions
+        geo_start_columns = (
+            [
+                pl.col(track.GEO_X).shift(1).over(LEVEL_TRACK_ID).alias(START_GEO_X),
+                pl.col(track.GEO_Y).shift(1).over(LEVEL_TRACK_ID).alias(START_GEO_Y),
+            ]
+            if has_geo
+            else []
+        )
+        geo_rename = {track.GEO_X: END_GEO_X, track.GEO_Y: END_GEO_Y} if has_geo else {}
+        geo_select = [END_GEO_X, END_GEO_Y, START_GEO_X, START_GEO_Y] if has_geo else []
+
         segments = (
             data.with_columns(
                 [
@@ -727,6 +742,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                     .shift(1)
                     .over(LEVEL_TRACK_ID)
                     .alias(START_VIDEO_NAME),
+                    *geo_start_columns,
                 ]
             )
             .drop_nulls(
@@ -745,6 +761,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                     track.OCCURRENCE: END_OCCURRENCE,
                     track.FRAME: END_FRAME,
                     track.VIDEO_NAME: END_VIDEO_NAME,
+                    **geo_rename,
                 }
             )
             .select(
@@ -761,6 +778,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                     END_OCCURRENCE,
                     END_FRAME,
                     END_VIDEO_NAME,
+                    *geo_select,
                 ]
             )
         )
