@@ -753,6 +753,8 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                     START_FRAME,
                     START_VIDEO_NAME,
                 ]
+                # start_geo_x/y are produced by the same shift(1) pattern and
+                # are therefore null on the same first-detection rows dropped here.
             )
             .rename(
                 {

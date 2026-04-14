@@ -726,68 +726,46 @@ VIDEO_NAME_VALUE = "myhostname_something.mp4"
 INPUT_FILE_VALUE = "myhostname_something.ottrk"
 
 
-def _build_dataset_with_geo(
+def _build_segment_dataset(
     track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+    *,
+    include_geo: bool,
 ) -> PolarsTrackDataset:
-    """Build a PolarsTrackDataset whose internal DataFrame includes geo columns."""
-    df = pl.DataFrame(
-        {
-            track.TRACK_ID: ["1", "1", "1"],
-            track.TRACK_CLASSIFICATION: ["car", "car", "car"],
-            track.CLASSIFICATION: ["car", "car", "car"],
-            track.CONFIDENCE: [0.9, 0.9, 0.9],
-            track.X: [10.0, 20.0, 30.0],
-            track.Y: [5.0, 5.0, 5.0],
-            track.W: [5.0, 5.0, 5.0],
-            track.H: [5.0, 5.0, 5.0],
-            track.FRAME: [1, 2, 3],
-            track.OCCURRENCE: [
-                datetime(2022, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
-                datetime(2022, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
-                datetime(2022, 1, 1, 0, 0, 2, tzinfo=timezone.utc),
-            ],
-            track.INTERPOLATED_DETECTION: [False, False, False],
-            track.VIDEO_NAME: [VIDEO_NAME_VALUE] * 3,
-            track.INPUT_FILE: [INPUT_FILE_VALUE] * 3,
-            track.ORIGINAL_TRACK_ID: ["1", "1", "1"],
-            ottrk_dataformat.FIRST: [True, False, False],
-            ottrk_dataformat.FINISHED: [False, False, True],
-            track.GEO_X: GEO_X_VALUES,
-            track.GEO_Y: GEO_Y_VALUES,
-        }
-    )
-    return PolarsTrackDataset.from_dataframe(df, track_geometry_factory)
+    """Build a PolarsTrackDataset for segment geo column tests.
 
+    Args:
+        track_geometry_factory: Factory used to construct the dataset.
+        include_geo: When True, the dataset includes geo_x and geo_y columns.
 
-def _build_dataset_without_geo(
-    track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
-) -> PolarsTrackDataset:
-    """Build a PolarsTrackDataset without geo columns."""
-    df = pl.DataFrame(
-        {
-            track.TRACK_ID: ["1", "1", "1"],
-            track.TRACK_CLASSIFICATION: ["car", "car", "car"],
-            track.CLASSIFICATION: ["car", "car", "car"],
-            track.CONFIDENCE: [0.9, 0.9, 0.9],
-            track.X: [10.0, 20.0, 30.0],
-            track.Y: [5.0, 5.0, 5.0],
-            track.W: [5.0, 5.0, 5.0],
-            track.H: [5.0, 5.0, 5.0],
-            track.FRAME: [1, 2, 3],
-            track.OCCURRENCE: [
-                datetime(2022, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
-                datetime(2022, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
-                datetime(2022, 1, 1, 0, 0, 2, tzinfo=timezone.utc),
-            ],
-            track.INTERPOLATED_DETECTION: [False, False, False],
-            track.VIDEO_NAME: [VIDEO_NAME_VALUE] * 3,
-            track.INPUT_FILE: [INPUT_FILE_VALUE] * 3,
-            track.ORIGINAL_TRACK_ID: ["1", "1", "1"],
-            ottrk_dataformat.FIRST: [True, False, False],
-            ottrk_dataformat.FINISHED: [False, False, True],
-        }
-    )
-    return PolarsTrackDataset.from_dataframe(df, track_geometry_factory)
+    Returns:
+        A PolarsTrackDataset backed by a minimal single-track DataFrame.
+    """
+    base: dict = {
+        track.TRACK_ID: ["1", "1", "1"],
+        track.TRACK_CLASSIFICATION: ["car", "car", "car"],
+        track.CLASSIFICATION: ["car", "car", "car"],
+        track.CONFIDENCE: [0.9, 0.9, 0.9],
+        track.X: [10.0, 20.0, 30.0],
+        track.Y: [5.0, 5.0, 5.0],
+        track.W: [5.0, 5.0, 5.0],
+        track.H: [5.0, 5.0, 5.0],
+        track.FRAME: [1, 2, 3],
+        track.OCCURRENCE: [
+            datetime(2022, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+            datetime(2022, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
+            datetime(2022, 1, 1, 0, 0, 2, tzinfo=timezone.utc),
+        ],
+        track.INTERPOLATED_DETECTION: [False, False, False],
+        track.VIDEO_NAME: [VIDEO_NAME_VALUE] * 3,
+        track.INPUT_FILE: [INPUT_FILE_VALUE] * 3,
+        track.ORIGINAL_TRACK_ID: ["1", "1", "1"],
+        ottrk_dataformat.FIRST: [True, False, False],
+        ottrk_dataformat.FINISHED: [False, False, True],
+    }
+    if include_geo:
+        base[track.GEO_X] = GEO_X_VALUES
+        base[track.GEO_Y] = GEO_Y_VALUES
+    return PolarsTrackDataset.from_dataframe(pl.DataFrame(base), track_geometry_factory)
 
 
 @dataclass
@@ -803,8 +781,12 @@ def create_given_segment_geo(
 ) -> GivenSegmentGeo:
     """Create GivenSegmentGeo with and without geo columns for testing."""
     return GivenSegmentGeo(
-        dataset_with_geo=_build_dataset_with_geo(track_geometry_factory),
-        dataset_without_geo=_build_dataset_without_geo(track_geometry_factory),
+        dataset_with_geo=_build_segment_dataset(
+            track_geometry_factory, include_geo=True
+        ),
+        dataset_without_geo=_build_segment_dataset(
+            track_geometry_factory, include_geo=False
+        ),
     )
 
 
