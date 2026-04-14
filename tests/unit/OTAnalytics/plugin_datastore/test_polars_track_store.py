@@ -792,6 +792,8 @@ def _build_dataset_without_geo(
 
 @dataclass
 class GivenSegmentGeo:
+    """Holds PolarsTrackDataset instances for segment geo column tests."""
+
     dataset_with_geo: PolarsTrackDataset
     dataset_without_geo: PolarsTrackDataset
 
@@ -799,6 +801,7 @@ class GivenSegmentGeo:
 def create_given_segment_geo(
     track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
 ) -> GivenSegmentGeo:
+    """Create GivenSegmentGeo with and without geo columns for testing."""
     return GivenSegmentGeo(
         dataset_with_geo=_build_dataset_with_geo(track_geometry_factory),
         dataset_without_geo=_build_dataset_without_geo(track_geometry_factory),
@@ -806,7 +809,18 @@ def create_given_segment_geo(
 
 
 def setup_default_segment_geo(given: GivenSegmentGeo) -> GivenSegmentGeo:
+    """Return the given instance unchanged (no default configuration needed)."""
     return given
+
+
+def create_target_segment_geo(given: GivenSegmentGeo) -> PolarsTrackDataset:
+    """Return the dataset with geo columns as the system under test."""
+    return given.dataset_with_geo
+
+
+def create_target_segment_geo_without_geo(given: GivenSegmentGeo) -> PolarsTrackDataset:
+    """Return the dataset without geo columns as the system under test."""
+    return given.dataset_without_geo
 
 
 class TestGetSegmentsPreservesGeoColumns:
@@ -816,9 +830,10 @@ class TestGetSegmentsPreservesGeoColumns:
         given = setup_default_segment_geo(
             create_given_segment_geo(track_geometry_factory)
         )
+        target = create_target_segment_geo(given)
 
         rows: list[dict] = []
-        given.dataset_with_geo.get_first_segments().apply(rows.append)
+        target.get_first_segments().apply(rows.append)
 
         assert rows[0][START_GEO_X] == GEO_X_VALUES[0]
         assert rows[0][START_GEO_Y] == GEO_Y_VALUES[0]
@@ -829,9 +844,10 @@ class TestGetSegmentsPreservesGeoColumns:
         given = setup_default_segment_geo(
             create_given_segment_geo(track_geometry_factory)
         )
+        target = create_target_segment_geo(given)
 
         rows: list[dict] = []
-        given.dataset_with_geo.get_last_segments().apply(rows.append)
+        target.get_last_segments().apply(rows.append)
 
         assert rows[0][END_GEO_X] == GEO_X_VALUES[-1]
         assert rows[0][END_GEO_Y] == GEO_Y_VALUES[-1]
@@ -842,9 +858,10 @@ class TestGetSegmentsPreservesGeoColumns:
         given = setup_default_segment_geo(
             create_given_segment_geo(track_geometry_factory)
         )
+        target = create_target_segment_geo_without_geo(given)
 
         rows: list[dict] = []
-        given.dataset_without_geo.get_first_segments().apply(rows.append)
+        target.get_first_segments().apply(rows.append)
 
         assert START_GEO_X not in rows[0]
         assert START_GEO_Y not in rows[0]
