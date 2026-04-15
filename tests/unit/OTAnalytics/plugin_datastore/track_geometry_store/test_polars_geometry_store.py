@@ -1215,8 +1215,8 @@ class TestWrapIntersectionPointsWithGeo:
 
 
 class TestWrapIntersectionPointsFallback:
-    """Ensures non-fusion files (no geo columns, no GeoreferenceMetadata) are
-    unaffected."""
+    """Ensures non-georeferenced files (no geo columns, no GeoreferenceMetadata)
+    are unaffected."""
 
     def test_no_metadata_no_geo_columns_uses_pixel_intersection(self) -> None:
         """Pixel-space intersection still works without georeference metadata."""

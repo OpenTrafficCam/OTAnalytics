@@ -351,7 +351,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
     @property
     def georeference_metadata(self) -> GeoreferenceMetadata | None:
-        """Geo-referencing metadata, or None for non-fusion datasets."""
+        """Geo-referencing metadata, or None if not georeferenced."""
         return self._georeference_metadata
 
     def with_georeference_metadata(
@@ -360,7 +360,8 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         """Return a new dataset with the given GeoreferenceMetadata attached.
 
         Args:
-            metadata: The georeference metadata to attach.
+            metadata: Geo-referencing metadata for BEV pixel → UTM coordinate
+                conversion.
 
         Returns:
             A new PolarsTrackDataset with the metadata attached.

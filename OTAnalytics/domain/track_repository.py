@@ -156,7 +156,8 @@ class TrackRepository:
         """Attach geo-referencing metadata to the track dataset.
 
         Args:
-            metadata: The georeference metadata to attach, or None to skip.
+            metadata: Geo-referencing metadata to attach to the track dataset.
+                Pass None to leave the dataset unchanged.
         """
         if metadata is None:
             return

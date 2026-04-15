@@ -404,7 +404,7 @@ def _calculate_intersection_points_geo(
     """Intersection math using START_GEO_X/Y and END_GEO_X/Y without offset.
 
     Mirrors calculate_intersection_points() but operates on geo columns.
-    No offset is applied because point-based OTFusion detections have w=h=0.
+    No offset is applied because point-based georeferenced detections have w=h=0.
 
     Args:
         segments_df: DataFrame containing START_GEO_X/Y and END_GEO_X/Y columns.

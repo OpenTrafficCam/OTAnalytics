@@ -5,10 +5,10 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class GeoreferenceMetadata:
-    """Geo-referencing metadata from an OTFusion ottrk file.
+    """Geo-referencing metadata from a georeferenced ottrk file.
 
     Describes the affine mapping between BEV pixel coordinates and UTM
-    geo coordinates for a single OTFusion output file.
+    geo coordinates for a single ottrk output file.
 
     Attributes:
         geo_min_x: West boundary in UTM easting (metres).
