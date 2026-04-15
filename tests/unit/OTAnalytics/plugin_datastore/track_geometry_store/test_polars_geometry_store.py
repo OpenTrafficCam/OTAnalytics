@@ -1219,7 +1219,7 @@ class TestWrapIntersectionPointsFallback:
     unaffected."""
 
     def test_no_metadata_no_geo_columns_uses_pixel_intersection(self) -> None:
-        """Standard pixel-space intersection still works when no otfusion metadata."""
+        """Pixel-space intersection still works without georeference metadata."""
         from datetime import timezone
 
         occ_start = datetime(2023, 1, 1, tzinfo=timezone.utc)
