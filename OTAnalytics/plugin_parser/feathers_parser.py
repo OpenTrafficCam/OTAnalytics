@@ -18,6 +18,7 @@ from OTAnalytics.application.datastore import (
     TracksParseResult,
 )
 from OTAnalytics.application.logger import logger
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import (
     POLARS_TRACK_GEOMETRY_FACTORY,
@@ -36,6 +37,7 @@ from OTAnalytics.plugin_parser.convert_ottrk_to_feathers import (
     convert_ottrk_to_feather,
 )
 from OTAnalytics.plugin_parser.json_parser import parse_json
+from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
 
 
 def use_feathers_files(files: list[Path]) -> list[Path]:
@@ -110,6 +112,7 @@ class FeathersParser(TrackParser):
         files_to_process = use_feathers_files(files)
         videos_metadata = []
         detections_metadata = []
+        georeference_metadatas: list[GeoreferenceMetadata | None] = []
         data_frames = []
         for file in files_to_process:
             if not file.exists():
@@ -135,6 +138,7 @@ class FeathersParser(TrackParser):
                 metadata["detection_metadata"]
             )
             detections_metadata.append(detection_metadata)
+            georeference_metadatas.append(self._parse_georeference_metadata(metadata))
         logger().info(f"{len(files)} track files parsed.")
 
         columns = data_frames[0].columns
@@ -146,7 +150,12 @@ class FeathersParser(TrackParser):
             df, self._track_geometry_factory, calculator=calculator
         )
         logger().info("TrackDataset created.")
-        return TracksParseResult(tracks, detections_metadata, videos_metadata)
+        georeference_metadata = next(
+            (m for m in georeference_metadatas if m is not None), None
+        )
+        return TracksParseResult(
+            tracks, detections_metadata, videos_metadata, georeference_metadata
+        )
 
     def parse(self, file: Path) -> TrackParseResult:
         """
@@ -235,3 +244,17 @@ class FeathersParser(TrackParser):
         """
         detection_classes = frozenset(metadata[KEY_DETECTION_CLASSES])
         return DetectionMetadata(detection_classes)
+
+    @staticmethod
+    def _parse_georeference_metadata(
+        metadata: dict,
+    ) -> GeoreferenceMetadata | None:
+        """Parse georeference metadata from the metadata dictionary.
+
+        Args:
+            metadata: Full metadata dictionary from the metadata JSON file.
+
+        Returns:
+            GeoreferenceMetadata if the georeference block is present, otherwise None.
+        """
+        return OttrkParser._parse_georeference_metadata(metadata)

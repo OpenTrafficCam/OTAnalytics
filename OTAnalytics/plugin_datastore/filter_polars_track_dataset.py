@@ -170,6 +170,7 @@ class FilterByClassPolarsTrackDataset(
             dataset=filtered_df,
             geometry_datasets=None,
             calculator=self._other.calculator,
+            georeference_metadata=self._other.georeference_metadata,
         )
 
     def wrap(self, other: PolarsTrackDataset) -> PolarsTrackDataset:

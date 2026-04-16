@@ -12,8 +12,10 @@ import pandas as pd
 import polars
 import pytest
 
+import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.application.datastore import DetectionMetadata, TrackParseResult
 from OTAnalytics.domain import track
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import PolarsTrackDataset
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
@@ -21,6 +23,32 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk
 from OTAnalytics.plugin_parser.feathers_parser import FeathersParser
+
+SAMPLE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
+    geo_min_x=449199.0,
+    geo_min_y=5699274.0,
+    geo_max_x=449294.0,
+    geo_max_y=5699370.0,
+    bev_width=983,
+    bev_height=983,
+    padding=20,
+    crs="EPSG:25833",
+)
+
+SAMPLE_GEOREFERENCE_METADATA_DICT = {
+    ottrk_format.GEO_BOUNDS: {
+        ottrk_format.GEO_BOUNDS_MIN_X: 449199.0,
+        ottrk_format.GEO_BOUNDS_MIN_Y: 5699274.0,
+        ottrk_format.GEO_BOUNDS_MAX_X: 449294.0,
+        ottrk_format.GEO_BOUNDS_MAX_Y: 5699370.0,
+    },
+    ottrk_format.BIRDS_EYE_VIEW_SIZE: {
+        ottrk_format.BIRDS_EYE_VIEW_WIDTH: 983,
+        ottrk_format.BIRDS_EYE_VIEW_HEIGHT: 983,
+    },
+    ottrk_format.BEV_PADDING: 20,
+    ottrk_format.CRS: "EPSG:25833",
+}
 
 
 @pytest.fixture
@@ -357,3 +385,109 @@ class TestFeathersParser:
         concat_df = mock_from_dataframe.call_args[0][0]
         assert concat_df.shape[0] == 2
         assert set(concat_df.columns) == set(columns_order_a)
+
+    @patch("OTAnalytics.plugin_parser.feathers_parser.parse_json")
+    @patch(
+        "OTAnalytics.plugin_datastore.polars_track_store."
+        "PolarsTrackDataset.from_dataframe"
+    )
+    def test_parse_files_returns_georeference_metadata_when_present(
+        self,
+        mock_from_dataframe: Mock,
+        mock_parse_json: Mock,
+        parser: FeathersParser,
+        sample_metadata: dict[str, Any],
+        test_data_tmp_dir: Path,
+    ) -> None:
+        metadata_with_geo = {
+            **sample_metadata,
+            ottrk_format.GEOREFERENCE: SAMPLE_GEOREFERENCE_METADATA_DICT,
+        }
+        mock_parse_json.return_value = metadata_with_geo
+        mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
+
+        row = {
+            track.CLASSIFICATION: "car",
+            track.CONFIDENCE: 0.9,
+            track.X: 100.0,
+            track.Y: 100.0,
+            track.W: 50.0,
+            track.H: 80.0,
+            track.FRAME: 1,
+            track.INTERPOLATED_DETECTION: False,
+            ottrk.FIRST: True,
+            ottrk.FINISHED: False,
+            track.VIDEO_NAME: "test.mp4",
+            track.INPUT_FILE: "test.ottrk",
+            track.ORIGINAL_TRACK_ID: "1",
+            track.TRACK_CLASSIFICATION: "car",
+            track.TRACK_ID: "1",
+            track.OCCURRENCE: datetime(2023, 1, 1, 10, 0, 0),
+        }
+        df = polars.DataFrame(row)
+        file_a = test_data_tmp_dir / "geo_test.feather"
+        df.write_ipc(file_a)
+        (test_data_tmp_dir / "geo_test_metadata.json").write_text("{}")
+
+        result = parser.parse_files([file_a])
+
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    @patch("OTAnalytics.plugin_parser.feathers_parser.parse_json")
+    @patch(
+        "OTAnalytics.plugin_datastore.polars_track_store."
+        "PolarsTrackDataset.from_dataframe"
+    )
+    def test_parse_files_returns_none_georeference_metadata_when_absent(
+        self,
+        mock_from_dataframe: Mock,
+        mock_parse_json: Mock,
+        parser: FeathersParser,
+        sample_metadata: dict[str, Any],
+        test_data_tmp_dir: Path,
+    ) -> None:
+        mock_parse_json.return_value = sample_metadata
+        mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
+
+        row = {
+            track.CLASSIFICATION: "car",
+            track.CONFIDENCE: 0.9,
+            track.X: 100.0,
+            track.Y: 100.0,
+            track.W: 50.0,
+            track.H: 80.0,
+            track.FRAME: 1,
+            track.INTERPOLATED_DETECTION: False,
+            ottrk.FIRST: True,
+            ottrk.FINISHED: False,
+            track.VIDEO_NAME: "test.mp4",
+            track.INPUT_FILE: "test.ottrk",
+            track.ORIGINAL_TRACK_ID: "1",
+            track.TRACK_CLASSIFICATION: "car",
+            track.TRACK_ID: "1",
+            track.OCCURRENCE: datetime(2023, 1, 1, 10, 0, 0),
+        }
+        df = polars.DataFrame(row)
+        file_a = test_data_tmp_dir / "no_geo_test.feather"
+        df.write_ipc(file_a)
+        (test_data_tmp_dir / "no_geo_test_metadata.json").write_text("{}")
+
+        result = parser.parse_files([file_a])
+
+        assert result.georeference_metadata is None
+
+
+class TestParseGeoreferenceMetadata:
+    def test_returns_georeference_metadata_from_valid_dict(
+        self, parser: FeathersParser
+    ) -> None:
+        metadata = {ottrk_format.GEOREFERENCE: SAMPLE_GEOREFERENCE_METADATA_DICT}
+
+        result = parser._parse_georeference_metadata(metadata)
+
+        assert result == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_returns_none_when_key_absent(self, parser: FeathersParser) -> None:
+        result = parser._parse_georeference_metadata({})
+
+        assert result is None
