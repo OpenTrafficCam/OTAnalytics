@@ -1371,15 +1371,16 @@ class TestMidpointRendering:
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
     )
-    def test_midpoints_rendered_after_current_point_in_draw_all(
+    def test_circles_rendered_after_midpoints_in_draw_all(
         self,
         mock_ui: Any,
         mock_viewmodel: Mock,
         mock_resource_manager: Mock,
         mock_section: Mock,
     ) -> None:
-        """Midpoint affordances must be last in SVG so they sit on top of the
-        moving circle's large transparent stroke and keep receiving pointer events."""
+        """Control circles must be rendered AFTER midpoint affordances so that circles
+        always win pointer events when they overlap. Midpoints are only reachable in
+        the gaps between circles; during drag, _current_point (big stroke) is topmost."""
         canvas = setup_canvas_form_with_mocks(
             mock_ui,
             mock_viewmodel,
@@ -1391,7 +1392,6 @@ class TestMidpointRendering:
         c1 = Circle(id=f"{section_id}-1", x=15, y=10, fill="orange", pointer_event="all")
         canvas._circles.add(section_id, c0)
         canvas._circles.add(section_id, c1)
-        # Simulate an active drag: current_point with the big transparent stroke
         canvas._current_point = Circle(
             id=f"{section_id}-0",
             x=10,
@@ -1406,13 +1406,13 @@ class TestMidpointRendering:
 
         content: str = canvas._background_image.content
         midpoint_id = f'id="mid-{section_id}-0"'
-        current_point_id = f'id="{section_id}-0"'
+        circle_id = f'id="{section_id}-1"'
         assert midpoint_id in content, "midpoint affordance must be in SVG"
-        assert current_point_id in content, "current point must be in SVG"
-        # Midpoint must appear AFTER the current-point circle so it is on top
-        assert content.index(midpoint_id) > content.rindex(
-            current_point_id
-        ), "midpoint affordances must be rendered after (on top of) the moving circle"
+        assert circle_id in content, "control circle must be in SVG"
+        # Midpoints must appear BEFORE circles so circles win pointer events on overlap
+        assert content.index(midpoint_id) < content.index(
+            circle_id
+        ), "midpoints must be rendered before (below) control circles"
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
@@ -1517,6 +1517,54 @@ class TestMidpointInsertEditMode:
         assert canvas._current_point is not None
         assert canvas._current_point.x == 100
         assert canvas._current_point.y == 0
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_inserting_midpoint_preserves_flat_dict_zorder(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+        mock_section: Mock,
+    ) -> None:
+        """After inserting a midpoint, the new circle must sit at its correct position
+        in _circles.circles (between its two neighbours), not appended at the end.
+        Rendering order determines SVG z-order; a circle appended at the end would
+        sit on top of all other control points, intercepting their pointer events."""
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            current_section=mock_section,
+        )
+        c0 = Circle(
+            id="test-section-id-0", x=0, y=0, fill="orange", pointer_event="all"
+        )
+        c1 = Circle(
+            id="test-section-id-1", x=200, y=0, fill="orange", pointer_event="all"
+        )
+        canvas._circles.add("test-section-id", c0)
+        canvas._circles.add("test-section-id", c1)
+
+        event = {
+            ELEMENT_ID: "mid-test-section-id-0",
+            IMAGE_X: 100.0,
+            IMAGE_Y: 0.0,
+        }
+        canvas.on_svg_pointer_down(event)
+
+        flat_keys = list(canvas._circles.circles.keys())
+        assert len(flat_keys) == 3
+        # The new circle must be between c0 and c1 in the flat dict, not at the end
+        c0_pos = flat_keys.index("test-section-id-0")
+        c1_pos = flat_keys.index("test-section-id-1")
+        inserted_id = list(canvas._circles.by_section["test-section-id"].keys())[1]
+        inserted_pos = flat_keys.index(inserted_id)
+        assert c0_pos < inserted_pos < c1_pos, (
+            f"Inserted circle at flat-dict index {inserted_pos} must be between "
+            f"c0 ({c0_pos}) and c1 ({c1_pos}) to avoid z-order corruption"
+        )
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"

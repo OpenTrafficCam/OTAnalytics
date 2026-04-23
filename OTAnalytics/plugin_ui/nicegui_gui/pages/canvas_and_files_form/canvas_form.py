@@ -217,15 +217,17 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self._background_image.content = self._edit_geometry()
             self._background_image.content += self._sections.to_svg()
             self._background_image.content += self._flows.to_svg()
+            self._background_image.content += self._midpoints_svg_for_section()
             self._background_image.content += self._circles.to_svg()
             if self._current_point:
                 self._background_image.content += self._current_point.to_svg()
             if self._new_point:
                 self._background_image.content += self._new_point.to_svg()
-            self._background_image.content += self._midpoints_svg_for_section()
             self.draw_new_section()
 
     def draw_new_section(self) -> None:
+        if self._background_image:
+            self._background_image.content += self._midpoints_svg_for_new_section()
         for point in self._new_section_points:
             if self._background_image:
                 self._background_image.content += point.to_svg()
@@ -236,8 +238,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             line = Polyline(id=NEW_SECTION_ID, points=coordinates, color=EDIT_COLOR)
             if self._background_image:
                 self._background_image.content += line.to_svg()
-        if self._background_image:
-            self._background_image.content += self._midpoints_svg_for_new_section()
 
     def _edit_geometry(self) -> str:
         if self._current_section is None:
@@ -322,7 +322,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         )
         updated = insert_circle_at_index(circles, segment_idx + 1, new_circle)
         self._circles.by_section[section_id] = updated
-        self._circles.circles.update(updated)
+        for old_id in circles:
+            self._circles.circles.pop(old_id, None)
+        for circle_id, circle in updated.items():
+            self._circles.circles[circle_id] = circle
         self._current_point = new_circle
         self.draw_all()
 
