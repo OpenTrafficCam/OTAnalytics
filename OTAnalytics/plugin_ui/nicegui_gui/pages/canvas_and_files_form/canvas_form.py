@@ -309,7 +309,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         points = circle_to_coordinates(circles.values())
         mid_x = (points[segment_idx][0] + points[segment_idx + 1][0]) // 2
         mid_y = (points[segment_idx][1] + points[segment_idx + 1][1]) // 2
-        new_id = f"{section_id}-inserted-{segment_idx}"
+        new_id = f"{section_id}-inserted-{len(circles)}"
         new_circle = Circle(
             id=new_id,
             x=mid_x,
@@ -339,7 +339,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         mid_y = (p0.y + p1.y) // 2
         insert_idx = segment_idx + 1
         new_circle = Circle(
-            id=f"new_point-inserted-{segment_idx}",
+            id=f"new_point-{len(self._new_section_points)}",
             x=mid_x,
             y=mid_y,
             fill=EDIT_COLOR,

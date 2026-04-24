@@ -1569,6 +1569,60 @@ class TestMidpointInsertEditMode:
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
     )
+    def test_inserting_second_midpoint_in_same_segment_creates_distinct_circle(
+        self,
+        mock_ui: Any,
+        mock_viewmodel: Mock,
+        mock_resource_manager: Mock,
+        mock_section: Mock,
+    ) -> None:
+        """Inserting a midpoint twice in the logically-same segment must produce two
+        distinct circles with unique ids. Previously both insertions generated the id
+        '{section_id}-inserted-{segment_idx}', so the second circle silently collided
+        with the first (dict-key dedup) and drag updates moved the first circle."""
+        canvas = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            current_section=mock_section,
+        )
+        section_id = mock_section.id.id
+        c0 = Circle(id=f"{section_id}-0", x=0, y=0, fill="orange", pointer_event="all")
+        c1 = Circle(
+            id=f"{section_id}-1", x=200, y=0, fill="orange", pointer_event="all"
+        )
+        canvas._circles.add(section_id, c0)
+        canvas._circles.add(section_id, c1)
+
+        # First insertion: midpoint of segment 0 (c0–c1)
+        canvas.on_svg_pointer_down(
+            {ELEMENT_ID: f"mid-{section_id}-0", IMAGE_X: 100.0, IMAGE_Y: 0.0}
+        )
+        # Simulate completing the drag (pointer_up without moving)
+        canvas.on_svg_pointer_up(
+            {ELEMENT_ID: "", IMAGE_X: 100.0, IMAGE_Y: 0.0}
+        )
+
+        # Section now has 3 points: c0, M1, c1.
+        # Segment 0 is c0–M1; clicking mid-{section_id}-0 inserts into that segment.
+        canvas.on_svg_pointer_down(
+            {ELEMENT_ID: f"mid-{section_id}-0", IMAGE_X: 50.0, IMAGE_Y: 0.0}
+        )
+        canvas.on_svg_pointer_up(
+            {ELEMENT_ID: "", IMAGE_X: 50.0, IMAGE_Y: 0.0}
+        )
+
+        circles = canvas._circles.by_section[section_id]
+        all_ids = list(circles.keys())
+        assert len(all_ids) == 4, "four distinct control points must exist"
+        assert len(set(all_ids)) == 4, "all four circle ids must be unique"
+        # Verify no original circle was silently replaced
+        assert f"{section_id}-0" in all_ids
+        assert f"{section_id}-1" in all_ids
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
     def test_non_midpoint_click_still_works_in_edit_mode(
         self,
         mock_ui: Any,
