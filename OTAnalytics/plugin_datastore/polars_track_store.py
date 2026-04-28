@@ -427,6 +427,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             dict[RelativeOffsetCoordinate, PolarsTrackGeometryDataset] | None
         ) = None,
         calculator: PolarsTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
+        georeference_metadata: "GeoreferenceMetadata | None" = None,
     ) -> "PolarsTrackDataset":
         if tracks.is_empty():
             return PolarsTrackDataset(track_geometry_factory)
@@ -440,6 +441,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             track_geometry_factory,
             result,
             geometry_datasets=geometry_dataset,
+            georeference_metadata=georeference_metadata,
         )
 
     def add_all(self, other: Iterable[Track]) -> "PolarsTrackDataset":
@@ -928,6 +930,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                     self.track_geometry_factory,
                     batch_geometries,
                     calculator=self.calculator,
+                    georeference_metadata=self._georeference_metadata,
                 )
             )
         return new_batches

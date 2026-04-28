@@ -1,7 +1,9 @@
 import pytest
 
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.track import Track
 from OTAnalytics.plugin_datastore.filter_polars_track_dataset import (
+    FilterByClassPolarsTrackDataset,
     FilterByIdPolarsTrackDataset,
     FilterLastNDetectionsPolarsTrackDataset,
 )
@@ -16,10 +18,58 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
 from tests.utils.assertions import assert_track_datasets_equal
 from tests.utils.builders.track_builder import mark_last_detection_finished
 
+SAMPLE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
+    geo_min_x=449199.0,
+    geo_min_y=5699274.0,
+    geo_max_x=449294.0,
+    geo_max_y=5699370.0,
+    bev_width=983,
+    bev_height=983,
+    padding=20,
+    crs="EPSG:25833",
+)
+
 
 @pytest.fixture
 def track_geometry_factory() -> POLARS_TRACK_GEOMETRY_FACTORY:
     return PolarsTrackGeometryDataset.from_track_dataset
+
+
+class TestFilterByClassPolarsTrackDataset:
+    def test_with_georeference_metadata_attaches_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        inner = PolarsTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        )
+        target = FilterByClassPolarsTrackDataset(
+            inner,
+            include_classes=frozenset(),
+            exclude_classes=frozenset(),
+        )
+
+        result = target.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_with_georeference_metadata_returns_filter_dataset(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+    ) -> None:
+        inner = PolarsTrackDataset.from_list([car_track], track_geometry_factory)
+        target = FilterByClassPolarsTrackDataset(
+            inner,
+            include_classes=frozenset(["car"]),
+            exclude_classes=frozenset(),
+        )
+
+        result = target.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        assert isinstance(result, FilterByClassPolarsTrackDataset)
 
 
 class TestFilterByIdPolarsTrackDataset:

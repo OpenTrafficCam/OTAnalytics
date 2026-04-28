@@ -720,6 +720,23 @@ class TestPolarsTrackDatasetGeoreferenceMetadata:
         dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
         assert dataset.georeference_metadata is None
 
+    def test_split_preserves_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        dataset = PolarsTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        batches = dataset.split(2)
+
+        assert all(
+            batch.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+            for batch in batches
+        )
+
 
 GEO_X_VALUES = [449250.0, 449260.0, 449270.0]
 GEO_Y_VALUES = [5855000.0, 5855010.0, 5855020.0]

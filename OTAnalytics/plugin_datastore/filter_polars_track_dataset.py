@@ -6,6 +6,7 @@ import polars as pl
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
@@ -35,6 +36,10 @@ class FilteredPolarsTrackDataset(
     def calculator(self) -> PolarsTrackClassificationCalculator:
         return self._other.calculator
 
+    @property
+    def georeference_metadata(self) -> GeoreferenceMetadata | None:
+        return self._other.georeference_metadata
+
     def __init__(self, other: PolarsTrackDataset) -> None:
         self._other = other
 
@@ -63,6 +68,11 @@ class FilteredPolarsTrackDataset(
     ) -> tuple[PolarsTrackDataset, TrackIdSet]:
         dataset, original_track_ids = self._other.cut_with_section(section, offset)
         return self.wrap(dataset), original_track_ids
+
+    def with_georeference_metadata(
+        self, metadata: GeoreferenceMetadata | None
+    ) -> "PolarsTrackDataset":
+        return self.wrap(self._other.with_georeference_metadata(metadata))
 
     def ids_inside(self, sections: list[Section]) -> TrackIdSet:
         return self._filter().ids_inside(sections)
