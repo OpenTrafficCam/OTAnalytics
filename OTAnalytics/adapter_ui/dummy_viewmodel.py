@@ -67,6 +67,7 @@ from OTAnalytics.application.config import (
     OTFLOW_FILE_TYPE,
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.config_parser import StartDateMissing
 from OTAnalytics.application.parser.flow_parser import FlowParser
@@ -138,6 +139,7 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.plugin_parser.track_statistics_export import TrackStatisticsCsvExporter
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 SUPPORTED_VIDEO_FILE_TYPES = [".mp4", ".avi", ".mkv", ".mov"]
@@ -1822,6 +1824,11 @@ class DummyViewModel(
                 export_mode=OVERWRITE,
             )
             self._application.export_track_statistics(export_specification)
-            logger().info(f"Exporting track statistics to {save_path}")
+            destination = build_export_path(
+                save_path.parent,
+                save_path.stem,
+                TrackStatisticsCsvExporter.PRIMARY_SUFFIX,
+            )
+            logger().info(f"Exporting track statistics to {destination}")
         except CancelExportFile:
             logger().info("User canceled configuration of export")

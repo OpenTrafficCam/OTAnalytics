@@ -92,7 +92,7 @@ class CacheTrackStatisticsException(Exception):
         super().__init__(
             message
             + f"Error occurred when exporting {format} to "
-            + f"{export_directory}/{export_filename_stem} using "
+            + f"{export_directory / export_filename_stem} using "
             + f"export mode {export_mode}"
         )
 

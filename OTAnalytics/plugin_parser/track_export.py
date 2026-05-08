@@ -2,6 +2,7 @@ from typing import Literal
 
 from pandas import DataFrame
 
+from OTAnalytics.application.config import CONTEXT_FILE_TYPE_TRACKS
 from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.track_export import (
@@ -27,7 +28,7 @@ class CsvTrackExport(ExportTracks):
     this exporter should not be reused afterwards!)
     """
 
-    PRIMARY_SUFFIX = ".tracks.csv"
+    PRIMARY_SUFFIX = f".{CONTEXT_FILE_TYPE_TRACKS}.csv"
     TRACKS_METADATA_SUFFIX = ".tracks_metadata.json"
     VIDEOS_METADATA_SUFFIX = ".videos_metadata.json"
     DERIVED_SUFFIXES = (TRACKS_METADATA_SUFFIX, VIDEOS_METADATA_SUFFIX)
