@@ -3,7 +3,9 @@ from typing import Iterable
 
 from pandas import DataFrame
 
+from OTAnalytics.application.config import CONTEXT_FILE_TYPE_TRACK_STATISTICS
 from OTAnalytics.application.export_formats.export_mode import ExportMode
+from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.track_statistics_export import (
     ExportFormat,
@@ -17,6 +19,7 @@ CSV_FORMAT = ExportFormat("CSV", ".csv")
 
 
 class TrackStatisticsCsvExporter(TrackStatisticsExporter):
+    PRIMARY_SUFFIX = f".{CONTEXT_FILE_TYPE_TRACK_STATISTICS}.csv"
 
     @property
     def format(self) -> ExportFormat:
@@ -57,16 +60,22 @@ class SimpleTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
         self, specification: TrackStatisticsExportSpecification
     ) -> TrackStatisticsExporter:
         """
-        Create the exporter for the given road user assignment export specification.
+        Create the exporter for the given track statistic export specification.
 
         Args:
-            specification (ExportSpecification): specification of the Exporter.
+            specification (TrackStatisticsExportSpecification): specification of
+                the Exporter.
 
         Returns:
-            TrackStatisticsExporter: Exporter to export road user assignments.
+            TrackStatisticsExporter: Exporter to export track statistics.
         """
+        output_file = build_export_path(
+            specification.export_directory,
+            specification.export_filename_stem,
+            TrackStatisticsCsvExporter.PRIMARY_SUFFIX,
+        )
         return self._factories[specification.format](
-            TrackStatisticsBuilder(), specification.save_path
+            TrackStatisticsBuilder(), output_file
         )
 
 
@@ -75,14 +84,16 @@ class CacheTrackStatisticsException(Exception):
     def __init__(
         self,
         message: str,
-        save_path: Path,
+        export_directory: Path,
+        export_filename_stem: str,
         format: str,
         export_mode: ExportMode,
     ) -> None:
         super().__init__(
             message
-            + f"Error occurred when exporting {format} to {save_path} using"
-            + " export mode {export_mode}"
+            + f"Error occurred when exporting {format} to "
+            + f"{export_directory}/{export_filename_stem} using "
+            + f"export mode {export_mode}"
         )
 
 
@@ -90,7 +101,7 @@ class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
 
     def __init__(self, other: TrackStatisticsExporterFactory) -> None:
         self.other = other
-        self._cache: dict[tuple[Path, str], TrackStatisticsExporter] = dict()
+        self._cache: dict[tuple[Path, str, str], TrackStatisticsExporter] = dict()
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         return self.other.get_supported_formats()
@@ -100,7 +111,11 @@ class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
     ) -> TrackStatisticsExporter:
         export_mode = specification.export_mode
 
-        key = (specification.save_path, specification.format)
+        key = (
+            specification.export_directory,
+            specification.export_filename_stem,
+            specification.format,
+        )
         key_exists = key in self._cache.keys()
 
         exporter: TrackStatisticsExporter
@@ -108,10 +123,11 @@ class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
             if key_exists:
                 raise CacheTrackStatisticsException(
                     "TrackStatisticsExporter already exists for format+file"
-                    + " upon first write!"
-                    + " Maybe previous export was not finished or cache was not"
-                    + "cleared properly.",
-                    specification.save_path,
+                    " upon first write!"
+                    " Maybe previous export was not finished or cache was not"
+                    " cleared properly.",
+                    specification.export_directory,
+                    specification.export_filename_stem,
                     specification.format,
                     export_mode,
                 )
@@ -123,9 +139,10 @@ class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
             if not key_exists:
                 raise CacheTrackStatisticsException(
                     "TrackStatisticsExporter missing in cache for format+file"
-                    + " upon subsequent write!"
-                    + "Maybe the cache was cleared too early.",
-                    specification.save_path,
+                    " upon subsequent write!"
+                    " Maybe the cache was cleared too early.",
+                    specification.export_directory,
+                    specification.export_filename_stem,
                     specification.format,
                     export_mode,
                 )

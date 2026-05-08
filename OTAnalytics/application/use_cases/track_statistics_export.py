@@ -83,7 +83,8 @@ class TrackStatisticsExporter(ABC):
 
 @dataclass(frozen=True)
 class TrackStatisticsExportSpecification:
-    save_path: Path
+    export_directory: Path
+    export_filename_stem: str
     format: str
     export_mode: ExportMode
 

@@ -13,13 +13,13 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_COUNTS,
     CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
-    CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_SECTIONS_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
 )
 from OTAnalytics.application.datastore import TrackParser
+from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.cli_parser import CliParseError
 from OTAnalytics.application.run_configuration import RunConfiguration
@@ -63,6 +63,7 @@ from OTAnalytics.domain.track_repository import TrackRepositoryEvent
 from OTAnalytics.plugin_parser.otvision_parser import OttrkFormatFixer
 from OTAnalytics.plugin_parser.road_user_assignment_export import CSV_FORMAT
 from OTAnalytics.plugin_parser.streaming_parser import StreamTrackParser
+from OTAnalytics.plugin_parser.track_statistics_export import TrackStatisticsCsvExporter
 from OTAnalytics.plugin_track_input_source.single_batch import (
     SingleBatchOttrkFileInputSource,
 )
@@ -184,7 +185,11 @@ class OTAnalyticsCli(ABC):
             )
 
         if self._run_config.do_export_track_statistics:
-            await self._do_export_track_statistics(save_base_path, export_mode)
+            await self._do_export_track_statistics(
+                self._run_config.save_dir,
+                self._run_config.save_stem,
+                export_mode,
+            )
 
     @staticmethod
     def _validate_cli_args(run_config: RunConfiguration) -> None:
@@ -371,18 +376,24 @@ class OTAnalyticsCli(ABC):
         pass
 
     async def _do_export_track_statistics(
-        self, save_path: Path, export_mode: ExportMode
+        self,
+        export_directory: Path,
+        export_filename_stem: str,
+        export_mode: ExportMode,
     ) -> None:
         logger().info("Create track statistics ...")
-        track_statistics_path = save_path.parent / (
-            save_path.name + f".{CONTEXT_FILE_TYPE_TRACK_STATISTICS}.csv"
-        )
         specification = TrackStatisticsExportSpecification(
-            save_path=track_statistics_path,
+            export_directory=export_directory,
+            export_filename_stem=export_filename_stem,
             format="CSV",
             export_mode=export_mode,
         )
         await asyncio.to_thread(self._export_track_statistics.export, specification)
+        track_statistics_path = build_export_path(
+            export_directory,
+            export_filename_stem,
+            TrackStatisticsCsvExporter.PRIMARY_SUFFIX,
+        )
         await self._after_track_statistics_export(track_statistics_path)
 
     async def _after_track_statistics_export(self, track_statistics_file: Path) -> None:

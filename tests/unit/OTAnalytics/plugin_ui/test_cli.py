@@ -23,7 +23,6 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_COUNTS,
-    CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_EVENTLIST_FILE_TYPE,
@@ -1138,11 +1137,6 @@ class TestOTAnalyticsCli:
         filename_with_dots = (
             "first5min_FOOBAR1234_1998_04_26-1500.00000_1998-04-26_15-00-00"
         )
-        save_path = test_data_tmp_dir / filename_with_dots
-        expected_track_statistics_path = (
-            test_data_tmp_dir
-            / f"{filename_with_dots}.{CONTEXT_FILE_TYPE_TRACK_STATISTICS}.csv"
-        )
 
         if mode == CliMode.STREAM:
             dependencies = mock_cli_stream_dependencies
@@ -1154,10 +1148,13 @@ class TestOTAnalyticsCli:
             mode, dependencies, dependencies, run_config
         )
 
-        await cli._do_export_track_statistics(save_path, OVERWRITE)
+        await cli._do_export_track_statistics(
+            test_data_tmp_dir, filename_with_dots, OVERWRITE
+        )
 
         expected_specification = TrackStatisticsExportSpecification(
-            save_path=expected_track_statistics_path,
+            export_directory=test_data_tmp_dir,
+            export_filename_stem=filename_with_dots,
             format="CSV",
             export_mode=OVERWRITE,
         )

@@ -1816,7 +1816,10 @@ class DummyViewModel(
             export_format = export_config.export_format
 
             export_specification = TrackStatisticsExportSpecification(
-                save_path, export_format, OVERWRITE
+                export_directory=save_path.parent,
+                export_filename_stem=save_path.stem,
+                format=export_format,
+                export_mode=OVERWRITE,
             )
             self._application.export_track_statistics(export_specification)
             logger().info(f"Exporting track statistics to {save_path}")
