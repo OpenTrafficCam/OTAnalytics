@@ -16,7 +16,8 @@ class TrackFileFormat(Enum):
 
 @dataclass(frozen=True)
 class TrackExportSpecification:
-    save_path: Path
+    export_directory: Path
+    export_filename_stem: str
     export_format: list[TrackFileFormat]
     export_mode: ExportMode
 

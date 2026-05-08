@@ -177,7 +177,11 @@ class OTAnalyticsCli(ABC):
             await self._do_export_counts(save_base_path, export_mode)
 
         if self._run_config.do_export_tracks:
-            await self._do_export_tracks(save_base_path, export_mode)
+            await self._do_export_tracks(
+                self._run_config.save_dir,
+                self._run_config.save_stem,
+                export_mode,
+            )
 
         if self._run_config.do_export_track_statistics:
             await self._do_export_track_statistics(save_base_path, export_mode)
@@ -343,18 +347,26 @@ class OTAnalyticsCli(ABC):
         """Hook to execute after counts export."""
         pass
 
-    async def _do_export_tracks(self, save_path: Path, export_mode: ExportMode) -> None:
+    async def _do_export_tracks(
+        self,
+        export_directory: Path,
+        export_filename_stem: str,
+        export_mode: ExportMode,
+    ) -> None:
         logger().info("Start tracks export")
         specification = TrackExportSpecification(
-            save_path=save_path,
+            export_directory=export_directory,
+            export_filename_stem=export_filename_stem,
             export_format=[TrackFileFormat.CSV, TrackFileFormat.OTTRK],
             export_mode=export_mode,
         )
         await asyncio.to_thread(self._export_tracks.export, specification)
         logger().info("Finished tracks export")
-        await self._after_track_export(save_path)
+        await self._after_track_export(export_directory, export_filename_stem)
 
-    async def _after_track_export(self, track_file: Path) -> None:
+    async def _after_track_export(
+        self, export_directory: Path, export_filename_stem: str
+    ) -> None:
         """Hook to execute after tracks export."""
         pass
 

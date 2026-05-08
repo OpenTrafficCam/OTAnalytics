@@ -86,7 +86,11 @@ from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
     RemoveSection,
 )
-from OTAnalytics.application.use_cases.track_export import ExportTracks
+from OTAnalytics.application.use_cases.track_export import (
+    ExportTracks,
+    TrackExportSpecification,
+    TrackFileFormat,
+)
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
     AllTrackIdsProvider,
@@ -1082,6 +1086,40 @@ class TestOTAnalyticsCli:
             export_mode=OVERWRITE,
         )
         dependencies[self.EXPORT_COUNTS].export.assert_called_with(
+            expected_specification
+        )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("mode", [CliMode.STREAM, CliMode.BULK])
+    async def test_do_export_tracks_preserves_filename_with_multiple_dots(
+        self,
+        mode: CliMode,
+        test_data_tmp_dir: Path,
+        mock_cli_stream_dependencies: dict[str, Mock],
+        mock_cli_bulk_dependencies: dict[str, Mock],
+    ) -> None:
+        filename_with_dots = (
+            "first5min_FOOBAR1234_1998_04_26-1500.00000_1998-04-26_15-00-00"
+        )
+        if mode == CliMode.STREAM:
+            dependencies = mock_cli_stream_dependencies
+        else:
+            dependencies = mock_cli_bulk_dependencies
+
+        run_config = Mock()
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode, dependencies, dependencies, run_config
+        )
+
+        await cli._do_export_tracks(test_data_tmp_dir, filename_with_dots, OVERWRITE)
+
+        expected_specification = TrackExportSpecification(
+            export_directory=test_data_tmp_dir,
+            export_filename_stem=filename_with_dots,
+            export_format=[TrackFileFormat.CSV, TrackFileFormat.OTTRK],
+            export_mode=OVERWRITE,
+        )
+        dependencies[self.EXPORT_TRACKS].export.assert_called_with(
             expected_specification
         )
 

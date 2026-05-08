@@ -14,7 +14,8 @@ class TestMultiExportTracks:
 
     def test_calls_all_exporter(self) -> None:
         specification = TrackExportSpecification(
-            save_path=Path("/path/to/export"),
+            export_directory=Path("/some/dir"),
+            export_filename_stem="some_stem",
             export_format=[TrackFileFormat.CSV, TrackFileFormat.OTTRK],
             export_mode=OVERWRITE,
         )
@@ -32,7 +33,8 @@ class TestMultiExportTracks:
 
     def test_calls_all_configured_exporters(self) -> None:
         specification = TrackExportSpecification(
-            save_path=Path("/path/to/export"),
+            export_directory=Path("/some/dir"),
+            export_filename_stem="some_stem",
             export_format=[TrackFileFormat.OTTRK],
             export_mode=OVERWRITE,
         )
