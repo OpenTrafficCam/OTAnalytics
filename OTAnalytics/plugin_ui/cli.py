@@ -280,8 +280,10 @@ class OTAnalyticsCli(ABC):
 
         for event_format in self._run_config.event_formats:
             event_list_exporter = self._provide_eventlist_exporter(event_format)
-            actual_save_path = save_path.parent / (
-                save_path.name + f".events{event_list_exporter.get_extension()}"
+            actual_save_path = build_export_path(
+                save_path.parent,
+                save_path.name,
+                f".events{event_list_exporter.get_extension()}",
             )
 
             event_export_specification = EventExportSpecification(
@@ -338,9 +340,11 @@ class OTAnalyticsCli(ABC):
         if modes is None:
             raise ValueError("modes is None but has to be defined for exporting counts")
         for count_interval in self._run_config.count_intervals:
-            output_file = save_path.parent / (
-                save_path.name + f".{CONTEXT_FILE_TYPE_COUNTS}_{count_interval}"
-                f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}.{DEFAULT_COUNTS_FILE_TYPE}"
+            output_file = build_export_path(
+                save_path.parent,
+                save_path.name,
+                f".{CONTEXT_FILE_TYPE_COUNTS}_{count_interval}"
+                f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}.{DEFAULT_COUNTS_FILE_TYPE}",
             )
             counting_specification = CountingSpecificationDto(
                 start=start,
