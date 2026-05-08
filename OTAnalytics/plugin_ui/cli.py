@@ -12,7 +12,6 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_COUNTS,
-    CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_SECTIONS_FILE_TYPE,
@@ -61,7 +60,10 @@ from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepositoryEvent
 from OTAnalytics.plugin_parser.otvision_parser import OttrkFormatFixer
-from OTAnalytics.plugin_parser.road_user_assignment_export import CSV_FORMAT
+from OTAnalytics.plugin_parser.road_user_assignment_export import (
+    CSV_FORMAT,
+    RoadUserAssignmentCsvExporter,
+)
 from OTAnalytics.plugin_parser.streaming_parser import StreamTrackParser
 from OTAnalytics.plugin_parser.track_statistics_export import TrackStatisticsCsvExporter
 from OTAnalytics.plugin_track_input_source.single_batch import (
@@ -293,14 +295,19 @@ class OTAnalyticsCli(ABC):
             logger().info(f"Event list saved at '{actual_save_path}'")
             await self._after_event_file_export(actual_save_path)
 
-        assignment_path = save_path.parent / (
-            save_path.name + f".{CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS}.csv"
-        )
         specification = ExportSpecification(
-            save_path=assignment_path, format=CSV_FORMAT.name, mode=export_mode
+            export_directory=save_path.parent,
+            export_filename_stem=save_path.name,
+            format=CSV_FORMAT.name,
+            export_mode=export_mode,
         )
         await asyncio.to_thread(
             self._export_road_user_assignments.export, specification
+        )
+        assignment_path = build_export_path(
+            save_path.parent,
+            save_path.name,
+            RoadUserAssignmentCsvExporter.PRIMARY_SUFFIX,
         )
         logger().info(f"Road user assignment saved at '{assignment_path}'")
         await self._after_road_user_assignment_export(assignment_path)

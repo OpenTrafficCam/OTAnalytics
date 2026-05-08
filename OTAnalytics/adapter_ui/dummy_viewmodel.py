@@ -139,6 +139,9 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
+from OTAnalytics.plugin_parser.road_user_assignment_export import (
+    RoadUserAssignmentCsvExporter,
+)
 from OTAnalytics.plugin_parser.track_statistics_export import TrackStatisticsCsvExporter
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
@@ -1707,10 +1710,18 @@ class DummyViewModel(
             export_format = export_config.export_format
 
             export_specification = ExportSpecification(
-                save_path, export_format, OVERWRITE
+                export_directory=save_path.parent,
+                export_filename_stem=save_path.stem,
+                format=export_format,
+                export_mode=OVERWRITE,
             )
             self._application.export_road_user_assignments(export_specification)
-            logger().info(f"Exporting road user assignments to {save_path}")
+            destination = build_export_path(
+                save_path.parent,
+                save_path.stem,
+                RoadUserAssignmentCsvExporter.PRIMARY_SUFFIX,
+            )
+            logger().info(f"Exporting road user assignments to {destination}")
         except CancelExportFile:
             logger().info("User canceled configuration of export")
 

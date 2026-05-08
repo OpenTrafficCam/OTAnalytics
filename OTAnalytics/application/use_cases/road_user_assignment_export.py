@@ -212,9 +212,10 @@ class RoadUserAssignmentExporter(ABC):
 
 @dataclass(frozen=True)
 class ExportSpecification:
-    save_path: Path
+    export_directory: Path
+    export_filename_stem: str
     format: str
-    mode: ExportMode
+    export_mode: ExportMode
 
 
 class RoadUserAssignmentExporterFactory(Protocol):
@@ -255,7 +256,7 @@ class ExportRoadUserAssignments:
     def export(self, specification: ExportSpecification) -> None:
         road_user_assignments = self._get_all_assignments.get()
         exporter = self._exporter_factory.create(specification)
-        exporter.export(road_user_assignments, specification.mode)
+        exporter.export(road_user_assignments, specification.export_mode)
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """

@@ -3,7 +3,9 @@ from typing import Iterable, Literal
 from pandas import DataFrame
 
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportFormat
+from OTAnalytics.application.config import CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS
 from OTAnalytics.application.export_formats.export_mode import ExportMode
+from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ROAD_USER_ASSIGNMENT_DICT_KEYS,
     ExportSpecification,
@@ -23,6 +25,8 @@ class RoadUserAssignmentCsvExporter(RoadUserAssignmentExporter):
     Export modes OVERWRITE and INITIAL_MERGE will write the column header.
     Other export modes will only append data.
     """
+
+    PRIMARY_SUFFIX = f".{CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS}.csv"
 
     @property
     def format(self) -> ExportFormat:
@@ -73,6 +77,11 @@ class SimpleRoadUserAssignmentExporterFactory:
         Returns:
             RoadUserAssignmentExporter: Exporter to export road user assignments.
         """
+        output_file = build_export_path(
+            specification.export_directory,
+            specification.export_filename_stem,
+            RoadUserAssignmentCsvExporter.PRIMARY_SUFFIX,
+        )
         return self._factories[specification.format](
-            RoadUserAssignmentBuilder(), specification.save_path
+            RoadUserAssignmentBuilder(), output_file
         )
