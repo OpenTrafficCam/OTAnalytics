@@ -11,7 +11,7 @@ The codebase has multiple exporters (tracks, events, counts, statistics, assignm
 - Some use manual `parent / (name + suffix)` construction
 - Inconsistency makes bugs easy to miss and hard to prevent in future
 
-Example bug: When video name is `video.00000_2025-08-28_15-00-00`, Path.with_suffix() would truncate it to `video.00000_2025-08-28_15-00` + suffix.
+Example bug: When video name is `video.00000_2025-08-28_15-00-00`, Path.with_suffix() would truncate it to `video` + suffix, losing the entire `00000_2025-08-28_15-00-00` portion.
 
 ## Solution Overview
 
