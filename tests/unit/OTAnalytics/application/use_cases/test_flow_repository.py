@@ -57,7 +57,6 @@ class TestAddFlow:
         assert flow_repository.add.call_args_list == [
             call(second_flow),
         ]
-        flow_repository.get_flow_ids.assert_called_once()
 
     def test_add_flow_with_same_names(
         self, flow_repository: Mock, first_flow: Mock
@@ -113,12 +112,52 @@ class TestGetAllFlows:
 
 class TestAddAllFlows:
     def test_add(self, first_flow: Flow, second_flow: Flow) -> None:
-        add_flow = Mock()
-        add_all_flows = AddAllFlows(add_flow)
+        flow_repository = Mock(spec=FlowRepository)
+        flow_repository.get_all.return_value = []
+        add_all_flows = AddAllFlows(flow_repository)
 
         add_all_flows.add([first_flow, second_flow])
 
-        assert add_flow.call_args_list == [
-            call(first_flow),
-            call(second_flow),
-        ]
+        flow_repository.add_all.assert_called_once_with([first_flow, second_flow])
+
+    def test_add_empty_list_does_nothing(self) -> None:
+        flow_repository = Mock(spec=FlowRepository)
+        add_all_flows = AddAllFlows(flow_repository)
+
+        add_all_flows.add([])
+
+        flow_repository.get_all.assert_not_called()
+        flow_repository.add_all.assert_not_called()
+
+    def test_add_raises_when_flows_not_unique(self, first_flow: Flow) -> None:
+        flow_repository = Mock(spec=FlowRepository)
+        add_all_flows = AddAllFlows(flow_repository)
+
+        with pytest.raises(FlowAlreadyExists):
+            add_all_flows.add([first_flow, first_flow])
+
+        flow_repository.add_all.assert_not_called()
+
+    def test_add_raises_when_flow_already_exists_in_repository(
+        self, first_flow: Flow, second_flow: Flow
+    ) -> None:
+        flow_repository = Mock(spec=FlowRepository)
+        flow_repository.get_all.return_value = [first_flow]
+        add_all_flows = AddAllFlows(flow_repository)
+
+        with pytest.raises(FlowAlreadyExists):
+            add_all_flows.add([second_flow, first_flow])
+
+        flow_repository.add_all.assert_not_called()
+
+    def test_add_raises_when_flows_added_are_not_unique(
+        self, first_flow: Flow, second_flow: Flow
+    ) -> None:
+        flow_repository = Mock(spec=FlowRepository)
+        flow_repository.get_all.return_value = [first_flow]
+        add_all_flows = AddAllFlows(flow_repository)
+
+        with pytest.raises(FlowAlreadyExists):
+            add_all_flows.add([first_flow, first_flow])
+
+        flow_repository.add_all.assert_not_called()

@@ -377,7 +377,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.project_updater,
             AddAllVideos(self.video_repository),
             AddAllSections(self.add_section),
-            AddAllFlows(self.add_flow),
+            self.add_all_flows,
             self.load_track_files,
             self.add_new_remark,
             parse_json,
@@ -491,6 +491,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def add_flow(self) -> AddFlow:
         return AddFlow(self.flow_repository)
+
+    @cached_property
+    def add_all_flows(self) -> AddAllFlows:
+        return AddAllFlows(self.flow_repository)
 
     @cached_property
     def clear_all_sections(self) -> ClearAllSections:
@@ -799,7 +803,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.clear_all_events,
             self.flow_parser,
             self.add_section,
-            self.add_flow,
+            self.add_all_flows,
             parse_json,
         )
 
