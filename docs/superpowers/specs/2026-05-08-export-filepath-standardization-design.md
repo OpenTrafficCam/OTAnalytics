@@ -73,7 +73,11 @@ class TrackStatisticsExportSpecification(BaseExportSpecification):
 
 @dataclass
 class CountingSpecificationDto(BaseExportSpecification):
-    # ... existing fields
+    start: datetime
+    end: datetime
+    interval_in_minutes: int
+    modes: list[str]
+    output_format: str
 ```
 
 ### 2. Shared Path Building Utility
@@ -210,6 +214,15 @@ async def export_to_multiple_formats(self, export_directory, export_filename_ste
 4. **Consistency:** All exporters follow the same pattern
 5. **Future-proofing:** Adding a new exporter or format requires no path building logic
 
+## Scope: Exporters Included
+
+This standardization applies to all exporters in the system:
+- **Track export** (CSV, feather formats)
+- **Track statistics export** (CSV)
+- **Event export** (multiple formats via provider)
+- **Road user assignment export** (CSV)
+- **Counts export** (CSV)
+
 ## Migration Path
 
 1. Create `BaseExportSpecification` with all three components
@@ -217,7 +230,7 @@ async def export_to_multiple_formats(self, export_directory, export_filename_ste
 3. Update each exporter implementation (tracks, events, statistics, assignments, counts)
 4. Update CLI to use explicit components
 5. Update tests to use new specification format
-6. Remove `MultiExportTracks`
+6. Remove `MultiExportTracks` (dead code, only in tests)
 
 ## Testing
 
