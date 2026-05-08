@@ -216,21 +216,36 @@ async def export_to_multiple_formats(self, export_directory, export_filename_ste
 
 ## Scope: Exporters Included
 
-This standardization applies to all exporters in the system:
-- **Track export** (CSV, feather formats)
-- **Track statistics export** (CSV)
-- **Event export** (multiple formats via provider)
-- **Road user assignment export** (CSV)
-- **Counts export** (CSV)
+This standardization applies to ALL exporters in the system, including:
+
+**Specification layer (application/use_cases/):**
+- `TrackExportSpecification`
+- `TrackStatisticsExportSpecification`
+- `EventExportSpecification`
+- `ExportSpecification` (road user assignments)
+- `CountingSpecificationDto`
+
+**Implementation layer (plugin_parser/):**
+- `CsvTrackExport` - outputs `.tracks.csv`, `.tracks_metadata.json`, `.videos_metadata.json`
+- `TrackStatisticsCsvExporter` - outputs `.track_statistics.csv`
+- Event list exporters (CSV, JSON, and other formats via `EventListExporterProvider`)
+- `RoadUserAssignmentCsvExporter` - outputs `.road_user_assignments.csv`
+- Counting exporters (CSV format with configurable intervals)
 
 ## Migration Path
 
-1. Create `BaseExportSpecification` with all three components
-2. Create `build_export_path()` utility
-3. Update each exporter implementation (tracks, events, statistics, assignments, counts)
-4. Update CLI to use explicit components
-5. Update tests to use new specification format
-6. Remove `MultiExportTracks` (dead code, only in tests)
+1. Create `BaseExportSpecification` in `application/use_cases/` with three components
+2. Create `build_export_path()` utility in new `application/export_path_builder.py`
+3. Update ALL exporter implementations:
+   - `CsvTrackExport` (plugin_parser/track_export.py)
+   - `TrackStatisticsCsvExporter` (plugin_parser/track_statistics_export.py)
+   - Event list exporters (plugin_parser, all format providers)
+   - `RoadUserAssignmentCsvExporter` (plugin_parser/road_user_assignment_export.py)
+   - Counting exporters (plugin_parser/traffic_counting.py or equivalent)
+4. Update ALL export specifications to inherit from `BaseExportSpecification`
+5. Update CLI (`plugin_ui/cli.py`) to use `export_directory` and `export_filename_stem`
+6. Update ALL exporter tests to use new specification format
+7. Remove `MultiExportTracks` from use_cases (dead code, only in tests)
 
 ## Testing
 
