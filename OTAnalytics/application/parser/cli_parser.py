@@ -85,7 +85,7 @@ class CliValueProvider(OtConfigDefaultValueProvider):
         )
 
     @property
-    def save_name(self) -> str:
+    def save_stem(self) -> str:
         return (
             self._cli_args.save_name if self._cli_args.save_name else DEFAULT_SAVE_NAME
         )

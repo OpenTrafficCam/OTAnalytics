@@ -169,18 +169,18 @@ class OTAnalyticsCli(ABC):
         self, sections: Iterable[Section], export_mode: ExportMode
     ) -> None:
         """Export events, counts and tracks."""
-        save_path = self._run_config.save_dir / self._run_config.save_name
+        save_base_path = self._run_config.save_dir / self._run_config.save_stem
         if self._run_config.do_events:
-            await self._export_events(sections, save_path, export_mode)
+            await self._export_events(sections, save_base_path, export_mode)
 
         if self._run_config.do_counting:
-            await self._do_export_counts(save_path, export_mode)
+            await self._do_export_counts(save_base_path, export_mode)
 
         if self._run_config.do_export_tracks:
-            await self._do_export_tracks(save_path, export_mode)
+            await self._do_export_tracks(save_base_path, export_mode)
 
         if self._run_config.do_export_track_statistics:
-            await self._do_export_track_statistics(save_path, export_mode)
+            await self._do_export_track_statistics(save_base_path, export_mode)
 
     @staticmethod
     def _validate_cli_args(run_config: RunConfiguration) -> None:

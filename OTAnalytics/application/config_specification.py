@@ -29,7 +29,7 @@ class OtConfigDefaultValueProvider(ABC):
 
     @property
     @abstractmethod
-    def save_name(self) -> str:
+    def save_stem(self) -> str:
         raise NotImplementedError
 
     @property

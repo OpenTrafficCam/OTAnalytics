@@ -267,9 +267,9 @@ class TestRunConfiguration:
         otconfig = Mock()
         otconfig.analysis = analysis
         if has_otconfig:
-            assert build_config(cli_args, otconfig).save_name == expected
+            assert build_config(cli_args, otconfig).save_stem == expected
         else:
-            assert build_config(cli_args, None).save_name == expected
+            assert build_config(cli_args, None).save_stem == expected
 
     def test_save_suffix(self, cli_args: Mock, otconfig: Mock) -> None:
         cli_args.save_suffix = "cli_suffix"
