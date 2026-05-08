@@ -66,7 +66,7 @@ def is_flow_name_valid(flow_name: str, existing_flows: Iterable[Flow]) -> bool:
 
 
 def is_flow_id_valid(given: FlowId, existing_ids: Iterable[FlowId]) -> bool:
-    return not (given in existing_ids)
+    return given not in existing_ids
 
 
 class ClearAllFlows:
