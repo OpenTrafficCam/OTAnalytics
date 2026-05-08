@@ -28,7 +28,9 @@ class CsvTrackExport(ExportTracks):
     """
 
     PRIMARY_SUFFIX = ".tracks.csv"
-    DERIVED_SUFFIXES = (".tracks_metadata.json", ".videos_metadata.json")
+    TRACKS_METADATA_SUFFIX = ".tracks_metadata.json"
+    VIDEOS_METADATA_SUFFIX = ".videos_metadata.json"
+    DERIVED_SUFFIXES = (TRACKS_METADATA_SUFFIX, VIDEOS_METADATA_SUFFIX)
 
     def __init__(
         self,
@@ -65,14 +67,14 @@ class CsvTrackExport(ExportTracks):
             tracks_metadata_path = build_export_path(
                 specification.export_directory,
                 specification.export_filename_stem,
-                ".tracks_metadata.json",
+                self.TRACKS_METADATA_SUFFIX,
             )
             write_json(self._iterative_tracks_metadata, tracks_metadata_path)
 
             videos_metadata_path = build_export_path(
                 specification.export_directory,
                 specification.export_filename_stem,
-                ".videos_metadata.json",
+                self.VIDEOS_METADATA_SUFFIX,
             )
             write_json(self._iterative_videos_metadata, videos_metadata_path)
 
