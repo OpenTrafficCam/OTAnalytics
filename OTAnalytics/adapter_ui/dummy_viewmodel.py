@@ -142,7 +142,6 @@ from OTAnalytics.domain.video import Video, VideoListObserver
 from OTAnalytics.plugin_parser.road_user_assignment_export import (
     RoadUserAssignmentCsvExporter,
 )
-from OTAnalytics.plugin_parser.track_statistics_export import TrackStatisticsCsvExporter
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 SUPPORTED_VIDEO_FILE_TYPES = [".mp4", ".avi", ".mkv", ".mov"]
@@ -1834,11 +1833,8 @@ class DummyViewModel(
                 format=export_format,
                 export_mode=OVERWRITE,
             )
-            self._application.export_track_statistics(export_specification)
-            destination = build_export_path(
-                save_path.parent,
-                save_path.stem,
-                TrackStatisticsCsvExporter.PRIMARY_SUFFIX,
+            destination = self._application.export_track_statistics(
+                export_specification
             )
             logger().info(f"Exporting track statistics to {destination}")
         except CancelExportFile:

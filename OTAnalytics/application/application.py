@@ -689,8 +689,24 @@ class OTAnalyticsApplication:
 
     def export_track_statistics(
         self, specification: TrackStatisticsExportSpecification
-    ) -> None:
-        self._export_track_statistics.export(specification)
+    ) -> Path:
+        """
+        Exports track statistics based on the provided specification.
+
+        This method facilitates the export of track statistics by utilizing the provided
+        export specification. It processes the specification and generates a file
+        containing the desired statistics. The resulting file's location is returned.
+
+        Args:
+            specification (TrackStatisticsExportSpecification): The specification
+                detailing the customization and requirements for exporting track
+                statistics.
+
+        Returns:
+            Path: The path to the generated file containing the exported track
+                statistics.
+        """
+        return self._export_track_statistics.export(specification)
 
     def get_track_statistics_export_formats(
         self,
