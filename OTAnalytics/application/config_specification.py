@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
+
 
 class OtConfigDefaultValueProvider(ABC):
     @property
@@ -36,6 +40,11 @@ class OtConfigDefaultValueProvider(ABC):
     @property
     @abstractmethod
     def count_intervals(self) -> set[int]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def counting_event(self) -> CountingEvent:
         raise NotImplementedError
 
     @property

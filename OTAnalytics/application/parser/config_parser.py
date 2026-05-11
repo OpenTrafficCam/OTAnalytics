@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
@@ -15,6 +18,7 @@ class ExportConfig:
     save_suffix: str
     event_formats: set[str]
     count_intervals: set[int]
+    counting_event: CountingEvent = CountingEvent.START
 
 
 @dataclass(frozen=True)

@@ -4,7 +4,6 @@ import pytest
 from playwright.sync_api import Page  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import ResourceManager
-from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     MARKER_PROJECT_NAME,
     MARKER_START_DATE,
@@ -19,6 +18,7 @@ from tests.acceptance.conftest import (
 from tests.utils.playwright_helpers import (
     fill_project_information,
     import_project_and_assert_values,
+    load_main_page,
     open_project_otconfig,
     save_project_otconfig,
     search_for_marker_element,
@@ -46,8 +46,7 @@ class TestProjectInformationPlaywright:
         self, page: Page, external_app: NiceGUITestServer
     ) -> None:
         """Open the main page to confirm the server is reachable (Playwright)."""
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
         # Sanity check: page should contain Project section (pick first occurrence)
         page.get_by_text("Project").first.wait_for(
             state="visible", timeout=ACCEPTANCE_TEST_FINAL_TIMEOUT_MS
@@ -63,8 +62,7 @@ class TestProjectInformationPlaywright:
         resource_manager: ResourceManager,
     ) -> None:
         """Verify project information form accepts ISO date format using Playwright."""
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         project_name = "Test Project - Leipzig Test Intersection - OTCamera19"
         date_value = "2023-05-24"
@@ -108,8 +106,7 @@ class TestProjectInformationPlaywright:
         resource_manager: ResourceManager,
     ) -> None:
         """Attempt to set German date format (expected to fail, mirrors Selenium test)."""  # noqa
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         project_name = "Test Project - Leipzig Test Intersection - OTCamera19"
         date_value = "24.05.2023"  # German format
@@ -156,8 +153,7 @@ class TestProjectInformationPlaywright:
         - Import previously saved otconfig and verify values restored
         - Modify fields again and re-import to verify overwrite
         """
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         saved_name = "Acceptance Save/Load Project"
         saved_date = "2023-05-24"

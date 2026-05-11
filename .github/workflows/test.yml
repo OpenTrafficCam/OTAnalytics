@@ -31,4 +31,4 @@ jobs:
         with:
           py-version: ${{ matrix.py }}
           package-path: OTAnalytics
-          test-path: tests/OTAnalytics
+          test-path: tests/unit

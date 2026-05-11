@@ -114,7 +114,6 @@ class NiceguiOtanalyticsBuilder(OtAnalyticsNiceGuiApplicationStarter):
         cli_args = CliArguments(
             start_cli=False,
             cli_mode=CliMode.BULK,
-            cli_chunk_size=1,
             debug=False,
             logfile_overwrite=True,
             track_export=False,

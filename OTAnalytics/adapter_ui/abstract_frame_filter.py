@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 
+from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.dto import DateRangeDto
 
 
-class AbstractFrameFilter(ABC):
+class AbstractFrameFilter(AbstractFrame, ABC):
     @abstractmethod
     def _introduce_to_viewmodel(self) -> None:
         pass

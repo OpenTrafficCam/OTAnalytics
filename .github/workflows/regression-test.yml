@@ -39,4 +39,4 @@ jobs:
         shell: bash
         run: uv sync --locked --dev
       - name: Run regression tests
-        run: uv run pytest ./tests/regression_otanalytics.py
+        run: uv run pytest ./tests/regression

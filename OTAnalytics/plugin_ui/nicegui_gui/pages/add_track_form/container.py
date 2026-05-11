@@ -16,6 +16,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_VIDEO_TAB = "marker-video-tab"
+MARKER_TRACK_TAB = "marker-track-tab"
 
 
 class TrackForm:
@@ -41,7 +42,8 @@ class TrackForm:
                     TrackFormKeys.TAB_VIDEO,
                 )
             )
-            # Expose a stable test-id for Playwright to open the Videos tab reliably
+            # Expose stable test-ids for Playwright to open tabs reliably
+            track_tab.props(f"{TEST_ID}={MARKER_TRACK_TAB}")
             video_tab.props(f"{TEST_ID}={MARKER_VIDEO_TAB}")
         with ui.tab_panels(tabs, value=track_tab).classes("w-full"):
             with ui.tab_panel(track_tab):

@@ -137,6 +137,8 @@ class FeathersParser(TrackParser):
             detections_metadata.append(detection_metadata)
         logger().info(f"{len(files)} track files parsed.")
 
+        columns = data_frames[0].columns
+        data_frames = [df.select(columns) for df in data_frames]
         df = pl.concat(data_frames)
         # Create TrackDataset from DataFrame
         calculator = PolarsByMaxConfidence()

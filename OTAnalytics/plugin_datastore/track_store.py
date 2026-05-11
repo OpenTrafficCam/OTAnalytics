@@ -95,6 +95,13 @@ class PandasDetection(Detection):
         return self.__get_attribute(track.INTERPOLATED_DETECTION)
 
     @property
+    def is_finished(self) -> bool:
+        if ottrk_dataformat.FINISHED not in self._data.index:
+            return False
+        value = self.__get_attribute(ottrk_dataformat.FINISHED)
+        return bool(value)
+
+    @property
     def track_id(self) -> TrackId:
         return TrackId(self._track_id)
 
@@ -403,6 +410,38 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def clear(self) -> "PandasTrackDataset":
         return PandasTrackDataset(self.track_geometry_factory)
 
+    def split_finished(self) -> tuple[TrackDataset, TrackDataset]:
+        empty = PandasTrackDataset(
+            self.track_geometry_factory, calculator=self.calculator
+        )
+        if self._dataset.empty:
+            return empty, empty
+        if ottrk_dataformat.FINISHED not in self._dataset.columns:
+            return self, empty
+
+        finished_mask = (
+            self._dataset[ottrk_dataformat.FINISHED].fillna(False).astype(bool).eq(True)
+        )
+        finished_ids = (
+            self._dataset.loc[finished_mask]
+            .index.get_level_values(LEVEL_TRACK_ID)
+            .unique()
+        )
+        finished_ids_list = list(finished_ids)
+        if not finished_ids_list:
+            return empty, self
+
+        index = self.get_index()
+        all_ids = list(index) if index is not None else []
+        finished_id_set = set(finished_ids_list)
+        remaining_ids_list = [
+            track_id for track_id in all_ids if track_id not in finished_id_set
+        ]
+
+        finished_dataset = self._subset_by_ids(finished_ids_list)
+        remaining_dataset = self._subset_by_ids(remaining_ids_list)
+        return finished_dataset, remaining_dataset
+
     def remove(self, track_id: TrackId) -> "PandasTrackDataset":
         remaining_tracks = self._dataset.drop(unpack(track_id), errors="ignore")
         updated_geometry_datasets = self._remove_from_geometry_dataset([track_id.id])
@@ -470,6 +509,20 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             return new_batches
 
         return [self]
+
+    def _subset_by_ids(self, track_ids: list[str]) -> "PandasTrackDataset":
+        if not track_ids:
+            return PandasTrackDataset(
+                self.track_geometry_factory, calculator=self.calculator
+            )
+        subset = self._dataset.loc[track_ids]
+        geometries = self._get_geometries_for(track_ids)
+        return PandasTrackDataset.from_dataframe(
+            subset,
+            self.track_geometry_factory,
+            geometries,
+            calculator=self.calculator,
+        )
 
     def get_index(self) -> Index | None:
         if self._dataset.empty:
@@ -802,6 +855,8 @@ def _convert_tracks(tracks: Iterable[Track]) -> DataFrame:
         for detection in current_track.detections:
             dto = detection.to_dict()
             dto[track.ORIGINAL_TRACK_ID] = current_track.original_id.id
+            dto[ottrk_dataformat.FIRST] = current_track.first_detection == detection
+            dto[ottrk_dataformat.FINISHED] = detection.is_finished
             prepared.append(dto)
 
     if not prepared:

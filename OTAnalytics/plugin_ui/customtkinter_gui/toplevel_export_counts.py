@@ -9,6 +9,9 @@ from OTAnalytics.adapter_ui.file_selection_cancelled import (
     FileSelectionCancelledException,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_COUNTS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
@@ -26,6 +29,7 @@ START = "start"
 END = "end"
 EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
+COUNTING_EVENT = "counting_event"
 
 
 class FrameConfigureExportCounts(FrameContent):
@@ -61,6 +65,15 @@ class FrameConfigureExportCounts(FrameContent):
             master=self, values=list(self._export_formats.keys())
         )
         self.optionmenu_format.set(self._input_values[EXPORT_FORMAT])
+        self.label_counting_event = CTkLabel(master=self, text="Counting Event")
+        counting_event_values = [event.value for event in CountingEvent]
+        self.optionmenu_counting_event = CTkOptionMenu(
+            master=self, values=counting_event_values
+        )
+        current_event = self._input_values.get(
+            COUNTING_EVENT, CountingEvent.START.value
+        )
+        self.optionmenu_counting_event.set(current_event)
 
     def _place_widgets(self) -> None:
         self.grid_columnconfigure(2, weight=1)
@@ -83,6 +96,12 @@ class FrameConfigureExportCounts(FrameContent):
         self.optionmenu_format.grid(
             row=3, column=1, columnspan=2, padx=PADX, pady=PADY, sticky=tkinter.NW
         )
+        self.label_counting_event.grid(
+            row=4, column=0, padx=PADX, pady=PADY, sticky=tkinter.NW
+        )
+        self.optionmenu_counting_event.grid(
+            row=4, column=1, columnspan=2, padx=PADX, pady=PADY, sticky=tkinter.NW
+        )
 
     def set_focus(self) -> None:
         self.after(0, lambda: self.entry_interval.focus_set())
@@ -92,6 +111,7 @@ class FrameConfigureExportCounts(FrameContent):
         self._input_values[END] = self.end_date.get_datetime()
         self._input_values[INTERVAL] = int(self.entry_interval.get())
         self._input_values[EXPORT_FORMAT] = self.optionmenu_format.get()
+        self._input_values[COUNTING_EVENT] = self.optionmenu_counting_event.get()
 
     def get_input_values(self) -> dict:
         self._parse_input_values()

@@ -96,6 +96,11 @@ class Detection(ABC):
 
     @property
     @abstractmethod
+    def is_finished(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def track_id(self) -> TrackId:
         raise NotImplementedError
 

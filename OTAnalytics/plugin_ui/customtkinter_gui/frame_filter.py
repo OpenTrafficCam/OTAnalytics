@@ -26,6 +26,7 @@ from OTAnalytics.adapter_ui.helpers import WidgetPositionProvider
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.date import DateRange
+from OTAnalytics.plugin_ui.customtkinter_gui.abstract_ctk_frame import AbstractCTkFrame
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import (
     PADX,
     PADY,
@@ -63,7 +64,7 @@ class InvalidDatetimeFormatError(Exception):
     pass
 
 
-class FrameFilter(AbstractFrameFilter, EmbeddedCTkFrame):
+class FrameFilter(AbstractCTkFrame, AbstractFrameFilter):
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel
@@ -113,6 +114,9 @@ class FrameFilter(AbstractFrameFilter, EmbeddedCTkFrame):
     def reset(self) -> None:
         self._get_widgets()
         self._place_widgets()
+
+    def introduce_to_viewmodel(self) -> None:
+        self._introduce_to_viewmodel()
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_filter_frame(self)

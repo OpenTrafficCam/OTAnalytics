@@ -8,7 +8,6 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     TrackFormKeys,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_VIDEO_TAB,
 )
@@ -20,6 +19,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
 )
 from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
+    ACCEPTANCE_TEST_VIDEO_FILE,
+    ACCEPTANCE_TEST_VIDEO_FILE_2,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     PLAYWRIGHT_POLL_INTERVAL_SECONDS,
     NiceGUITestServer,
@@ -27,6 +28,7 @@ from tests.acceptance.conftest import (
 from tests.utils.playwright_helpers import (
     add_video_via_picker,
     click_table_cell_with_text,
+    load_main_page,
     reset_videos_tab,
     search_for_marker_element,
     table_filenames,
@@ -63,15 +65,14 @@ class TestVideoImportAndDisplay:
         - Add a single video via in-app file picker UI
         - Click on Remove and verify the video disappears from the table
         """
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         reset_videos_tab(page, resource_manager)
 
         # Prepare test video path from tests/data
         data_dir = Path(__file__).parents[1] / "data"
-        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        v1 = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
         assert v1.exists(), f"Test video missing: {v1}"
 
         # Add the video via in-app picker
@@ -99,8 +100,7 @@ class TestVideoImportAndDisplay:
 
         Mirrors tests in TestVideoImportAndDisplay (Selenium-based).
         """
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         # Switch to Videos tab and ensure clean slate (prefer marker with fallback)
         try:
@@ -112,8 +112,8 @@ class TestVideoImportAndDisplay:
         reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"
-        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-        v2 = data_dir / "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
+        v1 = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
+        v2 = data_dir / ACCEPTANCE_TEST_VIDEO_FILE_2
         assert v1.exists() and v2.exists(), "Test videos are missing in tests/data"
 
         # Add both videos via in-app picker
@@ -157,15 +157,14 @@ class TestVideoImportAndDisplay:
         resource_manager: ResourceManager,
     ) -> None:
         """Playwright: Remove two videos sequentially (single-select table)."""
-        base_url = getattr(external_app, "base_url", "http://127.0.0.1:8080")
-        page.goto(base_url + ENDPOINT_MAIN_PAGE)
+        load_main_page(page, external_app)
 
         search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
         reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"
-        v1 = data_dir / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
-        v2 = data_dir / "Testvideo_Cars-Truck_FR20_2020-01-01_00-00-00.mp4"
+        v1 = data_dir / ACCEPTANCE_TEST_VIDEO_FILE
+        v2 = data_dir / ACCEPTANCE_TEST_VIDEO_FILE_2
         assert v1.exists() and v2.exists(), "Test videos are missing in tests/data"
 
         # Add videos
