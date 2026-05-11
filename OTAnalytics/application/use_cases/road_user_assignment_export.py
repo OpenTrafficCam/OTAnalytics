@@ -164,9 +164,20 @@ class RoadUserAssignmentExporter(ABC):
         self._builder = builder
         self._outputfile = output_file
 
-    def export(self, assignments: RoadUserAssignments, export_mode: ExportMode) -> None:
+    def export(self, assignments: RoadUserAssignments, export_mode: ExportMode) -> Path:
+        """Exports road user assignments data in the specified export mode.
+
+        Args:
+            assignments (RoadUserAssignments): The road user assignments data to be
+                exported.
+            export_mode (ExportMode): The mode in which the data should be exported.
+
+        Returns:
+            Path: The path to the file where the exported data has been saved.
+        """
         dtos = self._convert(assignments)
         self._serialize(dtos, export_mode)
+        return self._outputfile
 
     @abstractmethod
     def _serialize(self, dtos: list[dict], export_mode: ExportMode) -> None:
@@ -253,10 +264,20 @@ class ExportRoadUserAssignments:
         self._get_all_assignments = get_all_assignments
         self._exporter_factory = exporter_factory
 
-    def export(self, specification: ExportSpecification) -> None:
+    def export(self, specification: ExportSpecification) -> Path:
+        """Exports the road user assignments based on the provided specification.
+
+        Args:
+            specification (ExportSpecification): The specification dictating the
+                details of the export, including the export mode and other
+                configuration details.
+
+        Returns:
+            Path: The save location of the exported data.
+        """
         road_user_assignments = self._get_all_assignments.get()
         exporter = self._exporter_factory.create(specification)
-        exporter.export(road_user_assignments, specification.export_mode)
+        return exporter.export(road_user_assignments, specification.export_mode)
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """

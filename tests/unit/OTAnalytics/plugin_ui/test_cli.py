@@ -1265,7 +1265,7 @@ class TestOTAnalyticsCli:
         type(run_config).do_events = PropertyMock(return_value=True)
         type(run_config).do_counting = PropertyMock(return_value=True)
         type(run_config).save_dir = PropertyMock(return_value=Path("path/to/my/dir"))
-        type(run_config).save_name = PropertyMock(return_value="my_save_name")
+        type(run_config).save_stem = PropertyMock(return_value="my_save_stem")
 
         first_track_file = Path("path/to/a.ottrk")
         second_track_file = Path("path/to/b.ottrk")
@@ -1308,10 +1308,10 @@ class TestOTAnalyticsCli:
         dependencies[self.GET_ALL_SECTIONS].assert_called_once()
         dependencies[self.CREATE_EVENTS].assert_called_once()
         mock_export_events.assert_called_once_with(
-            sections, run_config.save_dir / run_config.save_name, OVERWRITE
+            sections, run_config.save_dir / run_config.save_stem, OVERWRITE
         )
         mock_do_export_counts.assert_called_once_with(
-            run_config.save_dir / run_config.save_name, OVERWRITE
+            run_config.save_dir / run_config.save_stem, OVERWRITE
         )
 
         if mode == CliMode.STREAM:

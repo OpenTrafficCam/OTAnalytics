@@ -60,10 +60,7 @@ from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepositoryEvent
 from OTAnalytics.plugin_parser.otvision_parser import OttrkFormatFixer
-from OTAnalytics.plugin_parser.road_user_assignment_export import (
-    CSV_FORMAT,
-    RoadUserAssignmentCsvExporter,
-)
+from OTAnalytics.plugin_parser.road_user_assignment_export import CSV_FORMAT
 from OTAnalytics.plugin_parser.streaming_parser import StreamTrackParser
 from OTAnalytics.plugin_parser.track_statistics_export import TrackStatisticsCsvExporter
 from OTAnalytics.plugin_track_input_source.single_batch import (
@@ -303,16 +300,11 @@ class OTAnalyticsCli(ABC):
             format=CSV_FORMAT.name,
             export_mode=export_mode,
         )
-        await asyncio.to_thread(
+        assignment_file = await asyncio.to_thread(
             self._export_road_user_assignments.export, specification
         )
-        assignment_path = build_export_path(
-            save_path.parent,
-            save_path.name,
-            RoadUserAssignmentCsvExporter.PRIMARY_SUFFIX,
-        )
-        logger().info(f"Road user assignment saved at '{assignment_path}'")
-        await self._after_road_user_assignment_export(assignment_path)
+        logger().info(f"Road user assignment saved at '{assignment_file}'")
+        await self._after_road_user_assignment_export(assignment_file)
 
     async def _after_event_file_export(self, event_file: Path) -> None:
         """Hook to execute after event file export."""

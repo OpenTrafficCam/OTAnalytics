@@ -313,12 +313,12 @@ class TestFixMissingAnalysis:
         logfile = "logfile.log"
         debug = True
         event_formats = ["csv", "xlsx"]
-        save_name = "my_name"
+        save_stem = "my_name"
         save_suffix = "my_suffix"
         count_intervals = [2, 3, 4]
         export = {
             EVENT_FORMATS: event_formats,
-            SAVE_NAME: save_name,
+            SAVE_NAME: save_stem,
             SAVE_SUFFIX: save_suffix,
             COUNT_INTERVALS: count_intervals,
             COUNTING_EVENT: CountingEvent.START.value,
@@ -343,7 +343,7 @@ class TestFixMissingAnalysis:
         type(value_provider).do_counting = PropertyMock(return_value=do_counting)
         type(value_provider).track_files = PropertyMock(return_value=track_files)
         type(value_provider).event_formats = PropertyMock(return_value=event_formats)
-        type(value_provider).save_name = PropertyMock(return_value=save_name)
+        type(value_provider).save_stem = PropertyMock(return_value=save_stem)
         type(value_provider).save_suffix = PropertyMock(return_value=save_suffix)
         type(value_provider).count_intervals = PropertyMock(
             return_value=count_intervals
