@@ -79,6 +79,7 @@ Changelog = "https://github.com/OpenTrafficCam/OTAnalytics/releases"
 
 [tool.uv]
 default-groups = []
+exclude-newer = "3 days"
 
 [tool.hatch.version]
 path = "OTAnalytics/version.py"
