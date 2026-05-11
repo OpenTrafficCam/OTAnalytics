@@ -278,9 +278,9 @@ class OTAnalyticsCli(ABC):
         for event_format in self._run_config.event_formats:
             event_list_exporter = self._provide_eventlist_exporter(event_format)
             actual_save_path = build_export_path(
-                save_path.parent,
-                save_path.name,
-                f".events{event_list_exporter.get_extension()}",
+                export_directory=save_path.parent,
+                export_filename_stem=save_path.name,
+                file_suffix=f".events{event_list_exporter.get_extension()}",
             )
 
             event_export_specification = EventExportSpecification(
