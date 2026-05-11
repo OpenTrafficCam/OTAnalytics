@@ -181,16 +181,16 @@ class OTAnalyticsCli(ABC):
 
         if self._run_config.do_export_tracks:
             await self._do_export_tracks(
-                self._run_config.save_dir,
-                self._run_config.save_stem,
-                export_mode,
+                export_directory=self._run_config.save_dir,
+                export_filename_stem=self._run_config.save_stem,
+                export_mode=export_mode,
             )
 
         if self._run_config.do_export_track_statistics:
             await self._do_export_track_statistics(
-                self._run_config.save_dir,
-                self._run_config.save_stem,
-                export_mode,
+                export_directory=self._run_config.save_dir,
+                export_filename_stem=self._run_config.save_stem,
+                export_mode=export_mode,
             )
 
     @staticmethod
