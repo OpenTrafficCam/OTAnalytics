@@ -110,7 +110,7 @@ class CtkUiFactory(UiFactory):
         ).get_data()
         file = export_config[toplevel_export_file.EXPORT_FILE]
         export_format = export_config[toplevel_export_file.EXPORT_FORMAT]
-        return ExportFileDto(file=file, export_format=export_format)
+        return ExportFileDto(file=Path(file), export_format=export_format)
 
     async def configure_export_counts(
         self,
