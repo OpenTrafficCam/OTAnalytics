@@ -31,7 +31,6 @@ class CsvTrackExport(ExportTracks):
     PRIMARY_SUFFIX = f".{CONTEXT_FILE_TYPE_TRACKS}.csv"
     TRACKS_METADATA_SUFFIX = ".tracks_metadata.json"
     VIDEOS_METADATA_SUFFIX = ".videos_metadata.json"
-    DERIVED_SUFFIXES = (TRACKS_METADATA_SUFFIX, VIDEOS_METADATA_SUFFIX)
 
     def __init__(
         self,
