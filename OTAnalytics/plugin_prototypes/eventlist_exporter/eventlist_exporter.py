@@ -13,8 +13,6 @@ from OTAnalytics.application.export_formats.event_list import (
     EVENT_COORDINATE_Y,
     EVENT_TYPE,
     FRAME_NUMBER,
-    GEO_X,
-    GEO_Y,
     HOSTNAME,
     INTERPOLATED_EVENT_COORDINATE_X,
     INTERPOLATED_EVENT_COORDINATE_Y,
@@ -56,8 +54,8 @@ NUMBER_ROUNDED_COLUMNS = {
     event_list.INTERPOLATED_EVENT_COORDINATE_Y: 1,
     event_list.DIRECTION_VECTOR_X: 4,
     event_list.DIRECTION_VECTOR_Y: 4,
-    GEO_X: 3,
-    GEO_Y: 3,
+    event_list.GEO_X: 3,
+    event_list.GEO_Y: 3,
 }
 
 DATETIME_ROUNDED_COLUMNS = {
@@ -106,11 +104,11 @@ class EventListDataFrameBuilder:
         self._add_detailed_date_time_columns()
         self._round()
         geo_cols = (
-            [GEO_X, GEO_Y]
-            if GEO_X in self._df.columns
-            and GEO_Y in self._df.columns
-            and pd.api.types.is_numeric_dtype(self._df[GEO_X])
-            and pd.api.types.is_numeric_dtype(self._df[GEO_Y])
+            [event_list.GEO_X, event_list.GEO_Y]
+            if event_list.GEO_X in self._df.columns
+            and event_list.GEO_Y in self._df.columns
+            and pd.api.types.is_numeric_dtype(self._df[event_list.GEO_X])
+            and pd.api.types.is_numeric_dtype(self._df[event_list.GEO_Y])
             else []
         )
         return self._df.loc[:, EXPORT_COLUMNS + geo_cols]
