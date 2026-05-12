@@ -133,9 +133,6 @@ SAMPLE_METADATA_VIDEO = {
 
 @dataclass
 class GeoParserGiven:
-    """Holds parser and detection dicts for geo parser tests."""
-
-    parser: PandasDetectionParser
     detections_with_geo: list[dict]
     detections_without_geo: list[dict]
 
@@ -159,11 +156,6 @@ def _make_detection(frame: int, track_id: int, **extra: object) -> dict:
 
 def create_geo_parser_given() -> GeoParserGiven:
     """Creates a GeoParserGiven with a parser and detection dicts with/without geo."""
-    parser = PandasDetectionParser(
-        PandasByMaxConfidence(),
-        ShapelyTrackGeometryDataset.from_track_dataset,
-        track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
-    )
     detections_with_geo = [
         _make_detection(
             frame=i,
@@ -177,19 +169,27 @@ def create_geo_parser_given() -> GeoParserGiven:
     ]
     detections_without_geo = [_make_detection(frame=i, track_id=1) for i in range(1, 5)]
     return GeoParserGiven(
-        parser=parser,
         detections_with_geo=detections_with_geo,
         detections_without_geo=detections_without_geo,
+    )
+
+
+def create_target() -> PandasDetectionParser:
+    return PandasDetectionParser(
+        PandasByMaxConfidence(),
+        ShapelyTrackGeometryDataset.from_track_dataset,
+        track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
     )
 
 
 class TestPandasDetectionParserGeoCoordinates:
     def test_geo_coordinates_mapped_when_present(self) -> None:
         given = create_geo_parser_given()
-        result = given.parser.parse_tracks(
+        target = create_target()
+        actual = target.parse_tracks(
             given.detections_with_geo, SAMPLE_METADATA_VIDEO, "cam.ottrk"
         )
-        tracks = result.as_list()
+        tracks = actual.as_list()
         assert len(tracks) == 1
         first_detection = tracks[0].detections[0]
         assert first_detection.geo_x == GEO_X_VALUE
@@ -197,10 +197,11 @@ class TestPandasDetectionParserGeoCoordinates:
 
     def test_geo_coordinates_absent_when_not_in_source(self) -> None:
         given = create_geo_parser_given()
-        result = given.parser.parse_tracks(
+        target = create_target()
+        actual = target.parse_tracks(
             given.detections_without_geo, SAMPLE_METADATA_VIDEO, "cam.ottrk"
         )
-        tracks = result.as_list()
+        tracks = actual.as_list()
         assert len(tracks) == 1
         first_detection = tracks[0].detections[0]
         assert first_detection.geo_x is None
