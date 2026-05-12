@@ -734,38 +734,40 @@ class PandasDetectionGeoGiven:
     detection_without_geo: PandasDetection
 
 
+def create_data_without_geo_coordinates() -> dict:
+    return {
+        track.CLASSIFICATION: "car",
+        track.CONFIDENCE: 0.9,
+        track.X: 100.0,
+        track.Y: 200.0,
+        track.W: 0.0,
+        track.H: 0.0,
+        track.FRAME: 1,
+        track.INTERPOLATED_DETECTION: False,
+        track.VIDEO_NAME: "cam.mp4",
+        track.INPUT_FILE: "cam.otdet",
+    }
+
+
+GEO_X = 449245.82
+GEO_Y = 5699325.96
+
+
+def create_data_with_geo_coordinates() -> dict:
+    with_geo_coordinates = create_data_without_geo_coordinates()
+    with_geo_coordinates[track.GEO_X] = GEO_X
+    with_geo_coordinates[track.GEO_Y] = GEO_Y
+    return with_geo_coordinates
+
+
 def create_pandas_detection_geo_given() -> PandasDetectionGeoGiven:
     """Creates a PandasDetectionGeoGiven with and without geo columns."""
     data_with = pd.Series(
-        {
-            track.CLASSIFICATION: "car",
-            track.CONFIDENCE: 0.9,
-            track.X: 100.0,
-            track.Y: 200.0,
-            track.W: 0.0,
-            track.H: 0.0,
-            track.FRAME: 1,
-            track.INTERPOLATED_DETECTION: False,
-            track.VIDEO_NAME: "cam.mp4",
-            track.INPUT_FILE: "cam.otdet",
-            track.GEO_X: 449245.82,
-            track.GEO_Y: 5699325.96,
-        },
+        data=create_data_with_geo_coordinates(),
         name=(datetime(2024, 1, 1, tzinfo=timezone.utc),),
     )
     data_without = pd.Series(
-        {
-            track.CLASSIFICATION: "car",
-            track.CONFIDENCE: 0.9,
-            track.X: 100.0,
-            track.Y: 200.0,
-            track.W: 0.0,
-            track.H: 0.0,
-            track.FRAME: 1,
-            track.INTERPOLATED_DETECTION: False,
-            track.VIDEO_NAME: "cam.mp4",
-            track.INPUT_FILE: "cam.otdet",
-        },
+        data=create_data_without_geo_coordinates(),
         name=(datetime(2024, 1, 1, tzinfo=timezone.utc),),
     )
     return PandasDetectionGeoGiven(
@@ -777,11 +779,11 @@ def create_pandas_detection_geo_given() -> PandasDetectionGeoGiven:
 class TestPandasDetectionGeoCoordinates:
     def test_geo_x_returns_value_when_column_present(self) -> None:
         given = create_pandas_detection_geo_given()
-        assert given.detection_with_geo.geo_x == 449245.82
+        assert given.detection_with_geo.geo_x == GEO_X
 
     def test_geo_y_returns_value_when_column_present(self) -> None:
         given = create_pandas_detection_geo_given()
-        assert given.detection_with_geo.geo_y == 5699325.96
+        assert given.detection_with_geo.geo_y == GEO_Y
 
     def test_geo_x_returns_none_when_column_absent(self) -> None:
         given = create_pandas_detection_geo_given()
