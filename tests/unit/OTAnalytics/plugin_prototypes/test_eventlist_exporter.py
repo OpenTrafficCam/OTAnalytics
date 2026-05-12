@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 
-import pytest
-
 from OTAnalytics.application.export_formats import event_list
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     EventListDataFrameBuilder,
 )
 from tests.utils.builders.event_builder import EventBuilder
+
+GEO_X = 449210.0
+GEO_Y = 5699310.0
 
 
 @dataclass
@@ -20,7 +21,7 @@ class EventListGiven:
 
 def create_event_list_given() -> EventListGiven:
     """Create test fixtures for event list export geo coordinate tests."""
-    builder_with = EventBuilder(geo_x=449210.0, geo_y=5699310.0)
+    builder_with = EventBuilder(geo_x=GEO_X, geo_y=GEO_Y)
     builder_with.append_section_event()
     builder_without = EventBuilder()
     builder_without.append_section_event()
@@ -72,13 +73,13 @@ class TestEventListDataFrameBuilderGeoCoordinates:
         given = create_event_list_given()
         target = create_target_with_geo(given)
         df = target.build()
-        assert df[event_list.GEO_X].iloc[0] == pytest.approx(449210.0, abs=0.001)
+        assert df[event_list.GEO_X].iloc[0] == GEO_X
 
     def test_geo_y_value_correct(self) -> None:
         given = create_event_list_given()
         target = create_target_with_geo(given)
         df = target.build()
-        assert df[event_list.GEO_Y].iloc[0] == pytest.approx(5699310.0, abs=0.001)
+        assert df[event_list.GEO_Y].iloc[0] == GEO_Y
 
     def test_geo_columns_absent_when_events_have_no_geo(self) -> None:
         given = create_event_list_given()
