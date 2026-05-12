@@ -900,6 +900,8 @@ class TestFindLineIntersectionsGeoPassthrough:
         )
         assert START_GEO_X not in result.columns
         assert END_GEO_X not in result.columns
+        assert START_GEO_Y not in result.columns
+        assert END_GEO_Y not in result.columns
 
 
 @dataclass
