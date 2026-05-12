@@ -643,6 +643,10 @@ class PolarsDetectionGeoGiven:
     detection_without_geo: PolarsDetection
 
 
+GEO_X = 449245.82
+GEO_Y = 5699325.96
+
+
 def create_polars_detection_geo_given() -> PolarsDetectionGeoGiven:
     """Creates a PolarsDetectionGeoGiven with and without geo keys in row data."""
     occurrence = datetime(2024, 1, 1, tzinfo=timezone.utc)
@@ -657,8 +661,8 @@ def create_polars_detection_geo_given() -> PolarsDetectionGeoGiven:
         track.INTERPOLATED_DETECTION: False,
         track.VIDEO_NAME: "cam.mp4",
         track.INPUT_FILE: "cam.otdet",
-        track.GEO_X: 449245.82,
-        track.GEO_Y: 5699325.96,
+        track.GEO_X: GEO_X,
+        track.GEO_Y: GEO_Y,
     }
     row_without = {
         k: v for k, v in row_with.items() if k not in (track.GEO_X, track.GEO_Y)
@@ -672,11 +676,11 @@ def create_polars_detection_geo_given() -> PolarsDetectionGeoGiven:
 class TestPolarsDetectionGeoCoordinates:
     def test_geo_x_returns_value_when_key_present(self) -> None:
         given = create_polars_detection_geo_given()
-        assert given.detection_with_geo.geo_x == 449245.82
+        assert given.detection_with_geo.geo_x == GEO_X
 
     def test_geo_y_returns_value_when_key_present(self) -> None:
         given = create_polars_detection_geo_given()
-        assert given.detection_with_geo.geo_y == 5699325.96
+        assert given.detection_with_geo.geo_y == GEO_Y
 
     def test_geo_x_returns_none_when_key_absent(self) -> None:
         given = create_polars_detection_geo_given()
