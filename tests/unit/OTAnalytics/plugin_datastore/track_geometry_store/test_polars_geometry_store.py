@@ -973,6 +973,10 @@ class TestGeoInterpolationAtIntersection:
         assert INTERPOLATED_GEO_Y not in points.columns
 
 
+GEO_X = 449210.0
+GEO_Y = 5699310.0
+
+
 @dataclass
 class CreateEventsGeoGiven:
     """Holds intersection point datasets for geo coordinate event creation tests."""
@@ -1009,8 +1013,8 @@ def create_create_events_geo_given() -> CreateEventsGeoGiven:
     without_geo = pl.DataFrame(base)
     with_geo = without_geo.with_columns(
         [
-            pl.Series(INTERPOLATED_GEO_X, [449210.0]),
-            pl.Series(INTERPOLATED_GEO_Y, [5699310.0]),
+            pl.Series(INTERPOLATED_GEO_X, [GEO_X]),
+            pl.Series(INTERPOLATED_GEO_Y, [GEO_Y]),
         ]
     )
     return CreateEventsGeoGiven(
@@ -1028,8 +1032,8 @@ class TestCreateEventsGeoCoordinates:
         event_dataset = given.points_with_geo.create_events(offset)
         events = list(event_dataset)
         assert len(events) == 1
-        assert events[0].geo_x == pytest.approx(449210.0)
-        assert events[0].geo_y == pytest.approx(5699310.0)
+        assert events[0].geo_x == GEO_X
+        assert events[0].geo_y == GEO_Y
 
     def test_events_have_none_geo_when_no_geo_columns(self) -> None:
         given = create_create_events_geo_given()
