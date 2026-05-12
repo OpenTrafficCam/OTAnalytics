@@ -759,6 +759,14 @@ class SegmentGeoGiven:
     df_without_geo: pl.DataFrame
 
 
+GIVEN_START_GEO_X = 449200.0
+GIVEN_MIDDLE_GEO_X = 449210.0
+GIVEN_END_GEO_X = 449220.0
+GIVEN_START_GEO_Y = 5699300.0
+GIVEN_MIDDLE_GEO_Y = 5699310.0
+GIVEN_END_GEO_Y = 5699320.0
+
+
 def create_segment_geo_given() -> SegmentGeoGiven:
     """Creates a SegmentGeoGiven with two DataFrames, with and without geo columns."""
     base = {
@@ -780,8 +788,12 @@ def create_segment_geo_given() -> SegmentGeoGiven:
     df_without_geo = pl.DataFrame(base)
     df_with_geo = df_without_geo.with_columns(
         [
-            pl.Series(track.GEO_X, [449200.0, 449210.0, 449220.0]),
-            pl.Series(track.GEO_Y, [5699300.0, 5699310.0, 5699320.0]),
+            pl.Series(
+                track.GEO_X, [GIVEN_START_GEO_X, GIVEN_MIDDLE_GEO_X, GIVEN_END_GEO_X]
+            ),
+            pl.Series(
+                track.GEO_Y, [GIVEN_START_GEO_Y, GIVEN_MIDDLE_GEO_Y, GIVEN_END_GEO_Y]
+            ),
         ]
     )
     return SegmentGeoGiven(df_with_geo=df_with_geo, df_without_geo=df_without_geo)
@@ -800,8 +812,8 @@ class TestCreateTrackSegmentsGeoCoordinates:
         given = create_segment_geo_given()
         result = create_track_segments(given.df_with_geo)
         # First segment: start=row0 (449200), end=row1 (449210)
-        assert result[START_GEO_X][0] == 449200.0
-        assert result[END_GEO_X][0] == 449210.0
+        assert result[START_GEO_X][0] == GIVEN_START_GEO_X
+        assert result[END_GEO_X][0] == GIVEN_MIDDLE_GEO_X
 
     def test_segments_omit_geo_columns_when_absent(self) -> None:
         given = create_segment_geo_given()
