@@ -806,6 +806,10 @@ class TestSimpleCutTrackSegmentBuilder:
         assert track_builder._detections == []
 
 
+GEO_X = 449245.82
+GEO_Y = 5699325.96
+
+
 @dataclass
 class PythonDetectionGeoGiven:
     """Holds PythonDetection instances for geo coordinate tests."""
@@ -816,7 +820,7 @@ class PythonDetectionGeoGiven:
 
 def create_python_detection_geo_given() -> PythonDetectionGeoGiven:
     """Creates a PythonDetectionGeoGiven with and without geo coordinates."""
-    builder_with = TrackBuilder(geo_x=449245.82, geo_y=5699325.96)
+    builder_with = TrackBuilder(geo_x=GEO_X, geo_y=GEO_Y)
     builder_with.append_detection()
     builder_without = TrackBuilder()
     builder_without.append_detection()
@@ -831,11 +835,11 @@ def create_python_detection_geo_given() -> PythonDetectionGeoGiven:
 class TestPythonDetectionGeoCoordinates:
     def test_geo_x_returns_value_when_set(self) -> None:
         given = create_python_detection_geo_given()
-        assert given.detection_with_geo.geo_x == 449245.82
+        assert given.detection_with_geo.geo_x == GEO_X
 
     def test_geo_y_returns_value_when_set(self) -> None:
         given = create_python_detection_geo_given()
-        assert given.detection_with_geo.geo_y == 5699325.96
+        assert given.detection_with_geo.geo_y == GEO_Y
 
     def test_geo_x_returns_none_when_not_set(self) -> None:
         given = create_python_detection_geo_given()
