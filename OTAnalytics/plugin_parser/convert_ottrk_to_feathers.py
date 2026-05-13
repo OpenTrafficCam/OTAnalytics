@@ -64,8 +64,8 @@ def _serialize_georeference_metadata(metadata: GeoreferenceMetadata) -> Dict[str
             ottrk_format.GEO_BOUNDS_MAX_Y: metadata.geo_max_y,
         },
         ottrk_format.BIRDS_EYE_VIEW_SIZE: {
-            ottrk_format.BIRDS_EYE_VIEW_WIDTH: metadata.bev_width,
-            ottrk_format.BIRDS_EYE_VIEW_HEIGHT: metadata.bev_height,
+            ottrk_format.BIRDS_EYE_VIEW_WIDTH: metadata.birds_eye_view_width,
+            ottrk_format.BIRDS_EYE_VIEW_HEIGHT: metadata.birds_eye_view_height,
         },
         ottrk_format.BEV_PADDING: metadata.padding,
         ottrk_format.CRS: metadata.crs,

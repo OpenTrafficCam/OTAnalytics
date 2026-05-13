@@ -294,8 +294,8 @@ class TestParseGeoreferenceMetadata:
             geo_min_y=5699274.275524861,
             geo_max_x=449294.8688478645,
             geo_max_y=5699370.047860203,
-            bev_width=983,
-            bev_height=983,
+            birds_eye_view_width=983,
+            birds_eye_view_height=983,
             padding=20,
             crs="EPSG:25833",
         )

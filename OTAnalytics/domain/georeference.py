@@ -15,8 +15,8 @@ class GeoreferenceMetadata:
         geo_min_y: South boundary in UTM northing (metres).
         geo_max_x: East boundary in UTM easting (metres).
         geo_max_y: North boundary in UTM northing (metres).
-        bev_width: Width of the BEV image in pixels.
-        bev_height: Height of the BEV image in pixels.
+        birds_eye_view_width: Width of the BEV image in pixels.
+        birds_eye_view_height: Height of the BEV image in pixels.
         padding: Pixel padding applied to all edges of the BEV image.
         crs: Coordinate reference system as a WKT or authority string.
     """
@@ -25,8 +25,8 @@ class GeoreferenceMetadata:
     geo_min_y: float
     geo_max_x: float
     geo_max_y: float
-    bev_width: int
-    bev_height: int
+    birds_eye_view_width: int
+    birds_eye_view_height: int
     padding: int
     crs: str
 
@@ -46,10 +46,10 @@ def pixel_to_geo(
         per-detection geo_x/geo_y fields.
     """
     scale_x = (metadata.geo_max_x - metadata.geo_min_x) / (
-        metadata.bev_width - 2 * metadata.padding
+        metadata.birds_eye_view_width - 2 * metadata.padding
     )
     scale_y = (metadata.geo_max_y - metadata.geo_min_y) / (
-        metadata.bev_height - 2 * metadata.padding
+        metadata.birds_eye_view_height - 2 * metadata.padding
     )
     geo_x = metadata.geo_min_x + (x - metadata.padding) * scale_x
     geo_y = metadata.geo_max_y - (y - metadata.padding) * scale_y

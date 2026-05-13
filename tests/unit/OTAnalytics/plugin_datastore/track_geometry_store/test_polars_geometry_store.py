@@ -1185,8 +1185,8 @@ class TestWrapIntersectionPointsWithGeo:
             geo_min_y=5699300.0,
             geo_max_x=449300.0,
             geo_max_y=5699350.0,
-            bev_width=200,
-            bev_height=200,
+            birds_eye_view_width=200,
+            birds_eye_view_height=200,
             padding=20,
             crs="EPSG:25833",
         )

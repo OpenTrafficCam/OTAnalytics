@@ -23,8 +23,8 @@ SAMPLE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
     geo_min_y=5699274.0,
     geo_max_x=449294.0,
     geo_max_y=5699370.0,
-    bev_width=983,
-    bev_height=983,
+    birds_eye_view_width=983,
+    birds_eye_view_height=983,
     padding=20,
     crs="EPSG:25833",
 )

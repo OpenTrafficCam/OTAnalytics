@@ -21,8 +21,8 @@ def sample_metadata() -> GeoreferenceMetadata:
         geo_min_y=GEO_MIN_Y,
         geo_max_x=GEO_MAX_X,
         geo_max_y=GEO_MAX_Y,
-        bev_width=BEV_WIDTH,
-        bev_height=BEV_HEIGHT,
+        birds_eye_view_width=BEV_WIDTH,
+        birds_eye_view_height=BEV_HEIGHT,
         padding=PADDING,
         crs=SAMPLE_CRS,
     )

@@ -668,8 +668,8 @@ class OttrkParser(TrackParser):
             geo_min_y=bounds[ottrk_format.GEO_BOUNDS_MIN_Y],
             geo_max_x=bounds[ottrk_format.GEO_BOUNDS_MAX_X],
             geo_max_y=bounds[ottrk_format.GEO_BOUNDS_MAX_Y],
-            bev_width=bev_size[ottrk_format.BIRDS_EYE_VIEW_WIDTH],
-            bev_height=bev_size[ottrk_format.BIRDS_EYE_VIEW_HEIGHT],
+            birds_eye_view_width=bev_size[ottrk_format.BIRDS_EYE_VIEW_WIDTH],
+            birds_eye_view_height=bev_size[ottrk_format.BIRDS_EYE_VIEW_HEIGHT],
             padding=georeference[ottrk_format.BEV_PADDING],
             crs=georeference[ottrk_format.CRS],
         )
