@@ -1284,3 +1284,119 @@ class TestWrapIntersectionPointsFallback:
         evt = events[0]
         assert evt.geo_x is None
         assert evt.geo_y is None
+
+
+@dataclass
+class FindLineIntersectionsEquivalenceGiven:
+    """Holds a segments DataFrame where geo and pixel columns are numerically
+    identical so that pixel and geo intersection paths can be compared directly."""
+
+    segments_df: pl.DataFrame
+    line_start_x: float
+    line_start_y: float
+    line_end_x: float
+    line_end_y: float
+    offset: RelativeOffsetCoordinate
+
+
+def create_find_line_intersections_equivalence_given() -> (
+    FindLineIntersectionsEquivalenceGiven
+):
+    """Builds segments where START_GEO_X == START_X, etc., and W=H=0.
+
+    Three segments cover the relevant cases:
+      - Row 1: vertical segment (50,0)->(50,100), crosses x=25..75 line  -> intersects
+      - Row 2: horizontal segment (0,0)->(10,0), well below the line     -> misses
+      - Row 3: parallel to the section line (50,200)->(50,300)           -> parallel
+    """
+    from datetime import timezone
+
+    occ = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start_x = [50.0, 0.0, 50.0]
+    start_y = [0.0, 0.0, 200.0]
+    end_x = [50.0, 10.0, 50.0]
+    end_y = [100.0, 0.0, 300.0]
+    segments_df = pl.DataFrame(
+        {
+            ROW_ID: [1, 2, 3],
+            TRACK_ID: ["t1", "t2", "t3"],
+            TRACK_CLASSIFICATION: ["car"] * 3,
+            END_VIDEO_NAME: ["cam.mp4"] * 3,
+            END_FRAME: [2, 2, 2],
+            START_X: start_x,
+            START_Y: start_y,
+            END_X: end_x,
+            END_Y: end_y,
+            START_W: [0.0] * 3,
+            START_H: [0.0] * 3,
+            END_W: [0.0] * 3,
+            END_H: [0.0] * 3,
+            START_OCCURRENCE: [occ] * 3,
+            END_OCCURRENCE: [occ] * 3,
+            START_GEO_X: start_x,
+            START_GEO_Y: start_y,
+            END_GEO_X: end_x,
+            END_GEO_Y: end_y,
+        }
+    )
+    return FindLineIntersectionsEquivalenceGiven(
+        segments_df=segments_df,
+        line_start_x=25.0,
+        line_start_y=50.0,
+        line_end_x=75.0,
+        line_end_y=50.0,
+        offset=RelativeOffsetCoordinate(0.3, 0.4),
+    )
+
+
+def _equal_with_none(a: list, b: list, tol: float = 1e-9) -> bool:
+    if len(a) != len(b):
+        return False
+    for x, y in zip(a, b):
+        if x is None and y is None:
+            continue
+        if x is None or y is None:
+            return False
+        if abs(x - y) > tol:
+            return False
+    return True
+
+
+class TestFindLineIntersectionsPixelGeoEquivalence:
+    """Guards against drift between pixel and geo intersection implementations.
+
+    When geo columns equal pixel columns and W=H=0, both paths must produce
+    identical INTERSECTS, INTERSECTION_X, INTERSECTION_Y for every row.
+    """
+
+    def test_pixel_and_geo_paths_produce_identical_intersections(self) -> None:
+        given = create_find_line_intersections_equivalence_given()
+        pixel_result = find_line_intersections(
+            given.segments_df,
+            line_id="line-1",
+            start_x=given.line_start_x,
+            start_y=given.line_start_y,
+            end_x=given.line_end_x,
+            end_y=given.line_end_y,
+            offset=given.offset,
+            use_geo=False,
+        )
+        geo_result = find_line_intersections(
+            given.segments_df,
+            line_id="line-1",
+            start_x=given.line_start_x,
+            start_y=given.line_start_y,
+            end_x=given.line_end_x,
+            end_y=given.line_end_y,
+            offset=given.offset,
+            use_geo=True,
+        )
+        assert pixel_result[INTERSECTS].to_list() == geo_result[INTERSECTS].to_list()
+        assert _equal_with_none(
+            pixel_result[INTERSECTION_X].to_list(),
+            geo_result[INTERSECTION_X].to_list(),
+        )
+        assert _equal_with_none(
+            pixel_result[INTERSECTION_Y].to_list(),
+            geo_result[INTERSECTION_Y].to_list(),
+        )
