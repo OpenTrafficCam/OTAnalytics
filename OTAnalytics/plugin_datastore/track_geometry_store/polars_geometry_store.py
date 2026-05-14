@@ -1430,6 +1430,12 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                     (pl.col(START_Y) + pl.col(START_H) * offset.y).alias(PREVIOUS_Y),
                 ]
             )
+            # Segment-length math in the same coordinate space as
+            # INTERSECTION_X/Y. The offset is applied uniformly via
+            # START_W/END_W (and H counterparts); when geo column names are
+            # passed, the corresponding W/H values are 0 (point-based geo
+            # detections have no bounding box), so the offset terms vanish
+            # and the formula reduces to end_geo - start_geo.
             .with_columns(
                 [
                     (
@@ -1449,6 +1455,9 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                     .alias(SEGMENT_LENGTH)
                 ]
             )
+            # Same W/H=0 invariant applies: when geo column names are passed
+            # the offset terms vanish, reducing the formula to
+            # INTERSECTION_X - start_geo.
             .with_columns(
                 [
                     (
