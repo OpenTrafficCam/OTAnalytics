@@ -1305,9 +1305,9 @@ def create_find_line_intersections_equivalence_given() -> (
     """Builds segments where START_GEO_X == START_X, etc., and W=H=0.
 
     Three segments cover the relevant cases:
-      - Row 1: vertical segment (50,0)->(50,100), crosses x=25..75 line  -> intersects
-      - Row 2: horizontal segment (0,0)->(10,0), well below the line     -> misses
-      - Row 3: parallel to the section line (50,200)->(50,300)           -> parallel
+      - Row 1: vertical (50,0)->(50,100), crosses horizontal line  -> intersects
+      - Row 2: horizontal (0,0)->(10,0), parallel to section line  -> parallel miss
+      - Row 3: vertical (50,200)->(50,300), above the line         -> non-parallel miss
     """
     from datetime import timezone
 
