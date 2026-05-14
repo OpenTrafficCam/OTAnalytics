@@ -1400,3 +1400,103 @@ class TestFindLineIntersectionsPixelGeoEquivalence:
             pixel_result[INTERSECTION_Y].to_list(),
             geo_result[INTERSECTION_Y].to_list(),
         )
+
+
+@dataclass
+class ComputeIntersectionPointsEquivalenceGiven:
+    """Holds an intersecting-segments DataFrame and a section for direct
+    invocation of the unified ``_compute_intersection_points`` helper."""
+
+    intersecting_segments: pl.DataFrame
+    section: LineSection
+    offset: RelativeOffsetCoordinate
+
+
+def create_compute_intersection_points_equivalence_given() -> (
+    ComputeIntersectionPointsEquivalenceGiven
+):
+    """Builds the input that ``_compute_intersection_points`` expects after the
+    upstream intersection check has run: segments with INTERSECTS=True, and
+    INTERSECTION_X/INTERSECTION_Y already populated.
+
+    Geo columns equal pixel columns, and W=H=0, so calling the helper with the
+    default pixel columns must produce the same RELATIVE_POSITION as calling it
+    with the geo columns.
+    """
+    from datetime import timezone
+
+    occ_start = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    occ_end = datetime(2024, 1, 1, 0, 0, 1, tzinfo=timezone.utc)
+    # Single segment from (0,0) to (10,0); section at x=4 crosses at (4,0).
+    # Expected relative_position = 4/10 = 0.4
+    intersecting_segments = pl.DataFrame(
+        {
+            ROW_ID: [1],
+            TRACK_ID: ["t1"],
+            TRACK_CLASSIFICATION: ["car"],
+            END_VIDEO_NAME: ["cam.mp4"],
+            END_FRAME: [2],
+            START_X: [0.0],
+            START_Y: [0.0],
+            END_X: [10.0],
+            END_Y: [0.0],
+            START_W: [0.0],
+            START_H: [0.0],
+            END_W: [0.0],
+            END_H: [0.0],
+            START_OCCURRENCE: [occ_start],
+            END_OCCURRENCE: [occ_end],
+            START_GEO_X: [0.0],
+            START_GEO_Y: [0.0],
+            END_GEO_X: [10.0],
+            END_GEO_Y: [0.0],
+            INTERSECTS: [True],
+            INTERSECTION_X: [4.0],
+            INTERSECTION_Y: [0.0],
+            INTERSECTION_LINE_ID: ["section_1"],
+        }
+    )
+    section = LineSection(
+        id=SectionId("section_1"),
+        name="section_1",
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+        },
+        plugin_data={},
+        coordinates=[Coordinate(4.0, -1.0), Coordinate(4.0, 1.0)],
+    )
+    return ComputeIntersectionPointsEquivalenceGiven(
+        intersecting_segments=intersecting_segments,
+        section=section,
+        offset=RelativeOffsetCoordinate(0.0, 0.0),
+    )
+
+
+class TestComputeIntersectionPointsPixelGeoEquivalence:
+    """Guards against drift between pixel and geo relative-position computation.
+
+    When geo columns equal pixel columns and W=H=0, calling
+    ``_compute_intersection_points`` with default (pixel) column names must
+    produce the same RELATIVE_POSITION as calling it with geo column names.
+    """
+
+    def test_pixel_defaults_and_geo_columns_produce_identical_relative_position(
+        self,
+    ) -> None:
+        given = create_compute_intersection_points_equivalence_given()
+        dataset = PolarsTrackGeometryDataset(given.offset)
+        pixel_result = dataset._compute_intersection_points(
+            given.intersecting_segments, given.offset, given.section
+        )
+        geo_result = dataset._compute_intersection_points(
+            given.intersecting_segments,
+            given.offset,
+            given.section,
+            start_x_col=START_GEO_X,
+            start_y_col=START_GEO_Y,
+            end_x_col=END_GEO_X,
+            end_y_col=END_GEO_Y,
+        )
+        assert pixel_result[RELATIVE_POSITION].to_list() == approx(
+            geo_result[RELATIVE_POSITION].to_list()
+        )

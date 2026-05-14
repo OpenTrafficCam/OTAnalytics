@@ -1346,11 +1346,17 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                 intersecting_segments = intersections.filter(pl.col(INTERSECTS))
 
                 if use_geo:
-                    intersection_points = self._compute_intersection_points_geo(
-                        intersecting_segments, offset, section
+                    intersection_points = self._compute_intersection_points(
+                        intersecting_segments,
+                        offset,
+                        section,
+                        start_x_col=START_GEO_X,
+                        start_y_col=START_GEO_Y,
+                        end_x_col=END_GEO_X,
+                        end_y_col=END_GEO_Y,
                     )
                 else:
-                    intersection_points = self._compute_intersection_points_pixel(
+                    intersection_points = self._compute_intersection_points(
                         intersecting_segments, offset, section
                     )
 
@@ -1380,18 +1386,37 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
             return PolarsIntersectionPointsDataset(pl.concat(result_df))
         return PolarsIntersectionPointsDataset()
 
-    def _compute_intersection_points_pixel(
+    def _compute_intersection_points(
         self,
         intersecting_segments: pl.DataFrame,
         offset: RelativeOffsetCoordinate,
         section: Section,
+        start_x_col: str = START_X,
+        start_y_col: str = START_Y,
+        end_x_col: str = END_X,
+        end_y_col: str = END_Y,
     ) -> pl.DataFrame:
-        """Compute RELATIVE_POSITION using pixel-space distances.
+        """Compute RELATIVE_POSITION using distances in the configured space.
+
+        ``CURRENT_X/Y`` and ``PREVIOUS_X/Y`` always reference pixel columns
+        because they are propagated downstream as event coordinates in pixel
+        space.
+
+        ``SEGMENT_LENGTH_X/Y`` and ``INTERSECTION_LENGTH_X/Y`` reference the
+        column names supplied via parameters. The same offset-applied formula
+        ``X + W * offset.x`` is used regardless of which columns are passed:
+        for geo column names, the corresponding ``W``/``H`` values are 0
+        (point-based geo detections have no bounding box), so the offset
+        application becomes a no-op and the formula reduces to
+        ``END_GEO_X - START_GEO_X`` / ``INTERSECTION_X - START_GEO_X``.
 
         Args:
             intersecting_segments: Segments that intersect the section leg.
             offset: Relative offset for bounding-box adjustment.
             section: The section being intersected.
+            start_x_col, start_y_col, end_x_col, end_y_col: Column names that
+                provide segment endpoints for length computation. Defaults to
+                pixel columns. Pass geo column names for geo-space distances.
 
         Returns:
             DataFrame with RELATIVE_POSITION and SECTION_ID columns added.
@@ -1407,8 +1432,14 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
             )
             .with_columns(
                 [
-                    (pl.col(CURRENT_X) - pl.col(PREVIOUS_X)).alias(SEGMENT_LENGTH_X),
-                    (pl.col(CURRENT_Y) - pl.col(PREVIOUS_Y)).alias(SEGMENT_LENGTH_Y),
+                    (
+                        (pl.col(end_x_col) + pl.col(END_W) * offset.x)
+                        - (pl.col(start_x_col) + pl.col(START_W) * offset.x)
+                    ).alias(SEGMENT_LENGTH_X),
+                    (
+                        (pl.col(end_y_col) + pl.col(END_H) * offset.y)
+                        - (pl.col(start_y_col) + pl.col(START_H) * offset.y)
+                    ).alias(SEGMENT_LENGTH_Y),
                 ]
             )
             .with_columns(
@@ -1422,99 +1453,12 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                 [
                     (
                         pl.col(INTERSECTION_X)
-                        - (pl.col(START_X) + pl.col(START_W) * offset.x)
+                        - (pl.col(start_x_col) + pl.col(START_W) * offset.x)
                     ).alias(INTERSECTION_LENGTH_X),
                     (
                         pl.col(INTERSECTION_Y)
-                        - (pl.col(START_Y) + pl.col(START_H) * offset.y)
+                        - (pl.col(start_y_col) + pl.col(START_H) * offset.y)
                     ).alias(INTERSECTION_LENGTH_Y),
-                ]
-            )
-            .with_columns(
-                [
-                    (
-                        pl.col(INTERSECTION_LENGTH_X) ** 2
-                        + pl.col(INTERSECTION_LENGTH_Y) ** 2
-                    )
-                    .sqrt()
-                    .alias(INTERSECTION_LENGTH)
-                ]
-            )
-            .with_columns(
-                [
-                    pl.when(
-                        (pl.col(SEGMENT_LENGTH_X) == 0)
-                        & (pl.col(SEGMENT_LENGTH_Y) == 0)
-                    )
-                    .then(None)
-                    .otherwise(pl.col(INTERSECTION_LENGTH) / pl.col(SEGMENT_LENGTH))
-                    .alias(RELATIVE_POSITION)
-                ]
-            )
-            .filter(pl.col(RELATIVE_POSITION).is_not_null())
-            .drop(
-                [
-                    SEGMENT_LENGTH_X,
-                    SEGMENT_LENGTH_Y,
-                    SEGMENT_LENGTH,
-                    INTERSECTION_LENGTH_X,
-                    INTERSECTION_LENGTH_Y,
-                    INTERSECTION_LENGTH,
-                ]
-            )
-            .with_columns(pl.lit(section.id.id).alias(SECTION_ID))
-        )
-
-    def _compute_intersection_points_geo(
-        self,
-        intersecting_segments: pl.DataFrame,
-        offset: RelativeOffsetCoordinate,
-        section: Section,
-    ) -> pl.DataFrame:
-        """Compute RELATIVE_POSITION using geo-space distances.
-
-        Used when intersection was computed in geo space. INTERSECTION_X/Y
-        are in geo coordinates, so SEGMENT_LENGTH and INTERSECTION_LENGTH
-        must also use geo columns.
-
-        Args:
-            intersecting_segments: Segments that intersect the section leg.
-            offset: Relative offset (used for CURRENT_X/Y, PREVIOUS_X/Y only).
-            section: The section being intersected.
-
-        Returns:
-            DataFrame with RELATIVE_POSITION and SECTION_ID columns added.
-        """
-        return (
-            intersecting_segments.with_columns(
-                [
-                    (pl.col(END_X) + pl.col(END_W) * offset.x).alias(CURRENT_X),
-                    (pl.col(END_Y) + pl.col(END_H) * offset.y).alias(CURRENT_Y),
-                    (pl.col(START_X) + pl.col(START_W) * offset.x).alias(PREVIOUS_X),
-                    (pl.col(START_Y) + pl.col(START_H) * offset.y).alias(PREVIOUS_Y),
-                ]
-            )
-            .with_columns(
-                [
-                    (pl.col(END_GEO_X) - pl.col(START_GEO_X)).alias(SEGMENT_LENGTH_X),
-                    (pl.col(END_GEO_Y) - pl.col(START_GEO_Y)).alias(SEGMENT_LENGTH_Y),
-                ]
-            )
-            .with_columns(
-                [
-                    (pl.col(SEGMENT_LENGTH_X) ** 2 + pl.col(SEGMENT_LENGTH_Y) ** 2)
-                    .sqrt()
-                    .alias(SEGMENT_LENGTH)
-                ]
-            )
-            .with_columns(
-                [
-                    (pl.col(INTERSECTION_X) - pl.col(START_GEO_X)).alias(
-                        INTERSECTION_LENGTH_X
-                    ),
-                    (pl.col(INTERSECTION_Y) - pl.col(START_GEO_Y)).alias(
-                        INTERSECTION_LENGTH_Y
-                    ),
                 ]
             )
             .with_columns(
