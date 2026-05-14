@@ -369,6 +369,9 @@ def calculate_intersection_points(
     Returns:
         pl.DataFrame: DataFrame with intersection points.
     """
+    line_dx = line_x2 - line_x1
+    line_dy = line_y2 - line_y1
+
     if segments_df.is_empty():
         return segments_df
 
@@ -381,11 +384,11 @@ def calculate_intersection_points(
     result_df = result_df.with_columns(
         [
             pl.when(pl.col(INTERSECTS))
-            .then(line_x1 + pl.col(UA) * (line_x2 - line_x1))
+            .then(line_x1 + pl.col(UA) * line_dx)
             .otherwise(None)
             .alias(INTERSECTION_X),
             pl.when(pl.col(INTERSECTS))
-            .then(line_y1 + pl.col(UA) * (line_y2 - line_y1))
+            .then(line_y1 + pl.col(UA) * line_dy)
             .otherwise(None)
             .alias(INTERSECTION_Y),
         ]
