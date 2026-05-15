@@ -1,7 +1,8 @@
 from pathlib import Path
 
-from OTAnalytics.application.datastore import TrackParser, VideoParser
+from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository

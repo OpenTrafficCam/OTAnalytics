@@ -11,13 +11,13 @@ from typing import Optional
 
 import polars as pl
 
-from OTAnalytics.application.datastore import (
+from OTAnalytics.application.logger import logger
+from OTAnalytics.application.parser.track_parser import (
     DetectionMetadata,
     TrackParser,
     TrackParseResult,
     TracksParseResult,
 )
-from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import (
@@ -252,9 +252,10 @@ class FeathersParser(TrackParser):
         """Parse georeference metadata from the metadata dictionary.
 
         Args:
-            metadata: Full metadata dictionary from the metadata JSON file.
+            metadata (GeoreferenceMetadata | None): Full metadata dictionary from the
+                metadata JSON file.
 
         Returns:
-            GeoreferenceMetadata if the georeference block is present, otherwise None.
+            GeoreferenceMetadata: if the georeference block is present, otherwise None.
         """
         return OttrkParser._parse_georeference_metadata(metadata)

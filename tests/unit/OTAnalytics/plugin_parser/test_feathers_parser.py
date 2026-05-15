@@ -13,7 +13,10 @@ import polars
 import pytest
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.application.datastore import DetectionMetadata, TrackParseResult
+from OTAnalytics.application.parser.track_parser import (
+    DetectionMetadata,
+    TrackParseResult,
+)
 from OTAnalytics.domain import track
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.video import VideoMetadata

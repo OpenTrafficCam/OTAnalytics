@@ -14,9 +14,9 @@ from OTAnalytics.application.config import (
     CLI_CUTTING_SECTION_MARKER,
     CUTTING_SECTION_MARKER,
 )
-from OTAnalytics.application.datastore import DetectionMetadata, TrackParser
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.parser.cli_parser import CliMode
+from OTAnalytics.application.parser.track_parser import DetectionMetadata, TrackParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (

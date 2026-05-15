@@ -10,15 +10,14 @@ from OTAnalytics.application.config import (
     ALLOWED_TRACK_SIZE_PARSING,
     TRACK_LENGTH_LIMIT,
 )
-from OTAnalytics.application.datastore import (
-    DetectionMetadata,
-    EventListParser,
-    TrackParser,
-    TrackParseResult,
-    VideoParser,
-)
+from OTAnalytics.application.datastore import EventListParser, VideoParser
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
+from OTAnalytics.application.parser.track_parser import (
+    DetectionMetadata,
+    TrackParser,
+    TrackParseResult,
+)
 from OTAnalytics.domain import event, flow, geometry, section, video
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import Event, EventType

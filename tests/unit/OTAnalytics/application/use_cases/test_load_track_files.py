@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, call
 
-from OTAnalytics.application.datastore import TracksParseResult
+from OTAnalytics.application.parser.track_parser import TracksParseResult
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.video import Video

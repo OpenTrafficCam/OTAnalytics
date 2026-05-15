@@ -2,8 +2,8 @@ from pathlib import Path
 from typing import Any, Dict
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.application.datastore import TrackParseResult
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.parser.track_parser import TrackParseResult
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
