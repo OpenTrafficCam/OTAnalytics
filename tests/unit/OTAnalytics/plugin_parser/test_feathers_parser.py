@@ -27,7 +27,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk
 from OTAnalytics.plugin_parser.feathers_parser import FeathersParser
 
-SAMPLE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
+GEOREF_METADATA = GeoreferenceMetadata(
     geo_min_x=449199.0,
     geo_min_y=5699274.0,
     geo_max_x=449294.0,
@@ -40,17 +40,36 @@ SAMPLE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
 
 SAMPLE_GEOREFERENCE_METADATA_DICT = {
     ottrk_format.GEO_BOUNDS: {
-        ottrk_format.GEO_BOUNDS_MIN_X: 449199.0,
-        ottrk_format.GEO_BOUNDS_MIN_Y: 5699274.0,
-        ottrk_format.GEO_BOUNDS_MAX_X: 449294.0,
-        ottrk_format.GEO_BOUNDS_MAX_Y: 5699370.0,
+        ottrk_format.GEO_BOUNDS_MIN_X: GEOREF_METADATA.geo_min_x,
+        ottrk_format.GEO_BOUNDS_MIN_Y: GEOREF_METADATA.geo_min_y,
+        ottrk_format.GEO_BOUNDS_MAX_X: GEOREF_METADATA.geo_max_x,
+        ottrk_format.GEO_BOUNDS_MAX_Y: GEOREF_METADATA.geo_max_y,
     },
     ottrk_format.BIRDS_EYE_VIEW_SIZE: {
-        ottrk_format.BIRDS_EYE_VIEW_WIDTH: 983,
-        ottrk_format.BIRDS_EYE_VIEW_HEIGHT: 983,
+        ottrk_format.BIRDS_EYE_VIEW_WIDTH: GEOREF_METADATA.birds_eye_view_width,
+        ottrk_format.BIRDS_EYE_VIEW_HEIGHT: GEOREF_METADATA.birds_eye_view_height,
     },
-    ottrk_format.BEV_PADDING: 20,
-    ottrk_format.CRS: "EPSG:25833",
+    ottrk_format.BEV_PADDING: GEOREF_METADATA.padding,
+    ottrk_format.CRS: GEOREF_METADATA.crs,
+}
+
+SINGLE_ROW = {
+    track.CLASSIFICATION: "car",
+    track.CONFIDENCE: 0.9,
+    track.X: 100.0,
+    track.Y: 100.0,
+    track.W: 50.0,
+    track.H: 80.0,
+    track.FRAME: 1,
+    track.INTERPOLATED_DETECTION: False,
+    ottrk.FIRST: True,
+    ottrk.FINISHED: False,
+    track.VIDEO_NAME: "test.mp4",
+    track.INPUT_FILE: "test.ottrk",
+    track.ORIGINAL_TRACK_ID: "1",
+    track.TRACK_CLASSIFICATION: "car",
+    track.TRACK_ID: "1",
+    track.OCCURRENCE: datetime(2023, 1, 1, 10, 0, 0),
 }
 
 
@@ -348,26 +367,8 @@ class TestFeathersParser:
             track.TRACK_ID,
             track.OCCURRENCE,
         ]
-        row = {
-            track.CLASSIFICATION: "car",
-            track.CONFIDENCE: 0.9,
-            track.X: 100.0,
-            track.Y: 100.0,
-            track.W: 50.0,
-            track.H: 80.0,
-            track.FRAME: 1,
-            track.INTERPOLATED_DETECTION: False,
-            ottrk.FIRST: True,
-            ottrk.FINISHED: False,
-            track.VIDEO_NAME: "test.mp4",
-            track.INPUT_FILE: "test.ottrk",
-            track.ORIGINAL_TRACK_ID: "1",
-            track.TRACK_CLASSIFICATION: "car",
-            track.TRACK_ID: "1",
-            track.OCCURRENCE: datetime(2023, 1, 1, 10, 0, 0),
-        }
-        df_a = polars.DataFrame(row).select(columns_order_a)
-        df_b = polars.DataFrame(row).select(columns_order_b)
+        df_a = polars.DataFrame(SINGLE_ROW).select(columns_order_a)
+        df_b = polars.DataFrame(SINGLE_ROW).select(columns_order_b)
 
         mock_parse_json.return_value = sample_metadata
         mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
@@ -409,32 +410,14 @@ class TestFeathersParser:
         mock_parse_json.return_value = metadata_with_geo
         mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
 
-        row = {
-            track.CLASSIFICATION: "car",
-            track.CONFIDENCE: 0.9,
-            track.X: 100.0,
-            track.Y: 100.0,
-            track.W: 50.0,
-            track.H: 80.0,
-            track.FRAME: 1,
-            track.INTERPOLATED_DETECTION: False,
-            ottrk.FIRST: True,
-            ottrk.FINISHED: False,
-            track.VIDEO_NAME: "test.mp4",
-            track.INPUT_FILE: "test.ottrk",
-            track.ORIGINAL_TRACK_ID: "1",
-            track.TRACK_CLASSIFICATION: "car",
-            track.TRACK_ID: "1",
-            track.OCCURRENCE: datetime(2023, 1, 1, 10, 0, 0),
-        }
-        df = polars.DataFrame(row)
+        df = polars.DataFrame(SINGLE_ROW)
         file_a = test_data_tmp_dir / "geo_test.feather"
         df.write_ipc(file_a)
         (test_data_tmp_dir / "geo_test_metadata.json").write_text("{}")
 
         result = parser.parse_files([file_a])
 
-        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+        assert result.georeference_metadata == GEOREF_METADATA
 
     @patch("OTAnalytics.plugin_parser.feathers_parser.parse_json")
     @patch(
@@ -452,25 +435,7 @@ class TestFeathersParser:
         mock_parse_json.return_value = sample_metadata
         mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
 
-        row = {
-            track.CLASSIFICATION: "car",
-            track.CONFIDENCE: 0.9,
-            track.X: 100.0,
-            track.Y: 100.0,
-            track.W: 50.0,
-            track.H: 80.0,
-            track.FRAME: 1,
-            track.INTERPOLATED_DETECTION: False,
-            ottrk.FIRST: True,
-            ottrk.FINISHED: False,
-            track.VIDEO_NAME: "test.mp4",
-            track.INPUT_FILE: "test.ottrk",
-            track.ORIGINAL_TRACK_ID: "1",
-            track.TRACK_CLASSIFICATION: "car",
-            track.TRACK_ID: "1",
-            track.OCCURRENCE: datetime(2023, 1, 1, 10, 0, 0),
-        }
-        df = polars.DataFrame(row)
+        df = polars.DataFrame(SINGLE_ROW)
         file_a = test_data_tmp_dir / "no_geo_test.feather"
         df.write_ipc(file_a)
         (test_data_tmp_dir / "no_geo_test_metadata.json").write_text("{}")
@@ -488,7 +453,7 @@ class TestParseGeoreferenceMetadata:
 
         result = parser._parse_georeference_metadata(metadata)
 
-        assert result == SAMPLE_GEOREFERENCE_METADATA
+        assert result == GEOREF_METADATA
 
     def test_returns_none_when_key_absent(self, parser: FeathersParser) -> None:
         result = parser._parse_georeference_metadata({})
