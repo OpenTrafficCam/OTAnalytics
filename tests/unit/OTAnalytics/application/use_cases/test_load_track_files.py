@@ -142,6 +142,21 @@ class TestLoadTrackFile:
                 detection_metadata.detection_classes
             )
 
+    def test_load_with_georeference_metadata_update(self) -> None:
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"class1", "class2"},
+        )
+        target = create_target(given)
+
+        target([some_file])
+        given.track_repository.apply_georeference_metadata.assert_called_once_with(
+            given.parse_result.georeference_metadata
+        )
+
 
 @dataclass
 class Given:
