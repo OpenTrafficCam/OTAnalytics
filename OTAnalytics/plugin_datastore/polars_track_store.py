@@ -431,7 +431,11 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         georeference_metadata: "GeoreferenceMetadata | None" = None,
     ) -> "PolarsTrackDataset":
         if tracks.is_empty():
-            return PolarsTrackDataset(track_geometry_factory)
+            return PolarsTrackDataset(
+                track_geometry_factory,
+                calculator=calculator,
+                georeference_metadata=georeference_metadata,
+            )
         tracks = (
             tracks.drop(ROW_ID, strict=False)
             .sort(by=[track.TRACK_ID, track.OCCURRENCE, track.VIDEO_NAME, track.FRAME])
@@ -516,7 +520,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
         updated_geometry_dataset = self._add_to_geometry_dataset(
             PolarsTrackDataset.from_dataframe(
-                updated_dataset, self.track_geometry_factory
+                updated_dataset,
+                self.track_geometry_factory,
+                georeference_metadata=self._georeference_metadata,
             )
         )
 

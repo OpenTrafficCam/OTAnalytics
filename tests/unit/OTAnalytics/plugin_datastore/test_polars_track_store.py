@@ -725,6 +725,20 @@ class TestPolarsTrackDatasetGeoreferenceMetadata:
         dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
         assert dataset.georeference_metadata is None
 
+    def test_from_dataframe_empty_input_preserves_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+    ) -> None:
+        import polars as pl
+
+        empty_df = pl.DataFrame()
+        result = PolarsTrackDataset.from_dataframe(
+            empty_df,
+            track_geometry_factory,
+            georeference_metadata=SAMPLE_GEOREFERENCE_METADATA,
+        )
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
     def test_split_preserves_georeference_metadata(
         self,
         track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
