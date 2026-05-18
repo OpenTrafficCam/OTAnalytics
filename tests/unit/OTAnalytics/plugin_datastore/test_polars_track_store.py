@@ -806,10 +806,10 @@ class TestPolarsTrackDatasetGeoreferenceMetadata:
             [car_track], track_geometry_factory
         ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
 
-        # No FINISHED column → split_finished returns (self, empty)
-        finished, remaining = dataset.split_finished()
+        # All detections are unfinished → split returns (empty_finished, self_remaining)
+        empty_finished, remaining = dataset.split_finished()
 
-        assert finished.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+        assert empty_finished.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
         assert remaining.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
 
     def test_split_finished_with_finished_tracks_preserves_georeference_metadata(
@@ -830,14 +830,20 @@ class TestPolarsTrackDatasetGeoreferenceMetadata:
 
     def test_revert_cuts_for_preserves_georeference_metadata(
         self,
-        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
         car_track: Track,
     ) -> None:
         dataset = PolarsTrackDataset.from_list(
-            [car_track], track_geometry_factory
+            [car_track], PolarsTrackGeometryDataset.from_track_dataset
         ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        # Vertical section at x=1.5 intersects car_track (1,1)→(2,2)
+        section = create_line_section("revert_cut", [(1.5, 0.0), (1.5, 3.0)])
+        offset = RelativeOffsetCoordinate(0.0, 0.0)
+        cut_dataset, original_ids = dataset.cut_with_section(section, offset)
+        cut_dataset = cut_dataset.with_georeference_metadata(
+            SAMPLE_GEOREFERENCE_METADATA
+        )
 
-        result_dataset, _, _ = dataset.revert_cuts_for(PolarsTrackIdSet([]))
+        result_dataset, _, _ = cut_dataset.revert_cuts_for(original_ids)
 
         assert result_dataset.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
 
