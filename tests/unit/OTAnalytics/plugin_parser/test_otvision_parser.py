@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock, call
@@ -31,10 +32,14 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import Video, VideoMetadata
+from OTAnalytics.plugin_datastore.polars_track_store import PolarsTrackDataset
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrack,
     PythonTrackDataset,
+)
+from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
+    PolarsTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
@@ -52,6 +57,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideo,
     CachedVideoParser,
     DetectionFixer,
+    DetectionParser,
     FormatVersions,
     InvalidSectionData,
     MetadataFixer,
@@ -74,20 +80,33 @@ from tests.utils.builders.track_builder import (
     track_builder_with_sample_data,
 )
 
+GEOREF_METADATA = GeoreferenceMetadata(
+    geo_min_x=449199.096512522,
+    geo_min_y=5699274.275524861,
+    geo_max_x=449294.8688478645,
+    geo_max_y=5699370.047860203,
+    birds_eye_view_width=983,
+    birds_eye_view_height=983,
+    padding=20,
+    crs="EPSG:25833",
+)
+
 SAMPLE_GEOREFERENCE_METADATA_DICT = {
     ottrk_dataformat.GEOREFERENCE: {
         ottrk_dataformat.GEO_BOUNDS: {
-            ottrk_dataformat.GEO_BOUNDS_MIN_X: 449199.096512522,
-            ottrk_dataformat.GEO_BOUNDS_MIN_Y: 5699274.275524861,
-            ottrk_dataformat.GEO_BOUNDS_MAX_X: 449294.8688478645,
-            ottrk_dataformat.GEO_BOUNDS_MAX_Y: 5699370.047860203,
+            ottrk_dataformat.GEO_BOUNDS_MIN_X: GEOREF_METADATA.geo_min_x,
+            ottrk_dataformat.GEO_BOUNDS_MIN_Y: GEOREF_METADATA.geo_min_y,
+            ottrk_dataformat.GEO_BOUNDS_MAX_X: GEOREF_METADATA.geo_max_x,
+            ottrk_dataformat.GEO_BOUNDS_MAX_Y: GEOREF_METADATA.geo_max_y,
         },
         ottrk_dataformat.BIRDS_EYE_VIEW_SIZE: {
-            ottrk_dataformat.BIRDS_EYE_VIEW_WIDTH: 983,
-            ottrk_dataformat.BIRDS_EYE_VIEW_HEIGHT: 983,
+            ottrk_dataformat.BIRDS_EYE_VIEW_WIDTH: GEOREF_METADATA.birds_eye_view_width,
+            ottrk_dataformat.BIRDS_EYE_VIEW_HEIGHT: (
+                GEOREF_METADATA.birds_eye_view_height
+            ),
         },
-        ottrk_dataformat.BEV_PADDING: 20,
-        ottrk_dataformat.CRS: "EPSG:25833",
+        ottrk_dataformat.BEV_PADDING: GEOREF_METADATA.padding,
+        ottrk_dataformat.CRS: GEOREF_METADATA.crs,
     }
 }
 
@@ -288,22 +307,58 @@ class TestOttrkParser:
         result = ottrk_parser._parse_georeference_metadata(
             SAMPLE_GEOREFERENCE_METADATA_DICT
         )
-        assert result == GeoreferenceMetadata(
-            geo_min_x=449199.096512522,
-            geo_min_y=5699274.275524861,
-            geo_max_x=449294.8688478645,
-            geo_max_y=5699370.047860203,
-            birds_eye_view_width=983,
-            birds_eye_view_height=983,
-            padding=20,
-            crs="EPSG:25833",
-        )
+        assert result == GEOREF_METADATA
 
     def test_returns_none_when_georeference_block_absent(
         self, ottrk_parser: OttrkParser
     ) -> None:
         result = OttrkParser._parse_georeference_metadata({"video": {}})
         assert result is None
+
+    def test_parse_embeds_georeference_metadata_in_tracks(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_ottrk_parser_with_georeference(test_data_tmp_dir)
+        target = create_target_ottrk_parser(given)
+
+        parse_result = target.parse(given.ottrk_file)
+
+        assert parse_result.tracks.georeference_metadata == GEOREF_METADATA
+
+
+@dataclass
+class GivenOttrkParserWithGeoreference:
+    ottrk_file: Path
+    detection_parser: Mock
+    expected_metadata: GeoreferenceMetadata
+
+
+def setup_default_ottrk_parser_with_georeference(
+    test_data_tmp_dir: Path,
+) -> GivenOttrkParserWithGeoreference:
+    ottrk_file = test_data_tmp_dir / "georeferenced.ottrk"
+    track_builder = track_builder_with_sample_data(input_file=str(ottrk_file))
+    ottrk_data = track_builder.build_ottrk()
+    ottrk_data[ottrk_dataformat.METADATA][ottrk_dataformat.GEOREFERENCE] = (
+        SAMPLE_GEOREFERENCE_METADATA_DICT[ottrk_dataformat.GEOREFERENCE]
+    )
+    write_json_bz2(ottrk_data, ottrk_file)
+
+    detection_parser = Mock(spec=DetectionParser)
+    detection_parser.parse_tracks.return_value = PolarsTrackDataset(
+        track_geometry_factory=PolarsTrackGeometryDataset.from_track_dataset,
+    )
+    return GivenOttrkParserWithGeoreference(
+        ottrk_file=ottrk_file,
+        detection_parser=detection_parser,
+        expected_metadata=GEOREF_METADATA,
+    )
+
+
+def create_target_ottrk_parser(
+    given: GivenOttrkParserWithGeoreference,
+) -> OttrkParser:
+    return OttrkParser(given.detection_parser)
 
 
 class TestPythonDetectionParser:
