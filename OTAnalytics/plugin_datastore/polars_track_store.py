@@ -544,7 +544,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
     def split_finished(self) -> tuple[TrackDataset, TrackDataset]:
         empty = PolarsTrackDataset(
-            self.track_geometry_factory, calculator=self.calculator
+            self.track_geometry_factory,
+            calculator=self.calculator,
+            georeference_metadata=self._georeference_metadata,
         )
         if self._dataset.is_empty():
             return empty, empty
@@ -584,6 +586,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             filtered_data,
             self._geometry_datasets,
             self.calculator,
+            georeference_metadata=self._georeference_metadata,
         )
 
     def remove_multiple(self, track_ids: TrackIdSet) -> "PolarsTrackDataset":
@@ -596,6 +599,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             filtered_data,
             self._geometry_datasets,
             self.calculator,
+            georeference_metadata=self._georeference_metadata,
         )
 
     def __to_raw_ids(self, track_ids: TrackIdSet) -> pl.Series | list:
@@ -854,7 +858,12 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             )
         ).drop(OLD_TRACK_ID)
         return (
-            PolarsTrackDataset.from_dataframe(result, self.track_geometry_factory),
+            PolarsTrackDataset.from_dataframe(
+                result,
+                self.track_geometry_factory,
+                calculator=self.calculator,
+                georeference_metadata=self._georeference_metadata,
+            ),
             original_track_ids,
         )
 
@@ -877,7 +886,10 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         )
 
         return PolarsTrackDataset(
-            self.track_geometry_factory, filtered_dataset, calculator=self.calculator
+            self.track_geometry_factory,
+            filtered_dataset,
+            calculator=self.calculator,
+            georeference_metadata=self._georeference_metadata,
         )
 
     def get_max_confidences_for(self, track_ids: TrackIdSet) -> dict[str, float]:
@@ -933,6 +945,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                 self.track_geometry_factory,
                 geometry_dataset=self._geometry_datasets,
                 calculator=self.calculator,
+                georeference_metadata=self._georeference_metadata,
             ),
             ids_to_revert,
             ids_to_revert,
@@ -979,7 +992,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     def _subset_by_ids(self, track_ids: list[str]) -> "PolarsTrackDataset":
         if not track_ids:
             return PolarsTrackDataset(
-                self.track_geometry_factory, calculator=self.calculator
+                self.track_geometry_factory,
+                calculator=self.calculator,
+                georeference_metadata=self._georeference_metadata,
             )
         subset = self._dataset.filter(pl.col(LEVEL_TRACK_ID).is_in(track_ids))
         geometries = self._get_geometries_for(track_ids)
@@ -988,6 +1003,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             self.track_geometry_factory,
             geometries,
             calculator=self.calculator,
+            georeference_metadata=self._georeference_metadata,
         )
 
     def _get_geometries_for(
@@ -1016,6 +1032,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             dataset=filtered_dataset,
             calculator=self.calculator,
             track_geometry_factory=self.track_geometry_factory,
+            georeference_metadata=self._georeference_metadata,
         )
 
         return updated_track_dataset, ids_to_remove

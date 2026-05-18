@@ -742,6 +742,61 @@ class TestPolarsTrackDatasetGeoreferenceMetadata:
             for batch in batches
         )
 
+    def test_remove_preserves_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        dataset = PolarsTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        result = dataset.remove(car_track.id)
+
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_remove_multiple_preserves_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        dataset = PolarsTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        result = dataset.remove_multiple(PolarsTrackIdSet([car_track.id.id]))
+
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_filter_by_min_detection_length_preserves_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        dataset = PolarsTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        result = dataset.filter_by_min_detection_length(1)
+
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_clear_drops_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+    ) -> None:
+        dataset = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        result = dataset.clear()
+
+        assert result.georeference_metadata is None
+
 
 ALTERNATE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
     geo_min_x=1.0,
