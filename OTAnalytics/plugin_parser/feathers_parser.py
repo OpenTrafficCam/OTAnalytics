@@ -39,21 +39,6 @@ from OTAnalytics.plugin_parser.json_parser import parse_json
 from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
 
 
-def use_feathers_files(files: list[Path]) -> list[Path]:
-    raised_exceptions: list[Exception] = []
-    result = []
-    for file in files:
-        try:
-            result.append(use_feather_file(file))
-        except Exception as cause:
-            raised_exceptions.append(cause)
-    if raised_exceptions:
-        raise ExceptionGroup(
-            "Errors occurred while loading the track files:", raised_exceptions
-        )
-    return result
-
-
 def use_feather_file(file: Path) -> Path:
     if not file.suffix.lower() == FEATHER_FILETYPE:
         if file.suffix.lower() == ".ottrk":

@@ -384,7 +384,7 @@ class TestFeathersParser:
         # Must not raise polars ShapeError when files have different column orders.
         result = parser.parse_files([file_a, file_b])
 
-        assert result.tracks is not None
+        assert len(result.tracks) == 2
 
     def test_parse_embeds_georeference_metadata_in_tracks(
         self, test_data_tmp_dir: Path
