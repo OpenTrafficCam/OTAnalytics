@@ -33,7 +33,7 @@ def combine_track_datasets(results: list[TrackParseResult]) -> TrackDataset:
         raise ValueError("No results to combine")
     tracks = results[0].tracks
     for result in results[1:]:
-        tracks.add_all(result.tracks)
+        tracks = tracks.add_all(result.tracks)
     return tracks
 
 
