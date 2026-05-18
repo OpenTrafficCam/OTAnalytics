@@ -82,9 +82,10 @@ def create_metadata_dict(parse_result: TrackParseResult) -> Dict[str, Any]:
         },
         KEY_VIDEO_METADATA: parse_result.video_metadata.to_dict(),
     }
-    if parse_result.georeference_metadata is not None:
+    georeference = parse_result.tracks.georeference_metadata
+    if georeference is not None:
         metadata[ottrk_format.GEOREFERENCE] = _serialize_georeference_metadata(
-            parse_result.georeference_metadata
+            georeference
         )
     return metadata
 

@@ -26,11 +26,12 @@ GIVEN_METADATA = GeoreferenceMetadata(
 def _make_parse_result(
     georeference_metadata: GeoreferenceMetadata | None,
 ) -> TrackParseResult:
+    tracks = Mock()
+    tracks.georeference_metadata = georeference_metadata
     return TrackParseResult(
-        tracks=Mock(),
+        tracks=tracks,
         detection_metadata=DetectionMetadata(frozenset(["car"])),
         video_metadata=Mock(spec=VideoMetadata),
-        georeference_metadata=georeference_metadata,
     )
 
 
