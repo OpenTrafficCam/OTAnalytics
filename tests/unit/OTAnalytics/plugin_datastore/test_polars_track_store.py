@@ -729,8 +729,6 @@ class TestPolarsTrackDatasetGeoreferenceMetadata:
         self,
         track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
     ) -> None:
-        import polars as pl
-
         empty_df = pl.DataFrame()
         result = PolarsTrackDataset.from_dataframe(
             empty_df,
