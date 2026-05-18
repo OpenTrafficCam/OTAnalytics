@@ -4,11 +4,23 @@ from unittest.mock import MagicMock, Mock, call
 
 from OTAnalytics.application.parser.track_parser import TracksParseResult
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.video import Video
 
 some_file = Path("some.file.ottrk")
 other_file = Path("other.file.ottrk")
+
+GEOREF_METADATA = GeoreferenceMetadata(
+    geo_min_x=449199.096512522,
+    geo_min_y=5699274.275524861,
+    geo_max_x=449294.8688478645,
+    geo_max_y=5699370.047860203,
+    birds_eye_view_width=983,
+    birds_eye_view_height=983,
+    padding=20,
+    crs="EPSG:25833",
+)
 
 
 class TestLoadTrackFile:
@@ -142,20 +154,24 @@ class TestLoadTrackFile:
                 detection_metadata.detection_classes
             )
 
-    def test_load_with_georeference_metadata_update(self) -> None:
+    def test_load_passes_dataset_with_georeference_metadata_to_repository(
+        self,
+    ) -> None:
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
             track_files=[some_file],
             existing_track_files=[],
             classes={"class1", "class2"},
+            georeference_metadata=GEOREF_METADATA,
         )
         target = create_target(given)
 
         target([some_file])
-        given.track_repository.apply_georeference_metadata.assert_called_once_with(
-            given.parse_result.georeference_metadata
-        )
+
+        add_all_call = given.track_repository.add_all.call_args
+        dataset_arg = add_all_call.args[0]
+        assert dataset_arg.georeference_metadata == GEOREF_METADATA
 
 
 @dataclass
@@ -189,6 +205,7 @@ def setup(
     track_files: list[Path],
     existing_track_files: list[Path],
     classes: set[str],
+    georeference_metadata: GeoreferenceMetadata | None = None,
 ) -> Given:
     videos = create_videos(video_files)
     videos_metadata = [create_video_metadata(video_file) for video_file in video_files]
@@ -196,6 +213,7 @@ def setup(
 
     track_dataset_result = Mock()
     type(track_dataset_result).track_ids = frozenset(track_ids)
+    track_dataset_result.georeference_metadata = georeference_metadata
 
     parse_result = Mock()
     parse_result.tracks = track_dataset_result

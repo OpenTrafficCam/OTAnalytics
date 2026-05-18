@@ -59,9 +59,6 @@ class LoadTrackFiles:
         ]
         self._video_repository.add_all(videos)
         self._track_repository.add_all(parse_result.tracks)
-        self._track_repository.apply_georeference_metadata(
-            parse_result.georeference_metadata
-        )
         self._track_file_repository.add_all(files_to_load)
         for detection_metadata in parse_result.detections_metadata:
             self._tracks_metadata.update_detection_classes(

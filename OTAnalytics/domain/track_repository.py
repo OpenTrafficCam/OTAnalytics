@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from OTAnalytics.application.logger import logger
-from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
@@ -149,20 +148,6 @@ class TrackRepository:
         if len(tracks):
             self._dataset = self._dataset.add_all(tracks)
             self.observers.notify(TrackRepositoryEvent.create_added(tracks.track_ids))
-
-    def apply_georeference_metadata(
-        self, metadata: GeoreferenceMetadata | None
-    ) -> None:
-        """Attach geo-referencing metadata to the track dataset.
-
-        Args:
-            metadata (GeoreferenceMetadata | None): Geo-referencing metadata to attach
-                to the track dataset. Pass None to leave the dataset unchanged.
-        """
-        if metadata is None:
-            return
-        if hasattr(self._dataset, "with_georeference_metadata"):
-            self._dataset = self._dataset.with_georeference_metadata(metadata)
 
     def get_for(self, id: TrackId) -> Optional[Track]:
         """
