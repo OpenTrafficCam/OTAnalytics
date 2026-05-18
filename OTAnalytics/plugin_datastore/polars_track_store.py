@@ -44,6 +44,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     START_X,
     START_Y,
     EmptyTrackIdSet,
+    IncompatibleGeoreferenceMetadataError,
     IntersectionPointsDataset,
     TrackDataset,
     TrackDoesNotExistError,
@@ -448,9 +449,26 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         new_tracks = self.__get_tracks(other)
         if new_tracks.is_empty():
             return self
+
+        incoming_metadata = (
+            other.georeference_metadata
+            if isinstance(other, PolarsTrackDataset)
+            else None
+        )
+
         if self._dataset.is_empty():
             return PolarsTrackDataset.from_dataframe(
-                new_tracks, self.track_geometry_factory, calculator=self.calculator
+                new_tracks,
+                self.track_geometry_factory,
+                calculator=self.calculator,
+                georeference_metadata=incoming_metadata,
+            )
+
+        if self._georeference_metadata != incoming_metadata:
+            raise IncompatibleGeoreferenceMetadataError(
+                "Cannot merge dataset with georeference metadata "
+                f"{incoming_metadata!r} into dataset with georeference metadata "
+                f"{self._georeference_metadata!r}"
             )
 
         # Ensure new_tracks has track classification before concatenating
@@ -482,8 +500,12 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                 updated_dataset, self.track_geometry_factory
             )
         )
+
         return PolarsTrackDataset.from_dataframe(
-            updated_dataset, self.track_geometry_factory, updated_geometry_dataset
+            updated_dataset,
+            self.track_geometry_factory,
+            updated_geometry_dataset,
+            georeference_metadata=self._georeference_metadata,
         )
 
     def __get_tracks(self, other: Iterable[Track]) -> pl.DataFrame:

@@ -15,6 +15,7 @@ from OTAnalytics.domain.track_dataset.track_dataset import (
     END_GEO_Y,
     START_GEO_X,
     START_GEO_Y,
+    IncompatibleGeoreferenceMetadataError,
 )
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
@@ -740,6 +741,124 @@ class TestPolarsTrackDatasetGeoreferenceMetadata:
             batch.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
             for batch in batches
         )
+
+
+ALTERNATE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
+    geo_min_x=1.0,
+    geo_min_y=1.0,
+    geo_max_x=101.0,
+    geo_max_y=101.0,
+    birds_eye_view_width=983,
+    birds_eye_view_height=983,
+    padding=20,
+    crs="EPSG:25833",
+)
+
+
+class TestPolarsTrackDatasetAddAllGeoreferenceValidation:
+    def test_add_all_to_empty_inherits_incoming_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+    ) -> None:
+        empty = PolarsTrackDataset(track_geometry_factory=track_geometry_factory)
+        incoming = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        result = empty.add_all(incoming)
+
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_add_all_to_empty_with_no_incoming_metadata_keeps_none(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+    ) -> None:
+        empty = PolarsTrackDataset(track_geometry_factory=track_geometry_factory)
+        incoming = PolarsTrackDataset.from_list([car_track], track_geometry_factory)
+
+        result = empty.add_all(incoming)
+
+        assert result.georeference_metadata is None
+
+    def test_add_all_with_matching_metadata_succeeds(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        current = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        incoming = PolarsTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        result = current.add_all(incoming)
+
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_add_all_with_mismatched_metadata_raises(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        current = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        incoming = PolarsTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        ).with_georeference_metadata(ALTERNATE_GEOREFERENCE_METADATA)
+
+        with pytest.raises(IncompatibleGeoreferenceMetadataError):
+            current.add_all(incoming)
+
+    def test_add_all_populated_without_metadata_and_incoming_with_metadata_raises(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        current = PolarsTrackDataset.from_list([car_track], track_geometry_factory)
+        incoming = PolarsTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        with pytest.raises(IncompatibleGeoreferenceMetadataError):
+            current.add_all(incoming)
+
+    def test_add_all_populated_with_metadata_and_incoming_without_metadata_raises(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        current = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        incoming = PolarsTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        )
+
+        with pytest.raises(IncompatibleGeoreferenceMetadataError):
+            current.add_all(incoming)
+
+    def test_add_all_both_without_metadata_succeeds(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        current = PolarsTrackDataset.from_list([car_track], track_geometry_factory)
+        incoming = PolarsTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        )
+
+        result = current.add_all(incoming)
+
+        assert result.georeference_metadata is None
 
 
 GEO_X_VALUES = [449250.0, 449260.0, 449270.0]
