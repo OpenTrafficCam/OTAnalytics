@@ -11,14 +11,13 @@ from typing import Optional
 
 import polars as pl
 
-from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.track_parser import (
     DetectionMetadata,
     TrackParser,
     TrackParseResult,
-    TracksParseResult,
 )
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import (
     POLARS_TRACK_GEOMETRY_FACTORY,
@@ -94,72 +93,8 @@ class FeathersParser(TrackParser):
             track_geometry_factory = PolarsTrackGeometryDataset.from_track_dataset
         self._track_geometry_factory = track_geometry_factory
 
-    def parse_files(self, files: list[Path]) -> TracksParseResult:
-        """
-        Parse feather file and its metadata to create TrackParseResult.
-
-        Args:
-            file: Path to the feather file
-
-        Returns:
-            TrackParseResult: Contains tracks, detection metadata, and video metadata
-
-        Raises:
-            FileNotFoundError: If the feather file or metadata file is not found
-            ValueError: If the file extension is not .feather
-        """
-        logger().info(f"Parsing {len(files)} track files...")
-        files_to_process = use_feathers_files(files)
-        videos_metadata = []
-        detections_metadata = []
-        georeference_metadatas: list[GeoreferenceMetadata | None] = []
-        data_frames = []
-        for file in files_to_process:
-            if not file.exists():
-                raise FileNotFoundError(f"Feather file not found: {file}")
-            # Construct metadata file path
-            metadata_file = file.parent / f"{file.stem}{METADATA_SUFFIX}"
-            if not metadata_file.exists():
-                raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
-
-            # Read the feather file
-            df = pl.read_ipc(file)
-            data_frames.append(df)
-
-            # Read the metadata
-            metadata = parse_json(metadata_file)
-
-            # Parse video metadata
-            video_metadata = self._parse_video_metadata(metadata["video_metadata"])
-            videos_metadata.append(video_metadata)
-
-            # Parse detection metadata
-            detection_metadata = self._parse_detection_metadata(
-                metadata["detection_metadata"]
-            )
-            detections_metadata.append(detection_metadata)
-            georeference_metadatas.append(self._parse_georeference_metadata(metadata))
-        logger().info(f"{len(files)} track files parsed.")
-
-        columns = data_frames[0].columns
-        data_frames = [df.select(columns) for df in data_frames]
-        df = pl.concat(data_frames)
-        # Create TrackDataset from DataFrame
-        calculator = PolarsByMaxConfidence()
-        tracks = PolarsTrackDataset.from_dataframe(
-            df, self._track_geometry_factory, calculator=calculator
-        )
-        logger().info("TrackDataset created.")
-        georeference_metadata = next(
-            (m for m in georeference_metadatas if m is not None), None
-        )
-        return TracksParseResult(
-            tracks, detections_metadata, videos_metadata, georeference_metadata
-        )
-
     def parse(self, file: Path) -> TrackParseResult:
-        """
-        Parse feather file and its metadata to create TrackParseResult.
+        """Parse feather file and its metadata to create TrackParseResult.
 
         Args:
             file: Path to the feather file
@@ -169,36 +104,30 @@ class FeathersParser(TrackParser):
 
         Raises:
             FileNotFoundError: If the feather file or metadata file is not found
-            ValueError: If the file extension is not .feather
         """
         file = use_feather_file(file)
 
         if not file.exists():
             raise FileNotFoundError(f"Feather file not found: {file}")
-        # Construct metadata file path
         metadata_file = file.parent / f"{file.stem}{METADATA_SUFFIX}"
         if not metadata_file.exists():
             raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
 
-        # Read the feather file
         df = pl.read_ipc(file)
-
-        # Read the metadata
         metadata = parse_json(metadata_file)
 
-        # Create TrackDataset from DataFrame
         calculator = PolarsByMaxConfidence()
-        tracks = PolarsTrackDataset.from_dataframe(
+        tracks: TrackDataset = PolarsTrackDataset.from_dataframe(
             df, self._track_geometry_factory, calculator=calculator
         )
 
-        # Parse video metadata
         video_metadata = self._parse_video_metadata(metadata[KEY_VIDEO_METADATA])
-
-        # Parse detection metadata
         detection_metadata = self._parse_detection_metadata(
             metadata[KEY_DETECTION_METADATA]
         )
+        georeference_metadata = self._parse_georeference_metadata(metadata)
+        if georeference_metadata is not None:
+            tracks = tracks.with_georeference_metadata(georeference_metadata)
 
         return TrackParseResult(tracks, detection_metadata, video_metadata)
 

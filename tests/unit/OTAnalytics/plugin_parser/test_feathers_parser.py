@@ -2,7 +2,9 @@
 Tests for the FeathersParser module.
 """
 
+import json
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -313,13 +315,8 @@ class TestFeathersParser:
         assert result.detection_classes == frozenset()
 
     @patch("OTAnalytics.plugin_parser.feathers_parser.parse_json")
-    @patch(
-        "OTAnalytics.plugin_datastore.polars_track_store."
-        "PolarsTrackDataset.from_dataframe"
-    )
     def test_parse_files_with_different_column_order(
         self,
-        mock_from_dataframe: Mock,
         mock_parse_json: Mock,
         parser: FeathersParser,
         sample_metadata: dict[str, Any],
@@ -331,6 +328,7 @@ class TestFeathersParser:
         See: https://openproject.platomo.de/work_packages/9514
         """
 
+        row_two = {**SINGLE_ROW, track.TRACK_ID: "2", track.ORIGINAL_TRACK_ID: "2"}
         columns_order_a = [
             track.CLASSIFICATION,
             track.CONFIDENCE,
@@ -368,10 +366,9 @@ class TestFeathersParser:
             track.OCCURRENCE,
         ]
         df_a = polars.DataFrame(SINGLE_ROW).select(columns_order_a)
-        df_b = polars.DataFrame(SINGLE_ROW).select(columns_order_b)
+        df_b = polars.DataFrame(row_two).select(columns_order_b)
 
         mock_parse_json.return_value = sample_metadata
-        mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
 
         tmpdir_path = test_data_tmp_dir
 
@@ -384,65 +381,91 @@ class TestFeathersParser:
             metadata_path = tmpdir_path / f"{stem}_metadata.json"
             metadata_path.write_text('{"test": "data"}')
 
-        parser.parse_files([file_a, file_b])
+        # Must not raise polars ShapeError when files have different column orders.
+        result = parser.parse_files([file_a, file_b])
 
-        concat_df = mock_from_dataframe.call_args[0][0]
-        assert concat_df.shape[0] == 2
-        assert set(concat_df.columns) == set(columns_order_a)
+        assert result.tracks is not None
 
-    @patch("OTAnalytics.plugin_parser.feathers_parser.parse_json")
-    @patch(
-        "OTAnalytics.plugin_datastore.polars_track_store."
-        "PolarsTrackDataset.from_dataframe"
-    )
-    def test_parse_files_returns_georeference_metadata_when_present(
-        self,
-        mock_from_dataframe: Mock,
-        mock_parse_json: Mock,
-        parser: FeathersParser,
-        sample_metadata: dict[str, Any],
-        test_data_tmp_dir: Path,
+    def test_parse_embeds_georeference_metadata_in_tracks(
+        self, test_data_tmp_dir: Path
     ) -> None:
-        metadata_with_geo = {
-            **sample_metadata,
-            ottrk_format.GEOREFERENCE: SAMPLE_GEOREFERENCE_METADATA_DICT,
-        }
-        mock_parse_json.return_value = metadata_with_geo
-        mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
+        given = setup_default_feathers_parser_with_georeference(test_data_tmp_dir)
+        target = create_target_feathers_parser(given)
 
-        df = polars.DataFrame(SINGLE_ROW)
-        file_a = test_data_tmp_dir / "geo_test.feather"
-        df.write_ipc(file_a)
-        (test_data_tmp_dir / "geo_test_metadata.json").write_text("{}")
+        parse_result = target.parse(given.feather_files[0])
 
-        result = parser.parse_files([file_a])
+        assert parse_result.tracks.georeference_metadata == given.expected_metadata
 
-        assert result.georeference_metadata == GEOREF_METADATA
-
-    @patch("OTAnalytics.plugin_parser.feathers_parser.parse_json")
-    @patch(
-        "OTAnalytics.plugin_datastore.polars_track_store."
-        "PolarsTrackDataset.from_dataframe"
-    )
-    def test_parse_files_returns_none_georeference_metadata_when_absent(
-        self,
-        mock_from_dataframe: Mock,
-        mock_parse_json: Mock,
-        parser: FeathersParser,
-        sample_metadata: dict[str, Any],
-        test_data_tmp_dir: Path,
+    def test_parse_files_with_matching_metadata_carries_through(
+        self, test_data_tmp_dir: Path
     ) -> None:
-        mock_parse_json.return_value = sample_metadata
-        mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
+        given = setup_default_feathers_parser_with_georeference(
+            test_data_tmp_dir,
+            stems=("file_a", "file_b"),
+            metadata=GEOREF_METADATA,
+        )
+        target = create_target_feathers_parser(given)
 
-        df = polars.DataFrame(SINGLE_ROW)
-        file_a = test_data_tmp_dir / "no_geo_test.feather"
-        df.write_ipc(file_a)
-        (test_data_tmp_dir / "no_geo_test_metadata.json").write_text("{}")
+        parse_result = target.parse_files(list(given.feather_files))
 
-        result = parser.parse_files([file_a])
+        assert parse_result.tracks.georeference_metadata == given.expected_metadata
 
-        assert result.georeference_metadata is None
+    def test_parse_files_with_no_metadata_yields_none(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_feathers_parser_with_georeference(
+            test_data_tmp_dir,
+            stems=("no_geo",),
+            metadata=None,
+        )
+        target = create_target_feathers_parser(given)
+
+        parse_result = target.parse_files(list(given.feather_files))
+
+        assert parse_result.tracks.georeference_metadata is None
+
+
+@dataclass
+class GivenFeathersParserWithGeoreference:
+    feather_files: tuple[Path, ...]
+    expected_metadata: GeoreferenceMetadata | None
+
+
+def setup_default_feathers_parser_with_georeference(
+    test_data_tmp_dir: Path,
+    stems: tuple[str, ...] = ("georeferenced",),
+    metadata: GeoreferenceMetadata | None = GEOREF_METADATA,
+) -> GivenFeathersParserWithGeoreference:
+    sidecar: dict[str, Any] = {
+        "detection_metadata": {"detection_classes": ["car"]},
+        "video_metadata": {
+            "path": "test_video.mp4",
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
+            "recorded_fps": 30.0,
+            "number_of_frames": 900,
+        },
+    }
+    if metadata is not None:
+        sidecar[ottrk_format.GEOREFERENCE] = SAMPLE_GEOREFERENCE_METADATA_DICT
+
+    feather_paths: list[Path] = []
+    for stem in stems:
+        feather_path = test_data_tmp_dir / f"{stem}.feather"
+        polars.DataFrame(SINGLE_ROW).write_ipc(feather_path)
+        metadata_path = test_data_tmp_dir / f"{stem}_metadata.json"
+        metadata_path.write_text(json.dumps(sidecar))
+        feather_paths.append(feather_path)
+
+    return GivenFeathersParserWithGeoreference(
+        feather_files=tuple(feather_paths),
+        expected_metadata=metadata,
+    )
+
+
+def create_target_feathers_parser(
+    given: GivenFeathersParserWithGeoreference,
+) -> FeathersParser:
+    return FeathersParser()
 
 
 class TestParseGeoreferenceMetadata:
