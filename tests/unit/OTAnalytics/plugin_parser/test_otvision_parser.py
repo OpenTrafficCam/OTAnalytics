@@ -323,7 +323,7 @@ class TestOttrkParser:
 
         parse_result = target.parse(given.ottrk_file)
 
-        assert parse_result.tracks.georeference_metadata == GEOREF_METADATA
+        assert parse_result.tracks.georeference_metadata == given.expected_metadata
 
 
 @dataclass
