@@ -74,6 +74,23 @@ from tests.utils.builders.track_builder import (
     track_builder_with_sample_data,
 )
 
+SAMPLE_GEOREFERENCE_METADATA_DICT = {
+    ottrk_dataformat.GEOREFERENCE: {
+        ottrk_dataformat.GEO_BOUNDS: {
+            ottrk_dataformat.GEO_BOUNDS_MIN_X: 449199.096512522,
+            ottrk_dataformat.GEO_BOUNDS_MIN_Y: 5699274.275524861,
+            ottrk_dataformat.GEO_BOUNDS_MAX_X: 449294.8688478645,
+            ottrk_dataformat.GEO_BOUNDS_MAX_Y: 5699370.047860203,
+        },
+        ottrk_dataformat.BIRDS_EYE_VIEW_SIZE: {
+            ottrk_dataformat.BIRDS_EYE_VIEW_WIDTH: 983,
+            ottrk_dataformat.BIRDS_EYE_VIEW_HEIGHT: 983,
+        },
+        ottrk_dataformat.BEV_PADDING: 20,
+        ottrk_dataformat.CRS: "EPSG:25833",
+    }
+}
+
 
 @pytest.fixture
 def track_builder_setup_with_sample_data() -> TrackBuilder:
@@ -265,28 +282,10 @@ class TestOttrkParser:
         )
         ottrk_file.unlink()
 
-
-SAMPLE_GEOREFERENCE_METADATA_DICT = {
-    ottrk_dataformat.GEOREFERENCE: {
-        ottrk_dataformat.GEO_BOUNDS: {
-            ottrk_dataformat.GEO_BOUNDS_MIN_X: 449199.096512522,
-            ottrk_dataformat.GEO_BOUNDS_MIN_Y: 5699274.275524861,
-            ottrk_dataformat.GEO_BOUNDS_MAX_X: 449294.8688478645,
-            ottrk_dataformat.GEO_BOUNDS_MAX_Y: 5699370.047860203,
-        },
-        ottrk_dataformat.BIRDS_EYE_VIEW_SIZE: {
-            ottrk_dataformat.BIRDS_EYE_VIEW_WIDTH: 983,
-            ottrk_dataformat.BIRDS_EYE_VIEW_HEIGHT: 983,
-        },
-        ottrk_dataformat.BEV_PADDING: 20,
-        ottrk_dataformat.CRS: "EPSG:25833",
-    }
-}
-
-
-class TestParseGeoreferenceMetadata:
-    def test_returns_metadata_when_georeference_block_present(self) -> None:
-        result = OttrkParser._parse_georeference_metadata(
+    def test_returns_metadata_when_georeference_block_present(
+        self, ottrk_parser: OttrkParser
+    ) -> None:
+        result = ottrk_parser._parse_georeference_metadata(
             SAMPLE_GEOREFERENCE_METADATA_DICT
         )
         assert result == GeoreferenceMetadata(
@@ -300,7 +299,9 @@ class TestParseGeoreferenceMetadata:
             crs="EPSG:25833",
         )
 
-    def test_returns_none_when_georeference_block_absent(self) -> None:
+    def test_returns_none_when_georeference_block_absent(
+        self, ottrk_parser: OttrkParser
+    ) -> None:
         result = OttrkParser._parse_georeference_metadata({"video": {}})
         assert result is None
 
