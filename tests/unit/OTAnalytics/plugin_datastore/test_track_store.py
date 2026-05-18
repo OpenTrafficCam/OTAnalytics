@@ -10,6 +10,7 @@ from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
@@ -792,3 +793,30 @@ class TestPandasDetectionGeoCoordinates:
     def test_geo_y_returns_none_when_column_absent(self) -> None:
         given = create_pandas_detection_geo_given()
         assert given.detection_without_geo.geo_y is None
+
+
+SAMPLE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
+    geo_min_x=449199.0,
+    geo_min_y=5699274.0,
+    geo_max_x=449294.0,
+    geo_max_y=5699370.0,
+    birds_eye_view_width=983,
+    birds_eye_view_height=983,
+    padding=20,
+    crs="EPSG:25833",
+)
+
+
+class TestPandasTrackDatasetGeoreferenceUnsupported:
+    def test_georeference_metadata_property_returns_none(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory=track_geometry_factory)
+        assert dataset.georeference_metadata is None
+
+    def test_with_georeference_metadata_raises_not_implemented(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory=track_geometry_factory)
+        with pytest.raises(NotImplementedError):
+            dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
