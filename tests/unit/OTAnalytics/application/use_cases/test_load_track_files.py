@@ -2,11 +2,29 @@ from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, call
 
-from OTAnalytics.application.parser.track_parser import TracksParseResult
+import pytest
+
+from OTAnalytics.application.parser.track_parser import (
+    DetectionMetadata,
+    TrackParser,
+    TracksParseResult,
+)
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.track import TrackId
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    IncompatibleGeoreferenceMetadataError,
+)
+from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import Video
+from OTAnalytics.plugin_datastore.polars_track_store import (
+    POLARS_TRACK_GEOMETRY_FACTORY,
+    PolarsTrackDataset,
+)
+from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
+    PolarsTrackGeometryDataset,
+)
+from tests.utils.builders.track_builder import create_track
 
 some_file = Path("some.file.ottrk")
 other_file = Path("other.file.ottrk")
@@ -16,6 +34,17 @@ GEOREF_METADATA = GeoreferenceMetadata(
     geo_min_y=5699274.275524861,
     geo_max_x=449294.8688478645,
     geo_max_y=5699370.047860203,
+    birds_eye_view_width=983,
+    birds_eye_view_height=983,
+    padding=20,
+    crs="EPSG:25833",
+)
+
+ALTERNATE_GEOREF_METADATA = GeoreferenceMetadata(
+    geo_min_x=1.0,
+    geo_min_y=1.0,
+    geo_max_x=101.0,
+    geo_max_y=101.0,
     birds_eye_view_width=983,
     birds_eye_view_height=983,
     padding=20,
@@ -173,6 +202,44 @@ class TestLoadTrackFile:
         dataset_arg = add_all_call.args[0]
         assert dataset_arg.georeference_metadata == GEOREF_METADATA
 
+    def test_two_loads_with_mismatched_metadata_raise(self) -> None:
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY = (
+            PolarsTrackGeometryDataset.from_track_dataset
+        )
+        repository = TrackRepository(
+            PolarsTrackDataset(track_geometry_factory=track_geometry_factory)
+        )
+
+        first_track = create_track("1", [(1, 1), (2, 2)], 1)
+        first_tracks = PolarsTrackDataset.from_list(
+            [first_track], track_geometry_factory
+        ).with_georeference_metadata(GEOREF_METADATA)
+        target_first = create_target_for_repo(
+            repository=repository,
+            parse_result=TracksParseResult(
+                tracks=first_tracks,
+                detections_metadata=[DetectionMetadata(frozenset(["car"]))],
+                videos_metadata=[create_video_metadata(Path("video1.mp4"))],
+            ),
+        )
+        target_first([some_file])
+
+        second_track = create_track("2", [(3, 3), (4, 4)], 3)
+        second_tracks = PolarsTrackDataset.from_list(
+            [second_track], track_geometry_factory
+        ).with_georeference_metadata(ALTERNATE_GEOREF_METADATA)
+        target_second = create_target_for_repo(
+            repository=repository,
+            parse_result=TracksParseResult(
+                tracks=second_tracks,
+                detections_metadata=[DetectionMetadata(frozenset(["car"]))],
+                videos_metadata=[create_video_metadata(Path("video2.mp4"))],
+            ),
+        )
+
+        with pytest.raises(IncompatibleGeoreferenceMetadataError):
+            target_second([other_file])
+
 
 @dataclass
 class Given:
@@ -274,4 +341,38 @@ def create_target(given: Given) -> LoadTrackFiles:
         progressbar=given.progressbar,
         tracks_metadata=given.tracks_metadata,
         videos_metadata=given.videos_metadata,
+    )
+
+
+def create_target_for_repo(
+    repository: TrackRepository,
+    parse_result: TracksParseResult,
+) -> LoadTrackFiles:
+    """Build a LoadTrackFiles wired to a real TrackRepository.
+
+    All collaborators except the repository (and a configured mock parser)
+    are simple Mocks so the test exercises the metadata-compatibility check
+    on the real PolarsTrackDataset path.
+    """
+    track_parser = Mock(spec=TrackParser)
+    track_parser.parse_files.return_value = parse_result
+
+    track_file_repository = Mock()
+    track_file_repository.get_all.return_value = []
+
+    video_parser = Mock()
+    video_parser.parse.side_effect = [
+        create_video(Path(str(metadata.path)))
+        for metadata in parse_result.videos_metadata
+    ]
+
+    return LoadTrackFiles(
+        track_parser=track_parser,
+        track_repository=repository,
+        track_file_repository=track_file_repository,
+        video_repository=Mock(),
+        video_parser=video_parser,
+        progressbar=Mock(),
+        tracks_metadata=Mock(),
+        videos_metadata=Mock(),
     )
