@@ -446,6 +446,25 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         )
 
     def add_all(self, other: Iterable[Track]) -> "PolarsTrackDataset":
+        """Add all tracks from `other` to this dataset.
+
+        Args:
+            other: A `PolarsTrackDataset` (with or without georeference metadata),
+                or any `Iterable[Track]` of raw tracks (treated as having no
+                metadata).
+
+        Returns:
+            A new `PolarsTrackDataset` containing the merged tracks. When current
+            is empty, the result inherits any metadata carried by `other`.
+            Otherwise the current dataset's metadata is preserved.
+
+        Raises:
+            IncompatibleGeoreferenceMetadataError: when current is non-empty and
+                the metadata carried by `other` (or its absence) does not match
+                the current dataset's metadata. Passing a non-`PolarsTrackDataset`
+                iterable into a metadata-bearing current dataset triggers this
+                because raw tracks are treated as having no metadata.
+        """
         new_tracks = self.__get_tracks(other)
         if new_tracks.is_empty():
             return self

@@ -860,6 +860,44 @@ class TestPolarsTrackDatasetAddAllGeoreferenceValidation:
 
         assert result.georeference_metadata is None
 
+    def test_add_all_populated_with_metadata_and_plain_track_list_raises(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        """Passing a raw list of Track objects into a populated metadata-bearing
+        dataset is unsafe: raw tracks carry no metadata, so the merge would
+        silently dilute the georeferenced invariant. The strict equality
+        check raises.
+        """
+        current = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        with pytest.raises(IncompatibleGeoreferenceMetadataError):
+            current.add_all([pedestrian_track])
+
+    def test_add_all_empty_incoming_is_noop_even_with_mismatched_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+    ) -> None:
+        """An empty incoming dataset never triggers validation: there is no
+        detection to merge, so the metadata invariant cannot be violated.
+        The current dataset is returned unchanged.
+        """
+        current = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        empty_incoming = PolarsTrackDataset(
+            track_geometry_factory=track_geometry_factory
+        ).with_georeference_metadata(ALTERNATE_GEOREFERENCE_METADATA)
+
+        result = current.add_all(empty_incoming)
+
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
 
 GEO_X_VALUES = [449250.0, 449260.0, 449270.0]
 GEO_Y_VALUES = [5855000.0, 5855010.0, 5855020.0]
