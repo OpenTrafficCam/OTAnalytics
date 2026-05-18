@@ -827,3 +827,35 @@ class TestPandasTrackDatasetGeoreferenceMetadata:
         dataset = PandasTrackDataset(track_geometry_factory=track_geometry_factory)
         dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
         assert dataset.georeference_metadata is None
+
+    def test_with_georeference_metadata_preserves_tracks_on_non_empty_dataset(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        track_builder = TrackBuilder()
+        track_builder.append_detection()
+        track_builder.append_detection()
+        built_track = track_builder.build_track()
+        dataset = PandasTrackDataset.from_list([built_track], track_geometry_factory)
+
+        updated = dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        assert updated.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+        assert len(updated) == 1
+        retrieved = updated.get_for(built_track.id)
+        assert retrieved is not None
+        assert retrieved.id == built_track.id
+
+    def test_with_georeference_metadata_none_clears_existing_metadata(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory=track_geometry_factory)
+        dataset_with_metadata = dataset.with_georeference_metadata(
+            SAMPLE_GEOREFERENCE_METADATA
+        )
+        assert (
+            dataset_with_metadata.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+        )
+
+        cleared = dataset_with_metadata.with_georeference_metadata(None)
+
+        assert cleared.georeference_metadata is None

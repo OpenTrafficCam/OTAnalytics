@@ -322,8 +322,8 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     ) -> "PandasTrackDataset":
         return PandasTrackDataset(
             self._track_geometry_factory,
-            self._dataset if not self._dataset.empty else None,
-            self._geometry_datasets,
+            self._dataset,
+            dict(self._geometry_datasets),
             self._calculator,
             georeference_metadata=metadata,
         )
