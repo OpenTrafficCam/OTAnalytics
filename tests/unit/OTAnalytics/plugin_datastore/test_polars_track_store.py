@@ -797,6 +797,79 @@ class TestPolarsTrackDatasetGeoreferenceMetadata:
 
         assert result.georeference_metadata is None
 
+    def test_split_finished_preserves_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+    ) -> None:
+        dataset = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        # No FINISHED column → split_finished returns (self, empty)
+        finished, remaining = dataset.split_finished()
+
+        assert finished.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+        assert remaining.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_split_finished_with_finished_tracks_preserves_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        finished_track = mark_last_detection_finished(car_track)
+        dataset = PolarsTrackDataset.from_list(
+            [finished_track, pedestrian_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        finished, remaining = dataset.split_finished()
+
+        assert finished.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+        assert remaining.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_revert_cuts_for_preserves_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+    ) -> None:
+        dataset = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        result_dataset, _, _ = dataset.revert_cuts_for(PolarsTrackIdSet([]))
+
+        assert result_dataset.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_remove_by_original_ids_preserves_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        dataset = PolarsTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        result_dataset, _ = dataset.remove_by_original_ids(PolarsTrackIdSet([]))
+
+        assert result_dataset.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_cut_with_section_preserves_georeference_metadata(
+        self,
+        car_track: Track,
+    ) -> None:
+        dataset = PolarsTrackDataset.from_list(
+            [car_track], PolarsTrackGeometryDataset.from_track_dataset
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        # A vertical section that does not intersect the car track coordinates
+        section = create_line_section("cut_meta", [(100.0, 0.0), (100.0, 10.0)])
+        offset = RelativeOffsetCoordinate(0.0, 0.0)
+
+        result_dataset, _ = dataset.cut_with_section(section, offset)
+
+        assert result_dataset.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
 
 ALTERNATE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
     geo_min_x=1.0,
