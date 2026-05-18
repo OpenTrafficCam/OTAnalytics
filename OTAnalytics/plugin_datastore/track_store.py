@@ -14,6 +14,7 @@ from pandas._typing import ListLike
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId, unpack
 from OTAnalytics.domain.track_dataset.track_dataset import (
@@ -312,6 +313,21 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
     def calculator(self) -> PandasTrackClassificationCalculator:
         return self._calculator
 
+    @property
+    def georeference_metadata(self) -> GeoreferenceMetadata | None:
+        return self._georeference_metadata
+
+    def with_georeference_metadata(
+        self, metadata: GeoreferenceMetadata | None
+    ) -> "PandasTrackDataset":
+        return PandasTrackDataset(
+            self._track_geometry_factory,
+            self._dataset if not self._dataset.empty else None,
+            self._geometry_datasets,
+            self._calculator,
+            georeference_metadata=metadata,
+        )
+
     def __init__(
         self,
         track_geometry_factory: TRACK_GEOMETRY_FACTORY,
@@ -320,6 +336,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             dict[RelativeOffsetCoordinate, TrackGeometryDataset] | None
         ) = None,
         calculator: PandasTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
+        georeference_metadata: GeoreferenceMetadata | None = None,
     ):
         if dataset is not None:
             self._dataset: DataFrame = dataset
@@ -334,6 +351,7 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
             ]()
         else:
             self._geometry_datasets = geometry_datasets
+        self._georeference_metadata = georeference_metadata
 
     def __iter__(self) -> Iterator[Track]:
         yield from self.as_generator()

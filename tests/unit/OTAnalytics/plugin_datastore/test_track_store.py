@@ -807,16 +807,23 @@ SAMPLE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
 )
 
 
-class TestPandasTrackDatasetGeoreferenceUnsupported:
-    def test_georeference_metadata_property_returns_none(
+class TestPandasTrackDatasetGeoreferenceMetadata:
+    def test_georeference_metadata_property_returns_none_by_default(
         self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
     ) -> None:
         dataset = PandasTrackDataset(track_geometry_factory=track_geometry_factory)
         assert dataset.georeference_metadata is None
 
-    def test_with_georeference_metadata_raises_not_implemented(
+    def test_with_georeference_metadata_returns_new_dataset_with_metadata(
         self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
     ) -> None:
         dataset = PandasTrackDataset(track_geometry_factory=track_geometry_factory)
-        with pytest.raises(NotImplementedError):
-            dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        updated = dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        assert updated.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_with_georeference_metadata_does_not_mutate_original(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory=track_geometry_factory)
+        dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        assert dataset.georeference_metadata is None
