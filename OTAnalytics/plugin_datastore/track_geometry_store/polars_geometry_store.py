@@ -1300,6 +1300,9 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
             georeference_metadata is not None
             and not self._segments_df.is_empty()
             and START_GEO_X in self._segments_df.columns
+            and START_GEO_Y in self._segments_df.columns
+            and END_GEO_X in self._segments_df.columns
+            and END_GEO_Y in self._segments_df.columns
         )
         coordinate_space = "geo coordinates" if use_geo else "image coordinates"
         logger().debug(f"Creating intersection events using {coordinate_space}.")
@@ -1357,12 +1360,20 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                     )
                 else:
                     intersection_points = self._compute_intersection_points(
-                        intersecting_segments, offset, section
+                        intersecting_segments,
+                        offset,
+                        section,
+                        start_x_col=START_X,
+                        start_y_col=START_Y,
+                        end_x_col=END_X,
+                        end_y_col=END_Y,
                     )
 
                 if (
                     START_GEO_X in intersecting_segments.columns
                     and START_GEO_Y in intersecting_segments.columns
+                    and END_GEO_X in intersecting_segments.columns
+                    and END_GEO_Y in intersecting_segments.columns
                 ):
                     intersection_points = intersection_points.with_columns(
                         [
