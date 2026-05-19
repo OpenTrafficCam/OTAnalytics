@@ -21,6 +21,9 @@ from OTAnalytics.application.parser.track_parser import (
 )
 from OTAnalytics.domain import track
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    IncompatibleGeoreferenceMetadataError,
+)
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import PolarsTrackDataset
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
@@ -424,6 +427,17 @@ class TestFeathersParser:
 
         assert parse_result.tracks.georeference_metadata is None
 
+    def test_parse_files_raises_on_mismatched_georeference_metadata(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_feathers_parser_mismatched_georeference(
+            create_given_feathers_parser_mismatched_georeference(test_data_tmp_dir)
+        )
+        target = create_target()
+
+        with pytest.raises(IncompatibleGeoreferenceMetadataError):
+            target.parse_files(list(given.feather_files))
+
 
 @dataclass
 class GivenFeathersParserWithGeoreference:
@@ -464,3 +478,63 @@ def setup_default_feathers_parser_with_georeference(
 
 def create_target() -> FeathersParser:
     return FeathersParser()
+
+
+DIFFERENT_GEOREF_METADATA_DICT = {
+    ottrk_format.GEO_BOUNDS: {
+        ottrk_format.GEO_BOUNDS_MIN_X: 0.0,
+        ottrk_format.GEO_BOUNDS_MIN_Y: 0.0,
+        ottrk_format.GEO_BOUNDS_MAX_X: 1.0,
+        ottrk_format.GEO_BOUNDS_MAX_Y: 1.0,
+    },
+    ottrk_format.BIRDS_EYE_VIEW_SIZE: {
+        ottrk_format.BIRDS_EYE_VIEW_WIDTH: 100,
+        ottrk_format.BIRDS_EYE_VIEW_HEIGHT: 100,
+    },
+    ottrk_format.BEV_PADDING: 0,
+    ottrk_format.CRS: "EPSG:4326",
+}
+
+
+@dataclass
+class GivenFeathersParserMismatchedGeoreference:
+    feather_files: tuple[Path, ...]
+
+
+def create_given_feathers_parser_mismatched_georeference(
+    test_data_tmp_dir: Path,
+) -> GivenFeathersParserMismatchedGeoreference:
+    base_sidecar: dict[str, Any] = {
+        "detection_metadata": {"detection_classes": ["car"]},
+        "video_metadata": {
+            "path": "test_video.mp4",
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
+            "recorded_fps": 30.0,
+            "number_of_frames": 900,
+        },
+    }
+    sidecar_a = {
+        **base_sidecar,
+        ottrk_format.GEOREFERENCE: SAMPLE_GEOREFERENCE_METADATA_DICT,
+    }
+    sidecar_b = {
+        **base_sidecar,
+        ottrk_format.GEOREFERENCE: DIFFERENT_GEOREF_METADATA_DICT,
+    }
+
+    file_a = test_data_tmp_dir / "mismatch_a.feather"
+    file_b = test_data_tmp_dir / "mismatch_b.feather"
+    polars.DataFrame(SINGLE_ROW).write_ipc(file_a)
+    polars.DataFrame(SINGLE_ROW).write_ipc(file_b)
+    (test_data_tmp_dir / "mismatch_a_metadata.json").write_text(json.dumps(sidecar_a))
+    (test_data_tmp_dir / "mismatch_b_metadata.json").write_text(json.dumps(sidecar_b))
+
+    return GivenFeathersParserMismatchedGeoreference(
+        feather_files=(file_a, file_b),
+    )
+
+
+def setup_default_feathers_parser_mismatched_georeference(
+    given: GivenFeathersParserMismatchedGeoreference,
+) -> GivenFeathersParserMismatchedGeoreference:
+    return given

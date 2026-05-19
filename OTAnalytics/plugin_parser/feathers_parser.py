@@ -7,7 +7,7 @@ feather files and their accompanying metadata JSON files to create TrackParseRes
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 import polars as pl
 
@@ -159,3 +159,13 @@ class FeathersParser(TrackParser, GeoreferenceMetadataParsingMixin):
         """
         detection_classes = frozenset(metadata[KEY_DETECTION_CLASSES])
         return DetectionMetadata(detection_classes)
+
+    def _combine_track_datasets(
+        self, parse_results: list[TrackParseResult]
+    ) -> TrackDataset:
+        datasets = [r.tracks for r in parse_results]
+        if all(isinstance(ds, PolarsTrackDataset) for ds in datasets):
+            return PolarsTrackDataset.merge_all(
+                cast(list[PolarsTrackDataset], datasets)
+            )
+        return super()._combine_track_datasets(parse_results)

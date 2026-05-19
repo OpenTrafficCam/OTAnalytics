@@ -39,10 +39,15 @@ class TrackParser(ABC):
         if not files:
             raise ValueError("No files to parse")
         results = [self.parse(file) for file in files]
-        tracks = combine_track_datasets(results)
+        tracks = self._combine_track_datasets(results)
         detections_metadata = [result.detection_metadata for result in results]
         videos_metadata = [result.video_metadata for result in results]
         return TracksParseResult(tracks, detections_metadata, videos_metadata)
+
+    def _combine_track_datasets(
+        self, parse_results: list[TrackParseResult]
+    ) -> TrackDataset:
+        return combine_track_datasets(parse_results)
 
     @abstractmethod
     def parse(self, file: Path) -> TrackParseResult:
