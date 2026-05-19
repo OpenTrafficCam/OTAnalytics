@@ -67,5 +67,7 @@ No georeference validation logic lives in `FeathersParser`. The override is pure
 - `PolarsTrackDataset.merge_all` where all datasets have no georeference metadata → merged result has `None`.
 - `PolarsTrackDataset.merge_all` where some datasets have empty DataFrames → empty ones are skipped in concat but still validated; result carries shared metadata.
 - `PolarsTrackDataset.merge_all([])` → raises `ValueError`.
+- `PolarsTrackDataset.merge_all` where all datasets have empty DataFrames → returns empty dataset with the shared metadata.
+- `PolarsTrackDataset.merge_all` with a single dataset → returns a dataset equivalent to that input.
 - `FeathersParser._combine_track_datasets` with all-Polars parse results → delegates to `merge_all`.
 - `FeathersParser._combine_track_datasets` with mixed types → falls back to `super()`.
