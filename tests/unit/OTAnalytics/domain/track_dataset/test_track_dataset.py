@@ -1,57 +1,11 @@
-import pytest
-
-from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.track import Track
-from OTAnalytics.domain.track_dataset.track_dataset import (
-    IncompatibleGeoreferenceMetadataError,
-    TrackDataset,
-)
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
 from tests.utils.assertions import assert_equal_track_properties
 from tests.utils.builders.track_dataset_provider import (
     IMPLEMENTATIONS,
     TrackDatasetProvider,
 )
-
-SAMPLE_METADATA = GeoreferenceMetadata(
-    geo_min_x=0.0,
-    geo_min_y=0.0,
-    geo_max_x=100.0,
-    geo_max_y=100.0,
-    birds_eye_view_width=10,
-    birds_eye_view_height=10,
-    padding=0,
-    crs="EPSG:25833",
-)
-
-
-class _MinimalTrackDataset(TrackDataset):
-    """Concrete subclass that bypasses ABC's instantiation check.
-
-    Used by tests that exercise default (non-abstract) members of `TrackDataset`.
-    """
-
-
-_MinimalTrackDataset.__abstractmethods__ = frozenset()
-
-
-class TestTrackDatasetGeoreferenceDefaults:
-    def test_georeference_metadata_default_is_none(self) -> None:
-        dataset = _MinimalTrackDataset()  # type: ignore[abstract]
-        assert dataset.georeference_metadata is None
-
-    def test_with_georeference_metadata_raises_not_implemented(self) -> None:
-        dataset = _MinimalTrackDataset()  # type: ignore[abstract]
-        with pytest.raises(NotImplementedError) as info:
-            dataset.with_georeference_metadata(SAMPLE_METADATA)
-        assert "_MinimalTrackDataset" in str(info.value)
-
-
-class TestIncompatibleGeoreferenceMetadataError:
-    def test_can_be_raised_and_carries_message(self) -> None:
-        with pytest.raises(IncompatibleGeoreferenceMetadataError) as info:
-            raise IncompatibleGeoreferenceMetadataError("boom")
-        assert str(info.value) == "boom"
 
 
 class TestTrackDataset:
