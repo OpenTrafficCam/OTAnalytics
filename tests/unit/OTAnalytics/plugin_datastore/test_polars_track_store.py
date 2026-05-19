@@ -1304,3 +1304,20 @@ class TestPolarsTrackDatasetMergeAll:
 
         assert len(result) == 1
         assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_empty_datasets_are_skipped_in_concat_but_metadata_is_validated(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+    ) -> None:
+        ds_with_tracks = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        ds_empty = PolarsTrackDataset(
+            track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        result = PolarsTrackDataset.merge_all([ds_with_tracks, ds_empty])
+
+        assert len(result) == 1
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
