@@ -390,7 +390,7 @@ class TestFeathersParser:
         self, test_data_tmp_dir: Path
     ) -> None:
         given = setup_default_feathers_parser_with_georeference(test_data_tmp_dir)
-        target = create_target_feathers_parser(given)
+        target = create_target()
 
         parse_result = target.parse(given.feather_files[0])
 
@@ -404,7 +404,7 @@ class TestFeathersParser:
             stems=("file_a", "file_b"),
             metadata=GEOREF_METADATA,
         )
-        target = create_target_feathers_parser(given)
+        target = create_target()
 
         parse_result = target.parse_files(list(given.feather_files))
 
@@ -418,7 +418,7 @@ class TestFeathersParser:
             stems=("no_geo",),
             metadata=None,
         )
-        target = create_target_feathers_parser(given)
+        target = create_target()
 
         parse_result = target.parse_files(list(given.feather_files))
 
@@ -462,23 +462,5 @@ def setup_default_feathers_parser_with_georeference(
     )
 
 
-def create_target_feathers_parser(
-    given: GivenFeathersParserWithGeoreference,
-) -> FeathersParser:
+def create_target() -> FeathersParser:
     return FeathersParser()
-
-
-class TestParseGeoreferenceMetadata:
-    def test_returns_georeference_metadata_from_valid_dict(
-        self, parser: FeathersParser
-    ) -> None:
-        metadata = {ottrk_format.GEOREFERENCE: SAMPLE_GEOREFERENCE_METADATA_DICT}
-
-        result = parser._parse_georeference_metadata(metadata)
-
-        assert result == GEOREF_METADATA
-
-    def test_returns_none_when_key_absent(self, parser: FeathersParser) -> None:
-        result = parser._parse_georeference_metadata({})
-
-        assert result is None

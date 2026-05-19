@@ -23,7 +23,6 @@ from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import Event, EventType
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
-from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import Area, LineSection, Section, SectionId
 from OTAnalytics.domain.track import (
     Detection,
@@ -51,6 +50,9 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrackDataset,
 )
 from OTAnalytics.plugin_parser import dataformat_versions
+from OTAnalytics.plugin_parser.georeference_parsing import (
+    GeoreferenceMetadataParsingMixin,
+)
 from OTAnalytics.plugin_parser.json_parser import (
     parse_json,
     parse_json_bz2,
@@ -562,7 +564,7 @@ class PythonDetectionParser(DetectionParser):
         return tracks_dict
 
 
-class OttrkParser(TrackParser):
+class OttrkParser(TrackParser, GeoreferenceMetadataParsingMixin):
     """Parse an ottrk file and convert its contents to our domain objects namely
     `Tracks`.
 
@@ -601,7 +603,7 @@ class OttrkParser(TrackParser):
             dets_list, metadata_video, str(ottrk_file), id_generator
         )
         detection_metadata = self.parse_metadata(ottrk_dict[ottrk_format.METADATA])
-        georeference_metadata = self._parse_georeference_metadata(
+        georeference_metadata = self.parse_georeference_metadata(
             ottrk_dict[ottrk_format.METADATA]
         )
         if georeference_metadata is not None:
@@ -644,34 +646,6 @@ class OttrkParser(TrackParser):
         tracking_run_id = tracking_metadata[ottrk_format.TRACKING_RUN_ID]
         frame_group = tracking_metadata[ottrk_format.FRAME_GROUP]
         return lambda id: TrackId(f"{tracking_run_id}#{frame_group}#{id}")
-
-    @classmethod
-    def _parse_georeference_metadata(
-        cls, metadata: dict
-    ) -> GeoreferenceMetadata | None:
-        """Parse the georeference block from ottrk metadata.
-
-        Args:
-            metadata: The full metadata dict from an ottrk file.
-
-        Returns:
-            GeoreferenceMetadata if the georeference block is present, otherwise None.
-        """
-        georeference = metadata.get(ottrk_format.GEOREFERENCE)
-        if georeference is None:
-            return None
-        bounds = georeference[ottrk_format.GEO_BOUNDS]
-        bev_size = georeference[ottrk_format.BIRDS_EYE_VIEW_SIZE]
-        return GeoreferenceMetadata(
-            geo_min_x=bounds[ottrk_format.GEO_BOUNDS_MIN_X],
-            geo_min_y=bounds[ottrk_format.GEO_BOUNDS_MIN_Y],
-            geo_max_x=bounds[ottrk_format.GEO_BOUNDS_MAX_X],
-            geo_max_y=bounds[ottrk_format.GEO_BOUNDS_MAX_Y],
-            birds_eye_view_width=bev_size[ottrk_format.BIRDS_EYE_VIEW_WIDTH],
-            birds_eye_view_height=bev_size[ottrk_format.BIRDS_EYE_VIEW_HEIGHT],
-            padding=georeference[ottrk_format.BEV_PADDING],
-            crs=georeference[ottrk_format.CRS],
-        )
 
     @classmethod
     def parse_metadata(cls, metadata_detection: dict) -> DetectionMetadata:

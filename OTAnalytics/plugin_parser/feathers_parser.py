@@ -16,7 +16,6 @@ from OTAnalytics.application.parser.track_parser import (
     TrackParser,
     TrackParseResult,
 )
-from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import (
@@ -35,8 +34,10 @@ from OTAnalytics.plugin_parser.convert_ottrk_to_feathers import (
     METADATA_SUFFIX,
     convert_ottrk_to_feather,
 )
+from OTAnalytics.plugin_parser.georeference_parsing import (
+    GeoreferenceMetadataParsingMixin,
+)
 from OTAnalytics.plugin_parser.json_parser import parse_json
-from OTAnalytics.plugin_parser.otvision_parser import OttrkParser
 
 
 def use_feather_file(file: Path) -> Path:
@@ -52,7 +53,7 @@ def use_feather_file(file: Path) -> Path:
     return file
 
 
-class FeathersParser(TrackParser):
+class FeathersParser(TrackParser, GeoreferenceMetadataParsingMixin):
     """
     Parse feather files with accompanying metadata JSON files.
 
@@ -110,7 +111,7 @@ class FeathersParser(TrackParser):
         detection_metadata = self._parse_detection_metadata(
             metadata[KEY_DETECTION_METADATA]
         )
-        georeference_metadata = self._parse_georeference_metadata(metadata)
+        georeference_metadata = self.parse_georeference_metadata(metadata)
         if georeference_metadata is not None:
             tracks = tracks.with_georeference_metadata(georeference_metadata)
 
@@ -158,18 +159,3 @@ class FeathersParser(TrackParser):
         """
         detection_classes = frozenset(metadata[KEY_DETECTION_CLASSES])
         return DetectionMetadata(detection_classes)
-
-    @staticmethod
-    def _parse_georeference_metadata(
-        metadata: dict,
-    ) -> GeoreferenceMetadata | None:
-        """Parse georeference metadata from the metadata dictionary.
-
-        Args:
-            metadata (GeoreferenceMetadata | None): Full metadata dictionary from the
-                metadata JSON file.
-
-        Returns:
-            GeoreferenceMetadata: if the georeference block is present, otherwise None.
-        """
-        return OttrkParser._parse_georeference_metadata(metadata)

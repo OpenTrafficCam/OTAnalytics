@@ -73,42 +73,16 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     version_of_otdet,
     version_of_ottrk,
 )
+from tests.unit.OTAnalytics.plugin_parser.conftest import (
+    GEOREF_METADATA,
+    SAMPLE_GEOREFERENCE_METADATA_DICT,
+)
 from tests.utils.assertions import assert_track_datasets_equal
 from tests.utils.builders.track_builder import (
     TrackBuilder,
     append_sample_data,
     track_builder_with_sample_data,
 )
-
-GEOREF_METADATA = GeoreferenceMetadata(
-    geo_min_x=449199.096512522,
-    geo_min_y=5699274.275524861,
-    geo_max_x=449294.8688478645,
-    geo_max_y=5699370.047860203,
-    birds_eye_view_width=983,
-    birds_eye_view_height=983,
-    padding=20,
-    crs="EPSG:25833",
-)
-
-SAMPLE_GEOREFERENCE_METADATA_DICT = {
-    ottrk_dataformat.GEOREFERENCE: {
-        ottrk_dataformat.GEO_BOUNDS: {
-            ottrk_dataformat.GEO_BOUNDS_MIN_X: GEOREF_METADATA.geo_min_x,
-            ottrk_dataformat.GEO_BOUNDS_MIN_Y: GEOREF_METADATA.geo_min_y,
-            ottrk_dataformat.GEO_BOUNDS_MAX_X: GEOREF_METADATA.geo_max_x,
-            ottrk_dataformat.GEO_BOUNDS_MAX_Y: GEOREF_METADATA.geo_max_y,
-        },
-        ottrk_dataformat.BIRDS_EYE_VIEW_SIZE: {
-            ottrk_dataformat.BIRDS_EYE_VIEW_WIDTH: GEOREF_METADATA.birds_eye_view_width,
-            ottrk_dataformat.BIRDS_EYE_VIEW_HEIGHT: (
-                GEOREF_METADATA.birds_eye_view_height
-            ),
-        },
-        ottrk_dataformat.BEV_PADDING: GEOREF_METADATA.padding,
-        ottrk_dataformat.CRS: GEOREF_METADATA.crs,
-    }
-}
 
 
 @pytest.fixture
@@ -300,20 +274,6 @@ class TestOttrkParser:
             number_of_frames=60,
         )
         ottrk_file.unlink()
-
-    def test_returns_metadata_when_georeference_block_present(
-        self, ottrk_parser: OttrkParser
-    ) -> None:
-        result = ottrk_parser._parse_georeference_metadata(
-            SAMPLE_GEOREFERENCE_METADATA_DICT
-        )
-        assert result == GEOREF_METADATA
-
-    def test_returns_none_when_georeference_block_absent(
-        self, ottrk_parser: OttrkParser
-    ) -> None:
-        result = OttrkParser._parse_georeference_metadata({"video": {}})
-        assert result is None
 
     def test_parse_embeds_georeference_metadata_in_tracks(
         self, test_data_tmp_dir: Path
