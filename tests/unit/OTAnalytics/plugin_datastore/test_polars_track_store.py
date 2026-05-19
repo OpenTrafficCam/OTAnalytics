@@ -1172,3 +1172,135 @@ class TestGetSegmentsPreservesGeoColumns:
 
         assert START_GEO_X not in rows[0]
         assert START_GEO_Y not in rows[0]
+
+
+@dataclass
+class GivenMergeAll:
+    dataset_a: PolarsTrackDataset
+    dataset_b: PolarsTrackDataset
+
+
+def create_given_merge_all(
+    track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+    car_track: Track,
+    pedestrian_track: Track,
+) -> GivenMergeAll:
+    ds_a = PolarsTrackDataset.from_list(
+        [car_track], track_geometry_factory
+    ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+    ds_b = PolarsTrackDataset.from_list(
+        [pedestrian_track], track_geometry_factory
+    ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+    return GivenMergeAll(dataset_a=ds_a, dataset_b=ds_b)
+
+
+def setup_default_merge_all(given: GivenMergeAll) -> GivenMergeAll:
+    return given
+
+
+def create_target_merge_all(given: GivenMergeAll) -> PolarsTrackDataset:
+    return PolarsTrackDataset.merge_all([given.dataset_a, given.dataset_b])
+
+
+class TestPolarsTrackDatasetMergeAll:
+    def test_raises_on_empty_list(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+    ) -> None:
+        with pytest.raises(ValueError, match="No datasets to merge"):
+            PolarsTrackDataset.merge_all([])
+
+    def test_combines_tracks_from_all_datasets(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        given = setup_default_merge_all(
+            create_given_merge_all(track_geometry_factory, car_track, pedestrian_track)
+        )
+        target = create_target_merge_all(given)
+
+        assert len(target) == 2
+
+    def test_result_carries_shared_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        given = setup_default_merge_all(
+            create_given_merge_all(track_geometry_factory, car_track, pedestrian_track)
+        )
+        target = create_target_merge_all(given)
+
+        assert target.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_raises_on_incompatible_georeference_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        different_metadata = GeoreferenceMetadata(
+            geo_min_x=0.0,
+            geo_min_y=0.0,
+            geo_max_x=1.0,
+            geo_max_y=1.0,
+            birds_eye_view_width=100,
+            birds_eye_view_height=100,
+            padding=0,
+            crs="EPSG:4326",
+        )
+        ds_a = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        ds_b = PolarsTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        ).with_georeference_metadata(different_metadata)
+
+        with pytest.raises(IncompatibleGeoreferenceMetadataError):
+            PolarsTrackDataset.merge_all([ds_a, ds_b])
+
+    def test_result_has_none_metadata_when_all_datasets_have_none(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        ds_a = PolarsTrackDataset.from_list([car_track], track_geometry_factory)
+        ds_b = PolarsTrackDataset.from_list([pedestrian_track], track_geometry_factory)
+
+        result = PolarsTrackDataset.merge_all([ds_a, ds_b])
+
+        assert result.georeference_metadata is None
+
+    def test_all_empty_datasets_returns_empty_with_metadata(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+    ) -> None:
+        ds_a = PolarsTrackDataset(track_geometry_factory).with_georeference_metadata(
+            SAMPLE_GEOREFERENCE_METADATA
+        )
+        ds_b = PolarsTrackDataset(track_geometry_factory).with_georeference_metadata(
+            SAMPLE_GEOREFERENCE_METADATA
+        )
+
+        result = PolarsTrackDataset.merge_all([ds_a, ds_b])
+
+        assert result.empty
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_single_dataset_returns_equivalent_result(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+    ) -> None:
+        ds = PolarsTrackDataset.from_list(
+            [car_track], track_geometry_factory
+        ).with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        result = PolarsTrackDataset.merge_all([ds])
+
+        assert len(result) == 1
+        assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA

@@ -449,6 +449,51 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             georeference_metadata=georeference_metadata,
         )
 
+    @classmethod
+    def merge_all(
+        cls,
+        datasets: Sequence["PolarsTrackDataset"],
+    ) -> "PolarsTrackDataset":
+        if not datasets:
+            raise ValueError("No datasets to merge")
+
+        expected_metadata = datasets[0].georeference_metadata
+        for ds in datasets[1:]:
+            if ds.georeference_metadata != expected_metadata:
+                raise IncompatibleGeoreferenceMetadataError(
+                    "Cannot merge datasets with different georeference metadata: "
+                    f"expected {expected_metadata!r}, got {ds.georeference_metadata!r}"
+                )
+
+        factory = datasets[0].track_geometry_factory
+        calculator = datasets[0].calculator
+
+        non_empty = [ds for ds in datasets if not ds._dataset.is_empty()]
+        if not non_empty:
+            return cls(
+                factory,
+                calculator=calculator,
+                georeference_metadata=expected_metadata,
+            )
+
+        geo_cols = [
+            c
+            for c in [track.GEO_X, track.GEO_Y]
+            if all(c in ds._dataset.columns for ds in non_empty)
+        ]
+        selected_columns = COLUMNS + geo_cols
+
+        frames = [drop_row_id(ds._dataset).select(selected_columns) for ds in non_empty]
+        merged = pl.concat(frames).sort(INDEX_NAMES)
+        merged = _assign_track_classification(merged, calculator)
+
+        return cls.from_dataframe(
+            merged,
+            factory,
+            calculator=calculator,
+            georeference_metadata=expected_metadata,
+        )
+
     def add_all(self, other: Iterable[Track]) -> "PolarsTrackDataset":
         """Add all tracks from `other` to this dataset.
 
@@ -1153,3 +1198,17 @@ def area_section_to_shapely(section: Section) -> BaseGeometry:
     geometry = shapely.Polygon([(c.x, c.y) for c in section.get_coordinates()])
     prepare(geometry)
     return geometry
+
+
+# def adheres_to_georeference_metadata_policy(
+#     this: TrackDataset, other: TrackDataset
+# ) -> bool:
+#     if this.empty:
+#         pass
+#
+#     if this != other:
+#         raise IncompatibleGeoreferenceMetadataError(
+#             "Cannot merge dataset with georeference metadata "
+#             f"{other!r} into dataset with georeference metadata "
+#             f"{this!r}"
+#         )
