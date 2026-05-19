@@ -157,11 +157,11 @@ class IncompatibleGeoreferenceMetadataError(Exception):
 
 class TrackDataset(ABC):
     @property
-    def georeference_metadata(self) -> "GeoreferenceMetadata | None":
+    def georeference_metadata(self) -> GeoreferenceMetadata | None:
         return None
 
     def with_georeference_metadata(
-        self, metadata: "GeoreferenceMetadata | None"
+        self, metadata: GeoreferenceMetadata | None
     ) -> "TrackDataset":
         raise NotImplementedError(
             f"{type(self).__name__} does not support georeference metadata"
