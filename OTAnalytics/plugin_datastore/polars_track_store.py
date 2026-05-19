@@ -484,11 +484,8 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         selected_columns = COLUMNS + geo_cols
 
         frames = [drop_row_id(ds._dataset).select(selected_columns) for ds in non_empty]
-        merged = pl.concat(frames).sort(INDEX_NAMES)
-        merged = _assign_track_classification(merged, calculator)
-
         return cls.from_dataframe(
-            merged,
+            pl.concat(frames),
             factory,
             calculator=calculator,
             georeference_metadata=expected_metadata,

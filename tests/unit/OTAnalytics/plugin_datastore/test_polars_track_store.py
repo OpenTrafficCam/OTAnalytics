@@ -1321,3 +1321,51 @@ class TestPolarsTrackDatasetMergeAll:
 
         assert len(result) == 1
         assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_geo_columns_preserved_when_all_datasets_have_them(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        ds_a_base = PolarsTrackDataset.from_list([car_track], track_geometry_factory)
+        ds_b_base = PolarsTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        )
+        df_a = ds_a_base.get_data().with_columns(
+            pl.lit(1.0).alias(track.GEO_X),
+            pl.lit(2.0).alias(track.GEO_Y),
+        )
+        df_b = ds_b_base.get_data().with_columns(
+            pl.lit(3.0).alias(track.GEO_X),
+            pl.lit(4.0).alias(track.GEO_Y),
+        )
+        ds_a = PolarsTrackDataset.from_dataframe(df_a, track_geometry_factory)
+        ds_b = PolarsTrackDataset.from_dataframe(df_b, track_geometry_factory)
+
+        result = PolarsTrackDataset.merge_all([ds_a, ds_b])
+
+        assert track.GEO_X in result.get_data().columns
+        assert track.GEO_Y in result.get_data().columns
+
+    def test_geo_columns_dropped_when_only_some_datasets_have_them(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        ds_a_base = PolarsTrackDataset.from_list([car_track], track_geometry_factory)
+        ds_b_base = PolarsTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        )
+        df_a = ds_a_base.get_data().with_columns(
+            pl.lit(1.0).alias(track.GEO_X),
+            pl.lit(2.0).alias(track.GEO_Y),
+        )
+        ds_a = PolarsTrackDataset.from_dataframe(df_a, track_geometry_factory)
+        ds_b = ds_b_base  # no geo columns
+
+        result = PolarsTrackDataset.merge_all([ds_a, ds_b])
+
+        assert track.GEO_X not in result.get_data().columns
+        assert track.GEO_Y not in result.get_data().columns
