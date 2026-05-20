@@ -247,6 +247,7 @@ COLUMNS = [
     track.TRACK_CLASSIFICATION,
     track.ORIGINAL_TRACK_ID,
 ]
+GEO_COLUMNS = [track.GEO_X, track.GEO_Y]
 DEFAULT_CLASSIFICATOR = PolarsByMaxConfidence()
 INDEX_NAMES = [track.TRACK_ID, track.OCCURRENCE]
 LEVEL_TRACK_ID = track.TRACK_ID
@@ -428,7 +429,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             dict[RelativeOffsetCoordinate, PolarsTrackGeometryDataset] | None
         ) = None,
         calculator: PolarsTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
-        georeference_metadata: "GeoreferenceMetadata | None" = None,
+        georeference_metadata: GeoreferenceMetadata | None = None,
     ) -> "PolarsTrackDataset":
         if tracks.is_empty():
             return PolarsTrackDataset(
@@ -457,18 +458,21 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         if not datasets:
             raise ValueError("No datasets to merge")
 
-        expected_metadata = datasets[0].georeference_metadata
-        for ds in datasets[1:]:
+        first_dataset = datasets[0]
+        other_datasets = datasets[1:]
+
+        expected_metadata = first_dataset.georeference_metadata
+        for ds in other_datasets:
             if ds.georeference_metadata != expected_metadata:
                 raise IncompatibleGeoreferenceMetadataError(
                     "Cannot merge datasets with different georeference metadata: "
                     f"expected {expected_metadata!r}, got {ds.georeference_metadata!r}"
                 )
 
-        factory = datasets[0].track_geometry_factory
-        calculator = datasets[0].calculator
+        factory = first_dataset.track_geometry_factory
+        calculator = first_dataset.calculator
 
-        non_empty = [ds for ds in datasets if not ds._dataset.is_empty()]
+        non_empty = [ds for ds in datasets if not ds.get_data().is_empty()]
         if not non_empty:
             return cls(
                 factory,
@@ -476,14 +480,14 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                 georeference_metadata=expected_metadata,
             )
 
-        geo_cols = [
-            c
-            for c in [track.GEO_X, track.GEO_Y]
-            if all(c in ds._dataset.columns for ds in non_empty)
-        ]
-        selected_columns = COLUMNS + geo_cols
+        selected_columns = COLUMNS
 
-        frames = [drop_row_id(ds._dataset).select(selected_columns) for ds in non_empty]
+        if all_datasets_have_geo_columns(non_empty):
+            selected_columns = COLUMNS + GEO_COLUMNS
+
+        frames = [
+            drop_row_id(ds.get_data()).select(selected_columns) for ds in non_empty
+        ]
         return cls.from_dataframe(
             pl.concat(frames),
             factory,
@@ -1209,3 +1213,11 @@ def area_section_to_shapely(section: Section) -> BaseGeometry:
 #             f"{other!r} into dataset with georeference metadata "
 #             f"{this!r}"
 #         )
+
+
+def dataset_has_geo_columns(dataset: PolarsTrackDataset) -> bool:
+    return all(column in dataset.get_data().columns for column in GEO_COLUMNS)
+
+
+def all_datasets_have_geo_columns(datasets: Iterable[PolarsTrackDataset]) -> bool:
+    return all(dataset_has_geo_columns(dataset) for dataset in datasets)
