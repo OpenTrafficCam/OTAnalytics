@@ -480,14 +480,18 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                 georeference_metadata=expected_metadata,
             )
 
-        selected_columns = COLUMNS
+        any_has_geo = any(dataset_has_geo_columns(ds) for ds in non_empty)
 
-        if all_datasets_have_geo_columns(non_empty):
-            selected_columns = COLUMNS + GEO_COLUMNS
+        def _prepare(dataset: "PolarsTrackDataset") -> pl.DataFrame:
+            df = drop_row_id(dataset.get_data())
+            if any_has_geo:
+                for col in GEO_COLUMNS:
+                    if col not in df.columns:
+                        df = df.with_columns(pl.lit(None, dtype=pl.Float64).alias(col))
+                return df.select(COLUMNS + GEO_COLUMNS)
+            return df.select(COLUMNS)
 
-        frames = [
-            drop_row_id(ds.get_data()).select(selected_columns) for ds in non_empty
-        ]
+        frames = [_prepare(ds) for ds in non_empty]
         return cls.from_dataframe(
             pl.concat(frames),
             factory,
@@ -546,18 +550,28 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         )
 
         # Get all tracks (existing + new) and assign classification.
-        # Preserve optional geo columns when both DataFrames carry them.
+        # Null-pad geo columns when either side carries them.
         geo_cols = [
             c
-            for c in [track.GEO_X, track.GEO_Y]
-            if c in self._dataset.columns
-            and c in new_tracks_with_classification.columns
+            for c in GEO_COLUMNS
+            if c in self._dataset.columns or c in new_tracks_with_classification.columns
         ]
+        existing_df = drop_row_id(self._dataset)
+        incoming_df = drop_row_id(new_tracks_with_classification)
+        for col in geo_cols:
+            if col not in existing_df.columns:
+                existing_df = existing_df.with_columns(
+                    pl.lit(None, dtype=pl.Float64).alias(col)
+                )
+            if col not in incoming_df.columns:
+                incoming_df = incoming_df.with_columns(
+                    pl.lit(None, dtype=pl.Float64).alias(col)
+                )
         selected_columns = COLUMNS + geo_cols
         combined_tracks = pl.concat(
             [
-                drop_row_id(self._dataset).select(selected_columns),
-                drop_row_id(new_tracks_with_classification).select(selected_columns),
+                existing_df.select(selected_columns),
+                incoming_df.select(selected_columns),
             ]
         ).sort(INDEX_NAMES)
 

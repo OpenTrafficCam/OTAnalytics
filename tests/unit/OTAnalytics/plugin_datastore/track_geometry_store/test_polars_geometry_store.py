@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Callable
 from unittest.mock import Mock
 
 import polars as pl
@@ -7,6 +8,7 @@ import pytest
 from polars import DataFrame
 from pytest import approx
 
+from OTAnalytics.application.config import CUTTING_SECTION_MARKER
 from OTAnalytics.domain import track
 from OTAnalytics.domain.event import SECTION_ID
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
@@ -490,19 +492,17 @@ def test_check_polygon_intersections_with_intersections() -> None:
 
 def _create_cutting_section(
     section_id: str, coordinates: list[tuple[float, float]]
-) -> Mock:
+) -> LineSection:
     """Helper function to create a mock cutting section for testing."""
-    section = Mock(spec=LineSection)
-    section.get_coordinates.return_value = [
-        Coordinate(coord[0], coord[1]) for coord in coordinates
-    ]
-    section.relative_offset_coordinates = {
-        EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
-    }
-    section.get_offset.return_value = RelativeOffsetCoordinate(0.0, 0.0)
-    section.id = SectionId(section_id)
-    section.get_type.return_value = SectionType.CUTTING
-    return section
+    return LineSection(
+        id=SectionId(section_id),
+        name=f"{CUTTING_SECTION_MARKER}_My_Section",
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+        },
+        plugin_data={},
+        coordinates=[Coordinate(coord[0], coord[1]) for coord in coordinates],
+    )
 
 
 @dataclass
@@ -510,7 +510,7 @@ class TrackIdsAfterCutGiven:
     """Test data container for track_ids_after_cut tests."""
 
     dataset: PolarsTrackGeometryDataset
-    section: Mock
+    section: LineSection
 
 
 def create_segments_dataframe(
@@ -1236,14 +1236,13 @@ class TestWrapIntersectionPointsFallback:
     """Ensures non-georeferenced files (no geo columns, no GeoreferenceMetadata)
     are unaffected."""
 
-    def test_no_metadata_no_geo_columns_uses_pixel_intersection(self) -> None:
-        """Pixel-space intersection still works without georeference metadata."""
-        from datetime import timezone
-
+    @staticmethod
+    def create_segment_data_without_geo_entries() -> dict:
         occ_start = datetime(2023, 1, 1, tzinfo=timezone.utc)
         occ_end = datetime(2023, 1, 1, 0, 0, 1, tzinfo=timezone.utc)
-        segments = pl.DataFrame(
-            {
+
+        return {
+            "data": {
                 ROW_ID: [1],
                 TRACK_ID: ["t1"],
                 "track_classification": ["car"],
@@ -1260,21 +1259,69 @@ class TestWrapIntersectionPointsFallback:
                 START_OCCURRENCE: [occ_start],
                 END_OCCURRENCE: [occ_end],
             }
-        )
-        geometry_dataset = PolarsTrackGeometryDataset(
-            offset=RelativeOffsetCoordinate(0.0, 0.0),
-            segments_df=segments,
-        )
-        section = Mock(spec=LineSection)
-        section.id = SectionId("s1")
-        section.get_coordinates.return_value = [
-            Coordinate(0.0, 100.0),
-            Coordinate(200.0, 100.0),
-        ]
-        section.relative_offset_coordinates = {
-            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
         }
-        section.get_type.return_value = SectionType.LINE
+
+    def create_segment_data_with_null_geo_entries(self) -> dict:
+        data = self.create_segment_data_without_geo_entries()
+        data["data"] = data["data"] | {
+            START_GEO_X: [None],
+            START_GEO_Y: [None],
+            END_GEO_X: [None],
+            END_GEO_Y: [None],
+        }
+        data["schema_overrides"] = {
+            START_GEO_X: pl.Float64,
+            START_GEO_Y: pl.Float64,
+            END_GEO_X: pl.Float64,
+            END_GEO_Y: pl.Float64,
+        }
+        return data
+
+    @staticmethod
+    def create_dataset(
+        segment_data_factory: Callable[[], dict],
+    ) -> PolarsTrackGeometryDataset:
+        segments_df = segment_data_factory()
+
+        return PolarsTrackGeometryDataset(
+            offset=RelativeOffsetCoordinate(0.0, 0.0),
+            segments_df=pl.DataFrame(**segments_df),
+        )
+
+    @staticmethod
+    def create_line_section() -> LineSection:
+        return LineSection(
+            id=SectionId("s1"),
+            name="My_Section",
+            coordinates=[
+                Coordinate(0.0, 100.0),
+                Coordinate(200.0, 100.0),
+            ],
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+            },
+            plugin_data={},
+        )
+
+    def create_georeference_metadata(self) -> GeoreferenceMetadata:
+        return GeoreferenceMetadata(
+            geo_min_x=449200.0,
+            geo_min_y=5699300.0,
+            geo_max_x=449300.0,
+            geo_max_y=5699350.0,
+            birds_eye_view_width=200,
+            birds_eye_view_height=200,
+            padding=20,
+            crs="EPSG:25833",
+        )
+
+    def test_no_metadata_no_geo_columns_uses_pixel_intersection(self) -> None:
+        """Pixel-space intersection still works without georeference metadata."""
+
+        geometry_dataset = self.create_dataset(
+            self.create_segment_data_without_geo_entries
+        )
+        section = self.create_line_section()
 
         result = geometry_dataset.wrap_intersection_points([section], None)
 
@@ -1284,6 +1331,35 @@ class TestWrapIntersectionPointsFallback:
         evt = events[0]
         assert evt.geo_x is None
         assert evt.geo_y is None
+
+    def test_null_geo_columns_fall_back_to_image_coordinates(
+        self, first_line_section: LineSection
+    ) -> None:
+        geometry_dataset = self.create_dataset(
+            self.create_segment_data_with_null_geo_entries
+        )
+        metadata = self.create_georeference_metadata()
+        section = create_line_section()
+        result = geometry_dataset.wrap_intersection_points([section], metadata)
+
+        assert not result.empty
+        events = list(result.create_events(RelativeOffsetCoordinate(0.0, 0.0)))
+        assert len(events) == 1
+        evt = events[0]
+        assert evt.geo_x is None
+        assert evt.geo_y is None
+
+    def test_interpolated_geo_not_added_when_geo_columns_have_nulls(self) -> None:
+        geometry_dataset = self.create_dataset(
+            self.create_segment_data_with_null_geo_entries
+        )
+        metadata = self.create_georeference_metadata()
+        section = create_line_section()
+        result = geometry_dataset.wrap_intersection_points([section], metadata)
+
+        assert isinstance(result, PolarsIntersectionPointsDataset)
+        assert INTERPOLATED_GEO_X not in result._points.columns
+        assert INTERPOLATED_GEO_Y not in result._points.columns
 
 
 @dataclass
@@ -1500,3 +1576,18 @@ class TestComputeIntersectionPointsPixelGeoEquivalence:
         assert pixel_result[RELATIVE_POSITION].to_list() == approx(
             geo_result[RELATIVE_POSITION].to_list()
         )
+
+
+def create_line_section() -> LineSection:
+    return LineSection(
+        id=SectionId("s1"),
+        name="My_Section",
+        coordinates=[
+            Coordinate(0.0, 100.0),
+            Coordinate(200.0, 100.0),
+        ],
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+        },
+        plugin_data={},
+    )

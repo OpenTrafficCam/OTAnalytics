@@ -21,6 +21,7 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSet
 from OTAnalytics.plugin_datastore.polars_track_store import (
     COLUMNS,
+    GEO_COLUMNS,
     POLARS_TRACK_GEOMETRY_FACTORY,
     PolarsDetection,
     PolarsTrackDataset,
@@ -1045,6 +1046,51 @@ class TestPolarsTrackDatasetAddAllGeoreferenceValidation:
         assert result.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
 
 
+class TestPolarsTrackDatasetAddAllGeoNullPadding:
+    @pytest.fixture
+    def dataset_without_geo_cols(
+        self, car_track: Track, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> PolarsTrackDataset:
+        return PolarsTrackDataset.from_list([car_track], track_geometry_factory)
+
+    @pytest.fixture
+    def dataset_with_geo_cols(
+        self,
+        pedestrian_track: Track,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+    ) -> PolarsTrackDataset:
+        ped_base = PolarsTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        )
+        df_ped = ped_base.get_data().with_columns(
+            pl.lit(3.0).alias(track.GEO_X),
+            pl.lit(4.0).alias(track.GEO_Y),
+        )
+        return PolarsTrackDataset.from_dataframe(df_ped, track_geometry_factory)
+
+    def test_add_with_geo_pads_null_into_incoming_without_geo_and_vice_versa(
+        self,
+        dataset_without_geo_cols: PolarsTrackDataset,
+        dataset_with_geo_cols: PolarsTrackDataset,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        with_geo_on_without = dataset_without_geo_cols.add_all(dataset_with_geo_cols)
+        without_geo_on_with = dataset_with_geo_cols.add_all(dataset_without_geo_cols)
+        for actual in [with_geo_on_without, without_geo_on_with]:
+            actual_data = actual.get_data()
+            assert track.GEO_X in actual_data.columns
+            assert track.GEO_Y in actual_data.columns
+            car_rows = actual_data.filter(pl.col(track.TRACK_ID) == car_track.id.id)
+            ped_rows = actual_data.filter(
+                pl.col(track.TRACK_ID) == pedestrian_track.id.id
+            )
+            assert car_rows[track.GEO_X].is_null().all()
+            assert car_rows[track.GEO_Y].is_null().all()
+            assert (ped_rows[track.GEO_X] == 3.0).all()
+            assert (ped_rows[track.GEO_Y] == 4.0).all()
+
+
 GEO_X_VALUES = [449250.0, 449260.0, 449270.0]
 GEO_Y_VALUES = [5855000.0, 5855010.0, 5855020.0]
 VIDEO_NAME_VALUE = "myhostname_something.mp4"
@@ -1348,7 +1394,7 @@ class TestPolarsTrackDatasetMergeAll:
         assert track.GEO_X in result.get_data().columns
         assert track.GEO_Y in result.get_data().columns
 
-    def test_geo_columns_dropped_when_only_some_datasets_have_them(
+    def test_geo_columns_null_padded_when_only_some_datasets_have_them(
         self,
         track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
         car_track: Track,
@@ -1367,5 +1413,63 @@ class TestPolarsTrackDatasetMergeAll:
 
         result = PolarsTrackDataset.merge_all([ds_a, ds_b])
 
-        assert track.GEO_X not in result.get_data().columns
-        assert track.GEO_Y not in result.get_data().columns
+        data = result.get_data()
+        assert track.GEO_X in data.columns
+        assert track.GEO_Y in data.columns
+        car_rows = data.filter(pl.col(track.TRACK_ID) == car_track.id.id)
+        pedestrian_rows = data.filter(pl.col(track.TRACK_ID) == pedestrian_track.id.id)
+        assert (car_rows[track.GEO_X] == 1.0).all()
+        assert (car_rows[track.GEO_Y] == 2.0).all()
+        assert pedestrian_rows[track.GEO_X].is_null().all()
+        assert pedestrian_rows[track.GEO_Y].is_null().all()
+
+
+class TestDatasetHasCompleteGeoValues:
+    def test_returns_true_when_geo_columns_present_and_all_non_null(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        ds = _build_segment_dataset(track_geometry_factory, include_geo=True)
+        assert dataset_has_complete_geo_values(ds) is True
+
+    def test_returns_false_when_geo_columns_absent(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        ds = _build_segment_dataset(track_geometry_factory, include_geo=False)
+        assert dataset_has_complete_geo_values(ds) is False
+
+    def test_returns_false_when_geo_columns_present_but_contain_nulls(
+        self,
+        track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        ds_a_base = PolarsTrackDataset.from_list([car_track], track_geometry_factory)
+        ds_b_base = PolarsTrackDataset.from_list(
+            [pedestrian_track], track_geometry_factory
+        )
+        df_a = ds_a_base.get_data().with_columns(
+            pl.lit(1.0).alias(track.GEO_X),
+            pl.lit(2.0).alias(track.GEO_Y),
+        )
+        ds_a = PolarsTrackDataset.from_dataframe(df_a, track_geometry_factory)
+        ds_b = ds_b_base
+        mixed = PolarsTrackDataset.merge_all([ds_a, ds_b])
+        assert dataset_has_complete_geo_values(mixed) is False
+
+    def test_returns_false_for_empty_dataset(
+        self, track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        ds = PolarsTrackDataset(track_geometry_factory=track_geometry_factory)
+        assert dataset_has_complete_geo_values(ds) is False
+
+
+def dataset_has_complete_geo_values(dataset: PolarsTrackDataset) -> bool:
+    df = dataset.get_data()
+    if df.is_empty():
+        return False
+    for col in GEO_COLUMNS:
+        if col not in df.columns:
+            return False
+        if df[col].is_null().any():
+            return False
+    return True

@@ -103,6 +103,7 @@ EVENT_COORDINATE_X = f"{event.EVENT_COORDINATE}_X"
 EVENT_COORDINATE_Y = f"{event.EVENT_COORDINATE}_Y"
 INTERPOLATED_EVENT_COORDINATE_X = f"{event.INTERPOLATED_EVENT_COORDINATE}_X"
 INTERPOLATED_EVENT_COORDINATE_Y = f"{event.INTERPOLATED_EVENT_COORDINATE}_Y"
+GEO_SEGMENT_COLUMNS = [START_GEO_X, START_GEO_Y, END_GEO_X, END_GEO_Y]
 
 
 @dataclass(frozen=True)
@@ -1299,10 +1300,10 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
         use_geo = (
             georeference_metadata is not None
             and not self._segments_df.is_empty()
-            and START_GEO_X in self._segments_df.columns
-            and START_GEO_Y in self._segments_df.columns
-            and END_GEO_X in self._segments_df.columns
-            and END_GEO_Y in self._segments_df.columns
+            and all(col in self._segments_df.columns for col in GEO_SEGMENT_COLUMNS)
+            and not any(
+                self._segments_df[col].is_null().any() for col in GEO_SEGMENT_COLUMNS
+            )
         )
         coordinate_space = "geo coordinates" if use_geo else "image coordinates"
         logger().debug(f"Creating intersection events using {coordinate_space}.")
@@ -1369,11 +1370,11 @@ class PolarsTrackGeometryDataset(TrackGeometryDataset):
                         end_y_col=END_Y,
                     )
 
-                if (
-                    START_GEO_X in intersecting_segments.columns
-                    and START_GEO_Y in intersecting_segments.columns
-                    and END_GEO_X in intersecting_segments.columns
-                    and END_GEO_Y in intersecting_segments.columns
+                if all(
+                    c in intersecting_segments.columns for c in GEO_SEGMENT_COLUMNS
+                ) and not any(
+                    intersecting_segments[c].is_null().any()
+                    for c in GEO_SEGMENT_COLUMNS
                 ):
                     intersection_points = intersection_points.with_columns(
                         [
