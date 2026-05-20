@@ -185,7 +185,17 @@ def create_track_segments(df: pl.DataFrame) -> pl.DataFrame:
             pl.col(H).shift(1).over(TRACK_ID).alias(START_H),
         ]
         + geo_columns
-    ).drop_nulls()  # Remove rows where shift resulted in null (first rows per track)
+    ).drop_nulls(
+        subset=[
+            START_OCCURRENCE,
+            START_X,
+            START_Y,
+            START_W,
+            START_H,
+        ]
+        # Only drop on non-geo shifted columns. Geo columns may legitimately be
+        # null (null-padded datasets) and must not cause valid segments to be dropped.
+    )
 
     geo_select = [END_GEO_X, END_GEO_Y, START_GEO_X, START_GEO_Y] if has_geo else []
 

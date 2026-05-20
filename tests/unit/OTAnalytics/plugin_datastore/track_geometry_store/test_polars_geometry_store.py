@@ -827,6 +827,17 @@ class TestCreateTrackSegmentsGeoCoordinates:
         result = create_track_segments(df_only_x)
         assert START_GEO_X not in result.columns
 
+    def test_segments_preserved_when_geo_columns_have_null_values(self) -> None:
+        given = create_segment_geo_given()
+        df_null_geo = given.df_without_geo.with_columns(
+            pl.lit(None, dtype=pl.Float64).alias(track.GEO_X),
+            pl.lit(None, dtype=pl.Float64).alias(track.GEO_Y),
+        )
+        result = create_track_segments(df_null_geo)
+        assert len(result) == 2
+        assert result[START_GEO_X].is_null().all()
+        assert result[END_GEO_X].is_null().all()
+
 
 @dataclass
 class LineIntersectionGeoGiven:
