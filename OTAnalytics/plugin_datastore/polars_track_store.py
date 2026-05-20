@@ -1201,20 +1201,6 @@ def area_section_to_shapely(section: Section) -> BaseGeometry:
     return geometry
 
 
-# def adheres_to_georeference_metadata_policy(
-#     this: TrackDataset, other: TrackDataset
-# ) -> bool:
-#     if this.empty:
-#         pass
-#
-#     if this != other:
-#         raise IncompatibleGeoreferenceMetadataError(
-#             "Cannot merge dataset with georeference metadata "
-#             f"{other!r} into dataset with georeference metadata "
-#             f"{this!r}"
-#         )
-
-
 def dataset_has_geo_columns(dataset: PolarsTrackDataset) -> bool:
     return all(column in dataset.get_data().columns for column in GEO_COLUMNS)
 
