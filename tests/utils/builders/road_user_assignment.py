@@ -51,4 +51,8 @@ def create_road_user_assignment(
         ras.START_INTERPOLATED_EVENT_COORD_Y: start_event.interpolated_event_coordinate.y,  # noqa
         ras.END_INTERPOLATED_EVENT_COORD_X: end_event.interpolated_event_coordinate.x,
         ras.END_INTERPOLATED_EVENT_COORD_Y: end_event.interpolated_event_coordinate.y,
+        ras.START_GEO_X: start_event.geo_x,
+        ras.START_GEO_Y: start_event.geo_y,
+        ras.END_GEO_X: end_event.geo_x,
+        ras.END_GEO_Y: end_event.geo_y,
     }
