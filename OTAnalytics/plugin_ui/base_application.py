@@ -267,6 +267,9 @@ from OTAnalytics.plugin_progress.lazy_tqdm_progressbar import LazyTqdmBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     TrackImageFactory,
 )
+from OTAnalytics.plugin_track_export.csv.track_dataset_writer import (
+    create_default_track_dataset_csv_writer,
+)
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
     ClassByFlowCountPlotter,
@@ -588,8 +591,12 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def csv_track_export(self) -> CsvTrackExport:
+        csv_writer = create_default_track_dataset_csv_writer()
         return CsvTrackExport(
-            self.track_repository, self.tracks_metadata, self.videos_metadata
+            self.track_repository,
+            self.tracks_metadata,
+            self.videos_metadata,
+            csv_writer=csv_writer,
         )
 
     @cached_property
