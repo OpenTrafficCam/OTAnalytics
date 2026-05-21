@@ -857,6 +857,8 @@ class PolarsIntersectionPointsDataset(IntersectionPointsDataset):
             if event.GEO_X in events.columns and event.GEO_Y in events.columns
             else []
         )
+        coordinate_space = "geo coordinates" if geo_event_cols else "image coordinates"
+        logger().info(f"Creating section events using {coordinate_space}.")
         events = events.select(
             [
                 event.ROAD_USER_ID,
