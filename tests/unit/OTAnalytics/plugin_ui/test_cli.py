@@ -984,11 +984,6 @@ class TestOTAnalyticsCli:
         classifications = frozenset(["car", "bike"])
         interval = 15
         filename = "filename"
-        expected_output_file = (
-            test_data_tmp_dir / f"{filename}.{CONTEXT_FILE_TYPE_COUNTS}_{interval}"
-            f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}."
-            f"{DEFAULT_COUNTS_FILE_TYPE}"
-        )
 
         if mode == CliMode.STREAM:
             dependencies = mock_cli_stream_dependencies
@@ -1013,7 +1008,11 @@ class TestOTAnalyticsCli:
             run_config,
         )
 
-        await cli._do_export_counts(test_data_tmp_dir / filename, OVERWRITE)
+        await cli._do_export_counts(
+            export_directory=test_data_tmp_dir,
+            export_filename_stem=filename,
+            export_mode=OVERWRITE,
+        )
         export_counts = dependencies[self.EXPORT_COUNTS]
 
         expected_specification = CountingSpecificationDto(
@@ -1022,7 +1021,8 @@ class TestOTAnalyticsCli:
             interval_in_minutes=interval,
             modes=list(classifications),
             output_format="CSV",
-            output_file=str(expected_output_file),
+            export_directory=test_data_tmp_dir,
+            export_filename_stem=filename,
             export_mode=OVERWRITE,
         )
         export_counts.export.assert_called_with(expected_specification)
@@ -1047,6 +1047,7 @@ class TestOTAnalyticsCli:
         end_date = datetime(1998, 4, 28, 15, 15)
         classifications = frozenset(["car", "bike"])
         interval = 15
+        export_directory = test_data_tmp_dir
         expected_output_file = (
             test_data_tmp_dir
             / f"{filename_with_dots}.{CONTEXT_FILE_TYPE_COUNTS}_{interval}"
@@ -1073,7 +1074,11 @@ class TestOTAnalyticsCli:
             mode, dependencies, dependencies, run_config
         )
 
-        await cli._do_export_counts(save_path, OVERWRITE)
+        await cli._do_export_counts(
+            export_directory=test_data_tmp_dir,
+            export_filename_stem=filename_with_dots,
+            export_mode=OVERWRITE,
+        )
 
         expected_specification = CountingSpecificationDto(
             start=start_date,
@@ -1081,7 +1086,9 @@ class TestOTAnalyticsCli:
             interval_in_minutes=interval,
             modes=list(classifications),
             output_format="CSV",
-            output_file=str(expected_output_file),
+            export_directory=test_data_tmp_dir,
+            export_filename_stem=filename_with_dots,
+            # output_file=str(expected_output_file),
             export_mode=OVERWRITE,
         )
         dependencies[self.EXPORT_COUNTS].export.assert_called_with(

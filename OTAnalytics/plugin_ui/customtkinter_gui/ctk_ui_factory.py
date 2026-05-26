@@ -5,6 +5,7 @@ from typing import Iterable
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
+from OTAnalytics.adapter_ui.helpers import ensure_dot_in_extension, strip_extension
 from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
@@ -14,7 +15,11 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
     CountingSpecificationDto,
 )
-from OTAnalytics.application.config import DEFAULT_COUNTING_INTERVAL_IN_MINUTES
+from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_COUNTS,
+    DEFAULT_COUNT_INTERVAL_TIME_UNIT,
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+)
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
@@ -39,6 +44,8 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_file import (
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_flows import ToplevelFlows
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import ToplevelSections
+
+SELECTED_EXTENSION = "selected_extension"
 
 
 class CtkUiFactory(UiFactory):
@@ -93,7 +100,7 @@ class CtkUiFactory(UiFactory):
         self,
         title: str,
         export_format_extensions: dict[str, str],
-        initial_file_stem: str,
+        context_file_type: str,
         viewmodel: ViewModel,
     ) -> ExportFileDto:
         default_format = next(iter(export_format_extensions.keys()))
@@ -105,12 +112,22 @@ class CtkUiFactory(UiFactory):
             initial_position=(50, 50),
             input_values=default_values,
             export_format_extensions=export_format_extensions,
-            initial_file_stem=initial_file_stem,
+            context_file_type=context_file_type,
             viewmodel=viewmodel,
         ).get_data()
-        file = export_config[toplevel_export_file.EXPORT_FILE]
+        file = Path(export_config[toplevel_export_file.EXPORT_FILE])
         export_format = export_config[toplevel_export_file.EXPORT_FORMAT]
-        return ExportFileDto(file=Path(file), export_format=export_format)
+        selected_extension = ensure_dot_in_extension(
+            export_config[toplevel_export_file.SELECTED_EXTENSION]
+        )
+        extension_with_context_type = f".{context_file_type}{selected_extension}"
+        file_stem = strip_extension(file.name, extension_with_context_type)
+        return ExportFileDto(
+            export_directory=file.parent,
+            file_stem=file_stem,
+            export_format_extension=selected_extension,
+            export_format=export_format,
+        )
 
     async def configure_export_counts(
         self,
@@ -132,19 +149,30 @@ class CtkUiFactory(UiFactory):
             initial_position=(50, 50),
             input_values=default_values,
             export_formats=export_formats,
+            context_file_type=CONTEXT_FILE_TYPE_COUNTS,
             viewmodel=viewmodel,
         ).get_data()
         logger().debug(export_values)
+        file = Path(export_values[EXPORT_FILE])
         counting_event_str = export_values.get(
             COUNTING_EVENT, CountingEvent.START.value
         )
+        interval_in_minutes = export_values[INTERVAL]
+        selected_extension = export_values[toplevel_export_file.SELECTED_EXTENSION]
+        extension_with_context_type = (
+            f".{CONTEXT_FILE_TYPE_COUNTS}"
+            f"_{interval_in_minutes}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"
+            f"{ensure_dot_in_extension(selected_extension)}"
+        )
+        file_stem = strip_extension(file.name, extension_with_context_type)
         return CountingSpecificationDto(
             interval_in_minutes=export_values[INTERVAL],
             start=export_values[START],
             end=export_values[END],
             modes=modes,
             output_format=export_values[EXPORT_FORMAT],
-            output_file=export_values[EXPORT_FILE],
+            export_directory=file.parent,
+            export_filename_stem=file_stem,
             export_mode=OVERWRITE,
             counting_event=CountingEvent.parse(counting_event_str),
         )

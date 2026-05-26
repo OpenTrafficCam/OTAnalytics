@@ -2,6 +2,7 @@ import io
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Callable, Iterator
 
 import pandas
@@ -394,7 +395,8 @@ class FlowAndClassOverTimeCountPlotter(MatplotlibCountPlotter, ABC):
             count_all_events=True,
             interval_in_minutes=self._interval_in_minutes,
             modes=list(self._metadata.detection_classifications),
-            output_file="none",
+            export_directory=Path.cwd(),
+            export_filename_stem="none",
             output_format="jpeg",
             export_mode=OVERWRITE,
         )

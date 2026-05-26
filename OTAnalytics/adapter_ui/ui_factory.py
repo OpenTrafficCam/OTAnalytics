@@ -64,7 +64,7 @@ class UiFactory(ABC):
         self,
         title: str,
         export_format_extensions: dict[str, str],
-        initial_file_stem: str,
+        context_file_type: str,
         viewmodel: ViewModel,
     ) -> ExportFileDto:
         raise NotImplementedError

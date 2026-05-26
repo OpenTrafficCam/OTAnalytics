@@ -2,6 +2,7 @@ from abc import ABC
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 from typing import Iterable
 
 from OTAnalytics.application.export_formats.export_mode import ExportMode
@@ -43,7 +44,8 @@ class CountingSpecificationDto:
     interval_in_minutes: int
     modes: list[str]
     output_format: str
-    output_file: str
+    export_directory: Path
+    export_filename_stem: str
     export_mode: ExportMode
     count_all_events: bool = False
     counting_event: CountingEvent = CountingEvent.START
@@ -55,7 +57,8 @@ class CountingSpecificationDto:
             interval_in_minutes=self.interval_in_minutes,
             modes=self.modes,
             output_format=self.output_format,
-            output_file=self.output_file,
+            export_directory=self.export_directory,
+            export_filename_stem=self.export_filename_stem,
             export_mode=self.export_mode,
             count_all_events=self.count_all_events,
             counting_event=self.counting_event,
@@ -83,12 +86,16 @@ class ExportSpecificationDto:
         return self.counting_specification.output_format
 
     @property
-    def output_file(self) -> str:
-        return self.counting_specification.output_file
+    def export_directory(self) -> Path:
+        return self.counting_specification.export_directory
+
+    @property
+    def export_filename_stem(self) -> str:
+        return self.counting_specification.export_filename_stem
 
 
 class ExportCounts(ABC):
-    def export(self, specification: CountingSpecificationDto) -> None:
+    def export(self, specification: CountingSpecificationDto) -> Path:
         raise NotImplementedError
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:

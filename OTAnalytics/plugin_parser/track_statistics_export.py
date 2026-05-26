@@ -3,9 +3,7 @@ from typing import Iterable
 
 from pandas import DataFrame
 
-from OTAnalytics.application.config import CONTEXT_FILE_TYPE_TRACK_STATISTICS
 from OTAnalytics.application.export_formats.export_mode import ExportMode
-from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.track_statistics_export import (
     ExportFormat,
@@ -19,7 +17,6 @@ CSV_FORMAT = ExportFormat("CSV", ".csv")
 
 
 class TrackStatisticsCsvExporter(TrackStatisticsExporter):
-    PRIMARY_SUFFIX = f".{CONTEXT_FILE_TYPE_TRACK_STATISTICS}.csv"
 
     @property
     def format(self) -> ExportFormat:
@@ -69,13 +66,8 @@ class SimpleTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
         Returns:
             TrackStatisticsExporter: Exporter to export track statistics.
         """
-        output_file = build_export_path(
-            specification.export_directory,
-            specification.export_filename_stem,
-            TrackStatisticsCsvExporter.PRIMARY_SUFFIX,
-        )
         return self._factories[specification.format](
-            TrackStatisticsBuilder(), output_file
+            TrackStatisticsBuilder(), specification
         )
 
 

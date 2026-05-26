@@ -45,45 +45,52 @@ from OTAnalytics.plugin_parser.export import (
     TagExploder,
 )
 
+EXPORT_FILENAME_STEM = "output-file"
+EXPORT_DIRECTORY = Path("path/to/export/directory")
+
 
 class TestCsvExport:
+    @pytest.fixture
+    def target(self, test_data_tmp_dir: Path) -> CsvExport:
+        return CsvExport(
+            export_directory=test_data_tmp_dir,
+            export_filename_stem=EXPORT_FILENAME_STEM,
+            interval_in_minutes=5,
+        )
 
-    def test_empty_data(self, test_data_tmp_dir: Path) -> None:
-        output_file = test_data_tmp_dir / "counts.csv"
+    def test_empty_data(self, target: CsvExport) -> None:
         counts = Mock(spec=Count)
         counts.to_dict.return_value = {}
-        export = CsvExport(output_file=str(output_file))
-        export.export(counts, OVERWRITE)
+        actual_export_path = target.export(counts, OVERWRITE)
 
-        assert not output_file.exists()
+        assert not actual_export_path.exists()
+        actual_export_path.unlink(missing_ok=True)
 
     @pytest.mark.parametrize("export_mode", [FLUSH, OVERWRITE])
-    def test_export(self, test_data_tmp_dir: Path, export_mode: ExportMode) -> None:
-        output_file = test_data_tmp_dir / "counts.csv"
+    def test_export(self, target: CsvExport, export_mode: ExportMode) -> None:
         counts = self._mock_counts_with_single_tag()
         expected = self._expected_counts()
-        export = CsvExport(output_file=str(output_file))
-        export.export(counts, export_mode)
+        actual_export_path = target.export(counts, export_mode)
 
-        actual: DataFrame = pandas.read_csv(output_file)
+        actual: DataFrame = pandas.read_csv(actual_export_path)
         assert actual.to_dict() == expected
+        actual_export_path.unlink(missing_ok=True)
 
     @pytest.mark.parametrize("export_mode", [INITIAL_MERGE, MERGE])
     def test_increment_no_export(
-        self, test_data_tmp_dir: Path, export_mode: ExportMode
+        self, target: CsvExport, export_mode: ExportMode
     ) -> None:
-        output_file = test_data_tmp_dir / "no_counts.csv"
         counts = self._mock_counts_with_single_tag()
 
-        export = CsvExport(output_file=str(output_file))
-        export.export(counts, export_mode)
+        actual_export_path = target.export(counts, export_mode)
 
-        assert not output_file.exists()
-        assert len(export._counts) == 1 and list(export._counts.values())[0] == 1
+        assert not actual_export_path.exists()
+        assert len(target._counts) == 1 and list(target._counts.values())[0] == 1
 
-        export.export(counts, export_mode)
-        assert not output_file.exists()
-        assert len(export._counts) == 1 and list(export._counts.values())[0] == 2
+        actual_export_path = target.export(counts, export_mode)
+        assert not actual_export_path.exists()
+        assert len(target._counts) == 1 and list(target._counts.values())[0] == 2
+        actual_export_path.unlink(missing_ok=True)
 
     def _expected_counts(self) -> dict:
         expected = {
@@ -188,7 +195,6 @@ def setup_single() -> GivenSingle:
     interval_in_minutes = 10
     modes = ["first-mode"]
     output_format = "csv"
-    output_file = "output-file.csv"
     flow_name_dto = FlowNameDto("from first -> to second", "from first", "to second")
     flow_names = [flow_name_dto]
     expected_tags: list[Tag] = [
@@ -202,7 +208,8 @@ def setup_single() -> GivenSingle:
         interval_in_minutes=interval_in_minutes,
         modes=modes,
         output_format=output_format,
-        output_file=output_file,
+        export_directory=EXPORT_DIRECTORY,
+        export_filename_stem=EXPORT_FILENAME_STEM,
         export_mode=OVERWRITE,
     )
     specification = ExportSpecificationDto(
@@ -239,7 +246,8 @@ def setup_update_end() -> GivenUpdateEnd:
         interval_in_minutes=interval_in_minutes,
         modes=modes,
         output_format=output_format,
-        output_file=output_file,
+        export_directory=EXPORT_DIRECTORY,
+        export_filename_stem=EXPORT_FILENAME_STEM,
         export_mode=OVERWRITE,
     )
     specification = ExportSpecificationDto(
@@ -301,7 +309,8 @@ def setup_multiple() -> GivenMultiple:
         interval_in_minutes=interval_in_minutes,
         modes=modes,
         output_format=output_format,
-        output_file=output_file,
+        export_directory=EXPORT_DIRECTORY,
+        export_filename_stem=EXPORT_FILENAME_STEM,
         export_mode=OVERWRITE,
     )
     specification = ExportSpecificationDto(
@@ -394,7 +403,8 @@ def setup_two_slots_test(
         interval_in_minutes=interval_in_minutes,
         modes=modes,
         output_format=output_format,
-        output_file=output_file,
+        export_directory=EXPORT_DIRECTORY,
+        export_filename_stem=EXPORT_FILENAME_STEM,
         export_mode=OVERWRITE,
     )
     specification = ExportSpecificationDto(

@@ -222,7 +222,8 @@ class UseCaseProvider:
             ),
             interval_in_minutes=15,
             modes=list(self._detection_metadata.detection_classes),
-            output_file=f"{save_dir / self._otflow_file.with_suffix('.csv').name}",
+            export_directory=save_dir,
+            export_filename_stem=self._otflow_file.stem,
             output_format="CSV",
             export_mode=OVERWRITE,
         )

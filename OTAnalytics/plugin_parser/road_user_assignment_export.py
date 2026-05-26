@@ -3,9 +3,7 @@ from typing import Iterable, Literal
 from pandas import DataFrame
 
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportFormat
-from OTAnalytics.application.config import CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS
 from OTAnalytics.application.export_formats.export_mode import ExportMode
-from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ROAD_USER_ASSIGNMENT_DICT_KEYS,
     ExportSpecification,
@@ -26,8 +24,6 @@ class RoadUserAssignmentCsvExporter(RoadUserAssignmentExporter):
     Other export modes will only append data.
     """
 
-    PRIMARY_SUFFIX = f".{CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS}.csv"
-
     @property
     def format(self) -> ExportFormat:
         return ExportFormat("csv", ".csv")
@@ -41,6 +37,7 @@ class RoadUserAssignmentCsvExporter(RoadUserAssignmentExporter):
 
 
 class SimpleRoadUserAssignmentExporterFactory:
+
     def __init__(
         self,
         section_repository: SectionRepository,
@@ -49,8 +46,8 @@ class SimpleRoadUserAssignmentExporterFactory:
         self._section_repository = section_repository
         self._get_all_tracks = get_all_tracks
         self._formats = {
-            CSV_FORMAT: lambda builder, output_file: RoadUserAssignmentCsvExporter(
-                section_repository, get_all_tracks, builder, output_file
+            CSV_FORMAT: lambda builder, specification: RoadUserAssignmentCsvExporter(
+                section_repository, get_all_tracks, builder, specification
             )
         }
         self._factories = {
@@ -77,11 +74,6 @@ class SimpleRoadUserAssignmentExporterFactory:
         Returns:
             RoadUserAssignmentExporter: Exporter to export road user assignments.
         """
-        output_file = build_export_path(
-            specification.export_directory,
-            specification.export_filename_stem,
-            RoadUserAssignmentCsvExporter.PRIMARY_SUFFIX,
-        )
         return self._factories[specification.format](
-            RoadUserAssignmentBuilder(), output_file
+            RoadUserAssignmentBuilder(), specification
         )

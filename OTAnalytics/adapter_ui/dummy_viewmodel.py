@@ -33,6 +33,7 @@ from OTAnalytics.adapter_ui.default_values import (
     RELATIVE_SECTION_OFFSET,
     SUPPORTED_FORMATS,
 )
+from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_adapter import (
     GeometricCenterCalculator,
     InnerSegmentsCenterCalculator,
@@ -61,13 +62,14 @@ from OTAnalytics.application.application import (
 )
 from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_EVENTS,
+    CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
     CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     CUTTING_SECTION_MARKER,
+    DEFAULT_COUNTS_FILE_TYPE,
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
-from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.config_parser import StartDateMissing
 from OTAnalytics.application.parser.flow_parser import FlowParser
@@ -98,6 +100,7 @@ from OTAnalytics.application.use_cases.editor.section_editor import (
     UpdateSectionCoordinates,
 )
 from OTAnalytics.application.use_cases.export_events import (
+    EventExportSpecification,
     EventListExporter,
     ExporterNotFoundError,
 )
@@ -139,9 +142,7 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_parser.road_user_assignment_export import (
-    RoadUserAssignmentCsvExporter,
-)
+from OTAnalytics.plugin_parser.track_statistics_export import TrackStatisticsCsvExporter
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 SUPPORTED_VIDEO_FILE_TYPES = [".mp4", ".avi", ".mkv", ".mov"]
@@ -1393,33 +1394,40 @@ class DummyViewModel(
             for key, exporter in self._event_list_export_formats.items()
         }
         try:
-            event_list_exporter, file = await self._configure_event_exporter(
+            event_list_exporter, export_config = await self._configure_event_exporter(
                 export_format_extensions
             )
-            self._application.export_events(Path(file), event_list_exporter)
+            specification = EventExportSpecification(
+                export_directory=export_config.export_directory,
+                export_filename_stem=export_config.file_stem,
+                export_mode=OVERWRITE,
+            )
+            self._application.export_events(specification, event_list_exporter)
             logger().info(
-                f"Exporting eventlist using {event_list_exporter.get_name()} to {file}"
+                f"Exporting eventlist using {event_list_exporter.get_name()} to "
+                f"{export_config.as_file_path()}"
             )
         except CancelExportFile:
             logger().info("User canceled configuration of export")
 
     async def _configure_event_exporter(
         self, export_format_extensions: dict[str, str]
-    ) -> tuple[EventListExporter, Path]:
+    ) -> tuple[EventListExporter, ExportFileDto]:
         export_config = await self._ui_factory.configure_export_file(
             title="Export events",
             export_format_extensions=export_format_extensions,
-            initial_file_stem=CONTEXT_FILE_TYPE_EVENTS,
+            context_file_type=CONTEXT_FILE_TYPE_EVENTS,
             viewmodel=self,
         )
-        file = export_config.file
-        export_format = export_config.export_format
-        event_list_exporter = self._event_list_export_formats.get(export_format, None)
+        event_list_exporter = self._event_list_export_formats.get(
+            export_config.export_format, None
+        )
         if event_list_exporter is None:
             raise ExporterNotFoundError(
                 f"{event_list_exporter} is not a valid export format"
             )
-        return event_list_exporter, file
+
+        return event_list_exporter, export_config
 
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
         start_msg_popup = self._ui_factory.minimal_info_box(
@@ -1701,26 +1709,20 @@ class DummyViewModel(
             export_config = await self._ui_factory.configure_export_file(
                 title="Export road user assignments",
                 export_format_extensions=export_formats,
-                initial_file_stem="road_user_assignments",
+                context_file_type=CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
                 viewmodel=self,
             )
             logger().debug(export_config)
-            save_path = export_config.file
-            export_format = export_config.export_format
-
             export_specification = ExportSpecification(
-                export_directory=save_path.parent,
-                export_filename_stem=save_path.stem,
-                format=export_format,
+                export_directory=export_config.export_directory,
+                export_filename_stem=export_config.file_stem,
+                format=export_config.export_format,
                 export_mode=OVERWRITE,
             )
             self._application.export_road_user_assignments(export_specification)
-            destination = build_export_path(
-                save_path.parent,
-                save_path.stem,
-                RoadUserAssignmentCsvExporter.PRIMARY_SUFFIX,
+            logger().info(
+                f"Exporting road user assignments to {export_config.as_file_path()}"
             )
-            logger().info(f"Exporting road user assignments to {destination}")
         except CancelExportFile:
             logger().info("User canceled configuration of export")
 
@@ -1820,17 +1822,14 @@ class DummyViewModel(
             export_config = await self._ui_factory.configure_export_file(
                 title="Export track statistics",
                 export_format_extensions=export_formats,
-                initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
+                context_file_type=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
                 viewmodel=self,
             )
             logger().debug(export_config)
-            save_path = export_config.file
-            export_format = export_config.export_format
-
             export_specification = TrackStatisticsExportSpecification(
-                export_directory=save_path.parent,
-                export_filename_stem=save_path.stem,
-                format=export_format,
+                export_directory=export_config.export_directory,
+                export_filename_stem=export_config.file_stem,
+                format=export_config.export_format,
                 export_mode=OVERWRITE,
             )
             destination = self._application.export_track_statistics(

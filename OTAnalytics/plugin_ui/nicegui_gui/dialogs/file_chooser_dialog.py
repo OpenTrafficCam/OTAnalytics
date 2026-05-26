@@ -23,7 +23,7 @@ MARKER_DIRECTORY = "marker-directory"
 
 
 class FileChooserDialog(BaseDialog):
-    "Dialog for choosing a file to save or open."
+    """Dialog for choosing a file to save or open."""
 
     def __init__(
         self,
@@ -94,7 +94,7 @@ class FileChooserDialog(BaseDialog):
         # Remove the old extension if present
         filename_stem = Path(current_filename).stem
         new_extension = self._get_extension_for_current_format()
-        self._filename_field.set_value(f"{filename_stem}.{new_extension}")
+        self._filename_field.set_value(f"{filename_stem}{new_extension}")
 
     def _get_extension_for_current_format(self) -> str:
         """Get the file extension for the currently selected format."""

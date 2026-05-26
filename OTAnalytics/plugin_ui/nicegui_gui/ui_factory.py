@@ -178,20 +178,21 @@ class NiceGuiUiFactory(UiFactory):
         self,
         title: str,
         export_format_extensions: dict[str, str],
-        initial_file_stem: str,
+        context_file_type: str,
         viewmodel: ViewModel,
     ) -> ExportFileDto:
         dialog = FileChooserDialog(
             resource_manager=self._resource_manager,
             title=title,
             file_extensions=export_format_extensions,
-            initial_file_stem=initial_file_stem,
+            initial_file_stem=context_file_type,
         )
 
         result = await dialog.result
         if result == DialogResult.APPLY:
-            return ExportFileDto(
-                file=dialog.get_file_path(),
+
+            return ExportFileDto.from_file_path(
+                dialog.get_file_path(),
                 export_format=dialog.get_format(),
             )
         raise CancelAddFlow()

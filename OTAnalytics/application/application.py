@@ -31,7 +31,10 @@ from OTAnalytics.application.use_cases.create_events import (
     CreateIntersectionEvents,
 )
 from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
-from OTAnalytics.application.use_cases.export_events import EventListExporter
+from OTAnalytics.application.use_cases.export_events import (
+    EventExportSpecification,
+    EventListExporter,
+)
 from OTAnalytics.application.use_cases.filter_visualization import (
     EnableFilterTrackByDate,
 )
@@ -433,17 +436,21 @@ class OTAnalyticsApplication:
         """
         self._datastore.save_event_list_file(file)
 
-    def export_events(self, file: Path, event_list_exporter: EventListExporter) -> None:
+    def export_events(
+        self,
+        specification: EventExportSpecification,
+        event_list_exporter: EventListExporter,
+    ) -> None:
         """
         Export the event repository into other formats (like CSV or Excel)
 
         Args:
-            file (Path): File to export the events to
+            specification (EventExportSpecification): The event export specification
             event_list_exporter (EventListExporter): Exporter building the format
         """
         if self._datastore._event_repository.is_empty():
             self.create_events()
-        self._datastore.export_event_list_file(file, event_list_exporter)
+        self._datastore.export_event_list_file(specification, event_list_exporter)
 
     def get_supported_export_formats(self) -> Iterable[ExportFormat]:
         """

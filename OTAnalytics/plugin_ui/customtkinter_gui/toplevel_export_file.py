@@ -17,6 +17,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
 
 EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
+SELECTED_EXTENSION = "selected_extension"
 
 
 class FrameConfigureExportFile(FrameContent):
@@ -69,14 +70,16 @@ class ToplevelExportFile(ToplevelTemplate):
         viewmodel: ViewModel,
         export_format_extensions: dict[str, str],
         input_values: dict,
-        initial_file_stem: str,
+        context_file_type: str,
+        title: str,
         **kwargs: Any,
     ) -> None:
         self._viewmodel = viewmodel
         self._input_values = input_values
         self._export_format_extensions = export_format_extensions
-        self._initial_file_stem = initial_file_stem
-        super().__init__(**kwargs)
+        self._context_file_type = context_file_type
+        self._text_title = title
+        super().__init__(title=title, **kwargs)
 
     def _create_frame_content(self, master: Any) -> FrameContent:
         return FrameConfigureExportFile(
@@ -91,16 +94,18 @@ class ToplevelExportFile(ToplevelTemplate):
         export_extension = f"*.{export_file_type}"
         # TODO refactor: inject get_save_path_suggestion as use case
         suggested_save_path = self._viewmodel.get_save_path_suggestion(
-            export_file_type, context_file_type=self._initial_file_stem
+            file_type=export_file_type, context_file_type=self._context_file_type
         )
+
         export_file = ask_for_save_file_name(
-            title="Save counts as",
+            title=self._text_title or "Save file as",
             filetypes=[(export_format, export_extension)],
             defaultextension=export_extension,
             initialfile=suggested_save_path.name,
             initialdir=suggested_save_path.parent,
         )
         self._input_values[EXPORT_FILE] = export_file
+        self._input_values[SELECTED_EXTENSION] = export_file_type
         if export_file == "":
             raise FileSelectionCancelledException
 

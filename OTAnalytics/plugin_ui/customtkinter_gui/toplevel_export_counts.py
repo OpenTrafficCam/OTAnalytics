@@ -30,6 +30,7 @@ END = "end"
 EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
 COUNTING_EVENT = "counting_event"
+SELECTED_EXTENSION = "selected_extension"
 
 
 class FrameConfigureExportCounts(FrameContent):
@@ -130,12 +131,14 @@ class ToplevelExportCounts(ToplevelTemplate):
         self,
         export_formats: dict[str, str],
         input_values: dict,
+        context_file_type: str,
         viewmodel: ViewModel,
         **kwargs: Any,
     ) -> None:
         self._input_values = input_values
         self._export_formats = export_formats
         self._viewmodel = viewmodel
+        self._context_file_type = context_file_type
         super().__init__(**kwargs)
 
     def _create_frame_content(self, master: Any) -> FrameContent:
@@ -162,6 +165,7 @@ class ToplevelExportCounts(ToplevelTemplate):
             initialdir=suggested_save_path.parent,
         )
         self._input_values[EXPORT_FILE] = export_file
+        self._input_values[SELECTED_EXTENSION] = export_extension
         if export_file == "":
             raise FileSelectionCancelledException
 

@@ -196,6 +196,14 @@ class ExportCountsDialog(BaseDialog):
         """Get the selected file path."""
         return Path(self._directory_field.value) / self._filename_field.value
 
+    def get_selected_directory(self) -> Path:
+        """Get the selected directory."""
+        return Path(self._directory_field.value)
+
+    def get_selected_filename(self) -> str:
+        """Get the selected filename."""
+        return Path(self._filename_field.value)
+
     def get_specification(self) -> CountingSpecificationDto:
         """Get the export specification."""
         if not self._filename_field.value:

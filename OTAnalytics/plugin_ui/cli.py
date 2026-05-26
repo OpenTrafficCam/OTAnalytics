@@ -170,23 +170,34 @@ class OTAnalyticsCli(ABC):
     ) -> None:
         """Export events, counts and tracks."""
         save_base_path = self._run_config.save_dir / self._run_config.save_stem
+        export_directory = self._run_config.save_dir
+        export_filename_stem = self._run_config.save_stem
         if self._run_config.do_events:
-            await self._export_events(sections, save_base_path, export_mode)
+            await self._export_events(
+                export_directory=export_directory,
+                export_filename_stem=export_filename_stem,
+                sections=sections,
+                export_mode=export_mode,
+            )
 
         if self._run_config.do_counting:
-            await self._do_export_counts(save_base_path, export_mode)
+            await self._do_export_counts(
+                export_directory=export_directory,
+                export_filename_stem=export_filename_stem,
+                export_mode=export_mode,
+            )
 
         if self._run_config.do_export_tracks:
             await self._do_export_tracks(
-                export_directory=self._run_config.save_dir,
-                export_filename_stem=self._run_config.save_stem,
+                export_directory=export_directory,
+                export_filename_stem=export_filename_stem,
                 export_mode=export_mode,
             )
 
         if self._run_config.do_export_track_statistics:
             await self._do_export_track_statistics(
-                export_directory=self._run_config.save_dir,
-                export_filename_stem=self._run_config.save_stem,
+                export_directory=export_directory,
+                export_filename_stem=export_filename_stem,
                 export_mode=export_mode,
             )
 
@@ -269,34 +280,30 @@ class OTAnalyticsCli(ABC):
 
     async def _export_events(
         self,
+        export_directory: Path,
+        export_filename_stem: str,
         sections: Iterable[Section],
-        save_path: Path,
         export_mode: ExportMode,
     ) -> None:
         events = self._event_repository.get_all()
 
         for event_format in self._run_config.event_formats:
             event_list_exporter = self._provide_eventlist_exporter(event_format)
-            actual_save_path = build_export_path(
-                export_directory=save_path.parent,
-                export_filename_stem=save_path.name,
-                file_suffix=f".events{event_list_exporter.get_extension()}",
-            )
-
             event_export_specification = EventExportSpecification(
-                file=actual_save_path,
+                export_directory=export_directory,
+                export_filename_stem=export_filename_stem,
                 export_mode=export_mode,
             )
 
-            await asyncio.to_thread(
+            actual_save_path = await asyncio.to_thread(
                 event_list_exporter.export, events, sections, event_export_specification
             )
             logger().info(f"Event list saved at '{actual_save_path}'")
             await self._after_event_file_export(actual_save_path)
 
         specification = ExportSpecification(
-            export_directory=save_path.parent,
-            export_filename_stem=save_path.name,
+            export_directory=export_directory,
+            export_filename_stem=export_filename_stem,
             format=CSV_FORMAT.name,
             export_mode=export_mode,
         )
@@ -316,7 +323,9 @@ class OTAnalyticsCli(ABC):
         """Hook to execute after road user assignment export."""
         pass
 
-    async def _do_export_counts(self, save_path: Path, export_mode: ExportMode) -> None:
+    async def _do_export_counts(
+        self, export_directory: Path, export_filename_stem: str, export_mode: ExportMode
+    ) -> None:
         logger().info("Create counts ...")
         self._tracks_metadata.notify_tracks(
             TrackRepositoryEvent.create_added(self._get_all_track_ids())
@@ -332,23 +341,20 @@ class OTAnalyticsCli(ABC):
         if modes is None:
             raise ValueError("modes is None but has to be defined for exporting counts")
         for count_interval in self._run_config.count_intervals:
-            output_file = build_export_path(
-                save_path.parent,
-                save_path.name,
-                f".{CONTEXT_FILE_TYPE_COUNTS}_{count_interval}"
-                f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}.{DEFAULT_COUNTS_FILE_TYPE}",
-            )
             counting_specification = CountingSpecificationDto(
                 start=start,
                 end=end,
                 modes=list(modes),
                 interval_in_minutes=count_interval,
-                output_file=str(output_file),
+                export_directory=export_directory,
+                export_filename_stem=export_filename_stem,
                 output_format="CSV",
                 export_mode=export_mode,
                 counting_event=self._run_config.counting_event,
             )
-            await asyncio.to_thread(self._export_counts.export, counting_specification)
+            output_file = await asyncio.to_thread(
+                self._export_counts.export, counting_specification
+            )
             await self._after_count_export(output_file)
 
     async def _after_count_export(self, counts_file: Path) -> None:
@@ -391,13 +397,10 @@ class OTAnalyticsCli(ABC):
             format="CSV",
             export_mode=export_mode,
         )
-        await asyncio.to_thread(self._export_track_statistics.export, specification)
-        track_statistics_path = build_export_path(
-            export_directory,
-            export_filename_stem,
-            TrackStatisticsCsvExporter.PRIMARY_SUFFIX,
+        output_file = await asyncio.to_thread(
+            self._export_track_statistics.export, specification
         )
-        await self._after_track_statistics_export(track_statistics_path)
+        await self._after_track_statistics_export(output_file)
 
     async def _after_track_statistics_export(self, track_statistics_file: Path) -> None:
         pass

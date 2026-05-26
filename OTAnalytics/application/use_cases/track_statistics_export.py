@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Iterable, Protocol
 
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportFormat
+from OTAnalytics.application.config import CONTEXT_FILE_TYPE_TRACK_STATISTICS
 from OTAnalytics.application.export_formats import track_statistics as ts
 from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.use_cases.track_statistics import (
@@ -40,19 +41,36 @@ class TrackStatisticsExportError(Exception):
     pass
 
 
+@dataclass(frozen=True)
+class TrackStatisticsExportSpecification:
+    export_directory: Path
+    export_filename_stem: str
+    format: str
+    export_mode: ExportMode
+
+
 class TrackStatisticsExporter(ABC):
+    CONTEXT_FILE_TYPE = CONTEXT_FILE_TYPE_TRACK_STATISTICS
+
     @property
     @abstractmethod
     def format(self) -> ExportFormat:
         raise NotImplementedError
 
+    @property
+    def _outputfile(self) -> Path:
+        return self._specification.export_directory / (
+            f"{self._specification.export_filename_stem}.{self.CONTEXT_FILE_TYPE}"
+            f"{self.format.file_extension}"
+        )
+
     def __init__(
         self,
         builder: TrackStatisticsBuilder,
-        output_file: Path,
+        specification: TrackStatisticsExportSpecification,
     ) -> None:
         self._builder = builder
-        self._outputfile = output_file
+        self._specification = specification
         self.reset_track_statistics()
 
     def export(
@@ -101,14 +119,6 @@ class TrackStatisticsExporter(ABC):
         self._preliminary_track_statistics = TrackStatistics()
 
 
-@dataclass(frozen=True)
-class TrackStatisticsExportSpecification:
-    export_directory: Path
-    export_filename_stem: str
-    format: str
-    export_mode: ExportMode
-
-
 class TrackStatisticsExporterFactory(Protocol):
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """
@@ -137,6 +147,8 @@ class TrackStatisticsExporterFactory(Protocol):
 
 class ExportTrackStatistics:
     """Use case to export track statistics"""
+
+    CONTEXT_FILE_TYPE = CONTEXT_FILE_TYPE_TRACK_STATISTICS
 
     def __init__(
         self,

@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignments,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportFormat
+from OTAnalytics.application.config import CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS
 from OTAnalytics.application.export_formats import road_user_assignments as ras
 from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.use_cases.assignment_repository import (
@@ -146,23 +147,41 @@ class RoadUserAssignmentExportError(Exception):
     pass
 
 
+@dataclass(frozen=True)
+class ExportSpecification:
+    export_directory: Path
+    export_filename_stem: str
+    format: str
+    export_mode: ExportMode
+
+
 class RoadUserAssignmentExporter(ABC):
+    CONTEXT_FILE_TYPE = CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS
+
     @property
     @abstractmethod
     def format(self) -> ExportFormat:
         raise NotImplementedError
+
+    @property
+    def _outputfile(self) -> Path:
+        return (
+            self._specification.export_directory
+            / f"{self._specification.export_filename_stem}.{self.CONTEXT_FILE_TYPE}"
+            f"{self.format.file_extension}"
+        )
 
     def __init__(
         self,
         section_repository: SectionRepository,
         get_all_tracks: GetAllTracks,
         builder: RoadUserAssignmentBuilder,
-        output_file: Path,
+        specification: ExportSpecification,
     ) -> None:
         self._section_repository = section_repository
         self._get_all_tracks = get_all_tracks
         self._builder = builder
-        self._outputfile = output_file
+        self._specification = specification
 
     def export(self, assignments: RoadUserAssignments, export_mode: ExportMode) -> Path:
         """Exports road user assignments data in the specified export mode.
@@ -219,14 +238,6 @@ class RoadUserAssignmentExporter(ABC):
                 f"No section found with id '{section_id.id}'"
             )
         return result
-
-
-@dataclass(frozen=True)
-class ExportSpecification:
-    export_directory: Path
-    export_filename_stem: str
-    format: str
-    export_mode: ExportMode
 
 
 class RoadUserAssignmentExporterFactory(Protocol):
