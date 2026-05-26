@@ -5,8 +5,11 @@ from typing import Any, Iterable
 
 from nicegui import ui
 
+from OTAnalytics.adapter_ui.cancel_export_counts import CancelExportCounts
+from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
+from OTAnalytics.adapter_ui.helpers import strip_extension
 from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
@@ -181,21 +184,28 @@ class NiceGuiUiFactory(UiFactory):
         context_file_type: str,
         viewmodel: ViewModel,
     ) -> ExportFileDto:
+        default_ext = next(iter(export_format_extensions.values())).lstrip(".")
+        suggestion = viewmodel.get_save_path_suggestion(default_ext, context_file_type)
+        initial_stem = strip_extension(suggestion.stem, f".{context_file_type}")
         dialog = FileChooserDialog(
             resource_manager=self._resource_manager,
             title=title,
             file_extensions=export_format_extensions,
-            initial_file_stem=context_file_type,
+            initial_file_stem=initial_stem,
+            initial_dir=suggestion.parent,
+            context_file_type=context_file_type,
+            enforce_suffix=True,
         )
 
         result = await dialog.result
         if result == DialogResult.APPLY:
-
-            return ExportFileDto.from_file_path(
-                dialog.get_file_path(),
+            return ExportFileDto(
+                export_directory=dialog.get_directory(),
+                file_stem=dialog.get_file_stem(),
+                export_format_extension=dialog.get_export_format_extension(),
                 export_format=dialog.get_format(),
             )
-        raise CancelAddFlow()
+        raise CancelExportFile()
 
     async def configure_export_counts(
         self,
@@ -219,7 +229,7 @@ class NiceGuiUiFactory(UiFactory):
         result = await dialog.result
         if result == DialogResult.APPLY:
             return dialog.get_specification()
-        raise CancelAddFlow()
+        raise CancelExportCounts()
 
     async def configure_section(
         self,
