@@ -28,13 +28,15 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
     FormFieldSelect,
     FormFieldText,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
+    MissingInstanceError,
+)
 
 MARKER_START_DATE = "marker-start-date"
 MARKER_START_TIME = "marker-start-time"
 MARKER_END_DATE = "marker-end-date"
 MARKER_END_TIME = "marker-end-time"
 MARKER_DIRECTORY = "marker-directory"
-MARKER_FILENAME = "marker-filename"
 MARKER_FILENAME_STEM = "marker-filename-stem"
 MARKER_FILENAME_SUFFIX = "marker-filename-suffix"
 MARKER_FORMAT = "marker-format"
@@ -128,9 +130,17 @@ class ExportCountsDialog(BaseDialog):
 
         self._directory_field = FormFieldText(
             label_text=self.resource_manager.get(FileChooserDialogKeys.LABEL_DIRECTORY),
-            initial_value=str(suggestion.parent or initial_dir),
+            initial_value=str(suggestion.parent),
             on_value_change=self._update_directory,
             marker=MARKER_DIRECTORY,
+        )
+
+        self._format_field = FormFieldSelect(
+            label_text=self.resource_manager.get(FileChooserDialogKeys.LABEL_FORMAT),
+            options=list(export_formats.keys()),
+            initial_value=default_format,
+            on_value_change=self._on_interval_or_format_change,
+            marker=MARKER_FORMAT,
         )
 
         self._filename_stem_field = FormFieldText(
@@ -143,14 +153,6 @@ class ExportCountsDialog(BaseDialog):
             initial_value=self._build_locked_suffix(DEFAULT_INTERVAL_MINUTES),
             readonly=True,
             marker=MARKER_FILENAME_SUFFIX,
-        )
-
-        self._format_field = FormFieldSelect(
-            label_text=self.resource_manager.get(FileChooserDialogKeys.LABEL_FORMAT),
-            options=list(export_formats.keys()),
-            initial_value=default_format,
-            on_value_change=self._on_interval_or_format_change,
-            marker=MARKER_FORMAT,
         )
 
         self._counting_event_field = FormFieldSelect(
@@ -197,7 +199,7 @@ class ExportCountsDialog(BaseDialog):
     def _current_extension(self) -> str:
         try:
             selected_format = self._format_field.value
-        except Exception:
+        except MissingInstanceError:
             selected_format = self._default_format
         return ensure_dot_in_extension(self._export_formats[selected_format])
 
@@ -216,7 +218,7 @@ class ExportCountsDialog(BaseDialog):
     def _on_interval_or_format_change(self, _: Any) -> None:
         try:
             interval = self._interval.value
-        except Exception:
+        except MissingInstanceError:
             interval = DEFAULT_INTERVAL_MINUTES
         self._filename_suffix_field.set_value(self._build_locked_suffix(interval))
 
