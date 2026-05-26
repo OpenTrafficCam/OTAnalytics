@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import cast
@@ -7,6 +8,7 @@ import pytest
 
 from OTAnalytics.domain.event import VIDEO_NAME
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import (
     INPUT_FILE,
@@ -803,3 +805,70 @@ class TestSimpleCutTrackSegmentBuilder:
         # Assert track builder is reset after build
         assert track_builder._track_id is None
         assert track_builder._detections == []
+
+
+GEO_X = 449245.82
+GEO_Y = 5699325.96
+
+
+@dataclass
+class PythonDetectionGeoGiven:
+    """Holds PythonDetection instances for geo coordinate tests."""
+
+    detection_with_geo: PythonDetection
+    detection_without_geo: PythonDetection
+
+
+def create_python_detection_geo_given() -> PythonDetectionGeoGiven:
+    """Creates a PythonDetectionGeoGiven with and without geo coordinates."""
+    builder_with = TrackBuilder(geo_x=GEO_X, geo_y=GEO_Y)
+    builder_with.append_detection()
+    builder_without = TrackBuilder()
+    builder_without.append_detection()
+    return PythonDetectionGeoGiven(
+        detection_with_geo=cast(PythonDetection, builder_with.build_detections()[0]),
+        detection_without_geo=cast(
+            PythonDetection, builder_without.build_detections()[0]
+        ),
+    )
+
+
+class TestPythonDetectionGeoCoordinates:
+    def test_geo_x_returns_value_when_set(self) -> None:
+        given = create_python_detection_geo_given()
+        assert given.detection_with_geo.geo_x == GEO_X
+
+    def test_geo_y_returns_value_when_set(self) -> None:
+        given = create_python_detection_geo_given()
+        assert given.detection_with_geo.geo_y == GEO_Y
+
+    def test_geo_x_returns_none_when_not_set(self) -> None:
+        given = create_python_detection_geo_given()
+        assert given.detection_without_geo.geo_x is None
+
+    def test_geo_y_returns_none_when_not_set(self) -> None:
+        given = create_python_detection_geo_given()
+        assert given.detection_without_geo.geo_y is None
+
+
+SAMPLE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
+    geo_min_x=449199.0,
+    geo_min_y=5699274.0,
+    geo_max_x=449294.0,
+    geo_max_y=5699370.0,
+    birds_eye_view_width=983,
+    birds_eye_view_height=983,
+    padding=20,
+    crs="EPSG:25833",
+)
+
+
+class TestPythonTrackDatasetGeoreferenceUnsupported:
+    def test_georeference_metadata_property_returns_none(self) -> None:
+        dataset = PythonTrackDataset(ShapelyTrackGeometryDataset.from_track_dataset)
+        assert dataset.georeference_metadata is None
+
+    def test_with_georeference_metadata_raises_not_implemented(self) -> None:
+        dataset = PythonTrackDataset(ShapelyTrackGeometryDataset.from_track_dataset)
+        with pytest.raises(NotImplementedError):
+            dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)

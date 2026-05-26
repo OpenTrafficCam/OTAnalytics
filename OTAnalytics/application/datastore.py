@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import (
     EventExportSpecification,
@@ -39,49 +39,6 @@ from OTAnalytics.domain.video import (
     VideoMetadata,
     VideoRepository,
 )
-
-
-@dataclass(frozen=True)
-class DetectionMetadata:
-    detection_classes: frozenset[str]
-
-
-@dataclass(frozen=True)
-class TrackParseResult:
-    tracks: TrackDataset
-    detection_metadata: DetectionMetadata
-    video_metadata: VideoMetadata
-
-
-@dataclass(frozen=True)
-class TracksParseResult:
-    tracks: TrackDataset
-    detections_metadata: list[DetectionMetadata]
-    videos_metadata: list[VideoMetadata]
-
-
-def combine_track_datasets(results: list[TrackParseResult]) -> TrackDataset:
-    if not results:
-        raise ValueError("No results to combine")
-    tracks = results[0].tracks
-    for result in results[1:]:
-        tracks.add_all(result.tracks)
-    return tracks
-
-
-class TrackParser(ABC):
-    def parse_files(self, files: list[Path]) -> TracksParseResult:
-        if not files:
-            raise ValueError("No files to parse")
-        results = [self.parse(file) for file in files]
-        tracks = combine_track_datasets(results)
-        detections_metadata = [result.detection_metadata for result in results]
-        videos_metadata = [result.video_metadata for result in results]
-        return TracksParseResult(tracks, detections_metadata, videos_metadata)
-
-    @abstractmethod
-    def parse(self, file: Path) -> TrackParseResult:
-        raise NotImplementedError
 
 
 class EventListParser(ABC):

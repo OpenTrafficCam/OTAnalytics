@@ -7,17 +7,16 @@ feather files and their accompanying metadata JSON files to create TrackParseRes
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 import polars as pl
 
-from OTAnalytics.application.datastore import (
+from OTAnalytics.application.parser.track_parser import (
     DetectionMetadata,
     TrackParser,
     TrackParseResult,
-    TracksParseResult,
 )
-from OTAnalytics.application.logger import logger
+from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import (
     POLARS_TRACK_GEOMETRY_FACTORY,
@@ -35,22 +34,10 @@ from OTAnalytics.plugin_parser.convert_ottrk_to_feathers import (
     METADATA_SUFFIX,
     convert_ottrk_to_feather,
 )
+from OTAnalytics.plugin_parser.georeference_parsing import (
+    GeoreferenceMetadataParsingMixin,
+)
 from OTAnalytics.plugin_parser.json_parser import parse_json
-
-
-def use_feathers_files(files: list[Path]) -> list[Path]:
-    raised_exceptions: list[Exception] = []
-    result = []
-    for file in files:
-        try:
-            result.append(use_feather_file(file))
-        except Exception as cause:
-            raised_exceptions.append(cause)
-    if raised_exceptions:
-        raise ExceptionGroup(
-            "Errors occurred while loading the track files:", raised_exceptions
-        )
-    return result
 
 
 def use_feather_file(file: Path) -> Path:
@@ -66,7 +53,7 @@ def use_feather_file(file: Path) -> Path:
     return file
 
 
-class FeathersParser(TrackParser):
+class FeathersParser(TrackParser, GeoreferenceMetadataParsingMixin):
     """
     Parse feather files with accompanying metadata JSON files.
 
@@ -92,65 +79,8 @@ class FeathersParser(TrackParser):
             track_geometry_factory = PolarsTrackGeometryDataset.from_track_dataset
         self._track_geometry_factory = track_geometry_factory
 
-    def parse_files(self, files: list[Path]) -> TracksParseResult:
-        """
-        Parse feather file and its metadata to create TrackParseResult.
-
-        Args:
-            file: Path to the feather file
-
-        Returns:
-            TrackParseResult: Contains tracks, detection metadata, and video metadata
-
-        Raises:
-            FileNotFoundError: If the feather file or metadata file is not found
-            ValueError: If the file extension is not .feather
-        """
-        logger().info(f"Parsing {len(files)} track files...")
-        files_to_process = use_feathers_files(files)
-        videos_metadata = []
-        detections_metadata = []
-        data_frames = []
-        for file in files_to_process:
-            if not file.exists():
-                raise FileNotFoundError(f"Feather file not found: {file}")
-            # Construct metadata file path
-            metadata_file = file.parent / f"{file.stem}{METADATA_SUFFIX}"
-            if not metadata_file.exists():
-                raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
-
-            # Read the feather file
-            df = pl.read_ipc(file)
-            data_frames.append(df)
-
-            # Read the metadata
-            metadata = parse_json(metadata_file)
-
-            # Parse video metadata
-            video_metadata = self._parse_video_metadata(metadata["video_metadata"])
-            videos_metadata.append(video_metadata)
-
-            # Parse detection metadata
-            detection_metadata = self._parse_detection_metadata(
-                metadata["detection_metadata"]
-            )
-            detections_metadata.append(detection_metadata)
-        logger().info(f"{len(files)} track files parsed.")
-
-        columns = data_frames[0].columns
-        data_frames = [df.select(columns) for df in data_frames]
-        df = pl.concat(data_frames)
-        # Create TrackDataset from DataFrame
-        calculator = PolarsByMaxConfidence()
-        tracks = PolarsTrackDataset.from_dataframe(
-            df, self._track_geometry_factory, calculator=calculator
-        )
-        logger().info("TrackDataset created.")
-        return TracksParseResult(tracks, detections_metadata, videos_metadata)
-
     def parse(self, file: Path) -> TrackParseResult:
-        """
-        Parse feather file and its metadata to create TrackParseResult.
+        """Parse feather file and its metadata to create TrackParseResult.
 
         Args:
             file: Path to the feather file
@@ -160,36 +90,30 @@ class FeathersParser(TrackParser):
 
         Raises:
             FileNotFoundError: If the feather file or metadata file is not found
-            ValueError: If the file extension is not .feather
         """
         file = use_feather_file(file)
 
         if not file.exists():
             raise FileNotFoundError(f"Feather file not found: {file}")
-        # Construct metadata file path
         metadata_file = file.parent / f"{file.stem}{METADATA_SUFFIX}"
         if not metadata_file.exists():
             raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
 
-        # Read the feather file
         df = pl.read_ipc(file)
-
-        # Read the metadata
         metadata = parse_json(metadata_file)
 
-        # Create TrackDataset from DataFrame
         calculator = PolarsByMaxConfidence()
-        tracks = PolarsTrackDataset.from_dataframe(
+        tracks: TrackDataset = PolarsTrackDataset.from_dataframe(
             df, self._track_geometry_factory, calculator=calculator
         )
 
-        # Parse video metadata
         video_metadata = self._parse_video_metadata(metadata[KEY_VIDEO_METADATA])
-
-        # Parse detection metadata
         detection_metadata = self._parse_detection_metadata(
             metadata[KEY_DETECTION_METADATA]
         )
+        georeference_metadata = self.parse_georeference_metadata(metadata)
+        if georeference_metadata is not None:
+            tracks = tracks.with_georeference_metadata(georeference_metadata)
 
         return TrackParseResult(tracks, detection_metadata, video_metadata)
 
@@ -235,3 +159,13 @@ class FeathersParser(TrackParser):
         """
         detection_classes = frozenset(metadata[KEY_DETECTION_CLASSES])
         return DetectionMetadata(detection_classes)
+
+    def _combine_track_datasets(
+        self, parse_results: list[TrackParseResult]
+    ) -> TrackDataset:
+        datasets = [r.tracks for r in parse_results]
+        if all(isinstance(ds, PolarsTrackDataset) for ds in datasets):
+            return PolarsTrackDataset.merge_all(
+                cast(list[PolarsTrackDataset], datasets)
+            )
+        return super()._combine_track_datasets(parse_results)

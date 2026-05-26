@@ -24,14 +24,10 @@ from OTAnalytics.application.analysis.traffic_counting import (
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
-from OTAnalytics.application.datastore import (
-    Datastore,
-    EventListParser,
-    TrackParser,
-    VideoParser,
-)
+from OTAnalytics.application.datastore import Datastore, EventListParser, VideoParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.parser.flow_parser import FlowParser
+from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.run_configuration import (
@@ -270,6 +266,9 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
 from OTAnalytics.plugin_progress.lazy_tqdm_progressbar import LazyTqdmBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     TrackImageFactory,
+)
+from OTAnalytics.plugin_track_export.csv.track_dataset_writer import (
+    create_default_track_dataset_csv_writer,
 )
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
@@ -592,8 +591,12 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def csv_track_export(self) -> CsvTrackExport:
+        csv_writer = create_default_track_dataset_csv_writer()
         return CsvTrackExport(
-            self.track_repository, self.tracks_metadata, self.videos_metadata
+            self.track_repository,
+            self.tracks_metadata,
+            self.videos_metadata,
+            csv_writer=csv_writer,
         )
 
     @cached_property
