@@ -1,6 +1,4 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Iterable
 
 
 class WidgetPositionProvider(ABC):
@@ -44,21 +42,17 @@ def ensure_file_extension_is_present(
 
 
 def strip_extension(file_name: str, extension: str) -> str:
-    """Strip supported file extension from file name if present.
+    """Strip the supported file extension from the file name if present.
 
     Args:
-        file_name (str): the file name.
-        extension (str): the supported file types.
+        file_name: The file name.
+        extension: The extension to strip (literal, including leading dot).
 
     Returns:
-        str: file name without supported extension if present, otherwise original file name
+        The file name without the extension if it ends with that suffix,
+        otherwise the original file name unchanged.
     """
-    if file_name.endswith(extension):
-        # Strip the supported file type from the file name
-        return file_name.rstrip(extension)
-
-    # file_name does not have supported file type appended yet
-    return file_name
+    return file_name.removesuffix(extension)
 
 
 def ensure_dot_in_extension(extension: str) -> str:
