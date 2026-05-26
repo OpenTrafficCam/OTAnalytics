@@ -179,12 +179,12 @@ class TestFileChooserDialog:
         assert file_chooser_dialog._filename_field.value == TEST_EXCEL_FILENAME
 
     @pytest.mark.asyncio
-    async def test_update_directory_invalid_path(
+    async def test_update_directory_invalid_path_keeps_typed_value(
         self,
         user: User,
         file_chooser_dialog: FileChooserDialog,
     ) -> None:
-        """Test that updating the directory with an invalid path reverts to the previous path."""  # noqa
+        """Typing a non-existent path keeps the typed value but does not update _initial_dir."""  # noqa
 
         @ui.page(ENDPOINT_NAME)
         def page() -> None:
@@ -192,18 +192,14 @@ class TestFileChooserDialog:
 
         await user.open(ENDPOINT_NAME)
 
-        # Store the initial directory
         initial_dir = file_chooser_dialog._initial_dir
 
-        # Try to update with an invalid directory
         with patch.object(Path, "exists", return_value=False):
-            # Use the user fixture to set an invalid path
             user.find(marker=MARKER_DIRECTORY).clear().type("/invalid/path")
-            # Trigger the on_value_change event by clicking elsewhere
             user.find(marker=MARKER_FILENAME).click()
 
-        # Check that the directory was reverted to the initial directory
-        assert file_chooser_dialog._directory_field.value == str(initial_dir)
+        assert file_chooser_dialog._directory_field.value == "/invalid/path"
+        assert file_chooser_dialog._initial_dir == initial_dir
 
     @pytest.mark.asyncio
     async def test_browse_button_exists(

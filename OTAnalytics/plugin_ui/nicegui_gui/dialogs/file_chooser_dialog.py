@@ -176,12 +176,12 @@ class FileChooserDialog(BaseDialog):
         return ensure_dot_in_extension(self._file_extensions[selected_format])
 
     def _update_directory(self, e: Any) -> None:
+        if not e.value:
+            return
         try:
             new_path = Path(e.value).expanduser()
             if new_path.exists() and new_path.is_dir():
                 self._initial_dir = new_path
-            else:
-                self._directory_field.set_value(str(self._initial_dir))
         except Exception:
             self._directory_field.set_value(str(self._initial_dir))
 
