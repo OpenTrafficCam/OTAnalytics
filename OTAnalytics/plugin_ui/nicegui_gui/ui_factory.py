@@ -101,6 +101,7 @@ class NiceGuiUiFactory(UiFactory):
             file_extensions=file_extensions,
             initial_file_stem="",
             extension_options=extension_options,
+            enforce_suffix=False,
         )
 
         result = await dialog.result
@@ -170,6 +171,8 @@ class NiceGuiUiFactory(UiFactory):
             file_extensions=file_extensions,
             initial_file_stem=Path(initialfile).stem,
             initial_dir=initialdir,
+            context_file_type="",
+            enforce_suffix=True,
         )
 
         result = await dialog.result

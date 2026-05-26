@@ -111,3 +111,66 @@ class TestConfigureExportCounts:
                 export_formats={"CSV": ".csv"},
                 viewmodel=viewmodel,
             )
+
+
+class TestAskForSaveFilePath:
+    @pytest.mark.asyncio
+    async def test_passes_enforce_suffix_true_and_empty_context(
+        self,
+        factory: NiceGuiUiFactory,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        captured_kwargs: dict = {}
+
+        def fake_dialog(**kwargs: object) -> Mock:
+            captured_kwargs.update(kwargs)
+            d = MagicMock()
+            d.result = AsyncMock(return_value=DialogResult.APPLY)()
+            d.get_file_path.return_value = Path("/tmp/mydata.otconfig")
+            return d
+
+        monkeypatch.setattr(
+            "OTAnalytics.plugin_ui.nicegui_gui.ui_factory.FileChooserDialog",
+            fake_dialog,
+        )
+
+        await factory.ask_for_save_file_path(
+            title="Save",
+            filetypes=[("otconfig", "*.otconfig")],
+            defaultextension=".otconfig",
+            initialfile="mydata.otconfig",
+            initialdir=Path("/tmp"),
+        )
+
+        assert captured_kwargs["enforce_suffix"] is True
+        assert captured_kwargs["context_file_type"] == ""
+
+
+class TestAskOpenFilename:
+    @pytest.mark.asyncio
+    async def test_passes_enforce_suffix_false(
+        self,
+        factory: NiceGuiUiFactory,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        captured_kwargs: dict = {}
+
+        def fake_dialog(**kwargs: object) -> Mock:
+            captured_kwargs.update(kwargs)
+            d = MagicMock()
+            d.result = AsyncMock(return_value=DialogResult.APPLY)()
+            d.get_file_path.return_value = Path("/tmp/some.ottrk")
+            return d
+
+        monkeypatch.setattr(
+            "OTAnalytics.plugin_ui.nicegui_gui.ui_factory.FileChooserDialog",
+            fake_dialog,
+        )
+
+        await factory.askopenfilename(
+            title="Open",
+            filetypes=[("ottrk", "*.ottrk")],
+            defaultextension=".ottrk",
+        )
+
+        assert captured_kwargs["enforce_suffix"] is False
