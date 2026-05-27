@@ -165,7 +165,9 @@ class SimpleExporterFactory(ExporterFactory):
             ExportFormat("CSV", ".csv"): lambda specification: CsvExport(
                 export_directory=specification.export_directory,
                 export_filename_stem=specification.export_filename_stem,
-                interval_in_minutes=specification.counting_specification.interval_in_minutes,
+                interval_in_minutes=(
+                    specification.counting_specification.interval_in_minutes
+                ),
             )
         }
         self._factories = {

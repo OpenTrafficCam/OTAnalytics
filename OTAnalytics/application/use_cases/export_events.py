@@ -5,7 +5,6 @@ from typing import Callable, Iterable
 
 from OTAnalytics.application.config import CONTEXT_FILE_TYPE_EVENTS
 from OTAnalytics.application.export_formats.export_mode import ExportMode
-from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.section import Section
 

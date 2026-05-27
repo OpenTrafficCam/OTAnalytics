@@ -227,7 +227,6 @@ def setup_update_end() -> GivenUpdateEnd:
     interval_in_minutes = 10
     modes = ["first-mode"]
     output_format = "csv"
-    output_file = "output-file.csv"
     flow_name_dto = FlowNameDto("from first -> to second", "from first", "to second")
     flow_names = [flow_name_dto]
     expected_tags: list[Tag] = [
@@ -273,7 +272,6 @@ def setup_multiple() -> GivenMultiple:
     second_mode = "second-mode"
     modes = [first_mode, second_mode]
     output_format = "csv"
-    output_file = "output-file.csv"
     first_flow = FlowNameDto("first-flow", "section a", "section b")
     second_flow = FlowNameDto("second-flow", "section c", "section d")
     flow_names = [first_flow, second_flow]
@@ -367,7 +365,6 @@ def setup_two_slots_test(
     second_mode = "second-mode"
     modes = [first_mode, second_mode]
     output_format = "csv"
-    output_file = "output-file.csv"
     first_flow = FlowNameDto("first-flow", "section a", "section b")
     second_flow = FlowNameDto("second-flow", "section c", "section d")
     flow_names = [first_flow, second_flow]
