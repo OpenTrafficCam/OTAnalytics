@@ -93,7 +93,7 @@ class ToplevelExportFile(ToplevelTemplate):
         export_file_type = self._export_format_extensions[export_format][1:]
         export_extension = f"*.{export_file_type}"
         # TODO refactor: inject get_save_path_suggestion as use case
-        suggested_save_path = self._viewmodel.get_save_path_suggestion(
+        save_suggestion = self._viewmodel.get_save_path_suggestion(
             file_type=export_file_type, context_file_type=self._context_file_type
         )
 
@@ -101,8 +101,8 @@ class ToplevelExportFile(ToplevelTemplate):
             title=self._text_title or "Save file as",
             filetypes=[(export_format, export_extension)],
             defaultextension=export_extension,
-            initialfile=suggested_save_path.name,
-            initialdir=suggested_save_path.parent,
+            initialfile=save_suggestion.file_path.name,
+            initialdir=save_suggestion.save_directory,
         )
         self._input_values[EXPORT_FILE] = export_file
         self._input_values[SELECTED_EXTENSION] = export_file_type

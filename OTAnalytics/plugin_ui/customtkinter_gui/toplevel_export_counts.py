@@ -152,7 +152,7 @@ class ToplevelExportCounts(ToplevelTemplate):
     def _choose_file(self) -> None:
         export_format = self._input_values[EXPORT_FORMAT]  #
         export_extension = self._export_formats[export_format]
-        suggested_save_path = self._viewmodel.get_save_path_suggestion(
+        save_suggestion = self._viewmodel.get_save_path_suggestion(
             export_extension[1:],
             f"{CONTEXT_FILE_TYPE_COUNTS}"
             f"_{self._input_values[INTERVAL]}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}",
@@ -161,8 +161,8 @@ class ToplevelExportCounts(ToplevelTemplate):
             title="Save counts as",
             filetypes=[(export_format, export_extension)],
             defaultextension=export_extension,
-            initialfile=suggested_save_path.name,
-            initialdir=suggested_save_path.parent,
+            initialfile=save_suggestion.file_path.name,
+            initialdir=save_suggestion.save_directory,
         )
         self._input_values[EXPORT_FILE] = export_file
         self._input_values[SELECTED_EXTENSION] = export_extension

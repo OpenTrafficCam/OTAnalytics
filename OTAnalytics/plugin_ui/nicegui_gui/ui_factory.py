@@ -9,7 +9,6 @@ from OTAnalytics.adapter_ui.cancel_export_counts import CancelExportCounts
 from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
-from OTAnalytics.adapter_ui.helpers import strip_extension
 from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
@@ -189,13 +188,12 @@ class NiceGuiUiFactory(UiFactory):
     ) -> ExportFileDto:
         default_ext = next(iter(export_format_extensions.values())).lstrip(".")
         suggestion = viewmodel.get_save_path_suggestion(default_ext, context_file_type)
-        initial_stem = strip_extension(suggestion.stem, f".{context_file_type}")
         dialog = FileChooserDialog(
             resource_manager=self._resource_manager,
             title=title,
             file_extensions=export_format_extensions,
-            initial_file_stem=initial_stem,
-            initial_dir=suggestion.parent,
+            initial_file_stem=suggestion.file_stem,
+            initial_dir=suggestion.save_directory,
             context_file_type=context_file_type,
             enforce_suffix=True,
         )

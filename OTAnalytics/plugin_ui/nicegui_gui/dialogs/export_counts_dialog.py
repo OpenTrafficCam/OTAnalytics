@@ -4,7 +4,7 @@ from typing import Any
 
 from nicegui import ui
 
-from OTAnalytics.adapter_ui.helpers import ensure_dot_in_extension, strip_extension
+from OTAnalytics.adapter_ui.helpers import ensure_dot_in_extension
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
@@ -120,17 +120,15 @@ class ExportCountsDialog(BaseDialog):
         )
 
         suggestion = self._viewmodel.get_save_path_suggestion(
-            self._extension_for_default_format().lstrip("."),
-            self._context_for_current_interval(DEFAULT_INTERVAL_MINUTES),
-        )
-        initial_stem = strip_extension(
-            suggestion.stem,
-            f".{self._context_for_current_interval(DEFAULT_INTERVAL_MINUTES)}",
+            file_type=self._extension_for_default_format().lstrip("."),
+            context_file_type=self._context_for_current_interval(
+                DEFAULT_INTERVAL_MINUTES
+            ),
         )
 
         self._directory_field = FormFieldText(
             label_text=self.resource_manager.get(FileChooserDialogKeys.LABEL_DIRECTORY),
-            initial_value=str(suggestion.parent),
+            initial_value=str(suggestion.save_directory),
             on_value_change=self._update_directory,
             marker=MARKER_DIRECTORY,
         )
@@ -145,7 +143,7 @@ class ExportCountsDialog(BaseDialog):
 
         self._filename_stem_field = FormFieldText(
             label_text=self.resource_manager.get(FileChooserDialogKeys.LABEL_FILENAME),
-            initial_value=initial_stem,
+            initial_value=suggestion.file_stem,
             marker=MARKER_FILENAME_STEM,
         )
         self._filename_suffix_field = FormFieldText(

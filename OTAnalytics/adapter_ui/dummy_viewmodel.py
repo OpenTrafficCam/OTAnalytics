@@ -65,7 +65,6 @@ from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
     CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     CUTTING_SECTION_MARKER,
-    DEFAULT_COUNTS_FILE_TYPE,
     OTCONFIG_FILE_TYPE,
     OTFLOW_FILE_TYPE,
 )
@@ -113,6 +112,7 @@ from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportSpecification,
 )
 from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave
+from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggestion
 from OTAnalytics.application.use_cases.track_statistics_export import (
     TrackStatisticsExportSpecification,
 )
@@ -142,7 +142,6 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_parser.track_statistics_export import TrackStatisticsCsvExporter
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 SUPPORTED_VIDEO_FILE_TYPES = [".mp4", ".avi", ".mkv", ".mov"]
@@ -616,13 +615,13 @@ class DummyViewModel(
         self.frame_project.update(name=project.name, start_date=project.start_date)
 
     async def save_otconfig(self) -> None:
-        suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
+        save_suggestion = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
         configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")],
             defaultextension=f".{OTCONFIG_FILE_TYPE}",
-            initialfile=suggested_save_path.name,
-            initialdir=suggested_save_path.parent,
+            initialfile=save_suggestion.file_path.name,
+            initialdir=save_suggestion.save_directory,
         )
         if not configuration_file:
             return
@@ -875,7 +874,7 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     async def save_configuration(self) -> None:
-        suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
+        save_suggestion = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
         configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
@@ -883,8 +882,8 @@ class DummyViewModel(
                 (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
             ],
             defaultextension=f".{OTCONFIG_FILE_TYPE}",
-            initialfile=suggested_save_path.name,
-            initialdir=suggested_save_path.parent,
+            initialfile=save_suggestion.file_path.name,
+            initialdir=save_suggestion.save_directory,
         )
         if not configuration_file.stem:
             return
@@ -1790,7 +1789,9 @@ class DummyViewModel(
     def update_remark_view(self, _: Any = None) -> None:
         self.frame_remark.load_remark()
 
-    def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
+    def get_save_path_suggestion(
+        self, file_type: str, context_file_type: str
+    ) -> SavePathSuggestion:
         return self._application.suggest_save_path(file_type, context_file_type)
 
     def set_frame_track_statistics(self, frame: AbstractFrameTrackStatistics) -> None:

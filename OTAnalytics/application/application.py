@@ -61,7 +61,10 @@ from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
 )
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
-from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
+from OTAnalytics.application.use_cases.suggest_save_path import (
+    SavePathSuggester,
+    SavePathSuggestion,
+)
 from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackFiles,
     TrackRepositorySize,
@@ -664,7 +667,9 @@ class OTAnalyticsApplication:
     ) -> Iterable[ExportFormat]:
         return self._export_road_user_assignments.get_supported_formats()
 
-    def suggest_save_path(self, file_type: str, context_file_type: str = "") -> Path:
+    def suggest_save_path(
+        self, file_type: str, context_file_type: str = ""
+    ) -> SavePathSuggestion:
         """Suggests a save path based on the given file type and an optional
         related file type.
 
