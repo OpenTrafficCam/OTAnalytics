@@ -7,8 +7,13 @@ from nicegui import ui
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_COUNTS,
+    DEFAULT_COUNT_INTERVAL_TIME_UNIT,
+)
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE, ExportMode
 from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggestion
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.export_counts_dialog import (
     MARKER_DIRECTORY,
     MARKER_FILENAME_STEM,
@@ -28,15 +33,26 @@ TEST_DEFAULT_FORMAT = "CSV"
 TEST_MODES = ExportMode.values()
 TEST_EXPORT_FORMATS = {"CSV": "csv", "Excel": "xlsx"}
 TEST_INTERVAL = 15
-TEST_OUTPUT_FILE = "/test/directory/test_file.csv"
-TEST_EXCEL_OUTPUT_FILE = "/test/directory/test_file.xlsx"
+TEST_FILE_DIR = "test/directory"
+TEST_FILE_STEM = "test_file"
+TEST_OUTPUT_FILE = f"/{TEST_FILE_DIR}/{TEST_FILE_STEM}.csv"
+TEST_EXCEL_OUTPUT_FILE = f"/{TEST_FILE_DIR}/{TEST_FILE_STEM}.xlsx"
+TEST_CONTEXT_FILE_TYPE = (
+    f"{CONTEXT_FILE_TYPE_COUNTS}_{TEST_INTERVAL}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"
+)
+SAVE_PATH_SUGGESTION = SavePathSuggestion(
+    save_directory=Path(TEST_FILE_DIR),
+    file_stem=TEST_FILE_STEM,
+    context_file_type=TEST_CONTEXT_FILE_TYPE,
+    file_type=".csv",
+)
 ENDPOINT_NAME = "/test-export-counts-dialog"
 
 
 @pytest.fixture
 def viewmodel() -> Mock:
     viewmodel = MagicMock(spec=ViewModel)
-    viewmodel.get_save_path_suggestion.return_value = Path(TEST_OUTPUT_FILE)
+    viewmodel.get_save_path_suggestion.return_value = SAVE_PATH_SUGGESTION
     return viewmodel
 
 
@@ -92,7 +108,7 @@ class TestExportCountsDialog:
         await user.open(ENDPOINT_NAME)
 
         user.find(MARKER_DIRECTORY).clear().type(str(Path(TEST_OUTPUT_FILE).parent))
-        user.find(MARKER_FILENAME_STEM).clear().type("test_file")
+        user.find(MARKER_FILENAME_STEM).clear().type(TEST_FILE_STEM)
         user.find(marker=MARKER_APPLY).click()
 
         specification = export_counts_dialog.get_specification()
@@ -101,7 +117,7 @@ class TestExportCountsDialog:
         assert specification.end == TEST_END
         assert specification.output_format == TEST_DEFAULT_FORMAT
         assert specification.export_directory == Path(TEST_OUTPUT_FILE).parent
-        assert specification.export_filename_stem == "test_file"
+        assert specification.export_filename_stem == TEST_FILE_STEM
         assert specification.export_mode == OVERWRITE
         assert specification.interval_in_minutes == TEST_INTERVAL
 
@@ -131,14 +147,14 @@ class TestExportCountsDialog:
         user.find(MARKER_DIRECTORY).clear().type(
             str(Path(TEST_EXCEL_OUTPUT_FILE).parent)
         )
-        user.find(MARKER_FILENAME_STEM).clear().type("test_file")
+        user.find(MARKER_FILENAME_STEM).clear().type(TEST_FILE_STEM)
         user.find(marker=MARKER_APPLY).click()
 
         specification = export_counts_dialog.get_specification()
 
         assert specification.output_format == "Excel"
         assert specification.export_directory == Path(TEST_EXCEL_OUTPUT_FILE).parent
-        assert specification.export_filename_stem == "test_file"
+        assert specification.export_filename_stem == TEST_FILE_STEM
 
     @pytest.mark.asyncio
     async def test_validation_error_empty_filename(
@@ -188,7 +204,7 @@ class TestExportCountsDialog:
         await user.open(ENDPOINT_NAME)
 
         user.find(MARKER_DIRECTORY).clear().type(str(Path(TEST_OUTPUT_FILE).parent))
-        user.find(MARKER_FILENAME_STEM).clear().type("test_file")
+        user.find(MARKER_FILENAME_STEM).clear().type(TEST_FILE_STEM)
         user.find(marker=MARKER_APPLY).click()
 
         # Verify that get_specification raises a ValueError
@@ -219,11 +235,8 @@ class TestExportCountsDialog:
         self,
         user: User,
         resource_manager: ResourceManager,
+        viewmodel: Mock,
     ) -> None:
-        viewmodel = MagicMock(spec=ViewModel)
-        viewmodel.get_save_path_suggestion.return_value = Path(
-            "/tmp/mydata.counts_15min.csv"
-        )
         dialog = ExportCountsDialog(
             resource_manager=resource_manager,
             viewmodel=viewmodel,
@@ -240,4 +253,4 @@ class TestExportCountsDialog:
 
         await user.open(ENDPOINT_NAME)
 
-        assert dialog._filename_stem_field.value == "mydata"
+        assert dialog._filename_stem_field.value == TEST_FILE_STEM
