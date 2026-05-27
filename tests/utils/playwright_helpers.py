@@ -31,6 +31,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
     MARKER_DIRECTORY,
     MARKER_FILENAME,
+    MARKER_FILENAME_STEM,
+    MARKER_FILENAME_SUFFIX,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
@@ -243,7 +245,7 @@ def save_project_otconfig(
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(
         str(target_path.parent)
     )
-    search_for_marker_element(page, MARKER_FILENAME).first.fill(target_path.stem)
+    search_for_marker_element(page, MARKER_FILENAME_STEM).first.fill(target_path.stem)
     # Confirm save
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
 
@@ -474,7 +476,7 @@ def save_project_as(page: Page, rm: ResourceManager, path: Path) -> None:
     # Normalize filename: prefer basename without .otconfig extension if present
     filename = path.name[:-9] if path.name.endswith(".otconfig") else path.name
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
-    search_for_marker_element(page, MARKER_FILENAME).first.fill(filename)
+    search_for_marker_element(page, MARKER_FILENAME_STEM).first.fill(filename)
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
 
 
@@ -503,10 +505,11 @@ def export_file_via_dialog(page: Page, output_dir: Path) -> Path:
     # Create the directory first because the dialog validates it exists
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Get the current filename value to determine output file
-    filename_field = search_for_marker_element(page, MARKER_FILENAME).first
+    # Get the current filename (stem + locked suffix) to determine output file
+    stem_field = search_for_marker_element(page, MARKER_FILENAME_STEM).first
+    suffix_field = search_for_marker_element(page, MARKER_FILENAME_SUFFIX).first
     page.wait_for_timeout(500)
-    current_filename = filename_field.input_value()
+    current_filename = stem_field.input_value() + suffix_field.input_value()
 
     # Update directory field using Playwright
     directory_field = search_for_marker_element(page, MARKER_DIRECTORY).first
