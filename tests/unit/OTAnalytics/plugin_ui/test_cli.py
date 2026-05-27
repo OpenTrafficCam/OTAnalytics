@@ -22,7 +22,6 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import (
-    CONTEXT_FILE_TYPE_COUNTS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
     DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_EVENTLIST_FILE_TYPE,
@@ -1042,17 +1041,10 @@ class TestOTAnalyticsCli:
         filename_with_dots = (
             "first5min_FOOBAR1234_1998_04_26-1500.00000_1998-04-26_15-00-00"
         )
-        save_path = test_data_tmp_dir / filename_with_dots
         start_date = datetime(1998, 8, 28, 15, 0)
         end_date = datetime(1998, 4, 28, 15, 15)
         classifications = frozenset(["car", "bike"])
         interval = 15
-        export_directory = test_data_tmp_dir
-        expected_output_file = (
-            test_data_tmp_dir
-            / f"{filename_with_dots}.{CONTEXT_FILE_TYPE_COUNTS}_{interval}"
-            f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}.{DEFAULT_COUNTS_FILE_TYPE}"
-        )
 
         if mode == CliMode.STREAM:
             dependencies = mock_cli_stream_dependencies
@@ -1088,7 +1080,6 @@ class TestOTAnalyticsCli:
             output_format="CSV",
             export_directory=test_data_tmp_dir,
             export_filename_stem=filename_with_dots,
-            # output_file=str(expected_output_file),
             export_mode=OVERWRITE,
         )
         dependencies[self.EXPORT_COUNTS].export.assert_called_with(
@@ -1315,10 +1306,15 @@ class TestOTAnalyticsCli:
         dependencies[self.GET_ALL_SECTIONS].assert_called_once()
         dependencies[self.CREATE_EVENTS].assert_called_once()
         mock_export_events.assert_called_once_with(
-            sections, run_config.save_dir / run_config.save_stem, OVERWRITE
+            export_directory=run_config.save_dir,
+            export_filename_stem=run_config.save_stem,
+            sections=sections,
+            export_mode=OVERWRITE,
         )
         mock_do_export_counts.assert_called_once_with(
-            run_config.save_dir / run_config.save_stem, OVERWRITE
+            export_directory=run_config.save_dir,
+            export_filename_stem=run_config.save_stem,
+            export_mode=OVERWRITE,
         )
 
         if mode == CliMode.STREAM:
