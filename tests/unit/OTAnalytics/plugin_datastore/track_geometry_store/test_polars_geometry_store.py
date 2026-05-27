@@ -1,16 +1,32 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Callable
 from unittest.mock import Mock
 
-import polars
+import polars as pl
 import pytest
 from polars import DataFrame
 from pytest import approx
 
+from OTAnalytics.application.config import CUTTING_SECTION_MARKER
+from OTAnalytics.domain import track
+from OTAnalytics.domain.event import SECTION_ID
 from OTAnalytics.domain.geometry import Coordinate, RelativeOffsetCoordinate
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import LineSection, SectionId, SectionType
 from OTAnalytics.domain.track import FRAME, TRACK_CLASSIFICATION, VIDEO_NAME, H, W
-from OTAnalytics.domain.track_dataset.track_dataset import END_FRAME, END_VIDEO_NAME
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    CURRENT_X,
+    CURRENT_Y,
+    END_FRAME,
+    END_GEO_X,
+    END_GEO_Y,
+    END_VIDEO_NAME,
+    PREVIOUS_X,
+    PREVIOUS_Y,
+    START_GEO_X,
+    START_GEO_Y,
+)
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
     END_H,
@@ -18,12 +34,15 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
     END_W,
     END_X,
     END_Y,
+    INTERPOLATED_GEO_X,
+    INTERPOLATED_GEO_Y,
     INTERSECTION_LINE_ID,
     INTERSECTION_X,
     INTERSECTION_Y,
     INTERSECTS,
     INTERSECTS_POLYGON,
     OCCURRENCE,
+    RELATIVE_POSITION,
     ROW_ID,
     START_H,
     START_OCCURRENCE,
@@ -31,6 +50,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
     START_X,
     START_Y,
     TRACK_ID,
+    PolarsIntersectionPointsDataset,
     PolarsTrackGeometryDataset,
     Polygon,
     X,
@@ -327,7 +347,7 @@ def test_create_track_segments_multiple_tracks() -> None:
     assert len(result) == 2  # Should have 2 segments (1 for each track)
 
     # Check track1 segment
-    track1_segment = result.filter(polars.col(TRACK_ID) == "track1").row(0, named=True)
+    track1_segment = result.filter(pl.col(TRACK_ID) == "track1").row(0, named=True)
     assert track1_segment[START_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 0)
     assert track1_segment[END_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 1)
     assert track1_segment[START_X] == 10.0
@@ -340,7 +360,7 @@ def test_create_track_segments_multiple_tracks() -> None:
     assert track1_segment[END_H] == 16.0
 
     # Check track2 segment
-    track2_segment = result.filter(polars.col(TRACK_ID) == "track2").row(0, named=True)
+    track2_segment = result.filter(pl.col(TRACK_ID) == "track2").row(0, named=True)
     assert track2_segment[START_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 0)
     assert track2_segment[END_OCCURRENCE] == datetime(2023, 1, 1, 10, 0, 1)
     assert track2_segment[START_X] == 100.0
@@ -472,19 +492,17 @@ def test_check_polygon_intersections_with_intersections() -> None:
 
 def _create_cutting_section(
     section_id: str, coordinates: list[tuple[float, float]]
-) -> Mock:
+) -> LineSection:
     """Helper function to create a mock cutting section for testing."""
-    section = Mock(spec=LineSection)
-    section.get_coordinates.return_value = [
-        Coordinate(coord[0], coord[1]) for coord in coordinates
-    ]
-    section.relative_offset_coordinates = {
-        EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
-    }
-    section.get_offset.return_value = RelativeOffsetCoordinate(0.0, 0.0)
-    section.id = SectionId(section_id)
-    section.get_type.return_value = SectionType.CUTTING
-    return section
+    return LineSection(
+        id=SectionId(section_id),
+        name=f"{CUTTING_SECTION_MARKER}_My_Section",
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+        },
+        plugin_data={},
+        coordinates=[Coordinate(coord[0], coord[1]) for coord in coordinates],
+    )
 
 
 @dataclass
@@ -492,7 +510,7 @@ class TrackIdsAfterCutGiven:
     """Test data container for track_ids_after_cut tests."""
 
     dataset: PolarsTrackGeometryDataset
-    section: Mock
+    section: LineSection
 
 
 def create_segments_dataframe(
@@ -731,3 +749,856 @@ class TestTrackIdsAfterCut:
         assert "track1_0" in unique_track_ids
         assert "track1_1" in unique_track_ids
         assert "track1_2" in unique_track_ids
+
+
+@dataclass
+class SegmentGeoGiven:
+    """Holds DataFrames for geo segment tests."""
+
+    df_with_geo: pl.DataFrame
+    df_without_geo: pl.DataFrame
+
+
+GIVEN_START_GEO_X = 449200.0
+GIVEN_MIDDLE_GEO_X = 449210.0
+GIVEN_END_GEO_X = 449220.0
+GIVEN_START_GEO_Y = 5699300.0
+GIVEN_MIDDLE_GEO_Y = 5699310.0
+GIVEN_END_GEO_Y = 5699320.0
+
+
+def create_segment_geo_given() -> SegmentGeoGiven:
+    """Creates a SegmentGeoGiven with two DataFrames, with and without geo columns."""
+    base = {
+        ROW_ID: [1, 2, 3],
+        TRACK_ID: ["t1", "t1", "t1"],
+        TRACK_CLASSIFICATION: ["car", "car", "car"],
+        X: [10.0, 20.0, 30.0],
+        Y: [10.0, 20.0, 30.0],
+        W: [0.0, 0.0, 0.0],
+        H: [0.0, 0.0, 0.0],
+        FRAME: [1, 2, 3],
+        OCCURRENCE: [
+            datetime(2024, 1, 1, 0, 0, 0),
+            datetime(2024, 1, 1, 0, 0, 1),
+            datetime(2024, 1, 1, 0, 0, 2),
+        ],
+        VIDEO_NAME: ["cam.mp4", "cam.mp4", "cam.mp4"],
+    }
+    df_without_geo = pl.DataFrame(base)
+    df_with_geo = df_without_geo.with_columns(
+        [
+            pl.Series(
+                track.GEO_X, [GIVEN_START_GEO_X, GIVEN_MIDDLE_GEO_X, GIVEN_END_GEO_X]
+            ),
+            pl.Series(
+                track.GEO_Y, [GIVEN_START_GEO_Y, GIVEN_MIDDLE_GEO_Y, GIVEN_END_GEO_Y]
+            ),
+        ]
+    )
+    return SegmentGeoGiven(df_with_geo=df_with_geo, df_without_geo=df_without_geo)
+
+
+class TestCreateTrackSegmentsGeoCoordinates:
+    def test_segments_include_geo_columns_when_both_present(self) -> None:
+        given = create_segment_geo_given()
+        result = create_track_segments(given.df_with_geo)
+        assert START_GEO_X in result.columns
+        assert START_GEO_Y in result.columns
+        assert END_GEO_X in result.columns
+        assert END_GEO_Y in result.columns
+
+    def test_start_geo_x_is_previous_row_geo_x(self) -> None:
+        given = create_segment_geo_given()
+        result = create_track_segments(given.df_with_geo)
+        # First segment: start=row0 (449200), end=row1 (449210)
+        assert result[START_GEO_X][0] == GIVEN_START_GEO_X
+        assert result[END_GEO_X][0] == GIVEN_MIDDLE_GEO_X
+
+    def test_segments_omit_geo_columns_when_absent(self) -> None:
+        given = create_segment_geo_given()
+        result = create_track_segments(given.df_without_geo)
+        assert START_GEO_X not in result.columns
+        assert END_GEO_X not in result.columns
+
+    def test_segments_omit_geo_columns_when_only_geo_x_present(self) -> None:
+        given = create_segment_geo_given()
+        df_only_x = given.df_with_geo.drop(track.GEO_Y)
+        result = create_track_segments(df_only_x)
+        assert START_GEO_X not in result.columns
+
+    def test_segments_preserved_when_geo_columns_have_null_values(self) -> None:
+        given = create_segment_geo_given()
+        df_null_geo = given.df_without_geo.with_columns(
+            pl.lit(None, dtype=pl.Float64).alias(track.GEO_X),
+            pl.lit(None, dtype=pl.Float64).alias(track.GEO_Y),
+        )
+        result = create_track_segments(df_null_geo)
+        assert len(result) == 2
+        assert result[START_GEO_X].is_null().all()
+        assert result[END_GEO_X].is_null().all()
+
+
+@dataclass
+class LineIntersectionGeoGiven:
+    """Holds segment DataFrames for geo passthrough tests."""
+
+    segments_with_geo: pl.DataFrame
+    segments_without_geo: pl.DataFrame
+
+
+def create_line_intersection_geo_given() -> LineIntersectionGeoGiven:
+    """Creates DataFrames for geo column passthrough tests."""
+    base = {
+        ROW_ID: [1],
+        TRACK_ID: ["t1"],
+        TRACK_CLASSIFICATION: ["car"],
+        END_VIDEO_NAME: ["cam.mp4"],
+        END_FRAME: [2],
+        START_X: [0.0],
+        START_Y: [5.0],
+        END_X: [10.0],
+        END_Y: [5.0],
+        START_W: [0.0],
+        START_H: [0.0],
+        END_W: [0.0],
+        END_H: [0.0],
+        START_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 0)],
+        END_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 1)],
+    }
+    without_geo = pl.DataFrame(base)
+    with_geo = without_geo.with_columns(
+        [
+            pl.Series(START_GEO_X, [449200.0]),
+            pl.Series(START_GEO_Y, [5699300.0]),
+            pl.Series(END_GEO_X, [449210.0]),
+            pl.Series(END_GEO_Y, [5699310.0]),
+        ]
+    )
+    return LineIntersectionGeoGiven(
+        segments_with_geo=with_geo,
+        segments_without_geo=without_geo,
+    )
+
+
+class TestFindLineIntersectionsGeoPassthrough:
+    def test_geo_columns_present_in_output_when_present_in_input(self) -> None:
+        given = create_line_intersection_geo_given()
+        result = find_line_intersections(
+            given.segments_with_geo,
+            "line-1",
+            5.0,
+            0.0,
+            5.0,
+            10.0,
+            RelativeOffsetCoordinate(0.0, 0.0),
+        )
+        assert START_GEO_X in result.columns
+        assert START_GEO_Y in result.columns
+        assert END_GEO_X in result.columns
+        assert END_GEO_Y in result.columns
+
+    def test_geo_columns_absent_from_output_when_absent_in_input(self) -> None:
+        given = create_line_intersection_geo_given()
+        result = find_line_intersections(
+            given.segments_without_geo,
+            "line-1",
+            5.0,
+            0.0,
+            5.0,
+            10.0,
+            RelativeOffsetCoordinate(0.0, 0.0),
+        )
+        assert START_GEO_X not in result.columns
+        assert END_GEO_X not in result.columns
+        assert START_GEO_Y not in result.columns
+        assert END_GEO_Y not in result.columns
+
+
+@dataclass
+class GeoInterpolationGiven:
+    """Holds datasets for geo interpolation at intersection tests."""
+
+    dataset_with_geo: PolarsTrackGeometryDataset
+    dataset_without_geo: PolarsTrackGeometryDataset
+    section: LineSection
+
+
+def create_geo_interpolation_given() -> GeoInterpolationGiven:
+    """Creates datasets for testing geo interpolation at track-section intersection."""
+    offset = RelativeOffsetCoordinate(0.0, 0.0)
+    # Track goes horizontally from (0,5) to (10,5)
+    # Section cuts vertically at x=5 — intersection at (5,5), relative_position=0.5
+    base_segments = {
+        ROW_ID: [1],
+        TRACK_ID: ["t1"],
+        TRACK_CLASSIFICATION: ["car"],
+        END_VIDEO_NAME: ["myhostname_cam.mp4"],
+        END_FRAME: [2],
+        START_X: [0.0],
+        START_Y: [5.0],
+        END_X: [10.0],
+        END_Y: [5.0],
+        START_W: [0.0],
+        START_H: [0.0],
+        END_W: [0.0],
+        END_H: [0.0],
+        START_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 0)],
+        END_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 2)],
+    }
+    without_geo_df = pl.DataFrame(base_segments)
+    with_geo_df = without_geo_df.with_columns(
+        [
+            pl.Series(START_GEO_X, [449200.0]),
+            pl.Series(START_GEO_Y, [5699300.0]),
+            pl.Series(END_GEO_X, [449220.0]),
+            pl.Series(END_GEO_Y, [5699320.0]),
+        ]
+    )
+    section = LineSection(
+        id=SectionId("s1"),
+        name="s1",
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+        },
+        plugin_data={},
+        coordinates=[Coordinate(5.0, 0.0), Coordinate(5.0, 10.0)],
+    )
+    return GeoInterpolationGiven(
+        dataset_with_geo=PolarsTrackGeometryDataset(offset, with_geo_df),
+        dataset_without_geo=PolarsTrackGeometryDataset(offset, without_geo_df),
+        section=section,
+    )
+
+
+class TestGeoInterpolationAtIntersection:
+    def test_interpolated_geo_x_at_midpoint(self) -> None:
+        given = create_geo_interpolation_given()
+        result = given.dataset_with_geo.wrap_intersection_points([given.section])
+        assert isinstance(result, PolarsIntersectionPointsDataset)
+        points = result._points
+        assert INTERPOLATED_GEO_X in points.columns
+        # relative_position=0.5, start=449200, end=449220 → expected=449210
+        assert points[INTERPOLATED_GEO_X][0] == pytest.approx(449210.0, abs=0.01)
+
+    def test_interpolated_geo_y_at_midpoint(self) -> None:
+        given = create_geo_interpolation_given()
+        result = given.dataset_with_geo.wrap_intersection_points([given.section])
+        assert isinstance(result, PolarsIntersectionPointsDataset)
+        points = result._points
+        assert INTERPOLATED_GEO_Y in points.columns
+        assert points[INTERPOLATED_GEO_Y][0] == pytest.approx(5699310.0, abs=0.01)
+
+    def test_no_geo_columns_when_segments_lack_geo(self) -> None:
+        given = create_geo_interpolation_given()
+        result = given.dataset_without_geo.wrap_intersection_points([given.section])
+        assert isinstance(result, PolarsIntersectionPointsDataset)
+        points = result._points
+        assert INTERPOLATED_GEO_X not in points.columns
+        assert INTERPOLATED_GEO_Y not in points.columns
+
+
+GEO_X = 449210.0
+GEO_Y = 5699310.0
+
+
+@dataclass
+class CreateEventsGeoGiven:
+    """Holds intersection point datasets for geo coordinate event creation tests."""
+
+    points_with_geo: PolarsIntersectionPointsDataset
+    points_without_geo: PolarsIntersectionPointsDataset
+
+
+def _base_points_dict() -> dict[str, list]:
+    return {
+        TRACK_ID: ["t1"],
+        TRACK_CLASSIFICATION: ["car"],
+        END_VIDEO_NAME: ["myhostname_cam.mp4"],
+        END_FRAME: [2],
+        END_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 1)],
+        START_OCCURRENCE: [datetime(2024, 1, 1, 0, 0, 0)],
+        SECTION_ID: ["s1"],
+        CURRENT_X: [5.0],
+        CURRENT_Y: [5.0],
+        PREVIOUS_X: [0.0],
+        PREVIOUS_Y: [5.0],
+        RELATIVE_POSITION: [0.5],
+    }
+
+
+def create_create_events_geo_given() -> CreateEventsGeoGiven:
+    """Build a ``CreateEventsGeoGiven`` with and without geo coordinate columns.
+
+    Returns:
+        A ``CreateEventsGeoGiven`` containing two ``PolarsIntersectionPointsDataset``
+        instances: one with geo coordinate columns and one without.
+    """
+    base = _base_points_dict()
+    without_geo = pl.DataFrame(base)
+    with_geo = without_geo.with_columns(
+        [
+            pl.Series(INTERPOLATED_GEO_X, [GEO_X]),
+            pl.Series(INTERPOLATED_GEO_Y, [GEO_Y]),
+        ]
+    )
+    return CreateEventsGeoGiven(
+        points_with_geo=PolarsIntersectionPointsDataset(with_geo),
+        points_without_geo=PolarsIntersectionPointsDataset(without_geo),
+    )
+
+
+class TestCreateEventsGeoCoordinates:
+    """Tests that ``create_events`` propagates geo coordinates onto produced events."""
+
+    def test_events_carry_geo_coordinates_when_present(self) -> None:
+        given = create_create_events_geo_given()
+        offset = RelativeOffsetCoordinate(0.0, 0.0)
+        event_dataset = given.points_with_geo.create_events(offset)
+        events = list(event_dataset)
+        assert len(events) == 1
+        assert events[0].geo_x == GEO_X
+        assert events[0].geo_y == GEO_Y
+
+    def test_events_have_none_geo_when_no_geo_columns(self) -> None:
+        given = create_create_events_geo_given()
+        offset = RelativeOffsetCoordinate(0.0, 0.0)
+        event_dataset = given.points_without_geo.create_events(offset)
+        events = list(event_dataset)
+        assert len(events) == 1
+        assert events[0].geo_x is None
+        assert events[0].geo_y is None
+
+
+def _create_segments_df_with_geo() -> pl.DataFrame:
+    """Single track segment in both pixel and geo coordinate space.
+
+    Pixel: (100, 0) -> (100, 200)  — vertical segment at x=100
+    Geo:   (449250.0, 5699320.0) -> (449250.0, 5699340.0) — vertical geo segment
+    """
+    from datetime import timezone
+
+    occ_start = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    occ_end = datetime(2023, 1, 1, 0, 0, 1, tzinfo=timezone.utc)
+    return pl.DataFrame(
+        {
+            ROW_ID: [1],
+            TRACK_ID: ["track_1"],
+            "track_classification": ["car"],
+            END_VIDEO_NAME: ["video.mp4"],
+            END_FRAME: [1],
+            START_X: [100.0],
+            START_Y: [0.0],
+            END_X: [100.0],
+            END_Y: [200.0],
+            START_W: [0.0],
+            START_H: [0.0],
+            END_W: [0.0],
+            END_H: [0.0],
+            START_OCCURRENCE: [occ_start],
+            END_OCCURRENCE: [occ_end],
+            START_GEO_X: [449250.0],
+            START_GEO_Y: [5699320.0],
+            END_GEO_X: [449250.0],
+            END_GEO_Y: [5699340.0],
+        }
+    )
+
+
+class TestFindLineIntersectionsUseGeo:
+    def test_intersects_in_geo_space(self) -> None:
+        segments_df = _create_segments_df_with_geo()
+        # Horizontal section line in geo space crossing the vertical track segment
+        result = find_line_intersections(
+            segments_df,
+            line_id="section_1",
+            start_x=449240.0,
+            start_y=5699325.0,
+            end_x=449260.0,
+            end_y=5699325.0,
+            offset=RelativeOffsetCoordinate(0.0, 0.0),
+            use_geo=True,
+        )
+        intersecting = result.filter(pl.col(INTERSECTS))
+        assert len(intersecting) == 1
+        row = intersecting.row(0, named=True)
+        assert row[INTERSECTION_X] == approx(449250.0, rel=1e-6)
+        assert row[INTERSECTION_Y] == approx(5699325.0, rel=1e-6)
+
+    def test_no_intersection_in_geo_space_when_lines_miss(self) -> None:
+        segments_df = _create_segments_df_with_geo()
+        # Section line that does NOT cross the track segment in geo space
+        result = find_line_intersections(
+            segments_df,
+            line_id="section_1",
+            start_x=449260.0,
+            start_y=5699345.0,
+            end_x=449280.0,
+            end_y=5699345.0,
+            offset=RelativeOffsetCoordinate(0.0, 0.0),
+            use_geo=True,
+        )
+        assert result.filter(pl.col(INTERSECTS)).is_empty()
+
+
+class TestWrapIntersectionPointsWithGeo:
+    """When georeference_metadata is provided and segments have geo columns,
+    section pixel coords are converted to geo and intersection uses geo math."""
+
+    def _make_geometry_dataset(self) -> PolarsTrackGeometryDataset:
+        """Single track: pixel (100, 0) -> (100, 200).
+
+        Geo: (449250, 5699320) -> (449250, 5699340).
+        """
+        from datetime import timezone
+
+        occ_start = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        occ_end = datetime(2023, 1, 1, 0, 0, 1, tzinfo=timezone.utc)
+        segments = pl.DataFrame(
+            {
+                ROW_ID: [1],
+                TRACK_ID: ["t1"],
+                "track_classification": ["car"],
+                END_VIDEO_NAME: ["v.mp4"],
+                END_FRAME: [1],
+                START_X: [100.0],
+                START_Y: [0.0],
+                END_X: [100.0],
+                END_Y: [200.0],
+                START_W: [0.0],
+                START_H: [0.0],
+                END_W: [0.0],
+                END_H: [0.0],
+                START_OCCURRENCE: [occ_start],
+                END_OCCURRENCE: [occ_end],
+                START_GEO_X: [449250.0],
+                START_GEO_Y: [5699320.0],
+                END_GEO_X: [449250.0],
+                END_GEO_Y: [5699340.0],
+            }
+        )
+        return PolarsTrackGeometryDataset(
+            offset=RelativeOffsetCoordinate(0.0, 0.0),
+            segments_df=segments,
+        )
+
+    def _make_georeference_metadata(self) -> GeoreferenceMetadata:
+        """Metadata where pixel (100, 100) maps to geo (449250, 5699325).
+
+        Using:
+          scale_x = (449300 - 449200) / (200 - 40) = 100 / 160 = 0.625
+          scale_y = (5699350 - 5699300) / (200 - 40) = 50 / 160 = 0.3125
+          pixel_x=100 -> geo_x = 449200 + (100-20)*0.625 = 449200 + 50 = 449250  ✓
+          pixel_y=100 -> geo_y = 5699350 - (100-20)*0.3125 = 5699350 - 25 = 5699325  ✓
+        """
+        return GeoreferenceMetadata(
+            geo_min_x=449200.0,
+            geo_min_y=5699300.0,
+            geo_max_x=449300.0,
+            geo_max_y=5699350.0,
+            birds_eye_view_width=200,
+            birds_eye_view_height=200,
+            padding=20,
+            crs="EPSG:25833",
+        )
+
+    def _make_section(
+        self, pixel_start: tuple[float, float], pixel_end: tuple[float, float]
+    ) -> LineSection:
+        section = Mock(spec=LineSection)
+        section.id = SectionId("s1")
+        section.get_coordinates.return_value = [
+            Coordinate(pixel_start[0], pixel_start[1]),
+            Coordinate(pixel_end[0], pixel_end[1]),
+        ]
+        section.relative_offset_coordinates = {
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+        }
+        section.get_type.return_value = SectionType.LINE
+        return section
+
+    def test_geo_intersection_uses_converted_section_coordinates(self) -> None:
+        # Section at pixel (80, 100) -> (120, 100), which converts to geo:
+        # pixel (80,100)→(120,100) converts to geo y=5699325, x=[449237.5, 449262.5]
+        # This horizontal geo line crosses the vertical geo track at (449250, 5699325)
+        geometry_dataset = self._make_geometry_dataset()
+        section = self._make_section(pixel_start=(80, 100), pixel_end=(120, 100))
+        metadata = self._make_georeference_metadata()
+
+        result = geometry_dataset.wrap_intersection_points([section], metadata)
+
+        assert not result.empty
+        events = list(result.create_events(RelativeOffsetCoordinate(0.0, 0.0)))
+        assert len(events) == 1
+        evt = events[0]
+        assert evt.geo_x == approx(449250.0, rel=1e-4)
+        assert evt.geo_y == approx(5699325.0, rel=1e-4)
+
+    def test_no_geo_metadata_falls_back_to_pixel_intersection(self) -> None:
+        # Without metadata, section pixel coords used for pixel intersection
+        # Section (0, 100) -> (200, 100) crosses pixel track (100,0)-(100,200)
+        geometry_dataset = self._make_geometry_dataset()
+        section = self._make_section(pixel_start=(0, 100), pixel_end=(200, 100))
+        result = geometry_dataset.wrap_intersection_points([section], None)
+        assert not result.empty
+
+
+class TestWrapIntersectionPointsFallback:
+    """Ensures non-georeferenced files (no geo columns, no GeoreferenceMetadata)
+    are unaffected."""
+
+    @staticmethod
+    def create_segment_data_without_geo_entries() -> dict:
+        occ_start = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        occ_end = datetime(2023, 1, 1, 0, 0, 1, tzinfo=timezone.utc)
+
+        return {
+            "data": {
+                ROW_ID: [1],
+                TRACK_ID: ["t1"],
+                "track_classification": ["car"],
+                END_VIDEO_NAME: ["v.mp4"],
+                END_FRAME: [1],
+                START_X: [100.0],
+                START_Y: [0.0],
+                END_X: [100.0],
+                END_Y: [200.0],
+                START_W: [0.0],
+                START_H: [0.0],
+                END_W: [0.0],
+                END_H: [0.0],
+                START_OCCURRENCE: [occ_start],
+                END_OCCURRENCE: [occ_end],
+            }
+        }
+
+    def create_segment_data_with_null_geo_entries(self) -> dict:
+        data = self.create_segment_data_without_geo_entries()
+        data["data"] = data["data"] | {
+            START_GEO_X: [None],
+            START_GEO_Y: [None],
+            END_GEO_X: [None],
+            END_GEO_Y: [None],
+        }
+        data["schema_overrides"] = {
+            START_GEO_X: pl.Float64,
+            START_GEO_Y: pl.Float64,
+            END_GEO_X: pl.Float64,
+            END_GEO_Y: pl.Float64,
+        }
+        return data
+
+    @staticmethod
+    def create_dataset(
+        segment_data_factory: Callable[[], dict],
+    ) -> PolarsTrackGeometryDataset:
+        segments_df = segment_data_factory()
+
+        return PolarsTrackGeometryDataset(
+            offset=RelativeOffsetCoordinate(0.0, 0.0),
+            segments_df=pl.DataFrame(**segments_df),
+        )
+
+    @staticmethod
+    def create_line_section() -> LineSection:
+        return LineSection(
+            id=SectionId("s1"),
+            name="My_Section",
+            coordinates=[
+                Coordinate(0.0, 100.0),
+                Coordinate(200.0, 100.0),
+            ],
+            relative_offset_coordinates={
+                EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+            },
+            plugin_data={},
+        )
+
+    def create_georeference_metadata(self) -> GeoreferenceMetadata:
+        return GeoreferenceMetadata(
+            geo_min_x=449200.0,
+            geo_min_y=5699300.0,
+            geo_max_x=449300.0,
+            geo_max_y=5699350.0,
+            birds_eye_view_width=200,
+            birds_eye_view_height=200,
+            padding=20,
+            crs="EPSG:25833",
+        )
+
+    def test_no_metadata_no_geo_columns_uses_pixel_intersection(self) -> None:
+        """Pixel-space intersection still works without georeference metadata."""
+
+        geometry_dataset = self.create_dataset(
+            self.create_segment_data_without_geo_entries
+        )
+        section = self.create_line_section()
+
+        result = geometry_dataset.wrap_intersection_points([section], None)
+
+        assert not result.empty
+        events = list(result.create_events(RelativeOffsetCoordinate(0.0, 0.0)))
+        assert len(events) == 1
+        evt = events[0]
+        assert evt.geo_x is None
+        assert evt.geo_y is None
+
+    def test_null_geo_columns_fall_back_to_image_coordinates(
+        self, first_line_section: LineSection
+    ) -> None:
+        geometry_dataset = self.create_dataset(
+            self.create_segment_data_with_null_geo_entries
+        )
+        metadata = self.create_georeference_metadata()
+        section = create_line_section()
+        result = geometry_dataset.wrap_intersection_points([section], metadata)
+
+        assert not result.empty
+        events = list(result.create_events(RelativeOffsetCoordinate(0.0, 0.0)))
+        assert len(events) == 1
+        evt = events[0]
+        assert evt.geo_x is None
+        assert evt.geo_y is None
+
+    def test_interpolated_geo_not_added_when_geo_columns_have_nulls(self) -> None:
+        geometry_dataset = self.create_dataset(
+            self.create_segment_data_with_null_geo_entries
+        )
+        metadata = self.create_georeference_metadata()
+        section = create_line_section()
+        result = geometry_dataset.wrap_intersection_points([section], metadata)
+
+        assert isinstance(result, PolarsIntersectionPointsDataset)
+        assert INTERPOLATED_GEO_X not in result._points.columns
+        assert INTERPOLATED_GEO_Y not in result._points.columns
+
+
+@dataclass
+class FindLineIntersectionsEquivalenceGiven:
+    """Holds a segments DataFrame where geo and pixel columns are numerically
+    identical so that pixel and geo intersection paths can be compared directly."""
+
+    segments_df: pl.DataFrame
+    line_start_x: float
+    line_start_y: float
+    line_end_x: float
+    line_end_y: float
+    offset: RelativeOffsetCoordinate
+
+
+def create_find_line_intersections_equivalence_given() -> (
+    FindLineIntersectionsEquivalenceGiven
+):
+    """Builds segments where START_GEO_X == START_X, etc., and W=H=0.
+
+    Three segments cover the relevant cases:
+      - Row 1: vertical (50,0)->(50,100), crosses horizontal line  -> intersects
+      - Row 2: horizontal (0,0)->(10,0), parallel to section line  -> parallel miss
+      - Row 3: vertical (50,200)->(50,300), above the line         -> non-parallel miss
+    """
+    from datetime import timezone
+
+    occ = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    start_x = [50.0, 0.0, 50.0]
+    start_y = [0.0, 0.0, 200.0]
+    end_x = [50.0, 10.0, 50.0]
+    end_y = [100.0, 0.0, 300.0]
+    segments_df = pl.DataFrame(
+        {
+            ROW_ID: [1, 2, 3],
+            TRACK_ID: ["t1", "t2", "t3"],
+            TRACK_CLASSIFICATION: ["car"] * 3,
+            END_VIDEO_NAME: ["cam.mp4"] * 3,
+            END_FRAME: [2, 2, 2],
+            START_X: start_x,
+            START_Y: start_y,
+            END_X: end_x,
+            END_Y: end_y,
+            START_W: [0.0] * 3,
+            START_H: [0.0] * 3,
+            END_W: [0.0] * 3,
+            END_H: [0.0] * 3,
+            START_OCCURRENCE: [occ] * 3,
+            END_OCCURRENCE: [occ] * 3,
+            START_GEO_X: start_x,
+            START_GEO_Y: start_y,
+            END_GEO_X: end_x,
+            END_GEO_Y: end_y,
+        }
+    )
+    return FindLineIntersectionsEquivalenceGiven(
+        segments_df=segments_df,
+        line_start_x=25.0,
+        line_start_y=50.0,
+        line_end_x=75.0,
+        line_end_y=50.0,
+        offset=RelativeOffsetCoordinate(0.3, 0.4),
+    )
+
+
+def _equal_with_none(a: list, b: list, tol: float = 1e-9) -> bool:
+    if len(a) != len(b):
+        return False
+    for x, y in zip(a, b):
+        if x is None and y is None:
+            continue
+        if x is None or y is None:
+            return False
+        if abs(x - y) > tol:
+            return False
+    return True
+
+
+class TestFindLineIntersectionsPixelGeoEquivalence:
+    """Guards against drift between pixel and geo intersection implementations.
+
+    When geo columns equal pixel columns and W=H=0, both paths must produce
+    identical INTERSECTS, INTERSECTION_X, INTERSECTION_Y for every row.
+    """
+
+    def test_pixel_and_geo_paths_produce_identical_intersections(self) -> None:
+        given = create_find_line_intersections_equivalence_given()
+        pixel_result = find_line_intersections(
+            given.segments_df,
+            line_id="line-1",
+            start_x=given.line_start_x,
+            start_y=given.line_start_y,
+            end_x=given.line_end_x,
+            end_y=given.line_end_y,
+            offset=given.offset,
+            use_geo=False,
+        )
+        geo_result = find_line_intersections(
+            given.segments_df,
+            line_id="line-1",
+            start_x=given.line_start_x,
+            start_y=given.line_start_y,
+            end_x=given.line_end_x,
+            end_y=given.line_end_y,
+            offset=given.offset,
+            use_geo=True,
+        )
+        assert pixel_result[INTERSECTS].to_list() == geo_result[INTERSECTS].to_list()
+        assert _equal_with_none(
+            pixel_result[INTERSECTION_X].to_list(),
+            geo_result[INTERSECTION_X].to_list(),
+        )
+        assert _equal_with_none(
+            pixel_result[INTERSECTION_Y].to_list(),
+            geo_result[INTERSECTION_Y].to_list(),
+        )
+
+
+@dataclass
+class ComputeIntersectionPointsEquivalenceGiven:
+    """Holds an intersecting-segments DataFrame and a section for direct
+    invocation of the unified ``_compute_intersection_points`` helper."""
+
+    intersecting_segments: pl.DataFrame
+    section: LineSection
+    offset: RelativeOffsetCoordinate
+
+
+def create_compute_intersection_points_equivalence_given() -> (
+    ComputeIntersectionPointsEquivalenceGiven
+):
+    """Builds the input that ``_compute_intersection_points`` expects after the
+    upstream intersection check has run: segments with INTERSECTS=True, and
+    INTERSECTION_X/INTERSECTION_Y already populated.
+
+    Geo columns equal pixel columns, and W=H=0, so calling the helper with the
+    default pixel columns must produce the same RELATIVE_POSITION as calling it
+    with the geo columns.
+    """
+    from datetime import timezone
+
+    occ_start = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    occ_end = datetime(2024, 1, 1, 0, 0, 1, tzinfo=timezone.utc)
+    # Single segment from (0,0) to (10,0); section at x=4 crosses at (4,0).
+    # Expected relative_position = 4/10 = 0.4
+    intersecting_segments = pl.DataFrame(
+        {
+            ROW_ID: [1],
+            TRACK_ID: ["t1"],
+            TRACK_CLASSIFICATION: ["car"],
+            END_VIDEO_NAME: ["cam.mp4"],
+            END_FRAME: [2],
+            START_X: [0.0],
+            START_Y: [0.0],
+            END_X: [10.0],
+            END_Y: [0.0],
+            START_W: [0.0],
+            START_H: [0.0],
+            END_W: [0.0],
+            END_H: [0.0],
+            START_OCCURRENCE: [occ_start],
+            END_OCCURRENCE: [occ_end],
+            START_GEO_X: [0.0],
+            START_GEO_Y: [0.0],
+            END_GEO_X: [10.0],
+            END_GEO_Y: [0.0],
+            INTERSECTS: [True],
+            INTERSECTION_X: [4.0],
+            INTERSECTION_Y: [0.0],
+            INTERSECTION_LINE_ID: ["section_1"],
+        }
+    )
+    section = LineSection(
+        id=SectionId("section_1"),
+        name="section_1",
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+        },
+        plugin_data={},
+        coordinates=[Coordinate(4.0, -1.0), Coordinate(4.0, 1.0)],
+    )
+    return ComputeIntersectionPointsEquivalenceGiven(
+        intersecting_segments=intersecting_segments,
+        section=section,
+        offset=RelativeOffsetCoordinate(0.0, 0.0),
+    )
+
+
+class TestComputeIntersectionPointsPixelGeoEquivalence:
+    """Guards against drift between pixel and geo relative-position computation.
+
+    When geo columns equal pixel columns and W=H=0, calling
+    ``_compute_intersection_points`` with default (pixel) column names must
+    produce the same RELATIVE_POSITION as calling it with geo column names.
+    """
+
+    def test_pixel_defaults_and_geo_columns_produce_identical_relative_position(
+        self,
+    ) -> None:
+        given = create_compute_intersection_points_equivalence_given()
+        dataset = PolarsTrackGeometryDataset(given.offset)
+        pixel_result = dataset._compute_intersection_points(
+            given.intersecting_segments, given.offset, given.section
+        )
+        geo_result = dataset._compute_intersection_points(
+            given.intersecting_segments,
+            given.offset,
+            given.section,
+            start_x_col=START_GEO_X,
+            start_y_col=START_GEO_Y,
+            end_x_col=END_GEO_X,
+            end_y_col=END_GEO_Y,
+        )
+        assert pixel_result[RELATIVE_POSITION].to_list() == approx(
+            geo_result[RELATIVE_POSITION].to_list()
+        )
+
+
+def create_line_section() -> LineSection:
+    return LineSection(
+        id=SectionId("s1"),
+        name="My_Section",
+        coordinates=[
+            Coordinate(0.0, 100.0),
+            Coordinate(200.0, 100.0),
+        ],
+        relative_offset_coordinates={
+            EventType.SECTION_ENTER: RelativeOffsetCoordinate(0.0, 0.0)
+        },
+        plugin_data={},
+    )

@@ -11,16 +11,12 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.config import (
-    CONTEXT_FILE_TYPE_COUNTS,
-    DEFAULT_COUNT_INTERVAL_TIME_UNIT,
-    DEFAULT_COUNTS_FILE_TYPE,
     DEFAULT_SECTIONS_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
 )
-from OTAnalytics.application.datastore import TrackParser
-from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.cli_parser import CliParseError
+from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.track_input_source import OttrkFileInputSource
@@ -62,7 +58,6 @@ from OTAnalytics.domain.track_repository import TrackRepositoryEvent
 from OTAnalytics.plugin_parser.otvision_parser import OttrkFormatFixer
 from OTAnalytics.plugin_parser.road_user_assignment_export import CSV_FORMAT
 from OTAnalytics.plugin_parser.streaming_parser import StreamTrackParser
-from OTAnalytics.plugin_parser.track_statistics_export import TrackStatisticsCsvExporter
 from OTAnalytics.plugin_track_input_source.single_batch import (
     SingleBatchOttrkFileInputSource,
 )
@@ -169,7 +164,6 @@ class OTAnalyticsCli(ABC):
         self, sections: Iterable[Section], export_mode: ExportMode
     ) -> None:
         """Export events, counts and tracks."""
-        save_base_path = self._run_config.save_dir / self._run_config.save_stem
         export_directory = self._run_config.save_dir
         export_filename_stem = self._run_config.save_stem
         if self._run_config.do_events:

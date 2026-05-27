@@ -27,7 +27,7 @@ from OTAnalytics.application.config import (
     DEFAULT_EVENTLIST_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
 )
-from OTAnalytics.application.datastore import TrackParser, VideoParser
+from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
@@ -38,6 +38,7 @@ from OTAnalytics.application.parser.cli_parser import (
 )
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.parser.flow_parser import FlowParser
+from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts

@@ -42,6 +42,8 @@ class EventBuilder:
     video_name: str = DEFAULT_VIDEO_NAME
     interpolated_occurrence: datetime | None = None
     interpolated_event_coordinate: ImageCoordinate | None = None
+    geo_x: float | None = None
+    geo_y: float | None = None
 
     def __post_init__(self) -> None:
         self._events: list[Event] = []
@@ -88,6 +90,8 @@ class EventBuilder:
             video_name=self.video_name,
             interpolated_occurrence=interpolated_occurrence,
             interpolated_event_coordinate=interpolated_event_coordinate,
+            geo_x=self.geo_x,
+            geo_y=self.geo_y,
         )
 
     def append_section_event(self) -> Self:

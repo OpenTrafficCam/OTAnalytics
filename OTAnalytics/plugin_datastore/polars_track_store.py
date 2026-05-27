@@ -25,20 +25,26 @@ from shapely.vectorized import contains
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Detection, Track, TrackId, pack, unpack
 from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
+    END_GEO_X,
+    END_GEO_Y,
     END_OCCURRENCE,
     END_VIDEO_NAME,
     END_X,
     END_Y,
     START_FRAME,
+    START_GEO_X,
+    START_GEO_Y,
     START_OCCURRENCE,
     START_VIDEO_NAME,
     START_X,
     START_Y,
     EmptyTrackIdSet,
+    IncompatibleGeoreferenceMetadataError,
     IntersectionPointsDataset,
     TrackDataset,
     TrackDoesNotExistError,
@@ -123,6 +129,14 @@ class PolarsDetection(Detection):
     @property
     def input_file(self) -> str:
         return self.__get_attribute(track.INPUT_FILE)
+
+    @property
+    def geo_x(self) -> float | None:
+        return self._data.get(track.GEO_X)
+
+    @property
+    def geo_y(self) -> float | None:
+        return self._data.get(track.GEO_Y)
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, PolarsDetection):
@@ -233,6 +247,7 @@ COLUMNS = [
     track.TRACK_CLASSIFICATION,
     track.ORIGINAL_TRACK_ID,
 ]
+GEO_COLUMNS = [track.GEO_X, track.GEO_Y]
 DEFAULT_CLASSIFICATOR = PolarsByMaxConfidence()
 INDEX_NAMES = [track.TRACK_ID, track.OCCURRENCE]
 LEVEL_TRACK_ID = track.TRACK_ID
@@ -336,6 +351,31 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     def calculator(self) -> PolarsTrackClassificationCalculator:
         return self._calculator
 
+    @property
+    def georeference_metadata(self) -> GeoreferenceMetadata | None:
+        """Geo-referencing metadata, or None if not georeferenced."""
+        return self._georeference_metadata
+
+    def with_georeference_metadata(
+        self, metadata: GeoreferenceMetadata | None
+    ) -> "PolarsTrackDataset":
+        """Return a new dataset with the given GeoreferenceMetadata attached.
+
+        Args:
+            metadata: Geo-referencing metadata for BEV pixel → UTM coordinate
+                conversion.
+
+        Returns:
+            A new PolarsTrackDataset with the metadata attached.
+        """
+        return PolarsTrackDataset(
+            track_geometry_factory=self._track_geometry_factory,
+            dataset=self._dataset,
+            geometry_datasets=self._geometry_datasets,
+            calculator=self._calculator,
+            georeference_metadata=metadata,
+        )
+
     def __init__(
         self,
         track_geometry_factory: POLARS_TRACK_GEOMETRY_FACTORY,
@@ -344,6 +384,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             dict[RelativeOffsetCoordinate, PolarsTrackGeometryDataset] | None
         ) = None,
         calculator: PolarsTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
+        georeference_metadata: GeoreferenceMetadata | None = None,
     ):
         if dataset is not None:
             self._dataset: pl.DataFrame = dataset
@@ -358,6 +399,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             ]()
         else:
             self._geometry_datasets = geometry_datasets
+        self._georeference_metadata = georeference_metadata
 
     def __iter__(self) -> Iterator[Track]:
         yield from self.as_generator()
@@ -387,9 +429,14 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             dict[RelativeOffsetCoordinate, PolarsTrackGeometryDataset] | None
         ) = None,
         calculator: PolarsTrackClassificationCalculator = DEFAULT_CLASSIFICATOR,
+        georeference_metadata: GeoreferenceMetadata | None = None,
     ) -> "PolarsTrackDataset":
         if tracks.is_empty():
-            return PolarsTrackDataset(track_geometry_factory)
+            return PolarsTrackDataset(
+                track_geometry_factory,
+                calculator=calculator,
+                georeference_metadata=georeference_metadata,
+            )
         tracks = (
             tracks.drop(ROW_ID, strict=False)
             .sort(by=[track.TRACK_ID, track.OCCURRENCE, track.VIDEO_NAME, track.FRAME])
@@ -400,15 +447,101 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             track_geometry_factory,
             result,
             geometry_datasets=geometry_dataset,
+            georeference_metadata=georeference_metadata,
+        )
+
+    @classmethod
+    def merge_all(
+        cls,
+        datasets: Sequence["PolarsTrackDataset"],
+    ) -> "PolarsTrackDataset":
+        if not datasets:
+            raise ValueError("No datasets to merge")
+
+        first_dataset = datasets[0]
+        other_datasets = datasets[1:]
+
+        expected_metadata = first_dataset.georeference_metadata
+        for ds in other_datasets:
+            if ds.georeference_metadata != expected_metadata:
+                raise IncompatibleGeoreferenceMetadataError(
+                    "Cannot merge datasets with different georeference metadata: "
+                    f"expected {expected_metadata!r}, got {ds.georeference_metadata!r}"
+                )
+
+        factory = first_dataset.track_geometry_factory
+        calculator = first_dataset.calculator
+
+        non_empty = [ds for ds in datasets if not ds.get_data().is_empty()]
+        if not non_empty:
+            return cls(
+                factory,
+                calculator=calculator,
+                georeference_metadata=expected_metadata,
+            )
+
+        any_has_geo = any(dataset_has_geo_columns(ds) for ds in non_empty)
+
+        def _prepare(dataset: "PolarsTrackDataset") -> pl.DataFrame:
+            df = drop_row_id(dataset.get_data())
+            if any_has_geo:
+                for col in GEO_COLUMNS:
+                    if col not in df.columns:
+                        df = df.with_columns(pl.lit(None, dtype=pl.Float64).alias(col))
+                return df.select(COLUMNS + GEO_COLUMNS)
+            return df.select(COLUMNS)
+
+        frames = [_prepare(ds) for ds in non_empty]
+        return cls.from_dataframe(
+            pl.concat(frames),
+            factory,
+            calculator=calculator,
+            georeference_metadata=expected_metadata,
         )
 
     def add_all(self, other: Iterable[Track]) -> "PolarsTrackDataset":
+        """Add all tracks from `other` to this dataset.
+
+        Args:
+            other: A `PolarsTrackDataset` (with or without georeference metadata),
+                or any `Iterable[Track]` of raw tracks (treated as having no
+                metadata).
+
+        Returns:
+            A new `PolarsTrackDataset` containing the merged tracks. When current
+            is empty, the result inherits any metadata carried by `other`.
+            Otherwise the current dataset's metadata is preserved.
+
+        Raises:
+            IncompatibleGeoreferenceMetadataError: when current is non-empty and
+                the metadata carried by `other` (or its absence) does not match
+                the current dataset's metadata. Passing a non-`PolarsTrackDataset`
+                iterable into a metadata-bearing current dataset triggers this
+                because raw tracks are treated as having no metadata.
+        """
         new_tracks = self.__get_tracks(other)
         if new_tracks.is_empty():
             return self
+
+        incoming_metadata = (
+            other.georeference_metadata
+            if isinstance(other, PolarsTrackDataset)
+            else None
+        )
+
         if self._dataset.is_empty():
             return PolarsTrackDataset.from_dataframe(
-                new_tracks, self.track_geometry_factory, calculator=self.calculator
+                new_tracks,
+                self.track_geometry_factory,
+                calculator=self.calculator,
+                georeference_metadata=incoming_metadata,
+            )
+
+        if self._georeference_metadata != incoming_metadata:
+            raise IncompatibleGeoreferenceMetadataError(
+                "Cannot merge dataset with georeference metadata "
+                f"{incoming_metadata!r} into dataset with georeference metadata "
+                f"{self._georeference_metadata!r}"
             )
 
         # Ensure new_tracks has track classification before concatenating
@@ -416,11 +549,29 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             new_tracks, self.calculator
         )
 
-        # Get all tracks (existing + new) and assign classification
+        # Get all tracks (existing + new) and assign classification.
+        # Null-pad geo columns when either side carries them.
+        geo_cols = [
+            c
+            for c in GEO_COLUMNS
+            if c in self._dataset.columns or c in new_tracks_with_classification.columns
+        ]
+        existing_df = drop_row_id(self._dataset)
+        incoming_df = drop_row_id(new_tracks_with_classification)
+        for col in geo_cols:
+            if col not in existing_df.columns:
+                existing_df = existing_df.with_columns(
+                    pl.lit(None, dtype=pl.Float64).alias(col)
+                )
+            if col not in incoming_df.columns:
+                incoming_df = incoming_df.with_columns(
+                    pl.lit(None, dtype=pl.Float64).alias(col)
+                )
+        selected_columns = COLUMNS + geo_cols
         combined_tracks = pl.concat(
             [
-                drop_row_id(self._dataset).select(COLUMNS),
-                drop_row_id(new_tracks_with_classification).select(COLUMNS),
+                existing_df.select(selected_columns),
+                incoming_df.select(selected_columns),
             ]
         ).sort(INDEX_NAMES)
 
@@ -429,11 +580,17 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
         updated_geometry_dataset = self._add_to_geometry_dataset(
             PolarsTrackDataset.from_dataframe(
-                updated_dataset, self.track_geometry_factory
+                updated_dataset,
+                self.track_geometry_factory,
+                georeference_metadata=self._georeference_metadata,
             )
         )
+
         return PolarsTrackDataset.from_dataframe(
-            updated_dataset, self.track_geometry_factory, updated_geometry_dataset
+            updated_dataset,
+            self.track_geometry_factory,
+            updated_geometry_dataset,
+            georeference_metadata=self._georeference_metadata,
         )
 
     def __get_tracks(self, other: Iterable[Track]) -> pl.DataFrame:
@@ -453,7 +610,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
 
     def split_finished(self) -> tuple[TrackDataset, TrackDataset]:
         empty = PolarsTrackDataset(
-            self.track_geometry_factory, calculator=self.calculator
+            self.track_geometry_factory,
+            calculator=self.calculator,
+            georeference_metadata=self._georeference_metadata,
         )
         if self._dataset.is_empty():
             return empty, empty
@@ -493,6 +652,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             filtered_data,
             self._geometry_datasets,
             self.calculator,
+            georeference_metadata=self._georeference_metadata,
         )
 
     def remove_multiple(self, track_ids: TrackIdSet) -> "PolarsTrackDataset":
@@ -505,6 +665,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             filtered_data,
             self._geometry_datasets,
             self.calculator,
+            georeference_metadata=self._georeference_metadata,
         )
 
     def __to_raw_ids(self, track_ids: TrackIdSet) -> pl.Series | list:
@@ -568,7 +729,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         self, sections: list[Section], offset: RelativeOffsetCoordinate
     ) -> IntersectionPointsDataset:
         geometry_dataset = self._get_geometry_dataset_for(offset)
-        return geometry_dataset.wrap_intersection_points(sections)
+        return geometry_dataset.wrap_intersection_points(
+            sections, self._georeference_metadata
+        )
 
     def ids_inside(self, sections: list[Section]) -> TrackIdSet:
         result: TrackIdSet = PolarsTrackIdSet()
@@ -663,8 +826,19 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             return pl.DataFrame(schema=schema)
 
         data = self._dataset.sort([LEVEL_TRACK_ID, LEVEL_OCCURRENCE])
+        has_geo = track.GEO_X in data.columns and track.GEO_Y in data.columns
 
-        # Create shifted columns for start positions
+        geo_start_columns = (
+            [
+                pl.col(track.GEO_X).shift(1).over(LEVEL_TRACK_ID).alias(START_GEO_X),
+                pl.col(track.GEO_Y).shift(1).over(LEVEL_TRACK_ID).alias(START_GEO_Y),
+            ]
+            if has_geo
+            else []
+        )
+        geo_rename = {track.GEO_X: END_GEO_X, track.GEO_Y: END_GEO_Y} if has_geo else {}
+        geo_select = [END_GEO_X, END_GEO_Y, START_GEO_X, START_GEO_Y] if has_geo else []
+
         segments = (
             data.with_columns(
                 [
@@ -682,6 +856,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                     .shift(1)
                     .over(LEVEL_TRACK_ID)
                     .alias(START_VIDEO_NAME),
+                    *geo_start_columns,
                 ]
             )
             .drop_nulls(
@@ -692,6 +867,8 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                     START_FRAME,
                     START_VIDEO_NAME,
                 ]
+                # start_geo_x/y are produced by the same shift(1) pattern and
+                # are therefore null on the same first-detection rows dropped here.
             )
             .rename(
                 {
@@ -700,6 +877,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                     track.OCCURRENCE: END_OCCURRENCE,
                     track.FRAME: END_FRAME,
                     track.VIDEO_NAME: END_VIDEO_NAME,
+                    **geo_rename,
                 }
             )
             .select(
@@ -716,6 +894,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                     END_OCCURRENCE,
                     END_FRAME,
                     END_VIDEO_NAME,
+                    *geo_select,
                 ]
             )
         )
@@ -745,7 +924,12 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             )
         ).drop(OLD_TRACK_ID)
         return (
-            PolarsTrackDataset.from_dataframe(result, self.track_geometry_factory),
+            PolarsTrackDataset.from_dataframe(
+                result,
+                self.track_geometry_factory,
+                calculator=self.calculator,
+                georeference_metadata=self._georeference_metadata,
+            ),
             original_track_ids,
         )
 
@@ -768,7 +952,10 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         )
 
         return PolarsTrackDataset(
-            self.track_geometry_factory, filtered_dataset, calculator=self.calculator
+            self.track_geometry_factory,
+            filtered_dataset,
+            calculator=self.calculator,
+            georeference_metadata=self._georeference_metadata,
         )
 
     def get_max_confidences_for(self, track_ids: TrackIdSet) -> dict[str, float]:
@@ -824,6 +1011,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                 self.track_geometry_factory,
                 geometry_dataset=self._geometry_datasets,
                 calculator=self.calculator,
+                georeference_metadata=self._georeference_metadata,
             ),
             ids_to_revert,
             ids_to_revert,
@@ -862,6 +1050,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
                     self.track_geometry_factory,
                     batch_geometries,
                     calculator=self.calculator,
+                    georeference_metadata=self._georeference_metadata,
                 )
             )
         return new_batches
@@ -869,7 +1058,9 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
     def _subset_by_ids(self, track_ids: list[str]) -> "PolarsTrackDataset":
         if not track_ids:
             return PolarsTrackDataset(
-                self.track_geometry_factory, calculator=self.calculator
+                self.track_geometry_factory,
+                calculator=self.calculator,
+                georeference_metadata=self._georeference_metadata,
             )
         subset = self._dataset.filter(pl.col(LEVEL_TRACK_ID).is_in(track_ids))
         geometries = self._get_geometries_for(track_ids)
@@ -878,6 +1069,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             self.track_geometry_factory,
             geometries,
             calculator=self.calculator,
+            georeference_metadata=self._georeference_metadata,
         )
 
     def _get_geometries_for(
@@ -906,6 +1098,7 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
             dataset=filtered_dataset,
             calculator=self.calculator,
             track_geometry_factory=self.track_geometry_factory,
+            georeference_metadata=self._georeference_metadata,
         )
 
         return updated_track_dataset, ids_to_remove
@@ -1020,3 +1213,11 @@ def area_section_to_shapely(section: Section) -> BaseGeometry:
     geometry = shapely.Polygon([(c.x, c.y) for c in section.get_coordinates()])
     prepare(geometry)
     return geometry
+
+
+def dataset_has_geo_columns(dataset: PolarsTrackDataset) -> bool:
+    return all(column in dataset.get_data().columns for column in GEO_COLUMNS)
+
+
+def all_datasets_have_geo_columns(datasets: Iterable[PolarsTrackDataset]) -> bool:
+    return all(dataset_has_geo_columns(dataset) for dataset in datasets)
