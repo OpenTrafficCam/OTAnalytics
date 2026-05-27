@@ -4,7 +4,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
-from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import (
     EventExportSpecification,
@@ -276,10 +275,6 @@ class Datastore:
             events=self._event_repository.get_all(),
             sections=self._section_repository.get_all(),
             export_specification=specification,
-            # export_specification=EventExportSpecification(
-            #     file=file,
-            #     export_mode=OVERWRITE,
-            # ),
         )
 
     def is_flow_using_section(self, section: SectionId) -> bool:
