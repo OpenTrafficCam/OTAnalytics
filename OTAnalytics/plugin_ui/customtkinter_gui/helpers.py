@@ -3,11 +3,7 @@ from tkinter import Widget
 from tkinter.filedialog import asksaveasfilename
 from typing import Any
 
-from OTAnalytics.adapter_ui.helpers import (
-    ensure_file_extension_is_present,
-    remove_wildcard_from,
-    strip_extension,
-)
+from OTAnalytics.adapter_ui.helpers import ensure_file_extension_is_present
 
 
 class InvalidReferenceError(Exception):
@@ -158,12 +154,6 @@ def ask_for_save_file_name(
     Returns:
         str: file name with extension
     """
-    # supported_filetypes = [remove_wildcard_from(filetype[1]) for filetype in filetypes]
-    # file_name_without_supported_extension = strip_supported_extension(
-    #     file_name=initialfile,
-    #     supported_filetypes=supported_filetypes,
-    # )
-
     filename = asksaveasfilename(
         title=title,
         filetypes=filetypes,
