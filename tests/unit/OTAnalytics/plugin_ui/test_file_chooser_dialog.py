@@ -184,7 +184,10 @@ class TestFileChooserDialog:
         user: User,
         file_chooser_dialog: FileChooserDialog,
     ) -> None:
-        """Typing a non-existent path keeps the typed value but does not update _initial_dir."""  # noqa
+        """
+        Typing a non-existent path keeps the typed value but does not update
+        _initial_dir.
+        """
 
         @ui.page(ENDPOINT_NAME)
         def page() -> None:
