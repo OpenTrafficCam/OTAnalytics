@@ -201,14 +201,14 @@ class ToplevelExportCounts(ToplevelTemplate):
         export_format = self._input_values[EXPORT_FORMAT]  #
         export_extension = self._export_formats[export_format]
         save_suggestion = self._viewmodel.get_save_path_suggestion(
-            export_extension[1:],
-            self.context_file_type,
+            file_type=export_extension,
+            context_file_type=self.context_file_type,
         )
         export_file = ask_for_save_file_name(
             title="Save counts as",
-            filetypes=[(export_format, export_extension)],
-            defaultextension=export_extension,
-            initialfile=save_suggestion.file_path.name,
+            filetypes=[(export_format, f"*{save_suggestion.file_type}")],
+            defaultextension=save_suggestion.file_type,
+            initialfile=save_suggestion.name_without_file_type,
             initialdir=save_suggestion.save_directory,
         )
         self._input_values[EXPORT_FILE] = export_file

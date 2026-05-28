@@ -40,6 +40,20 @@ class SavePathSuggestion:
             )
         return self.save_directory / f"{self.file_stem}{self.file_type}"
 
+    @property
+    def name_without_file_type(self) -> str:
+        """Filename suggestion without the trailing ``file_type`` extension.
+
+        Pass this as ``initialfile`` to tkinter's ``asksaveasfilename`` so the
+        dialog can append the extension itself via ``defaultextension``. Tk 9.0
+        on macOS appends ``defaultextension`` to ``initialfile`` even when the
+        latter already ends with that extension, producing duplicated suffixes
+        (e.g. ``foo.events.otevents.otevents``) for non-system file types.
+        """
+        if self.context_file_type is not None:
+            return f"{self.file_stem}.{self.context_file_type}"
+        return self.file_stem
+
 
 class SavePathSuggester:
     """
