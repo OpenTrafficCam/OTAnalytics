@@ -4,7 +4,6 @@ from typing import Any
 
 from nicegui import ui
 
-from OTAnalytics.adapter_ui.helpers import ensure_dot_in_extension
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
@@ -15,6 +14,7 @@ from OTAnalytics.application.config import (
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.files import ensure_dot_in_extension
 from OTAnalytics.application.resources.resource_manager import (
     ExportCountsDialogKeys,
     FileChooserDialogKeys,

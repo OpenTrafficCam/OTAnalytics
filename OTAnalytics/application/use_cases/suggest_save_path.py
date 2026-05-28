@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+from OTAnalytics.application.files import ensure_dot_in_extension
 from OTAnalytics.application.state import FileState
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
@@ -18,14 +19,26 @@ class SavePathSuggestion:
     context_file_type: str | None
     file_type: str
 
+    def __post_init__(self) -> None:
+        if not self.file_type.startswith("."):
+            raise ValueError(f"file_type must start with '.', got '{self.file_type}'")
+
+        if self.context_file_type is not None and self.context_file_type.startswith(
+            "."
+        ):
+            raise ValueError(
+                f"context_file_type must not start with '.', got "
+                f"'{self.context_file_type}'"
+            )
+
     @property
     def file_path(self) -> Path:
         if self.context_file_type is not None:
             return (
                 self.save_directory
-                / f"{self.file_stem}.{self.context_file_type}.{self.file_type}"
+                / f"{self.file_stem}.{self.context_file_type}{self.file_type}"
             )
-        return self.save_directory / f"{self.file_stem}.{self.file_type}"
+        return self.save_directory / f"{self.file_stem}{self.file_type}"
 
 
 class SavePathSuggester:
@@ -101,7 +114,7 @@ class SavePathSuggester:
             3. Default: <CURRENT DATE AND TIME>
 
         Args:
-            file_type (str): the file type.
+            file_type (str): Can start with or without a leading dot.
             context_file_type (str): the context file type.
 
         Returns:
@@ -111,11 +124,12 @@ class SavePathSuggester:
         base_folder = self._retrieve_base_folder()
         file_stem = self._suggest_file_stem()
         actual_context_file_type = self._parse_context_file_type(context_file_type)
+        sanitized_file_type = ensure_dot_in_extension(file_type)
         return SavePathSuggestion(
             save_directory=base_folder,
             file_stem=file_stem,
             context_file_type=actual_context_file_type,
-            file_type=file_type,
+            file_type=sanitized_file_type,
         )
 
     def _retrieve_base_folder(self) -> Path:

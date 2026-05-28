@@ -5,7 +5,6 @@ from typing import Iterable
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
-from OTAnalytics.adapter_ui.helpers import ensure_dot_in_extension, strip_extension
 from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
@@ -17,23 +16,19 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_COUNTS,
-    DEFAULT_COUNT_INTERVAL_TIME_UNIT,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.plugin_ui.customtkinter_gui import toplevel_export_file
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_path
 from OTAnalytics.plugin_ui.customtkinter_gui.messagebox import (
     CtkInfoBox,
     MinimalInfoBox,
 )
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_export_counts import (
-    COUNTING_EVENT,
     END,
-    EXPORT_FILE,
     EXPORT_FORMAT,
     INTERVAL,
     START,
@@ -107,7 +102,7 @@ class CtkUiFactory(UiFactory):
         default_values: dict = {
             EXPORT_FORMAT: default_format,
         }
-        export_config = ToplevelExportFile(
+        return ToplevelExportFile(
             title=title,
             initial_position=(50, 50),
             input_values=default_values,
@@ -115,19 +110,6 @@ class CtkUiFactory(UiFactory):
             context_file_type=context_file_type,
             viewmodel=viewmodel,
         ).get_data()
-        file = Path(export_config[toplevel_export_file.EXPORT_FILE])
-        export_format = export_config[toplevel_export_file.EXPORT_FORMAT]
-        selected_extension = ensure_dot_in_extension(
-            export_config[toplevel_export_file.SELECTED_EXTENSION]
-        )
-        extension_with_context_type = f".{context_file_type}{selected_extension}"
-        file_stem = strip_extension(file.name, extension_with_context_type)
-        return ExportFileDto(
-            export_directory=file.parent,
-            file_stem=file_stem,
-            export_format_extension=selected_extension,
-            export_format=export_format,
-        )
 
     async def configure_export_counts(
         self,
@@ -144,7 +126,7 @@ class CtkUiFactory(UiFactory):
             END: end,
             EXPORT_FORMAT: default_format,
         }
-        export_values: dict = ToplevelExportCounts(
+        export_dto = ToplevelExportCounts(
             title="Export counts",
             initial_position=(50, 50),
             input_values=default_values,
@@ -152,29 +134,18 @@ class CtkUiFactory(UiFactory):
             context_file_type=CONTEXT_FILE_TYPE_COUNTS,
             viewmodel=viewmodel,
         ).get_data()
-        logger().debug(export_values)
-        file = Path(export_values[EXPORT_FILE])
-        counting_event_str = export_values.get(
-            COUNTING_EVENT, CountingEvent.START.value
-        )
-        interval_in_minutes = export_values[INTERVAL]
-        selected_extension = export_values[toplevel_export_file.SELECTED_EXTENSION]
-        extension_with_context_type = (
-            f".{CONTEXT_FILE_TYPE_COUNTS}"
-            f"_{interval_in_minutes}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"
-            f"{ensure_dot_in_extension(selected_extension)}"
-        )
-        file_stem = strip_extension(file.name, extension_with_context_type)
+        logger().debug(export_dto)
+
         return CountingSpecificationDto(
-            interval_in_minutes=export_values[INTERVAL],
-            start=export_values[START],
-            end=export_values[END],
+            interval_in_minutes=export_dto.interval_in_minutes,
+            start=export_dto.start_date,
+            end=export_dto.end_date,
             modes=modes,
-            output_format=export_values[EXPORT_FORMAT],
-            export_directory=file.parent,
-            export_filename_stem=file_stem,
+            output_format=export_dto.export_format,
+            export_directory=export_dto.export_directory,
+            export_filename_stem=export_dto.export_filename_stem,
             export_mode=OVERWRITE,
-            counting_event=CountingEvent.parse(counting_event_str),
+            counting_event=CountingEvent.parse(export_dto.counting_event),
         )
 
     async def configure_section(

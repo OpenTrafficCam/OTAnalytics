@@ -1,9 +1,7 @@
 import pytest
 
-from OTAnalytics.adapter_ui.helpers import (
-    ensure_file_extension_is_present,
-    strip_extension,
-)
+from OTAnalytics.adapter_ui.helpers import ensure_file_extension_is_present
+from OTAnalytics.application.files import strip_extension
 
 
 @pytest.mark.parametrize(

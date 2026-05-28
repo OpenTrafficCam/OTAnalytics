@@ -1,5 +1,8 @@
 import contextlib
 import tkinter
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from customtkinter import CTkEntry, CTkLabel, CTkOptionMenu
@@ -16,6 +19,7 @@ from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_COUNTS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
 )
+from OTAnalytics.application.files import ensure_dot_in_extension, strip_extension
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import DateRow
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
@@ -31,6 +35,17 @@ EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
 COUNTING_EVENT = "counting_event"
 SELECTED_EXTENSION = "selected_extension"
+
+
+@dataclass(frozen=True)
+class CountsExportDto:
+    start_date: datetime
+    end_date: datetime
+    counting_event: str
+    interval_in_minutes: int
+    export_directory: Path
+    export_filename_stem: str
+    export_format: str
 
 
 class FrameConfigureExportCounts(FrameContent):
@@ -127,6 +142,39 @@ class FrameConfigureExportCounts(FrameContent):
 
 
 class ToplevelExportCounts(ToplevelTemplate):
+    @property
+    def interval_in_minutes(self) -> int:
+        return int(self._input_values[INTERVAL])
+
+    @property
+    def context_file_type(self) -> str:
+        return (
+            f"{CONTEXT_FILE_TYPE_COUNTS}"
+            f"_{self._input_values[INTERVAL]}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"
+        )
+
+    @property
+    def selected_file_type(self) -> str:
+        return ensure_dot_in_extension(self._input_values[SELECTED_EXTENSION])
+
+    @property
+    def file_type_with_context_type(self) -> str:
+        return f".{self.context_file_type}{self.selected_file_type}"
+
+    @property
+    def export_file(self) -> Path:
+        return Path(self._input_values[EXPORT_FILE])
+
+    @property
+    def export_directory(self) -> Path:
+        return self.export_file.parent
+
+    @property
+    def export_filename_stem(self) -> str:
+        return strip_extension(
+            file_name=self.export_file.name, extension=self.file_type_with_context_type
+        )
+
     def __init__(
         self,
         export_formats: dict[str, str],
@@ -154,8 +202,7 @@ class ToplevelExportCounts(ToplevelTemplate):
         export_extension = self._export_formats[export_format]
         save_suggestion = self._viewmodel.get_save_path_suggestion(
             export_extension[1:],
-            f"{CONTEXT_FILE_TYPE_COUNTS}"
-            f"_{self._input_values[INTERVAL]}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}",
+            self.context_file_type,
         )
         export_file = ask_for_save_file_name(
             title="Save counts as",
@@ -175,8 +222,23 @@ class ToplevelExportCounts(ToplevelTemplate):
             self._choose_file()
             self._close()
 
-    def get_data(self) -> dict:
+    def get_data(self) -> CountsExportDto:
         self.wait_window()
         if self._canceled:
             raise CancelExportCounts()
-        return self._input_values
+
+        start_date = self._input_values[START]
+        end_date = self._input_values[END]
+        counting_event = self._input_values.get(
+            COUNTING_EVENT, CountingEvent.START.value
+        )
+        export_format = self._input_values[EXPORT_FORMAT]
+        return CountsExportDto(
+            start_date=start_date,
+            end_date=end_date,
+            counting_event=counting_event,
+            interval_in_minutes=self.interval_in_minutes,
+            export_directory=self.export_directory,
+            export_filename_stem=self.export_filename_stem,
+            export_format=export_format,
+        )

@@ -3,7 +3,7 @@ from typing import Any
 
 from nicegui import ui
 
-from OTAnalytics.adapter_ui.helpers import ensure_dot_in_extension, strip_extension
+from OTAnalytics.application.files import ensure_dot_in_extension, strip_extension
 from OTAnalytics.application.resources.resource_manager import (
     FileChooserDialogKeys,
     ResourceManager,

@@ -1,13 +1,16 @@
 import contextlib
+from pathlib import Path
 from typing import Any
 
 from customtkinter import CTkLabel, CTkOptionMenu
 
 from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
+from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.file_selection_cancelled import (
     FileSelectionCancelledException,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.files import ensure_dot_in_extension, strip_extension
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
@@ -65,6 +68,30 @@ class FrameConfigureExportFile(FrameContent):
 
 
 class ToplevelExportFile(ToplevelTemplate):
+    @property
+    def export_file(self) -> Path:
+        return Path(self._input_values[EXPORT_FILE])
+
+    @property
+    def export_directory(self) -> Path:
+        return self.export_file.parent
+
+    @property
+    def export_filename_stem(self) -> str:
+        return strip_extension(
+            file_name=self.export_file.name, extension=self.file_type_with_context_type
+        )
+
+    @property
+    def selected_filetype(self) -> str:
+        return ensure_dot_in_extension(
+            self._export_format_extensions[self._input_values[EXPORT_FORMAT]]
+        )
+
+    @property
+    def file_type_with_context_type(self) -> str:
+        return f".{self._context_file_type}{self.selected_filetype}"
+
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -115,8 +142,17 @@ class ToplevelExportFile(ToplevelTemplate):
             self._choose_file()
             self._close()
 
-    def get_data(self) -> dict:
+    def get_data(self) -> ExportFileDto:
         self.wait_window()
         if self._canceled:
             raise CancelExportFile()
-        return self._input_values
+        return self._create_export_file_dto()
+
+    def _create_export_file_dto(self) -> ExportFileDto:
+        export_format = self._input_values[EXPORT_FORMAT]
+        return ExportFileDto(
+            export_directory=self.export_directory,
+            file_stem=self.export_filename_stem,
+            export_format_extension=self.selected_filetype,
+            export_format=export_format,
+        )
