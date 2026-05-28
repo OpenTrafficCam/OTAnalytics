@@ -37,7 +37,7 @@ class AddFlow:
         self._flow_repository.add(flow)
 
 
-def check_flow_already_exists(given: Flow, existing_flows: list[Flow]) -> None:
+def check_flow_already_exists(given: Flow, existing_flows: Iterable[Flow]) -> None:
     if not is_flow_name_valid(given.name, existing_flows):
         raise FlowAlreadyExists(
             f"A flow with the name {given.name} already exists. " "Choose another name."
