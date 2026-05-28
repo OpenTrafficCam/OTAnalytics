@@ -15,6 +15,7 @@ from OTAnalytics.domain.geometry import (
     RelativeOffsetCoordinate,
     calculate_direction_vector,
 )
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import Section, SectionId
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.types import EventType
@@ -37,6 +38,10 @@ CURRENT_X: str = "current_x"
 CURRENT_Y: str = "current_y"
 PREVIOUS_X: str = "previous_x"
 PREVIOUS_Y: str = "previous_y"
+START_GEO_X: str = "start_geo_x"
+START_GEO_Y: str = "start_geo_y"
+END_GEO_X: str = "end_geo_x"
+END_GEO_Y: str = "end_geo_y"
 
 
 class TrackDoesNotExistError(Exception):
@@ -146,7 +151,22 @@ def concat(
     return result
 
 
+class IncompatibleGeoreferenceMetadataError(Exception):
+    """Raised when merging datasets with incompatible georeference metadata."""
+
+
 class TrackDataset(ABC):
+    @property
+    def georeference_metadata(self) -> GeoreferenceMetadata | None:
+        return None
+
+    def with_georeference_metadata(
+        self, metadata: GeoreferenceMetadata | None
+    ) -> "TrackDataset":
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support georeference metadata"
+        )
+
     @property
     @abstractmethod
     def track_ids(self) -> TrackIdSet:

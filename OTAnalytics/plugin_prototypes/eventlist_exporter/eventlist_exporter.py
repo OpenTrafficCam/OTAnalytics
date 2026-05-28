@@ -54,6 +54,8 @@ NUMBER_ROUNDED_COLUMNS = {
     event_list.INTERPOLATED_EVENT_COORDINATE_Y: 1,
     event_list.DIRECTION_VECTOR_X: 4,
     event_list.DIRECTION_VECTOR_Y: 4,
+    event_list.GEO_X: 3,
+    event_list.GEO_Y: 3,
 }
 
 DATETIME_ROUNDED_COLUMNS = {
@@ -101,11 +103,21 @@ class EventListDataFrameBuilder:
         self._add_section_names()
         self._add_detailed_date_time_columns()
         self._round()
-        return self._df.loc[:, EXPORT_COLUMNS]
+        geo_cols = (
+            [event_list.GEO_X, event_list.GEO_Y]
+            if event_list.GEO_X in self._df.columns
+            and event_list.GEO_Y in self._df.columns
+            and pd.api.types.is_numeric_dtype(self._df[event_list.GEO_X])
+            and pd.api.types.is_numeric_dtype(self._df[event_list.GEO_Y])
+            else []
+        )
+        return self._df.loc[:, EXPORT_COLUMNS + geo_cols]
 
     def _round(self) -> None:
         for column, decimals in NUMBER_ROUNDED_COLUMNS.items():
-            if column in self._df.columns:
+            if column in self._df.columns and pd.api.types.is_numeric_dtype(
+                self._df[column]
+            ):
                 self._df.loc[:, column] = self._df.loc[:, column].round(decimals)
         for column, freq in DATETIME_ROUNDED_COLUMNS.items():
             if column in self._df.columns:

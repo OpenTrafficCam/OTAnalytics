@@ -1,12 +1,16 @@
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import cast
 from unittest.mock import Mock, call
 
 import numpy
+import pandas as pd
 import pytest
 from pandas import DataFrame, Series
 
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import LineSection
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
@@ -721,3 +725,137 @@ class TestPandasTrackDataset:
         assert actual.index.names == INDEX_NAMES
         assert INDEX_NAMES not in actual.columns.to_list()
         assert set(COLUMNS) - set(INDEX_NAMES) == set(actual.columns.to_list())
+
+
+@dataclass
+class PandasDetectionGeoGiven:
+    """Holds PandasDetection instances for geo coordinate tests."""
+
+    detection_with_geo: PandasDetection
+    detection_without_geo: PandasDetection
+
+
+def create_data_without_geo_coordinates() -> dict:
+    return {
+        track.CLASSIFICATION: "car",
+        track.CONFIDENCE: 0.9,
+        track.X: 100.0,
+        track.Y: 200.0,
+        track.W: 0.0,
+        track.H: 0.0,
+        track.FRAME: 1,
+        track.INTERPOLATED_DETECTION: False,
+        track.VIDEO_NAME: "cam.mp4",
+        track.INPUT_FILE: "cam.otdet",
+    }
+
+
+GEO_X = 449245.82
+GEO_Y = 5699325.96
+
+
+def create_data_with_geo_coordinates() -> dict:
+    with_geo_coordinates = create_data_without_geo_coordinates()
+    with_geo_coordinates[track.GEO_X] = GEO_X
+    with_geo_coordinates[track.GEO_Y] = GEO_Y
+    return with_geo_coordinates
+
+
+def create_pandas_detection_geo_given() -> PandasDetectionGeoGiven:
+    """Creates a PandasDetectionGeoGiven with and without geo columns."""
+    data_with = pd.Series(
+        data=create_data_with_geo_coordinates(),
+        name=(datetime(2024, 1, 1, tzinfo=timezone.utc),),
+    )
+    data_without = pd.Series(
+        data=create_data_without_geo_coordinates(),
+        name=(datetime(2024, 1, 1, tzinfo=timezone.utc),),
+    )
+    return PandasDetectionGeoGiven(
+        detection_with_geo=PandasDetection("track-1", data_with),
+        detection_without_geo=PandasDetection("track-1", data_without),
+    )
+
+
+class TestPandasDetectionGeoCoordinates:
+    def test_geo_x_returns_value_when_column_present(self) -> None:
+        given = create_pandas_detection_geo_given()
+        assert given.detection_with_geo.geo_x == GEO_X
+
+    def test_geo_y_returns_value_when_column_present(self) -> None:
+        given = create_pandas_detection_geo_given()
+        assert given.detection_with_geo.geo_y == GEO_Y
+
+    def test_geo_x_returns_none_when_column_absent(self) -> None:
+        given = create_pandas_detection_geo_given()
+        assert given.detection_without_geo.geo_x is None
+
+    def test_geo_y_returns_none_when_column_absent(self) -> None:
+        given = create_pandas_detection_geo_given()
+        assert given.detection_without_geo.geo_y is None
+
+
+SAMPLE_GEOREFERENCE_METADATA = GeoreferenceMetadata(
+    geo_min_x=449199.0,
+    geo_min_y=5699274.0,
+    geo_max_x=449294.0,
+    geo_max_y=5699370.0,
+    birds_eye_view_width=983,
+    birds_eye_view_height=983,
+    padding=20,
+    crs="EPSG:25833",
+)
+
+
+class TestPandasTrackDatasetGeoreferenceMetadata:
+    def test_georeference_metadata_property_returns_none_by_default(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory=track_geometry_factory)
+        assert dataset.georeference_metadata is None
+
+    def test_with_georeference_metadata_returns_new_dataset_with_metadata(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory=track_geometry_factory)
+        updated = dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        assert updated.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+
+    def test_with_georeference_metadata_does_not_mutate_original(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory=track_geometry_factory)
+        dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+        assert dataset.georeference_metadata is None
+
+    def test_with_georeference_metadata_preserves_tracks_on_non_empty_dataset(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        track_builder = TrackBuilder()
+        track_builder.append_detection()
+        track_builder.append_detection()
+        built_track = track_builder.build_track()
+        dataset = PandasTrackDataset.from_list([built_track], track_geometry_factory)
+
+        updated = dataset.with_georeference_metadata(SAMPLE_GEOREFERENCE_METADATA)
+
+        assert updated.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+        assert len(updated) == 1
+        retrieved = updated.get_for(built_track.id)
+        assert retrieved is not None
+        assert retrieved.id == built_track.id
+
+    def test_with_georeference_metadata_none_clears_existing_metadata(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory=track_geometry_factory)
+        dataset_with_metadata = dataset.with_georeference_metadata(
+            SAMPLE_GEOREFERENCE_METADATA
+        )
+        assert (
+            dataset_with_metadata.georeference_metadata == SAMPLE_GEOREFERENCE_METADATA
+        )
+
+        cleared = dataset_with_metadata.with_georeference_metadata(None)
+
+        assert cleared.georeference_metadata is None

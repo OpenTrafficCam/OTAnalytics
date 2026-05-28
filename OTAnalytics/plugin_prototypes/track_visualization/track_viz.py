@@ -375,6 +375,13 @@ class PandasTracksOffsetProvider(PandasDataFrameProvider):
         self, tracks: DataFrame, offset: Optional[RelativeOffsetCoordinate]
     ) -> DataFrame:
         if new_offset := offset:
+            # The offset shifts the measurement point within the bounding box:
+            #   x_shifted = x + offset_x * w
+            #   y_shifted = y + offset_y * h
+            # For ottrk files produced by fusion (e.g. OTFusion outputs), detections
+            # are point-based and carry w=0, h=0 (no bounding box). In that case the
+            # offset evaluates to zero and has no visual effect — this is intentional,
+            # as a relative offset is undefined for point detections.
             tracks[track.X] = tracks[track.X] + new_offset.x * tracks[track.W]
             tracks[track.Y] = tracks[track.Y] + new_offset.y * tracks[track.H]
         return tracks

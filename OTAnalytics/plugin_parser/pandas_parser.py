@@ -83,6 +83,14 @@ class PandasDetectionParser(DetectionParser):
             },
             inplace=True,
         )
+        if ottrk_format.GEO_X in data.columns and ottrk_format.GEO_Y in data.columns:
+            data.rename(
+                columns={
+                    ottrk_format.GEO_X: track.GEO_X,
+                    ottrk_format.GEO_Y: track.GEO_Y,
+                },
+                inplace=True,
+            )
         data[track.TRACK_ID] = (
             data[track.TRACK_ID]
             .astype(str)

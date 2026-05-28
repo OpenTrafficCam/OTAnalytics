@@ -19,9 +19,9 @@ from OTAnalytics.application.config import (
     DEFAULT_SECTIONS_FILE_TYPE,
     DEFAULT_TRACK_FILE_TYPE,
 )
-from OTAnalytics.application.datastore import TrackParser
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.cli_parser import CliParseError
+from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.track_input_source import OttrkFileInputSource

@@ -10,15 +10,14 @@ from OTAnalytics.application.config import (
     ALLOWED_TRACK_SIZE_PARSING,
     TRACK_LENGTH_LIMIT,
 )
-from OTAnalytics.application.datastore import (
-    DetectionMetadata,
-    EventListParser,
-    TrackParser,
-    TrackParseResult,
-    VideoParser,
-)
+from OTAnalytics.application.datastore import EventListParser, VideoParser
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.flow_parser import FlowParser
+from OTAnalytics.application.parser.track_parser import (
+    DetectionMetadata,
+    TrackParser,
+    TrackParseResult,
+)
 from OTAnalytics.domain import event, flow, geometry, section, video
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.event import Event, EventType
@@ -51,6 +50,9 @@ from OTAnalytics.plugin_datastore.python_track_store import (
     PythonTrackDataset,
 )
 from OTAnalytics.plugin_parser import dataformat_versions
+from OTAnalytics.plugin_parser.georeference_parsing import (
+    GeoreferenceMetadataParsingMixin,
+)
 from OTAnalytics.plugin_parser.json_parser import (
     parse_json,
     parse_json_bz2,
@@ -562,7 +564,7 @@ class PythonDetectionParser(DetectionParser):
         return tracks_dict
 
 
-class OttrkParser(TrackParser):
+class OttrkParser(TrackParser, GeoreferenceMetadataParsingMixin):
     """Parse an ottrk file and convert its contents to our domain objects namely
     `Tracks`.
 
@@ -601,6 +603,11 @@ class OttrkParser(TrackParser):
             dets_list, metadata_video, str(ottrk_file), id_generator
         )
         detection_metadata = self.parse_metadata(ottrk_dict[ottrk_format.METADATA])
+        georeference_metadata = self.parse_georeference_metadata(
+            ottrk_dict[ottrk_format.METADATA]
+        )
+        if georeference_metadata is not None:
+            tracks = tracks.with_georeference_metadata(georeference_metadata)
         return TrackParseResult(tracks, detection_metadata, video_metadata)
 
     @classmethod

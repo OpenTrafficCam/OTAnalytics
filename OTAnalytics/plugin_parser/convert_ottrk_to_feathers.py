@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Any, Dict
 
-from OTAnalytics.application.datastore import TrackParseResult
+import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.parser.track_parser import TrackParseResult
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.track_dataset.track_dataset import TRACK_GEOMETRY_FACTORY
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackDataset
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
@@ -52,9 +54,27 @@ def convert_to_pandas_dataset(
     return PandasTrackDataset.from_list(tracks_list, track_geometry_factory)
 
 
+def _serialize_georeference_metadata(metadata: GeoreferenceMetadata) -> Dict[str, Any]:
+    """Serialize a GeoreferenceMetadata to a plain dict using ottrk_dataformat keys."""
+    return {
+        ottrk_format.GEO_BOUNDS: {
+            ottrk_format.GEO_BOUNDS_MIN_X: metadata.geo_min_x,
+            ottrk_format.GEO_BOUNDS_MIN_Y: metadata.geo_min_y,
+            ottrk_format.GEO_BOUNDS_MAX_X: metadata.geo_max_x,
+            ottrk_format.GEO_BOUNDS_MAX_Y: metadata.geo_max_y,
+        },
+        ottrk_format.BIRDS_EYE_VIEW_SIZE: {
+            ottrk_format.BIRDS_EYE_VIEW_WIDTH: metadata.birds_eye_view_width,
+            ottrk_format.BIRDS_EYE_VIEW_HEIGHT: metadata.birds_eye_view_height,
+        },
+        ottrk_format.BEV_PADDING: metadata.padding,
+        ottrk_format.CRS: metadata.crs,
+    }
+
+
 def create_metadata_dict(parse_result: TrackParseResult) -> Dict[str, Any]:
     """Create a metadata dictionary from TrackParseResult."""
-    metadata = {
+    metadata: Dict[str, Any] = {
         KEY_DETECTION_METADATA: {
             KEY_DETECTION_CLASSES: list(
                 parse_result.detection_metadata.detection_classes
@@ -62,6 +82,11 @@ def create_metadata_dict(parse_result: TrackParseResult) -> Dict[str, Any]:
         },
         KEY_VIDEO_METADATA: parse_result.video_metadata.to_dict(),
     }
+    georeference = parse_result.tracks.georeference_metadata
+    if georeference is not None:
+        metadata[ottrk_format.GEOREFERENCE] = _serialize_georeference_metadata(
+            georeference
+        )
     return metadata
 
 
