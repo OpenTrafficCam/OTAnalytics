@@ -121,7 +121,7 @@ class ExportCountsDialog(BaseDialog):
         )
 
         suggestion = self._viewmodel.get_save_path_suggestion(
-            file_type=self._extension_for_default_format().lstrip("."),
+            file_type=self._extension_for_default_format(),
             context_file_type=self._context_for_current_interval(
                 DEFAULT_INTERVAL_MINUTES
             ),
