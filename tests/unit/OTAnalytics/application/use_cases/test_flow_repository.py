@@ -161,3 +161,16 @@ class TestAddAllFlows:
             add_all_flows.add([first_flow, first_flow])
 
         flow_repository.add_all.assert_not_called()
+
+    def test_add_able_to_handle_exhaustable_iterables(
+        self, first_flow: Flow, second_flow: Flow
+    ) -> None:
+        flow_repository = Mock(spec=FlowRepository)
+        flow_repository.get_all.return_value = []
+        add_all_flows = AddAllFlows(flow_repository)
+
+        exhaustable_iterable = (_flow for _flow in [first_flow, second_flow])
+
+        add_all_flows.add(exhaustable_iterable)
+
+        flow_repository.add_all.assert_called_once_with([first_flow, second_flow])
