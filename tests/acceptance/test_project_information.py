@@ -172,7 +172,8 @@ class TestProjectInformationPlaywright:
         # Save using shared helper to interact with the file dialog
         save_project_otconfig(page, resource_manager, save_path)
 
-        while True:
+        max_polls = ACCEPTANCE_TEST_FINAL_TIMEOUT_MS // PLAYWRIGHT_POLL_INTERVAL_MS
+        for _ in range(max_polls):
             if save_path.exists():
                 break
             page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)

@@ -9,6 +9,7 @@ from OTAnalytics.adapter_ui.cancel_export_counts import CancelExportCounts
 from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
+from OTAnalytics.adapter_ui.helpers import remove_wildcard_from
 from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
@@ -38,6 +39,27 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicke
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import DialogResult
 
 BASE_FILE_PICKER_DIRECTORY = Path.home()
+
+
+def build_file_extensions(filetypes: Iterable[tuple[str, str]]) -> dict[str, str]:
+    """Convert tkinter-style filetypes into a format-to-extension mapping.
+
+    The ``filetypes`` use glob patterns such as ``"*.otconfig"``. The
+    :class:`FileChooserDialog` expects bare extensions without a wildcard or
+    leading dot, because it adds the dot itself when building the locked
+    suffix. Leaving the ``*`` in place produces malformed filenames such as
+    ``project.*otconfig.otconfig``.
+
+    Args:
+        filetypes: Pairs of human-readable description and glob pattern.
+
+    Returns:
+        Mapping of description to bare extension (no wildcard, no leading dot).
+    """
+    return {
+        description: remove_wildcard_from(pattern).replace(".", "")
+        for description, pattern in filetypes
+    }
 
 
 class NiceGuiMessageBox(MessageBox):
@@ -91,8 +113,7 @@ class NiceGuiUiFactory(UiFactory):
         defaultextension: str,
         extension_options: dict[str, list[str] | None] | None = None,
     ) -> str:
-        # Convert filetypes to the format expected by FileChooserDialog
-        file_extensions = {desc: ext.replace(".", "") for desc, ext in filetypes}
+        file_extensions = build_file_extensions(filetypes)
 
         dialog = FileChooserDialog(
             resource_manager=self._resource_manager,
@@ -161,8 +182,7 @@ class NiceGuiUiFactory(UiFactory):
         initialfile: str,
         initialdir: Path,
     ) -> Path:
-        # Convert filetypes to the format expected by FileChooserDialog
-        file_extensions = {desc: ext.replace(".", "") for desc, ext in filetypes}
+        file_extensions = build_file_extensions(filetypes)
 
         dialog = FileChooserDialog(
             resource_manager=self._resource_manager,
