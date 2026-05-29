@@ -8,6 +8,7 @@ import pytest
 
 from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_COUNTS,
+    CONTEXT_FILE_TYPE_EVENTS,
     CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
     CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     CONTEXT_FILE_TYPE_TRACKS,
@@ -64,43 +65,54 @@ class TestMultipleDotsInFilenameResultsInIncompleteExportFilenames:
         assert actual.returncode == 0
 
         # Expected Feather, videos metadata, and tracks metadata files
-        assert given.base_dir / f"{given.filename_stem}.feather"
-        assert given.base_dir / f"{given.filename_stem}.tracks_metadata.json"
-        assert given.base_dir / f"{given.filename_stem}.videos_metadata.json"
+        assert Path(given.base_dir / f"{given.filename_stem}.feather").exists()
+        assert Path(
+            given.base_dir / f"{given.filename_stem}.tracks_metadata.json"
+        ).exists()
+        assert Path(
+            given.base_dir / f"{given.filename_stem}.videos_metadata.json"
+        ).exists()
 
         # Expected event files
-        assert given.base_dir / f"{given.filename_stem}{CONTEXT_FILE_TYPE_COUNTS}.csv"
-        assert given.base_dir / f"{given.filename_stem}{CONTEXT_FILE_TYPE_COUNTS}.xlsx"
-        assert (
-            given.base_dir / f"{given.filename_stem}{CONTEXT_FILE_TYPE_COUNTS}.otevents"
-        )
+        assert Path(
+            given.base_dir / f"{given.filename_stem}.{CONTEXT_FILE_TYPE_EVENTS}.csv"
+        ).exists()
+        assert Path(
+            given.base_dir / f"{given.filename_stem}.{CONTEXT_FILE_TYPE_EVENTS}.xlsx"
+        ).exists()
+        assert Path(
+            given.base_dir
+            / f"{given.filename_stem}.{CONTEXT_FILE_TYPE_EVENTS}.otevents"
+        ).exists()
 
         # Expected count file
-        assert (
-            given.base_dir / f"{given.filename_stem}{CONTEXT_FILE_TYPE_COUNTS}"
+        assert Path(
+            given.base_dir / f"{given.filename_stem}.{CONTEXT_FILE_TYPE_COUNTS}"
             f"_{given.interval_in_minutes}min.csv"
-        )
+        ).exists()
 
         # Expected track CSV file
-        assert given.base_dir / f"{given.filename_stem}.{CONTEXT_FILE_TYPE_TRACKS}.csv"
+        assert Path(
+            given.base_dir / f"{given.filename_stem}.{CONTEXT_FILE_TYPE_TRACKS}.csv"
+        ).exists()
 
         # Expected track statistics CSV files
-        assert (
+        assert Path(
             given.base_dir
             / f"{given.filename_stem}.{CONTEXT_FILE_TYPE_TRACK_STATISTICS}.csv"
-        )
+        ).exists()
 
         # Expected Road User Assignments CSV file
-        assert (
+        assert Path(
             given.base_dir
             / f"{given.filename_stem}.{CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS}.csv"
-        )
+        ).exists()
 
         # Expected Track Statistics CSV file
-        assert (
+        assert Path(
             given.base_dir
             / f"{given.filename_stem}.{CONTEXT_FILE_TYPE_TRACK_STATISTICS}.csv"
-        )
+        ).exists()
 
     def create_given(
         self,
