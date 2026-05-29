@@ -1,5 +1,5 @@
 ---
-name: Test
+name: System Test With Pytest
 
 on:
   # Run tests each time a PR is opened or changed.
@@ -11,7 +11,7 @@ permissions: read-all
 
 jobs:
   test:
-    name: Execute tests across various operating systems and Python versions.
+    name: Execute system tests across various operating systems and Python versions.
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -25,10 +25,10 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.py }}
-      - name: Run Python Unit Tests
+      - name: Run Python System Tests
         uses: platomo/test-python-app-action@v4
         timeout-minutes: 60
         with:
           py-version: ${{ matrix.py }}
           package-path: OTAnalytics
-          test-path: tests/unit
+          test-path: tests/system
