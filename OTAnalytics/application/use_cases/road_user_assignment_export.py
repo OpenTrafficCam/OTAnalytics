@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignments,
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportFormat
+from OTAnalytics.application.config import CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS
 from OTAnalytics.application.export_formats import road_user_assignments as ras
 from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.use_cases.assignment_repository import (
@@ -154,27 +155,56 @@ class RoadUserAssignmentExportError(Exception):
     pass
 
 
+@dataclass(frozen=True)
+class ExportSpecification:
+    export_directory: Path
+    export_filename_stem: str
+    format: str
+    export_mode: ExportMode
+
+
 class RoadUserAssignmentExporter(ABC):
+    CONTEXT_FILE_TYPE = CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS
+
     @property
     @abstractmethod
     def format(self) -> ExportFormat:
         raise NotImplementedError
+
+    @property
+    def _outputfile(self) -> Path:
+        return (
+            self._specification.export_directory
+            / f"{self._specification.export_filename_stem}.{self.CONTEXT_FILE_TYPE}"
+            f"{self.format.file_extension}"
+        )
 
     def __init__(
         self,
         section_repository: SectionRepository,
         get_all_tracks: GetAllTracks,
         builder: RoadUserAssignmentBuilder,
-        output_file: Path,
+        specification: ExportSpecification,
     ) -> None:
         self._section_repository = section_repository
         self._get_all_tracks = get_all_tracks
         self._builder = builder
-        self._outputfile = output_file
+        self._specification = specification
 
-    def export(self, assignments: RoadUserAssignments, export_mode: ExportMode) -> None:
+    def export(self, assignments: RoadUserAssignments, export_mode: ExportMode) -> Path:
+        """Exports road user assignments data in the specified export mode.
+
+        Args:
+            assignments (RoadUserAssignments): The road user assignments data to be
+                exported.
+            export_mode (ExportMode): The mode in which the data should be exported.
+
+        Returns:
+            Path: The path to the file where the exported data has been saved.
+        """
         dtos = self._convert(assignments)
         self._serialize(dtos, export_mode)
+        return self._outputfile
 
     @abstractmethod
     def _serialize(self, dtos: list[dict], export_mode: ExportMode) -> None:
@@ -218,13 +248,6 @@ class RoadUserAssignmentExporter(ABC):
         return result
 
 
-@dataclass(frozen=True)
-class ExportSpecification:
-    save_path: Path
-    format: str
-    mode: ExportMode
-
-
 class RoadUserAssignmentExporterFactory(Protocol):
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """
@@ -260,10 +283,20 @@ class ExportRoadUserAssignments:
         self._get_all_assignments = get_all_assignments
         self._exporter_factory = exporter_factory
 
-    def export(self, specification: ExportSpecification) -> None:
+    def export(self, specification: ExportSpecification) -> Path:
+        """Exports the road user assignments based on the provided specification.
+
+        Args:
+            specification (ExportSpecification): The specification dictating the
+                details of the export, including the export mode and other
+                configuration details.
+
+        Returns:
+            Path: The save location of the exported data.
+        """
         road_user_assignments = self._get_all_assignments.get()
         exporter = self._exporter_factory.create(specification)
-        exporter.export(road_user_assignments, specification.mode)
+        return exporter.export(road_user_assignments, specification.export_mode)
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """

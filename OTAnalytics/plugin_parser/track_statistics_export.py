@@ -57,16 +57,17 @@ class SimpleTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
         self, specification: TrackStatisticsExportSpecification
     ) -> TrackStatisticsExporter:
         """
-        Create the exporter for the given road user assignment export specification.
+        Create the exporter for the given track statistic export specification.
 
         Args:
-            specification (ExportSpecification): specification of the Exporter.
+            specification (TrackStatisticsExportSpecification): specification of
+                the Exporter.
 
         Returns:
-            TrackStatisticsExporter: Exporter to export road user assignments.
+            TrackStatisticsExporter: Exporter to export track statistics.
         """
         return self._factories[specification.format](
-            TrackStatisticsBuilder(), specification.save_path
+            TrackStatisticsBuilder(), specification
         )
 
 
@@ -75,14 +76,16 @@ class CacheTrackStatisticsException(Exception):
     def __init__(
         self,
         message: str,
-        save_path: Path,
+        export_directory: Path,
+        export_filename_stem: str,
         format: str,
         export_mode: ExportMode,
     ) -> None:
         super().__init__(
             message
-            + f"Error occurred when exporting {format} to {save_path} using"
-            + " export mode {export_mode}"
+            + f"Error occurred when exporting {format} to "
+            + f"{export_directory / export_filename_stem} using "
+            + f"export mode {export_mode}"
         )
 
 
@@ -90,7 +93,7 @@ class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
 
     def __init__(self, other: TrackStatisticsExporterFactory) -> None:
         self.other = other
-        self._cache: dict[tuple[Path, str], TrackStatisticsExporter] = dict()
+        self._cache: dict[tuple[Path, str, str], TrackStatisticsExporter] = dict()
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         return self.other.get_supported_formats()
@@ -100,7 +103,11 @@ class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
     ) -> TrackStatisticsExporter:
         export_mode = specification.export_mode
 
-        key = (specification.save_path, specification.format)
+        key = (
+            specification.export_directory,
+            specification.export_filename_stem,
+            specification.format,
+        )
         key_exists = key in self._cache.keys()
 
         exporter: TrackStatisticsExporter
@@ -108,10 +115,11 @@ class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
             if key_exists:
                 raise CacheTrackStatisticsException(
                     "TrackStatisticsExporter already exists for format+file"
-                    + " upon first write!"
-                    + " Maybe previous export was not finished or cache was not"
-                    + "cleared properly.",
-                    specification.save_path,
+                    " upon first write!"
+                    " Maybe previous export was not finished or cache was not"
+                    " cleared properly.",
+                    specification.export_directory,
+                    specification.export_filename_stem,
                     specification.format,
                     export_mode,
                 )
@@ -123,9 +131,10 @@ class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
             if not key_exists:
                 raise CacheTrackStatisticsException(
                     "TrackStatisticsExporter missing in cache for format+file"
-                    + " upon subsequent write!"
-                    + "Maybe the cache was cleared too early.",
-                    specification.save_path,
+                    " upon subsequent write!"
+                    " Maybe the cache was cleared too early.",
+                    specification.export_directory,
+                    specification.export_filename_stem,
                     specification.format,
                     export_mode,
                 )

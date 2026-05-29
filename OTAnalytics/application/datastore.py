@@ -3,7 +3,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
-from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import (
@@ -218,22 +217,21 @@ class Datastore:
         )
 
     def export_event_list_file(
-        self, file: Path, event_list_exporter: EventListExporter
+        self,
+        specification: EventExportSpecification,
+        event_list_exporter: EventListExporter,
     ) -> None:
         """
         Export events from the event list to other formats (like CSV or Excel).
 
         Args:
-            file (Path): File to export events to
+            specification (EventExportSpecification): The event export specification
             event_list_exporter (EventListExporter): Exporter building the format
         """
         event_list_exporter.export(
             events=self._event_repository.get_all(),
             sections=self._section_repository.get_all(),
-            export_specification=EventExportSpecification(
-                file=file,
-                export_mode=OVERWRITE,
-            ),
+            export_specification=specification,
         )
 
     def is_flow_using_section(self, section: SectionId) -> bool:

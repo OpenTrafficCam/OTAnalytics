@@ -41,6 +41,7 @@ class RoadUserAssignmentCsvExporter(RoadUserAssignmentExporter):
 
 
 class SimpleRoadUserAssignmentExporterFactory:
+
     def __init__(
         self,
         section_repository: SectionRepository,
@@ -49,8 +50,8 @@ class SimpleRoadUserAssignmentExporterFactory:
         self._section_repository = section_repository
         self._get_all_tracks = get_all_tracks
         self._formats = {
-            CSV_FORMAT: lambda builder, output_file: RoadUserAssignmentCsvExporter(
-                section_repository, get_all_tracks, builder, output_file
+            CSV_FORMAT: lambda builder, specification: RoadUserAssignmentCsvExporter(
+                section_repository, get_all_tracks, builder, specification
             )
         }
         self._factories = {
@@ -78,5 +79,5 @@ class SimpleRoadUserAssignmentExporterFactory:
             RoadUserAssignmentExporter: Exporter to export road user assignments.
         """
         return self._factories[specification.format](
-            RoadUserAssignmentBuilder(), specification.save_path
+            RoadUserAssignmentBuilder(), specification
         )

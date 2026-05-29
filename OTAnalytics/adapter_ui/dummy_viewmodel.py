@@ -33,6 +33,7 @@ from OTAnalytics.adapter_ui.default_values import (
     RELATIVE_SECTION_OFFSET,
     SUPPORTED_FORMATS,
 )
+from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_adapter import (
     GeometricCenterCalculator,
     InnerSegmentsCenterCalculator,
@@ -61,6 +62,7 @@ from OTAnalytics.application.application import (
 )
 from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_EVENTS,
+    CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
     CONTEXT_FILE_TYPE_TRACK_STATISTICS,
     CUTTING_SECTION_MARKER,
     OTCONFIG_FILE_TYPE,
@@ -97,6 +99,7 @@ from OTAnalytics.application.use_cases.editor.section_editor import (
     UpdateSectionCoordinates,
 )
 from OTAnalytics.application.use_cases.export_events import (
+    EventExportSpecification,
     EventListExporter,
     ExporterNotFoundError,
 )
@@ -109,6 +112,7 @@ from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportSpecification,
 )
 from OTAnalytics.application.use_cases.save_otflow import NoSectionsToSave
+from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggestion
 from OTAnalytics.application.use_cases.track_statistics_export import (
     TrackStatisticsExportSpecification,
 )
@@ -611,13 +615,13 @@ class DummyViewModel(
         self.frame_project.update(name=project.name, start_date=project.start_date)
 
     async def save_otconfig(self) -> None:
-        suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
+        save_suggestion = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
         configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")],
             defaultextension=f".{OTCONFIG_FILE_TYPE}",
-            initialfile=suggested_save_path.name,
-            initialdir=suggested_save_path.parent,
+            initialfile=save_suggestion.file_path.name,
+            initialdir=save_suggestion.save_directory,
         )
         if not configuration_file:
             return
@@ -870,7 +874,7 @@ class DummyViewModel(
         self.refresh_items_on_canvas()
 
     async def save_configuration(self) -> None:
-        suggested_save_path = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
+        save_suggestion = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
         configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
@@ -878,8 +882,8 @@ class DummyViewModel(
                 (f"{OTFLOW_FILE_TYPE} file", f"*.{OTFLOW_FILE_TYPE}"),
             ],
             defaultextension=f".{OTCONFIG_FILE_TYPE}",
-            initialfile=suggested_save_path.name,
-            initialdir=suggested_save_path.parent,
+            initialfile=save_suggestion.file_path.name,
+            initialdir=save_suggestion.save_directory,
         )
         if not configuration_file.stem:
             return
@@ -1389,33 +1393,40 @@ class DummyViewModel(
             for key, exporter in self._event_list_export_formats.items()
         }
         try:
-            event_list_exporter, file = await self._configure_event_exporter(
+            event_list_exporter, export_config = await self._configure_event_exporter(
                 export_format_extensions
             )
-            self._application.export_events(Path(file), event_list_exporter)
+            specification = EventExportSpecification(
+                export_directory=export_config.export_directory,
+                export_filename_stem=export_config.file_stem,
+                export_mode=OVERWRITE,
+            )
+            self._application.export_events(specification, event_list_exporter)
             logger().info(
-                f"Exporting eventlist using {event_list_exporter.get_name()} to {file}"
+                f"Exporting eventlist using {event_list_exporter.get_name()} to "
+                f"{export_config.as_file_path()}"
             )
         except CancelExportFile:
             logger().info("User canceled configuration of export")
 
     async def _configure_event_exporter(
         self, export_format_extensions: dict[str, str]
-    ) -> tuple[EventListExporter, Path]:
+    ) -> tuple[EventListExporter, ExportFileDto]:
         export_config = await self._ui_factory.configure_export_file(
             title="Export events",
             export_format_extensions=export_format_extensions,
-            initial_file_stem=CONTEXT_FILE_TYPE_EVENTS,
+            context_file_type=CONTEXT_FILE_TYPE_EVENTS,
             viewmodel=self,
         )
-        file = export_config.file
-        export_format = export_config.export_format
-        event_list_exporter = self._event_list_export_formats.get(export_format, None)
+        event_list_exporter = self._event_list_export_formats.get(
+            export_config.export_format, None
+        )
         if event_list_exporter is None:
             raise ExporterNotFoundError(
                 f"{event_list_exporter} is not a valid export format"
             )
-        return event_list_exporter, file
+
+        return event_list_exporter, export_config
 
     def set_track_offset(self, offset_x: float, offset_y: float) -> None:
         start_msg_popup = self._ui_factory.minimal_info_box(
@@ -1697,18 +1708,20 @@ class DummyViewModel(
             export_config = await self._ui_factory.configure_export_file(
                 title="Export road user assignments",
                 export_format_extensions=export_formats,
-                initial_file_stem="road_user_assignments",
+                context_file_type=CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS,
                 viewmodel=self,
             )
             logger().debug(export_config)
-            save_path = export_config.file
-            export_format = export_config.export_format
-
             export_specification = ExportSpecification(
-                save_path, export_format, OVERWRITE
+                export_directory=export_config.export_directory,
+                export_filename_stem=export_config.file_stem,
+                format=export_config.export_format,
+                export_mode=OVERWRITE,
             )
             self._application.export_road_user_assignments(export_specification)
-            logger().info(f"Exporting road user assignments to {save_path}")
+            logger().info(
+                f"Exporting road user assignments to {export_config.as_file_path()}"
+            )
         except CancelExportFile:
             logger().info("User canceled configuration of export")
 
@@ -1776,7 +1789,9 @@ class DummyViewModel(
     def update_remark_view(self, _: Any = None) -> None:
         self.frame_remark.load_remark()
 
-    def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
+    def get_save_path_suggestion(
+        self, file_type: str, context_file_type: str
+    ) -> SavePathSuggestion:
         return self._application.suggest_save_path(file_type, context_file_type)
 
     def set_frame_track_statistics(self, frame: AbstractFrameTrackStatistics) -> None:
@@ -1808,17 +1823,19 @@ class DummyViewModel(
             export_config = await self._ui_factory.configure_export_file(
                 title="Export track statistics",
                 export_format_extensions=export_formats,
-                initial_file_stem=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
+                context_file_type=CONTEXT_FILE_TYPE_TRACK_STATISTICS,
                 viewmodel=self,
             )
             logger().debug(export_config)
-            save_path = export_config.file
-            export_format = export_config.export_format
-
             export_specification = TrackStatisticsExportSpecification(
-                save_path, export_format, OVERWRITE
+                export_directory=export_config.export_directory,
+                export_filename_stem=export_config.file_stem,
+                format=export_config.export_format,
+                export_mode=OVERWRITE,
             )
-            self._application.export_track_statistics(export_specification)
-            logger().info(f"Exporting track statistics to {save_path}")
+            destination = self._application.export_track_statistics(
+                export_specification
+            )
+            logger().info(f"Exporting track statistics to {destination}")
         except CancelExportFile:
             logger().info("User canceled configuration of export")

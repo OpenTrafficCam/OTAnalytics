@@ -1,3 +1,5 @@
+from OTAnalytics.application.config import CONTEXT_FILE_TYPE_TRACKS
+from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.track_export import (
     ExportTracks,
@@ -24,6 +26,10 @@ class CsvTrackExport(ExportTracks):
     this exporter should not be reused afterwards!)
     """
 
+    PRIMARY_SUFFIX = f".{CONTEXT_FILE_TYPE_TRACKS}.csv"
+    TRACKS_METADATA_SUFFIX = ".tracks_metadata.json"
+    VIDEOS_METADATA_SUFFIX = ".videos_metadata.json"
+
     def __init__(
         self,
         track_repository: TrackRepository,
@@ -49,17 +55,27 @@ class CsvTrackExport(ExportTracks):
         self._update_iterative_metadata()
 
         append = specification.export_mode.is_subsequent_write()
-        path = specification.save_path
-        output_path = path.with_suffix(".tracks.csv")
-
+        output_path = build_export_path(
+            specification.export_directory,
+            specification.export_filename_stem,
+            self.PRIMARY_SUFFIX,
+        )
         dataset = self._track_repository.get_all()
         self._csv_writer.write(dataset, output_path, append)
 
         if specification.export_mode.is_final_write():
-            tracks_metadata_path = path.with_suffix(".tracks_metadata.json")
+            tracks_metadata_path = build_export_path(
+                specification.export_directory,
+                specification.export_filename_stem,
+                self.TRACKS_METADATA_SUFFIX,
+            )
             write_json(self._iterative_tracks_metadata, tracks_metadata_path)
 
-            videos_metadata_path = path.with_suffix(".videos_metadata.json")
+            videos_metadata_path = build_export_path(
+                specification.export_directory,
+                specification.export_filename_stem,
+                self.VIDEOS_METADATA_SUFFIX,
+            )
             write_json(self._iterative_videos_metadata, videos_metadata_path)
 
             self._iterative_tracks_metadata.clear()

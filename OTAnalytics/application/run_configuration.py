@@ -109,7 +109,7 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         raise RunConfigurationError("No OTConfig nor OTFlow file passed.")
 
     @property
-    def save_name(self) -> str:
+    def save_stem(self) -> str:
         save_stem = self._get_save_stem()
         save_suffix = self.save_suffix
         return f"{save_stem}{save_suffix}"

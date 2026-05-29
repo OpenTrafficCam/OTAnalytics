@@ -136,9 +136,10 @@ class TestExportRoadUserAssignments:
                 exporter_factory,
             )
             specification = Mock()
-            specification.save_path = Mock()
+            specification.export_directory = Mock()
+            specification.export_filename_stem = "assignments"
             specification.format = "csv"
-            specification.mode = OVERWRITE
+            specification.export_mode = OVERWRITE
 
             export_road_user_assignments.export(specification)
 

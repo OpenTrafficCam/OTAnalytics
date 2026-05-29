@@ -31,7 +31,10 @@ from OTAnalytics.application.use_cases.create_events import (
     CreateIntersectionEvents,
 )
 from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
-from OTAnalytics.application.use_cases.export_events import EventListExporter
+from OTAnalytics.application.use_cases.export_events import (
+    EventExportSpecification,
+    EventListExporter,
+)
 from OTAnalytics.application.use_cases.filter_visualization import (
     EnableFilterTrackByDate,
 )
@@ -61,7 +64,10 @@ from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
 )
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
-from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
+from OTAnalytics.application.use_cases.suggest_save_path import (
+    SavePathSuggester,
+    SavePathSuggestion,
+)
 from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackFiles,
     TrackRepositorySize,
@@ -436,17 +442,21 @@ class OTAnalyticsApplication:
         """
         self._datastore.save_event_list_file(file)
 
-    def export_events(self, file: Path, event_list_exporter: EventListExporter) -> None:
+    def export_events(
+        self,
+        specification: EventExportSpecification,
+        event_list_exporter: EventListExporter,
+    ) -> None:
         """
         Export the event repository into other formats (like CSV or Excel)
 
         Args:
-            file (Path): File to export the events to
+            specification (EventExportSpecification): The event export specification
             event_list_exporter (EventListExporter): Exporter building the format
         """
         if self._datastore._event_repository.is_empty():
             self.create_events()
-        self._datastore.export_event_list_file(file, event_list_exporter)
+        self._datastore.export_event_list_file(specification, event_list_exporter)
 
     def get_supported_export_formats(self) -> Iterable[ExportFormat]:
         """
@@ -660,7 +670,9 @@ class OTAnalyticsApplication:
     ) -> Iterable[ExportFormat]:
         return self._export_road_user_assignments.get_supported_formats()
 
-    def suggest_save_path(self, file_type: str, context_file_type: str = "") -> Path:
+    def suggest_save_path(
+        self, file_type: str, context_file_type: str = ""
+    ) -> SavePathSuggestion:
         """Suggests a save path based on the given file type and an optional
         related file type.
 
@@ -692,8 +704,24 @@ class OTAnalyticsApplication:
 
     def export_track_statistics(
         self, specification: TrackStatisticsExportSpecification
-    ) -> None:
-        self._export_track_statistics.export(specification)
+    ) -> Path:
+        """
+        Exports track statistics based on the provided specification.
+
+        This method facilitates the export of track statistics by utilizing the provided
+        export specification. It processes the specification and generates a file
+        containing the desired statistics. The resulting file's location is returned.
+
+        Args:
+            specification (TrackStatisticsExportSpecification): The specification
+                detailing the customization and requirements for exporting track
+                statistics.
+
+        Returns:
+            Path: The path to the generated file containing the exported track
+                statistics.
+        """
+        return self._export_track_statistics.export(specification)
 
     def get_track_statistics_export_formats(
         self,

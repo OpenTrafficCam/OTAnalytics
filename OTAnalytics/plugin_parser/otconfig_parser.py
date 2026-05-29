@@ -105,7 +105,7 @@ class FixMissingAnalysis(OtConfigFormatFixer):
             TRACKS: self._run_config.track_files,
             EXPORT: {
                 EVENT_FORMATS: self._run_config.event_formats,
-                SAVE_NAME: self._run_config.save_name,
+                SAVE_NAME: self._run_config.save_stem,
                 SAVE_SUFFIX: self._run_config.save_suffix,
                 COUNT_INTERVALS: self._run_config.count_intervals,
                 COUNTING_EVENT: self._run_config.counting_event.value,

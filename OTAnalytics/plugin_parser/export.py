@@ -27,6 +27,10 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
     ExportSpecificationDto,
 )
+from OTAnalytics.application.config import (
+    CONTEXT_FILE_TYPE_COUNTS,
+    DEFAULT_COUNT_INTERVAL_TIME_UNIT,
+)
 from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.logger import logger
 
@@ -88,6 +92,8 @@ def count_dict_to_dataframe(count_dict: dict[Tag, int]) -> DataFrame:
 
 
 class CsvExport(Exporter):
+    CONTEXT_FILE_TYPE = CONTEXT_FILE_TYPE_COUNTS
+
     """
     A counts Exporter exporting to .csv format.
     Allows to either overwrite result file or incrementally collect count data.
@@ -97,11 +103,27 @@ class CsvExport(Exporter):
     is provided.
     """
 
-    def __init__(self, output_file: str) -> None:
-        self._output_file = output_file
+    @property
+    def _output_file(self) -> Path:
+        return (
+            self._export_directory
+            / f"{self._export_filename_stem}.{self.CONTEXT_FILE_TYPE}"
+            f"_{self._interval_in_minutes}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"
+            f"{self.get_extension()}"
+        )
+
+    def __init__(
+        self,
+        export_directory: Path,
+        export_filename_stem: str,
+        interval_in_minutes: int,
+    ) -> None:
+        self._export_directory = export_directory
+        self._export_filename_stem = export_filename_stem
+        self._interval_in_minutes = interval_in_minutes
         self._counts: dict[Tag, int] = defaultdict(int)
 
-    def export(self, counts: Count, export_mode: ExportMode) -> None:
+    def export(self, counts: Count, export_mode: ExportMode) -> Path:
         logger().info(f"Exporting counts to {self._output_file}")
 
         for tag, value in counts.to_dict().items():
@@ -111,18 +133,20 @@ class CsvExport(Exporter):
             dataframe = count_dict_to_dataframe(self._counts)
             if dataframe.empty:
                 logger().info("Nothing to count.")
-                return
+                return self._output_file
 
             dataframe.to_csv(self.__create_path(), index=False)
             logger().info(f"Counts saved at {self._output_file}")
 
             self._counts.clear()
+        return self._output_file
 
     def __create_path(self) -> Path:
+        output_file = str(self._output_file)
         fixed_file_ending = (
-            self._output_file
-            if self._output_file.lower().endswith(".csv")
-            else self._output_file + ".csv"
+            output_file
+            if output_file.lower().endswith(self.get_extension())
+            else output_file + self.get_extension()
         )
         path = Path(fixed_file_ending)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -131,11 +155,20 @@ class CsvExport(Exporter):
     def update_end(self, counting_specification: CountingSpecificationDto) -> None:
         pass
 
+    def get_extension(self) -> str:
+        return ".csv"
+
 
 class SimpleExporterFactory(ExporterFactory):
     def __init__(self) -> None:
         self._formats = {
-            ExportFormat("CSV", ".csv"): lambda output_file: CsvExport(output_file)
+            ExportFormat("CSV", ".csv"): lambda specification: CsvExport(
+                export_directory=specification.export_directory,
+                export_filename_stem=specification.export_filename_stem,
+                interval_in_minutes=(
+                    specification.counting_specification.interval_in_minutes
+                ),
+            )
         }
         self._factories = {
             format.name: factory for format, factory in self._formats.items()
@@ -145,7 +178,7 @@ class SimpleExporterFactory(ExporterFactory):
         return self._formats.keys()
 
     def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
-        return self._factories[specification.format](specification.output_file)
+        return self._factories[specification.format](specification)
 
 
 class TagExploder:
@@ -203,9 +236,9 @@ class FillZerosExporter(Exporter):
         self._other = other
         self._tag_exploder = tag_exploder
 
-    def export(self, counts: Count, export_mode: ExportMode) -> None:
+    def export(self, counts: Count, export_mode: ExportMode) -> Path:
         tags = self._tag_exploder.explode()
-        self._other.export(FillEmptyCount(counts, tags), export_mode)
+        return self._other.export(FillEmptyCount(counts, tags), export_mode)
 
     def update_end(self, counting_specification: CountingSpecificationDto) -> None:
         self._other.update_end(counting_specification)
@@ -231,11 +264,13 @@ class AddSectionInformationExporter(Exporter):
         self._other = other
         self._specification = specification
 
-    def export(self, counts: Count, export_mode: ExportMode) -> None:
+    def export(self, counts: Count, export_mode: ExportMode) -> Path:
         flow_info_dict = {
             flow_dto.name: flow_dto for flow_dto in self._specification.flow_name_info
         }
-        self._other.export(AddSectionInformation(counts, flow_info_dict), export_mode)
+        return self._other.export(
+            AddSectionInformation(counts, flow_info_dict), export_mode
+        )
 
     def update_end(self, counting_specification: CountingSpecificationDto) -> None:
         self._other.update_end(counting_specification)
@@ -282,8 +317,12 @@ class CachedExporterFactory(ExporterFactory):
     def create_exporter(self, specification: ExportSpecificationDto) -> Exporter:
         count_specification = specification.counting_specification
         export_mode = count_specification.export_mode
+        output_base_path = str(
+            count_specification.export_directory
+            / count_specification.export_filename_stem
+        )
 
-        key = (count_specification.output_format, count_specification.output_file)
+        key = (count_specification.output_format, output_base_path)
         key_exists = key in self._cache.keys()
 
         exporter: Exporter
@@ -294,7 +333,7 @@ class CachedExporterFactory(ExporterFactory):
                     + " Maybe previous export was not finished or cache was not"
                     + "cleared properly.",
                     count_specification.output_format,
-                    count_specification.output_file,
+                    output_base_path,
                     export_mode,
                 )
 
@@ -307,7 +346,7 @@ class CachedExporterFactory(ExporterFactory):
                     "Exporter missing in cache for format+file upon subsequent write!"
                     + "Maybe the cache was cleared too early.",
                     count_specification.output_format,
-                    count_specification.output_file,
+                    output_base_path,
                     export_mode,
                 )
             exporter = self._cache[key]

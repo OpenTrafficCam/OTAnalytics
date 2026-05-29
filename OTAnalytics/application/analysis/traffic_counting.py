@@ -899,7 +899,7 @@ class Exporter(ABC):
     """
 
     @abstractmethod
-    def export(self, counts: Count, export_mode: ExportMode) -> None:
+    def export(self, counts: Count, export_mode: ExportMode) -> Path:
         """
         Export the given counts.
 
@@ -908,6 +908,9 @@ class Exporter(ABC):
             export_mode (ExportMode): export mode specifies whether result data
                 should overwrite file, be appended (or flushed to file in case
                 of stateful exporter).
+
+        Returns:
+            Path: path to the exported file.
         """
         raise NotImplementedError
 
@@ -1124,7 +1127,7 @@ class ExportTrafficCounting(ExportCounts):
         self._traffic_counting = traffic_counting
         self._exporter_factory = exporter_factory
 
-    def export(self, specification: CountingSpecificationDto) -> None:
+    def export(self, specification: CountingSpecificationDto) -> Path:
         """
         Export the traffic countings based on the currently available events and flows.
 
@@ -1138,7 +1141,7 @@ class ExportTrafficCounting(ExportCounts):
             flows, specification, self._traffic_counting.provide_get_sections_by_id()
         )
         exporter = self._exporter_factory.create_exporter(export_specification)
-        exporter.export(counts, specification.export_mode)
+        return exporter.export(counts, specification.export_mode)
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """
