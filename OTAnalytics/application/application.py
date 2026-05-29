@@ -39,6 +39,9 @@ from OTAnalytics.application.use_cases.filter_visualization import (
     EnableFilterTrackByDate,
 )
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
+from OTAnalytics.application.use_cases.flow_repository import (
+    is_flow_name_valid as check_flow_name_valid,
+)
 from OTAnalytics.application.use_cases.flow_statistics import (
     NumberOfTracksAssignedToEachFlow,
 )
@@ -288,7 +291,7 @@ class OTAnalyticsApplication:
         Returns:
             bool: True if a flow with the name already exists, False otherwise.
         """
-        return self._add_flow.is_flow_name_valid(flow_name)
+        return check_flow_name_valid(flow_name, self._datastore.get_all_flows())
 
     def add_flow(self, flow: Flow) -> None:
         self._add_flow(flow)

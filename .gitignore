@@ -4,6 +4,9 @@ data/
 tests/data/OTCamera19_FR20_2023-05-24*
 tests/scripts/
 
+# Anthropic Claude
+.claude/rules/shared
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
