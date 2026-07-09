@@ -23,7 +23,7 @@ classifiers = [
 ]
 keywords = ["OpenTrafficCam", "Traffic Analysis", "Traffic Counting", "Trajectories"]
 dependencies = [
-    "av==13.0.0",
+    "av==16.1.0",
     "customtkinter==5.2.2",
     "fastapi==0.128.0",
     "ijson==3.3.0",
