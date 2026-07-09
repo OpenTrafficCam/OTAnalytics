@@ -140,9 +140,8 @@ the [official documentation](https://opentrafficcam.org/OTAnalytics).
 
 ## Contributing
 
-We appreciate your support in the form of both code and comments. Please have a look at
-the [contribute](https://opentrafficcam.org/contribute) section of the OpenTrafficCam documentation for guidelines on
-how to contribute to this project.
+We appreciate your support in the form of both code and comments. Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for
+guidelines on how to contribute, including development setup, coding standards, and how to submit a pull request.
 
 ## License
 
