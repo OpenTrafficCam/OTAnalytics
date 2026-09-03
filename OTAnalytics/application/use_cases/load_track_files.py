@@ -34,12 +34,17 @@ class LoadTrackFiles:
         """
         Load and parse the given track file together with the corresponding video file.
 
+        Each video is resolved relative to the parent folder of the track file it was
+        parsed from, so track files from different folders each find their own video.
+        This relies on `TrackParser.parse_files` returning exactly one `VideoMetadata`
+        per input file, in input order; `strict=True` turns a violation of that into
+        an error rather than silently dropping videos.
+
         Args:
             files (Path): files in ottrk format.
         """
         if not files:
             return
-        parent_folder = files[0].parent
         files_to_load = [
             file for file in files if not self._is_file_already_loaded(file)
         ]
@@ -53,9 +58,11 @@ class LoadTrackFiles:
 
         videos = [
             self._video_parser.parse(
-                parent_folder / video_metadata.path, video_metadata
+                track_file.parent / video_metadata.path, video_metadata
             )
-            for video_metadata in parse_result.videos_metadata
+            for track_file, video_metadata in zip(
+                files_to_load, parse_result.videos_metadata, strict=True
+            )
         ]
         self._video_repository.add_all(videos)
         self._track_repository.add_all(parse_result.tracks)

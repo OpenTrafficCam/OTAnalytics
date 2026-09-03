@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, Mock, call
 
 import pytest
@@ -28,6 +29,9 @@ from tests.utils.builders.track_builder import create_track
 
 some_file = Path("some.file.ottrk")
 other_file = Path("other.file.ottrk")
+
+FOLDER_A = Path("folder_a")
+FOLDER_B = Path("folder_b")
 
 GEOREF_METADATA = GeoreferenceMetadata(
     geo_min_x=449199.096512522,
@@ -240,6 +244,68 @@ class TestLoadTrackFile:
         with pytest.raises(IncompatibleGeoreferenceMetadataError):
             target_second([other_file])
 
+    @pytest.mark.parametrize(
+        "track_files, expected_video_paths",
+        [
+            pytest.param(
+                [FOLDER_A / "a.ottrk", FOLDER_B / "b.ottrk"],
+                [FOLDER_A / "a.mp4", FOLDER_B / "b.mp4"],
+                id="different_folders",
+            ),
+            pytest.param(
+                [FOLDER_A / "a.ottrk", FOLDER_A / "b.ottrk"],
+                [FOLDER_A / "a.mp4", FOLDER_A / "b.mp4"],
+                id="same_folder",
+            ),
+        ],
+    )
+    def test_load_resolves_each_video_relative_to_its_own_track_file(
+        self, track_files: list[Path], expected_video_paths: list[Path]
+    ) -> None:
+        """Each video is resolved under the parent of the track file it came from.
+
+        # Requirement OP#10279
+        """
+        given = setup(
+            track_ids=[TrackId("1"), TrackId("2")],
+            video_files=[Path("a.mp4"), Path("b.mp4")],
+            track_files=track_files,
+            existing_track_files=[],
+            classes={"class1"},
+        )
+        target = create_target(given)
+
+        target(track_files)
+
+        assert given.parsed_video_calls() == list(
+            zip(expected_video_paths, given.parse_result.videos_metadata, strict=True)
+        )
+
+    def test_load_resolves_videos_against_the_files_actually_parsed(self) -> None:
+        """Skipping an already loaded file must not shift video resolution.
+
+        Videos are paired with the files handed to the parser, not with every
+        file the caller passed in.
+
+        # Requirement OP#10279
+        """
+        already_loaded = FOLDER_A / "a.ottrk"
+        track_file_b = FOLDER_B / "b.ottrk"
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("b.mp4")],
+            track_files=[track_file_b],
+            existing_track_files=[already_loaded],
+            classes={"class1"},
+        )
+        target = create_target(given)
+
+        target([already_loaded, track_file_b])
+
+        assert given.parsed_video_calls() == [
+            (FOLDER_B / "b.mp4", given.parse_result.videos_metadata[0])
+        ]
+
 
 @dataclass
 class Given:
@@ -256,6 +322,13 @@ class Given:
     tracks_metadata: Mock
     videos_metadata: Mock
     order: MagicMock
+
+    def parsed_video_calls(self) -> list[tuple[Path, Any]]:
+        """The (path, metadata) pairs handed to the video parser, in call order."""
+        return [
+            (call_args.args[0], call_args.args[1])
+            for call_args in self.video_parser.parse.call_args_list
+        ]
 
     def __post_init__(self) -> None:
         self.order.track_parser = self.track_parser
