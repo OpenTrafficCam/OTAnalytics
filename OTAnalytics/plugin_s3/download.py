@@ -9,8 +9,6 @@ from OTAnalytics.plugin_s3.connect import S3Connection
 class S3Download:
     """Downloads objects from S3 storage to the local filesystem.
 
-    Copied from OTCloud — see `docs/adr/0001-duplicate-s3-layer.md`.
-
     Args:
         connection (S3Connection): S3 connection manager for establishing
             client sessions.
