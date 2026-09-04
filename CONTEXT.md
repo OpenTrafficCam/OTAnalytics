@@ -15,10 +15,11 @@ startup configuration; it is not something a user switches while working.
 _Avoid_: storage backend, data source (both suggest a per-load choice).
 
 **Startup Configuration**:
-The file naming the Transfer Mode and, in S3 mode, the S3 settings. Distinct
-from an **otconfig**, which is a per-project file a user saves and shares —
-credentials belong in the Startup Configuration, never in an otconfig.
-_Avoid_: config file (ambiguous between the two).
+The environment variables naming the Transfer Mode and, in S3 mode, the S3
+settings. Fixed for the lifetime of the process. Deliberately not a file, and
+deliberately never the **otconfig** — that is a per-project file users save and
+share, and credentials must not travel in one.
+_Avoid_: config file (there isn't one, and it invites confusion with otconfig).
 
 **Key Prefix**:
 The single S3 prefix an instance reads from, covering one camera or site. Fixed

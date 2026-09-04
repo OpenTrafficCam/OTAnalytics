@@ -1,7 +1,7 @@
 import asyncio
 from pathlib import Path
 
-from OTAnalytics.application.s3_config import S3Config
+from OTAnalytics.plugin_s3.config.s3 import S3Config
 from OTAnalytics.plugin_s3.connect import S3Connection
 
 

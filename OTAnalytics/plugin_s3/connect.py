@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, AsyncContextManager
 
 import aioboto3
 
-from OTAnalytics.application.s3_config import S3Config
+from OTAnalytics.plugin_s3.config.s3 import S3Config
 
 if TYPE_CHECKING:
     from types_aiobotocore_s3 import S3Client

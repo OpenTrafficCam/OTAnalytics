@@ -4,7 +4,6 @@ import pytest
 
 from OTAnalytics.application.startup_config import (
     InvalidTransferModeError,
-    StartupConfig,
     StartupConfigError,
     UnsupportedTransferModeError,
     validate_transfer_mode,
@@ -14,7 +13,6 @@ from OTAnalytics.plugin_s3.config.parsing import (
     InvalidDurationError,
     MissingS3ConfigError,
 )
-from tests.unit.OTAnalytics.plugin_s3.s3_config_builder import create_s3_config
 
 
 class TestValidateTransferMode:
@@ -68,15 +66,3 @@ class TestStartupConfigErrorHierarchy:
         # Requirement OP#10256
         """
         assert isinstance(error, StartupConfigError)
-
-
-class TestStartupConfig:
-    def test_uses_s3(self) -> None:
-        s3 = StartupConfig(transfer_mode=TransferMode.S3, s3=create_s3_config())
-        local = StartupConfig(transfer_mode=TransferMode.LOCAL_FILESYSTEM)
-
-        assert s3.uses_s3 is True
-        assert local.uses_s3 is False
-
-    def test_defaults_to_no_s3_settings(self) -> None:
-        assert StartupConfig(transfer_mode=TransferMode.LOCAL_FILESYSTEM).s3 is None

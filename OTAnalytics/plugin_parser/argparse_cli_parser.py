@@ -67,16 +67,6 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
-            "--startup-config",
-            type=str,
-            help=(
-                "Path to the startup config file selecting the data transfer mode "
-                "and, in s3 mode, the S3 settings. Environment variables take "
-                "precedence over its values."
-            ),
-            required=False,
-        )
-        self._parser.add_argument(
             "--ottrks",
             nargs="+",
             type=str,
@@ -197,7 +187,6 @@ class ArgparseCliParser(CliParser):
             show_svz=args.show_svz,
             file_picker_directory=args.file_picker_directory,
             config_file=args.config,
-            startup_config_file=args.startup_config,
             track_files=args.ottrks,
             otflow_file=args.otflow,
             save_dir=args.save_dir,

@@ -45,7 +45,6 @@ class CliArguments:
     show_svz: bool = False
     file_picker_directory: str | None = None
     config_file: str | None = None
-    startup_config_file: str | None = None
     track_files: list[str] | None = None
     otflow_file: str | None = None
     save_dir: str | None = None

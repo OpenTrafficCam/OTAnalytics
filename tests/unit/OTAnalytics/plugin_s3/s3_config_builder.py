@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from OTAnalytics.application.s3_config import S3Config
+from OTAnalytics.plugin_s3.config.s3 import S3Config
 
 ENDPOINT_URL = "http://localhost:9000"
 ACCESS_KEY = "minioadmin"
