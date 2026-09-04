@@ -12,15 +12,26 @@ from OTAnalytics.application.parser.cli_parser import (
 )
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.run_configuration import RunConfiguration
+from OTAnalytics.application.startup_config import (
+    StartupConfig,
+    StartupConfigError,
+    validate_transfer_mode,
+)
 from OTAnalytics.application.state import VideosMetadata
+from OTAnalytics.domain.transfer_mode import TransferMode
 from OTAnalytics.helpers.time_profiling import log_processing_time
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
 from OTAnalytics.plugin_parser.argparse_cli_parser import ArgparseCliParser
 from OTAnalytics.plugin_parser.otconfig_parser import OtConfigParser
+from OTAnalytics.plugin_parser.startup_config_parser import (
+    parse_startup_config,
+    parse_transfer_mode,
+)
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     PilImageFactory,
     TrackImageFactory,
 )
+from OTAnalytics.plugin_s3.config.env_vars import transfer_mode_from_env
 from OTAnalytics.plugin_ui.base_application import (
     create_format_fixer,
     create_otflow_parser,
@@ -41,6 +52,8 @@ class ApplicationStarter:
             self.run_config.logfile_overwrite,
             self.run_config.debug,
         )
+        if not self._startup_config_is_valid():
+            return
         if self.run_config.start_cli:
             try:
                 OtAnalyticsCliApplicationStarter(self.run_config).start()
@@ -72,6 +85,37 @@ class ApplicationStarter:
             config = config_parser.parse(Path(config_file))
             return RunConfiguration(self.flow_parser, cli_args, config)
         return RunConfiguration(self.flow_parser, cli_args, None)
+
+    def _startup_config_is_valid(self) -> bool:
+        """Report a misconfigured startup config as a message, not a traceback.
+
+        The front-end check runs before the S3 settings are parsed. Otherwise a
+        CTk user in S3 mode with incomplete credentials would be told which
+        settings are missing, when the real problem is that CTk cannot use S3.
+        """
+        try:
+            validate_transfer_mode(
+                self.transfer_mode, start_webui=self.run_config.start_webui
+            )
+            self.startup_config  # parses the S3 settings, if any
+        except StartupConfigError as cause:
+            logger().error(str(cause))
+            return False
+        return True
+
+    @cached_property
+    def transfer_mode(self) -> TransferMode:
+        return parse_transfer_mode(
+            self.run_config.startup_config_file,
+            mode_from_env=transfer_mode_from_env(),
+        )
+
+    @cached_property
+    def startup_config(self) -> StartupConfig:
+        return parse_startup_config(
+            self.run_config.startup_config_file,
+            mode_from_env=transfer_mode_from_env(),
+        )
 
     @cached_property
     def video_parser(self) -> VideoParser:
