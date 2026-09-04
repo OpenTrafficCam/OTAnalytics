@@ -8,7 +8,7 @@ import pytest
 from PIL import Image, ImageChops  # type: ignore
 from playwright.sync_api import Error, Page, TimeoutError
 
-from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
+from OTAnalytics.application.config import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
     AddTracksKeys,
     AddVideoKeys,

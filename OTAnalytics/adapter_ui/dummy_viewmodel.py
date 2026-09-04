@@ -3,7 +3,7 @@ import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Iterable, Optional
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -105,6 +105,10 @@ from OTAnalytics.application.use_cases.export_events import (
 )
 from OTAnalytics.application.use_cases.flow_repository import FlowAlreadyExists
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
+from OTAnalytics.application.use_cases.provide_input_files import (
+    ProvideTrackFiles,
+    ProvideVideoFiles,
+)
 from OTAnalytics.application.use_cases.quick_save_configuration import (
     NoExistingFileToSave,
 )
@@ -144,7 +148,6 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
-SUPPORTED_VIDEO_FILE_TYPES = [".mp4", ".avi", ".mkv", ".mov"]
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
@@ -314,9 +317,13 @@ class DummyViewModel(
         show_svz: bool,
         add_new_section: AddNewSection,
         update_section_coordinates: UpdateSectionCoordinates,
+        provide_track_files: ProvideTrackFiles,
+        provide_video_files: ProvideVideoFiles,
     ) -> None:
         self._application = application
         self._ui_factory = ui_factory
+        self._provide_track_files = provide_track_files
+        self._provide_video_files = provide_video_files
         self._flow_parser: FlowParser = flow_parser
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
@@ -557,24 +564,7 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
 
     async def add_video(self) -> None:
-        # Generate extension_options dynamically from SUPPORTED_VIDEO_FILE_TYPES
-        extension_options: Dict[str, Optional[List[str]]] = {}
-
-        # Convert "*.ext" format to ".ext" format for extension_options
-        clean_extensions = [ext for ext in SUPPORTED_VIDEO_FILE_TYPES]
-
-        # Add "All File Endings" option with all supported extensions
-        extension_options["All File Endings"] = clean_extensions
-
-        # Add individual extension options
-        for ext in clean_extensions:
-            extension_options[ext] = [ext]
-
-        video_files = await self._ui_factory.askopenfilenames(
-            title="Load video files",
-            filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
-            extension_options=extension_options,
-        )
+        video_files = await self._provide_video_files.provide()
         if not video_files:
             return
         logger().info(f"Video files to load: {video_files}")
@@ -819,17 +809,11 @@ class DummyViewModel(
 
     @action
     async def load_tracks(self) -> None:
-        track_files = await self._ui_factory.askopenfilenames(
-            title="Load track files",
-            filetypes=[
-                ("tracks file", "*.ottrk"),
-            ],
-        )
+        track_files = await self._provide_track_files.provide()
         if not track_files:
             return
         logger().info(f"Tracks files to load: {track_files}")
-        track_paths = [Path(file) for file in track_files]
-        self._application.add_tracks_of_files(track_files=track_paths)
+        self._application.add_tracks_of_files(track_files=track_files)
 
     async def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
