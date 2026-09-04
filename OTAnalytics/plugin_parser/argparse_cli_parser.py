@@ -12,14 +12,16 @@ class ArgparseCliParser(CliParser):
     Acts as a wrapper to `argparse.ArgumentParser`.
 
     Args:
-        arg_parser (ArgumentParser, optional): the argument parser.
-            Defaults to ArgumentParser("OTAnalytics CLI").
+        arg_parser (ArgumentParser | None, optional): the argument parser. A new
+            one is created when omitted. It must not default to a shared
+            instance: `_setup()` would then re-add every argument to the same
+            parser on a second instantiation and raise `ArgumentError`.
     """
 
-    def __init__(
-        self, arg_parser: ArgumentParser = ArgumentParser("OTAnalytics CLI")
-    ) -> None:
-        self._parser = arg_parser
+    def __init__(self, arg_parser: ArgumentParser | None = None) -> None:
+        self._parser = (
+            arg_parser if arg_parser is not None else ArgumentParser("OTAnalytics CLI")
+        )
         self._setup()
 
     def _setup(self) -> None:
@@ -62,6 +64,16 @@ class ArgparseCliParser(CliParser):
             "--config",
             type=str,
             help="Path to otconfig file.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--startup-config",
+            type=str,
+            help=(
+                "Path to the startup config file selecting the data transfer mode "
+                "and, in s3 mode, the S3 settings. Environment variables take "
+                "precedence over its values."
+            ),
             required=False,
         )
         self._parser.add_argument(
@@ -185,6 +197,7 @@ class ArgparseCliParser(CliParser):
             show_svz=args.show_svz,
             file_picker_directory=args.file_picker_directory,
             config_file=args.config,
+            startup_config_file=args.startup_config,
             track_files=args.ottrks,
             otflow_file=args.otflow,
             save_dir=args.save_dir,

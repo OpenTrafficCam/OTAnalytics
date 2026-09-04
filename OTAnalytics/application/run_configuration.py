@@ -85,6 +85,17 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         return None
 
     @property
+    def startup_config_file(self) -> Path | None:
+        """Path to the startup config selecting the data transfer mode.
+
+        Distinct from `config_file`, which is a per-project otconfig. Parsing it
+        belongs to the plugin layer, so only the path is exposed here.
+        """
+        if startup_config_file := self._cli_args.startup_config_file:
+            return Path(startup_config_file)
+        return None
+
+    @property
     def track_files(self) -> set[Path]:
         if self._cli_args.track_files:
             return {Path(track) for track in self._cli_args.track_files}
