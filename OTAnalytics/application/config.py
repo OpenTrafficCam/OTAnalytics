@@ -25,6 +25,14 @@ DEFAULT_NUM_PROCESSES = 1
 
 
 # File Types
+SUPPORTED_VIDEO_FILE_TYPES = [".mp4", ".avi", ".mkv", ".mov"]
+"""Video containers OTAnalytics can read.
+
+A property of the application, not of any one way of choosing files, so anything
+that offers or recognises videos — a local file chooser, a remote provider, a
+test helper — reads it from here.
+"""
+
 CONTEXT_FILE_TYPE_ROAD_USER_ASSIGNMENTS = "road_user_assignments"
 CONTEXT_FILE_TYPE_TRACK_STATISTICS = "track_statistics"
 CONTEXT_FILE_TYPE_EVENTS = "events"
