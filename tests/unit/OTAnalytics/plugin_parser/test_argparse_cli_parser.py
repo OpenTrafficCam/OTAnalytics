@@ -72,22 +72,3 @@ class TestArgparseCliParser:
                 include_classes=["truck", "car"],
                 exclude_classes=["pedestrian"],
             )
-
-    def test_parse_startup_config(self) -> None:
-        """--startup-config selects the data transfer mode configuration.
-
-        # Requirement OP#10256
-        """
-        startup_config = "path/to/startup.yaml"
-        cli_args: list[str] = ["path", "--webui", "--startup-config", startup_config]
-
-        with patch.object(sys, "argv", cli_args):
-            args = ArgparseCliParser().parse()
-
-        assert args.startup_config_file == startup_config
-
-    def test_startup_config_defaults_to_none(self) -> None:
-        with patch.object(sys, "argv", ["path"]):
-            args = ArgparseCliParser().parse()
-
-        assert args.startup_config_file is None

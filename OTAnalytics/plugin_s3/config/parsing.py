@@ -1,21 +1,28 @@
-"""Parse the `s3` block of the startup configuration.
+"""Build the S3 configuration from environment variables.
 
-Environment variables take precedence over file values, mirroring OTCloud's
-`parse_s3_config(data, env)`. OTCloud exposes this as a mixin because several of
-its parsers need it; OTAnalytics has a single startup config parser, so a plain
-function is used instead.
+S3 access is configured entirely through the environment. Ten flat settings, two
+of them secrets, six already carrying OTCloud's variable names — a config file
+would be machinery without structure to justify it, and secrets passed as CLI
+flags appear in `ps`. See `docs/adr/0003-configure-s3-via-environment.md`.
 """
 
 import re
 from datetime import timedelta
 
-from OTAnalytics.application.s3_config import (
+from OTAnalytics.application.startup_config import StartupConfigError
+from OTAnalytics.plugin_s3.config.env_vars import (
+    ENV_S3_ACCESS_KEY,
+    ENV_S3_BUCKET,
+    ENV_S3_KEY_PREFIX,
+    ENV_S3_SECRET_KEY,
+    ENV_S3_USER_SOURCE,
+    S3Env,
+)
+from OTAnalytics.plugin_s3.config.s3 import (
     DEFAULT_DOWNLOAD_CONCURRENCY,
     DEFAULT_MAX_LOAD_DURATION,
     S3Config,
 )
-from OTAnalytics.application.startup_config import StartupConfigError
-from OTAnalytics.plugin_s3.config.env_vars import S3Env
 
 DURATION_PATTERN = re.compile(r"^(\d+)([hms])$")
 _UNIT_TO_KEYWORD = {"h": "hours", "m": "minutes", "s": "seconds"}
@@ -26,36 +33,22 @@ class InvalidDurationError(StartupConfigError):
 
 
 class MissingS3ConfigError(StartupConfigError):
-    """Raised when required S3 settings are absent from both file and environment.
+    """Raised when required S3 environment variables are not set.
 
-    Carries every missing field rather than only the first, so an operator can
-    fix them in one pass instead of one restart per field.
+    Names every missing variable rather than only the first, so an operator can
+    fix them in one pass instead of one restart per variable.
 
     Attributes:
-        missing (list[str]): the config keys that were not supplied.
+        missing (list[str]): the environment variables that were not set.
     """
 
     def __init__(self, missing: list[str]) -> None:
         self.missing = missing
         super().__init__(
-            "Missing required S3 configuration: "
+            "Missing required S3 configuration. Set these environment variables: "
             + ", ".join(missing)
-            + ". Supply them in the startup config's 's3' block or via the "
-            "corresponding S3_* environment variables."
+            + "."
         )
-
-
-class S3ConfigKeys:
-    S3 = "s3"
-    ENDPOINT_URL = "endpoint-url"
-    ACCESS_KEY = "access-key"
-    SECRET_KEY = "secret-key"  # nosec B105 - config key name, not a secret
-    BUCKET = "bucket"
-    REGION = "region"
-    KEY_PREFIX = "key-prefix"
-    USER_SOURCE = "user-source"
-    MAX_LOAD_DURATION = "max-load-duration"
-    DOWNLOAD_CONCURRENCY = "download-concurrency"
 
 
 def parse_duration(value: str) -> timedelta:
@@ -84,82 +77,57 @@ def parse_duration(value: str) -> timedelta:
     return timedelta(**{_UNIT_TO_KEYWORD[unit]: int(amount)})
 
 
-def parse_s3_config(section: dict, env: S3Env) -> S3Config:
-    """Parse the `s3` section of a startup configuration.
+def parse_s3_config(env: S3Env) -> S3Config:
+    """Build the S3 configuration from environment values.
 
     Args:
-        section (dict): the contents of the `s3` block. May be empty, in which
-            case every setting must come from the environment.
-        env (S3Env): environment values, which take precedence over the file.
+        env (S3Env): the S3 environment variables.
 
     Returns:
         S3Config: the parsed configuration.
 
     Raises:
-        MissingS3ConfigError: if required keys are absent from both the file and
-            the environment. Every missing key is reported, not just the first.
-        InvalidDurationError: if `max-load-duration` is malformed.
-    """
-    resolved = _resolve_required(section, env)
-
-    return S3Config(
-        endpoint_url=_resolve(env.endpoint_url, section, S3ConfigKeys.ENDPOINT_URL),
-        access_key=resolved[S3ConfigKeys.ACCESS_KEY],
-        secret_key=resolved[S3ConfigKeys.SECRET_KEY],
-        bucket=resolved[S3ConfigKeys.BUCKET],
-        region=_resolve(env.region, section, S3ConfigKeys.REGION),
-        key_prefix=resolved[S3ConfigKeys.KEY_PREFIX],
-        user_source=resolved[S3ConfigKeys.USER_SOURCE],
-        max_load_duration=_parse_max_load_duration(section, env),
-        download_concurrency=_parse_download_concurrency(section, env),
-    )
-
-
-def _resolve_required(section: dict, env: S3Env) -> dict[str, str]:
-    """Resolve the settings that have no default, reporting all absentees.
-
-    Returns:
-        dict[str, str]: every required key, guaranteed present.
-
-    Raises:
-        MissingS3ConfigError: naming every key absent from file and environment.
+        MissingS3ConfigError: if required variables are unset. Every missing
+            variable is reported, not just the first.
+        InvalidDurationError: if S3_MAX_LOAD_DURATION is malformed.
     """
     required = (
-        (S3ConfigKeys.ACCESS_KEY, env.access_key),
-        (S3ConfigKeys.SECRET_KEY, env.secret_key),
-        (S3ConfigKeys.BUCKET, env.bucket),
-        (S3ConfigKeys.KEY_PREFIX, env.key_prefix),
-        (S3ConfigKeys.USER_SOURCE, env.user_source),
+        (ENV_S3_ACCESS_KEY, env.access_key),
+        (ENV_S3_SECRET_KEY, env.secret_key),
+        (ENV_S3_BUCKET, env.bucket),
+        (ENV_S3_KEY_PREFIX, env.key_prefix),
+        (ENV_S3_USER_SOURCE, env.user_source),
     )
-    resolved = {key: _resolve(from_env, section, key) for key, from_env in required}
-    if missing := [key for key, value in resolved.items() if value is None]:
+    if missing := [name for name, value in required if value is None]:
         raise MissingS3ConfigError(missing)
-    return {key: value for key, value in resolved.items() if value is not None}
 
-
-def _resolve(from_env: str | None, section: dict, key: str) -> str | None:
-    """Environment value if supplied, otherwise the file value.
-
-    Compares against None rather than using `or`, so an intentionally empty
-    setting — `S3_KEY_PREFIX=""` to read from the root of a bucket — counts as
-    supplied instead of silently falling back to the file.
-    """
-    if from_env is not None:
-        return from_env
-    return section.get(key, None)
-
-
-def _parse_max_load_duration(section: dict, env: S3Env) -> timedelta:
-    value = _resolve(env.max_load_duration, section, S3ConfigKeys.MAX_LOAD_DURATION)
-    if value is None:
-        return DEFAULT_MAX_LOAD_DURATION
-    return parse_duration(str(value))
-
-
-def _parse_download_concurrency(section: dict, env: S3Env) -> int:
-    value = _resolve(
-        env.download_concurrency, section, S3ConfigKeys.DOWNLOAD_CONCURRENCY
+    return S3Config(
+        endpoint_url=env.endpoint_url,
+        access_key=_required(env.access_key),
+        secret_key=_required(env.secret_key),
+        bucket=_required(env.bucket),
+        region=env.region,
+        key_prefix=_required(env.key_prefix),
+        user_source=_required(env.user_source),
+        max_load_duration=_parse_max_load_duration(env),
+        download_concurrency=_parse_download_concurrency(env),
     )
-    if value is None:
+
+
+def _required(value: str | None) -> str:
+    """Narrow a value the missing-variable check has already guaranteed."""
+    if value is None:  # pragma: no cover - guarded by parse_s3_config
+        raise MissingS3ConfigError([])
+    return value
+
+
+def _parse_max_load_duration(env: S3Env) -> timedelta:
+    if env.max_load_duration is None:
+        return DEFAULT_MAX_LOAD_DURATION
+    return parse_duration(env.max_load_duration)
+
+
+def _parse_download_concurrency(env: S3Env) -> int:
+    if env.download_concurrency is None:
         return DEFAULT_DOWNLOAD_CONCURRENCY
-    return int(value)
+    return int(env.download_concurrency)
