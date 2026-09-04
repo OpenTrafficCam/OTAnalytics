@@ -1,6 +1,9 @@
 import os
 from dataclasses import dataclass, field
 
+from OTAnalytics.application.startup_config import InvalidTransferModeError
+from OTAnalytics.domain.transfer_mode import TransferMode
+
 ENV_DATA_TRANSFER_MODE = "DATA_TRANSFER_MODE"
 ENV_S3_ENDPOINT_URL = "S3_ENDPOINT_URL"
 ENV_S3_ACCESS_KEY = "S3_ACCESS_KEY"
@@ -54,10 +57,26 @@ class S3Env:
     )
 
 
-def transfer_mode_from_env() -> str | None:
+def transfer_mode_from_env() -> TransferMode:
     """Read the configured transfer mode from the environment.
 
     Returns:
-        str | None: the raw value of DATA_TRANSFER_MODE, or None if unset.
+        TransferMode: the configured mode, defaulting to local-filesystem when
+            DATA_TRANSFER_MODE is unset.
+
+    Raises:
+        InvalidTransferModeError: if the value is not one OTAnalytics supports.
+            The message lists the supported values, because OTCloud defines an
+            `ftp` mode that OTAnalytics does not and the two may share a machine.
     """
-    return os.environ.get(ENV_DATA_TRANSFER_MODE, None)
+    raw_mode = os.environ.get(ENV_DATA_TRANSFER_MODE, None)
+    if raw_mode is None:
+        return TransferMode.LOCAL_FILESYSTEM
+    try:
+        return TransferMode(raw_mode)
+    except ValueError:
+        supported = ", ".join(f"'{mode.value}'" for mode in TransferMode)
+        raise InvalidTransferModeError(
+            f"Unsupported {ENV_DATA_TRANSFER_MODE} '{raw_mode}'. "
+            f"Supported values are {supported}."
+        ) from None
