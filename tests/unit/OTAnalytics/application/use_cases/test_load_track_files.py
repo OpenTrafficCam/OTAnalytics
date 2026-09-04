@@ -85,10 +85,10 @@ class TestLoadTrackFile:
 
     def test_load_existing_track_file(self) -> None:
         """
-        # Requirement https://openproject.platomo.de/projects/001-opentrafficcam-live/work_packages/2665
+        # Requirement https://openproject.platomo.de/wp/2665
 
         @bug by randy-seng
-        """  # noqa
+        """
         given = setup(
             track_ids=[],
             video_files=[],
@@ -109,10 +109,10 @@ class TestLoadTrackFile:
 
     def test_load_multiple_with_existing_track_file(self) -> None:
         """
-        # Requirement https://openproject.platomo.de/projects/001-opentrafficcam-live/work_packages/2665
+        # Requirement https://openproject.platomo.de/wp/2665
 
         @bug by randy-seng
-        """  # noqa
+        """
         classes = {"class1"}
         given = setup(
             track_ids=[TrackId("1")],
@@ -264,7 +264,7 @@ class TestLoadTrackFile:
     ) -> None:
         """Each video is resolved under the parent of the track file it came from.
 
-        # Requirement OP#10279
+        # Requirement https://openproject.platomo.de/wp/10279
         """
         given = setup(
             track_ids=[TrackId("1"), TrackId("2")],
@@ -287,7 +287,7 @@ class TestLoadTrackFile:
         Videos are paired with the files handed to the parser, not with every
         file the caller passed in.
 
-        # Requirement OP#10279
+        # Requirement https://openproject.platomo.de/wp/10279
         """
         already_loaded = FOLDER_A / "a.ottrk"
         track_file_b = FOLDER_B / "b.ottrk"
