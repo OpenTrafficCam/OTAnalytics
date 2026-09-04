@@ -23,7 +23,7 @@ _Avoid_: config file (there isn't one, and it invites confusion with otconfig).
 
 **Key Prefix**:
 The single S3 prefix an instance reads from, covering one camera or site. Fixed
-at startup, so a user chooses only *when*, never *where*.
+at startup, so a user chooses only _when_, never _where_.
 _Avoid_: path, folder (S3 has neither).
 
 **User Source**:
