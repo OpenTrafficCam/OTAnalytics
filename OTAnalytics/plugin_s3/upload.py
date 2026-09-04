@@ -8,11 +8,6 @@ from OTAnalytics.plugin_s3.connect import S3Connection
 class S3Upload:
     """Uploads local files to S3 storage.
 
-    Copied from OTCloud alongside the rest of the S3 client layer — see
-    `docs/adr/0001-duplicate-s3-layer.md`. Not used by the S3 time-selection
-    epic; it is here for the later work that uploads analysis results back to
-    the bucket.
-
     Args:
         connection (S3Connection): S3 connection manager for establishing
             client sessions.

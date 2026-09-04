@@ -1,10 +1,4 @@
-"""Build the S3 configuration from environment variables.
-
-S3 access is configured entirely through the environment. Ten flat settings, two
-of them secrets, six already carrying OTCloud's variable names — a config file
-would be machinery without structure to justify it, and secrets passed as CLI
-flags appear in `ps`. See `docs/adr/0003-configure-s3-via-environment.md`.
-"""
+"""Build the S3 configuration from environment variables."""
 
 import re
 from datetime import timedelta
@@ -35,7 +29,7 @@ class InvalidDurationError(StartupConfigError):
 class MissingS3ConfigError(StartupConfigError):
     """Raised when required S3 environment variables are not set.
 
-    Names every missing variable rather than only the first, so an operator can
+    Names every missing variable rather than only the first, so the user can
     fix them in one pass instead of one restart per variable.
 
     Attributes:

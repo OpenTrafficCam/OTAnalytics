@@ -8,7 +8,6 @@ class S3ListObjects:
     """Lists object keys from S3 storage under a given prefix.
 
     Handles pagination transparently via list_objects_v2 continuation tokens.
-    Copied from OTCloud — see `docs/adr/0001-duplicate-s3-layer.md`.
 
     Args:
         connection (S3Connection): S3 connection manager for establishing

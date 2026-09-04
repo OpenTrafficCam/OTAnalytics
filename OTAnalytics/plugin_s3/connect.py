@@ -12,8 +12,7 @@ class S3Connection:
     """Manages connections to AWS S3 or S3-compatible storage services.
 
     Provides functionality to establish asynchronous connections to S3 storage
-    using aioboto3. Copied from OTCloud — see
-    `docs/adr/0001-duplicate-s3-layer.md`.
+    using aioboto3.
     """
 
     def establish(self, config: S3Config) -> AsyncContextManager["S3Client"]:
