@@ -2,6 +2,10 @@ from abc import abstractmethod
 from functools import cached_property
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import DummyViewModel
+from OTAnalytics.adapter_ui.local_file_providers import (
+    LocalTrackFileProvider,
+    LocalVideoFileProvider,
+)
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
@@ -12,6 +16,10 @@ from OTAnalytics.application.use_cases.create_events import (
     MissingEventsSectionProvider,
     SectionProvider,
     SimpleCreateIntersectionEvents,
+)
+from OTAnalytics.application.use_cases.provide_input_files import (
+    ProvideTrackFiles,
+    ProvideVideoFiles,
 )
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.plugin_filter.pandas_track_id import PandasTrackIdProvider
@@ -139,7 +147,17 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             show_svz=self.run_config.show_svz,
             add_new_section=self.add_new_section,
             update_section_coordinates=self.update_section_coordinates,
+            provide_track_files=self.provide_track_files,
+            provide_video_files=self.provide_video_files,
         )
+
+    @cached_property
+    def provide_track_files(self) -> ProvideTrackFiles:
+        return LocalTrackFileProvider(self.ui_factory)
+
+    @cached_property
+    def provide_video_files(self) -> ProvideVideoFiles:
+        return LocalVideoFileProvider(self.ui_factory)
 
     @cached_property
     def application(self) -> OTAnalyticsApplication:
