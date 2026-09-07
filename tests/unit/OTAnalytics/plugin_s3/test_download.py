@@ -5,8 +5,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
 from OTAnalytics.plugin_s3.download import S3Download
-from tests.unit.OTAnalytics.plugin_s3.s3_config_builder import BUCKET, create_s3_config
-from tests.unit.OTAnalytics.plugin_s3.s3_connection_builder import create_connection
+from tests.utils.builders.s3_config_builder import BUCKET, create_s3_config
+from tests.utils.builders.s3_connection_builder import create_connection
 
 KEY = "project-1/site-1/OTCamera04/OTCamera04_2026-08-27_06-00-00.ottrk"
 PAYLOAD = b"ottrk-bytes"
