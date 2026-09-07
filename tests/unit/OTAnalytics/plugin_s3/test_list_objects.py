@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from unittest.mock import AsyncMock, Mock
 
 from OTAnalytics.plugin_s3.list_objects import S3ListObjects
-from tests.unit.OTAnalytics.plugin_s3.s3_config_builder import BUCKET, create_s3_config
-from tests.unit.OTAnalytics.plugin_s3.s3_connection_builder import create_connection
+from tests.utils.builders.s3_config_builder import BUCKET, create_s3_config
+from tests.utils.builders.s3_connection_builder import create_connection
 
 PREFIX = "project-1/site-1/OTCamera04/"
 
