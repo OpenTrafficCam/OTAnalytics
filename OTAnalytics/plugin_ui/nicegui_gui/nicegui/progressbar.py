@@ -15,7 +15,7 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.domain.progress import Counter, ProgressbarBuilder
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
-MARKER_CANCEL = "progressbar-cancel"
+MARKER_PROGRESSBAR_CANCEL = "progressbar-cancel"
 MARKER_MESSAGE = "progressbar-message"
 MARKER_CURRENT_ITEM = "progressbar-current-item"
 
@@ -53,14 +53,17 @@ class NiceguiProgressbar:
 
     @property
     def state(self) -> ProgressState:
+        """The progress being shown."""
         return self._state
 
     @property
     def counter(self) -> Counter:
+        """The counter advancing the progress."""
         return self._counter
 
     @property
     def cancellation(self) -> Cancellation:
+        """The signal set when the user presses cancel."""
         return self._cancellation
 
     @property
@@ -72,25 +75,27 @@ class NiceguiProgressbar:
         """Build and show the progressbar dialog.
 
         Does nothing without a browser to show it in, which is the case while
-        input files given on the command line are preloaded at startup.
+        input files given on the command line are preloaded at startup, and
+        nothing when there is no progress left to show, because only progress
+        closes the dialog again.
         """
-        if context.client.is_auto_index_client:
+        if context.client.is_auto_index_client or self._state.finished:
             return
         with ui.dialog().props("persistent") as dialog, ui.card().classes("w-96"):
             self._dialog = dialog
             self._message = ui.label(self._state.message)
             self._message.props(f"{TEST_ID}={MARKER_MESSAGE}")
-            self._bar = ui.linear_progress(
-                value=self._state.fraction, show_value=False
-            ).props("instant-feedback")
+            self._bar = ui.linear_progress(value=self._state.fraction).props(
+                "instant-feedback"
+            )
             self._item = ui.label(self._state.current_item)
             self._item.props(f"{TEST_ID}={MARKER_CURRENT_ITEM}")
             cancel = ui.button(
                 self._resource_manager.get(GeneralKeys.LABEL_CANCEL),
                 on_click=self._on_cancel,
             )
-            cancel.mark(MARKER_CANCEL)
-            cancel.props(f"{TEST_ID}={MARKER_CANCEL}")
+            cancel.mark(MARKER_PROGRESSBAR_CANCEL)
+            cancel.props(f"{TEST_ID}={MARKER_PROGRESSBAR_CANCEL}")
         dialog.open()
 
     def complete(self, item: str) -> None:
@@ -108,6 +113,7 @@ class NiceguiProgressbar:
         self._state.notify()
 
     def close(self) -> None:
+        """Hide the progressbar dialog."""
         if self._dialog:
             self._dialog.close()
 
@@ -139,6 +145,11 @@ class NiceguiProgressbarBuilder(ProgressbarBuilder):
 
     @property
     def progressbar(self) -> NiceguiProgressbar:
+        """The most recently built progressbar.
+
+        Raises:
+            ValueError: if no progressbar has been built yet.
+        """
         if self._progressbar is None:
             raise ValueError("No progressbar has been built yet")
         return self._progressbar
@@ -154,6 +165,8 @@ class NiceguiProgressbarBuilder(ProgressbarBuilder):
         Returns:
             NiceguiProgressbar: the opened progressbar.
         """
+        if self._progressbar:
+            self._progressbar.close()
         progressbar = NiceguiProgressbar(
             self._resource_manager, description, unit, total
         )
