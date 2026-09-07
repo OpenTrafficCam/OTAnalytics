@@ -70,7 +70,7 @@ def _build(given: Given) -> DummyViewModel:
 
 class TestLoadTracks:
     async def test_forwards_the_provided_files(self) -> None:
-        """# Requirement OP#10280"""
+        """#Requirement https://openproject.platomo.de/wp/10280"""
         given = create_given(tracks=TRACK_FILES)
         target = create_target(given)
 
@@ -81,6 +81,7 @@ class TestLoadTracks:
         )
 
     async def test_loads_nothing_when_the_provider_returns_nothing(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10280"""
         given = create_given(tracks=[])
         target = create_target(given)
 
@@ -91,7 +92,7 @@ class TestLoadTracks:
 
 class TestAddVideo:
     async def test_forwards_the_provided_files(self) -> None:
-        """# Requirement OP#10280"""
+        """#Requirement https://openproject.platomo.de/wp/10280"""
         given = create_given(videos=VIDEO_FILES)
         target = create_target(given)
 
@@ -100,6 +101,7 @@ class TestAddVideo:
         given.application.add_videos.assert_called_once_with(files=VIDEO_FILES)
 
     async def test_loads_nothing_when_the_provider_returns_nothing(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10280"""
         given = create_given(videos=[])
         target = create_target(given)
 
