@@ -5,7 +5,7 @@ from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.track_parser import TrackParser, TracksParseResult
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
-from OTAnalytics.domain.progress import ProgressbarBuilder, RunningProgressbar
+from OTAnalytics.domain.progress import CompletionProgress, ProgressbarBuilder
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 
@@ -80,7 +80,7 @@ class LoadTrackFiles:
             finally:
                 progressbar.close()
 
-    def _start_progress(self, files_to_load: list[Path]) -> RunningProgressbar:
+    def _start_progress(self, files_to_load: list[Path]) -> CompletionProgress:
         """Show that track files are being parsed until the caller closes it again.
 
         The parser reports nothing until it is done with all of the files, so this
@@ -91,7 +91,7 @@ class LoadTrackFiles:
             files_to_load (list[Path]): the files about to be parsed.
 
         Returns:
-            RunningProgressbar: the progressbar to close once the files are loaded.
+            CompletionProgress: the progress to close once the files are loaded.
         """
         return self._progressbar.start(
             PARSING_DESCRIPTION, PARSING_UNIT, len(files_to_load)
