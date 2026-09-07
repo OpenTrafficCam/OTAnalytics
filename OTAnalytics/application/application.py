@@ -309,16 +309,35 @@ class OTAnalyticsApplication:
         self._save_otconfig(file)
 
     def load_otconfig(self, file: Path) -> None:
+        """Load an otconfig, blocking. Outside an event loop only."""
         self._load_otconfig.load(file)
+
+    async def load_otconfig_async(self, file: Path) -> None:
+        """Load an otconfig without blocking the event loop.
+
+        Args:
+            file (Path): the otconfig file.
+        """
+        await self._load_otconfig.load_async(file)
 
     def add_tracks_of_files(self, track_files: list[Path]) -> None:
         """
         Load a multiple track files.
 
+        Outside an event loop only. Inside one use `add_tracks_of_files_async`.
+
         Args:
             track_files (list[Path]): files in ottrk format
         """
         self._load_track_files(track_files)
+
+    async def add_tracks_of_files_async(self, track_files: list[Path]) -> None:
+        """Load multiple track files without blocking the event loop.
+
+        Args:
+            track_files (list[Path]): files in ottrk format
+        """
+        await self._load_track_files.load(track_files)
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks."""

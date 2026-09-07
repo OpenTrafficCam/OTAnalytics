@@ -33,8 +33,11 @@ def create_given(
     provide_track_files.provide = AsyncMock(return_value=tracks or [])
     provide_video_files = Mock(spec=ProvideVideoFiles)
     provide_video_files.provide = AsyncMock(return_value=videos or [])
+    application = Mock()
+    application.add_tracks_of_files_async = AsyncMock()
+    application.load_otconfig_async = AsyncMock()
     return Given(
-        application=Mock(),
+        application=application,
         provide_track_files=provide_track_files,
         provide_video_files=provide_video_files,
     )
@@ -70,15 +73,20 @@ def _build(given: Given) -> DummyViewModel:
 
 class TestLoadTracks:
     async def test_forwards_the_provided_files(self) -> None:
-        """#Requirement https://openproject.platomo.de/wp/10280"""
+        """Loading is awaited so the ui keeps repainting while parsing runs.
+
+        #Requirement https://openproject.platomo.de/wp/10280
+        #Requirement https://openproject.platomo.de/wp/10282
+        """
         given = create_given(tracks=TRACK_FILES)
         target = create_target(given)
 
         await target.load_tracks()
 
-        given.application.add_tracks_of_files.assert_called_once_with(
+        given.application.add_tracks_of_files_async.assert_awaited_once_with(
             track_files=TRACK_FILES
         )
+        given.application.add_tracks_of_files.assert_not_called()
 
     async def test_loads_nothing_when_the_provider_returns_nothing(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10280"""
@@ -87,7 +95,7 @@ class TestLoadTracks:
 
         await target.load_tracks()
 
-        given.application.add_tracks_of_files.assert_not_called()
+        given.application.add_tracks_of_files_async.assert_not_awaited()
 
 
 class TestAddVideo:

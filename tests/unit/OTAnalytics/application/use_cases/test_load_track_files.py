@@ -1,3 +1,5 @@
+import asyncio
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -305,6 +307,118 @@ class TestLoadTrackFile:
         assert given.parsed_video_calls() == [
             (FOLDER_B / "b.mp4", given.parse_result.videos_metadata[0])
         ]
+
+
+class TestLoadTrackFilesInsideAnEventLoop:
+    """#Requirement https://openproject.platomo.de/wp/10282"""
+
+    async def test_blocking_call_refuses_to_run_on_the_event_loop(self) -> None:
+        """Parsing on the event loop freezes the webui for every connected client."""
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"class1"},
+        )
+        target = create_target(given)
+
+        with pytest.raises(RuntimeError):
+            target([some_file])
+
+        given.track_parser.parse_files.assert_not_called()
+
+
+class TestLoadTrackFilesOffTheEventLoop:
+    """#Requirement https://openproject.platomo.de/wp/10282"""
+
+    async def test_parses_only_the_files_not_already_loaded(self) -> None:
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[other_file],
+            existing_track_files=[some_file],
+            classes={"class1"},
+        )
+        target = create_target(given)
+
+        await target.load([some_file, other_file])
+
+        given.track_parser.parse_files.assert_called_once_with([other_file])
+
+    def test_publishes_in_the_same_order_as_the_blocking_call(self) -> None:
+        classes = {"class1", "class2"}
+        arguments = dict(
+            track_ids=[TrackId("1"), TrackId("2")],
+            video_files=[Path("video1.mp4"), Path("video2.mp4")],
+            track_files=[some_file, other_file],
+            existing_track_files=[],
+            classes=classes,
+        )
+        blocking = setup(**arguments)  # type: ignore[arg-type]
+        create_target(blocking)([some_file, other_file])
+
+        awaited = setup(**arguments)  # type: ignore[arg-type]
+        asyncio.run(create_target(awaited).load([some_file, other_file]))
+
+        # the two runs hold distinct mocks, so compare what was called in what
+        # order rather than the mock instances passed along
+        assert call_names(awaited) == call_names(blocking)
+        assert awaited.track_repository.add_all.call_count == 1
+
+    async def test_parses_off_the_event_loop_and_publishes_on_it(self) -> None:
+        """Repositories notify observers that mutate widgets, so publishing must
+        stay on the event loop while the expensive parse does not."""
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"class1"},
+        )
+        threads: dict[str, threading.Thread] = {}
+        given.track_parser.parse_files.side_effect = (
+            lambda files: threads.setdefault("parse", threading.current_thread())
+            and given.parse_result
+        )
+        given.track_repository.add_all.side_effect = lambda tracks: threads.setdefault(
+            "publish", threading.current_thread()
+        )
+        target = create_target(given)
+
+        await target.load([some_file])
+
+        assert threads["parse"] is not threading.current_thread()
+        assert threads["publish"] is threading.current_thread()
+
+    async def test_parses_before_publishing_anything(self) -> None:
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"class1"},
+        )
+        published_during_parse: list[list] = []
+
+        def record_publishes_so_far(files: list[Path]) -> Any:
+            published_during_parse.append(
+                list(given.track_repository.add_all.call_args_list)
+            )
+            return given.parse_result
+
+        given.track_parser.parse_files.side_effect = record_publishes_so_far
+        target = create_target(given)
+
+        await target.load([some_file])
+
+        assert published_during_parse == [[]]
+        given.track_repository.add_all.assert_called_once()
+
+
+def call_names(given: "Given") -> list[str]:
+    """The collaborator methods called, in call order."""
+    return [name for name, _, _ in given.order.mock_calls]
 
 
 @dataclass
