@@ -100,7 +100,8 @@ class Cancellation:
     """A signal that a long running operation should be abandoned.
 
     The signal can be polled via `is_cancelled` from synchronous code and
-    awaited via `wait` from the event loop.
+    awaited via `wait` from the event loop. Cancel from the event loop only:
+    `wait` is backed by an `asyncio.Event`, which is not thread safe.
     """
 
     def __init__(self) -> None:
@@ -147,6 +148,7 @@ class ProgressState:
 
     @property
     def description(self) -> str:
+        """What the operation being tracked is doing."""
         return self._description
 
     @property
@@ -163,6 +165,7 @@ class ProgressState:
 
     @property
     def message(self) -> str:
+        """How many of the expected items are done, as shown to the user."""
         return (
             f"{self._description} {self._counter.get_value()}"
             f" / {self._total} {self._unit}"
@@ -170,6 +173,7 @@ class ProgressState:
 
     @property
     def finished(self) -> bool:
+        """Whether every expected item is done. An empty operation is finished."""
         return self._counter.get_value() >= self._total
 
     def complete(self, item: str) -> None:

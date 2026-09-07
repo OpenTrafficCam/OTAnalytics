@@ -9,7 +9,7 @@ from nicegui.testing import User
 from OTAnalytics.application.progress import Cancellation
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
-    MARKER_CANCEL,
+    MARKER_PROGRESSBAR_CANCEL,
     NiceguiProgressbar,
     NiceguiProgressbarBuilder,
 )
@@ -77,7 +77,7 @@ class TestNiceguiProgressbar:
         await user.open("/test")
         assert given.cancellation.is_cancelled is False
 
-        user.find(marker=MARKER_CANCEL).click()
+        user.find(marker=MARKER_PROGRESSBAR_CANCEL).click()
 
         assert given.cancellation.is_cancelled is True
         assert target.is_open is False
@@ -133,6 +133,40 @@ class TestNiceguiProgressbarBuilder:
         ]
         assert target.progressbar.state.message == "Parsing 4 / 4 files"
         assert target.progressbar.state.finished is True
+
+    @pytest.mark.asyncio
+    async def test_shows_nothing_for_an_empty_sequence(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """There is no progress to show, and nothing would ever close it again."""
+        given = create_given(resource_manager)
+        target = create_builder(given)
+
+        @ui.page("/test")
+        def page() -> None:
+            list(target([], "Parsing", "files"))
+
+        await user.open("/test")
+
+        assert target.progressbar.is_open is False
+
+    @pytest.mark.asyncio
+    async def test_closes_the_previous_progressbar(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        given = create_given(resource_manager)
+        target = create_builder(given)
+        progressbars = []
+
+        @ui.page("/test")
+        def page() -> None:
+            progressbars.append(target.build("Downloading", "files", 2))
+            progressbars.append(target.build("Parsing", "files", 2))
+
+        await user.open("/test")
+
+        assert progressbars[0].is_open is False
+        assert progressbars[1].is_open is True
 
 
 class TestProgressbarWithoutABrowser:
