@@ -1,6 +1,7 @@
 from pathlib import Path
+from typing import Awaitable, Callable
 
-from OTAnalytics.application.parser.config_parser import ConfigParser
+from OTAnalytics.application.parser.config_parser import ConfigParser, OtConfig
 from OTAnalytics.application.parser.deserializer import Deserializer
 from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
@@ -44,29 +45,66 @@ class LoadOtconfig:
         self._subject = Subject[ConfigurationFile]()
 
     def load(self, file: Path) -> None:
-        self._reset_application.reset()
-        config = self._config_parser.parse(file)
+        """Load an otconfig and its track files, blocking.
+
+        For use outside an event loop only, such as preloading a config file given
+        on the command line at startup. Inside an event loop use `load_async`.
+
+        Args:
+            file (Path): the otconfig file.
+        """
+        self._apply(file, self._load_track_files)
+
+    async def load_async(self, file: Path) -> None:
+        """Load an otconfig and its track files, keeping the ui responsive.
+
+        Args:
+            file (Path): the otconfig file.
+        """
+        await self._apply_async(file, self._load_track_files.load)
+
+    def _apply(self, file: Path, load_track_files: Callable[[list], None]) -> None:
+        config = self._begin(file)
         try:
-            self._update_project(
-                config.project.name, config.project.start_date, config.project.metadata
-            )
-            self._add_videos.add(config.videos)
-            self._add_sections.add(config.sections)
-            self._add_flows.add(config.flows)
-            self._load_track_files(list(config.analysis.track_files))
-            if config.remark:
-                self._add_new_remark.add(config.remark)
-            self._subject.notify(
-                ConfigurationFile(
-                    file,
-                    self._deserialize(file),
-                )
-            )
+            self._publish_before_tracks(config)
+            load_track_files(list(config.analysis.track_files))
+            self._publish_after_tracks(file, config)
         except (SectionAlreadyExists, FlowAlreadyExists) as cause:
-            self._reset_application.reset()
-            raise UnableToLoadOtconfigFile(
-                "Error while loading otconfig file. Abort loading!"
-            ) from cause
+            self._abort(cause)
+
+    async def _apply_async(
+        self, file: Path, load_track_files: Callable[[list], Awaitable[None]]
+    ) -> None:
+        config = self._begin(file)
+        try:
+            self._publish_before_tracks(config)
+            await load_track_files(list(config.analysis.track_files))
+            self._publish_after_tracks(file, config)
+        except (SectionAlreadyExists, FlowAlreadyExists) as cause:
+            self._abort(cause)
+
+    def _begin(self, file: Path) -> OtConfig:
+        self._reset_application.reset()
+        return self._config_parser.parse(file)
+
+    def _publish_before_tracks(self, config: OtConfig) -> None:
+        self._update_project(
+            config.project.name, config.project.start_date, config.project.metadata
+        )
+        self._add_videos.add(config.videos)
+        self._add_sections.add(config.sections)
+        self._add_flows.add(config.flows)
+
+    def _publish_after_tracks(self, file: Path, config: OtConfig) -> None:
+        if config.remark:
+            self._add_new_remark.add(config.remark)
+        self._subject.notify(ConfigurationFile(file, self._deserialize(file)))
+
+    def _abort(self, cause: Exception) -> None:
+        self._reset_application.reset()
+        raise UnableToLoadOtconfigFile(
+            "Error while loading otconfig file. Abort loading!"
+        ) from cause
 
     def register(self, observer: OBSERVER[ConfigurationFile]) -> None:
         self._subject.register(observer)
