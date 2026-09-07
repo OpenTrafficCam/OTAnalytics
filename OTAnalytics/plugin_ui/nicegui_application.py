@@ -3,12 +3,14 @@ from typing import Protocol
 
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.domain.progress import ProgressbarBuilder
-from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     PilImageFactory,
     TrackImageFactory,
 )
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
+    NiceguiProgressbarBuilder,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
     AddTracksForm,
 )
@@ -233,7 +235,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def progressbar_builder(self) -> ProgressbarBuilder:
-        return TqdmBuilder()
+        return NiceguiProgressbarBuilder(self.resource_manager)
 
     @cached_property
     def track_image_factory(self) -> TrackImageFactory:
