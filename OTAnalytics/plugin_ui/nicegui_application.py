@@ -2,6 +2,8 @@ from functools import cached_property
 from pathlib import Path
 from typing import Protocol
 
+from nicegui import app as nicegui_app
+
 from OTAnalytics.adapter_ui.local_file_providers import (
     LocalTrackFileProvider,
     LocalVideoFileProvider,
@@ -133,6 +135,9 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         # or a docker kill left staged from the previous run.
         if wipe := self.wipe_user_source:
             wipe.wipe()
+            # Best effort on SIGTERM/SIGINT. The startup wipe above is the
+            # guarantee; this only shortens how long orphans sit on disk.
+            nicegui_app.on_shutdown(wipe.wipe)
         self.preload_input_files.load(self.run_config)
         return NiceguiWebserver(
             page_builders=[main_page_builder],

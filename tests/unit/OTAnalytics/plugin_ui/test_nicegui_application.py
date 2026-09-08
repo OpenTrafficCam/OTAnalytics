@@ -82,3 +82,29 @@ class TestOtAnalyticsNiceGuiApplicationStarter:
         target = OtAnalyticsNiceGuiApplicationStarter(Mock(spec=RunConfiguration))
 
         assert isinstance(target.progressbar_builder, NiceguiProgressbarBuilder)
+
+
+class TestUserSourceLifecycle:
+    """#Requirement https://openproject.platomo.de/wp/10283"""
+
+    def test_local_mode_stages_nothing_to_wipe(self, local_mode: None) -> None:
+        target = create_target(create_given())
+
+        assert target.wipe_user_source is None
+
+    def test_s3_mode_wipes_the_configured_user_source(
+        self, s3_mode: None, tmp_path: Path
+    ) -> None:
+        target = create_target(create_given())
+        wipe = target.wipe_user_source
+
+        assert wipe is not None
+
+        staged = tmp_path / "user-source" / "cam19" / "a.ottrk"
+        staged.parent.mkdir(parents=True)
+        staged.write_bytes(b"tracks")
+
+        wipe.wipe()
+
+        assert not staged.exists()
+        assert (tmp_path / "user-source").is_dir()
