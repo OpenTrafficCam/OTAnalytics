@@ -5,10 +5,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
+from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.domain.load_window import LoadWindow
 from OTAnalytics.plugin_s3.download_objects import DownloadCancelled
 from OTAnalytics.plugin_s3.s3_file_providers import (
-    AskForLoadWindow,
     S3TrackFileProvider,
     S3VideoFileProvider,
 )
@@ -56,6 +56,7 @@ def create_given(
         downloads=[],
     )
     given.config.key_prefix = PREFIX
+    given.config.bucket = "recordings"
     given.config.max_load_duration = MAXIMUM
     given.dialog.ask = AsyncMock(
         return_value=(

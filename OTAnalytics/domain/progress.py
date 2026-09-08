@@ -102,13 +102,6 @@ class NoCompletionProgress(CompletionProgress):
         return False
 
 
-class NoCompletionProgressBuilder(CompletionProgressBuilder):
-    """Builds progress that shows nothing."""
-
-    def build(self, description: str, unit: str, total: int) -> CompletionProgress:
-        return NoCompletionProgress()
-
-
 class ProgressbarBuilder(ABC):
     """Interface defining a Progressbar builder.
 

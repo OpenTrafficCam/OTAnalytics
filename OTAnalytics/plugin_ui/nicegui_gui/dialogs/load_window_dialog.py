@@ -9,8 +9,8 @@ from OTAnalytics.application.resources.resource_manager import (
     LoadWindowKeys,
     ResourceManager,
 )
+from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.domain.load_window import LoadWindow
-from OTAnalytics.plugin_s3.s3_file_providers import AskForLoadWindow
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import DateTimeForm
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
@@ -20,6 +20,7 @@ MARKER_END_DATE = "load-window-end-date"
 MARKER_END_TIME = "load-window-end-time"
 MARKER_LOAD = "load-window-load"
 MARKER_CANCEL = "load-window-cancel"
+MARKER_SOURCE = "load-window-source"
 
 
 class LoadWindowDialog(AskForLoadWindow):
@@ -36,11 +37,13 @@ class LoadWindowDialog(AskForLoadWindow):
     def __init__(self, resource_manager: ResourceManager) -> None:
         self._resource_manager = resource_manager
 
-    async def ask(self, title: str) -> LoadWindow | None:
+    async def ask(self, title: str, source: str) -> LoadWindow | None:
         """Ask for the time range to load.
 
         Args:
             title (str): the dialog title.
+            source (str): where the files will come from, shown so the user can
+                see which site they are loading, since they cannot choose it.
 
         Returns:
             LoadWindow | None: the selected window, None if the user cancelled.
@@ -59,6 +62,7 @@ class LoadWindowDialog(AskForLoadWindow):
         )
         with ui.dialog() as dialog, ui.card().classes("w-96"):
             ui.label(title).classes("text-lg")
+            ui.label(source).classes("text-xs").mark(MARKER_SOURCE)
             start.build()
             end.build()
             ui.label(self._label(LoadWindowKeys.LABEL_UTC_HINT)).classes("text-xs")
