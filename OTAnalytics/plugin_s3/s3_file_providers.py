@@ -70,6 +70,15 @@ class AskForLoadWindow(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def report_error(self, message: str) -> None:
+        """Tell the user why nothing could be loaded.
+
+        Args:
+            message (str): what went wrong, in the user's terms.
+        """
+        raise NotImplementedError
+
 
 def read_video_name(ottrk: Path) -> str:
     """Read the name of the video a track file was produced from.
@@ -171,6 +180,10 @@ class S3TrackFileProvider(_S3Provider, ProvideTrackFiles):
             await self._download_objects.download_all(video_keys, DOWNLOADING_VIDEOS)
         except DownloadCancelled:
             logger().info("Loading from S3 cancelled. Nothing was loaded.")
+            return []
+        except MissingVideoForTrackFile as cause:
+            logger().warning(str(cause))
+            self._dialog.report_error(str(cause))
             return []
         return track_files
 
