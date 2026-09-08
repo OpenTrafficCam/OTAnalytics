@@ -127,6 +127,21 @@ class TestLoadWindowDialog:
             resource_manager.get(LoadWindowKeys.MESSAGE_CLAMPED), retries=200
         )
 
+    async def test_reports_why_nothing_could_be_loaded(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        given = create_given(resource_manager)
+        target = create_target(given)
+        message = "'a.ottrk' needs video 'a.mp4', which is not in bucket 'recordings'."
+
+        @ui.page("/test")
+        def page() -> None:
+            target.report_error(message)
+
+        await user.open("/test")
+
+        await user.should_see(message, retries=200)
+
 
 class TestRejectedSelections:
     """#Requirement https://openproject.platomo.de/wp/10283"""

@@ -89,6 +89,14 @@ class LoadWindowDialog(AskForLoadWindow):
         message = self._label(LoadWindowKeys.MESSAGE_CLAMPED)
         ui.notify(f"{message} {window.end:%Y-%m-%d %H:%M:%S} UTC.", type="warning")
 
+    def report_error(self, message: str) -> None:
+        """Tell the user why nothing could be loaded.
+
+        Args:
+            message (str): what went wrong, in the user's terms.
+        """
+        ui.notify(message, type="negative", multi_line=True)
+
     def _submit(
         self, dialog: ui.dialog, start: datetime | None, end: datetime | None
     ) -> None:
