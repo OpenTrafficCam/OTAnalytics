@@ -1,18 +1,10 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import (
-    Any,
-    Callable,
-    Generator,
-    Iterable,
-    Iterator,
-    Optional,
-    Sequence,
-    cast,
-)
+from typing import Any, Optional, cast
 
 import numpy
 import polars as pl

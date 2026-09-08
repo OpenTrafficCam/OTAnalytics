@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from math import floor
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
 from OTAnalytics.domain.files import build_relative_path
 from OTAnalytics.domain.track import TrackImage

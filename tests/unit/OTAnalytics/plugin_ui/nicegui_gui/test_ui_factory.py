@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import build_file_extensions
 

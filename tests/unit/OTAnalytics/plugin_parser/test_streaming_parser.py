@@ -1,6 +1,6 @@
+from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import AsyncIterator
 from unittest.mock import Mock
 
 import pytest

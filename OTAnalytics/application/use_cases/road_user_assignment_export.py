@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, Protocol, Self
+from typing import Protocol, Self
 
 from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignment,

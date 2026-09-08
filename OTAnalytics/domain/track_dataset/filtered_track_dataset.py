@@ -1,6 +1,7 @@
 from abc import abstractmethod
+from collections.abc import Iterator
 from datetime import datetime
-from typing import Iterator, Optional
+from typing import Optional
 
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import Section, SectionId

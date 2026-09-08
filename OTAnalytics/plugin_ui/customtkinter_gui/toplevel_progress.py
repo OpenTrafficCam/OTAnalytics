@@ -1,5 +1,6 @@
+from collections.abc import Sequence
 from tkinter import Widget
-from typing import Any, Optional, Sequence
+from typing import Any, Optional
 
 from customtkinter import CTkLabel, CTkProgressBar, CTkToplevel
 

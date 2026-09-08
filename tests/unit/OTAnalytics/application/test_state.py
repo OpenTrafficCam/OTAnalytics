@@ -1,6 +1,7 @@
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 from unittest.mock import Mock, call
 
 import pytest

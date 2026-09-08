@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from bisect import bisect
+from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Any, Callable, Generator, Iterable, Iterator, Optional, Sequence
+from typing import Any, Optional
 
 import numpy
 import pandas

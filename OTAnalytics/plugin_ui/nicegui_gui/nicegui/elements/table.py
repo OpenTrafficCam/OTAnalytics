@@ -1,6 +1,7 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from types import SimpleNamespace
-from typing import Any, Callable, List, Literal
+from typing import Any, Literal
 
 from nicegui import ui
 from nicegui.elements.table import Table
@@ -52,8 +53,8 @@ class CustomTable:
 
     def __init__(
         self,
-        columns: List[dict],
-        rows: List[dict],
+        columns: list[dict],
+        rows: list[dict],
         title: str = "",
         header_slot: str = "",
         body_slot: str = "",
@@ -124,7 +125,7 @@ class CustomTable:
         for table_callback in self._observers:
             self._table.on(table_callback.event_name, table_callback.callback)
 
-    def update(self, rows: List[dict]) -> None:
+    def update(self, rows: list[dict]) -> None:
         """Update the contents of this table.
 
         Args:

@@ -1,8 +1,9 @@
 from bisect import bisect
 from collections import defaultdict
+from collections.abc import Iterable, Sequence
 from functools import partial
 from itertools import chain
-from typing import Any, Iterable, Literal, Sequence
+from typing import Any, Literal
 
 from numpy import dtype, ndarray, object_
 from pandas import DataFrame, Series, concat

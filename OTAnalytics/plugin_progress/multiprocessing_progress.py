@@ -1,6 +1,6 @@
+from collections.abc import Sequence
 from multiprocessing.managers import ValueProxy
 from threading import Lock
-from typing import Sequence
 
 from OTAnalytics.adapter_ui.abstract_progressbar_popup import ProgressbarPopupBuilder
 from OTAnalytics.application.progress import ManualIncrementingProgressbar

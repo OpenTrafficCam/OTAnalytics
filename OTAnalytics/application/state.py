@@ -1,9 +1,10 @@
 import bisect
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Generic, Optional
+from typing import Generic, Optional
 
 from OTAnalytics.application.analysis.traffic_counting import CountImage
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET

@@ -1,5 +1,4 @@
-"""Defines the dictionary keys to access an ottrk file.
-"""
+"""Defines the dictionary keys to access an ottrk file."""
 
 DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
 

@@ -1,6 +1,6 @@
+from collections.abc import Iterator
 from multiprocessing import Manager, Pool, cpu_count
 from multiprocessing.managers import SyncManager
-from typing import Iterator
 from unittest.mock import Mock
 
 import pytest

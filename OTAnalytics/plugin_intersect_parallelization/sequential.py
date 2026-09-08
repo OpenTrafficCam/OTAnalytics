@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 
 from OTAnalytics.domain.event import EventDataset, PythonEventDataset
 from OTAnalytics.domain.intersect import IntersectParallelizationStrategy

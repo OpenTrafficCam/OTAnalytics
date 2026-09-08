@@ -3,8 +3,9 @@ from __future__ import annotations
 import subprocess
 import sys
 import time
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator, TypeVar
+from typing import TypeVar
 
 import pytest
 import requests

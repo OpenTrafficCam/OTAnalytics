@@ -1,8 +1,9 @@
 from collections import defaultdict
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from math import ceil
-from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
+from typing import Any, Optional
 
 from more_itertools import batched
 

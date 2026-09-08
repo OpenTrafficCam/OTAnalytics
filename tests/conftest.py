@@ -1,6 +1,7 @@
 import shutil
+from collections.abc import Generator, Sequence
 from pathlib import Path
-from typing import Any, Generator, List, Sequence, TypeVar
+from typing import Any, TypeVar
 from unittest.mock import Mock
 
 import pytest
@@ -437,8 +438,8 @@ def second_road_user_assignment(
 
 def assert_shown_files(
     picker: Any,
-    expected_included: List[str],
-    expected_excluded: List[str],
+    expected_included: list[str],
+    expected_excluded: list[str],
     expected_count: int,
 ) -> None:
     """
@@ -446,8 +447,8 @@ def assert_shown_files(
 
     Args:
         picker: The LocalFilePicker instance to test
-        expected_included: List of file names that should be shown
-        expected_excluded: List of file names that should not be shown
+        expected_included: list of file names that should be shown
+        expected_excluded: list of file names that should not be shown
         expected_count: Expected total number of items in the grid
     """
     # Get row data from picker grid - handle both access patterns

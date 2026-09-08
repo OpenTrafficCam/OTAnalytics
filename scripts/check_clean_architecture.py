@@ -27,7 +27,6 @@ import sys
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 
 class ArchitecturalLayer(Enum):
@@ -57,7 +56,7 @@ class ImportViolation:
 class CleanArchitectureChecker:
     def __init__(self, project_root: str = "OTAnalytics"):
         self.project_root = Path(project_root)
-        self.violations: List[ImportViolation] = []
+        self.violations: list[ImportViolation] = []
 
         # Define layer hierarchy (inner to outer)
         self.layer_hierarchy = [
@@ -116,7 +115,7 @@ class CleanArchitectureChecker:
             # If layer not found in hierarchy, be permissive
             return True
 
-    def extract_imports_from_file(self, file_path: Path) -> List[Tuple[int, str]]:
+    def extract_imports_from_file(self, file_path: Path) -> list[tuple[int, str]]:
         """Extract all import statements from a Python file"""
         try:
             with open(file_path, "r", encoding="utf-8") as f:
@@ -225,7 +224,7 @@ class CleanArchitectureChecker:
         print()
 
         # Group violations by file
-        violations_by_file: dict[str, List[ImportViolation]] = {}
+        violations_by_file: dict[str, list[ImportViolation]] = {}
         for violation in self.violations:
             if violation.file_path not in violations_by_file:
                 violations_by_file[violation.file_path] = []
@@ -243,7 +242,7 @@ class CleanArchitectureChecker:
                     )
             print()
 
-    def get_summary(self) -> Dict[str, int]:
+    def get_summary(self) -> dict[str, int]:
         """Get a summary of violations by layer"""
         summary: dict[str, int] = {}
         for violation in self.violations:

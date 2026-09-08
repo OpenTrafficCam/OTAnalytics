@@ -1,5 +1,5 @@
 import contextlib
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from OTAnalytics.application.application import CancelAddSection
 from OTAnalytics.application.use_cases.section_repository import AddSection
