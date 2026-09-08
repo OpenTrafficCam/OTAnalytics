@@ -193,6 +193,18 @@ class TestS3TrackFileProvider:
 
         assert await target.provide() == []
 
+    async def test_a_failed_download_is_explained_rather_than_raised(self) -> None:
+        """A raw traceback in the browser tells the user nothing useful."""
+        given = create_given()
+        given.download_objects.download_all = AsyncMock(
+            side_effect=RuntimeError("the bucket said no")
+        )
+        target = create_track_target(given)
+
+        assert await target.provide() == []
+
+        given.dialog.report_error.assert_called_once()
+
     async def test_an_over_long_window_is_clamped_and_reported(self) -> None:
         given = create_given(
             window=LoadWindow(start=START, end=START + timedelta(hours=24))

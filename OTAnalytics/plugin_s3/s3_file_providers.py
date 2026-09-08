@@ -131,9 +131,19 @@ class _S3Provider:
         except DownloadCancelled:
             logger().info(CANCELLED)
             return []
-        except (MissingVideoForTrackFile, UnreadableTrackFile, OSError) as cause:
+        except (MissingVideoForTrackFile, UnreadableTrackFile) as cause:
             logger().warning(str(cause))
             self._dialog.report_error(str(cause))
+            return []
+        except Exception as cause:
+            # The boundary of a user action: anything the bucket, the network or
+            # the filesystem throws would otherwise surface as a traceback in the
+            # browser. The traceback still goes to the log.
+            logger().exception(cause, exc_info=True)
+            self._dialog.report_error(
+                f"Could not load from '{self._source()}': {cause}."
+                " Nothing was loaded."
+            )
             return []
 
     async def _load(
