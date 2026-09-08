@@ -6,6 +6,8 @@ from pathlib import Path
 from OTAnalytics.domain.progress import CompletionProgressBuilder
 from OTAnalytics.plugin_s3.download import S3Download
 
+CANCEL_POLL_INTERVAL = 0.1
+
 
 class DownloadCancelled(Exception):
     """Raised when the user abandoned a download."""
@@ -66,6 +68,18 @@ class DownloadObjects:
                 await self._download.download(key, destination)
                 progress.complete(Path(key).name)
                 return destination
+
+        async def watch_for_cancel(downloads: list[asyncio.Task]) -> None:
+            """Abandon the load as soon as the user asks, mid-download.
+
+            Checking only as each download starts would let a cancel go
+            unnoticed until a slot frees, which for a multi-gigabyte load is
+            far too late to feel like cancelling.
+            """
+            while not all(download.done() for download in downloads):
+                if progress.is_cancelled:
+                    raise DownloadCancelled(description)
+                await asyncio.sleep(CANCEL_POLL_INTERVAL)
 
         try:
             return list(await asyncio.gather(*(download_one(key) for key in keys)))

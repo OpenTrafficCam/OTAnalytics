@@ -9,6 +9,7 @@ from OTAnalytics.adapter_ui.local_file_providers import (
     LocalVideoFileProvider,
 )
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
+from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideTrackFiles,
     ProvideVideoFiles,
@@ -29,7 +30,6 @@ from OTAnalytics.plugin_s3.download import S3Download
 from OTAnalytics.plugin_s3.download_objects import DownloadObjects
 from OTAnalytics.plugin_s3.list_objects import S3ListObjects
 from OTAnalytics.plugin_s3.s3_file_providers import (
-    AskForLoadWindow,
     S3TrackFileProvider,
     S3VideoFileProvider,
 )
@@ -268,6 +268,15 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def progressbar_builder(self) -> ProgressbarBuilder:
+        return self.nicegui_progressbar_builder
+
+    @cached_property
+    def nicegui_progressbar_builder(self) -> NiceguiProgressbarBuilder:
+        """One builder for the whole application.
+
+        It keeps the most recently built progressbar reachable, so a second
+        instance would split that state between two owners.
+        """
         return NiceguiProgressbarBuilder(self.resource_manager)
 
     @cached_property
@@ -345,7 +354,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             download=S3Download(self.s3_connection, config),
             user_source=Path(config.user_source),
             concurrency=config.download_concurrency,
-            progressbar_builder=NiceguiProgressbarBuilder(self.resource_manager),
+            progressbar_builder=self.nicegui_progressbar_builder,
         )
 
     def _required_s3_config(self) -> S3Config:
