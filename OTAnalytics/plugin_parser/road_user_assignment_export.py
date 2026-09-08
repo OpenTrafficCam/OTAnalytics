@@ -1,4 +1,5 @@
-from typing import Iterable, Literal
+from collections.abc import Iterable
+from typing import Literal
 
 from pandas import DataFrame
 

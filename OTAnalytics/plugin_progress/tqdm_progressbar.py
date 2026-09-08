@@ -1,4 +1,5 @@
-from typing import Any, Iterator, Sequence
+from collections.abc import Iterator, Sequence
+from typing import Any
 
 from tqdm import tqdm
 

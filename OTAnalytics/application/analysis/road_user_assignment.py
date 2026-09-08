@@ -1,8 +1,8 @@
 import itertools
 from abc import ABC, abstractmethod
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from OTAnalytics.application.logger import logger as logging
 from OTAnalytics.domain.event import Event

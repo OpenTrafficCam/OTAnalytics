@@ -1,4 +1,5 @@
-from typing import Callable, Iterable, Protocol
+from collections.abc import Callable, Iterable
+from typing import Protocol
 
 from OTAnalytics.application.analysis.intersect import (
     RunIntersect,

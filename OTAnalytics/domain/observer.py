@@ -1,4 +1,5 @@
-from typing import Callable, Generic, TypeVar
+from collections.abc import Callable
+from typing import Generic, TypeVar
 
 VALUE = TypeVar("VALUE")
 OBSERVER = Callable[[VALUE], None]

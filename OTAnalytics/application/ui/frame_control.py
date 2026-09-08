@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from datetime import timedelta
-from typing import Sequence
 
 from OTAnalytics.application.state import SectionState, TrackViewState, VideosMetadata
 from OTAnalytics.application.use_cases.filter_visualization import CreateDefaultFilter

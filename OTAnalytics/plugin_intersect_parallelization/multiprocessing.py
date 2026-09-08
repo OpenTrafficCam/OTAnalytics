@@ -1,5 +1,5 @@
+from collections.abc import Callable, Iterable, Sequence
 from multiprocessing import Pool
-from typing import Callable, Iterable, Sequence
 
 from OTAnalytics.application.config import DEFAULT_NUM_PROCESSES
 from OTAnalytics.application.logger import logger

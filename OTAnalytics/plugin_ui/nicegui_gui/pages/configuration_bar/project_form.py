@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Optional, Self
+from typing import Any, Optional, Self
 
 from nicegui import ui
 from nicegui.elements.button import Button

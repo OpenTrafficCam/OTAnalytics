@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable
 
 from OTAnalytics.application.config import CONTEXT_FILE_TYPE_EVENTS
 from OTAnalytics.application.export_formats.export_mode import ExportMode

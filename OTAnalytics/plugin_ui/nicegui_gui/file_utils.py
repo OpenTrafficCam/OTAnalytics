@@ -1,7 +1,7 @@
 """Utility functions for file operations in the NiceGUI UI."""
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
 

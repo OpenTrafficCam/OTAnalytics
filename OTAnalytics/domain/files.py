@@ -1,7 +1,7 @@
+from collections.abc import Callable
 from os import path
 from os.path import normcase, splitdrive
 from pathlib import Path
-from typing import Callable
 
 
 class DifferentDrivesException(Exception):

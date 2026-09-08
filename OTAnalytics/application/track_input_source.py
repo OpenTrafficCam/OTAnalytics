@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import AsyncIterator
 
 
 class OttrkFileInputSource(ABC):

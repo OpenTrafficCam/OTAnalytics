@@ -1,7 +1,7 @@
 import bz2
 from abc import ABC
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import ijson
 

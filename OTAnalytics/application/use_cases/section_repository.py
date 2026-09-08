@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from OTAnalytics.application.config import CLI_CUTTING_SECTION_MARKER
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate

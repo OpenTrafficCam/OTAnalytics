@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -18,10 +18,10 @@ class TestLocalFilePicker:
         self, user: User
     ) -> None:
         test_dir: Path = Path("/tmp")
-        extensions: List[str] = [".txt", ".py", ".md"]
+        extensions: list[str] = [".txt", ".py", ".md"]
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-file-picker-init")
         def test_page() -> None:
@@ -45,7 +45,7 @@ class TestLocalFilePicker:
         extension: str = ".txt"
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-file-picker-backward")
         def test_page() -> None:
@@ -69,10 +69,10 @@ class TestLocalFilePicker:
     ) -> None:
         """Test that files are filtered correctly with multiple extensions."""
         test_dir: Path = Path("/tmp")
-        extensions: List[str] = [".txt", ".py"]
+        extensions: list[str] = [".txt", ".py"]
 
         # Mock file paths
-        mock_files: List[Mock] = [
+        mock_files: list[Mock] = [
             Mock(
                 spec=Path,
                 suffix=".txt",
@@ -108,7 +108,7 @@ class TestLocalFilePicker:
         mock_glob.return_value = mock_files
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-file-filtering-multiple")
         def test_page() -> None:
@@ -187,7 +187,7 @@ class TestLocalFilePicker:
         extension: str = ".txt"
 
         # Mock file paths
-        mock_files: List[Mock] = [
+        mock_files: list[Mock] = [
             Mock(
                 spec=Path,
                 suffix=".txt",
@@ -216,7 +216,7 @@ class TestLocalFilePicker:
         mock_glob.return_value = mock_files
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-file-filtering-single")
         def test_page() -> None:
@@ -258,7 +258,7 @@ class TestLocalFilePicker:
         test_dir = Path("/tmp")
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-file-picker-no-filtering")
         def test_page() -> None:
@@ -278,7 +278,7 @@ class TestLocalFilePicker:
         test_dir = Path("/tmp")
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-file-picker-extension-enabled")
         def test_page() -> None:
@@ -303,7 +303,7 @@ class TestLocalFilePicker:
         test_dir = Path("/tmp")
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-file-picker-extension-disabled")
         def test_page() -> None:
@@ -323,7 +323,7 @@ class TestLocalFilePicker:
         test_dir = Path("/tmp")
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-extension-filter-update")
         def test_page() -> None:
@@ -355,7 +355,7 @@ class TestLocalFilePicker:
         test_dir: Path = Path("/tmp")
 
         # Mock file paths
-        mock_files: List[Mock] = [
+        mock_files: list[Mock] = [
             Mock(
                 spec=Path,
                 suffix=".txt",
@@ -391,7 +391,7 @@ class TestLocalFilePicker:
         mock_glob.return_value = mock_files
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-dropdown-filter-priority")
         def test_page() -> None:

@@ -1,5 +1,6 @@
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Optional, Self, Sequence
+from typing import Optional, Self
 
 from nicegui import ui
 

@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest

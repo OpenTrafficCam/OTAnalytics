@@ -1,6 +1,6 @@
 import platform
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from nicegui import events, ui
 
@@ -27,7 +27,7 @@ class LocalFilePicker(ui.dialog):
         show_files_only_of_types: list[str] | None = None,
         show_only_directories: bool = False,
         show_extension_select: bool = True,
-        extension_options: Dict[str, Optional[List[str]]] | None = None,
+        extension_options: dict[str, Optional[list[str]]] | None = None,
     ) -> None:
         """Local File Picker
 
@@ -47,7 +47,7 @@ class LocalFilePicker(ui.dialog):
             show_extension_select (bool): Whether to show a dropdown
                 to select file extensions. If True, a select dropdown will be
                 displayed to filter files by extension.
-            extension_options (Dict[str, Optional[List[str]]]): Custom extension options
+            extension_options (dict[str, Optional[list[str]]]): Custom extension options
                 for the dropdown selector. Keys are display names, values are lists of
                 extensions or None for "All Files". If None, uses default options.
         """
@@ -57,14 +57,14 @@ class LocalFilePicker(ui.dialog):
         self.upper_limit: Path = directory.expanduser()
         self.show_hidden_files: bool = show_hidden_files
         self.show_files_only_of_type: Optional[str] = show_files_only_of_type
-        self.show_files_only_of_types: Optional[List[str]] = show_files_only_of_types
+        self.show_files_only_of_types: Optional[list[str]] = show_files_only_of_types
         self.show_only_directories: bool = show_only_directories
         self.show_extension_select: bool = show_extension_select
 
         # Define file extension options for the select dropdown
         if extension_options is None:
             # Provide default extension options with 4 specific choices
-            self.extension_options: Dict[str, Optional[List[str]]] = {
+            self.extension_options: dict[str, Optional[list[str]]] = {
                 "All File Endings": [".otflow", ".otconfig"],
                 ".otconfig": [".otconfig"],
                 ".otflow": [".otflow"],
@@ -75,7 +75,7 @@ class LocalFilePicker(ui.dialog):
             self._create_all_files_option()
 
         # Current selected extension filter from dropdown
-        self.current_extension_filter: Optional[List[str]] = None
+        self.current_extension_filter: Optional[list[str]] = None
         self.current_selected_option: str = "All File Endings"
         if extension_options is not None and "All Files" in self.extension_options:
             self.current_selected_option = "All Files"
@@ -188,7 +188,7 @@ class LocalFilePicker(ui.dialog):
         self.update_grid()
 
     def update_grid(self) -> None:
-        paths: List[Path] = list(self.path.glob("*"))
+        paths: list[Path] = list(self.path.glob("*"))
         if not self.show_hidden_files:
             paths = [p for p in paths if not p.name.startswith(".")]
 
@@ -202,7 +202,7 @@ class LocalFilePicker(ui.dialog):
         ):
             # Filter based on current_extension_filter (handles all extension filtering)
             # Only apply filter if current_extension_filter is not empty
-            exts: List[str] = list(self.current_extension_filter)
+            exts: list[str] = list(self.current_extension_filter)
 
             def matches_any(file_path: Path) -> bool:
                 return any(file_path.name.endswith(ext) for ext in exts)
@@ -242,10 +242,10 @@ class LocalFilePicker(ui.dialog):
 
     async def _handle_ok(self) -> None:
         # NiceGUI may return None when nothing is selected; normalize to an empty list
-        rows: List[Dict[str, Any]] | list = await self.grid.get_selected_rows() or []
+        rows: list[dict[str, Any]] | list = await self.grid.get_selected_rows() or []
 
         # Build paths only from valid row dicts that contain PATH
-        paths: List[Path] = [
+        paths: list[Path] = [
             self._map_to_domain(r[PATH])
             for r in rows
             if isinstance(r, dict) and (PATH in r)
