@@ -5,25 +5,26 @@ about the staging layout, which is what keeps lazy or streaming loading cheap to
 adopt later.
 """
 
-import bz2
-from abc import ABC, abstractmethod
-from datetime import timedelta
 from pathlib import Path, PurePosixPath
-from typing import Callable, Iterable
+from typing import Callable
 
 import ijson
 
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideTrackFiles,
     ProvideVideoFiles,
 )
-from OTAnalytics.domain.load_window import LoadWindow
 from OTAnalytics.plugin_parser import ottrk_dataformat
 from OTAnalytics.plugin_s3.config.s3 import S3Config
 from OTAnalytics.plugin_s3.download_objects import DownloadCancelled, DownloadObjects
 from OTAnalytics.plugin_s3.list_objects import S3ListObjects
 from OTAnalytics.plugin_s3.select_objects import select_in_window
+from OTAnalytics.plugin_track_input_source.template import (
+    metadata_from_json_events,
+    parse_json_bz2_events,
+)
 
 TRACK_SUFFIXES = {".ottrk"}
 VIDEO_SUFFIXES = {".mp4", ".avi", ".mkv", ".mov"}
@@ -32,6 +33,8 @@ LOAD_TRACKS_TITLE = "Load tracks from S3"
 LOAD_VIDEOS_TITLE = "Load videos from S3"
 DOWNLOADING_TRACKS = "Downloading tracks"
 DOWNLOADING_VIDEOS = "Downloading videos"
+
+CANCELLED = "Loading from S3 cancelled. Nothing was loaded."
 
 
 class MissingVideoForTrackFile(Exception):
@@ -42,42 +45,12 @@ class MissingVideoForTrackFile(Exception):
     """
 
 
-class AskForLoadWindow(ABC):
-    """Asks the user which time range to load.
+class UnreadableTrackFile(Exception):
+    """Raised when a downloaded track file does not say which video it belongs to.
 
-    Owned by the S3 providers rather than added to `UiFactory`, because a new
-    abstract method there would break OTCloud's `UnimplementedUiFactory`.
+    A different failure from a video that is simply absent: here the object was
+    fetched but cannot be understood, so no amount of looking in the bucket helps.
     """
-
-    @abstractmethod
-    async def ask(self, title: str) -> LoadWindow | None:
-        """Ask for the time range to load.
-
-        Args:
-            title (str): the dialog title.
-
-        Returns:
-            LoadWindow | None: the selected window, None if the user cancelled.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def report_clamped(self, window: LoadWindow) -> None:
-        """Tell the user the selected range was shortened.
-
-        Args:
-            window (LoadWindow): the window that will actually be loaded.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def report_error(self, message: str) -> None:
-        """Tell the user why nothing could be loaded.
-
-        Args:
-            message (str): what went wrong, in the user's terms.
-        """
-        raise NotImplementedError
 
 
 def read_video_name(ottrk: Path) -> str:
@@ -91,19 +64,31 @@ def read_video_name(ottrk: Path) -> str:
 
     Returns:
         str: the video file name, with extension.
+
+    Raises:
+        UnreadableTrackFile: if the file carries no video metadata.
     """
-    with bz2.BZ2File(ottrk) as stream:
-        events: Iterable = ijson.parse(stream)
-        for metadata in ijson.items(events, ottrk_dataformat.METADATA):
-            video = metadata[ottrk_dataformat.VIDEO]
-            return str(video[ottrk_dataformat.FILENAME]) + str(
-                video[ottrk_dataformat.FILETYPE]
-            )
-    raise MissingVideoForTrackFile(f"'{ottrk}' carries no video metadata.")
+    try:
+        metadata = metadata_from_json_events(parse_json_bz2_events(ottrk))
+        video = metadata[ottrk_dataformat.VIDEO]
+        return str(video[ottrk_dataformat.FILENAME]) + str(
+            video[ottrk_dataformat.FILETYPE]
+        )
+    except (KeyError, TypeError, OSError, ijson.JSONError) as cause:
+        raise UnreadableTrackFile(
+            f"'{ottrk.name}' does not say which video it belongs to."
+        ) from cause
 
 
 class _S3Provider:
-    """What both providers share: asking for a window and listing the prefix."""
+    """The load sequence both providers share.
+
+    Args:
+        dialog (AskForLoadWindow): asks the user for the time range.
+        list_objects (S3ListObjects): lists the bucket under the key prefix.
+        download_objects (DownloadObjects): downloads the selected objects.
+        config (S3Config): the S3 settings fixed at startup.
+    """
 
     def __init__(
         self,
@@ -117,32 +102,53 @@ class _S3Provider:
         self._download_objects = download_objects
         self._config = config
 
-    async def _ask_for_window(self, title: str) -> LoadWindow | None:
-        """Ask for a time range and hold it to the configured maximum.
+    async def _provide(
+        self, title: str, suffixes: set[str], description: str
+    ) -> list[Path]:
+        """Ask for a window, then download everything in it.
 
         Args:
             title (str): the dialog title.
+            suffixes (set[str]): the file extensions to load.
+            description (str): what to tell the user is being downloaded.
 
         Returns:
-            LoadWindow | None: the window to load, None if the user cancelled.
+            list[Path]: the local paths, empty if nothing was loaded.
         """
-        selected = await self._dialog.ask(title)
+        selected = await self._dialog.ask(title, self._source())
         if selected is None:
-            return None
-        window = selected.clamp(self._maximum())
+            return []
+        window = selected.clamp(self._config.max_load_duration)
         if window.was_clamped:
             self._dialog.report_clamped(window)
-        return window
+        keys = await self._list_objects.list_keys(self._config.key_prefix)
+        wanted = select_in_window(keys, window, suffixes)
+        if not wanted:
+            logger().info(f"Nothing to load between {window.start} and {window.end}")
+            return []
+        try:
+            return await self._load(wanted, keys, description)
+        except DownloadCancelled:
+            logger().info(CANCELLED)
+            return []
+        except (MissingVideoForTrackFile, UnreadableTrackFile, OSError) as cause:
+            logger().warning(str(cause))
+            self._dialog.report_error(str(cause))
+            return []
 
-    def _maximum(self) -> timedelta:
-        return self._config.max_load_duration
+    async def _load(
+        self, wanted: list[str], keys: list[str], description: str
+    ) -> list[Path]:
+        """Download what was selected. Overridden to fetch companions too."""
+        return await self._download_objects.download_all(wanted, description)
 
-    async def _list_keys(self) -> list[str]:
-        return await self._list_objects.list_keys(self._config.key_prefix)
+    def _source(self) -> str:
+        """Where files come from, for the user to see but not to change."""
+        return f"{self._config.bucket}/{self._config.key_prefix}"
 
 
 class S3TrackFileProvider(_S3Provider, ProvideTrackFiles):
-    """Provides track files downloaded from S3 for a selected time range.
+    """Provides track files downloaded from S3, each with its own video.
 
     Args:
         dialog (AskForLoadWindow): asks the user for the time range.
@@ -164,27 +170,16 @@ class S3TrackFileProvider(_S3Provider, ProvideTrackFiles):
         self._read_video_name = read_video_name
 
     async def provide(self) -> list[Path]:
-        window = await self._ask_for_window(LOAD_TRACKS_TITLE)
-        if window is None:
-            return []
-        keys = await self._list_keys()
-        track_keys = select_in_window(keys, window, TRACK_SUFFIXES)
-        if not track_keys:
-            logger().info(f"No track files in {window.start} - {window.end}")
-            return []
-        try:
-            track_files = await self._download_objects.download_all(
-                track_keys, DOWNLOADING_TRACKS
-            )
-            video_keys = self._resolve_videos(track_files, keys)
-            await self._download_objects.download_all(video_keys, DOWNLOADING_VIDEOS)
-        except DownloadCancelled:
-            logger().info("Loading from S3 cancelled. Nothing was loaded.")
-            return []
-        except MissingVideoForTrackFile as cause:
-            logger().warning(str(cause))
-            self._dialog.report_error(str(cause))
-            return []
+        return await self._provide(
+            LOAD_TRACKS_TITLE, TRACK_SUFFIXES, DOWNLOADING_TRACKS
+        )
+
+    async def _load(
+        self, wanted: list[str], keys: list[str], description: str
+    ) -> list[Path]:
+        track_files = await self._download_objects.download_all(wanted, description)
+        video_keys = self._resolve_videos(track_files, keys)
+        await self._download_objects.download_all(video_keys, DOWNLOADING_VIDEOS)
         return track_files
 
     def _resolve_videos(self, track_files: list[Path], keys: list[str]) -> list[str]:
@@ -220,18 +215,6 @@ class S3VideoFileProvider(_S3Provider, ProvideVideoFiles):
     """
 
     async def provide(self) -> list[Path]:
-        window = await self._ask_for_window(LOAD_VIDEOS_TITLE)
-        if window is None:
-            return []
-        keys = await self._list_keys()
-        video_keys = select_in_window(keys, window, VIDEO_SUFFIXES)
-        if not video_keys:
-            logger().info(f"No videos in {window.start} - {window.end}")
-            return []
-        try:
-            return await self._download_objects.download_all(
-                video_keys, DOWNLOADING_VIDEOS
-            )
-        except DownloadCancelled:
-            logger().info("Loading from S3 cancelled. Nothing was loaded.")
-            return []
+        return await self._provide(
+            LOAD_VIDEOS_TITLE, VIDEO_SUFFIXES, DOWNLOADING_VIDEOS
+        )
