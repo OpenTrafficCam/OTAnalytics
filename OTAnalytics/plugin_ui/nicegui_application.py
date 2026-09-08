@@ -1,11 +1,35 @@
 from functools import cached_property
+from pathlib import Path
 from typing import Protocol
 
+from OTAnalytics.adapter_ui.local_file_providers import (
+    LocalTrackFileProvider,
+    LocalVideoFileProvider,
+)
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
+from OTAnalytics.application.use_cases.provide_input_files import (
+    ProvideTrackFiles,
+    ProvideVideoFiles,
+)
+from OTAnalytics.application.use_cases.reset_application import ResetApplication
 from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.transfer_mode import TransferMode
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     PilImageFactory,
     TrackImageFactory,
+)
+from OTAnalytics.plugin_s3.cleanup import WipeUserSource, WipeUserSourceOnReset
+from OTAnalytics.plugin_s3.config.env_vars import S3Env, transfer_mode_from_env
+from OTAnalytics.plugin_s3.config.parsing import parse_s3_config
+from OTAnalytics.plugin_s3.config.s3 import S3Config
+from OTAnalytics.plugin_s3.connect import S3Connection
+from OTAnalytics.plugin_s3.download import S3Download
+from OTAnalytics.plugin_s3.download_objects import DownloadObjects
+from OTAnalytics.plugin_s3.list_objects import S3ListObjects
+from OTAnalytics.plugin_s3.s3_file_providers import (
+    AskForLoadWindow,
+    S3TrackFileProvider,
+    S3VideoFileProvider,
 )
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
@@ -105,6 +129,10 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
         )
+        # Before anything is preloaded: reclaims whatever a crash, an OOM kill
+        # or a docker kill left staged from the previous run.
+        if wipe := self.wipe_user_source:
+            wipe.wipe()
         self.preload_input_files.load(self.run_config)
         return NiceguiWebserver(
             page_builders=[main_page_builder],
@@ -236,6 +264,89 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     @cached_property
     def progressbar_builder(self) -> ProgressbarBuilder:
         return NiceguiProgressbarBuilder(self.resource_manager)
+
+    @cached_property
+    def transfer_mode(self) -> TransferMode:
+        return transfer_mode_from_env()
+
+    @cached_property
+    def s3_config(self) -> S3Config | None:
+        """The S3 settings, or None when not running in S3 mode."""
+        if self.transfer_mode != TransferMode.S3:
+            return None
+        return parse_s3_config(S3Env())
+
+    @cached_property
+    def provide_track_files(self) -> ProvideTrackFiles:
+        if config := self.s3_config:
+            return S3TrackFileProvider(
+                dialog=self.ask_for_load_window,
+                list_objects=self.s3_list_objects,
+                download_objects=self.download_objects,
+                config=config,
+            )
+        return LocalTrackFileProvider(self.ui_factory)
+
+    @cached_property
+    def provide_video_files(self) -> ProvideVideoFiles:
+        if config := self.s3_config:
+            return S3VideoFileProvider(
+                dialog=self.ask_for_load_window,
+                list_objects=self.s3_list_objects,
+                download_objects=self.download_objects,
+                config=config,
+            )
+        return LocalVideoFileProvider(self.ui_factory)
+
+    @cached_property
+    def reset_application(self) -> ResetApplication:
+        """Resetting a project also frees the staged downloads it used.
+
+        Safe only in this order: the repositories drop every `Video` reference
+        before the files behind them are removed.
+        """
+        if wipe := self.wipe_user_source:
+            return WipeUserSourceOnReset(
+                self.clear_all_repositories, self.reset_state, wipe
+            )
+        return ResetApplication(self.clear_all_repositories, self.reset_state)
+
+    @cached_property
+    def wipe_user_source(self) -> WipeUserSource | None:
+        if config := self.s3_config:
+            return WipeUserSource(Path(config.user_source))
+        return None
+
+    @cached_property
+    def ask_for_load_window(self) -> AskForLoadWindow:
+        from OTAnalytics.plugin_ui.nicegui_gui.dialogs.load_window_dialog import (
+            LoadWindowDialog,
+        )
+
+        return LoadWindowDialog(self.resource_manager)
+
+    @cached_property
+    def s3_connection(self) -> S3Connection:
+        return S3Connection()
+
+    @cached_property
+    def s3_list_objects(self) -> S3ListObjects:
+        return S3ListObjects(self.s3_connection, self._required_s3_config())
+
+    @cached_property
+    def download_objects(self) -> DownloadObjects:
+        config = self._required_s3_config()
+        return DownloadObjects(
+            download=S3Download(self.s3_connection, config),
+            user_source=Path(config.user_source),
+            concurrency=config.download_concurrency,
+            progressbar_builder=NiceguiProgressbarBuilder(self.resource_manager),
+        )
+
+    def _required_s3_config(self) -> S3Config:
+        if config := self.s3_config:
+            return config
+        raise ValueError("S3 is not configured; this is only reachable in s3 mode.")
 
     @cached_property
     def track_image_factory(self) -> TrackImageFactory:
