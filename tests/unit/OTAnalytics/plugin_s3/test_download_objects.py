@@ -24,9 +24,12 @@ class FakeProgress(CompletionProgress):
     def __init__(self, cancel_after: int | None = None) -> None:
         self.completed: list[str] = []
         self.closed = False
+        self.completed_after_close: list[str] = []
         self._cancel_after = cancel_after
 
     def complete(self, item: str) -> None:
+        if self.closed:
+            self.completed_after_close.append(item)
         self.completed.append(item)
 
     def close(self) -> None:
@@ -49,7 +52,10 @@ class Given:
 
 
 def create_given(
-    concurrency: int = 2, cancel_after: int | None = None, fail_on: str | None = None
+    concurrency: int = 2,
+    cancel_after: int | None = None,
+    fail_on: str | None = None,
+    slow: bool = False,
 ) -> Given:
     given = Given(
         download=Mock(),
@@ -62,7 +68,7 @@ def create_given(
         nonlocal in_flight
         in_flight += 1
         given.concurrent.append(in_flight)
-        await asyncio.sleep(0)
+        await asyncio.sleep(0.5 if slow else 0)
         if fail_on == key:
             in_flight -= 1
             raise OSError(f"boom on {key}")
@@ -141,6 +147,26 @@ class TestDownloadObjects:
 
         assert len(given.downloaded) < len(KEYS)
         assert given.progress.closed is True
+
+    async def test_cancelling_stops_the_downloads_still_in_flight(self) -> None:
+        """Abandoning a load must not leave workers running behind the dialog."""
+        given = create_given(cancel_after=0, slow=True)
+        target = create_target(given, concurrency=4)
+
+        with pytest.raises(DownloadCancelled):
+            await target.download_all(KEYS, "Downloading tracks")
+
+        assert given.downloaded == []
+        assert given.progress.completed_after_close == []
+
+    async def test_a_failure_stops_the_downloads_still_in_flight(self) -> None:
+        given = create_given(fail_on=KEY_A)
+        target = create_target(given, concurrency=4)
+
+        with pytest.raises(OSError):
+            await target.download_all(KEYS, "Downloading tracks")
+
+        assert given.progress.completed_after_close == []
 
     async def test_a_failed_download_fails_the_whole_load(self) -> None:
         given = create_given(fail_on=KEY_B)

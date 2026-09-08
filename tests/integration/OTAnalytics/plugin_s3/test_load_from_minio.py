@@ -4,7 +4,9 @@ Exercises what mocks cannot: `list_objects_v2` pagination, real GETs against a
 running server, and the clamp applied to an over-long selection.
 """
 
+import bz2
 import io
+import json
 import os
 import subprocess
 from dataclasses import dataclass
@@ -16,7 +18,6 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from OTAnalytics.domain.load_window import LoadWindow
-from OTAnalytics.domain.progress import NoCompletionProgressBuilder
 from OTAnalytics.plugin_s3.config.s3 import S3Config
 from OTAnalytics.plugin_s3.connect import S3Connection
 from OTAnalytics.plugin_s3.download import S3Download
@@ -27,6 +28,7 @@ from OTAnalytics.plugin_s3.s3_file_providers import (
     S3TrackFileProvider,
     S3VideoFileProvider,
 )
+from tests.utils.progress import SilentProgressBuilder
 
 BUCKET = "recordings"
 PREFIX = "project-0/site-0/camera-1"
@@ -34,6 +36,9 @@ START = datetime(2023, 5, 24, 10, 0, tzinfo=timezone.utc)
 MAX_LOAD_DURATION = timedelta(minutes=20)
 
 CHUNKS = ["10-00-00", "10-15-00", "10-30-00"]
+# Deliberately not .mp4: the companion is named by the ottrk's own metadata, and
+# a suffix swap would look for an object that is not there.
+VIDEO_TYPE = ".mkv"
 
 # Pinned for reproducibility. testcontainers' own default is a 2022 build that is
 # amd64 only and will not start on an arm64 host.
@@ -69,13 +74,21 @@ def minio() -> Iterator[dict]:
         client = container.get_client()
         client.make_bucket(BUCKET)
         for chunk in CHUNKS:
-            for suffix, payload in ((".ottrk", b"tracks"), (".mp4", b"video")):
-                _put(client, f"OTCamera19_FR20_2023-05-24_{chunk}{suffix}", payload)
+            stem = f"OTCamera19_FR20_2023-05-24_{chunk}"
+            _put(client, f"{stem}.ottrk", _ottrk_naming(f"{stem}{VIDEO_TYPE}"))
+            _put(client, f"{stem}{VIDEO_TYPE}", b"video")
         yield {
             "endpoint_url": f"http://{container.get_config()['endpoint']}",
             "access_key": container.access_key,
             "secret_key": container.secret_key,
         }
+
+
+def _ottrk_naming(video: str) -> bytes:
+    """A track file whose metadata names the video it belongs to."""
+    stem, _, filetype = video.rpartition(".")
+    metadata = {"metadata": {"video": {"filename": stem, "filetype": f".{filetype}"}}}
+    return bz2.compress(json.dumps(metadata).encode())
 
 
 def _put(client: object, name: str, payload: bytes) -> None:
@@ -117,7 +130,7 @@ def _download_objects(given: Given) -> DownloadObjects:
         download=S3Download(connection, given.config),
         user_source=given.user_source,
         concurrency=given.config.download_concurrency,
-        progressbar_builder=NoCompletionProgressBuilder(),
+        progressbar_builder=SilentProgressBuilder(),
     )
 
 
@@ -127,7 +140,6 @@ def create_track_target(given: Given) -> S3TrackFileProvider:
         list_objects=S3ListObjects(S3Connection(), given.config),
         download_objects=_download_objects(given),
         config=given.config,
-        read_video_name=lambda ottrk: ottrk.with_suffix(".mp4").name,
     )
 
 
@@ -167,7 +179,7 @@ class TestLoadFromMinio:
         await target.provide()
 
         for chunk in CHUNKS[:2]:
-            for suffix in (".ottrk", ".mp4"):
+            for suffix in (".ottrk", VIDEO_TYPE):
                 staged = (
                     given.user_source
                     / PREFIX
@@ -195,7 +207,20 @@ class TestLoadFromMinio:
 
         provided = await target.provide()
 
-        assert provided[0].read_bytes() == b"tracks"
+        assert bz2.decompress(provided[0].read_bytes()).startswith(b"{")
+
+    async def test_pairs_each_track_file_with_the_video_its_metadata_names(
+        self, minio: dict, tmp_path: Path
+    ) -> None:
+        """A suffix swap would have looked for a .mp4 that does not exist."""
+        given = create_given(minio, tmp_path, hours=1)
+        target = create_track_target(given)
+
+        await target.provide()
+
+        staged = given.user_source / PREFIX
+        assert (staged / f"OTCamera19_FR20_2023-05-24_10-00-00{VIDEO_TYPE}").is_file()
+        assert not (staged / "OTCamera19_FR20_2023-05-24_10-00-00.mp4").exists()
 
     async def test_videos_load_on_their_own(self, minio: dict, tmp_path: Path) -> None:
         given = create_given(minio, tmp_path, hours=1)
@@ -204,6 +229,6 @@ class TestLoadFromMinio:
         provided = await target.provide()
 
         assert [path.name for path in provided] == [
-            "OTCamera19_FR20_2023-05-24_10-00-00.mp4",
-            "OTCamera19_FR20_2023-05-24_10-15-00.mp4",
+            f"OTCamera19_FR20_2023-05-24_10-00-00{VIDEO_TYPE}",
+            f"OTCamera19_FR20_2023-05-24_10-15-00{VIDEO_TYPE}",
         ]
