@@ -5,13 +5,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
-import pytest
-
 from OTAnalytics.domain.load_window import LoadWindow
 from OTAnalytics.plugin_s3.download_objects import DownloadCancelled
 from OTAnalytics.plugin_s3.s3_file_providers import (
     AskForLoadWindow,
-    MissingVideoForTrackFile,
     S3TrackFileProvider,
     S3VideoFileProvider,
 )
@@ -149,8 +146,26 @@ class TestS3TrackFileProvider:
         given = create_given(keys=[TRACK_0600, TRACK_0615, VIDEO_0600])
         target = create_track_target(given)
 
-        with pytest.raises(MissingVideoForTrackFile):
-            await target.provide()
+        assert await target.provide() == []
+
+    async def test_a_missing_video_is_named_to_the_user(self) -> None:
+        given = create_given(keys=[TRACK_0600, TRACK_0615, VIDEO_0600])
+        target = create_track_target(given)
+
+        await target.provide()
+
+        reported = given.dialog.report_error.call_args.args[0]
+        assert "OTCamera19_FR20_2023-05-24_06-15-00.mkv" in reported
+
+    async def test_a_missing_video_leaves_no_videos_downloaded(self) -> None:
+        given = create_given(keys=[TRACK_0600, TRACK_0615, VIDEO_0600])
+        target = create_track_target(given)
+
+        await target.provide()
+
+        assert [description for _, description in given.downloads] == [
+            "Downloading tracks"
+        ]
 
     async def test_choosing_no_window_loads_nothing(self) -> None:
         given = create_given()
