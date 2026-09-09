@@ -3,6 +3,7 @@ data/
 !tests/data
 tests/data/OTCamera19_FR20_2023-05-24*
 tests/scripts/
+.envrc
 
 # Anthropic Claude
 .claude/rules/shared
