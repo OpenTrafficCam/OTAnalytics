@@ -10,8 +10,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
 from OTAnalytics.plugin_s3.upload import S3Upload
-from tests.utils.builders.s3_config_builder import BUCKET, create_s3_config
-from tests.utils.builders.s3_connection_builder import create_connection
+from tests.utils.builders.s3_config_builder import BUCKET
+from tests.utils.builders.s3_store_builder import create_store
 
 KEY = "project-1/site-1/OTCamera04/events.otevents"
 PAYLOAD = b"event-bytes"
@@ -20,16 +20,16 @@ PAYLOAD = b"event-bytes"
 @dataclass
 class Given:
     client: AsyncMock
-    connection: Mock
+    store: Mock
 
 
 def create_given() -> Given:
     client = AsyncMock()
-    return Given(client=client, connection=create_connection(client))
+    return Given(client=client, store=create_store(client))
 
 
 def create_target(given: Given) -> S3Upload:
-    return S3Upload(connection=given.connection, config=create_s3_config())
+    return S3Upload(store=given.store)
 
 
 class TestS3Upload:

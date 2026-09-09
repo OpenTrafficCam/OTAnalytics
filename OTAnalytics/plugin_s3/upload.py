@@ -1,22 +1,18 @@
 import asyncio
 from pathlib import Path
 
-from OTAnalytics.plugin_s3.config.s3 import S3Config
-from OTAnalytics.plugin_s3.connect import S3Connection
+from OTAnalytics.plugin_s3.store import S3Store
 
 
 class S3Upload:
     """Uploads local files to S3 storage.
 
     Args:
-        connection (S3Connection): S3 connection manager for establishing
-            client sessions.
-        config (S3Config): Config containing S3 bucket and connection parameters.
+        store (S3Store): the S3 bucket to upload to.
     """
 
-    def __init__(self, connection: S3Connection, config: S3Config) -> None:
-        self._connection = connection
-        self._config = config
+    def __init__(self, store: S3Store) -> None:
+        self._store = store
 
     async def upload(
         self, src: Path, key: str, content_type: str | None = None
@@ -24,7 +20,7 @@ class S3Upload:
         """Uploads a local file to S3.
 
         Reads the file from the local filesystem and uploads it to the
-        configured S3 bucket with the specified key. Optionally sets the
+        store's bucket with the specified key. Optionally sets the
         content type for the uploaded object.
 
         Args:
@@ -34,17 +30,17 @@ class S3Upload:
                 object. If None, S3 will attempt to infer the content type.
         """
         payload = await asyncio.to_thread(src.read_bytes)
-        async with self._connection.establish(self._config) as client:
+        async with self._store.client() as client:
             # Spelled out rather than built as **kwargs: put_object is precisely
             # typed by types-aiobotocore-s3 and rejects a dict unpacking.
             if content_type:
                 await client.put_object(
-                    Bucket=self._config.bucket,
+                    Bucket=self._store.bucket,
                     Key=key,
                     Body=payload,
                     ContentType=content_type,
                 )
             else:
                 await client.put_object(
-                    Bucket=self._config.bucket, Key=key, Body=payload
+                    Bucket=self._store.bucket, Key=key, Body=payload
                 )

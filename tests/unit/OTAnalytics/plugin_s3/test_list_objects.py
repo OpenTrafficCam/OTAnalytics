@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from unittest.mock import AsyncMock, Mock
 
 from OTAnalytics.plugin_s3.list_objects import S3ListObjects
-from tests.utils.builders.s3_config_builder import BUCKET, create_s3_config
-from tests.utils.builders.s3_connection_builder import create_connection
+from tests.utils.builders.s3_config_builder import BUCKET
+from tests.utils.builders.s3_store_builder import create_store
 
 PREFIX = "project-1/site-1/OTCamera04/"
 
@@ -17,16 +17,16 @@ KEY_3 = f"{PREFIX}OTCamera04_2026-08-27_06-15-00.ottrk"
 @dataclass
 class Given:
     client: AsyncMock
-    connection: Mock
+    store: Mock
 
 
 def create_given() -> Given:
     client = AsyncMock()
-    return Given(client=client, connection=create_connection(client))
+    return Given(client=client, store=create_store(client))
 
 
 def create_target(given: Given) -> S3ListObjects:
-    return S3ListObjects(connection=given.connection, config=create_s3_config())
+    return S3ListObjects(store=given.store)
 
 
 class TestS3ListObjects:
