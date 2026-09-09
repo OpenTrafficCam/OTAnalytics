@@ -7,6 +7,7 @@ from OTAnalytics.application.startup_config import StartupConfigError
 from OTAnalytics.plugin_s3.config.env_vars import (
     ENV_S3_ACCESS_KEY,
     ENV_S3_BUCKET,
+    ENV_S3_ENDPOINT_URL,
     ENV_S3_KEY_PREFIX,
     ENV_S3_SECRET_KEY,
     ENV_S3_USER_SOURCE,
@@ -86,6 +87,7 @@ def parse_s3_config(env: S3Env) -> S3Config:
         InvalidDurationError: if S3_MAX_LOAD_DURATION is malformed.
     """
     required = (
+        (ENV_S3_ENDPOINT_URL, env.endpoint_url),
         (ENV_S3_ACCESS_KEY, env.access_key),
         (ENV_S3_SECRET_KEY, env.secret_key),
         (ENV_S3_BUCKET, env.bucket),
