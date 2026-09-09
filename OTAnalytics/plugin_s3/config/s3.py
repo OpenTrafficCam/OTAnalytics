@@ -15,7 +15,7 @@ class S3Config:
     `key_prefix`, `max_load_duration` and `download_concurrency` are added.
 
     Attributes:
-        endpoint_url (str | None): S3 endpoint URL (None for AWS S3).
+        endpoint_url (str): S3 endpoint URL.
         access_key (str): S3 access key for authentication.
         secret_key (str): S3 secret key for authentication.
         bucket (str): S3 bucket name.
@@ -30,7 +30,7 @@ class S3Config:
         download_concurrency (int): how many objects to download at once.
     """
 
-    endpoint_url: str | None
+    endpoint_url: str
     access_key: str
     secret_key: str
     bucket: str
