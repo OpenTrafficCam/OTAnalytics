@@ -135,17 +135,35 @@ class TestMissingRequiredVariables:
             parse_s3_config(env(bucket="otcloud"))
 
         assert excinfo.value.missing == [
+            ENV_S3_ENDPOINT_URL,
             ENV_S3_ACCESS_KEY,
             ENV_S3_SECRET_KEY,
             ENV_S3_KEY_PREFIX,
             ENV_S3_USER_SOURCE,
         ]
 
+    def test_missing_endpoint_url_is_reported(self) -> None:
+        """The endpoint URL is named like any other missing variable.
+
+        It is required, so leaving it out of the report tells an operator
+        nothing about what to set.
+
+        # Requirement OP#10256
+        """
+        with pytest.raises(MissingS3ConfigError) as excinfo:
+            parse_s3_config(complete_env(endpoint_url=None))
+
+        assert excinfo.value.missing == [ENV_S3_ENDPOINT_URL]
+
     def test_only_absent_variables_are_reported(self) -> None:
         with pytest.raises(MissingS3ConfigError) as excinfo:
             parse_s3_config(env(bucket="otcloud", access_key="a", user_source="/src"))
 
-        assert excinfo.value.missing == [ENV_S3_SECRET_KEY, ENV_S3_KEY_PREFIX]
+        assert excinfo.value.missing == [
+            ENV_S3_ENDPOINT_URL,
+            ENV_S3_SECRET_KEY,
+            ENV_S3_KEY_PREFIX,
+        ]
 
     def test_message_names_the_environment_variables(self) -> None:
         with pytest.raises(MissingS3ConfigError, match=ENV_S3_ACCESS_KEY):
