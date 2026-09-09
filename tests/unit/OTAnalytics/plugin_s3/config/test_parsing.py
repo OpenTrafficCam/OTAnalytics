@@ -33,6 +33,7 @@ def env(**overrides: str | None) -> S3Env:
 def complete_env(**overrides: str | None) -> S3Env:
     """An S3Env with every required variable set, then the overrides applied."""
     required: dict[str, str | None] = {
+        "endpoint_url": "http://localhost:9000",
         "access_key": "minioadmin",
         "secret_key": "minioadmin",  # gitleaks:allow
         "bucket": "otcloud",
@@ -93,7 +94,6 @@ class TestParseS3Config:
         """
         actual = parse_s3_config(complete_env())
 
-        assert actual.endpoint_url is None
         assert actual.region is None
         assert actual.max_load_duration == timedelta(hours=10)
         assert actual.download_concurrency == 8

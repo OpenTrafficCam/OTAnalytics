@@ -96,7 +96,7 @@ def parse_s3_config(env: S3Env) -> S3Config:
         raise MissingS3ConfigError(missing)
 
     return S3Config(
-        endpoint_url=env.endpoint_url,
+        endpoint_url=_required(env.endpoint_url),
         access_key=_required(env.access_key),
         secret_key=_required(env.secret_key),
         bucket=_required(env.bucket),

@@ -14,7 +14,7 @@ USER_SOURCE = "/data/otanalytics-source"
 
 
 def create_s3_config(
-    endpoint_url: str | None = ENDPOINT_URL,
+    endpoint_url: str = ENDPOINT_URL,
     access_key: str = ACCESS_KEY,
     secret_key: str = SECRET_KEY,
     bucket: str = BUCKET,
