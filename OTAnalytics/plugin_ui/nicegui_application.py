@@ -25,7 +25,6 @@ from OTAnalytics.plugin_s3.cleanup import WipeUserSource, WipeUserSourceOnReset
 from OTAnalytics.plugin_s3.config.env_vars import S3Env, transfer_mode_from_env
 from OTAnalytics.plugin_s3.config.parsing import parse_s3_config
 from OTAnalytics.plugin_s3.config.s3 import S3Config
-from OTAnalytics.plugin_s3.connect import S3Connection
 from OTAnalytics.plugin_s3.download import S3Download
 from OTAnalytics.plugin_s3.download_objects import DownloadObjects
 from OTAnalytics.plugin_s3.list_objects import S3ListObjects
@@ -33,6 +32,7 @@ from OTAnalytics.plugin_s3.s3_file_providers import (
     S3TrackFileProvider,
     S3VideoFileProvider,
 )
+from OTAnalytics.plugin_s3.store import S3Store
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
     NiceguiProgressbarBuilder,
@@ -340,18 +340,18 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return LoadWindowDialog(self.resource_manager)
 
     @cached_property
-    def s3_connection(self) -> S3Connection:
-        return S3Connection()
+    def s3_store(self) -> S3Store:
+        return S3Store(self._required_s3_config())
 
     @cached_property
     def s3_list_objects(self) -> S3ListObjects:
-        return S3ListObjects(self.s3_connection, self._required_s3_config())
+        return S3ListObjects(self.s3_store)
 
     @cached_property
     def download_objects(self) -> DownloadObjects:
         config = self._required_s3_config()
         return DownloadObjects(
-            download=S3Download(self.s3_connection, config),
+            download=S3Download(self.s3_store),
             user_source=Path(config.user_source),
             concurrency=config.download_concurrency,
             progressbar_builder=self.nicegui_progressbar_builder,

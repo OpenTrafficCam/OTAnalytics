@@ -19,7 +19,6 @@ import pytest
 
 from OTAnalytics.domain.load_window import LoadWindow
 from OTAnalytics.plugin_s3.config.s3 import S3Config
-from OTAnalytics.plugin_s3.connect import S3Connection
 from OTAnalytics.plugin_s3.download import S3Download
 from OTAnalytics.plugin_s3.download_objects import DownloadObjects
 from OTAnalytics.plugin_s3.list_objects import S3ListObjects
@@ -28,6 +27,7 @@ from OTAnalytics.plugin_s3.s3_file_providers import (
     S3TrackFileProvider,
     S3VideoFileProvider,
 )
+from OTAnalytics.plugin_s3.store import S3Store
 from tests.utils.progress import SilentProgressBuilder
 
 BUCKET = "recordings"
@@ -125,9 +125,8 @@ def create_given(minio: dict, tmp_path: Path, hours: float = 1) -> Given:
 
 
 def _download_objects(given: Given) -> DownloadObjects:
-    connection = S3Connection()
     return DownloadObjects(
-        download=S3Download(connection, given.config),
+        download=S3Download(S3Store(given.config)),
         user_source=given.user_source,
         concurrency=given.config.download_concurrency,
         progressbar_builder=SilentProgressBuilder(),
@@ -137,7 +136,7 @@ def _download_objects(given: Given) -> DownloadObjects:
 def create_track_target(given: Given) -> S3TrackFileProvider:
     return S3TrackFileProvider(
         dialog=given.dialog,
-        list_objects=S3ListObjects(S3Connection(), given.config),
+        list_objects=S3ListObjects(S3Store(given.config)),
         download_objects=_download_objects(given),
         config=given.config,
     )
@@ -146,7 +145,7 @@ def create_track_target(given: Given) -> S3TrackFileProvider:
 def create_video_target(given: Given) -> S3VideoFileProvider:
     return S3VideoFileProvider(
         dialog=given.dialog,
-        list_objects=S3ListObjects(S3Connection(), given.config),
+        list_objects=S3ListObjects(S3Store(given.config)),
         download_objects=_download_objects(given),
         config=given.config,
     )
