@@ -9,11 +9,6 @@ DEFAULT_DOWNLOAD_CONCURRENCY = 8
 class S3Config:
     """Configuration for S3-compatible object storage.
 
-    Mirrors the `s3` block of the startup configuration one for one. Copied from
-    OTCloud's `S3Config` and deliberately kept separate from it — see
-    `docs/adr/0001-duplicate-s3-layer.md`. OTCloud's `otcloud_source` is dropped;
-    `key_prefix`, `max_load_duration` and `download_concurrency` are added.
-
     Attributes:
         endpoint_url (str): S3 endpoint URL.
         access_key (str): S3 access key for authentication.
