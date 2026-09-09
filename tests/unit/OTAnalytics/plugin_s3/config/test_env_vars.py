@@ -4,7 +4,10 @@ import pytest
 
 from OTAnalytics.application.startup_config import InvalidTransferModeError
 from OTAnalytics.domain.transfer_mode import TransferMode
-from OTAnalytics.plugin_s3.config.env_vars import transfer_mode_from_env
+from OTAnalytics.plugin_s3.config.env_vars import (
+    ENV_DATA_TRANSFER_MODE,
+    transfer_mode_from_env,
+)
 
 
 class TestTransferModeFromEnv:
@@ -15,7 +18,7 @@ class TestTransferModeFromEnv:
 
         # Requirement OP#10256
         """
-        monkeypatch.delenv("DATA_TRANSFER_MODE", raising=False)
+        monkeypatch.delenv(ENV_DATA_TRANSFER_MODE, raising=False)
 
         assert transfer_mode_from_env() == TransferMode.LOCAL_FILESYSTEM
 
@@ -29,7 +32,7 @@ class TestTransferModeFromEnv:
     def test_reads_supported_values(
         self, monkeypatch: pytest.MonkeyPatch, value: str, expected: TransferMode
     ) -> None:
-        monkeypatch.setenv("DATA_TRANSFER_MODE", value)
+        monkeypatch.setenv(ENV_DATA_TRANSFER_MODE, value)
 
         assert transfer_mode_from_env() == expected
 
@@ -40,7 +43,7 @@ class TestTransferModeFromEnv:
 
         # Requirement OP#10256
         """
-        monkeypatch.setenv("DATA_TRANSFER_MODE", "ftp")
+        monkeypatch.setenv(ENV_DATA_TRANSFER_MODE, "ftp")
 
         with pytest.raises(InvalidTransferModeError, match="local-filesystem"):
             transfer_mode_from_env()

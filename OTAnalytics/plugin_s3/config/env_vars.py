@@ -4,26 +4,23 @@ from dataclasses import dataclass, field
 from OTAnalytics.application.startup_config import InvalidTransferModeError
 from OTAnalytics.domain.transfer_mode import TransferMode
 
-ENV_DATA_TRANSFER_MODE = "DATA_TRANSFER_MODE"
-ENV_S3_ENDPOINT_URL = "S3_ENDPOINT_URL"
-ENV_S3_ACCESS_KEY = "S3_ACCESS_KEY"
-ENV_S3_SECRET_KEY = "S3_SECRET_KEY"  # nosec B105 - variable name, not a secret
-ENV_S3_BUCKET = "S3_BUCKET"
-ENV_S3_REGION = "S3_REGION"
-ENV_S3_KEY_PREFIX = "S3_KEY_PREFIX"
-ENV_S3_USER_SOURCE = "S3_USER_SOURCE"
-ENV_S3_MAX_LOAD_DURATION = "S3_MAX_LOAD_DURATION"
-ENV_S3_DOWNLOAD_CONCURRENCY = "S3_DOWNLOAD_CONCURRENCY"
+ENV_DATA_TRANSFER_MODE = "OTA_DATA_TRANSFER_MODE"
+ENV_S3_ENDPOINT_URL = "OTA_S3_ENDPOINT_URL"
+ENV_S3_ACCESS_KEY = "OTA_S3_ACCESS_KEY"
+ENV_S3_SECRET_KEY = "OTA_S3_SECRET_KEY"  # nosec B105 - variable name, not a secret
+ENV_S3_BUCKET = "OTA_S3_BUCKET"
+ENV_S3_REGION = "OTA_S3_REGION"
+ENV_S3_KEY_PREFIX = "OTA_S3_KEY_PREFIX"
+ENV_S3_USER_SOURCE = "OTA_S3_USER_SOURCE"
+ENV_S3_MAX_LOAD_DURATION = "OTA_S3_MAX_LOAD_DURATION"
+ENV_S3_DOWNLOAD_CONCURRENCY = "OTA_S3_DOWNLOAD_CONCURRENCY"
 
 
 @dataclass
 class S3Env:
     """S3 settings read from the environment.
 
-    Values are read when the instance is constructed. Names for the first six
-    fields match OTCloud's `S3Env` so a deployment already configured for
-    OTCloud needs no new variables; the remainder are specific to OTAnalytics.
-
+    Values are read when the instance is constructed.
     Every field is optional here — whether a missing value is fatal depends on
     the configured transfer mode, which startup validation decides.
     """

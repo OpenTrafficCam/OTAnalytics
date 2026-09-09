@@ -4,7 +4,18 @@ from datetime import timedelta
 
 import pytest
 
-from OTAnalytics.plugin_s3.config.env_vars import S3Env
+from OTAnalytics.plugin_s3.config.env_vars import (
+    ENV_S3_ACCESS_KEY,
+    ENV_S3_BUCKET,
+    ENV_S3_DOWNLOAD_CONCURRENCY,
+    ENV_S3_ENDPOINT_URL,
+    ENV_S3_KEY_PREFIX,
+    ENV_S3_MAX_LOAD_DURATION,
+    ENV_S3_REGION,
+    ENV_S3_SECRET_KEY,
+    ENV_S3_USER_SOURCE,
+    S3Env,
+)
 from OTAnalytics.plugin_s3.config.parsing import (
     InvalidDurationError,
     MissingS3ConfigError,
@@ -124,28 +135,28 @@ class TestMissingRequiredVariables:
             parse_s3_config(env(bucket="otcloud"))
 
         assert excinfo.value.missing == [
-            "S3_ACCESS_KEY",
-            "S3_SECRET_KEY",
-            "S3_KEY_PREFIX",
-            "S3_USER_SOURCE",
+            ENV_S3_ACCESS_KEY,
+            ENV_S3_SECRET_KEY,
+            ENV_S3_KEY_PREFIX,
+            ENV_S3_USER_SOURCE,
         ]
 
     def test_only_absent_variables_are_reported(self) -> None:
         with pytest.raises(MissingS3ConfigError) as excinfo:
             parse_s3_config(env(bucket="otcloud", access_key="a", user_source="/src"))
 
-        assert excinfo.value.missing == ["S3_SECRET_KEY", "S3_KEY_PREFIX"]
+        assert excinfo.value.missing == [ENV_S3_SECRET_KEY, ENV_S3_KEY_PREFIX]
 
     def test_message_names_the_environment_variables(self) -> None:
-        with pytest.raises(MissingS3ConfigError, match="S3_ACCESS_KEY"):
+        with pytest.raises(MissingS3ConfigError, match=ENV_S3_ACCESS_KEY):
             parse_s3_config(env())
 
 
 class TestS3EnvFromEnvironment:
     def test_reads_environment_variables(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("S3_BUCKET", "from-env")
-        monkeypatch.setenv("S3_ACCESS_KEY", "key-from-env")
-        monkeypatch.setenv("S3_MAX_LOAD_DURATION", "3h")
+        monkeypatch.setenv(ENV_S3_BUCKET, "from-env")
+        monkeypatch.setenv(ENV_S3_ACCESS_KEY, "key-from-env")
+        monkeypatch.setenv(ENV_S3_MAX_LOAD_DURATION, "3h")
 
         actual = S3Env()
 
@@ -155,15 +166,15 @@ class TestS3EnvFromEnvironment:
 
     def test_unset_variables_are_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
         for name in (
-            "S3_ENDPOINT_URL",
-            "S3_ACCESS_KEY",
-            "S3_SECRET_KEY",
-            "S3_BUCKET",
-            "S3_REGION",
-            "S3_KEY_PREFIX",
-            "S3_USER_SOURCE",
-            "S3_MAX_LOAD_DURATION",
-            "S3_DOWNLOAD_CONCURRENCY",
+            ENV_S3_ENDPOINT_URL,
+            ENV_S3_ACCESS_KEY,
+            ENV_S3_SECRET_KEY,
+            ENV_S3_BUCKET,
+            ENV_S3_REGION,
+            ENV_S3_KEY_PREFIX,
+            ENV_S3_USER_SOURCE,
+            ENV_S3_MAX_LOAD_DURATION,
+            ENV_S3_DOWNLOAD_CONCURRENCY,
         ):
             monkeypatch.delenv(name, raising=False)
 
