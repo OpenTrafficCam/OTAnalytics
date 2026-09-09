@@ -5,8 +5,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
 from OTAnalytics.plugin_s3.download import S3Download
-from tests.utils.builders.s3_config_builder import BUCKET, create_s3_config
-from tests.utils.builders.s3_connection_builder import create_connection
+from tests.utils.builders.s3_config_builder import BUCKET
+from tests.utils.builders.s3_store_builder import create_store
 
 KEY = "project-1/site-1/OTCamera04/OTCamera04_2026-08-27_06-00-00.ottrk"
 PAYLOAD = b"ottrk-bytes"
@@ -15,7 +15,7 @@ PAYLOAD = b"ottrk-bytes"
 @dataclass
 class Given:
     client: AsyncMock
-    connection: Mock
+    store: Mock
 
 
 def create_given(payload: bytes = PAYLOAD) -> Given:
@@ -23,11 +23,11 @@ def create_given(payload: bytes = PAYLOAD) -> Given:
     body.read = AsyncMock(return_value=payload)
     client = AsyncMock()
     client.get_object = AsyncMock(return_value={"Body": body})
-    return Given(client=client, connection=create_connection(client))
+    return Given(client=client, store=create_store(client))
 
 
 def create_target(given: Given) -> S3Download:
-    return S3Download(connection=given.connection, config=create_s3_config())
+    return S3Download(store=given.store)
 
 
 class TestS3Download:
