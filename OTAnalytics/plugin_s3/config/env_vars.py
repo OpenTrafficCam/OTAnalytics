@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass, field
+from typing import Callable
 
 from OTAnalytics.application.startup_config import InvalidTransferModeError
 from OTAnalytics.domain.transfer_mode import TransferMode
@@ -16,6 +17,14 @@ ENV_S3_MAX_LOAD_DURATION = "OTA_S3_MAX_LOAD_DURATION"
 ENV_S3_DOWNLOAD_CONCURRENCY = "OTA_S3_DOWNLOAD_CONCURRENCY"
 
 
+def read_env_var(var_name: str) -> str | None:
+    return os.environ.get(var_name, None)
+
+
+def _make_env_reader(var_name: str) -> Callable[[], str | None]:
+    return lambda: read_env_var(var_name)
+
+
 @dataclass
 class S3Env:
     """S3 settings read from the environment.
@@ -26,31 +35,21 @@ class S3Env:
     """
 
     endpoint_url: str | None = field(
-        default_factory=lambda: os.environ.get(ENV_S3_ENDPOINT_URL, None)
+        default_factory=_make_env_reader(ENV_S3_ENDPOINT_URL)
     )
-    access_key: str | None = field(
-        default_factory=lambda: os.environ.get(ENV_S3_ACCESS_KEY, None)
-    )
-    secret_key: str | None = field(
-        default_factory=lambda: os.environ.get(ENV_S3_SECRET_KEY, None)
-    )
-    bucket: str | None = field(
-        default_factory=lambda: os.environ.get(ENV_S3_BUCKET, None)
-    )
-    region: str | None = field(
-        default_factory=lambda: os.environ.get(ENV_S3_REGION, None)
-    )
-    key_prefix: str | None = field(
-        default_factory=lambda: os.environ.get(ENV_S3_KEY_PREFIX, None)
-    )
+    access_key: str | None = field(default_factory=_make_env_reader(ENV_S3_ACCESS_KEY))
+    secret_key: str | None = field(default_factory=_make_env_reader(ENV_S3_SECRET_KEY))
+    bucket: str | None = field(default_factory=_make_env_reader(ENV_S3_BUCKET))
+    region: str | None = field(default_factory=_make_env_reader(ENV_S3_REGION))
+    key_prefix: str | None = field(default_factory=_make_env_reader(ENV_S3_KEY_PREFIX))
     user_source: str | None = field(
-        default_factory=lambda: os.environ.get(ENV_S3_USER_SOURCE, None)
+        default_factory=_make_env_reader(ENV_S3_USER_SOURCE)
     )
     max_load_duration: str | None = field(
-        default_factory=lambda: os.environ.get(ENV_S3_MAX_LOAD_DURATION, None)
+        default_factory=_make_env_reader(ENV_S3_MAX_LOAD_DURATION)
     )
     download_concurrency: str | None = field(
-        default_factory=lambda: os.environ.get(ENV_S3_DOWNLOAD_CONCURRENCY, None)
+        default_factory=_make_env_reader(ENV_S3_DOWNLOAD_CONCURRENCY)
     )
 
 
@@ -66,7 +65,7 @@ def transfer_mode_from_env() -> TransferMode:
             The message lists the supported values, because OTCloud defines an
             `ftp` mode that OTAnalytics does not and the two may share a machine.
     """
-    raw_mode = os.environ.get(ENV_DATA_TRANSFER_MODE, None)
+    raw_mode = read_env_var(ENV_DATA_TRANSFER_MODE)
     if raw_mode is None:
         return TransferMode.LOCAL_FILESYSTEM
     try:
