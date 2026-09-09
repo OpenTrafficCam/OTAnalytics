@@ -1,9 +1,4 @@
-"""Local-filesystem implementations of the input file providers.
-
-These hold the file-chooser interaction that used to sit inline in
-`DummyViewModel`, so that swapping in a different source of input files does not
-touch the view model at all.
-"""
+"""Local-filesystem implementations of the input file providers."""
 
 from pathlib import Path
 
