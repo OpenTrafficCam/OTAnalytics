@@ -5,9 +5,12 @@ from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.track_parser import TrackParser, TracksParseResult
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
-from OTAnalytics.domain.progress import ProgressbarBuilder
+from OTAnalytics.domain.progress import ProgressbarBuilder, RunningProgressbar
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
+
+PARSING_DESCRIPTION = "Parsing track files"
+PARSING_UNIT = "files"
 
 
 class LoadTrackFiles:
@@ -51,7 +54,11 @@ class LoadTrackFiles:
                 " Use load() instead."
             )
         if files_to_load := self._files_to_load(files):
-            self._publish(self._parse(files_to_load), files_to_load)
+            progressbar = self._start_progress(files_to_load)
+            try:
+                self._publish(self._parse(files_to_load), files_to_load)
+            finally:
+                progressbar.close()
 
     async def load(self, files: list[Path]) -> None:
         """Load and parse track files together with their videos.
@@ -63,11 +70,32 @@ class LoadTrackFiles:
             files (list[Path]): files in ottrk format.
         """
         if files_to_load := self._files_to_load(files):
-            # parse_files must stay pure: no repository, no observer, no ui. It runs
-            # on a worker thread here, and repositories notify observers that mutate
-            # widgets, which is only safe on the event loop.
-            parse_result = await asyncio.to_thread(self._parse, files_to_load)
-            self._publish(parse_result, files_to_load)
+            progressbar = self._start_progress(files_to_load)
+            try:
+                # parse_files must stay pure: no repository, no observer, no ui. It
+                # runs on a worker thread here, and repositories notify observers
+                # that mutate widgets, which is only safe on the event loop.
+                parse_result = await asyncio.to_thread(self._parse, files_to_load)
+                self._publish(parse_result, files_to_load)
+            finally:
+                progressbar.close()
+
+    def _start_progress(self, files_to_load: list[Path]) -> RunningProgressbar:
+        """Show that track files are being parsed until the caller closes it again.
+
+        The parser reports nothing until it is done with all of the files, so this
+        counts no progress. It says what is keeping the application busy, and it
+        goes away once the files are loaded.
+
+        Args:
+            files_to_load (list[Path]): the files about to be parsed.
+
+        Returns:
+            RunningProgressbar: the progressbar to close once the files are loaded.
+        """
+        return self._progressbar.start(
+            PARSING_DESCRIPTION, PARSING_UNIT, len(files_to_load)
+        )
 
     @staticmethod
     def _event_loop_is_running() -> bool:
