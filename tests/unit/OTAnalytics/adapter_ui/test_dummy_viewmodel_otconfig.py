@@ -1,0 +1,124 @@
+"""Tests that loading an otconfig explains what went wrong.
+
+Loading had no error handling at all: anything the parser raised travelled out
+of `load_otconfig` and reached the browser as a traceback. Saving has explained
+its failures since it was written; loading now does the same.
+"""
+
+from dataclasses import dataclass
+from pathlib import Path
+from unittest.mock import AsyncMock, Mock
+
+from OTAnalytics.adapter_ui.dummy_viewmodel import (
+    MESSAGE_CONFIGURATION_NOT_LOADED,
+    DummyViewModel,
+)
+from OTAnalytics.application.use_cases.load_otconfig import UnableToLoadOtconfigFile
+
+OTCONFIG_FILE = Path("folder/project.otconfig")
+
+
+@dataclass
+class Given:
+    application: Mock
+    ui_factory: Mock
+
+
+def create_given(load_error: Exception | None = None) -> Given:
+    application = Mock()
+    application.load_otconfig_async = AsyncMock(side_effect=load_error)
+    ui_factory = Mock()
+    ui_factory.askopenfilename = AsyncMock(return_value=str(OTCONFIG_FILE))
+    # The confirmation box that precedes every load.
+    ui_factory.info_box.return_value = Mock(canceled=False)
+    return Given(application=application, ui_factory=ui_factory)
+
+
+def create_target(given: Given) -> DummyViewModel:
+    """A view model with the post-load view refresh stubbed out.
+
+    `show_current_project` and `update_svz_metadata_view` drive injected
+    widgets and raise `MissingInjectedInstanceError` without a built ui, which
+    has nothing to do with how a load failure is reported.
+    """
+    target = _build(given)
+    target.show_current_project = Mock()  # type: ignore[method-assign]
+    target.update_svz_metadata_view = Mock()  # type: ignore[method-assign]
+    return target
+
+
+def _build(given: Given) -> DummyViewModel:
+    return DummyViewModel(
+        application=given.application,
+        ui_factory=given.ui_factory,
+        flow_parser=Mock(),
+        name_generator=Mock(),
+        event_list_export_formats={},
+        show_svz=False,
+        add_new_section=Mock(),
+        update_section_coordinates=Mock(),
+        provide_track_files=Mock(),
+        provide_video_files=Mock(),
+    )
+
+
+def reported_messages(given: Given) -> list[str]:
+    return [
+        call.kwargs["message"]
+        for call in given.ui_factory.info_box.call_args_list
+        if "message" in call.kwargs
+    ]
+
+
+class TestLoadOtconfig:
+    async def test_explains_a_failed_load_instead_of_raising(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10321"""
+        given = create_given(load_error=UnableToLoadOtconfigFile("sections clash"))
+        target = create_target(given)
+
+        await target.load_otconfig()
+
+        assert any(
+            MESSAGE_CONFIGURATION_NOT_LOADED in message
+            for message in reported_messages(given)
+        )
+
+    async def test_explains_a_missing_file_instead_of_raising(self) -> None:
+        """A reference that resolves nowhere is the common case, and today it
+        reaches the browser as a `FileNotFoundError` traceback.
+
+        #Requirement https://openproject.platomo.de/wp/10321
+        """
+        given = create_given(load_error=FileNotFoundError("no such track file"))
+        target = create_target(given)
+
+        await target.load_otconfig()
+
+        assert any(
+            "no such track file" in message for message in reported_messages(given)
+        )
+
+    async def test_does_not_refresh_the_view_after_a_failed_load(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10321"""
+        given = create_given(load_error=UnableToLoadOtconfigFile("sections clash"))
+        target = create_target(given)
+
+        await target.load_otconfig()
+
+        target.show_current_project.assert_not_called()  # type: ignore[attr-defined]
+
+    async def test_refreshes_the_view_after_a_successful_load(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10321"""
+        given = create_given()
+        target = create_target(given)
+
+        await target.load_otconfig()
+
+        given.application.load_otconfig_async.assert_awaited_once_with(
+            file=OTCONFIG_FILE
+        )
+        target.show_current_project.assert_called_once()  # type: ignore[attr-defined]
+        assert not any(
+            MESSAGE_CONFIGURATION_NOT_LOADED in message
+            for message in reported_messages(given)
+        )
