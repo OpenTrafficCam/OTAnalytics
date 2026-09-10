@@ -66,15 +66,31 @@ def read_video_name(ottrk: Path) -> str:
         str: the video file name, with extension.
 
     Raises:
-        UnreadableTrackFile: if the file carries no video metadata.
+        UnreadableTrackFile: if the file is missing, cannot be read, or carries
+            no video metadata. Each says which of the three it was, because the
+            message is what the user is shown and they lead to different places
+            to look.
     """
     try:
         metadata = metadata_from_json_events(parse_json_bz2_events(ottrk))
+    except FileNotFoundError as cause:
+        raise UnreadableTrackFile(f"'{ottrk.name}' is missing: {ottrk}.") from cause
+    except OSError as cause:
+        raise UnreadableTrackFile(
+            f"'{ottrk.name}' could not be read: {cause}."
+        ) from cause
+    except ijson.JSONError as cause:
+        # The parser reports the offending line with a caret pointing into it,
+        # which belongs in the log, not in a dialog the user has to read.
+        raise UnreadableTrackFile(
+            f"'{ottrk.name}' is not a valid track file."
+        ) from cause
+    try:
         video = metadata[ottrk_dataformat.VIDEO]
         return str(video[ottrk_dataformat.FILENAME]) + str(
             video[ottrk_dataformat.FILETYPE]
         )
-    except (KeyError, TypeError, OSError, ijson.JSONError) as cause:
+    except (KeyError, TypeError) as cause:
         raise UnreadableTrackFile(
             f"'{ottrk.name}' does not say which video it belongs to."
         ) from cause
