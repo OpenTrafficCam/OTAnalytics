@@ -182,11 +182,13 @@ class OtConfigParser(ConfigParser):
         existing_entries = []
         for video_entry in video_entries:
             video_file = base_folder / video_entry[PATH]
-            resolved = self._resolve(video_file, base_folder, "video", substitutions)
-            if resolved == video_file:
+            substitution = self._resolve(
+                video_file, base_folder, "video", substitutions
+            )
+            if substitution is None:
                 existing_entries.append(video_entry)
             else:
-                existing_entries.append({PATH: resolved.name})
+                existing_entries.append({PATH: substitution.used.name})
         return self._video_parser.parse_list(existing_entries, base_folder)
 
     def _resolve(
@@ -195,15 +197,16 @@ class OtConfigParser(ConfigParser):
         base_folder: Path,
         kind: str,
         substitutions: list[SubstitutedFile] | None,
-    ) -> Path:
+    ) -> SubstitutedFile | None:
         """Resolve a reference, falling back to a same-named neighbour.
 
-        Shared by videos and track files so the two cannot drift apart. A
-        substitution is recorded for reporting; the fallback itself is
-        deliberate and unchanged.
+        Shared by videos and track files so the two cannot drift apart. Returns
+        the substitution that was made, or `None` when the reference resolved
+        where the otconfig said. The fallback itself is deliberate and
+        unchanged; only its silence is not.
         """
         if requested.exists():
-            return requested
+            return None
         alternative = base_folder / requested.name
         logger().warning(
             f"Unable to find {kind} file '{requested}'. "
@@ -215,9 +218,10 @@ class OtConfigParser(ConfigParser):
                 f"Searching for alternative {kind} file '{alternative}' "
                 "unsuccessful. Can not parse OTConfig."
             )
+        substitution = SubstitutedFile(requested=requested, used=alternative)
         if substitutions is not None:
-            substitutions.append(SubstitutedFile(requested=requested, used=alternative))
-        return alternative
+            substitutions.append(substitution)
+        return substitution
 
     def _parse_project(self, data: dict) -> Project:
         _validate_data(data, [project.NAME, project.START_DATE])
@@ -309,8 +313,11 @@ class OtConfigParser(ConfigParser):
         existing_track_files: set[Path] = set()
         for _file in track_files:
             file_in_config = base_folder / _file
+            substitution = self._resolve(
+                file_in_config, base_folder, "track", substitutions
+            )
             existing_track_files.add(
-                self._resolve(file_in_config, base_folder, "track", substitutions)
+                file_in_config if substitution is None else substitution.used
             )
         return existing_track_files
 
