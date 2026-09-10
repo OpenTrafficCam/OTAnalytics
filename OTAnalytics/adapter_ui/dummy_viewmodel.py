@@ -161,6 +161,18 @@ TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
 
 
+def _explain(cause: BaseException) -> str:
+    """Name the underlying failure, not the wrapper.
+
+    `UnableToLoadOtconfigFile` carries a fixed string and keeps the real reason
+    in `__cause__`, so reporting the wrapper alone tells the user nothing they
+    can act on.
+    """
+    if cause.__cause__ is not None:
+        return f"{cause} {cause.__cause__}"
+    return f"{cause}"
+
+
 class MissingInjectedInstanceError(Exception):
     """Raise when no instance of an object was injected before referencing it"""
 
@@ -714,7 +726,7 @@ class DummyViewModel(
         except (UnableToLoadOtconfigFile, OSError) as cause:
             # A file the config references is missing, or the config contradicts
             # itself. Both are the user's to fix, so name the cause.
-            self._report_load_failure(f"{cause}")
+            self._report_load_failure(_explain(cause))
             return
         except Exception as cause:
             # The boundary of a user action: without this, a malformed config
@@ -741,23 +753,35 @@ class DummyViewModel(
             f"• '{substitution.requested}' → '{substitution.used}'"
             for substitution in substitutions
         )
-        message = (
+        self._tell_user(
             f"{MESSAGE_CONFIGURATION_FILES_SUBSTITUTED}"
             f"The files below were not found where the configuration says, so a "
             f"file of the same name next to the configuration was loaded "
             f"instead. Check that this is the data you meant:\n{rebound}"
         )
-        logger().warning(message)
-        self._ui_factory.info_box(
-            message=message, initial_position=self._get_window_position()
-        )
 
     def _report_load_failure(self, reason: str) -> None:
-        message = f"{MESSAGE_CONFIGURATION_NOT_LOADED}{reason}"
+        self._tell_user(f"{MESSAGE_CONFIGURATION_NOT_LOADED}{reason}")
+
+    def _tell_user(self, message: str) -> None:
+        """Log a message and show it if the ui can be reached.
+
+        Reporting must never break what it reports on. Nicegui resolves the
+        client through the slot stack and raises when that stack is empty, so
+        `info_box` fails whenever no browser is attached — during the startup
+        preload of a `--config` file, for one. Left unguarded, reporting a
+        substitution there would propagate out of the parse and stop the server
+        from starting. The log is the guarantee; the box is best effort.
+        """
         logger().warning(message)
-        self._ui_factory.info_box(
-            message=message, initial_position=self._get_window_position()
-        )
+        try:
+            self._ui_factory.info_box(
+                message=message, initial_position=self._get_window_position()
+            )
+        except Exception as cause:
+            logger().exception(
+                "Could not show this message to the user", exc_info=cause
+            )
 
     def set_tracks_frame(self, frame: AbstractFrame) -> None:
         self._frame_tracks = frame

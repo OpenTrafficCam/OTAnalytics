@@ -99,6 +99,25 @@ class TestLoadOtconfig:
             "no such track file" in message for message in reported_messages(given)
         )
 
+    async def test_names_the_underlying_cause_not_the_wrapper(self) -> None:
+        """`UnableToLoadOtconfigFile` carries a fixed string and keeps the real
+        reason in `__cause__`, so the wrapper alone tells the user nothing.
+
+        #Requirement https://openproject.platomo.de/wp/10321
+        """
+        wrapper = UnableToLoadOtconfigFile(
+            "Error while loading otconfig file. Abort loading!"
+        )
+        wrapper.__cause__ = FileNotFoundError("clip.ottrk is missing")
+        given = create_given(load_error=wrapper)
+        target = create_target(given)
+
+        await target.load_otconfig()
+
+        assert any(
+            "clip.ottrk is missing" in message for message in reported_messages(given)
+        )
+
     async def test_does_not_refresh_the_view_after_a_failed_load(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10321"""
         given = create_given(load_error=UnableToLoadOtconfigFile("sections clash"))
@@ -175,3 +194,36 @@ class TestReportSubstitutedFiles:
         target.report_substituted_files([])
 
         assert reported_messages(given) == []
+
+
+class TestReportingCannotBreakALoad:
+    def test_a_report_that_cannot_be_shown_does_not_abort_the_load(self) -> None:
+        """Preloading a `--config` file happens before any browser client exists.
+
+        NiceGUI's `ui.notify` resolves `context.client` through the slot stack
+        and raises `RuntimeError` when that stack is empty, so reporting a
+        substitution during the startup preload would otherwise propagate out
+        of the parse and take the whole server down.
+
+        #Requirement https://openproject.platomo.de/wp/10321
+        """
+        given = create_given()
+        given.ui_factory.info_box.side_effect = RuntimeError(
+            "The current slot cannot be determined"
+        )
+        target = create_target(given)
+
+        target.report_substituted_files(
+            [SubstitutedFile(Path("a/one.ottrk"), Path("b/one.ottrk"))]
+        )
+
+    async def test_a_failure_report_that_cannot_be_shown_still_returns(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10321"""
+        given = create_given(load_error=FileNotFoundError("no such track file"))
+        given.ui_factory.info_box.side_effect = [
+            Mock(canceled=False),
+            RuntimeError("The current slot cannot be determined"),
+        ]
+        target = create_target(given)
+
+        await target.load_otconfig()
