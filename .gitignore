@@ -4,6 +4,8 @@ data/
 tests/data/OTCamera19_FR20_2023-05-24*
 tests/scripts/
 .envrc
+# Where S3_USER_SOURCE stages downloaded tracks and videos while running
+.cache-otanalytics/
 
 # Anthropic Claude
 .claude/rules/shared

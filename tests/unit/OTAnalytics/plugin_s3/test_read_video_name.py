@@ -66,15 +66,50 @@ class TestReadVideoName:
     ) -> None:
         given = create_given(tmp_path, {"metadata": {}})
 
-        with pytest.raises(UnreadableTrackFile):
+        with pytest.raises(UnreadableTrackFile, match="does not say which video"):
             read_video_name(given.ottrk)
 
-    def test_an_unreadable_track_file_is_reported(self, tmp_path: Path) -> None:
+    def test_a_track_file_that_is_not_valid_json_is_reported(
+        self, tmp_path: Path
+    ) -> None:
+        """Naming the content as the problem, not the video metadata."""
         given = create_given(tmp_path, None)
 
-        with pytest.raises(UnreadableTrackFile):
+        with pytest.raises(UnreadableTrackFile, match="is not a valid track file"):
             read_video_name(given.ottrk)
 
-    def test_a_missing_track_file_is_reported(self, tmp_path: Path) -> None:
-        with pytest.raises(UnreadableTrackFile):
-            read_video_name(tmp_path / "absent.ottrk")
+    def test_a_track_file_that_cannot_be_opened_is_reported(
+        self, tmp_path: Path
+    ) -> None:
+        given = Given(ottrk=tmp_path / "plain.ottrk")
+        given.ottrk.write_bytes(b"not compressed at all")
+
+        with pytest.raises(UnreadableTrackFile, match="could not be read"):
+            read_video_name(given.ottrk)
+
+    def test_every_report_stays_on_one_line(self, tmp_path: Path) -> None:
+        """The message is shown in a dialog, so a parser dump does not belong.
+
+        ijson names the offending line and points a caret into it, which is
+        several lines of diagram nobody can read in a popup.
+        """
+        given = create_given(tmp_path, None)
+
+        with pytest.raises(UnreadableTrackFile) as reported:
+            read_video_name(given.ottrk)
+
+        assert "\n" not in str(reported.value)
+
+    def test_a_missing_track_file_says_it_is_missing(self, tmp_path: Path) -> None:
+        """A file that never arrived is a different problem from a corrupt one.
+
+        Reporting it as missing video metadata sends whoever reads the message
+        looking inside a file that is not there.
+        """
+        absent = tmp_path / "absent.ottrk"
+
+        with pytest.raises(UnreadableTrackFile, match="is missing") as reported:
+            read_video_name(absent)
+
+        assert str(absent) in str(reported.value)
+        assert isinstance(reported.value.__cause__, FileNotFoundError)
