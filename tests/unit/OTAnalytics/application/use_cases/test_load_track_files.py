@@ -1,3 +1,5 @@
+import asyncio
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,7 +12,11 @@ from OTAnalytics.application.parser.track_parser import (
     TrackParser,
     TracksParseResult,
 )
-from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
+from OTAnalytics.application.use_cases.load_track_files import (
+    PARSING_DESCRIPTION,
+    PARSING_UNIT,
+    LoadTrackFiles,
+)
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
@@ -307,6 +313,231 @@ class TestLoadTrackFile:
         ]
 
 
+class TestLoadTrackFilesInsideAnEventLoop:
+    """#Requirement https://openproject.platomo.de/wp/10282"""
+
+    async def test_blocking_call_refuses_to_run_on_the_event_loop(self) -> None:
+        """Parsing on the event loop freezes the webui for every connected client."""
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"class1"},
+        )
+        target = create_target(given)
+
+        with pytest.raises(RuntimeError):
+            target([some_file])
+
+        given.track_parser.parse_files.assert_not_called()
+
+
+class TestLoadTrackFilesOffTheEventLoop:
+    """#Requirement https://openproject.platomo.de/wp/10282"""
+
+    async def test_parses_only_the_files_not_already_loaded(self) -> None:
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[other_file],
+            existing_track_files=[some_file],
+            classes={"class1"},
+        )
+        target = create_target(given)
+
+        await target.load([some_file, other_file])
+
+        given.track_parser.parse_files.assert_called_once_with([other_file])
+
+    def test_publishes_in_the_same_order_as_the_blocking_call(self) -> None:
+        classes = {"class1", "class2"}
+        arguments = dict(
+            track_ids=[TrackId("1"), TrackId("2")],
+            video_files=[Path("video1.mp4"), Path("video2.mp4")],
+            track_files=[some_file, other_file],
+            existing_track_files=[],
+            classes=classes,
+        )
+        blocking = setup(**arguments)  # type: ignore[arg-type]
+        create_target(blocking)([some_file, other_file])
+
+        awaited = setup(**arguments)  # type: ignore[arg-type]
+        asyncio.run(create_target(awaited).load([some_file, other_file]))
+
+        # the two runs hold distinct mocks, so compare what was called in what
+        # order rather than the mock instances passed along
+        assert call_names(awaited) == call_names(blocking)
+        assert awaited.track_repository.add_all.call_count == 1
+
+    async def test_parses_off_the_event_loop_and_publishes_on_it(self) -> None:
+        """Repositories notify observers that mutate widgets, so publishing must
+        stay on the event loop while the expensive parse does not."""
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"class1"},
+        )
+        threads: dict[str, threading.Thread] = {}
+        given.track_parser.parse_files.side_effect = (
+            lambda files: threads.setdefault("parse", threading.current_thread())
+            and given.parse_result
+        )
+        given.track_repository.add_all.side_effect = lambda tracks: threads.setdefault(
+            "publish", threading.current_thread()
+        )
+        target = create_target(given)
+
+        await target.load([some_file])
+
+        assert threads["parse"] is not threading.current_thread()
+        assert threads["publish"] is threading.current_thread()
+
+    async def test_parses_before_publishing_anything(self) -> None:
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"class1"},
+        )
+        published_during_parse: list[list] = []
+
+        def record_publishes_so_far(files: list[Path]) -> Any:
+            published_during_parse.append(
+                list(given.track_repository.add_all.call_args_list)
+            )
+            return given.parse_result
+
+        given.track_parser.parse_files.side_effect = record_publishes_so_far
+        target = create_target(given)
+
+        await target.load([some_file])
+
+        assert published_during_parse == [[]]
+        given.track_repository.add_all.assert_called_once()
+
+
+class TestLoadTrackFilesShowsProgress:
+    """#Requirement https://openproject.platomo.de/wp/10282"""
+
+    def test_blocking_call_shows_a_progressbar_until_the_files_are_loaded(
+        self,
+    ) -> None:
+        given = setup(
+            track_ids=[TrackId("1"), TrackId("2")],
+            video_files=[Path("video1.mp4"), Path("video2.mp4")],
+            track_files=[some_file, other_file],
+            existing_track_files=[],
+            classes={"class1"},
+        )
+        target = create_target(given)
+
+        target([some_file, other_file])
+
+        given.progressbar.start.assert_called_once_with(
+            PARSING_DESCRIPTION, PARSING_UNIT, 2
+        )
+        given.progressbar.start.return_value.close.assert_called_once_with()
+
+    async def test_shows_a_progressbar_until_the_files_are_loaded(self) -> None:
+        """Parsing off the event loop leaves the ui free to show what it is doing."""
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"class1"},
+        )
+        target = create_target(given)
+
+        await target.load([some_file])
+
+        given.progressbar.start.assert_called_once_with(
+            PARSING_DESCRIPTION, PARSING_UNIT, 1
+        )
+        given.progressbar.start.return_value.close.assert_called_once_with()
+
+    async def test_counts_only_the_files_it_is_going_to_parse(self) -> None:
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[other_file],
+            existing_track_files=[some_file],
+            classes={"class1"},
+        )
+        target = create_target(given)
+
+        await target.load([some_file, other_file])
+
+        given.progressbar.start.assert_called_once_with(
+            PARSING_DESCRIPTION, PARSING_UNIT, 1
+        )
+
+    async def test_opens_the_progressbar_before_parsing_and_closes_it_after(
+        self,
+    ) -> None:
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"class1"},
+        )
+        target = create_target(given)
+
+        await target.load([some_file])
+
+        assert call_names(given) == [
+            "progressbar.start",
+            "track_parser.parse_files",
+            "videos_metadata.update",
+            "video_parser.parse",
+            "video_repository.add_all",
+            "track_repository.add_all",
+            "tracks_metadata.update_detection_classes",
+            "progressbar.start().close",
+        ]
+
+    async def test_closes_the_progressbar_when_parsing_fails(self) -> None:
+        """A progressbar left open would hide the ui behind it for good."""
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"class1"},
+        )
+        given.track_parser.parse_files.side_effect = ValueError("broken track file")
+        target = create_target(given)
+
+        with pytest.raises(ValueError):
+            await target.load([some_file])
+
+        given.progressbar.start.return_value.close.assert_called_once_with()
+
+    async def test_shows_nothing_when_every_file_is_loaded_already(self) -> None:
+        given = setup(
+            track_ids=[],
+            video_files=[],
+            track_files=[],
+            existing_track_files=[some_file],
+            classes=set(),
+        )
+        target = create_target(given)
+
+        await target.load([some_file])
+
+        given.progressbar.start.assert_not_called()
+
+
+def call_names(given: "Given") -> list[str]:
+    """The collaborator methods called, in call order."""
+    return [name for name, _, _ in given.order.mock_calls]
+
+
 @dataclass
 class Given:
     track_ids: list[TrackId]
@@ -337,6 +568,7 @@ class Given:
         self.order.track_repository = self.track_repository
         self.order.video_parser = self.video_parser
         self.order.tracks_metadata = self.tracks_metadata
+        self.order.progressbar = self.progressbar
 
 
 def setup(

@@ -22,6 +22,12 @@ PLAYWRIGHT_VISIBLE_TIMEOUT_MS = 5000
 PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS = 1000
 # Short one-off UI settle wait (milliseconds)
 PLAYWRIGHT_SHORT_WAIT_MS = 150
+# Parsing track files runs off the event loop and may take a while on a cold
+# feather cache, so waiting it out needs far more headroom than the other ui waits
+TRACK_LOADING_TIMEOUT_MS = 120_000
+# Exports take seconds rather than milliseconds, and more of them on a busy
+# machine, so give them room instead of guessing a sleep
+EXPORT_TIMEOUT_MS = 120_000
 # Polling intervals (milliseconds)
 PLAYWRIGHT_POLL_INTERVAL_MS = 50
 PLAYWRIGHT_POLL_INTERVAL_SLOW_MS = 100
