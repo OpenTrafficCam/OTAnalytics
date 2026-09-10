@@ -105,6 +105,7 @@ from OTAnalytics.application.use_cases.export_events import (
 )
 from OTAnalytics.application.use_cases.flow_repository import FlowAlreadyExists
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
+from OTAnalytics.application.use_cases.load_otconfig import UnableToLoadOtconfigFile
 from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideTrackFiles,
     ProvideVideoFiles,
@@ -148,6 +149,7 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
+MESSAGE_CONFIGURATION_NOT_LOADED = "The configuration has not been loaded.\n"
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
@@ -701,9 +703,28 @@ class DummyViewModel(
         if proceed.canceled:
             return
         logger().info(f"{OTCONFIG_FILE_TYPE} file to load: {otconfig_file}")
-        await self._application.load_otconfig_async(file=Path(otconfig_file))
+        try:
+            await self._application.load_otconfig_async(file=Path(otconfig_file))
+        except (UnableToLoadOtconfigFile, OSError) as cause:
+            # A file the config references is missing, or the config contradicts
+            # itself. Both are the user's to fix, so name the cause.
+            self._report_load_failure(f"{cause}")
+            return
+        except Exception as cause:
+            # The boundary of a user action: without this, a malformed config
+            # reaches the browser as a traceback. The traceback still logs.
+            logger().exception("Failed to load configuration file", exc_info=cause)
+            self._report_load_failure("An unexpected error occurred.")
+            return
         self.show_current_project()
         self.update_svz_metadata_view()
+
+    def _report_load_failure(self, reason: str) -> None:
+        message = f"{MESSAGE_CONFIGURATION_NOT_LOADED}{reason}"
+        logger().warning(message)
+        self._ui_factory.info_box(
+            message=message, initial_position=self._get_window_position()
+        )
 
     def set_tracks_frame(self, frame: AbstractFrame) -> None:
         self._frame_tracks = frame
