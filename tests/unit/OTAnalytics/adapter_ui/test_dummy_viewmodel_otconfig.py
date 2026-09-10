@@ -13,6 +13,7 @@ from OTAnalytics.adapter_ui.dummy_viewmodel import (
     MESSAGE_CONFIGURATION_NOT_LOADED,
     DummyViewModel,
 )
+from OTAnalytics.application.parser.config_parser import SubstitutedFile
 from OTAnalytics.application.use_cases.load_otconfig import UnableToLoadOtconfigFile
 
 OTCONFIG_FILE = Path("folder/project.otconfig")
@@ -122,3 +123,55 @@ class TestLoadOtconfig:
             MESSAGE_CONFIGURATION_NOT_LOADED in message
             for message in reported_messages(given)
         )
+
+
+class TestReportSubstitutedFiles:
+    def test_names_what_was_asked_for_and_what_was_used(self) -> None:
+        """The user has to be able to tell which data the project now holds.
+
+        #Requirement https://openproject.platomo.de/wp/10321
+        """
+        given = create_given()
+        target = create_target(given)
+
+        target.report_substituted_files(
+            [
+                SubstitutedFile(
+                    requested=Path("moved/clip.ottrk"), used=Path("here/clip.ottrk")
+                )
+            ]
+        )
+
+        reported = reported_messages(given)
+        assert len(reported) == 1
+        assert "moved/clip.ottrk" in reported[0]
+        assert "here/clip.ottrk" in reported[0]
+
+    def test_reports_every_substitution_in_one_message(self) -> None:
+        """A project with many rebound files must not raise many boxes.
+
+        #Requirement https://openproject.platomo.de/wp/10321
+        """
+        given = create_given()
+        target = create_target(given)
+
+        target.report_substituted_files(
+            [
+                SubstitutedFile(Path("a/one.ottrk"), Path("b/one.ottrk")),
+                SubstitutedFile(Path("a/two.mp4"), Path("b/two.mp4")),
+            ]
+        )
+
+        reported = reported_messages(given)
+        assert len(reported) == 1
+        assert "one.ottrk" in reported[0]
+        assert "two.mp4" in reported[0]
+
+    def test_says_nothing_when_there_was_no_substitution(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10321"""
+        given = create_given()
+        target = create_target(given)
+
+        target.report_substituted_files([])
+
+        assert reported_messages(given) == []

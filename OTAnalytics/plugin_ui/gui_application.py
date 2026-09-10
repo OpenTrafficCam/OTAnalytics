@@ -7,7 +7,6 @@ from OTAnalytics.adapter_ui.local_file_providers import (
     LocalVideoFileProvider,
 )
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
-from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
@@ -113,6 +112,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.event_repository.register_observer(self.view_model.update_track_statistics)
         self.load_otflow.register(self.file_state.last_saved_config.set)
         self.load_otconfig.register(self.file_state.last_saved_config.set)
+        # The cli builds its own parser and registers nothing, so a headless
+        # run keeps the log warning as its only signal.
+        self.otconfig_parser.register(self.view_model.report_substituted_files)
         self.load_otconfig.register(self.view_model.update_remark_view)
         self.project_updater.register(self.view_model.update_quick_save_button)
         self.track_file_repository.register(self.view_model.update_quick_save_button)
@@ -137,7 +139,14 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         )
 
     @cached_property
-    def view_model(self) -> ViewModel:
+    def view_model(self) -> DummyViewModel:
+        """Typed concretely so wiring can reach methods the `ViewModel` port
+        does not declare.
+
+        Adding them to the port instead is ruled out: `ViewModel` and
+        `UiFactory` must not gain abstract methods, because OTCloud implements
+        those ports and a new one breaks it at its next pin bump.
+        """
         return DummyViewModel(
             self.application,
             self.ui_factory,
