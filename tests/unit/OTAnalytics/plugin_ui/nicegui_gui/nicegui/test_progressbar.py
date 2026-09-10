@@ -169,6 +169,31 @@ class TestNiceguiProgressbarBuilder:
         assert progressbars[1].is_open is True
 
 
+class TestProgressbarForWorkOffTheEventLoop:
+    """#Requirement https://openproject.platomo.de/wp/10282"""
+
+    @pytest.mark.asyncio
+    async def test_stays_open_until_the_caller_closes_it(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """Parsing on a worker thread reports nothing until it is done."""
+        given = create_given(resource_manager)
+        target = create_builder(given)
+        progressbars = []
+
+        @ui.page("/test")
+        def page() -> None:
+            progressbars.append(target.start("Parsing track files", "files", 2))
+
+        await user.open("/test")
+        await user.should_see("Parsing track files 0 / 2 files")
+        assert progressbars[0].is_open is True
+
+        progressbars[0].close()
+
+        assert progressbars[0].is_open is False
+
+
 class TestProgressbarWithoutABrowser:
     """#Requirement https://openproject.platomo.de/wp/10281"""
 
