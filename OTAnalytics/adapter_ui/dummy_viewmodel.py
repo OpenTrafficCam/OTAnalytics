@@ -3,7 +3,7 @@ import functools
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Sequence
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -70,7 +70,10 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
-from OTAnalytics.application.parser.config_parser import StartDateMissing
+from OTAnalytics.application.parser.config_parser import (
+    StartDateMissing,
+    SubstitutedFile,
+)
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.project import (
@@ -150,6 +153,9 @@ from OTAnalytics.domain.video import Video, VideoListObserver
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
 MESSAGE_CONFIGURATION_NOT_LOADED = "The configuration has not been loaded.\n"
+MESSAGE_CONFIGURATION_FILES_SUBSTITUTED = (
+    "The configuration references files that were not found.\n"
+)
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
@@ -718,6 +724,33 @@ class DummyViewModel(
             return
         self.show_current_project()
         self.update_svz_metadata_view()
+
+    def report_substituted_files(
+        self, substitutions: Sequence[SubstitutedFile]
+    ) -> None:
+        """Tell the user which references were rebound while loading.
+
+        The parser resolves a missing reference to a same-named file beside the
+        otconfig. The names match but the contents need not: re-detected or
+        re-tracked output reuses the filename with different detections. So the
+        project is loaded, and the user is told what it actually holds.
+        """
+        if not substitutions:
+            return
+        rebound = "\n".join(
+            f"• '{substitution.requested}' → '{substitution.used}'"
+            for substitution in substitutions
+        )
+        message = (
+            f"{MESSAGE_CONFIGURATION_FILES_SUBSTITUTED}"
+            f"The files below were not found where the configuration says, so a "
+            f"file of the same name next to the configuration was loaded "
+            f"instead. Check that this is the data you meant:\n{rebound}"
+        )
+        logger().warning(message)
+        self._ui_factory.info_box(
+            message=message, initial_position=self._get_window_position()
+        )
 
     def _report_load_failure(self, reason: str) -> None:
         message = f"{MESSAGE_CONFIGURATION_NOT_LOADED}{reason}"
