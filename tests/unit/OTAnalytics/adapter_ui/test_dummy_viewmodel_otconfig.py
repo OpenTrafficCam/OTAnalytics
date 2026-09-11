@@ -14,6 +14,7 @@ from OTAnalytics.adapter_ui.dummy_viewmodel import (
     DummyViewModel,
 )
 from OTAnalytics.application.parser.config_parser import SubstitutedFile
+from OTAnalytics.application.project_location import UnsupportedProjectLocation
 from OTAnalytics.application.use_cases.load_otconfig import UnableToLoadOtconfigFile
 
 OTCONFIG_FILE = Path("folder/project.otconfig")
@@ -140,6 +141,29 @@ class TestLoadOtconfig:
         target.show_current_project.assert_called_once()  # type: ignore[attr-defined]
         assert not any(
             MESSAGE_CONFIGURATION_NOT_LOADED in message
+            for message in reported_messages(given)
+        )
+
+
+class TestRefusingAProjectStoredElsewhere:
+    async def test_tells_the_user_where_the_project_says_its_data_lives(self) -> None:
+        """A project stored in S3 opened by a local-filesystem installation.
+
+        #Requirement https://openproject.platomo.de/wp/10322
+        """
+        given = create_given(
+            load_error=UnsupportedProjectLocation(
+                "This project's tracks and videos are stored in S3, under "
+                "'project-1/site-2/otcamera19/', but this installation reads "
+                "the local filesystem."
+            )
+        )
+        target = create_target(given)
+
+        await target.load_otconfig()
+
+        assert any(
+            "project-1/site-2/otcamera19/" in message
             for message in reported_messages(given)
         )
 
