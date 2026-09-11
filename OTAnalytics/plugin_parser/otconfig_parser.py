@@ -19,6 +19,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
+from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
@@ -71,6 +72,7 @@ NUM_PROCESSES = "num_processes"
 LOGFILE = "logfile"
 DEBUG = "debug"
 PATH = "path"
+S3_KEY_PREFIX = "s3_key_prefix"
 
 
 class OtConfigFormatFixer(ABC):
@@ -171,7 +173,20 @@ class OtConfigParser(ConfigParser):
             sections=sections,
             flows=flows,
             remark=remark,
+            s3_key_prefix=self._parse_s3_key_prefix(fixed_content),
         )
+
+    def _parse_s3_key_prefix(self, data: dict) -> S3KeyPrefix | None:
+        """Read where the project says its data lives, if it says so at all.
+
+        Absent from every otconfig written before ADR 0004, so its absence is
+        not an error here. Whether a file may be loaded without one -- or with
+        one -- is decided on load by ValidateProjectLocation, which knows what
+        this installation reads from; the parser does not.
+        """
+        if (prefix := data.get(S3_KEY_PREFIX)) is None:
+            return None
+        return S3KeyPrefix(prefix)
 
     def _parse_videos(
         self,
