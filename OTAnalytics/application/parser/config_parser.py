@@ -103,6 +103,7 @@ class ConfigParser(ABC):
         flows: Iterable[Flow],
         file: Path,
         remark: str | None,
+        s3_key_prefix: S3KeyPrefix | None,
     ) -> None:
         """Serializes the project with the given videos, sections and flows into the
         file.
@@ -115,6 +116,8 @@ class ConfigParser(ABC):
             flows (Iterable[Flow]): flows to store
             file (Path): output file
             remark(str | None): comment on this file
+            s3_key_prefix(S3KeyPrefix | None): where this project's data lives,
+                or None when it lives on the local filesystem
 
         Raises:
             StartDateMissing: if start date is not configured
@@ -142,8 +145,16 @@ class ConfigParser(ABC):
         flows: Iterable[Flow],
         file: Path,
         remark: str | None,
+        s3_key_prefix: S3KeyPrefix | None,
     ) -> dict:
-        """Converts the given information into a dictionary."""
+        """Converts the given information into a dictionary.
+
+        `s3_key_prefix` is required rather than defaulted: SaveOtconfig and
+        OtconfigHasChanged both call this and must pass the same value. If only
+        the save side passed it, the written file would carry the key while
+        `convert` omitted it, and every project would report itself as
+        permanently unsaved.
+        """
         raise NotImplementedError
 
 
