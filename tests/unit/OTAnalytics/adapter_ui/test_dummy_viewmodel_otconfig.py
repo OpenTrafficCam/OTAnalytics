@@ -152,19 +152,20 @@ class TestReportSubstitutedFiles:
         """
         given = create_given()
         target = create_target(given)
+        requested = Path("moved/clip.ottrk")
+        used = Path("here/clip.ottrk")
 
         target.report_substituted_files(
-            [
-                SubstitutedFile(
-                    requested=Path("moved/clip.ottrk"), used=Path("here/clip.ottrk")
-                )
-            ]
+            [SubstitutedFile(requested=requested, used=used)]
         )
 
         reported = reported_messages(given)
         assert len(reported) == 1
-        assert "moved/clip.ottrk" in reported[0]
-        assert "here/clip.ottrk" in reported[0]
+        # The paths are rendered the way the platform writes them, so the
+        # expectation has to come from the same Path objects: on Windows the
+        # separator is a backslash.
+        assert str(requested) in reported[0]
+        assert str(used) in reported[0]
 
     def test_reports_every_substitution_in_one_message(self) -> None:
         """A project with many rebound files must not raise many boxes.
