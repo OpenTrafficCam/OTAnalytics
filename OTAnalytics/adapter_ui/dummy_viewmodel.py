@@ -93,6 +93,7 @@ from OTAnalytics.application.project import (
     SvzMetadata,
     WeatherType,
 )
+from OTAnalytics.application.project_location import UnsupportedProjectLocation
 from OTAnalytics.application.use_cases.config import ConfigValidationError
 from OTAnalytics.application.use_cases.config_has_changed import NoExistingConfigFound
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
@@ -723,9 +724,14 @@ class DummyViewModel(
         logger().info(f"{OTCONFIG_FILE_TYPE} file to load: {otconfig_file}")
         try:
             await self._application.load_otconfig_async(file=Path(otconfig_file))
-        except (UnableToLoadOtconfigFile, OSError) as cause:
-            # A file the config references is missing, or the config contradicts
-            # itself. Both are the user's to fix, so name the cause.
+        except (
+            UnableToLoadOtconfigFile,
+            UnsupportedProjectLocation,
+            OSError,
+        ) as cause:
+            # A file the config references is missing, the config contradicts
+            # itself, or its data lives where this installation cannot read it.
+            # All are the user's to act on, so name the cause.
             self._report_load_failure(_explain(cause))
             return
         except Exception as cause:
