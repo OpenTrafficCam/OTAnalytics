@@ -29,6 +29,10 @@ from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
+from OTAnalytics.application.project_location import (
+    RefuseAnyProjectLocation,
+    ValidateProjectLocation,
+)
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.run_configuration import (
     RunConfiguration,
@@ -380,7 +384,18 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.load_track_files,
             self.add_new_remark,
             parse_json,
+            self.validate_project_location,
         )
+
+    @cached_property
+    def validate_project_location(self) -> ValidateProjectLocation:
+        """Refuse a project stored in S3; this starter reads the filesystem.
+
+        Overridden where S3 can be configured. Choosing the implementation here
+        is how the application answers the transfer-mode question, so no code
+        downstream has to ask it.
+        """
+        return RefuseAnyProjectLocation()
 
     @cached_property
     def reset_application(self) -> ResetApplication:
