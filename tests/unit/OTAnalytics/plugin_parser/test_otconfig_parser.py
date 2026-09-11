@@ -130,6 +130,7 @@ class TestOtConfigParser:
             flows=flows,
             file=output,
             remark=remark,
+            s3_key_prefix=None,
         )
 
         serialized_content = parse_json(output)
@@ -162,6 +163,7 @@ class TestOtConfigParser:
             mock_otconfig.flows,
             save_path,
             mock_otconfig.remark,
+            mock_otconfig.s3_key_prefix,
         )
 
     def test_parse_config(
