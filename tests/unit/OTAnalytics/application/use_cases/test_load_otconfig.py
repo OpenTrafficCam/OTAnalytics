@@ -183,6 +183,31 @@ class TestRefusingAProjectStoredElsewhere:
         observer.assert_not_called()
         given.reset_application.reset.assert_called_once()
 
+    def test_holds_the_prefix_while_track_files_load(self) -> None:
+        """Slice 7 saves beside the inputs, so the prefix has to be in effect
+        while they are loaded -- after `_begin`'s reset has cleared it.
+        """
+        given = setup_default()
+        target = create_target(given)
+
+        target.load(Mock())
+
+        given.current_key_prefix.set.assert_called_once_with(
+            given.otconfig.s3_key_prefix
+        )
+
+    def test_holds_no_prefix_when_the_location_is_refused(self) -> None:
+        given = setup_default()
+        given.validate_project_location.side_effect = UnsupportedProjectLocation(
+            "stored in S3"
+        )
+        target = create_target(given)
+
+        with pytest.raises(UnsupportedProjectLocation):
+            target.load(Mock())
+
+        given.current_key_prefix.set.assert_not_called()
+
     async def test_refuses_an_async_load_the_same_way(self) -> None:
         given = setup_default()
         given.load_track_files = Mock(spec=LoadTrackFiles)
@@ -213,6 +238,7 @@ class Given:
     deserializer: Mock
     deserialization_result: Mock
     validate_project_location: Mock
+    current_key_prefix: Mock
 
 
 def setup_default() -> Given:
@@ -246,6 +272,7 @@ def setup(
     deserializer = Mock()
     deserializer.return_value = deserialization_result
     validate_project_location = Mock()
+    current_key_prefix = Mock()
 
     if raise_error:
         add_sections = MagicMock()
@@ -266,6 +293,7 @@ def setup(
         deserializer=deserializer,
         deserialization_result=deserialization_result,
         validate_project_location=validate_project_location,
+        current_key_prefix=current_key_prefix,
     )
 
 
@@ -304,4 +332,5 @@ def create_target(given: Given) -> LoadOtconfig:
         given.remark_repository,
         given.deserializer,
         given.validate_project_location,
+        given.current_key_prefix,
     )

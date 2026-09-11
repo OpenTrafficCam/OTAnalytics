@@ -40,6 +40,7 @@ from OTAnalytics.application.run_configuration import (
 )
 from OTAnalytics.application.state import (
     ActionState,
+    CurrentKeyPrefix,
     FileState,
     FlowState,
     SectionState,
@@ -357,6 +358,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                 self.get_all_videos,
                 self.get_all_track_files,
                 self.get_current_remark,
+                self.current_key_prefix,
             ),
             OtflowHasChanged(
                 self.flow_parser, self.get_all_sections, self.get_all_flows
@@ -385,6 +387,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.add_new_remark,
             parse_json,
             self.validate_project_location,
+            self.current_key_prefix,
         )
 
     @cached_property
@@ -412,6 +415,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.flow_state,
             self.action_state,
             self.file_state,
+            self.current_key_prefix,
         )
 
     @cached_property
@@ -431,7 +435,18 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.otconfig_parser,
             self.file_state,
             self.get_current_remark,
+            self.current_key_prefix,
         )
+
+    @cached_property
+    def current_key_prefix(self) -> CurrentKeyPrefix:
+        """One holder for the whole application.
+
+        Save, dirty-tracking and the S3 providers all have to read the same
+        prefix; a second instance would split that between owners and let a
+        save write a location the providers never read from.
+        """
+        return CurrentKeyPrefix()
 
     @cached_property
     def get_current_remark(self) -> GetCurrentRemark:
