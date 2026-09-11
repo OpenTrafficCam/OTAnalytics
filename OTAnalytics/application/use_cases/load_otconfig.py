@@ -3,6 +3,7 @@ from typing import Awaitable, Callable
 
 from OTAnalytics.application.parser.config_parser import ConfigParser, OtConfig
 from OTAnalytics.application.parser.deserializer import Deserializer
+from OTAnalytics.application.project_location import ValidateProjectLocation
 from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.flow_repository import (
@@ -32,6 +33,7 @@ class LoadOtconfig:
         load_track_files: LoadTrackFiles,
         add_new_remark: AddNewRemark,
         deserialize: Deserializer,
+        validate_project_location: ValidateProjectLocation,
     ) -> None:
         self._add_new_remark = add_new_remark
         self._reset_application = reset_application
@@ -42,6 +44,7 @@ class LoadOtconfig:
         self._add_flows = add_flows
         self._load_track_files = load_track_files
         self._deserialize = deserialize
+        self._validate_project_location = validate_project_location
         self._subject = Subject[ConfigurationFile]()
 
     def load(self, file: Path) -> None:
@@ -84,8 +87,16 @@ class LoadOtconfig:
             self._abort(cause)
 
     def _begin(self, file: Path) -> OtConfig:
+        """Reset, parse, and refuse a project this installation cannot read.
+
+        Validating here rather than after `_publish_before_tracks` is what keeps
+        the load all-or-nothing without `_abort`: nothing has been published
+        yet, so a refusal leaves the application exactly as the reset left it.
+        """
         self._reset_application.reset()
-        return self._config_parser.parse(file)
+        config = self._config_parser.parse(file)
+        self._validate_project_location(config.s3_key_prefix)
+        return config
 
     def _publish_before_tracks(self, config: OtConfig) -> None:
         self._update_project(
