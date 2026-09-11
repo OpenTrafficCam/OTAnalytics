@@ -6,6 +6,7 @@ from typing import Iterable, Sequence
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
+from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section
@@ -53,6 +54,10 @@ class OtConfig:
     sections: Sequence[Section]
     flows: Sequence[Flow]
     remark: str | None
+    # Defaulted, and it has to stay that way: OTCloud rebuilds an OtConfig by
+    # keyword (plugin_video_validate/ui.py:165) and its keyword list cannot name
+    # this field until it bumps its OTAnalytics pin.
+    s3_key_prefix: S3KeyPrefix | None = None
 
 
 class ConfigParser(ABC):
