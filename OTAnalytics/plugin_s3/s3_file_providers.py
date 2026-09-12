@@ -10,7 +10,9 @@ from typing import Callable
 
 import ijson
 
+from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.state import CurrentKeyPrefix
 from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideTrackFiles,
@@ -35,6 +37,10 @@ DOWNLOADING_TRACKS = "Downloading tracks"
 DOWNLOADING_VIDEOS = "Downloading videos"
 
 CANCELLED = "Loading from S3 cancelled. Nothing was loaded."
+NO_PROJECT = (
+    "This installation reads from S3, where a project says which data is its"
+    " own. Load a project first, then select a time range."
+)
 
 
 class MissingVideoForTrackFile(Exception):
@@ -104,6 +110,9 @@ class _S3Provider:
         list_objects (S3ListObjects): lists the bucket under the key prefix.
         download_objects (DownloadObjects): downloads the selected objects.
         config (S3Config): the S3 settings fixed at startup.
+        current_key_prefix (CurrentKeyPrefix): where the loaded project's data
+            lives. Read per load rather than at startup, because opening another
+            project moves it.
     """
 
     def __init__(
@@ -112,11 +121,13 @@ class _S3Provider:
         list_objects: S3ListObjects,
         download_objects: DownloadObjects,
         config: S3Config,
+        current_key_prefix: CurrentKeyPrefix,
     ) -> None:
         self._dialog = dialog
         self._list_objects = list_objects
         self._download_objects = download_objects
         self._config = config
+        self._current_key_prefix = current_key_prefix
 
     async def _provide(
         self, title: str, suffixes: set[str], description: str
@@ -131,13 +142,19 @@ class _S3Provider:
         Returns:
             list[Path]: the local paths, empty if nothing was loaded.
         """
-        selected = await self._dialog.ask(title, self._source())
+        key_prefix = self._current_key_prefix.get()
+        if key_prefix is None:
+            # The prefix belongs to the project, so before one is loaded there
+            # is nothing to list and no window worth asking for.
+            self._dialog.report_error(NO_PROJECT)
+            return []
+        selected = await self._dialog.ask(title, self._source(key_prefix))
         if selected is None:
             return []
         window = selected.clamp(self._config.max_load_duration)
         if window.was_clamped:
             self._dialog.report_clamped(window)
-        keys = await self._list_objects.list_keys(self._config.key_prefix)
+        keys = await self._list_objects.list_keys(key_prefix.value)
         wanted = select_in_window(keys, window, suffixes)
         if not wanted:
             logger().info(f"Nothing to load between {window.start} and {window.end}")
@@ -157,7 +174,7 @@ class _S3Provider:
             # browser. The traceback still goes to the log.
             logger().exception(cause, exc_info=True)
             self._dialog.report_error(
-                f"Could not load from '{self._source()}': {cause}."
+                f"Could not load from '{self._source(key_prefix)}': {cause}."
                 " Nothing was loaded."
             )
             return []
@@ -168,9 +185,9 @@ class _S3Provider:
         """Download what was selected. Overridden to fetch companions too."""
         return await self._download_objects.download_all(wanted, description)
 
-    def _source(self) -> str:
+    def _source(self, key_prefix: S3KeyPrefix) -> str:
         """Where files come from, for the user to see but not to change."""
-        return f"{self._config.bucket}/{self._config.key_prefix}"
+        return f"{self._config.bucket}/{key_prefix}"
 
 
 class S3TrackFileProvider(_S3Provider, ProvideTrackFiles):
@@ -181,6 +198,7 @@ class S3TrackFileProvider(_S3Provider, ProvideTrackFiles):
         list_objects (S3ListObjects): lists the bucket under the key prefix.
         download_objects (DownloadObjects): downloads the selected objects.
         config (S3Config): the S3 settings fixed at startup.
+        current_key_prefix (CurrentKeyPrefix): where the loaded project's data lives.
         read_video_name (Callable[[Path], str]): reads a track file's video name.
     """
 
@@ -190,9 +208,12 @@ class S3TrackFileProvider(_S3Provider, ProvideTrackFiles):
         list_objects: S3ListObjects,
         download_objects: DownloadObjects,
         config: S3Config,
+        current_key_prefix: CurrentKeyPrefix,
         read_video_name: Callable[[Path], str] = read_video_name,
     ) -> None:
-        super().__init__(dialog, list_objects, download_objects, config)
+        super().__init__(
+            dialog, list_objects, download_objects, config, current_key_prefix
+        )
         self._read_video_name = read_video_name
 
     async def provide(self) -> list[Path]:

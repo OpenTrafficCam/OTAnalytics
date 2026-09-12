@@ -306,6 +306,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
                 list_objects=self.s3_list_objects,
                 download_objects=self.download_objects,
                 config=config,
+                current_key_prefix=self.current_key_prefix,
             )
         return LocalTrackFileProvider(self.ui_factory)
 
@@ -317,6 +318,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
                 list_objects=self.s3_list_objects,
                 download_objects=self.download_objects,
                 config=config,
+                current_key_prefix=self.current_key_prefix,
             )
         return LocalVideoFileProvider(self.ui_factory)
 

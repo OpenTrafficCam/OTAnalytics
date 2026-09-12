@@ -8,7 +8,6 @@ from OTAnalytics.plugin_s3.config.env_vars import (
     ENV_S3_ACCESS_KEY,
     ENV_S3_BUCKET,
     ENV_S3_ENDPOINT_URL,
-    ENV_S3_KEY_PREFIX,
     ENV_S3_SECRET_KEY,
     ENV_S3_USER_SOURCE,
     S3Env,
@@ -91,7 +90,6 @@ def parse_s3_config(env: S3Env) -> S3Config:
         (ENV_S3_ACCESS_KEY, env.access_key),
         (ENV_S3_SECRET_KEY, env.secret_key),
         (ENV_S3_BUCKET, env.bucket),
-        (ENV_S3_KEY_PREFIX, env.key_prefix),
         (ENV_S3_USER_SOURCE, env.user_source),
     )
     if missing := [name for name, value in required if value is None]:
@@ -103,7 +101,6 @@ def parse_s3_config(env: S3Env) -> S3Config:
         secret_key=_required(env.secret_key),
         bucket=_required(env.bucket),
         region=env.region,
-        key_prefix=_required(env.key_prefix),
         user_source=_required(env.user_source),
         max_load_duration=_parse_max_load_duration(env),
         download_concurrency=_parse_download_concurrency(env),

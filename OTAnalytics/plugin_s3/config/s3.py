@@ -15,8 +15,6 @@ class S3Config:
         secret_key (str): S3 secret key for authentication.
         bucket (str): S3 bucket name.
         region (str | None): AWS region (None if not applicable).
-        key_prefix (str): prefix under which this instance's tracks and videos
-            live. Fixed at startup; the user selects a time range, not a prefix.
         user_source (str): base path on the local filesystem that downloaded
             objects are written to, mirroring their S3 keys. Named after
             OTCloud's `S3_USER_SOURCE` for cross-repo consistency.
@@ -30,7 +28,6 @@ class S3Config:
     secret_key: str
     bucket: str
     region: str | None
-    key_prefix: str
     user_source: str
     max_load_duration: timedelta = DEFAULT_MAX_LOAD_DURATION
     download_concurrency: int = DEFAULT_DOWNLOAD_CONCURRENCY
