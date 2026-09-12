@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789098288045,
+  "lastUpdate": 1789184912157,
   "repoUrl": "https://github.com/OpenTrafficCam/OTAnalytics",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -120078,6 +120078,217 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 23.35579800200003 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Jan",
+            "username": "schubsen",
+            "email": "83372587+schubsen@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "aa1dabc90dcff27ccbbeb88e85d9f4ffb966bcc2",
+          "message": "Merge pull request #821 from OpenTrafficCam/bug/9548-incomplete-filenames-in-otanalytics-if-video-name-has-multiple-dots\n\nbug/9548-incomplete-filenames-in-otanalytics-if-video-name-has-multiple-dots",
+          "timestamp": "2026-05-29T15:05:38Z",
+          "url": "https://github.com/OpenTrafficCam/OTAnalytics/commit/aa1dabc90dcff27ccbbeb88e85d9f4ffb966bcc2"
+        },
+        "date": 1789184905121,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkTrackParser::test_load_15min",
+            "value": 0.1362338540618918,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.340319386000004 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min[bulk]",
+            "value": 3838.123311231037,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 260.5439999996406 usec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min[stream]",
+            "value": 4080.9330644845522,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 245.04200000308174 usec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours[bulk]",
+            "value": 4453.926358644379,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 224.52100000691644 usec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_2hours[stream]",
+            "value": 4529.683012527976,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 220.76600001241786 usec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min_filtered[bulk]",
+            "value": 4062.6790118227486,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 246.14299999825562 usec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkTracksIntersectingSections::test_15min_filtered[stream]",
+            "value": 4462.6719802427,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 224.08099999893238 usec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min[bulk]",
+            "value": 4.837293450532068,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 206.72717300001864 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min[stream]",
+            "value": 3.1727225357658235,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 315.1867170000173 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min_filtered[bulk]",
+            "value": 4.915125973326906,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 203.45358500000543 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkCreateEvents::test_15min_filtered[stream]",
+            "value": 4.939283560476016,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 202.45851199999265 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkExportCounting::test_15min[bulk]",
+            "value": 657.9194088176671,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 1.5199430000052416 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkExportCounting::test_15min[stream]",
+            "value": 1022.2304454987307,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 978.2529999995404 usec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkExportCounting::test_15min_filtered[bulk]",
+            "value": 1106.2509818042868,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 903.9539999946555 usec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkExportCounting::test_15min_filtered[stream]",
+            "value": 1069.9890540161884,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 934.588999996322 usec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_15min[bulk]",
+            "value": 3.610176727176236,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 276.99475000000007 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_15min[stream]",
+            "value": 3.4691175427045877,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 288.2577450000099 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_15min_filtered[bulk]",
+            "value": 3.504702355529847,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 285.3309349999904 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestBenchmarkCuttingSection::test_15min_filtered[stream]",
+            "value": 3.42789055156805,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 291.7246000000091 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestPipelineBenchmark::test_15min[bulk]",
+            "value": 1.7387059468103754,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 575.1403805999985 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestPipelineBenchmark::test_15min[stream]",
+            "value": 1.641009803311822,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 609.380881200002 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestPipelineBenchmark::test_15min_filtered[bulk]",
+            "value": 1.835196386349138,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 544.9008114000037 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestPipelineBenchmark::test_15min_filtered[stream]",
+            "value": 1.7037393314424178,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 586.9442476000017 msec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestPipelineBenchmark::test_2hours[bulk]",
+            "value": 0.04210182889664357,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 23.751937296000023 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestPipelineBenchmark::test_2hours[stream]",
+            "value": 0.043772796468596775,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 22.845239068000012 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestPipelineBenchmark::test_2hours_filtered[bulk]",
+            "value": 0.04148675583915346,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 24.104078031 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmark/test_benchmark_otanalytics.py::TestPipelineBenchmark::test_2hours_filtered[stream]",
+            "value": 0.04264700237269582,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 23.448306900000006 sec\nrounds: 1"
           }
         ]
       }
