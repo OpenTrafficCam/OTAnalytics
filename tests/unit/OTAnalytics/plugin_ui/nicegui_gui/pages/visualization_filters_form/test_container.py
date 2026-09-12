@@ -46,6 +46,9 @@ def create_target(given: Given) -> VisualizationFiltersForm:
 
 class TestBeforeThePageIsBuilt:
     def test_introduces_itself_to_the_view_model(self) -> None:
+        """
+        #Requirement https://openproject.platomo.de/wp/10325
+        """
         given = create_given()
 
         target = create_target(given)
@@ -71,12 +74,19 @@ class TestBeforeThePageIsBuilt:
         """Each of these reaches a widget that only `build()` creates. Before
         this fix, `update_date_range` raised `AttributeError` and took the whole
         startup with it.
+
+        #Requirement https://openproject.platomo.de/wp/10325
+
+        @bug by randy-seng
         """
         target = create_target(create_given())
 
         call(target)
 
     def test_offers_no_general_buttons_yet(self) -> None:
+        """
+        #Requirement https://openproject.platomo.de/wp/10325
+        """
         target = create_target(create_given())
 
         assert target.get_general_buttons() == []

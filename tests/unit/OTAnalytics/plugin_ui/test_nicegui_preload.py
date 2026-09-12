@@ -39,6 +39,9 @@ def create_target(given: Given) -> OtAnalyticsNiceGuiApplicationStarter:
 
 class TestPreloadingTheProject:
     def test_loads_the_files_named_on_the_command_line(self) -> None:
+        """
+        #Requirement https://openproject.platomo.de/wp/10325
+        """
         given = create_given()
 
         create_target(given).preload_project()
@@ -46,6 +49,11 @@ class TestPreloadingTheProject:
         given.preload_input_files.load.assert_called_once_with(given.run_config)
 
     def test_a_file_that_cannot_be_loaded_does_not_stop_the_server(self) -> None:
+        """
+        #Requirement https://openproject.platomo.de/wp/10325
+
+        @bug by randy-seng
+        """
         given = create_given(load_error=FileNotFoundError("no such otconfig"))
 
         create_target(given).preload_project()
@@ -54,6 +62,10 @@ class TestPreloadingTheProject:
         """Deliberately broad: the point is that startup continues, and every
         exception type reaching here has already cost the user their server
         once.
+
+        #Requirement https://openproject.platomo.de/wp/10325
+
+        @bug by randy-seng
         """
         given = create_given(load_error=RuntimeError("anything at all"))
 
