@@ -9,6 +9,10 @@ from OTAnalytics.adapter_ui.local_file_providers import (
     LocalVideoFileProvider,
 )
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
+from OTAnalytics.application.project_location import (
+    RefuseAnyProjectLocation,
+    ValidateProjectLocation,
+)
 from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideTrackFiles,
@@ -28,6 +32,7 @@ from OTAnalytics.plugin_s3.config.s3 import S3Config
 from OTAnalytics.plugin_s3.download import S3Download
 from OTAnalytics.plugin_s3.download_objects import DownloadObjects
 from OTAnalytics.plugin_s3.list_objects import S3ListObjects
+from OTAnalytics.plugin_s3.project_location import RequireWellFormedKeyPrefix
 from OTAnalytics.plugin_s3.s3_file_providers import (
     S3TrackFileProvider,
     S3VideoFileProvider,
@@ -298,6 +303,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
                 list_objects=self.s3_list_objects,
                 download_objects=self.download_objects,
                 config=config,
+                current_key_prefix=self.current_key_prefix,
             )
         return LocalTrackFileProvider(self.ui_factory)
 
@@ -309,8 +315,15 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
                 list_objects=self.s3_list_objects,
                 download_objects=self.download_objects,
                 config=config,
+                current_key_prefix=self.current_key_prefix,
             )
         return LocalVideoFileProvider(self.ui_factory)
+
+    @cached_property
+    def validate_project_location(self) -> ValidateProjectLocation:
+        if self.s3_config:
+            return RequireWellFormedKeyPrefix()
+        return RefuseAnyProjectLocation()
 
     @cached_property
     def reset_application(self) -> ResetApplication:

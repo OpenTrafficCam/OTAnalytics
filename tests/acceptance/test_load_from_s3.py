@@ -1,6 +1,7 @@
 """Acceptance: in s3 mode, adding tracks asks for a time range, not a file."""
 
 import io
+import json
 import os
 import subprocess
 import sys
@@ -22,7 +23,6 @@ from OTAnalytics.plugin_s3.config.env_vars import (
     ENV_S3_ACCESS_KEY,
     ENV_S3_BUCKET,
     ENV_S3_ENDPOINT_URL,
-    ENV_S3_KEY_PREFIX,
     ENV_S3_MAX_LOAD_DURATION,
     ENV_S3_SECRET_KEY,
     ENV_S3_USER_SOURCE,
@@ -75,12 +75,49 @@ def minio() -> Iterator[dict]:
         }
 
 
+def _project_otconfig(directory: Path) -> Path:
+    """An otconfig declaring where this project's data lives.
+
+    In s3 mode the prefix comes from the project, not the environment (ADR
+    0004), so the application has to be given a project before it can list
+    anything at all.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    file = directory / "project.otconfig"
+    file.write_text(
+        json.dumps(
+            {
+                "project": {"name": "Acceptance", "start_date": 1684886400},
+                "s3_key_prefix": PREFIX,
+                "videos": [],
+                "analysis": {
+                    "do_events": True,
+                    "do_counting": True,
+                    "tracks": [],
+                    "export": {
+                        "save_name": "acceptance",
+                        "save_suffix": "",
+                        "event_formats": ["csv"],
+                        "count_intervals": [15],
+                    },
+                    "num_processes": 1,
+                    "logfile": "logs",
+                },
+                "sections": [],
+                "flows": [],
+            }
+        )
+    )
+    return file
+
+
 @pytest.fixture
 def s3_app(minio: dict, tmp_path: Path) -> Iterator[Any]:
     """The real application, started in s3 mode against MinIO.
 
     Configuration is environment only, so pointing the documented variables at a
-    throwaway MinIO exercises the production path with no test-only hooks.
+    throwaway MinIO exercises the production path with no test-only hooks. The
+    project is preloaded from a file, which is where the key prefix comes from.
     """
     environment = dict(os.environ)
     environment.update(
@@ -90,7 +127,6 @@ def s3_app(minio: dict, tmp_path: Path) -> Iterator[Any]:
             ENV_S3_ACCESS_KEY: minio["access_key"],
             ENV_S3_SECRET_KEY: minio["secret_key"],
             ENV_S3_BUCKET: BUCKET,
-            ENV_S3_KEY_PREFIX: PREFIX,
             ENV_S3_USER_SOURCE: str(tmp_path / "user-source"),
             ENV_S3_MAX_LOAD_DURATION: "20m",
         }
@@ -101,6 +137,8 @@ def s3_app(minio: dict, tmp_path: Path) -> Iterator[Any]:
             "-m",
             "OTAnalytics",
             "--webui",
+            "--config",
+            str(_project_otconfig(tmp_path / "project")),
             "--file-picker-directory",
             file_picker_directory(),
         ],

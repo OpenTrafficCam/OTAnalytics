@@ -17,6 +17,8 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from OTAnalytics.application.key_prefix import S3KeyPrefix
+from OTAnalytics.application.state import CurrentKeyPrefix
 from OTAnalytics.domain.load_window import LoadWindow
 from OTAnalytics.plugin_s3.config.s3 import S3Config
 from OTAnalytics.plugin_s3.download import S3Download
@@ -102,6 +104,7 @@ class Given:
     config: S3Config
     dialog: Mock
     user_source: Path
+    current_key_prefix: CurrentKeyPrefix
 
 
 def create_given(minio: dict, tmp_path: Path, hours: float = 1) -> Given:
@@ -112,7 +115,6 @@ def create_given(minio: dict, tmp_path: Path, hours: float = 1) -> Given:
         secret_key=minio["secret_key"],
         bucket=BUCKET,
         region=None,
-        key_prefix=PREFIX,
         user_source=str(user_source),
         max_load_duration=MAX_LOAD_DURATION,
         download_concurrency=4,
@@ -121,7 +123,14 @@ def create_given(minio: dict, tmp_path: Path, hours: float = 1) -> Given:
     dialog.ask = AsyncMock(
         return_value=LoadWindow(start=START, end=START + timedelta(hours=hours))
     )
-    return Given(config=config, dialog=dialog, user_source=user_source)
+    current_key_prefix = CurrentKeyPrefix()
+    current_key_prefix.set(S3KeyPrefix(PREFIX))
+    return Given(
+        config=config,
+        dialog=dialog,
+        user_source=user_source,
+        current_key_prefix=current_key_prefix,
+    )
 
 
 def _download_objects(given: Given) -> DownloadObjects:
@@ -139,6 +148,7 @@ def create_track_target(given: Given) -> S3TrackFileProvider:
         list_objects=S3ListObjects(S3Store(given.config)),
         download_objects=_download_objects(given),
         config=given.config,
+        current_key_prefix=given.current_key_prefix,
     )
 
 
@@ -148,6 +158,7 @@ def create_video_target(given: Given) -> S3VideoFileProvider:
         list_objects=S3ListObjects(S3Store(given.config)),
         download_objects=_download_objects(given),
         config=given.config,
+        current_key_prefix=given.current_key_prefix,
     )
 
 
