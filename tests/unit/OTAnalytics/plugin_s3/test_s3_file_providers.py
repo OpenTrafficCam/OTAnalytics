@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
+from OTAnalytics.application.key_prefix import S3KeyPrefix
+from OTAnalytics.application.state import CurrentKeyPrefix
 from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.domain.load_window import LoadWindow
 from OTAnalytics.plugin_s3.download_objects import DownloadCancelled
@@ -40,6 +42,7 @@ class Given:
     list_objects: Mock
     download_objects: Mock
     config: Mock
+    current_key_prefix: CurrentKeyPrefix
     downloads: list[tuple[list[str], str]]
 
 
@@ -47,15 +50,19 @@ def create_given(
     window: LoadWindow | None = None,
     keys: list[str] | None = None,
     cancel: bool = False,
+    project_loaded: bool = True,
 ) -> Given:
+    current_key_prefix = CurrentKeyPrefix()
+    if project_loaded:
+        current_key_prefix.set(S3KeyPrefix(PREFIX))
     given = Given(
         dialog=Mock(spec=AskForLoadWindow),
         list_objects=Mock(),
         download_objects=Mock(),
         config=Mock(),
+        current_key_prefix=current_key_prefix,
         downloads=[],
     )
-    given.config.key_prefix = PREFIX
     given.config.bucket = "recordings"
     given.config.max_load_duration = MAXIMUM
     given.dialog.ask = AsyncMock(
@@ -91,6 +98,7 @@ def create_track_target(given: Given) -> S3TrackFileProvider:
         list_objects=given.list_objects,
         download_objects=given.download_objects,
         config=given.config,
+        current_key_prefix=given.current_key_prefix,
         read_video_name=read_video_name,
     )
 
@@ -101,6 +109,7 @@ def create_video_target(given: Given) -> S3VideoFileProvider:
         list_objects=given.list_objects,
         download_objects=given.download_objects,
         config=given.config,
+        current_key_prefix=given.current_key_prefix,
     )
 
 
@@ -255,3 +264,37 @@ class TestS3VideoFileProvider:
         target = create_video_target(given)
 
         assert await target.provide() == []
+
+
+class TestWithoutALoadedProject:
+    """In s3 mode the prefix comes from the project, so until one is loaded
+    there is nowhere to list.
+
+    #Requirement https://openproject.platomo.de/wp/10322
+    """
+
+    async def test_asks_for_no_window_and_lists_nothing(self) -> None:
+        given = create_given(project_loaded=False)
+        target = create_track_target(given)
+
+        provided = await target.provide()
+
+        assert provided == []
+        given.dialog.ask.assert_not_awaited()
+        given.list_objects.list_keys.assert_not_awaited()
+
+    async def test_says_a_project_has_to_be_loaded_first(self) -> None:
+        given = create_given(project_loaded=False)
+        target = create_video_target(given)
+
+        await target.provide()
+
+        given.dialog.report_error.assert_called_once()
+        assert "project" in given.dialog.report_error.call_args.args[0]
+
+    async def test_lists_under_the_prefix_the_loaded_project_declares(self) -> None:
+        given = create_given()
+
+        await create_video_target(given).provide()
+
+        given.list_objects.list_keys.assert_awaited_once_with(PREFIX)
