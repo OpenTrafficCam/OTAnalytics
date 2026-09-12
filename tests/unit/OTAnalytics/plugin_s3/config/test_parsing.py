@@ -9,7 +9,6 @@ from OTAnalytics.plugin_s3.config.env_vars import (
     ENV_S3_BUCKET,
     ENV_S3_DOWNLOAD_CONCURRENCY,
     ENV_S3_ENDPOINT_URL,
-    ENV_S3_KEY_PREFIX,
     ENV_S3_MAX_LOAD_DURATION,
     ENV_S3_REGION,
     ENV_S3_SECRET_KEY,
@@ -32,7 +31,6 @@ def env(**overrides: str | None) -> S3Env:
         "secret_key": None,
         "bucket": None,
         "region": None,
-        "key_prefix": None,
         "user_source": None,
         "max_load_duration": None,
         "download_concurrency": None,
@@ -48,7 +46,6 @@ def complete_env(**overrides: str | None) -> S3Env:
         "access_key": "minioadmin",
         "secret_key": "minioadmin",  # gitleaks:allow
         "bucket": "otcloud",
-        "key_prefix": "6-1145/site/OTCamera19/",
         "user_source": "/data/otanalytics-source",
     }
     required.update(overrides)
@@ -93,7 +90,6 @@ class TestParseS3Config:
         assert actual.access_key == "minioadmin"
         assert actual.bucket == "otcloud"
         assert actual.region == "us-east-1"
-        assert actual.key_prefix == "6-1145/site/OTCamera19/"
         assert actual.user_source == "/data/otanalytics-source"
         assert actual.max_load_duration == timedelta(hours=2)
         assert actual.download_concurrency == 16
@@ -108,15 +104,6 @@ class TestParseS3Config:
         assert actual.region is None
         assert actual.max_load_duration == timedelta(hours=10)
         assert actual.download_concurrency == 8
-
-    def test_empty_key_prefix_is_kept(self) -> None:
-        """`S3_KEY_PREFIX=""` means the bucket root, not "unset".
-
-        # Requirement OP#10256
-        """
-        actual = parse_s3_config(complete_env(key_prefix=""))
-
-        assert actual.key_prefix == ""
 
     def test_malformed_duration_is_rejected(self) -> None:
         with pytest.raises(InvalidDurationError):
@@ -138,7 +125,6 @@ class TestMissingRequiredVariables:
             ENV_S3_ENDPOINT_URL,
             ENV_S3_ACCESS_KEY,
             ENV_S3_SECRET_KEY,
-            ENV_S3_KEY_PREFIX,
             ENV_S3_USER_SOURCE,
         ]
 
@@ -162,7 +148,6 @@ class TestMissingRequiredVariables:
         assert excinfo.value.missing == [
             ENV_S3_ENDPOINT_URL,
             ENV_S3_SECRET_KEY,
-            ENV_S3_KEY_PREFIX,
         ]
 
     def test_message_names_the_environment_variables(self) -> None:
@@ -189,7 +174,6 @@ class TestS3EnvFromEnvironment:
             ENV_S3_SECRET_KEY,
             ENV_S3_BUCKET,
             ENV_S3_REGION,
-            ENV_S3_KEY_PREFIX,
             ENV_S3_USER_SOURCE,
             ENV_S3_MAX_LOAD_DURATION,
             ENV_S3_DOWNLOAD_CONCURRENCY,

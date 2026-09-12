@@ -16,7 +16,6 @@ from OTAnalytics.plugin_s3.config.env_vars import (
     ENV_S3_ACCESS_KEY,
     ENV_S3_BUCKET,
     ENV_S3_ENDPOINT_URL,
-    ENV_S3_KEY_PREFIX,
     ENV_S3_SECRET_KEY,
     ENV_S3_USER_SOURCE,
 )
@@ -52,7 +51,6 @@ def s3_mode(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv(ENV_S3_BUCKET, "recordings")
     monkeypatch.setenv(ENV_S3_ACCESS_KEY, "key")
     monkeypatch.setenv(ENV_S3_SECRET_KEY, "secret")
-    monkeypatch.setenv(ENV_S3_KEY_PREFIX, "cam19")
     monkeypatch.setenv(ENV_S3_USER_SOURCE, str(tmp_path / "user-source"))
 
 
