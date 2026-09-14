@@ -337,7 +337,7 @@ class OTAnalyticsApplication:
         Args:
             track_files (list[Path]): files in ottrk format
         """
-        await self._load_track_files.load(track_files)
+        await self._load_track_files.load_async(track_files)
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks."""

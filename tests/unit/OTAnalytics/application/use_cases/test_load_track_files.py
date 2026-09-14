@@ -346,7 +346,7 @@ class TestLoadTrackFilesOffTheEventLoop:
         )
         target = create_target(given)
 
-        await target.load([some_file, other_file])
+        await target.load_async([some_file, other_file])
 
         given.track_parser.parse_files.assert_called_once_with([other_file])
 
@@ -363,7 +363,7 @@ class TestLoadTrackFilesOffTheEventLoop:
         create_target(blocking)([some_file, other_file])
 
         awaited = setup(**arguments)  # type: ignore[arg-type]
-        asyncio.run(create_target(awaited).load([some_file, other_file]))
+        asyncio.run(create_target(awaited).load_async([some_file, other_file]))
 
         # the two runs hold distinct mocks, so compare what was called in what
         # order rather than the mock instances passed along
@@ -390,7 +390,7 @@ class TestLoadTrackFilesOffTheEventLoop:
         )
         target = create_target(given)
 
-        await target.load([some_file])
+        await target.load_async([some_file])
 
         assert threads["parse"] is not threading.current_thread()
         assert threads["publish"] is threading.current_thread()
@@ -414,7 +414,7 @@ class TestLoadTrackFilesOffTheEventLoop:
         given.track_parser.parse_files.side_effect = record_publishes_so_far
         target = create_target(given)
 
-        await target.load([some_file])
+        await target.load_async([some_file])
 
         assert published_during_parse == [[]]
         given.track_repository.add_all.assert_called_once()
@@ -453,7 +453,7 @@ class TestLoadTrackFilesShowsProgress:
         )
         target = create_target(given)
 
-        await target.load([some_file])
+        await target.load_async([some_file])
 
         given.progressbar.start.assert_called_once_with(
             PARSING_DESCRIPTION, PARSING_UNIT, 1
@@ -470,7 +470,7 @@ class TestLoadTrackFilesShowsProgress:
         )
         target = create_target(given)
 
-        await target.load([some_file, other_file])
+        await target.load_async([some_file, other_file])
 
         given.progressbar.start.assert_called_once_with(
             PARSING_DESCRIPTION, PARSING_UNIT, 1
@@ -488,7 +488,7 @@ class TestLoadTrackFilesShowsProgress:
         )
         target = create_target(given)
 
-        await target.load([some_file])
+        await target.load_async([some_file])
 
         assert call_names(given) == [
             "progressbar.start",
@@ -514,7 +514,7 @@ class TestLoadTrackFilesShowsProgress:
         target = create_target(given)
 
         with pytest.raises(ValueError):
-            await target.load([some_file])
+            await target.load_async([some_file])
 
         given.progressbar.start.return_value.close.assert_called_once_with()
 
@@ -528,7 +528,7 @@ class TestLoadTrackFilesShowsProgress:
         )
         target = create_target(given)
 
-        await target.load([some_file])
+        await target.load_async([some_file])
 
         given.progressbar.start.assert_not_called()
 
