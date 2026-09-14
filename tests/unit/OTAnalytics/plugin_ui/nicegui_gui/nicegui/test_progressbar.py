@@ -42,12 +42,13 @@ def create_builder(given: Given) -> NiceguiProgressbarBuilder:
 
 
 class TestNiceguiProgressbar:
-    """#Requirement https://openproject.platomo.de/wp/10281"""
 
     @pytest.mark.asyncio
     async def test_shows_counts_and_the_current_item(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
+
         given = create_given(resource_manager)
         target = create_target(given)
 
@@ -67,6 +68,8 @@ class TestNiceguiProgressbar:
     async def test_cancel_button_triggers_the_cancellation_signal(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
+
         given = create_given(resource_manager)
         target = create_target(given)
 
@@ -86,6 +89,8 @@ class TestNiceguiProgressbar:
     async def test_closes_once_every_item_completed(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
+
         given = create_given(resource_manager)
         target = create_target(given, total=2)
 
@@ -103,12 +108,13 @@ class TestNiceguiProgressbar:
 
 
 class TestNiceguiProgressbarBuilder:
-    """#Requirement https://openproject.platomo.de/wp/10281"""
 
     @pytest.mark.asyncio
     async def test_yields_every_element_and_counts_up(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
+
         given = create_given(resource_manager)
         target = create_builder(given)
         seen = []
@@ -138,7 +144,10 @@ class TestNiceguiProgressbarBuilder:
     async def test_shows_nothing_for_an_empty_sequence(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
-        """There is no progress to show, and nothing would ever close it again."""
+        """There is no progress to show, and nothing would ever close it again.
+
+        Requirement https://openproject.platomo.de/wp/10281
+        """
         given = create_given(resource_manager)
         target = create_builder(given)
 
@@ -154,6 +163,8 @@ class TestNiceguiProgressbarBuilder:
     async def test_closes_the_previous_progressbar(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
+
         given = create_given(resource_manager)
         target = create_builder(given)
         progressbars = []
@@ -170,13 +181,15 @@ class TestNiceguiProgressbarBuilder:
 
 
 class TestProgressbarWithoutABrowser:
-    """#Requirement https://openproject.platomo.de/wp/10281"""
 
     @pytest.mark.asyncio
     async def test_shows_nothing_when_no_browser_is_connected(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
-        """Preloading input files at startup runs before any page is served."""
+        """Preloading input files at startup runs before any page is served.
+
+        #Requirement https://openproject.platomo.de/wp/1028
+        """
         given = create_given(resource_manager)
         target = create_target(given, total=2)
 
@@ -188,6 +201,8 @@ class TestProgressbarWithoutABrowser:
     async def test_still_tracks_progress_when_no_browser_is_connected(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
+
         given = create_given(resource_manager)
         target = create_target(given, total=2)
         target.open()
