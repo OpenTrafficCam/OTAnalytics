@@ -37,9 +37,17 @@ class LoadTrackFiles:
     def __call__(self, files: list[Path]) -> None:
         """Load and parse track files together with their videos, blocking.
 
+        Args:
+            files (list[Path]): files in ottrk format.
+        """
+        self.load(files)
+
+    def load(self, files: list[Path]) -> None:
+        """Load and parse track files together with their videos, blocking.
+
         For use outside an event loop only, such as preloading files given on the
         command line at startup. Nothing is connected then, so there is nothing to
-        yield to. Inside an event loop use `load` instead, which keeps the ui
+        yield to. Inside an event loop use `load_async` instead, which keeps the ui
         responsive.
 
         Args:
@@ -51,7 +59,7 @@ class LoadTrackFiles:
         if self._event_loop_is_running():
             raise RuntimeError(
                 "Parsing track files blocks the event loop and freezes the ui."
-                " Use load() instead."
+                " Use load_async() instead."
             )
         if files_to_load := self._files_to_load(files):
             progressbar = self._start_progress(files_to_load)
@@ -60,7 +68,7 @@ class LoadTrackFiles:
             finally:
                 progressbar.close()
 
-    async def load(self, files: list[Path]) -> None:
+    async def load_async(self, files: list[Path]) -> None:
         """Load and parse track files together with their videos.
 
         Parsing runs on a worker thread, so the ui keeps repainting while it runs.

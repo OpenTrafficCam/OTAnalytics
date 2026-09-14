@@ -40,7 +40,7 @@ class TestLoadOtconfig:
         given.add_videos.add.assert_called_once_with(given.otconfig.videos)
         given.add_sections.add.assert_called_once_with(given.otconfig.sections)
         given.add_flows.add.assert_called_once_with(given.otconfig.flows)
-        given.load_track_files.assert_called_once_with(
+        given.load_track_files.load.assert_called_once_with(
             list(given.otconfig.analysis.track_files)
         )
         observer.assert_called_once_with(
@@ -86,16 +86,16 @@ class TestLoadOtconfigOnTheEventLoop:
             raise_error=False,
         )
         given.load_track_files = Mock(spec=LoadTrackFiles)
-        given.load_track_files.load = AsyncMock()
+        given.load_track_files.load_async = AsyncMock()
         target = create_target(given)
         file = Mock()
 
         await target.load_async(file)
 
-        given.load_track_files.load.assert_awaited_once_with(
+        given.load_track_files.load_async.assert_awaited_once_with(
             list(given.otconfig.analysis.track_files)
         )
-        given.load_track_files.assert_not_called()
+        given.load_track_files.load.assert_not_called()
 
     async def test_publishes_everything_the_blocking_load_publishes(self) -> None:
         given = setup(
@@ -106,7 +106,7 @@ class TestLoadOtconfigOnTheEventLoop:
             raise_error=False,
         )
         given.load_track_files = Mock(spec=LoadTrackFiles)
-        given.load_track_files.load = AsyncMock()
+        given.load_track_files.load_async = AsyncMock()
         target = create_target(given)
         observer = Mock()
         target.register(observer)
@@ -132,7 +132,7 @@ class TestLoadOtconfigOnTheEventLoop:
             raise_error=True,
         )
         given.load_track_files = Mock(spec=LoadTrackFiles)
-        given.load_track_files.load = AsyncMock()
+        given.load_track_files.load_async = AsyncMock()
         target = create_target(given)
         observer = Mock()
         target.register(observer)
