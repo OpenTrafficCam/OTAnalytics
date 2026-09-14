@@ -103,13 +103,16 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
         )
-        self.preload_input_files.load(self.run_config)
+        self.preload_project()
         return NiceguiWebserver(
             page_builders=[main_page_builder],
             layout_components=NiceguiLayoutComponents(),
             hostname=DEFAULT_HOSTNAME,
             port=DEFAULT_PORT,
         )
+
+    def preload_project(self) -> None:
+        self.preload_input_files.load(self.run_config)
 
     @cached_property
     def analysis_form(self) -> AnalysisForm:

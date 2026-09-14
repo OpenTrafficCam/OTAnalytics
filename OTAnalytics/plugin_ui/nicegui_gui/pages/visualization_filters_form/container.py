@@ -158,6 +158,15 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._button_next_second: ui.button | None = None
         self._button_next_frame: ui.button | None = None
         self._button_next_event: ui.button | None = None
+        # Created by `build()`, which runs when a browser first asks for the
+        # page -- long after `_introduce_to_viewmodel` below makes this form
+        # reachable from the view model. Until then the form exists and has no
+        # widgets, and saying so here is what keeps that window harmless.
+        self._filter_by_date_button: ui.button | None = None
+        self._filter_by_date_button_left: ui.button | None = None
+        self._filter_by_date_button_right: ui.button | None = None
+        self._filter_by_class_button: ui.button | None = None
+        self._label_filter_by_date: ui.label | None = None
         self._introduce_to_viewmodel()
         self._frames_to_skip = 0
         self._seconds_to_skip = 0
@@ -342,40 +351,66 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
     def open_range_dialog(self) -> None:
         self._filter_by_date_popup.open()
 
+    def _date_buttons(self) -> list[ui.button]:
+        """Every date button, or none at all while the form is unbuilt."""
+        return [
+            button
+            for button in (
+                self._filter_by_date_button,
+                self._filter_by_date_button_left,
+                self._filter_by_date_button_right,
+            )
+            if button is not None
+        ]
+
     def set_active_color_on_filter_by_date_button(self) -> None:
+        if self._filter_by_date_button is None:
+            return
         self._filter_by_date_button.props("color=orange")
         # Expose active state for Playwright assertions
         self._filter_by_date_button.props("data-filter-by-date-active=true")
 
     def set_inactive_color_on_filter_by_date_button(self) -> None:
+        if self._filter_by_date_button is None:
+            return
         self._filter_by_date_button.props("color=primary")
         # Expose inactive state for Playwright assertions
         self._filter_by_date_button.props("data-filter-by-date-active=false")
 
     def set_active_color_on_filter_by_class_button(self) -> None:
+        if self._filter_by_class_button is None:
+            return
         self._filter_by_class_button.props("color=orange")
 
     def enable_filter_by_class_button(self) -> None:
+        if self._filter_by_class_button is None:
+            return
         self._filter_by_class_button.enable()
 
     def enable_filter_by_date_button(self) -> None:
-        self._filter_by_date_button.enable()
-        self._filter_by_date_button_left.enable()
-        self._filter_by_date_button_right.enable()
+        for button in self._date_buttons():
+            button.enable()
 
     def set_inactive_color_on_filter_by_class_button(self) -> None:
+        if self._filter_by_class_button is None:
+            return
         self._filter_by_class_button.props("color=primary")
 
     def disable_filter_by_date_button(self) -> None:
         self.set_inactive_color_on_filter_by_date_button()
-        self._filter_by_date_button.disable()
-        self._filter_by_date_button_left.disable()
-        self._filter_by_date_button_right.disable()
+        for button in self._date_buttons():
+            button.disable()
 
     def disable_filter_by_class_button(self) -> None:
+        if self._filter_by_class_button is None:
+            return
         self._filter_by_class_button.disable()
 
     def update_date_range(self, date_range: DateRangeDto) -> None:
+        if self._label_filter_by_date is None:
+            # The range still reaches the view model's state, so the label shows
+            # it as soon as `build()` reads that state. Nothing is lost here.
+            return
         start_date = date_range["start_date"]
         end_date = date_range["end_date"]
 
