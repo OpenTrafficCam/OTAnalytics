@@ -12,9 +12,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
 
 
 class TestOtAnalyticsNiceGuiApplicationStarter:
-    """#Requirement https://openproject.platomo.de/wp/10281"""
-
     def test_shows_progress_in_the_browser(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
+
         target = OtAnalyticsNiceGuiApplicationStarter(Mock(spec=RunConfiguration))
 
         assert isinstance(target.progressbar_builder, NiceguiProgressbarBuilder)
