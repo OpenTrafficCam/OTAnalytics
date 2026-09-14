@@ -211,6 +211,14 @@ class TestCreateImportantTestData:
         toggle_and_screenshot(
             page,
             canvas,
+            ALL,
+            acceptance_test_data_folder,
+            "highlight_tracks_all",
+            nth=0,
+        )
+        toggle_and_screenshot(
+            page,
+            canvas,
             INTERSECTING_SECTIONS,
             acceptance_test_data_folder,
             "highlight_tracks_intersecting_sections",
