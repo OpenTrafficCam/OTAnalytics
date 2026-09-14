@@ -58,14 +58,14 @@ class TestManualIncrementingProgressbar:
 
 
 class TestCancellation:
-    """#Requirement https://openproject.platomo.de/wp/10281"""
-
     def test_is_not_cancelled_before_cancel(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
         target = Cancellation()
 
         assert target.is_cancelled is False
 
     def test_is_cancelled_after_cancel(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
         target = Cancellation()
 
         target.cancel()
@@ -73,6 +73,7 @@ class TestCancellation:
         assert target.is_cancelled is True
 
     def test_cancelling_twice_keeps_it_cancelled(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
         target = Cancellation()
 
         target.cancel()
@@ -81,6 +82,7 @@ class TestCancellation:
         assert target.is_cancelled is True
 
     async def test_wait_returns_once_cancelled(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
         target = Cancellation()
         waiting = asyncio.ensure_future(target.wait())
         await asyncio.sleep(0)
@@ -114,9 +116,8 @@ def create_target(
 
 
 class TestProgressState:
-    """#Requirement https://openproject.platomo.de/wp/10281"""
-
     def test_starts_empty(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
         given = create_given()
         target = create_target(given)
 
@@ -126,6 +127,7 @@ class TestProgressState:
         assert target.finished is False
 
     def test_completing_an_item_advances_the_count(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
         given = create_given()
         target = create_target(given)
 
@@ -136,6 +138,7 @@ class TestProgressState:
         assert target.current_item == "first.mp4"
 
     def test_counts_completions_arriving_out_of_order(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
         given = create_given()
         target = create_target(given)
 
@@ -147,6 +150,7 @@ class TestProgressState:
         assert target.current_item == "third.mp4"
 
     def test_is_finished_once_every_item_completed(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
         given = create_given()
         target = create_target(given, total=2)
 
@@ -158,6 +162,7 @@ class TestProgressState:
         assert target.fraction == 1.0
 
     def test_notifies_on_every_completion(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
         given = create_given()
         target = create_target(given, total=2)
 
@@ -167,6 +172,7 @@ class TestProgressState:
         assert given.on_change.call_count == 2
 
     def test_notify_reports_progress_made_through_the_counter(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
         given = create_given()
         target = create_target(given)
 
@@ -177,6 +183,7 @@ class TestProgressState:
         given.on_change.assert_called_once()
 
     def test_an_empty_sequence_is_finished_from_the_start(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10281"""
         given = create_given()
         target = create_target(given, total=0)
 
