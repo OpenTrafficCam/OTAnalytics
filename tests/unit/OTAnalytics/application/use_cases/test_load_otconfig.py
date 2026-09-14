@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 
 from OTAnalytics.application.parser.config_parser import OtConfig
+from OTAnalytics.application.project_location import UnsupportedProjectLocation
 from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.load_otconfig import (
     LoadOtconfig,
@@ -144,6 +145,85 @@ class TestLoadOtconfigOnTheEventLoop:
         observer.assert_not_called()
 
 
+class TestRefusingAProjectStoredElsewhere:
+    """A project whose data lives where this installation cannot read it.
+
+    ADR 0004. The refusal happens in `_begin`, before anything is published, so
+    all-or-nothing holds without `_abort` having to undo a partial load.
+    """
+
+    def test_validates_the_location_the_project_declared(self) -> None:
+        given = setup_default()
+        target = create_target(given)
+
+        target.load(Mock())
+
+        given.validate_project_location.assert_called_once_with(
+            given.otconfig.s3_key_prefix
+        )
+
+    def test_publishes_nothing_when_the_location_is_refused(self) -> None:
+        given = setup_default()
+        given.validate_project_location.side_effect = UnsupportedProjectLocation(
+            "stored in S3"
+        )
+        target = create_target(given)
+        observer = Mock()
+        target.register(observer)
+
+        with pytest.raises(UnsupportedProjectLocation):
+            target.load(Mock())
+
+        given.update_project.assert_not_called()
+        given.add_videos.add.assert_not_called()
+        given.add_sections.add.assert_not_called()
+        given.add_flows.add.assert_not_called()
+        given.load_track_files.assert_not_called()
+        given.remark_repository.add.assert_not_called()
+        observer.assert_not_called()
+        given.reset_application.reset.assert_called_once()
+
+    def test_holds_the_prefix_while_track_files_load(self) -> None:
+        """Slice 7 saves beside the inputs, so the prefix has to be in effect
+        while they are loaded -- after `_begin`'s reset has cleared it.
+        """
+        given = setup_default()
+        target = create_target(given)
+
+        target.load(Mock())
+
+        given.current_key_prefix.set.assert_called_once_with(
+            given.otconfig.s3_key_prefix
+        )
+
+    def test_holds_no_prefix_when_the_location_is_refused(self) -> None:
+        given = setup_default()
+        given.validate_project_location.side_effect = UnsupportedProjectLocation(
+            "stored in S3"
+        )
+        target = create_target(given)
+
+        with pytest.raises(UnsupportedProjectLocation):
+            target.load(Mock())
+
+        given.current_key_prefix.set.assert_not_called()
+
+    async def test_refuses_an_async_load_the_same_way(self) -> None:
+        given = setup_default()
+        given.load_track_files = Mock(spec=LoadTrackFiles)
+        given.load_track_files.load = AsyncMock()
+        given.validate_project_location.side_effect = UnsupportedProjectLocation(
+            "stored in S3"
+        )
+        target = create_target(given)
+
+        with pytest.raises(UnsupportedProjectLocation):
+            await target.load_async(Mock())
+
+        given.load_track_files.load.assert_not_awaited()
+        given.update_project.assert_not_called()
+
+
 @dataclass
 class Given:
     otconfig: OtConfig
@@ -157,6 +237,18 @@ class Given:
     remark_repository: Mock
     deserializer: Mock
     deserialization_result: Mock
+    validate_project_location: Mock
+    current_key_prefix: Mock
+
+
+def setup_default() -> Given:
+    return setup(
+        project_name="my project",
+        start_date=datetime(2021, 1, 1),
+        track_files={"path/to/first.ottrk"},
+        remark=REMARK,
+        raise_error=False,
+    )
 
 
 def setup(
@@ -179,6 +271,8 @@ def setup(
     deserialization_result = Mock()
     deserializer = Mock()
     deserializer.return_value = deserialization_result
+    validate_project_location = Mock()
+    current_key_prefix = Mock()
 
     if raise_error:
         add_sections = MagicMock()
@@ -198,6 +292,8 @@ def setup(
         remark_repository=remark_repository,
         deserializer=deserializer,
         deserialization_result=deserialization_result,
+        validate_project_location=validate_project_location,
+        current_key_prefix=current_key_prefix,
     )
 
 
@@ -235,4 +331,6 @@ def create_target(given: Given) -> LoadOtconfig:
         given.load_track_files,
         given.remark_repository,
         given.deserializer,
+        given.validate_project_location,
+        given.current_key_prefix,
     )

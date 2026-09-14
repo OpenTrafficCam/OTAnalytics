@@ -8,6 +8,7 @@ from typing import Callable, Generic, Optional
 from OTAnalytics.application.analysis.traffic_counting import CountImage
 from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.date import DateRange
@@ -774,6 +775,33 @@ class ConfigurationFile:
             return self.file.suffix[1:]  # remove starting dot
         else:
             return file_type
+
+
+class CurrentKeyPrefix:
+    """Where the loaded project's tracks and videos live in the bucket.
+
+    The prefix arrives with the project rather than with the process (ADR
+    0004), so it is held here between loading a project and saving or listing
+    under it. Named after OTCloud's CurrentCameraId so the two repos read
+    alike, at the cost of this module's `*State` suffix.
+
+    Seeded with None, because until a project is loaded there is no prefix and
+    nothing can be listed. Reset returns to that seed rather than to a
+    last-known value: a prefix outliving its project would let a save write the
+    previous project's location.
+    """
+
+    def __init__(self) -> None:
+        self._key_prefix: S3KeyPrefix | None = None
+
+    def get(self) -> S3KeyPrefix | None:
+        return self._key_prefix
+
+    def set(self, key_prefix: S3KeyPrefix | None) -> None:
+        self._key_prefix = key_prefix
+
+    def reset(self) -> None:
+        self._key_prefix = None
 
 
 class FileState:
