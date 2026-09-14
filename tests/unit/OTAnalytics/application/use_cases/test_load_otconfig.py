@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from unittest.mock import MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
@@ -10,6 +10,7 @@ from OTAnalytics.application.use_cases.load_otconfig import (
     LoadOtconfig,
     UnableToLoadOtconfigFile,
 )
+from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.section_repository import SectionAlreadyExists
 
 REMARK = "my remark"
@@ -68,6 +69,79 @@ class TestLoadOtconfig:
         given.config_parser.parse.assert_called_once_with(file)
         observer.assert_not_called()
         given.remark_repository.add.assert_not_called()
+
+
+class TestLoadOtconfigOnTheEventLoop:
+    """Loading an otconfig loads its track files, so it freezes the ui too.
+
+    #Requirement https://openproject.platomo.de/wp/10282
+    """
+
+    async def test_loads_track_files_off_the_event_loop(self) -> None:
+        given = setup(
+            project_name="my project",
+            start_date=datetime(2021, 1, 1),
+            track_files={"path/to/first.ottrk"},
+            remark=REMARK,
+            raise_error=False,
+        )
+        given.load_track_files = Mock(spec=LoadTrackFiles)
+        given.load_track_files.load = AsyncMock()
+        target = create_target(given)
+        file = Mock()
+
+        await target.load_async(file)
+
+        given.load_track_files.load.assert_awaited_once_with(
+            list(given.otconfig.analysis.track_files)
+        )
+        given.load_track_files.assert_not_called()
+
+    async def test_publishes_everything_the_blocking_load_publishes(self) -> None:
+        given = setup(
+            project_name="my project",
+            start_date=datetime(2021, 1, 1),
+            track_files={"path/to/first.ottrk"},
+            remark=REMARK,
+            raise_error=False,
+        )
+        given.load_track_files = Mock(spec=LoadTrackFiles)
+        given.load_track_files.load = AsyncMock()
+        target = create_target(given)
+        observer = Mock()
+        target.register(observer)
+        file = Mock()
+
+        await target.load_async(file)
+
+        given.update_project.assert_called_once()
+        given.add_videos.add.assert_called_once_with(given.otconfig.videos)
+        given.add_sections.add.assert_called_once_with(given.otconfig.sections)
+        given.add_flows.add.assert_called_once_with(given.otconfig.flows)
+        given.remark_repository.add.assert_called_once_with(REMARK)
+        observer.assert_called_once_with(
+            ConfigurationFile(file, given.deserialization_result)
+        )
+
+    async def test_reports_a_broken_otconfig_the_same_way(self) -> None:
+        given = setup(
+            project_name="my project",
+            start_date=datetime(2021, 1, 1),
+            track_files={"path/to/first.ottrk"},
+            remark=REMARK,
+            raise_error=True,
+        )
+        given.load_track_files = Mock(spec=LoadTrackFiles)
+        given.load_track_files.load = AsyncMock()
+        target = create_target(given)
+        observer = Mock()
+        target.register(observer)
+
+        with pytest.raises(UnableToLoadOtconfigFile):
+            await target.load_async(Mock())
+
+        assert given.reset_application.reset.call_count == 2
+        observer.assert_not_called()
 
 
 @dataclass
