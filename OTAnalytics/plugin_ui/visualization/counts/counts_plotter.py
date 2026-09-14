@@ -1,9 +1,10 @@
 import io
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Callable, Iterator
+from typing import Any
 
 import pandas
 from matplotlib.axes import Axes

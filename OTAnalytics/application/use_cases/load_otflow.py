@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from OTAnalytics.application.parser.deserializer import Deserializer
 from OTAnalytics.application.parser.flow_parser import FlowParser

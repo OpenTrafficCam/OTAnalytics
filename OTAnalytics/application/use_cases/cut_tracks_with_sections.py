@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from OTAnalytics.domain.observer import OBSERVER
 from OTAnalytics.domain.section import Section, SectionId, SectionListObserver

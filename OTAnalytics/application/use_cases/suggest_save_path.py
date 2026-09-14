@@ -1,7 +1,7 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
 
 from OTAnalytics.application.files import ensure_dot_in_extension
 from OTAnalytics.application.state import FileState

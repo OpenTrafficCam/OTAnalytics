@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Iterable, Optional
+from typing import Optional
 
 from pandas import DataFrame, Series
 

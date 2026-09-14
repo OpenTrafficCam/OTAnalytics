@@ -1,6 +1,6 @@
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Sequence
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,

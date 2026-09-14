@@ -1,6 +1,7 @@
 from abc import ABC
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Iterable, Optional
+from typing import Optional
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.state import FlowState, SectionState, TrackViewState

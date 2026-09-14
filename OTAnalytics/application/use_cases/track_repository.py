@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.track import Track, TrackId

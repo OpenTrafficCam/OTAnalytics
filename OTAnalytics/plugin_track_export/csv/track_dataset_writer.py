@@ -1,5 +1,6 @@
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Protocol, Sequence
+from typing import Protocol
 
 from OTAnalytics.plugin_track_export.csv.writers.domain import (
     DomainTrackDatasetCsvWriter,

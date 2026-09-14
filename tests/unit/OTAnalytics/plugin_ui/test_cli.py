@@ -1,7 +1,8 @@
+from collections.abc import AsyncIterator
 from datetime import datetime
 from pathlib import Path
 from shutil import copy2, rmtree
-from typing import Any, AsyncIterator
+from typing import Any
 from unittest.mock import Mock, PropertyMock, patch
 
 import pytest

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Iterable, Mapping
+from collections.abc import Iterable, Mapping
 
 from OTAnalytics.domain.event import EventDataset
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate

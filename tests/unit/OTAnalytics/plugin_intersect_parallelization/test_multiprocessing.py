@@ -1,4 +1,5 @@
-from typing import Callable, Iterable, cast
+from collections.abc import Callable, Iterable
+from typing import cast
 from unittest.mock import Mock, patch
 
 import pytest

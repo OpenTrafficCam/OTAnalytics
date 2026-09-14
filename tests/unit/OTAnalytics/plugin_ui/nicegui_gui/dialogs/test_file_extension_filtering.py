@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -22,7 +22,7 @@ class TestFileExtensionFiltering:
         extensions = [".txt", ".py", ".md"]
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-multiple-extensions-example")
         def test_page() -> None:
@@ -54,7 +54,7 @@ class TestFileExtensionFiltering:
         extension = ".py"
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-single-extension-example")
         def test_page() -> None:
@@ -81,7 +81,7 @@ class TestFileExtensionFiltering:
         test_dir = Path("/tmp")
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-no-extension-filtering-example")
         def test_page() -> None:
@@ -109,7 +109,7 @@ class TestFileExtensionFiltering:
         multiple_extensions = [".py", ".md"]
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-priority-multiple-over-single")
         def test_page() -> None:
@@ -162,7 +162,7 @@ class TestFileExtensionFiltering:
         mock_glob.return_value = mock_files
 
         # Container to store picker instance
-        picker_container: Dict[str, Any] = {}
+        picker_container: dict[str, Any] = {}
 
         @ui.page("/test-filtering-logic-multiple-extensions")
         def test_page() -> None:

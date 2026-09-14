@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable
+from collections.abc import Callable
 
 from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.config import CLI_CUTTING_SECTION_MARKER

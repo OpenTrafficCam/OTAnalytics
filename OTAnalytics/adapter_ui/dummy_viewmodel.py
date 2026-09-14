@@ -1,9 +1,10 @@
 import contextlib
 import functools
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Optional
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,
@@ -558,7 +559,7 @@ class DummyViewModel(
 
     async def add_video(self) -> None:
         # Generate extension_options dynamically from SUPPORTED_VIDEO_FILE_TYPES
-        extension_options: Dict[str, Optional[List[str]]] = {}
+        extension_options: dict[str, Optional[list[str]]] = {}
 
         # Convert "*.ext" format to ".ext" format for extension_options
         clean_extensions = [ext for ext in SUPPORTED_VIDEO_FILE_TYPES]

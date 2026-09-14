@@ -1,7 +1,7 @@
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
 from tkinter.filedialog import askopenfilename, askopenfilenames
-from typing import Iterable
 
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
