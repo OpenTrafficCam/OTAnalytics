@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Sequence
+from typing import Iterable, Sequence
 
 from nicegui import context, ui
 
@@ -33,8 +33,8 @@ class NiceguiProgressbar:
         description: str,
         unit: str,
         total: int,
-        counter: Optional[Counter] = None,
-        cancellation: Optional[Cancellation] = None,
+        counter: Counter | None = None,
+        cancellation: Cancellation | None = None,
     ) -> None:
         self._resource_manager = resource_manager
         self._counter = counter if counter is not None else SimpleCounter()
@@ -46,10 +46,10 @@ class NiceguiProgressbar:
             counter=self._counter,
             on_change=self._refresh,
         )
-        self._dialog: Optional[ui.dialog] = None
-        self._message: Optional[ui.label] = None
-        self._bar: Optional[ui.linear_progress] = None
-        self._item: Optional[ui.label] = None
+        self._dialog: ui.dialog | None = None
+        self._message: ui.label | None = None
+        self._bar: ui.linear_progress | None = None
+        self._item: ui.label | None = None
 
     @property
     def state(self) -> ProgressState:
@@ -141,7 +141,7 @@ class NiceguiProgressbarBuilder(ProgressbarBuilder):
 
     def __init__(self, resource_manager: ResourceManager) -> None:
         self._resource_manager = resource_manager
-        self._progressbar: Optional[NiceguiProgressbar] = None
+        self._progressbar: NiceguiProgressbar | None = None
 
     @property
     def progressbar(self) -> NiceguiProgressbar:
