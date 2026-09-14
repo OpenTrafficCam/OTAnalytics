@@ -2,7 +2,6 @@ from functools import cached_property
 from typing import Protocol
 
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
-from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
@@ -113,22 +112,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         )
 
     def preload_project(self) -> None:
-        """Open the files named on the command line, if any.
-
-        This runs while the webserver is still being built, so anything it
-        raises would otherwise propagate out of startup and the process would
-        die before binding a port -- leaving the user with a traceback instead
-        of an application, over a file they could have opened by hand. The
-        failure is logged and startup continues.
-        """
-        try:
-            self.preload_input_files.load(self.run_config)
-        except Exception as cause:
-            logger().exception(
-                "Could not open the files given on the command line. "
-                "Starting without them.",
-                exc_info=cause,
-            )
+        self.preload_input_files.load(self.run_config)
 
     @cached_property
     def analysis_form(self) -> AnalysisForm:

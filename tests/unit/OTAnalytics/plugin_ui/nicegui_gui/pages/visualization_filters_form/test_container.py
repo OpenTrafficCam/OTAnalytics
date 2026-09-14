@@ -1,12 +1,5 @@
 """Tests the form before its page has been built.
 
-The form introduces itself to the view model in `__init__`
-(`_introduce_to_viewmodel`), so the view model can call it from the moment it
-exists. `build()` runs much later, when a browser asks for the page. Anything
-the application does in between -- preloading a `--config` file while the
-webserver is still being constructed, for one -- reaches a form whose widgets
-do not exist yet.
-
 #Requirement https://openproject.platomo.de/wp/10325
 """
 

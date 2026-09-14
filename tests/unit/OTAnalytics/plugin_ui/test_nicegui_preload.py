@@ -1,15 +1,7 @@
-"""Tests that a file named on the command line cannot stop the server starting.
-
-The web UI preloads `--config` while the webserver is still being constructed,
-so anything the load raises propagates out of startup and the process dies
-before it binds a port. The user is then left with a traceback and no
-application, for a file they could simply have opened again by hand.
-
-#Requirement https://openproject.platomo.de/wp/10325
-"""
-
 from dataclasses import dataclass
 from unittest.mock import Mock
+
+import pytest
 
 from OTAnalytics.plugin_ui.nicegui_application import (
     OtAnalyticsNiceGuiApplicationStarter,
@@ -48,17 +40,16 @@ class TestPreloadingTheProject:
 
         given.preload_input_files.load.assert_called_once_with(given.run_config)
 
-    def test_a_file_that_cannot_be_loaded_does_not_stop_the_server(self) -> None:
+    def test_a_file_that_cannot_be_loaded_stops_server_from_being_started(self) -> None:
         """
         #Requirement https://openproject.platomo.de/wp/10325
-
-        @bug by randy-seng
         """
         given = create_given(load_error=FileNotFoundError("no such otconfig"))
 
-        create_target(given).preload_project()
+        with pytest.raises(FileNotFoundError):
+            create_target(given).preload_project()
 
-    def test_survives_a_failure_of_any_kind(self) -> None:
+    def test_fails_on_any_error(self) -> None:
         """Deliberately broad: the point is that startup continues, and every
         exception type reaching here has already cost the user their server
         once.
@@ -67,6 +58,7 @@ class TestPreloadingTheProject:
 
         @bug by randy-seng
         """
-        given = create_given(load_error=RuntimeError("anything at all"))
+        given = create_given(load_error=Exception("anything at all"))
 
-        create_target(given).preload_project()
+        with pytest.raises(Exception):
+            create_target(given).preload_project()
