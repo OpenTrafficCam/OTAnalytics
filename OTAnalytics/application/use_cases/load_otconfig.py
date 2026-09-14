@@ -53,7 +53,7 @@ class LoadOtconfig:
         Args:
             file (Path): the otconfig file.
         """
-        self._apply(file, self._load_track_files)
+        self._apply(file, self._load_track_files.load)
 
     async def load_async(self, file: Path) -> None:
         """Load an otconfig and its track files, keeping the ui responsive.
@@ -61,7 +61,7 @@ class LoadOtconfig:
         Args:
             file (Path): the otconfig file.
         """
-        await self._apply_async(file, self._load_track_files.load)
+        await self._apply_async(file, self._load_track_files.load_async)
 
     def _apply(self, file: Path, load_track_files: Callable[[list], None]) -> None:
         config = self._begin(file)
