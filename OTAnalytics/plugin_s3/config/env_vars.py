@@ -11,7 +11,6 @@ ENV_S3_ACCESS_KEY = "OTA_S3_ACCESS_KEY"
 ENV_S3_SECRET_KEY = "OTA_S3_SECRET_KEY"  # nosec B105 - variable name, not a secret
 ENV_S3_BUCKET = "OTA_S3_BUCKET"
 ENV_S3_REGION = "OTA_S3_REGION"
-ENV_S3_KEY_PREFIX = "OTA_S3_KEY_PREFIX"  # gitleaks:allow - variable name, not a secret
 ENV_S3_USER_SOURCE = "OTA_S3_USER_SOURCE"
 ENV_S3_MAX_LOAD_DURATION = "OTA_S3_MAX_LOAD_DURATION"
 ENV_S3_DOWNLOAD_CONCURRENCY = "OTA_S3_DOWNLOAD_CONCURRENCY"
@@ -41,7 +40,6 @@ class S3Env:
     secret_key: str | None = field(default_factory=_make_env_reader(ENV_S3_SECRET_KEY))
     bucket: str | None = field(default_factory=_make_env_reader(ENV_S3_BUCKET))
     region: str | None = field(default_factory=_make_env_reader(ENV_S3_REGION))
-    key_prefix: str | None = field(default_factory=_make_env_reader(ENV_S3_KEY_PREFIX))
     user_source: str | None = field(
         default_factory=_make_env_reader(ENV_S3_USER_SOURCE)
     )

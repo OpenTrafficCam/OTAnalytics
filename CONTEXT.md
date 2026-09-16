@@ -15,16 +15,22 @@ startup configuration; it is not something a user switches while working.
 _Avoid_: storage backend, data source (both suggest a per-load choice).
 
 **Startup Configuration**:
-The environment variables naming the Transfer Mode and, in S3 mode, the S3
-settings. Fixed for the lifetime of the process. Deliberately not a file, and
-deliberately never the **otconfig** — that is a per-project file users save and
-share, and credentials must not travel in one.
+The environment variables naming the Transfer Mode and, in S3 mode, the bucket
+and credentials. Fixed for the lifetime of the process. Deliberately not a file.
+Says what a deployment may authenticate to, never which project it holds: the
+Key Prefix comes from the **otconfig** instead, because that is per-project and
+varies per lease. Credentials must never travel in an otconfig, since users save
+and share those files.
 _Avoid_: config file (there isn't one, and it invites confusion with otconfig).
 
 **Key Prefix**:
-The single S3 prefix an instance reads from, covering one camera or site. Fixed
-at startup, so a user chooses only _when_, never _where_.
-_Avoid_: path, folder (S3 has neither).
+The S3 prefix a project's Tracks and Videos live under, covering one camera or
+site. A property of the project, declared by its otconfig, and required there in
+S3 mode — so opening a different project moves where an instance reads from,
+within the one configured bucket. Until a project is loaded there is no Key
+Prefix and nothing can be listed.
+_Avoid_: path, folder (S3 has neither); startup configuration (it is per-project,
+unlike the bucket and credentials).
 
 **User Source**:
 The local directory that downloaded objects are written into, mirroring their S3
