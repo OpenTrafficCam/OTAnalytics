@@ -10,6 +10,7 @@ import pytest
 import requests
 
 from OTAnalytics.plugin_ui.nicegui_application import DEFAULT_HOSTNAME, DEFAULT_PORT
+from tests.utils.app_environment import local_filesystem_environment
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
 # Centralized timeouts and settings used by Playwright-based acceptance tests
@@ -63,7 +64,11 @@ class NiceGUITestServer:
         self.base_url = f"http://{DEFAULT_HOSTNAME}:{port}"
 
     def start(self) -> None:
-        """Start NiceGUI server in subprocess."""
+        """Start NiceGUI server in subprocess.
+
+        The environment is stated rather than inherited, so a shell configured
+        for s3 work cannot start these local mode tests in s3 mode.
+        """
         self.process = subprocess.Popen(
             [
                 sys.executable,
@@ -73,6 +78,7 @@ class NiceGUITestServer:
                 "--file-picker-directory",
                 file_picker_directory(),
             ],
+            env=local_filesystem_environment(),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
