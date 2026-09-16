@@ -181,13 +181,14 @@ class TestNiceguiProgressbarBuilder:
 
 
 class TestProgressbarForWorkOffTheEventLoop:
-    """#Requirement https://openproject.platomo.de/wp/10282"""
-
     @pytest.mark.asyncio
     async def test_stays_open_until_the_caller_closes_it(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
-        """Parsing on a worker thread reports nothing until it is done."""
+        """Parsing on a worker thread reports nothing until it is done.
+
+        Requirement https://openproject.platomo.de/wp/10282
+        """
         given = create_given(resource_manager)
         target = create_builder(given)
         progressbars = []

@@ -65,6 +65,7 @@ class TestLoadOtconfig:
         with pytest.raises(UnableToLoadOtconfigFile):
             target.load(file)
 
+        # once before loading, once to discard the half applied config
         assert given.reset_application.reset.call_count == 2
         given.config_parser.parse.assert_called_once_with(file)
         observer.assert_not_called()
@@ -72,12 +73,11 @@ class TestLoadOtconfig:
 
 
 class TestLoadOtconfigOnTheEventLoop:
-    """Loading an otconfig loads its track files, so it freezes the ui too.
-
-    #Requirement https://openproject.platomo.de/wp/10282
-    """
+    """Loading an otconfig loads its track files, so it freezes the ui too."""
 
     async def test_loads_track_files_off_the_event_loop(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
+
         given = setup(
             project_name="my project",
             start_date=datetime(2021, 1, 1),
@@ -98,6 +98,8 @@ class TestLoadOtconfigOnTheEventLoop:
         given.load_track_files.load.assert_not_called()
 
     async def test_publishes_everything_the_blocking_load_publishes(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
+
         given = setup(
             project_name="my project",
             start_date=datetime(2021, 1, 1),
@@ -124,6 +126,8 @@ class TestLoadOtconfigOnTheEventLoop:
         )
 
     async def test_reports_a_broken_otconfig_the_same_way(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
+
         given = setup(
             project_name="my project",
             start_date=datetime(2021, 1, 1),
@@ -140,6 +144,7 @@ class TestLoadOtconfigOnTheEventLoop:
         with pytest.raises(UnableToLoadOtconfigFile):
             await target.load_async(Mock())
 
+        # once before loading, once to discard the half applied config
         assert given.reset_application.reset.call_count == 2
         observer.assert_not_called()
 

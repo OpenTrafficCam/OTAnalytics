@@ -314,10 +314,12 @@ class TestLoadTrackFile:
 
 
 class TestLoadTrackFilesInsideAnEventLoop:
-    """#Requirement https://openproject.platomo.de/wp/10282"""
 
     async def test_blocking_call_refuses_to_run_on_the_event_loop(self) -> None:
-        """Parsing on the event loop freezes the webui for every connected client."""
+        """Parsing on the event loop freezes the webui for every connected client.
+
+        #Requirement https://openproject.platomo.de/wp/10282
+        """
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
@@ -334,9 +336,9 @@ class TestLoadTrackFilesInsideAnEventLoop:
 
 
 class TestLoadTrackFilesOffTheEventLoop:
-    """#Requirement https://openproject.platomo.de/wp/10282"""
 
     async def test_parses_only_the_files_not_already_loaded(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
@@ -351,6 +353,7 @@ class TestLoadTrackFilesOffTheEventLoop:
         given.track_parser.parse_files.assert_called_once_with([other_file])
 
     def test_publishes_in_the_same_order_as_the_blocking_call(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
         classes = {"class1", "class2"}
         arguments = dict(
             track_ids=[TrackId("1"), TrackId("2")],
@@ -372,7 +375,10 @@ class TestLoadTrackFilesOffTheEventLoop:
 
     async def test_parses_off_the_event_loop_and_publishes_on_it(self) -> None:
         """Repositories notify observers that mutate widgets, so publishing must
-        stay on the event loop while the expensive parse does not."""
+        stay on the event loop while the expensive parse does not.
+
+        #Requirement https://openproject.platomo.de/wp/10282
+        """
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
@@ -396,6 +402,8 @@ class TestLoadTrackFilesOffTheEventLoop:
         assert threads["publish"] is threading.current_thread()
 
     async def test_parses_before_publishing_anything(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
+
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
@@ -421,11 +429,12 @@ class TestLoadTrackFilesOffTheEventLoop:
 
 
 class TestLoadTrackFilesShowsProgress:
-    """#Requirement https://openproject.platomo.de/wp/10282"""
 
     def test_blocking_call_shows_a_progressbar_until_the_files_are_loaded(
         self,
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
+
         given = setup(
             track_ids=[TrackId("1"), TrackId("2")],
             video_files=[Path("video1.mp4"), Path("video2.mp4")],
@@ -443,7 +452,10 @@ class TestLoadTrackFilesShowsProgress:
         given.progressbar.start.return_value.close.assert_called_once_with()
 
     async def test_shows_a_progressbar_until_the_files_are_loaded(self) -> None:
-        """Parsing off the event loop leaves the ui free to show what it is doing."""
+        """Parsing off the event loop leaves the ui free to show what it is doing.
+
+        #Requirement https://openproject.platomo.de/wp/10282
+        """
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
@@ -461,6 +473,8 @@ class TestLoadTrackFilesShowsProgress:
         given.progressbar.start.return_value.close.assert_called_once_with()
 
     async def test_counts_only_the_files_it_is_going_to_parse(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
+
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
@@ -479,6 +493,8 @@ class TestLoadTrackFilesShowsProgress:
     async def test_opens_the_progressbar_before_parsing_and_closes_it_after(
         self,
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
+
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
@@ -502,7 +518,10 @@ class TestLoadTrackFilesShowsProgress:
         ]
 
     async def test_closes_the_progressbar_when_parsing_fails(self) -> None:
-        """A progressbar left open would hide the ui behind it for good."""
+        """A progressbar left open would hide the ui behind it for good.
+
+        #Requirement https://openproject.platomo.de/wp/10282
+        """
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
@@ -519,6 +538,8 @@ class TestLoadTrackFilesShowsProgress:
         given.progressbar.start.return_value.close.assert_called_once_with()
 
     async def test_shows_nothing_when_every_file_is_loaded_already(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
+
         given = setup(
             track_ids=[],
             video_files=[],
