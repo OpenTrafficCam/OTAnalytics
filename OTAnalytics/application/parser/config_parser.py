@@ -32,6 +32,20 @@ class AnalysisConfig:
 
 
 @dataclass(frozen=True)
+class SubstitutedFile:
+    """A reference an otconfig named, and the file loaded in its place.
+
+    The parser falls back to a same-named file beside the otconfig when a
+    reference does not resolve, which keeps a moved project openable. The two
+    files share a name but not necessarily their contents, so every
+    substitution has to be reported rather than merely logged.
+    """
+
+    requested: Path
+    used: Path
+
+
+@dataclass(frozen=True)
 class OtConfig:
     project: Project
     analysis: AnalysisConfig
