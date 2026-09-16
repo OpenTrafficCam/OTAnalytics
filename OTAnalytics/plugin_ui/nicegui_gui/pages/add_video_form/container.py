@@ -1,4 +1,5 @@
-from typing import Iterable, Self
+from collections.abc import Iterable
+from typing import Self
 
 from nicegui import ui
 from nicegui.elements.button import Button

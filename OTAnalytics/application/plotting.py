@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from math import floor
-from typing import Any, Callable, Generic, Iterable, Optional, Sequence, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.state import (

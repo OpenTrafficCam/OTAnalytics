@@ -1,6 +1,7 @@
 import tkinter
+from collections.abc import Sequence
 from functools import partial
-from typing import Any, Sequence
+from typing import Any
 
 from customtkinter import CTk, CTkFrame, set_appearance_mode, set_default_color_theme
 

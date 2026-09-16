@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksDto,

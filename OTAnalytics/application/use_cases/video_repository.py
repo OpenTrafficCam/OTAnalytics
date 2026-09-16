@@ -1,5 +1,6 @@
+from collections.abc import Iterable
 from datetime import datetime, timezone
-from typing import Iterable, Optional
+from typing import Optional
 
 from OTAnalytics.domain.video import Video, VideoRepository
 

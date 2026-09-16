@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from datetime import datetime, timezone
-from typing import Iterable
 from unittest.mock import Mock, PropertyMock
 
 import pandas

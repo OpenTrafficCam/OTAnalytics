@@ -1,6 +1,7 @@
+from collections.abc import Callable, Sequence
 from datetime import datetime, timezone
 from functools import cached_property
-from typing import Callable, Optional, Sequence
+from typing import Optional
 
 from pandas import DataFrame
 

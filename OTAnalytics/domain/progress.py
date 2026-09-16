@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, Iterator, Sequence
+from collections.abc import Iterable, Iterator, Sequence
 
 
 class ProgressbarBuildError(Exception):

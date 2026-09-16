@@ -1,4 +1,5 @@
-from typing import Any, Callable, Iterator, Optional, Sequence
+from collections.abc import Callable, Iterator, Sequence
+from typing import Any, Optional
 
 from OTAnalytics.application.config import DEFAULT_PROGRESSBAR_STEP_PERCENTAGE
 from OTAnalytics.domain.progress import Counter, Progressbar

@@ -1,7 +1,7 @@
 import asyncio
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator, Iterable
 from pathlib import Path
-from typing import AsyncIterator, Iterable
 
 from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignmentRepository,
