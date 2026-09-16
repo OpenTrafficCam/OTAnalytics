@@ -35,7 +35,8 @@ pytest.importorskip("playwright.sync_api", reason="needs pytest-playwright")
 
 BUCKET = "recordings"
 PREFIX = "project-0/site-0/camera-1"
-MINIO_IMAGE = "minio/minio:RELEASE.2025-09-07T16-13-09Z"
+# Pinned for reproducibility, and built for both amd64 and arm64.
+RUSTFS_IMAGE = "rustfs/rustfs:1.0.0-rc.6"
 CHUNKS = ["10-00-00", "10-15-00"]
 
 
@@ -52,16 +53,16 @@ def _docker_is_available() -> bool:
 
 
 pytestmark = pytest.mark.skipif(
-    not _docker_is_available(), reason="needs Docker to run MinIO"
+    not _docker_is_available(), reason="needs Docker to run RustFS"
 )
 
 
 @pytest.fixture(scope="module")
-def minio() -> Iterator[dict]:
-    from testcontainers.minio import MinioContainer
+def rustfs() -> Iterator[dict]:
+    from tests.utils.rustfs_container import RustFsContainer
 
     os.environ.setdefault("TESTCONTAINERS_RYUK_DISABLED", "true")
-    with MinioContainer(image=MINIO_IMAGE) as container:
+    with RustFsContainer(image=RUSTFS_IMAGE) as container:
         client = container.get_client()
         client.make_bucket(BUCKET)
         for chunk in CHUNKS:
@@ -76,19 +77,19 @@ def minio() -> Iterator[dict]:
 
 
 @pytest.fixture
-def s3_app(minio: dict, tmp_path: Path) -> Iterator[Any]:
-    """The real application, started in s3 mode against MinIO.
+def s3_app(rustfs: dict, tmp_path: Path) -> Iterator[Any]:
+    """The real application, started in s3 mode against RustFS.
 
     Configuration is environment only, so pointing the documented variables at a
-    throwaway MinIO exercises the production path with no test-only hooks.
+    throwaway RustFS exercises the production path with no test-only hooks.
     """
     environment = dict(os.environ)
     environment.update(
         {
             ENV_DATA_TRANSFER_MODE: "s3",
-            ENV_S3_ENDPOINT_URL: minio["endpoint_url"],
-            ENV_S3_ACCESS_KEY: minio["access_key"],
-            ENV_S3_SECRET_KEY: minio["secret_key"],
+            ENV_S3_ENDPOINT_URL: rustfs["endpoint_url"],
+            ENV_S3_ACCESS_KEY: rustfs["access_key"],
+            ENV_S3_SECRET_KEY: rustfs["secret_key"],
             ENV_S3_BUCKET: BUCKET,
             ENV_S3_KEY_PREFIX: PREFIX,
             ENV_S3_USER_SOURCE: str(tmp_path / "user-source"),

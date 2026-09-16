@@ -40,9 +40,8 @@ CHUNKS = ["10-00-00", "10-15-00", "10-30-00"]
 # a suffix swap would look for an object that is not there.
 VIDEO_TYPE = ".mkv"
 
-# Pinned for reproducibility. testcontainers' own default is a 2022 build that is
-# amd64 only and will not start on an arm64 host.
-MINIO_IMAGE = "minio/minio:RELEASE.2025-09-07T16-13-09Z"
+# Pinned for reproducibility, and built for both amd64 and arm64.
+RUSTFS_IMAGE = "rustfs/rustfs:1.0.0-rc.6"
 
 
 def _docker_is_available() -> bool:
@@ -58,19 +57,19 @@ def _docker_is_available() -> bool:
 
 
 pytestmark = pytest.mark.skipif(
-    not _docker_is_available(), reason="needs Docker to run MinIO"
+    not _docker_is_available(), reason="needs Docker to run RustFS"
 )
 
 
 @pytest.fixture(scope="module")
-def minio() -> Iterator[dict]:
-    from testcontainers.minio import MinioContainer
+def rustfs() -> Iterator[dict]:
+    from tests.utils.rustfs_container import RustFsContainer
 
     # The reaper container bind-mounts the Docker socket, which Docker Desktop
     # refuses on some hosts. The context manager below cleans up on a normal
     # exit; the reaper only matters if the test process is killed outright.
     os.environ.setdefault("TESTCONTAINERS_RYUK_DISABLED", "true")
-    with MinioContainer(image=MINIO_IMAGE) as container:
+    with RustFsContainer(image=RUSTFS_IMAGE) as container:
         client = container.get_client()
         client.make_bucket(BUCKET)
         for chunk in CHUNKS:
@@ -104,12 +103,12 @@ class Given:
     user_source: Path
 
 
-def create_given(minio: dict, tmp_path: Path, hours: float = 1) -> Given:
+def create_given(rustfs: dict, tmp_path: Path, hours: float = 1) -> Given:
     user_source = tmp_path / "user-source"
     config = S3Config(
-        endpoint_url=minio["endpoint_url"],
-        access_key=minio["access_key"],
-        secret_key=minio["secret_key"],
+        endpoint_url=rustfs["endpoint_url"],
+        access_key=rustfs["access_key"],
+        secret_key=rustfs["secret_key"],
         bucket=BUCKET,
         region=None,
         key_prefix=PREFIX,
@@ -151,14 +150,14 @@ def create_video_target(given: Given) -> S3VideoFileProvider:
     )
 
 
-class TestLoadFromMinio:
+class TestLoadFromRustFs:
     """#Requirement https://openproject.platomo.de/wp/10283"""
 
     async def test_an_over_long_selection_loads_only_up_to_the_cap(
-        self, minio: dict, tmp_path: Path
+        self, rustfs: dict, tmp_path: Path
     ) -> None:
         """10:00-11:00 clamps to 10:20, so only the 10:00 and 10:15 chunks load."""
-        given = create_given(minio, tmp_path, hours=1)
+        given = create_given(rustfs, tmp_path, hours=1)
         target = create_track_target(given)
 
         provided = await target.provide()
@@ -170,9 +169,9 @@ class TestLoadFromMinio:
         given.dialog.report_clamped.assert_called_once()
 
     async def test_downloads_each_track_file_with_its_video(
-        self, minio: dict, tmp_path: Path
+        self, rustfs: dict, tmp_path: Path
     ) -> None:
-        given = create_given(minio, tmp_path, hours=1)
+        given = create_given(rustfs, tmp_path, hours=1)
         target = create_track_target(given)
 
         await target.provide()
@@ -187,9 +186,9 @@ class TestLoadFromMinio:
                 assert staged.is_file(), f"{staged} was not downloaded"
 
     async def test_stages_objects_under_paths_mirroring_their_keys(
-        self, minio: dict, tmp_path: Path
+        self, rustfs: dict, tmp_path: Path
     ) -> None:
-        given = create_given(minio, tmp_path, hours=1)
+        given = create_given(rustfs, tmp_path, hours=1)
         target = create_track_target(given)
 
         provided = await target.provide()
@@ -199,9 +198,9 @@ class TestLoadFromMinio:
         )
 
     async def test_reads_the_bytes_that_were_stored(
-        self, minio: dict, tmp_path: Path
+        self, rustfs: dict, tmp_path: Path
     ) -> None:
-        given = create_given(minio, tmp_path, hours=1)
+        given = create_given(rustfs, tmp_path, hours=1)
         target = create_track_target(given)
 
         provided = await target.provide()
@@ -209,10 +208,10 @@ class TestLoadFromMinio:
         assert bz2.decompress(provided[0].read_bytes()).startswith(b"{")
 
     async def test_pairs_each_track_file_with_the_video_its_metadata_names(
-        self, minio: dict, tmp_path: Path
+        self, rustfs: dict, tmp_path: Path
     ) -> None:
         """A suffix swap would have looked for a .mp4 that does not exist."""
-        given = create_given(minio, tmp_path, hours=1)
+        given = create_given(rustfs, tmp_path, hours=1)
         target = create_track_target(given)
 
         await target.provide()
@@ -221,8 +220,8 @@ class TestLoadFromMinio:
         assert (staged / f"OTCamera19_FR20_2023-05-24_10-00-00{VIDEO_TYPE}").is_file()
         assert not (staged / "OTCamera19_FR20_2023-05-24_10-00-00.mp4").exists()
 
-    async def test_videos_load_on_their_own(self, minio: dict, tmp_path: Path) -> None:
-        given = create_given(minio, tmp_path, hours=1)
+    async def test_videos_load_on_their_own(self, rustfs: dict, tmp_path: Path) -> None:
+        given = create_given(rustfs, tmp_path, hours=1)
         target = create_video_target(given)
 
         provided = await target.provide()
