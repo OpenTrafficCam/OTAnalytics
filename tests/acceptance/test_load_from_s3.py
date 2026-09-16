@@ -29,6 +29,7 @@ from OTAnalytics.plugin_s3.config.env_vars import (
 )
 from OTAnalytics.plugin_ui.nicegui_application import DEFAULT_HOSTNAME, DEFAULT_PORT
 from tests.acceptance.conftest import PLAYWRIGHT_VISIBLE_TIMEOUT_MS
+from tests.utils.app_environment import s3_environment
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
 pytest.importorskip("playwright.sync_api", reason="needs pytest-playwright")
@@ -120,8 +121,7 @@ def s3_app(rustfs: dict, tmp_path: Path) -> Iterator[Any]:
     throwaway RustFS exercises the production path with no test-only hooks. The
     project is preloaded from a file, which is where the key prefix comes from.
     """
-    environment = dict(os.environ)
-    environment.update(
+    environment = s3_environment(
         {
             ENV_DATA_TRANSFER_MODE: "s3",
             ENV_S3_ENDPOINT_URL: rustfs["endpoint_url"],
