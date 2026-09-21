@@ -1,5 +1,5 @@
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Awaitable, Callable
 
 from OTAnalytics.application.parser.config_parser import ConfigParser, OtConfig
 from OTAnalytics.application.parser.deserializer import Deserializer
