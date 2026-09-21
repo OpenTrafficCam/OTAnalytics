@@ -159,7 +159,7 @@ class ProgressState:
     @property
     def fraction(self) -> float:
         """The share of items completed, between 0.0 and 1.0."""
-        if not self._total:
+        if self._total <= 0:
             return 1.0
         return min(self._counter.get_value() / self._total, 1.0)
 
