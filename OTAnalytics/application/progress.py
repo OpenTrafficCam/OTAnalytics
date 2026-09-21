@@ -158,10 +158,13 @@ class ProgressState:
 
     @property
     def fraction(self) -> float:
-        """The share of items completed, between 0.0 and 1.0."""
+        """
+        The share of items completed, between 0.0 and 1.0, rounded to the nearest
+        2 decimals.
+        """
         if self._total <= 0:
             return 1.0
-        return min(self._counter.get_value() / self._total, 1.0)
+        return min(round(self._counter.get_value(), 2) / self._total, 1.0)
 
     @property
     def message(self) -> str:
