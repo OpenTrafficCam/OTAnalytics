@@ -83,6 +83,7 @@ class Given:
     remark_repository: Mock
     deserializer: Mock
     deserialization_result: Mock
+    select_track_files: Mock
 
 
 def setup(
@@ -105,6 +106,7 @@ def setup(
     deserialization_result = Mock()
     deserializer = Mock()
     deserializer.return_value = deserialization_result
+    select_track_files = Mock()
 
     if raise_error:
         add_sections = MagicMock()
@@ -124,6 +126,7 @@ def setup(
         remark_repository=remark_repository,
         deserializer=deserializer,
         deserialization_result=deserialization_result,
+        select_track_files=select_track_files,
     )
 
 
@@ -161,4 +164,5 @@ def create_target(given: Given) -> LoadOtconfig:
         given.load_track_files,
         given.remark_repository,
         given.deserializer,
+        given.select_track_files,
     )

@@ -56,6 +56,7 @@ class CliArguments:
     log_file: str | None = None
     include_classes: list[str] | None = None
     exclude_classes: list[str] | None = None
+    track_file_fraction: float | None = None
 
 
 class CliValueProvider(OtConfigDefaultValueProvider):

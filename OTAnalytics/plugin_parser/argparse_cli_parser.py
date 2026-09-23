@@ -1,9 +1,33 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentTypeError, Namespace
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode, CliParser
+
+
+def _parse_fraction(value: str) -> float:
+    """Parse a string value as a float and check if it is between 0.0 and 1.0.
+
+    Args:
+        value (str): The string value to parse.
+
+    Returns:
+        float: The parsed float value.
+
+    Raises:
+        argparse.ArgumentTypeError: If the value is not a valid float or
+        not in the range [0.0, 1.0].
+    """
+    try:
+        fraction = float(value)
+    except ValueError:
+        raise ArgumentTypeError(f"Invalid float value: {value}")
+
+    if not 0.0 <= fraction <= 1.0:
+        raise ArgumentTypeError(f"Fraction must be between 0.0 and 1.0, got {fraction}")
+
+    return fraction
 
 
 class ArgparseCliParser(CliParser):
@@ -170,6 +194,12 @@ class ArgparseCliParser(CliParser):
             help="Blacklist filter to exclude tracks with given classes.",
             required=False,
         )
+        self._parser.add_argument(
+            "--track-file-fraction",
+            type=_parse_fraction,
+            help="Fraction of track files to select.",
+            required=False,
+        )
 
     def parse(self) -> CliArguments:
         """Parse and checks for cli arg
@@ -178,6 +208,7 @@ class ArgparseCliParser(CliParser):
             CliArguments: _description_
         """
         args = self._parser.parse_args()
+        self._validate_track_file_fraction(args)
         return CliArguments(
             start_cli=args.cli,
             start_webui=args.webui,
@@ -200,4 +231,27 @@ class ArgparseCliParser(CliParser):
             log_file=args.logfile,
             include_classes=args.include_classes,
             exclude_classes=args.exclude_classes,
+            track_file_fraction=args.track_file_fraction,
         )
+
+    def _validate_track_file_fraction(self, args: Namespace) -> None:
+        if args.track_file_fraction is None:
+            return
+
+        if args.config is None:
+            self._parser.error(
+                "The argument '--track-file-fraction' can only be used "
+                "in combination with '--config'."
+            )
+
+        if args.ottrks:
+            self._parser.error(
+                "The argument '--track-file-fraction' cannot be used "
+                "in combination with '--ottrks'."
+            )
+
+        if args.cli:
+            self._parser.error(
+                "The argument '--track-file-fraction' cannot be used "
+                "in combination with '--cli'."
+            )

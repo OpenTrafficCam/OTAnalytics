@@ -251,5 +251,11 @@ class RunConfiguration(OtConfigDefaultValueProvider):
             return Path(self._cli_args.file_picker_directory)
         return Path.home()
 
+    @property
+    def track_file_fraction(self) -> float:
+        if self._cli_args.track_file_fraction is not None:
+            return self._cli_args.track_file_fraction
+        return 1.0
+
 
 RunConfigurationBuilder = Callable[[CliArguments, OtConfig | None], RunConfiguration]

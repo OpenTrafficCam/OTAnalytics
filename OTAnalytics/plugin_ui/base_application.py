@@ -155,6 +155,9 @@ from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
     RemoveSection,
 )
+from OTAnalytics.application.use_cases.select_track_files import (
+    SelectEquallySpacedTrackFiles,
+)
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
 from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
@@ -369,6 +372,14 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return GetAllVideos(self.video_repository)
 
     @cached_property
+    def track_file_fraction(self) -> float:
+        return self.run_config.track_file_fraction
+
+    @cached_property
+    def select_track_files(self) -> SelectEquallySpacedTrackFiles:
+        return SelectEquallySpacedTrackFiles(self.track_file_fraction)
+
+    @cached_property
     def load_otconfig(self) -> LoadOtconfig:
         return LoadOtconfig(
             self.reset_application,
@@ -380,6 +391,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.load_track_files,
             self.add_new_remark,
             parse_json,
+            self.select_track_files,
         )
 
     @cached_property
