@@ -3,6 +3,9 @@ from pathlib import Path
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.state import ConfigurationFile, FileState
+from OTAnalytics.application.use_cases.deselected_track_files import (
+    GetAllConfiguredTrackFiles,
+)
 from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
 
 
@@ -21,11 +24,13 @@ class SaveOtconfig:
         config_parser: ConfigParser,
         state: FileState,
         get_current_remark: GetCurrentRemark,
+        get_all_configured_track_files: GetAllConfiguredTrackFiles,
     ) -> None:
         self._datastore = datastore
         self._config_parser = config_parser
         self._state = state
         self._get_current_remark = get_current_remark
+        self._get_all_configured_track_files = get_all_configured_track_files
 
     def __call__(self, file: Path) -> None:
         project = self._datastore.project
@@ -41,7 +46,7 @@ class SaveOtconfig:
             raise ConfigValidationError(errors)
 
         video_files = self._datastore.get_all_videos()
-        track_files = self._datastore._track_file_repository.get_all()
+        track_files = self._get_all_configured_track_files()
         sections = self._datastore.get_all_sections()
         flows = self._datastore.get_all_flows()
         remark = self._get_current_remark.get()

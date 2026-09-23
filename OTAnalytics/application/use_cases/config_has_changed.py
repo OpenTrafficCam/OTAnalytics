@@ -1,11 +1,13 @@
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.state import ConfigurationFile, FileState
+from OTAnalytics.application.use_cases.deselected_track_files import (
+    GetAllConfiguredTrackFiles,
+)
 from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
 from OTAnalytics.application.use_cases.section_repository import GetAllSections
-from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
 from OTAnalytics.application.use_cases.video_repository import GetAllVideos
 
 
@@ -17,7 +19,7 @@ class OtconfigHasChanged:
         get_flows: GetAllFlows,
         get_current_project: GetCurrentProject,
         get_videos: GetAllVideos,
-        get_track_files: GetAllTrackFiles,
+        get_track_files: GetAllConfiguredTrackFiles,
         get_remark: GetCurrentRemark,
     ):
         self._config_parser = config_parser

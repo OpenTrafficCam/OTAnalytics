@@ -1,3 +1,6 @@
+from OTAnalytics.application.use_cases.deselected_track_files import (
+    ClearDeselectedTrackFiles,
+)
 from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import ClearAllFlows
 from OTAnalytics.application.use_cases.intersection_repository import (
@@ -22,6 +25,8 @@ class ClearRepositories:
             to video repository.
         clear_all_tracks (ClearAllTracks): use case to clear track repository.
         clear_all_videos (ClearAllVideos): use case to clear video repository.
+        clear_deselected_track_files (ClearDeselectedTrackFiles): use case to
+            clear the repository of track files that have not been loaded.
     """
 
     def __init__(
@@ -33,6 +38,7 @@ class ClearRepositories:
         clear_all_tracks: ClearAllTracks,
         clear_all_track_files: ClearAllTrackFiles,
         clear_all_videos: ClearAllVideos,
+        clear_deselected_track_files: ClearDeselectedTrackFiles,
     ):
         self._clear_all_events = clear_all_events
         self._clear_all_flows = clear_all_flows
@@ -41,6 +47,7 @@ class ClearRepositories:
         self._clear_all_tracks = clear_all_tracks
         self._clear_all_track_files = clear_all_track_files
         self._clear_all_videos = clear_all_videos
+        self._clear_deselected_track_files = clear_deselected_track_files
 
     def __call__(self) -> None:
         """Clear all repositories used within OTAnalytics."""
@@ -51,3 +58,4 @@ class ClearRepositories:
         self._clear_all_tracks()
         self._clear_all_track_files()
         self._clear_all_videos()
+        self._clear_deselected_track_files()

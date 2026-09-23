@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -13,6 +14,8 @@ from OTAnalytics.application.use_cases.load_otconfig import (
 from OTAnalytics.application.use_cases.section_repository import SectionAlreadyExists
 
 REMARK = "my remark"
+FIRST_TRACK_FILE = Path("path/to/first.ottrk")
+SECOND_TRACK_FILE = Path("path/to/second.ottrk")
 
 
 class TestLoadOtconfig:
@@ -20,7 +23,7 @@ class TestLoadOtconfig:
         given = setup(
             project_name="my project",
             start_date=datetime(2021, 1, 1),
-            track_files={"path/to/first.ottrk", "path/to/second.ottrk"},
+            track_files={FIRST_TRACK_FILE, SECOND_TRACK_FILE},
             remark=REMARK,
             raise_error=False,
         )
@@ -40,7 +43,7 @@ class TestLoadOtconfig:
         given.add_sections.add.assert_called_once_with(given.otconfig.sections)
         given.add_flows.add.assert_called_once_with(given.otconfig.flows)
         given.load_track_files.assert_called_once_with(
-            list(given.otconfig.analysis.track_files)
+            given.otconfig.analysis.track_files
         )
         observer.assert_called_once_with(
             ConfigurationFile(file, given.deserialization_result)
@@ -52,7 +55,7 @@ class TestLoadOtconfig:
         given = setup(
             project_name="my project",
             start_date=datetime(2021, 1, 1),
-            track_files={"path/to/first.ottrk", "path/to/second.ottrk"},
+            track_files={FIRST_TRACK_FILE, SECOND_TRACK_FILE},
             remark=REMARK,
             raise_error=True,
         )
@@ -83,13 +86,12 @@ class Given:
     remark_repository: Mock
     deserializer: Mock
     deserialization_result: Mock
-    select_track_files: Mock
 
 
 def setup(
     project_name: str,
     start_date: datetime,
-    track_files: set[str],
+    track_files: set[Path],
     remark: str,
     raise_error: bool,
 ) -> Given:
@@ -106,7 +108,6 @@ def setup(
     deserialization_result = Mock()
     deserializer = Mock()
     deserializer.return_value = deserialization_result
-    select_track_files = Mock()
 
     if raise_error:
         add_sections = MagicMock()
@@ -126,14 +127,13 @@ def setup(
         remark_repository=remark_repository,
         deserializer=deserializer,
         deserialization_result=deserialization_result,
-        select_track_files=select_track_files,
     )
 
 
 def create_otconfig(
     project_name: str,
     start_date: datetime,
-    track_files: set[str],
+    track_files: set[Path],
     remark: str,
 ) -> OtConfig:
     project = Mock()
@@ -164,5 +164,4 @@ def create_target(given: Given) -> LoadOtconfig:
         given.load_track_files,
         given.remark_repository,
         given.deserializer,
-        given.select_track_files,
     )

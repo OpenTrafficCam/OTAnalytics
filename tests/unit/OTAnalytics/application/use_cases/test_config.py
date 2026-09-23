@@ -9,6 +9,9 @@ from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.config import ConfigValidationError, SaveOtconfig
+from OTAnalytics.application.use_cases.deselected_track_files import (
+    GetAllConfiguredTrackFiles,
+)
 from OTAnalytics.domain.track_repository import TrackFileRepository
 
 
@@ -24,8 +27,13 @@ class TestSaveOtconfig:
         output = test_data_tmp_dir / "test.otconfig"
         file_state = Mock()
         get_current_remark = Mock()
+        get_all_configured_track_files = Mock(spec=GetAllConfiguredTrackFiles)
         use_case = SaveOtconfig(
-            datastore, config_parser, file_state, get_current_remark
+            datastore,
+            config_parser,
+            file_state,
+            get_current_remark,
+            get_all_configured_track_files,
         )
 
         use_case(output)
@@ -43,8 +51,13 @@ class TestSaveOtconfig:
         output = test_data_tmp_dir / "test.otconfig"
         file_state = Mock()
         get_current_remark = Mock()
+        get_all_configured_track_files = Mock(spec=GetAllConfiguredTrackFiles)
         use_case = SaveOtconfig(
-            datastore, config_parser, file_state, get_current_remark
+            datastore,
+            config_parser,
+            file_state,
+            get_current_remark,
+            get_all_configured_track_files,
         )
 
         with pytest.raises(ConfigValidationError) as exc_info:

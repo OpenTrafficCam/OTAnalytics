@@ -84,6 +84,11 @@ from OTAnalytics.application.use_cases.create_road_user_assignments import (
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
     CutTracksIntersectingSection,
 )
+from OTAnalytics.application.use_cases.deselected_track_files import (
+    ClearDeselectedTrackFiles,
+    DeselectedTrackFileRepository,
+    GetAllConfiguredTrackFiles,
+)
 from OTAnalytics.application.use_cases.editor.section_editor import (
     AddNewSection,
     CreateSectionId,
@@ -131,6 +136,9 @@ from OTAnalytics.application.use_cases.inside_cutting_section import (
 )
 from OTAnalytics.application.use_cases.intersection_repository import (
     ClearAllIntersections,
+)
+from OTAnalytics.application.use_cases.load_configured_track_files import (
+    LoadConfiguredTrackFiles,
 )
 from OTAnalytics.application.use_cases.load_otconfig import LoadOtconfig
 from OTAnalytics.application.use_cases.load_otflow import LoadOtflow
@@ -354,7 +362,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                 self.get_all_flows,
                 self.get_current_project,
                 self.get_all_videos,
-                self.get_all_track_files,
+                self.get_all_configured_track_files,
                 self.get_current_remark,
             ),
             OtflowHasChanged(
@@ -376,6 +384,14 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return self.run_config.track_file_fraction
 
     @cached_property
+    def load_configured_track_files(self) -> LoadConfiguredTrackFiles:
+        return LoadConfiguredTrackFiles(
+            self.load_track_files,
+            self.select_track_files,
+            self.deselected_track_file_repository,
+        )
+
+    @cached_property
     def select_track_files(self) -> SelectEquallySpacedTrackFiles:
         return SelectEquallySpacedTrackFiles(self.track_file_fraction)
 
@@ -388,10 +404,9 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             AddAllVideos(self.video_repository),
             AddAllSections(self.add_section),
             self.add_all_flows,
-            self.load_track_files,
+            self.load_configured_track_files,
             self.add_new_remark,
             parse_json,
-            self.select_track_files,
         )
 
     @cached_property
@@ -428,6 +443,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.otconfig_parser,
             self.file_state,
             self.get_current_remark,
+            self.get_all_configured_track_files,
         )
 
     @cached_property
@@ -735,6 +751,20 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return ClearAllTrackFiles(self.track_file_repository)
 
     @cached_property
+    def deselected_track_file_repository(self) -> DeselectedTrackFileRepository:
+        return DeselectedTrackFileRepository()
+
+    @cached_property
+    def clear_deselected_track_files(self) -> ClearDeselectedTrackFiles:
+        return ClearDeselectedTrackFiles(self.deselected_track_file_repository)
+
+    @cached_property
+    def get_all_configured_track_files(self) -> GetAllConfiguredTrackFiles:
+        return GetAllConfiguredTrackFiles(
+            self.get_all_track_files, self.deselected_track_file_repository
+        )
+
+    @cached_property
     def flow_generator(self) -> GenerateFlows:
         section_provider = FilterOutCuttingSections(self.get_all_sections)
         id_generator: FlowIdGenerator = RepositoryFlowIdGenerator(self.flow_repository)
@@ -832,6 +862,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.clear_all_tracks,
             self.clear_all_track_files,
             self.clear_all_videos,
+            self.clear_deselected_track_files,
         )
 
     @cached_property

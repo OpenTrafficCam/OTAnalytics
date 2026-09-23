@@ -8,14 +8,13 @@ from OTAnalytics.application.use_cases.flow_repository import (
     AddAllFlows,
     FlowAlreadyExists,
 )
-from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
+from OTAnalytics.application.use_cases.load_configured_track_files import (
+    LoadConfiguredTrackFiles,
+)
 from OTAnalytics.application.use_cases.reset_application import ResetApplication
 from OTAnalytics.application.use_cases.section_repository import (
     AddAllSections,
     SectionAlreadyExists,
-)
-from OTAnalytics.application.use_cases.select_track_files import (
-    SelectEquallySpacedTrackFiles,
 )
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import AddAllVideos
@@ -31,10 +30,9 @@ class LoadOtconfig:
         add_videos: AddAllVideos,
         add_sections: AddAllSections,
         add_flows: AddAllFlows,
-        load_track_files: LoadTrackFiles,
+        load_track_files: LoadConfiguredTrackFiles,
         add_new_remark: AddNewRemark,
         deserialize: Deserializer,
-        select_track_files: SelectEquallySpacedTrackFiles,
     ) -> None:
         self._add_new_remark = add_new_remark
         self._reset_application = reset_application
@@ -45,7 +43,6 @@ class LoadOtconfig:
         self._add_flows = add_flows
         self._load_track_files = load_track_files
         self._deserialize = deserialize
-        self._select_track_files = select_track_files
         self._subject = Subject[ConfigurationFile]()
 
     def load(self, file: Path) -> None:
@@ -58,10 +55,7 @@ class LoadOtconfig:
             self._add_videos.add(config.videos)
             self._add_sections.add(config.sections)
             self._add_flows.add(config.flows)
-            track_files_to_load = self._select_track_files.select(
-                config.analysis.track_files
-            )
-            self._load_track_files(track_files_to_load)
+            self._load_track_files(config.analysis.track_files)
             if config.remark:
                 self._add_new_remark.add(config.remark)
             self._subject.notify(
