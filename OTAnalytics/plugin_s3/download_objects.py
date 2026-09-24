@@ -69,12 +69,14 @@ class DownloadObjects:
                 progress.complete(Path(key).name)
                 return destination
 
-        async def watch_for_cancel(downloads: list[asyncio.Task]) -> None:
+        async def watch_for_cancel(downloads: list[asyncio.Task[Path]]) -> None:
             """Abandon the load as soon as the user asks, mid-download.
 
             Checking only as each download starts would let a cancel go
             unnoticed until a slot frees, which for a multi-gigabyte load is
-            far too late to feel like cancelling.
+            far too late to feel like cancelling. Raising here, inside the
+            same task group as the downloads, cancels whichever of them are
+            still in flight instead of only those not yet started.
             """
             while not all(download.done() for download in downloads):
                 if progress.is_cancelled:
@@ -82,9 +84,15 @@ class DownloadObjects:
                 await asyncio.sleep(CANCEL_POLL_INTERVAL)
 
         try:
-            return list(await asyncio.gather(*(download_one(key) for key in keys)))
+            async with asyncio.TaskGroup() as group:
+                downloads = [group.create_task(download_one(key)) for key in keys]
+                group.create_task(watch_for_cancel(downloads))
+        except* BaseException as failure:
+            raise failure.exceptions[0] from None
         finally:
             progress.close()
+
+        return [download.result() for download in downloads]
 
     def _destination_of(self, key: str) -> Path:
         """The local path an object key is mirrored to.
