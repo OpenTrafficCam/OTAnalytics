@@ -44,9 +44,9 @@ class Progressbar(ABC, Iterable):
 class CompletionProgress(ABC):
     """Progress of work whose items complete in an order of their own.
 
-    The `Progressbar` iterator contract cannot express concurrent work, where
-    completion order is not sequence order. Here the caller reports each item as
-    it finishes and polls whether the user asked to stop.
+    This progressbar can express concurrent work, where completion order is not
+    sequence order. Here the caller reports each item as it finishes and polls whether
+    the user asked to stop.
     """
 
     @abstractmethod
