@@ -19,92 +19,6 @@ KEYS = [KEY_A, KEY_B, KEY_C]
 USER_SOURCE = Path("/staging")
 
 
-class FakeProgress(CompletionProgress):
-    """Records completions and can be cancelled at a chosen point."""
-
-    def __init__(
-        self,
-        cancel_after: int | None = None,
-        cancel_after_seconds: float | None = None,
-    ) -> None:
-        self.completed: list[str] = []
-        self.closed = False
-        self.completed_after_close: list[str] = []
-        self._cancel_after = cancel_after
-        self._cancel_after_seconds = cancel_after_seconds
-        self._start = time.monotonic()
-
-    def complete(self, item: str) -> None:
-        if self.closed:
-            self.completed_after_close.append(item)
-        self.completed.append(item)
-
-    def close(self) -> None:
-        self.closed = True
-
-    @property
-    def is_cancelled(self) -> bool:
-        if (
-            self._cancel_after_seconds is not None
-            and time.monotonic() - self._start >= self._cancel_after_seconds
-        ):
-            return True
-        if self._cancel_after is None:
-            return False
-        return len(self.completed) >= self._cancel_after
-
-
-@dataclass
-class Given:
-    download: Mock
-    progress: FakeProgress
-    progressbar_builder: Mock
-    downloaded: list[str] = field(default_factory=list)
-    concurrent: list[int] = field(default_factory=list)
-
-
-def create_given(
-    concurrency: int = 2,
-    cancel_after: int | None = None,
-    cancel_after_seconds: float | None = None,
-    fail_on: str | None = None,
-    slow: bool = False,
-) -> Given:
-    given = Given(
-        download=Mock(),
-        progress=FakeProgress(
-            cancel_after=cancel_after, cancel_after_seconds=cancel_after_seconds
-        ),
-        progressbar_builder=Mock(spec=CompletionProgressBuilder),
-    )
-    in_flight = 0
-
-    async def fake_download(key: str, dst: Path) -> None:
-        nonlocal in_flight
-        in_flight += 1
-        given.concurrent.append(in_flight)
-        await asyncio.sleep(0.5 if slow else 0)
-        if fail_on == key:
-            in_flight -= 1
-            raise OSError(f"boom on {key}")
-        given.downloaded.append(key)
-        in_flight -= 1
-
-    given.download.download = AsyncMock(side_effect=fake_download)
-    given.progressbar_builder.build.return_value = given.progress
-    given.concurrency = concurrency  # type: ignore[attr-defined]
-    return given
-
-
-def create_target(given: Given, concurrency: int = 2) -> DownloadObjects:
-    return DownloadObjects(
-        download=given.download,
-        user_source=USER_SOURCE,
-        concurrency=concurrency,
-        progressbar_builder=given.progressbar_builder,
-    )
-
-
 class TestDownloadObjects:
     """#Requirement https://openproject.platomo.de/wp/10283"""
 
@@ -216,3 +130,89 @@ class TestDownloadObjects:
 
         assert paths == []
         given.progressbar_builder.build.assert_not_called()
+
+
+class FakeProgress(CompletionProgress):
+    """Records completions and can be cancelled at a chosen point."""
+
+    def __init__(
+        self,
+        cancel_after: int | None = None,
+        cancel_after_seconds: float | None = None,
+    ) -> None:
+        self.completed: list[str] = []
+        self.closed = False
+        self.completed_after_close: list[str] = []
+        self._cancel_after = cancel_after
+        self._cancel_after_seconds = cancel_after_seconds
+        self._start = time.monotonic()
+
+    def complete(self, item: str) -> None:
+        if self.closed:
+            self.completed_after_close.append(item)
+        self.completed.append(item)
+
+    def close(self) -> None:
+        self.closed = True
+
+    @property
+    def is_cancelled(self) -> bool:
+        if (
+            self._cancel_after_seconds is not None
+            and time.monotonic() - self._start >= self._cancel_after_seconds
+        ):
+            return True
+        if self._cancel_after is None:
+            return False
+        return len(self.completed) >= self._cancel_after
+
+
+@dataclass
+class Given:
+    download: Mock
+    progress: FakeProgress
+    progressbar_builder: Mock
+    downloaded: list[str] = field(default_factory=list)
+    concurrent: list[int] = field(default_factory=list)
+
+
+def create_given(
+    concurrency: int = 2,
+    cancel_after: int | None = None,
+    cancel_after_seconds: float | None = None,
+    fail_on: str | None = None,
+    slow: bool = False,
+) -> Given:
+    given = Given(
+        download=Mock(),
+        progress=FakeProgress(
+            cancel_after=cancel_after, cancel_after_seconds=cancel_after_seconds
+        ),
+        progressbar_builder=Mock(spec=CompletionProgressBuilder),
+    )
+    in_flight = 0
+
+    async def fake_download(key: str, dst: Path) -> None:
+        nonlocal in_flight
+        in_flight += 1
+        given.concurrent.append(in_flight)
+        await asyncio.sleep(0.5 if slow else 0)
+        if fail_on == key:
+            in_flight -= 1
+            raise OSError(f"boom on {key}")
+        given.downloaded.append(key)
+        in_flight -= 1
+
+    given.download.download = AsyncMock(side_effect=fake_download)
+    given.progressbar_builder.build.return_value = given.progress
+    given.concurrency = concurrency  # type: ignore[attr-defined]
+    return given
+
+
+def create_target(given: Given, concurrency: int = 2) -> DownloadObjects:
+    return DownloadObjects(
+        download=given.download,
+        user_source=USER_SOURCE,
+        concurrency=concurrency,
+        progressbar_builder=given.progressbar_builder,
+    )
