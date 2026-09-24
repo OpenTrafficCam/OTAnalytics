@@ -640,6 +640,17 @@ class PolarsTrackDataset(TrackDataset, PolarsDataFrameProvider):
         remaining_dataset = self._subset_by_ids(remaining_ids)
         return finished_dataset, remaining_dataset
 
+    def track_ids_ending_before(self, date: datetime) -> TrackIdSet:
+        if self._dataset.is_empty():
+            return PolarsTrackIdSet()
+        stale = (
+            self._dataset.group_by(LEVEL_TRACK_ID)
+            .agg(pl.col(track.OCCURRENCE).max().alias("_last_occurrence"))
+            .filter(pl.col("_last_occurrence") < date)
+            .get_column(LEVEL_TRACK_ID)
+        )
+        return PolarsTrackIdSet(stale)
+
     def _create_track_flyweight(self, track_id: str) -> Track:
         """Create a Track flyweight object for the given track_id."""
         track_data = self._dataset.filter(pl.col(LEVEL_TRACK_ID) == track_id)

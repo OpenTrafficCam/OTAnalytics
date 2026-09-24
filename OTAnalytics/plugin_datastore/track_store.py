@@ -472,6 +472,13 @@ class PandasTrackDataset(TrackDataset, PandasDataFrameProvider):
         remaining_dataset = self._subset_by_ids(remaining_ids_list)
         return finished_dataset, remaining_dataset
 
+    def track_ids_ending_before(self, date: datetime) -> TrackIdSet:
+        return PythonTrackIdSet(
+            track.id
+            for track in self.as_list()
+            if track.last_detection.occurrence < date
+        )
+
     def remove(self, track_id: TrackId) -> "PandasTrackDataset":
         remaining_tracks = self._dataset.drop(unpack(track_id), errors="ignore")
         updated_geometry_datasets = self._remove_from_geometry_dataset([track_id.id])
