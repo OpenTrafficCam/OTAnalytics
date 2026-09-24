@@ -595,6 +595,13 @@ class PythonTrackDataset(TrackDataset):
         )
         return finished_dataset, remaining_dataset
 
+    def track_ids_ending_before(self, date: datetime) -> TrackIdSet:
+        return PythonTrackIdSet(
+            track_id
+            for track_id, track in self._tracks.items()
+            if track.last_detection.occurrence < date
+        )
+
     def as_list(self) -> list[Track]:
         return list(self._tracks.values())
 
