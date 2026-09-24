@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import cast
 from unittest.mock import Mock, call
@@ -616,6 +616,55 @@ class TestPythonTrackDataset:
 
         assert finished.track_ids == PythonTrackIdSet({finished_car.id})
         assert remaining.empty
+
+    def test_track_ids_ending_before(
+        self, car_track: Track, pedestrian_track: Track
+    ) -> None:
+        dataset = PythonTrackDataset.from_list(
+            [car_track, pedestrian_track],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+
+        result = dataset.track_ids_ending_before(
+            pedestrian_track.last_detection.occurrence
+        )
+
+        assert result == PythonTrackIdSet({car_track.id})
+
+    def test_track_ids_ending_before_excludes_tracks_ending_on_date(
+        self, car_track: Track, pedestrian_track: Track
+    ) -> None:
+        dataset = PythonTrackDataset.from_list(
+            [car_track, pedestrian_track],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+
+        result = dataset.track_ids_ending_before(car_track.last_detection.occurrence)
+
+        assert result == PythonTrackIdSet()
+
+    def test_track_ids_ending_before_includes_all_tracks_ending_before_date(
+        self, car_track: Track, pedestrian_track: Track
+    ) -> None:
+        dataset = PythonTrackDataset.from_list(
+            [car_track, pedestrian_track],
+            ShapelyTrackGeometryDataset.from_track_dataset,
+        )
+
+        result = dataset.track_ids_ending_before(
+            datetime(2020, 1, 1, 0, 0, 4, tzinfo=timezone.utc)
+        )
+
+        assert result == PythonTrackIdSet({car_track.id, pedestrian_track.id})
+
+    def test_track_ids_ending_before_empty_dataset(self) -> None:
+        dataset = PythonTrackDataset(ShapelyTrackGeometryDataset.from_track_dataset)
+
+        result = dataset.track_ids_ending_before(
+            datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        )
+
+        assert len(result) == 0
 
     def test_filter_by_minimum_detection_length(
         self, car_track: Track, pedestrian_track: Track

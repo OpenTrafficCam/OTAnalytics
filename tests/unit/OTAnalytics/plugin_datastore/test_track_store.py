@@ -270,6 +270,63 @@ class TestPandasTrackDataset:
         assert set(finished.track_ids) == {first_track.id, second_track.id}
         assert remaining.empty
 
+    def test_track_ids_ending_before(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        dataset = PandasTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        )
+
+        result = dataset.track_ids_ending_before(
+            pedestrian_track.last_detection.occurrence
+        )
+
+        assert set(result) == {car_track.id}
+
+    def test_track_ids_ending_before_excludes_tracks_ending_on_date(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        dataset = PandasTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        )
+
+        result = dataset.track_ids_ending_before(car_track.last_detection.occurrence)
+
+        assert len(result) == 0
+
+    def test_track_ids_ending_before_includes_all_tracks_ending_before_date(
+        self,
+        track_geometry_factory: TRACK_GEOMETRY_FACTORY,
+        car_track: Track,
+        pedestrian_track: Track,
+    ) -> None:
+        dataset = PandasTrackDataset.from_list(
+            [car_track, pedestrian_track], track_geometry_factory
+        )
+
+        result = dataset.track_ids_ending_before(
+            datetime(2020, 1, 1, 0, 0, 4, tzinfo=timezone.utc)
+        )
+
+        assert set(result) == {car_track.id, pedestrian_track.id}
+
+    def test_track_ids_ending_before_empty_dataset(
+        self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
+    ) -> None:
+        dataset = PandasTrackDataset(track_geometry_factory)
+
+        result = dataset.track_ids_ending_before(
+            datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        )
+
+        assert len(result) == 0
+
     def test_add_two_existing_pandas_datasets(
         self, track_geometry_factory: TRACK_GEOMETRY_FACTORY
     ) -> None:
