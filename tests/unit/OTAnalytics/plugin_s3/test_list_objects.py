@@ -14,21 +14,6 @@ KEY_2 = f"{PREFIX}OTCamera04_2026-08-27_06-00-00.mp4"
 KEY_3 = f"{PREFIX}OTCamera04_2026-08-27_06-15-00.ottrk"
 
 
-@dataclass
-class Given:
-    client: AsyncMock
-    store: Mock
-
-
-def create_given() -> Given:
-    client = AsyncMock()
-    return Given(client=client, store=create_store(client))
-
-
-def create_target(given: Given) -> S3ListObjects:
-    return S3ListObjects(store=given.store)
-
-
 class TestS3ListObjects:
     async def test_list_keys_single_page(self) -> None:
         given = create_given()
@@ -124,3 +109,18 @@ class TestS3ListObjects:
         actual = await target.list_keys(PREFIX)
 
         assert actual == [KEY_1, KEY_2, KEY_3]
+
+
+@dataclass
+class Given:
+    client: AsyncMock
+    store: Mock
+
+
+def create_given() -> Given:
+    client = AsyncMock()
+    return Given(client=client, store=create_store(client))
+
+
+def create_target(given: Given) -> S3ListObjects:
+    return S3ListObjects(store=given.store)

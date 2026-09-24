@@ -32,9 +32,9 @@ def create_given(hours: float = 1, keys: list[str] | None = None) -> Given:
 
 
 class TestSelectInWindow:
-    """#Requirement https://openproject.platomo.de/wp/10283"""
 
     def test_keeps_only_the_requested_suffixes(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given()
 
         selected = select_in_window(given.keys, given.window, {".ottrk"})
@@ -42,6 +42,7 @@ class TestSelectInWindow:
         assert VIDEO_0600 not in selected
 
     def test_includes_both_boundaries(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(hours=1)
 
         selected = select_in_window(given.keys, given.window, {".ottrk"})
@@ -50,7 +51,10 @@ class TestSelectInWindow:
         assert AT_0700 in selected
 
     def test_drops_a_chunk_starting_before_the_window(self) -> None:
-        """Strict start-in-range: a 05:45 chunk is not loaded for a 06:00 start."""
+        """Strict start-in-range: a 05:45 chunk is not loaded for a 06:00 start.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
         given = create_given(hours=1)
 
         selected = select_in_window(given.keys, given.window, {".ottrk"})
@@ -58,6 +62,7 @@ class TestSelectInWindow:
         assert AT_0545 not in selected
 
     def test_drops_a_chunk_starting_after_the_window(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(hours=1)
 
         selected = select_in_window(given.keys, given.window, {".ottrk"})
@@ -65,6 +70,7 @@ class TestSelectInWindow:
         assert AT_0715 not in selected
 
     def test_returns_them_in_recording_order(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(hours=1)
 
         selected = select_in_window(given.keys, given.window, {".ottrk"})
@@ -72,7 +78,10 @@ class TestSelectInWindow:
         assert selected == [AT_0600, AT_0615, AT_0700]
 
     def test_ignores_objects_without_a_timestamp(self) -> None:
-        """A bucket may hold anything; unrelated objects must not break a load."""
+        """A bucket may hold anything; unrelated objects must not break a load.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
         given = create_given(hours=1, keys=[AT_0600, "cam/notes.ottrk", "cam/"])
 
         selected = select_in_window(given.keys, given.window, {".ottrk"})
@@ -80,6 +89,7 @@ class TestSelectInWindow:
         assert selected == [AT_0600]
 
     def test_matches_suffixes_regardless_of_case(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(hours=1, keys=["cam/OTCamera19_2023-05-24_06-00-00.OTTRK"])
 
         selected = select_in_window(given.keys, given.window, {".ottrk"})
