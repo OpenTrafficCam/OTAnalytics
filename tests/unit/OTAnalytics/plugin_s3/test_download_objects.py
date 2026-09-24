@@ -1,6 +1,7 @@
 """Tests for downloading the selected S3 objects into the user source."""
 
 import asyncio
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock
@@ -21,11 +22,17 @@ USER_SOURCE = Path("/staging")
 class FakeProgress(CompletionProgress):
     """Records completions and can be cancelled at a chosen point."""
 
-    def __init__(self, cancel_after: int | None = None) -> None:
+    def __init__(
+        self,
+        cancel_after: int | None = None,
+        cancel_after_seconds: float | None = None,
+    ) -> None:
         self.completed: list[str] = []
         self.closed = False
         self.completed_after_close: list[str] = []
         self._cancel_after = cancel_after
+        self._cancel_after_seconds = cancel_after_seconds
+        self._start = time.monotonic()
 
     def complete(self, item: str) -> None:
         if self.closed:
@@ -37,6 +44,11 @@ class FakeProgress(CompletionProgress):
 
     @property
     def is_cancelled(self) -> bool:
+        if (
+            self._cancel_after_seconds is not None
+            and time.monotonic() - self._start >= self._cancel_after_seconds
+        ):
+            return True
         if self._cancel_after is None:
             return False
         return len(self.completed) >= self._cancel_after
@@ -54,12 +66,15 @@ class Given:
 def create_given(
     concurrency: int = 2,
     cancel_after: int | None = None,
+    cancel_after_seconds: float | None = None,
     fail_on: str | None = None,
     slow: bool = False,
 ) -> Given:
     given = Given(
         download=Mock(),
-        progress=FakeProgress(cancel_after=cancel_after),
+        progress=FakeProgress(
+            cancel_after=cancel_after, cancel_after_seconds=cancel_after_seconds
+        ),
         progressbar_builder=Mock(spec=CompletionProgressBuilder),
     )
     in_flight = 0
@@ -158,6 +173,22 @@ class TestDownloadObjects:
 
         assert given.downloaded == []
         assert given.progress.completed_after_close == []
+
+    async def test_cancelling_mid_download_aborts_it_promptly(self) -> None:
+        """A cancel raised after downloads are already under way must interrupt
+        them, not wait for the slot-acquisition check that starts the next one."""
+        given = create_given(
+            concurrency=len(KEYS), cancel_after_seconds=0.05, slow=True
+        )
+        target = create_target(given, concurrency=len(KEYS))
+
+        start = time.monotonic()
+        with pytest.raises(DownloadCancelled):
+            await target.download_all(KEYS, "Downloading tracks")
+        elapsed = time.monotonic() - start
+
+        assert elapsed < 0.3
+        assert given.downloaded == []
 
     async def test_a_failure_stops_the_downloads_still_in_flight(self) -> None:
         given = create_given(fail_on=KEY_A)
