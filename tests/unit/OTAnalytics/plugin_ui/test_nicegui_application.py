@@ -11,6 +11,8 @@ from OTAnalytics.adapter_ui.local_file_providers import (
     LocalVideoFileProvider,
 )
 from OTAnalytics.application.run_configuration import RunConfiguration
+from OTAnalytics.application.save_destination import NoDestinationGuard
+from OTAnalytics.application.upload_otconfig import NoOtconfigUpload
 from OTAnalytics.plugin_s3.config.env_vars import (
     ENV_DATA_TRANSFER_MODE,
     ENV_S3_ACCESS_KEY,
@@ -19,10 +21,12 @@ from OTAnalytics.plugin_s3.config.env_vars import (
     ENV_S3_SECRET_KEY,
     ENV_S3_USER_SOURCE,
 )
+from OTAnalytics.plugin_s3.otconfig_upload import S3OtconfigUpload
 from OTAnalytics.plugin_s3.s3_file_providers import (
     S3TrackFileProvider,
     S3VideoFileProvider,
 )
+from OTAnalytics.plugin_s3.save_destination import RequireDestinationUnderUserSource
 from OTAnalytics.plugin_ui.nicegui_application import (
     OtAnalyticsNiceGuiApplicationStarter,
 )
@@ -95,6 +99,32 @@ class TestUserSourceLifecycle:
 
         assert not staged.exists()
         assert (tmp_path / "user-source").is_dir()
+
+
+class TestOtconfigUpload:
+    """#Requirement https://openproject.platomo.de/wp/10323"""
+
+    def test_local_mode_never_uploads(self, local_mode: None) -> None:
+        target = create_target(create_given())
+
+        assert isinstance(target.otconfig_upload, NoOtconfigUpload)
+
+    def test_s3_mode_uploads_beside_the_project_data(self, s3_mode: None) -> None:
+        target = create_target(create_given())
+
+        assert isinstance(target.otconfig_upload, S3OtconfigUpload)
+
+    def test_local_mode_never_guards_the_destination(self, local_mode: None) -> None:
+        target = create_target(create_given())
+
+        assert isinstance(target.guard_save_destination, NoDestinationGuard)
+
+    def test_s3_mode_guards_the_destination(self, s3_mode: None) -> None:
+        target = create_target(create_given())
+
+        assert isinstance(
+            target.guard_save_destination, RequireDestinationUnderUserSource
+        )
 
 
 @dataclass

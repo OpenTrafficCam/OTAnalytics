@@ -209,6 +209,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.export_track_statistics,
             self.get_current_remark,
             self.update_count_plots,
+            self.current_key_prefix,
         )
 
     @cached_property

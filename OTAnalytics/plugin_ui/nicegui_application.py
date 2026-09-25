@@ -13,6 +13,11 @@ from OTAnalytics.application.project_location import (
     RefuseAnyProjectLocation,
     ValidateProjectLocation,
 )
+from OTAnalytics.application.save_destination import (
+    GuardSaveDestination,
+    NoDestinationGuard,
+)
+from OTAnalytics.application.upload_otconfig import NoOtconfigUpload, UploadOtconfig
 from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideTrackFiles,
@@ -32,12 +37,15 @@ from OTAnalytics.plugin_s3.config.s3 import S3Config
 from OTAnalytics.plugin_s3.download import S3Download
 from OTAnalytics.plugin_s3.download_objects import DownloadObjects
 from OTAnalytics.plugin_s3.list_objects import S3ListObjects
+from OTAnalytics.plugin_s3.otconfig_upload import S3OtconfigUpload
 from OTAnalytics.plugin_s3.project_location import RequireWellFormedKeyPrefix
 from OTAnalytics.plugin_s3.s3_file_providers import (
     S3TrackFileProvider,
     S3VideoFileProvider,
 )
+from OTAnalytics.plugin_s3.save_destination import RequireDestinationUnderUserSource
 from OTAnalytics.plugin_s3.store import S3Store
+from OTAnalytics.plugin_s3.upload import S3Upload
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
     NiceguiProgressbarBuilder,
@@ -327,6 +335,18 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         if self.s3_config:
             return RequireWellFormedKeyPrefix()
         return RefuseAnyProjectLocation()
+
+    @cached_property
+    def otconfig_upload(self) -> UploadOtconfig:
+        if self.s3_config:
+            return S3OtconfigUpload(S3Upload(self.s3_store))
+        return NoOtconfigUpload()
+
+    @cached_property
+    def guard_save_destination(self) -> GuardSaveDestination:
+        if config := self.s3_config:
+            return RequireDestinationUnderUserSource(Path(config.user_source))
+        return NoDestinationGuard()
 
     @cached_property
     def reset_application(self) -> ResetApplication:
