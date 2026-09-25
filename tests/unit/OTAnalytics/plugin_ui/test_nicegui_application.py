@@ -32,19 +32,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
 )
 
 
-@dataclass
-class Given:
-    run_config: Mock
-
-
-def create_given() -> Given:
-    return Given(run_config=Mock(spec=RunConfiguration))
-
-
-def create_target(given: Given) -> OtAnalyticsNiceGuiApplicationStarter:
-    return OtAnalyticsNiceGuiApplicationStarter(given.run_config)
-
-
 @pytest.fixture
 def s3_mode(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv(ENV_DATA_TRANSFER_MODE, "s3")
@@ -87,9 +74,8 @@ class TestOtAnalyticsNiceGuiApplicationStarter:
 
 
 class TestUserSourceLifecycle:
-    """#Requirement https://openproject.platomo.de/wp/10283"""
-
     def test_local_mode_stages_nothing_to_wipe(self, local_mode: None) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         target = create_target(create_given())
 
         assert target.wipe_user_source is None
@@ -97,6 +83,7 @@ class TestUserSourceLifecycle:
     def test_s3_mode_wipes_the_configured_user_source(
         self, s3_mode: None, tmp_path: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         target = create_target(create_given())
         wipe = target.wipe_user_source
 
@@ -110,3 +97,16 @@ class TestUserSourceLifecycle:
 
         assert not staged.exists()
         assert (tmp_path / "user-source").is_dir()
+
+
+@dataclass
+class Given:
+    run_config: Mock
+
+
+def create_given() -> Given:
+    return Given(run_config=Mock(spec=RunConfiguration))
+
+
+def create_target(given: Given) -> OtAnalyticsNiceGuiApplicationStarter:
+    return OtAnalyticsNiceGuiApplicationStarter(given.run_config)

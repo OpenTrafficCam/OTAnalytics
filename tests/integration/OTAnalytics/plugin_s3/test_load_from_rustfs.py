@@ -151,12 +151,14 @@ def create_video_target(given: Given) -> S3VideoFileProvider:
 
 
 class TestLoadFromRustFs:
-    """#Requirement https://openproject.platomo.de/wp/10283"""
 
     async def test_an_over_long_selection_loads_only_up_to_the_cap(
         self, rustfs: dict, tmp_path: Path
     ) -> None:
-        """10:00-11:00 clamps to 10:20, so only the 10:00 and 10:15 chunks load."""
+        """10:00-11:00 clamps to 10:20, so only the 10:00 and 10:15 chunks load.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
         given = create_given(rustfs, tmp_path, hours=1)
         target = create_track_target(given)
 
@@ -171,6 +173,7 @@ class TestLoadFromRustFs:
     async def test_downloads_each_track_file_with_its_video(
         self, rustfs: dict, tmp_path: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(rustfs, tmp_path, hours=1)
         target = create_track_target(given)
 
@@ -188,6 +191,7 @@ class TestLoadFromRustFs:
     async def test_stages_objects_under_paths_mirroring_their_keys(
         self, rustfs: dict, tmp_path: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(rustfs, tmp_path, hours=1)
         target = create_track_target(given)
 
@@ -200,6 +204,7 @@ class TestLoadFromRustFs:
     async def test_reads_the_bytes_that_were_stored(
         self, rustfs: dict, tmp_path: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(rustfs, tmp_path, hours=1)
         target = create_track_target(given)
 
@@ -210,7 +215,10 @@ class TestLoadFromRustFs:
     async def test_pairs_each_track_file_with_the_video_its_metadata_names(
         self, rustfs: dict, tmp_path: Path
     ) -> None:
-        """A suffix swap would have looked for a .mp4 that does not exist."""
+        """A suffix swap would have looked for a .mp4 that does not exist.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
         given = create_given(rustfs, tmp_path, hours=1)
         target = create_track_target(given)
 
@@ -221,6 +229,7 @@ class TestLoadFromRustFs:
         assert not (staged / "OTCamera19_FR20_2023-05-24_10-00-00.mp4").exists()
 
     async def test_videos_load_on_their_own(self, rustfs: dict, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(rustfs, tmp_path, hours=1)
         target = create_video_target(given)
 
