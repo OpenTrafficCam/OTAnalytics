@@ -182,6 +182,18 @@ class VisualizationLayersKeys(ResourceKey):
     LABEL_VISUALIZATION_LAYERS_FORM_HEADER = "label-visualization-layers-form-header"
 
 
+class LoadWindowKeys(ResourceKey):
+    LABEL_START_DATE = "label-load-window-start-date"
+    LABEL_START_TIME = "label-load-window-start-time"
+    LABEL_END_DATE = "label-load-window-end-date"
+    LABEL_END_TIME = "label-load-window-end-time"
+    LABEL_UTC_HINT = "label-load-window-utc-hint"
+    LABEL_LOAD = "label-load-window-load"
+    MESSAGE_END_BEFORE_START = "message-load-window-end-before-start"
+    MESSAGE_INCOMPLETE = "message-load-window-incomplete"
+    MESSAGE_CLAMPED = "message-load-window-clamped"
+
+
 class WorkspaceKeys(ResourceKey):
     LABEL_WORKSPACE_FORM_HEADER = "label-workspace-form-header"
 
@@ -286,6 +298,19 @@ DEFAULT_RESOURCE_MAP = {
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
     VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
     WorkspaceKeys.LABEL_WORKSPACE_FORM_HEADER: "Workspace",
+    LoadWindowKeys.LABEL_START_DATE: "Start date (UTC)",
+    LoadWindowKeys.LABEL_START_TIME: "Start time (UTC)",
+    LoadWindowKeys.LABEL_END_DATE: "End date (UTC)",
+    LoadWindowKeys.LABEL_END_TIME: "End time (UTC)",
+    LoadWindowKeys.LABEL_UTC_HINT: (
+        "Times are UTC, matching the timestamps in the file names."
+    ),
+    LoadWindowKeys.LABEL_LOAD: "Load",
+    LoadWindowKeys.MESSAGE_END_BEFORE_START: "The end must not be before the start.",
+    LoadWindowKeys.MESSAGE_INCOMPLETE: "Please give both a start and an end.",
+    LoadWindowKeys.MESSAGE_CLAMPED: (
+        "The selected range was too long and was shortened to end at"
+    ),
 }
 
 DEFAULT_IMAGE_RESOURCE_MAP: dict[ResourceKey, str] = {

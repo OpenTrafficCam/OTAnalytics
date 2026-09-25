@@ -14,21 +14,6 @@ KEY_2 = f"{PREFIX}OTCamera04_2026-08-27_06-00-00.mp4"
 KEY_3 = f"{PREFIX}OTCamera04_2026-08-27_06-15-00.ottrk"
 
 
-@dataclass
-class Given:
-    client: AsyncMock
-    store: Mock
-
-
-def create_given() -> Given:
-    client = AsyncMock()
-    return Given(client=client, store=create_store(client))
-
-
-def create_target(given: Given) -> S3ListObjects:
-    return S3ListObjects(store=given.store)
-
-
 class TestS3ListObjects:
     async def test_list_keys_single_page(self) -> None:
         given = create_given()
@@ -82,3 +67,60 @@ class TestS3ListObjects:
         actual = await target.list_keys(PREFIX)
 
         assert actual == []
+
+    async def test_list_keys_reports_a_repeated_key_once(self) -> None:
+        """A key repeated by the service is reported once, in first-seen order.
+
+        S3-compatible services such as rustfs list the same object several
+        times; loading it twice publishes its video metadata twice, which the
+        application rejects.
+
+        @bug by randy-seng
+        """
+        given = create_given()
+        given.client.list_objects_v2.return_value = {
+            "Contents": [
+                {"Key": KEY_1},
+                {"Key": KEY_2},
+                {"Key": KEY_1},
+                {"Key": KEY_2},
+                {"Key": KEY_3},
+            ],
+            "IsTruncated": False,
+        }
+        target = create_target(given)
+
+        actual = await target.list_keys(PREFIX)
+
+        assert actual == [KEY_1, KEY_2, KEY_3]
+
+    async def test_list_keys_reports_a_key_repeated_across_pages_once(self) -> None:
+        given = create_given()
+        given.client.list_objects_v2.side_effect = [
+            {
+                "Contents": [{"Key": KEY_1}, {"Key": KEY_2}],
+                "IsTruncated": True,
+                "NextContinuationToken": "token-1",
+            },
+            {"Contents": [{"Key": KEY_2}, {"Key": KEY_3}], "IsTruncated": False},
+        ]
+        target = create_target(given)
+
+        actual = await target.list_keys(PREFIX)
+
+        assert actual == [KEY_1, KEY_2, KEY_3]
+
+
+@dataclass
+class Given:
+    client: AsyncMock
+    store: Mock
+
+
+def create_given() -> Given:
+    client = AsyncMock()
+    return Given(client=client, store=create_store(client))
+
+
+def create_target(given: Given) -> S3ListObjects:
+    return S3ListObjects(store=given.store)
