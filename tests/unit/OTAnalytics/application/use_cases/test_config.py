@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -8,6 +8,7 @@ from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.project import Project
+from OTAnalytics.application.save_destination import UnsupportedSaveDestination
 from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.config import ConfigValidationError, SaveOtconfig
 from OTAnalytics.domain.track_repository import TrackFileRepository
@@ -16,7 +17,7 @@ A_PREFIX = S3KeyPrefix("project-1/site-2/otcamera19/")
 
 
 class TestSaveOtconfig:
-    def test_correct_date(self, test_data_tmp_dir: Path) -> None:
+    async def test_correct_date(self, test_data_tmp_dir: Path) -> None:
         track_file_repository = Mock(spec=TrackFileRepository)
         datastore = Mock(spec=Datastore)
         datastore._track_file_repository = track_file_repository
@@ -29,15 +30,19 @@ class TestSaveOtconfig:
         get_current_remark = Mock()
         current_key_prefix = Mock()
         current_key_prefix.get.return_value = A_PREFIX
+        otconfig_upload = AsyncMock()
+        guard_save_destination = Mock()
         use_case = SaveOtconfig(
             datastore,
             config_parser,
             file_state,
             get_current_remark,
             current_key_prefix,
+            otconfig_upload,
+            guard_save_destination,
         )
 
-        use_case(output)
+        await use_case(output)
 
         config_parser.serialize.assert_called_once()
         assert config_parser.serialize.call_args.kwargs["s3_key_prefix"] == A_PREFIX
@@ -46,7 +51,7 @@ class TestSaveOtconfig:
         )
         get_current_remark.get.assert_called_once()
 
-    def test_writes_the_same_location_it_records_as_saved(
+    async def test_writes_the_same_location_it_records_as_saved(
         self, test_data_tmp_dir: Path
     ) -> None:
         """The written file and the content remembered as "last saved" have to
@@ -69,15 +74,145 @@ class TestSaveOtconfig:
             Mock(),
             Mock(),
             current_key_prefix,
+            AsyncMock(),
+            Mock(),
         )
 
-        use_case(test_data_tmp_dir / "test.otconfig")
+        await use_case(test_data_tmp_dir / "test.otconfig")
 
         written = config_parser.serialize.call_args.kwargs["s3_key_prefix"]
         recorded = config_parser.convert.call_args.args[-1]
         assert written == recorded == A_PREFIX
 
-    def test_missing_date(self, test_data_tmp_dir: Path) -> None:
+    async def test_uploads_when_project_names_a_key_prefix(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        track_file_repository = Mock(spec=TrackFileRepository)
+        datastore = Mock(spec=Datastore)
+        datastore._track_file_repository = track_file_repository
+        datastore.project = Project("name", start_date=datetime(2023, 1, 1))
+        config_parser = Mock(spec=ConfigParser)
+        current_key_prefix = Mock()
+        current_key_prefix.get.return_value = A_PREFIX
+        otconfig_upload = AsyncMock()
+        output = test_data_tmp_dir / "test.otconfig"
+        use_case = SaveOtconfig(
+            datastore,
+            config_parser,
+            Mock(),
+            Mock(),
+            current_key_prefix,
+            otconfig_upload,
+            Mock(),
+        )
+
+        await use_case(output)
+
+        otconfig_upload.upload.assert_awaited_once_with(output, A_PREFIX)
+
+    async def test_does_not_upload_when_project_names_no_key_prefix(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        track_file_repository = Mock(spec=TrackFileRepository)
+        datastore = Mock(spec=Datastore)
+        datastore._track_file_repository = track_file_repository
+        datastore.project = Project("name", start_date=datetime(2023, 1, 1))
+        config_parser = Mock(spec=ConfigParser)
+        current_key_prefix = Mock()
+        current_key_prefix.get.return_value = None
+        otconfig_upload = AsyncMock()
+        use_case = SaveOtconfig(
+            datastore,
+            config_parser,
+            Mock(),
+            Mock(),
+            current_key_prefix,
+            otconfig_upload,
+            Mock(),
+        )
+
+        await use_case(test_data_tmp_dir / "test.otconfig")
+
+        otconfig_upload.upload.assert_not_awaited()
+
+    async def test_guards_the_destination_when_project_names_a_key_prefix(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        track_file_repository = Mock(spec=TrackFileRepository)
+        datastore = Mock(spec=Datastore)
+        datastore._track_file_repository = track_file_repository
+        datastore.project = Project("name", start_date=datetime(2023, 1, 1))
+        config_parser = Mock(spec=ConfigParser)
+        current_key_prefix = Mock()
+        current_key_prefix.get.return_value = A_PREFIX
+        guard_save_destination = Mock()
+        output = test_data_tmp_dir / "test.otconfig"
+        use_case = SaveOtconfig(
+            datastore,
+            config_parser,
+            Mock(),
+            Mock(),
+            current_key_prefix,
+            AsyncMock(),
+            guard_save_destination,
+        )
+
+        await use_case(output)
+
+        guard_save_destination.assert_called_once_with(output, A_PREFIX)
+
+    async def test_does_not_guard_when_project_names_no_key_prefix(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        track_file_repository = Mock(spec=TrackFileRepository)
+        datastore = Mock(spec=Datastore)
+        datastore._track_file_repository = track_file_repository
+        datastore.project = Project("name", start_date=datetime(2023, 1, 1))
+        config_parser = Mock(spec=ConfigParser)
+        current_key_prefix = Mock()
+        current_key_prefix.get.return_value = None
+        guard_save_destination = Mock()
+        use_case = SaveOtconfig(
+            datastore,
+            config_parser,
+            Mock(),
+            Mock(),
+            current_key_prefix,
+            AsyncMock(),
+            guard_save_destination,
+        )
+
+        await use_case(test_data_tmp_dir / "test.otconfig")
+
+        guard_save_destination.assert_not_called()
+
+    async def test_refused_destination_is_not_serialized(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        track_file_repository = Mock(spec=TrackFileRepository)
+        datastore = Mock(spec=Datastore)
+        datastore._track_file_repository = track_file_repository
+        datastore.project = Project("name", start_date=datetime(2023, 1, 1))
+        config_parser = Mock(spec=ConfigParser)
+        current_key_prefix = Mock()
+        current_key_prefix.get.return_value = A_PREFIX
+        guard_save_destination = Mock(side_effect=UnsupportedSaveDestination())
+        use_case = SaveOtconfig(
+            datastore,
+            config_parser,
+            Mock(),
+            Mock(),
+            current_key_prefix,
+            AsyncMock(),
+            guard_save_destination,
+        )
+
+        with pytest.raises(UnsupportedSaveDestination):
+            await use_case(test_data_tmp_dir / "test.otconfig")
+
+        config_parser.serialize.assert_not_called()
+
+    async def test_missing_date(self, test_data_tmp_dir: Path) -> None:
         datastore = Mock(spec=Datastore)
         datastore.project = Project("name", start_date=None)
         config_parser = Mock(spec=ConfigParser)
@@ -85,11 +220,17 @@ class TestSaveOtconfig:
         file_state = Mock()
         get_current_remark = Mock()
         use_case = SaveOtconfig(
-            datastore, config_parser, file_state, get_current_remark, Mock()
+            datastore,
+            config_parser,
+            file_state,
+            get_current_remark,
+            Mock(),
+            AsyncMock(),
+            Mock(),
         )
 
         with pytest.raises(ConfigValidationError) as exc_info:
-            use_case(output)
+            await use_case(output)
         assert "Start date and time are missing or incomplete" in exc_info.value.errors
         file_state.last_saved_config.set.assert_not_called()
         get_current_remark.get.assert_not_called()

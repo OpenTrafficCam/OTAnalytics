@@ -38,6 +38,10 @@ from OTAnalytics.application.run_configuration import (
     RunConfiguration,
     RunConfigurationError,
 )
+from OTAnalytics.application.save_destination import (
+    GuardSaveDestination,
+    NoDestinationGuard,
+)
 from OTAnalytics.application.state import (
     ActionState,
     CurrentKeyPrefix,
@@ -58,6 +62,7 @@ from OTAnalytics.application.ui.frame_control import (
     SwitchToNext,
     SwitchToPrevious,
 )
+from OTAnalytics.application.upload_otconfig import NoOtconfigUpload, UploadOtconfig
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.assignment_repository import (
@@ -436,7 +441,27 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.file_state,
             self.get_current_remark,
             self.current_key_prefix,
+            self.otconfig_upload,
+            self.guard_save_destination,
         )
+
+    @cached_property
+    def otconfig_upload(self) -> UploadOtconfig:
+        """Puts a saved otconfig where s3 mode can find it again.
+
+        Overridden where s3 can be configured. This starter never sees a
+        project naming a location, so saving never needs to upload anywhere.
+        """
+        return NoOtconfigUpload()
+
+    @cached_property
+    def guard_save_destination(self) -> GuardSaveDestination:
+        """Refuses a save a later s3-mode load could not find again.
+
+        Overridden where s3 can be configured. This starter never sees a
+        project naming a location, so no destination needs guarding.
+        """
+        return NoDestinationGuard()
 
     @cached_property
     def current_key_prefix(self) -> CurrentKeyPrefix:
