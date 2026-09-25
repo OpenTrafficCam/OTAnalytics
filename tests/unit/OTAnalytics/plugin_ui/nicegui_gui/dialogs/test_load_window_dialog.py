@@ -26,32 +26,12 @@ SOURCE = "recordings/project-0/site-0/camera-1"
 START = datetime(2023, 5, 24, 6, 0, tzinfo=timezone.utc)
 
 
-@dataclass
-class Given:
-    resource_manager: ResourceManager
-
-
-def create_given(resource_manager: ResourceManager) -> Given:
-    return Given(resource_manager=resource_manager)
-
-
-def create_target(given: Given) -> LoadWindowDialog:
-    return LoadWindowDialog(given.resource_manager)
-
-
-def _type_window(user: User, start: datetime, end: datetime) -> None:
-    user.find(marker=MARKER_START_DATE).clear().type(start.strftime("%Y-%m-%d"))
-    user.find(marker=MARKER_START_TIME).clear().type(start.strftime("%H:%M:%S"))
-    user.find(marker=MARKER_END_DATE).clear().type(end.strftime("%Y-%m-%d"))
-    user.find(marker=MARKER_END_TIME).clear().type(end.strftime("%H:%M:%S"))
-
-
 class TestLoadWindowDialog:
-    """#Requirement https://openproject.platomo.de/wp/10283"""
 
     def test_is_the_seam_the_providers_ask_through(
         self, resource_manager: ResourceManager
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(resource_manager)
 
         assert isinstance(create_target(given), AskForLoadWindow)
@@ -59,6 +39,7 @@ class TestLoadWindowDialog:
     async def test_provides_the_selected_window(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(resource_manager)
         target = create_target(given)
         end = START + timedelta(hours=2)
@@ -79,6 +60,7 @@ class TestLoadWindowDialog:
     async def test_cancelling_provides_nothing(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(resource_manager)
         target = create_target(given)
         selected: list[LoadWindow | None] = []
@@ -97,7 +79,10 @@ class TestLoadWindowDialog:
     async def test_shows_where_the_files_come_from(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
-        """The user picks only when, never where, so where must be visible."""
+        """The user picks only when, never where, so where must be visible.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
         given = create_given(resource_manager)
         target = create_target(given)
 
@@ -112,7 +97,10 @@ class TestLoadWindowDialog:
     async def test_labels_the_fields_as_utc(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
-        """The digits in the file names are UTC, and a user in Berlin is not."""
+        """The digits in the file names are UTC, and a user in Berlin is not.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
         given = create_given(resource_manager)
         target = create_target(given)
 
@@ -127,6 +115,7 @@ class TestLoadWindowDialog:
     async def test_reports_a_shortened_range(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(resource_manager)
         target = create_target(given)
         clamped = LoadWindow(
@@ -146,6 +135,7 @@ class TestLoadWindowDialog:
     async def test_reports_why_nothing_could_be_loaded(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(resource_manager)
         target = create_target(given)
         message = "'a.ottrk' needs video 'a.mp4', which is not in bucket 'recordings'."
@@ -160,8 +150,6 @@ class TestLoadWindowDialog:
 
 
 class TestRejectedSelections:
-    """#Requirement https://openproject.platomo.de/wp/10283"""
-
     @pytest.mark.parametrize(
         "hours, message_key",
         [
@@ -177,6 +165,7 @@ class TestRejectedSelections:
         hours: int,
         message_key: LoadWindowKeys,
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(resource_manager)
         target = create_target(given)
 
@@ -190,3 +179,23 @@ class TestRejectedSelections:
 
         await user.should_see(resource_manager.get(message_key), retries=200)
         await user.should_see(TITLE)
+
+
+@dataclass
+class Given:
+    resource_manager: ResourceManager
+
+
+def create_given(resource_manager: ResourceManager) -> Given:
+    return Given(resource_manager=resource_manager)
+
+
+def create_target(given: Given) -> LoadWindowDialog:
+    return LoadWindowDialog(given.resource_manager)
+
+
+def _type_window(user: User, start: datetime, end: datetime) -> None:
+    user.find(marker=MARKER_START_DATE).clear().type(start.strftime("%Y-%m-%d"))
+    user.find(marker=MARKER_START_TIME).clear().type(start.strftime("%H:%M:%S"))
+    user.find(marker=MARKER_END_DATE).clear().type(end.strftime("%Y-%m-%d"))
+    user.find(marker=MARKER_END_TIME).clear().type(end.strftime("%H:%M:%S"))
