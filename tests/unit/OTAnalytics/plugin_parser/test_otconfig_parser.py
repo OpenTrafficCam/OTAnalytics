@@ -20,6 +20,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
+from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ExportConfig,
@@ -46,6 +47,7 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     NUM_PROCESSES,
     PATH,
     PROJECT,
+    S3_KEY_PREFIX,
     SAVE_NAME,
     SAVE_SUFFIX,
     TRACKS,
@@ -145,6 +147,99 @@ class TestOtConfigParser:
             call(videos, relative_to=test_data_tmp_dir)
         ]
         assert flow_parser.convert.call_args_list == [call(sections, flows)]
+
+    def test_serialize_config_omits_file_references_in_s3_mode(
+        self, test_data_tmp_dir: Path, do_nothing_fixer: OtConfigFormatFixer
+    ) -> None:
+        """Data is picked per session by time range, so a project's own file
+        references have no reader in s3 mode. Recording paths into
+        `user_source` would only leave stale references after the startup
+        wipe. See OP#10323's decision log.
+        """
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+            format_fixer=do_nothing_fixer,
+        )
+        project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
+        videos: list[Video] = [Mock(spec=Video)]
+        track_files: list[Path] = [test_data_tmp_dir / "a.ottrk"]
+        sections: list[Section] = []
+        flows: list[Flow] = []
+        output = test_data_tmp_dir / "config.otconfig"
+        prefix = S3KeyPrefix("project-1/site-2/otcamera19")
+        serialized_videos: dict = {video.VIDEOS: []}
+        serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
+
+        video_parser.convert.return_value = serialized_videos
+        flow_parser.convert.return_value = serialized_sections
+
+        config_parser.serialize(
+            project=project,
+            video_files=videos,
+            track_files=track_files,
+            sections=sections,
+            flows=flows,
+            file=output,
+            remark=None,
+            s3_key_prefix=prefix,
+        )
+
+        serialized_content = parse_json(output)
+        assert serialized_content[S3_KEY_PREFIX] == prefix.value
+        assert serialized_content[ANALYSIS][TRACKS] == []
+        assert video_parser.convert.call_args_list == [
+            call([], relative_to=test_data_tmp_dir)
+        ]
+
+    def test_convert_agrees_across_calls_in_s3_mode_despite_live_repo_drift(
+        self, test_data_tmp_dir: Path, do_nothing_fixer: OtConfigFormatFixer
+    ) -> None:
+        """`SaveOtconfig` and `OtconfigHasChanged` both call `convert` with
+        whatever the live repositories hold right now, which can differ
+        between the save call and a later dirty-check call. If the omission
+        depended on that repository content, s3 projects could drift between
+        the two calls and report themselves as permanently unsaved. Putting
+        the omission inside `convert`, keyed only on `s3_key_prefix`, makes
+        both calls agree regardless. See decision 4 in OP#10323.
+        """
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+            format_fixer=do_nothing_fixer,
+        )
+        video_parser.convert.return_value = {video.VIDEOS: []}
+        flow_parser.convert.return_value = {section.SECTIONS: {}}
+        project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
+        output = test_data_tmp_dir / "config.otconfig"
+        prefix = S3KeyPrefix("project-1/site-2/otcamera19")
+
+        at_save_time = config_parser.convert(
+            project,
+            [Mock(spec=Video)],
+            [test_data_tmp_dir / "a.ottrk"],
+            [],
+            [],
+            output,
+            None,
+            prefix,
+        )
+        at_dirty_check_time = config_parser.convert(
+            project,
+            [Mock(spec=Video), Mock(spec=Video)],
+            [test_data_tmp_dir / "a.ottrk", test_data_tmp_dir / "b.ottrk"],
+            [],
+            [],
+            output,
+            None,
+            prefix,
+        )
+
+        assert at_save_time == at_dirty_check_time
 
     @patch("OTAnalytics.plugin_parser.otconfig_parser.OtConfigParser.serialize")
     def test_serialize_from_config(
