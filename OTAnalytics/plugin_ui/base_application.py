@@ -38,10 +38,6 @@ from OTAnalytics.application.run_configuration import (
     RunConfiguration,
     RunConfigurationError,
 )
-from OTAnalytics.application.save_destination import (
-    GuardSaveDestination,
-    NoDestinationGuard,
-)
 from OTAnalytics.application.state import (
     ActionState,
     CurrentKeyPrefix,
@@ -442,7 +438,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.get_current_remark,
             self.current_key_prefix,
             self.otconfig_upload,
-            self.guard_save_destination,
         )
 
     @cached_property
@@ -453,15 +448,6 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         project naming a location, so saving never needs to upload anywhere.
         """
         return NoOtconfigUpload()
-
-    @cached_property
-    def guard_save_destination(self) -> GuardSaveDestination:
-        """Refuses a save a later s3-mode load could not find again.
-
-        Overridden where s3 can be configured. This starter never sees a
-        project naming a location, so no destination needs guarding.
-        """
-        return NoDestinationGuard()
 
     @cached_property
     def current_key_prefix(self) -> CurrentKeyPrefix:

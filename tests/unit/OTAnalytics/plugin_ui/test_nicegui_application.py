@@ -11,7 +11,6 @@ from OTAnalytics.adapter_ui.local_file_providers import (
     LocalVideoFileProvider,
 )
 from OTAnalytics.application.run_configuration import RunConfiguration
-from OTAnalytics.application.save_destination import NoDestinationGuard
 from OTAnalytics.application.upload_otconfig import NoOtconfigUpload
 from OTAnalytics.plugin_s3.config.env_vars import (
     ENV_DATA_TRANSFER_MODE,
@@ -26,7 +25,6 @@ from OTAnalytics.plugin_s3.s3_file_providers import (
     S3TrackFileProvider,
     S3VideoFileProvider,
 )
-from OTAnalytics.plugin_s3.save_destination import RequireDestinationUnderUserSource
 from OTAnalytics.plugin_ui.nicegui_application import (
     OtAnalyticsNiceGuiApplicationStarter,
 )
@@ -113,18 +111,6 @@ class TestOtconfigUpload:
         target = create_target(create_given())
 
         assert isinstance(target.otconfig_upload, S3OtconfigUpload)
-
-    def test_local_mode_never_guards_the_destination(self, local_mode: None) -> None:
-        target = create_target(create_given())
-
-        assert isinstance(target.guard_save_destination, NoDestinationGuard)
-
-    def test_s3_mode_guards_the_destination(self, s3_mode: None) -> None:
-        target = create_target(create_given())
-
-        assert isinstance(
-            target.guard_save_destination, RequireDestinationUnderUserSource
-        )
 
 
 @dataclass
