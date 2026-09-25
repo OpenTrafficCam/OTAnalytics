@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.state import ConfigurationFile, CurrentKeyPrefix, FileState
 from OTAnalytics.application.upload_otconfig import UploadOtconfig
@@ -53,6 +54,7 @@ class SaveOtconfig:
         # The same value reaches `convert` below. Passing it to only one of the
         # two would make every project report itself as permanently unsaved.
         s3_key_prefix = self._current_key_prefix.get()
+        logger().info(f"Saving otconfig to '{file}'")
         self._config_parser.serialize(
             project=project,
             video_files=video_files,
@@ -79,4 +81,5 @@ class SaveOtconfig:
             )
         )
         if s3_key_prefix is not None:
+            logger().info(f"Uploading otconfig '{file}' to s3 under '{s3_key_prefix}'")
             await self._otconfig_upload.upload(file, s3_key_prefix)
