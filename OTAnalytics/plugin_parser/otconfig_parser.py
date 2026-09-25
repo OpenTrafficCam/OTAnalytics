@@ -390,6 +390,13 @@ class OtConfigParser(ConfigParser):
     ) -> dict:
         parent_folder = file.parent
         project_content = project.to_dict()
+        if s3_key_prefix is not None:
+            # Data is picked per session by time range (OP#10283), so a
+            # project's own file references have no reader in s3 mode.
+            # Recording them would only leave stale paths into the ephemeral
+            # `user_source` staging area behind. See OP#10323's decision log.
+            video_files = []
+            track_files = []
         video_content = self._video_parser.convert(
             video_files,
             relative_to=parent_folder,
