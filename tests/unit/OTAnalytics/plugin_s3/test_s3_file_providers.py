@@ -34,6 +34,178 @@ VIDEO_NAMES = {
 }
 
 
+class TestS3TrackFileProvider:
+
+    async def test_provides_the_track_files_in_the_selected_window(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given()
+        target = create_track_target(given)
+
+        provided = await target.provide()
+
+        assert provided == [USER_SOURCE / TRACK_0600, USER_SOURCE / TRACK_0615]
+
+    async def test_lists_only_the_configured_prefix(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given()
+        target = create_track_target(given)
+
+        await target.provide()
+
+        given.list_objects.list_keys.assert_awaited_once_with(PREFIX)
+
+    async def test_downloads_each_video_named_by_its_own_track_file(self) -> None:
+        """The companion is read from the ottrk, not guessed as '.mp4'.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
+        given = create_given()
+        target = create_track_target(given)
+
+        await target.provide()
+
+        assert given.downloads[1][0] == [VIDEO_0600, VIDEO_0615]
+
+    async def test_downloads_tracks_before_videos(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given()
+        target = create_track_target(given)
+
+        await target.provide()
+
+        assert [keys for keys, _ in given.downloads] == [
+            [TRACK_0600, TRACK_0615],
+            [VIDEO_0600, VIDEO_0615],
+        ]
+
+    async def test_a_missing_video_aborts_the_whole_load(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given(keys=[TRACK_0600, TRACK_0615, VIDEO_0600])
+        target = create_track_target(given)
+
+        assert await target.provide() == []
+
+    async def test_a_missing_video_is_named_to_the_user(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given(keys=[TRACK_0600, TRACK_0615, VIDEO_0600])
+        target = create_track_target(given)
+
+        await target.provide()
+
+        reported = given.dialog.report_error.call_args.args[0]
+        assert "OTCamera19_FR20_2023-05-24_06-15-00.mkv" in reported
+
+    async def test_a_missing_video_leaves_no_videos_downloaded(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given(keys=[TRACK_0600, TRACK_0615, VIDEO_0600])
+        target = create_track_target(given)
+
+        await target.provide()
+
+        assert [description for _, description in given.downloads] == [
+            "Downloading tracks"
+        ]
+
+    async def test_choosing_no_window_loads_nothing(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given()
+        given.dialog.ask = AsyncMock(return_value=None)
+        target = create_track_target(given)
+
+        assert await target.provide() == []
+        given.list_objects.list_keys.assert_not_awaited()
+
+    async def test_an_empty_window_loads_nothing(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given(
+            window=LoadWindow(
+                start=START - timedelta(days=1), end=START - timedelta(hours=23)
+            )
+        )
+        target = create_track_target(given)
+
+        assert await target.provide() == []
+        given.download_objects.download_all.assert_not_awaited()
+
+    async def test_cancelling_loads_nothing(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given(cancel=True)
+        target = create_track_target(given)
+
+        assert await target.provide() == []
+
+    async def test_a_failed_download_is_explained_rather_than_raised(self) -> None:
+        """A raw traceback in the browser tells the user nothing useful.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
+        given = create_given()
+        given.download_objects.download_all = AsyncMock(
+            side_effect=RuntimeError("the bucket said no")
+        )
+        target = create_track_target(given)
+
+        assert await target.provide() == []
+
+        given.dialog.report_error.assert_called_once()
+
+    async def test_an_over_long_window_is_clamped_and_reported(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given(
+            window=LoadWindow(start=START, end=START + timedelta(hours=24))
+        )
+        target = create_track_target(given)
+
+        provided = await target.provide()
+
+        clamped = given.dialog.report_clamped.call_args.args[0]
+        assert clamped.end == START + MAXIMUM
+        assert clamped.was_clamped is True
+        assert provided == [
+            USER_SOURCE / TRACK_0600,
+            USER_SOURCE / TRACK_0615,
+            USER_SOURCE / TRACK_0900,
+        ]
+
+    async def test_a_window_within_the_cap_is_not_reported(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given()
+        target = create_track_target(given)
+
+        await target.provide()
+
+        given.dialog.report_clamped.assert_not_called()
+
+
+class TestS3VideoFileProvider:
+    """#Requirement https://openproject.platomo.de/wp/10283"""
+
+    async def test_provides_the_videos_in_the_selected_window(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given()
+        target = create_video_target(given)
+
+        provided = await target.provide()
+
+        assert provided == [USER_SOURCE / VIDEO_0600, USER_SOURCE / VIDEO_0615]
+
+    async def test_loads_videos_without_any_track_file(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given()
+        target = create_video_target(given)
+
+        await target.provide()
+
+        assert [keys for keys, _ in given.downloads] == [[VIDEO_0600, VIDEO_0615]]
+
+    async def test_cancelling_loads_nothing(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given(cancel=True)
+        target = create_video_target(given)
+
+        assert await target.provide() == []
+
+
 @dataclass
 class Given:
     dialog: Mock
@@ -102,156 +274,3 @@ def create_video_target(given: Given) -> S3VideoFileProvider:
         download_objects=given.download_objects,
         config=given.config,
     )
-
-
-class TestS3TrackFileProvider:
-    """#Requirement https://openproject.platomo.de/wp/10283"""
-
-    async def test_provides_the_track_files_in_the_selected_window(self) -> None:
-        given = create_given()
-        target = create_track_target(given)
-
-        provided = await target.provide()
-
-        assert provided == [USER_SOURCE / TRACK_0600, USER_SOURCE / TRACK_0615]
-
-    async def test_lists_only_the_configured_prefix(self) -> None:
-        given = create_given()
-        target = create_track_target(given)
-
-        await target.provide()
-
-        given.list_objects.list_keys.assert_awaited_once_with(PREFIX)
-
-    async def test_downloads_each_video_named_by_its_own_track_file(self) -> None:
-        """The companion is read from the ottrk, not guessed as '.mp4'."""
-        given = create_given()
-        target = create_track_target(given)
-
-        await target.provide()
-
-        assert given.downloads[1][0] == [VIDEO_0600, VIDEO_0615]
-
-    async def test_downloads_tracks_before_videos(self) -> None:
-        given = create_given()
-        target = create_track_target(given)
-
-        await target.provide()
-
-        assert [keys for keys, _ in given.downloads] == [
-            [TRACK_0600, TRACK_0615],
-            [VIDEO_0600, VIDEO_0615],
-        ]
-
-    async def test_a_missing_video_aborts_the_whole_load(self) -> None:
-        given = create_given(keys=[TRACK_0600, TRACK_0615, VIDEO_0600])
-        target = create_track_target(given)
-
-        assert await target.provide() == []
-
-    async def test_a_missing_video_is_named_to_the_user(self) -> None:
-        given = create_given(keys=[TRACK_0600, TRACK_0615, VIDEO_0600])
-        target = create_track_target(given)
-
-        await target.provide()
-
-        reported = given.dialog.report_error.call_args.args[0]
-        assert "OTCamera19_FR20_2023-05-24_06-15-00.mkv" in reported
-
-    async def test_a_missing_video_leaves_no_videos_downloaded(self) -> None:
-        given = create_given(keys=[TRACK_0600, TRACK_0615, VIDEO_0600])
-        target = create_track_target(given)
-
-        await target.provide()
-
-        assert [description for _, description in given.downloads] == [
-            "Downloading tracks"
-        ]
-
-    async def test_choosing_no_window_loads_nothing(self) -> None:
-        given = create_given()
-        given.dialog.ask = AsyncMock(return_value=None)
-        target = create_track_target(given)
-
-        assert await target.provide() == []
-        given.list_objects.list_keys.assert_not_awaited()
-
-    async def test_an_empty_window_loads_nothing(self) -> None:
-        given = create_given(
-            window=LoadWindow(
-                start=START - timedelta(days=1), end=START - timedelta(hours=23)
-            )
-        )
-        target = create_track_target(given)
-
-        assert await target.provide() == []
-        given.download_objects.download_all.assert_not_awaited()
-
-    async def test_cancelling_loads_nothing(self) -> None:
-        given = create_given(cancel=True)
-        target = create_track_target(given)
-
-        assert await target.provide() == []
-
-    async def test_a_failed_download_is_explained_rather_than_raised(self) -> None:
-        """A raw traceback in the browser tells the user nothing useful."""
-        given = create_given()
-        given.download_objects.download_all = AsyncMock(
-            side_effect=RuntimeError("the bucket said no")
-        )
-        target = create_track_target(given)
-
-        assert await target.provide() == []
-
-        given.dialog.report_error.assert_called_once()
-
-    async def test_an_over_long_window_is_clamped_and_reported(self) -> None:
-        given = create_given(
-            window=LoadWindow(start=START, end=START + timedelta(hours=24))
-        )
-        target = create_track_target(given)
-
-        provided = await target.provide()
-
-        clamped = given.dialog.report_clamped.call_args.args[0]
-        assert clamped.end == START + MAXIMUM
-        assert clamped.was_clamped is True
-        assert provided == [
-            USER_SOURCE / TRACK_0600,
-            USER_SOURCE / TRACK_0615,
-            USER_SOURCE / TRACK_0900,
-        ]
-
-    async def test_a_window_within_the_cap_is_not_reported(self) -> None:
-        given = create_given()
-        target = create_track_target(given)
-
-        await target.provide()
-
-        given.dialog.report_clamped.assert_not_called()
-
-
-class TestS3VideoFileProvider:
-    """#Requirement https://openproject.platomo.de/wp/10283"""
-
-    async def test_provides_the_videos_in_the_selected_window(self) -> None:
-        given = create_given()
-        target = create_video_target(given)
-
-        provided = await target.provide()
-
-        assert provided == [USER_SOURCE / VIDEO_0600, USER_SOURCE / VIDEO_0615]
-
-    async def test_loads_videos_without_any_track_file(self) -> None:
-        given = create_given()
-        target = create_video_target(given)
-
-        await target.provide()
-
-        assert [keys for keys, _ in given.downloads] == [[VIDEO_0600, VIDEO_0615]]
-
-    async def test_cancelling_loads_nothing(self) -> None:
-        given = create_given(cancel=True)
-        target = create_video_target(given)
-
-        assert await target.provide() == []
