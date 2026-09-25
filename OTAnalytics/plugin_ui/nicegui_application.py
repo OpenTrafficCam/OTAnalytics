@@ -13,10 +13,6 @@ from OTAnalytics.application.project_location import (
     RefuseAnyProjectLocation,
     ValidateProjectLocation,
 )
-from OTAnalytics.application.save_destination import (
-    GuardSaveDestination,
-    NoDestinationGuard,
-)
 from OTAnalytics.application.upload_otconfig import NoOtconfigUpload, UploadOtconfig
 from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.application.use_cases.provide_input_files import (
@@ -43,7 +39,6 @@ from OTAnalytics.plugin_s3.s3_file_providers import (
     S3TrackFileProvider,
     S3VideoFileProvider,
 )
-from OTAnalytics.plugin_s3.save_destination import RequireDestinationUnderUserSource
 from OTAnalytics.plugin_s3.store import S3Store
 from OTAnalytics.plugin_s3.upload import S3Upload
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
@@ -341,12 +336,6 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         if self.s3_config:
             return S3OtconfigUpload(S3Upload(self.s3_store))
         return NoOtconfigUpload()
-
-    @cached_property
-    def guard_save_destination(self) -> GuardSaveDestination:
-        if config := self.s3_config:
-            return RequireDestinationUnderUserSource(Path(config.user_source))
-        return NoDestinationGuard()
 
     @cached_property
     def reset_application(self) -> ResetApplication:
