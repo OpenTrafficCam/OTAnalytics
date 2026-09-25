@@ -18,21 +18,7 @@ VIDEO_0600 = "cam/OTCamera19_2023-05-24_06-00-00.mp4"
 ALL_KEYS = [AT_0715, AT_0545, AT_0700, AT_0600, AT_0615, VIDEO_0600]
 
 
-@dataclass
-class Given:
-    keys: list[str]
-    window: LoadWindow
-
-
-def create_given(hours: float = 1, keys: list[str] | None = None) -> Given:
-    return Given(
-        keys=ALL_KEYS if keys is None else keys,
-        window=LoadWindow(start=START, end=START + timedelta(hours=hours)),
-    )
-
-
 class TestSelectInWindow:
-
     def test_keeps_only_the_requested_suffixes(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given()
@@ -95,3 +81,16 @@ class TestSelectInWindow:
         selected = select_in_window(given.keys, given.window, {".ottrk"})
 
         assert selected == ["cam/OTCamera19_2023-05-24_06-00-00.OTTRK"]
+
+
+@dataclass
+class Given:
+    keys: list[str]
+    window: LoadWindow
+
+
+def create_given(hours: float = 1, keys: list[str] | None = None) -> Given:
+    return Given(
+        keys=ALL_KEYS if keys is None else keys,
+        window=LoadWindow(start=START, end=START + timedelta(hours=hours)),
+    )
