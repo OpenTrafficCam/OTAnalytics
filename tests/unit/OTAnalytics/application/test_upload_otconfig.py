@@ -7,6 +7,14 @@ from OTAnalytics.application.upload_otconfig import NoOtconfigUpload
 A_PREFIX = S3KeyPrefix("project-1/site-2/otcamera19/")
 
 
+class TestNoOtconfigUpload:
+    async def test_does_nothing(self, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10323"""
+        given = create_given(tmp_path)
+
+        await create_target(given).upload(given.file, A_PREFIX)
+
+
 @dataclass
 class Given:
     file: Path
@@ -20,11 +28,3 @@ def create_given(tmp_path: Path) -> Given:
 
 def create_target(given: Given) -> NoOtconfigUpload:
     return NoOtconfigUpload()
-
-
-class TestNoOtconfigUpload:
-    async def test_does_nothing(self, tmp_path: Path) -> None:
-        """#Requirement https://openproject.platomo.de/wp/10323"""
-        given = create_given(tmp_path)
-
-        await create_target(given).upload(given.file, A_PREFIX)
