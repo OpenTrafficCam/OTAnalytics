@@ -686,9 +686,9 @@ class DummyViewModel(
         )
         if not otconfig_file:
             return
-        self._load_otconfig(otconfig_file)
+        await self._load_otconfig(otconfig_file)
 
-    def _load_otconfig(self, otconfig_file: Path) -> None:
+    async def _load_otconfig(self, otconfig_file: Path) -> None:
         proceed = self._ui_factory.info_box(
             message=(
                 "This will load a stored configuration from file. \n"
@@ -701,7 +701,7 @@ class DummyViewModel(
         if proceed.canceled:
             return
         logger().info(f"{OTCONFIG_FILE_TYPE} file to load: {otconfig_file}")
-        self._application.load_otconfig(file=Path(otconfig_file))
+        await self._application.load_otconfig_async(file=Path(otconfig_file))
         self.show_current_project()
         self.update_svz_metadata_view()
 
@@ -813,7 +813,7 @@ class DummyViewModel(
         if not track_files:
             return
         logger().info(f"Tracks files to load: {track_files}")
-        self._application.add_tracks_of_files(track_files=track_files)
+        await self._application.add_tracks_of_files_async(track_files=track_files)
 
     async def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
@@ -832,7 +832,7 @@ class DummyViewModel(
         elif configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
             self._load_otflow(configuration_file)
         elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
-            self._load_otconfig(configuration_file)
+            await self._load_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to load has unknown file extension")
 
