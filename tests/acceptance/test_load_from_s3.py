@@ -1,7 +1,6 @@
 """Acceptance: in s3 mode, adding tracks asks for a time range, not a file."""
 
 import io
-import json
 import os
 import subprocess
 import sys
@@ -11,6 +10,7 @@ from typing import Any, Iterator
 
 import pytest
 import requests
+import ujson
 from playwright.sync_api import Page, expect  # type: ignore
 
 from OTAnalytics.application.resources.resource_manager import (
@@ -87,7 +87,7 @@ def _project_otconfig(directory: Path) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     file = directory / "project.otconfig"
     file.write_text(
-        json.dumps(
+        ujson.dumps(
             {
                 "project": {"name": "Acceptance", "start_date": 1684886400},
                 "s3_key_prefix": PREFIX,
