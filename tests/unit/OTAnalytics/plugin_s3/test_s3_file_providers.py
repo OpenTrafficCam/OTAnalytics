@@ -208,6 +208,42 @@ class TestS3VideoFileProvider:
         assert await target.provide() == []
 
 
+class TestWithoutALoadedProject:
+    """
+    In s3 mode the prefix comes from the project, so until one is loaded
+    there is nowhere to list.
+    """
+
+    async def test_asks_for_no_window_and_lists_nothing(self) -> None:
+        """# Requirement https://openproject.platomo.de/wp/10322"""
+        given = create_given(project_loaded=False)
+        target = create_track_target(given)
+
+        provided = await target.provide()
+
+        assert provided == []
+        given.dialog.ask.assert_not_awaited()
+        given.list_objects.list_keys.assert_not_awaited()
+
+    async def test_says_a_project_has_to_be_loaded_first(self) -> None:
+        """# Requirement https://openproject.platomo.de/wp/10322"""
+        given = create_given(project_loaded=False)
+        target = create_video_target(given)
+
+        await target.provide()
+
+        given.dialog.report_error.assert_called_once()
+        assert "project" in given.dialog.report_error.call_args.args[0]
+
+    async def test_lists_under_the_prefix_the_loaded_project_declares(self) -> None:
+        """# Requirement https://openproject.platomo.de/wp/10322"""
+        given = create_given()
+
+        await create_video_target(given).provide()
+
+        given.list_objects.list_keys.assert_awaited_once_with(PREFIX)
+
+
 @dataclass
 class Given:
     dialog: Mock
@@ -283,37 +319,3 @@ def create_video_target(given: Given) -> S3VideoFileProvider:
         config=given.config,
         current_key_prefix=given.current_key_prefix,
     )
-
-
-class TestWithoutALoadedProject:
-    """In s3 mode the prefix comes from the project, so until one is loaded
-    there is nowhere to list.
-
-    #Requirement https://openproject.platomo.de/wp/10322
-    """
-
-    async def test_asks_for_no_window_and_lists_nothing(self) -> None:
-        given = create_given(project_loaded=False)
-        target = create_track_target(given)
-
-        provided = await target.provide()
-
-        assert provided == []
-        given.dialog.ask.assert_not_awaited()
-        given.list_objects.list_keys.assert_not_awaited()
-
-    async def test_says_a_project_has_to_be_loaded_first(self) -> None:
-        given = create_given(project_loaded=False)
-        target = create_video_target(given)
-
-        await target.provide()
-
-        given.dialog.report_error.assert_called_once()
-        assert "project" in given.dialog.report_error.call_args.args[0]
-
-    async def test_lists_under_the_prefix_the_loaded_project_declares(self) -> None:
-        given = create_given()
-
-        await create_video_target(given).provide()
-
-        given.list_objects.list_keys.assert_awaited_once_with(PREFIX)
