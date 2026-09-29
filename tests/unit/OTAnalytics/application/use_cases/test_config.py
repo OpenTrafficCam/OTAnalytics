@@ -83,6 +83,7 @@ class TestSaveOtconfig:
     async def test_uploads_when_project_names_a_key_prefix(
         self, test_data_tmp_dir: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10323"""
         track_file_repository = Mock(spec=TrackFileRepository)
         datastore = Mock(spec=Datastore)
         datastore._track_file_repository = track_file_repository
@@ -108,6 +109,7 @@ class TestSaveOtconfig:
     async def test_does_not_upload_when_project_names_no_key_prefix(
         self, test_data_tmp_dir: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10323"""
         track_file_repository = Mock(spec=TrackFileRepository)
         datastore = Mock(spec=Datastore)
         datastore._track_file_repository = track_file_repository
