@@ -17,6 +17,52 @@ A_PREFIX = S3KeyPrefix("project-1/site-2/otcamera19")
 SUGGESTED_PATH = Path("/user-source/project-1/site-2/otcamera19/my.otconfig")
 
 
+class TestSaveConfiguration:
+    async def test_skips_the_dialog_when_project_names_a_key_prefix(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10323"""
+        given = create_given(A_PREFIX)
+        target = create_target(given)
+
+        await target.save_configuration()
+
+        given.ui_factory.ask_for_save_file_path.assert_not_called()
+        given.application.save_otconfig.assert_awaited_once_with(SUGGESTED_PATH)
+
+    async def test_asks_the_dialog_when_project_names_no_key_prefix(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10323"""
+        given = create_given(None)
+        given.ui_factory.ask_for_save_file_path.return_value = SUGGESTED_PATH
+        target = create_target(given)
+
+        await target.save_configuration()
+
+        given.ui_factory.ask_for_save_file_path.assert_awaited_once()
+        given.application.save_otconfig.assert_awaited_once_with(SUGGESTED_PATH)
+
+
+class TestSaveOtconfig:
+    async def test_skips_the_dialog_when_project_names_a_key_prefix(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10323"""
+        given = create_given(A_PREFIX)
+        target = create_target(given)
+
+        await target.save_otconfig()
+
+        given.ui_factory.ask_for_save_file_path.assert_not_called()
+        given.application.save_otconfig.assert_awaited_once_with(SUGGESTED_PATH)
+
+    async def test_asks_the_dialog_when_project_names_no_key_prefix(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10323"""
+        given = create_given(None)
+        given.ui_factory.ask_for_save_file_path.return_value = SUGGESTED_PATH
+        target = create_target(given)
+
+        await target.save_otconfig()
+
+        given.ui_factory.ask_for_save_file_path.assert_awaited_once()
+        given.application.save_otconfig.assert_awaited_once_with(SUGGESTED_PATH)
+
+
 @dataclass
 class Given:
     application: Mock
@@ -51,45 +97,3 @@ def create_target(given: Given) -> DummyViewModel:
         provide_track_files=Mock(),
         provide_video_files=Mock(),
     )
-
-
-class TestSaveConfiguration:
-    async def test_skips_the_dialog_when_project_names_a_key_prefix(self) -> None:
-        given = create_given(A_PREFIX)
-        target = create_target(given)
-
-        await target.save_configuration()
-
-        given.ui_factory.ask_for_save_file_path.assert_not_called()
-        given.application.save_otconfig.assert_awaited_once_with(SUGGESTED_PATH)
-
-    async def test_asks_the_dialog_when_project_names_no_key_prefix(self) -> None:
-        given = create_given(None)
-        given.ui_factory.ask_for_save_file_path.return_value = SUGGESTED_PATH
-        target = create_target(given)
-
-        await target.save_configuration()
-
-        given.ui_factory.ask_for_save_file_path.assert_awaited_once()
-        given.application.save_otconfig.assert_awaited_once_with(SUGGESTED_PATH)
-
-
-class TestSaveOtconfig:
-    async def test_skips_the_dialog_when_project_names_a_key_prefix(self) -> None:
-        given = create_given(A_PREFIX)
-        target = create_target(given)
-
-        await target.save_otconfig()
-
-        given.ui_factory.ask_for_save_file_path.assert_not_called()
-        given.application.save_otconfig.assert_awaited_once_with(SUGGESTED_PATH)
-
-    async def test_asks_the_dialog_when_project_names_no_key_prefix(self) -> None:
-        given = create_given(None)
-        given.ui_factory.ask_for_save_file_path.return_value = SUGGESTED_PATH
-        target = create_target(given)
-
-        await target.save_otconfig()
-
-        given.ui_factory.ask_for_save_file_path.assert_awaited_once()
-        given.application.save_otconfig.assert_awaited_once_with(SUGGESTED_PATH)
