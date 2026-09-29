@@ -1,6 +1,6 @@
 """Tests that an otconfig declares where its data lives.
 
-ADR 0004: the file carries one top-level `s3_key_prefix`, and it is the sole
+The file carries one top-level `s3_key_prefix`, and it is the sole
 source of the prefix an instance reads from. The key is absent from every
 otconfig written before this change, so a missing key must parse to `None`
 rather than fail -- refusing such a file in s3 mode is the job of

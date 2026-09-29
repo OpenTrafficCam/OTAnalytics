@@ -80,9 +80,8 @@ def rustfs() -> Iterator[dict]:
 def _project_otconfig(directory: Path) -> Path:
     """An otconfig declaring where this project's data lives.
 
-    In s3 mode the prefix comes from the project, not the environment (ADR
-    0004), so the application has to be given a project before it can list
-    anything at all.
+    In s3 mode the prefix comes from the project, not the environment,
+    so the application has to be given a project before it can list anything at all.
     """
     directory.mkdir(parents=True, exist_ok=True)
     file = directory / "project.otconfig"

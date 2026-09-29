@@ -1,7 +1,7 @@
 """Tests for the key prefix an otconfig declares.
 
 The prefix says where in the bucket a project's tracks and videos live. It is
-declared by the file rather than the environment (ADR 0004) so that one
+declared by the file rather than the environment so that one
 deployment can open projects stored under different prefixes.
 
 Whether a prefix may be honoured *here* -- local mode refuses any, s3 mode

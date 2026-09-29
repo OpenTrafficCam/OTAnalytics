@@ -153,7 +153,7 @@ class TestLoadOtconfigOnTheEventLoop:
 class TestRefusingAProjectStoredElsewhere:
     """A project whose data lives where this installation cannot read it.
 
-    ADR 0004. The refusal happens in `_begin`, before anything is published, so
+    The refusal happens in `_begin`, before anything is published, so
     all-or-nothing holds without `_abort` having to undo a partial load.
     """
 

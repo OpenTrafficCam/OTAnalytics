@@ -1,6 +1,6 @@
 """Tests the holder for the loaded project's key prefix.
 
-The prefix arrives with the project rather than with the process (ADR 0004), so
+The prefix arrives with the project rather than with the process, so
 something has to hold it between loading a project and saving or listing under
 it. Until a project is loaded there is no prefix, which is why the seed is None
 and why reset returns to the seed rather than to some last-known value.

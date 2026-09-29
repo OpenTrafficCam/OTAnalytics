@@ -1,6 +1,6 @@
 """Tests the refusal of a project this installation cannot read.
 
-ADR 0004 gives four cases. Two of them belong to the default implementation,
+There are four cases. Two of them belong to the default implementation,
 which is wired whenever s3 is not configured:
 
 | Transfer mode      | s3_key_prefix | Behaviour       |

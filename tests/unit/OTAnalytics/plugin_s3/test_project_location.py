@@ -1,4 +1,4 @@
-"""Tests the two s3-mode rows of ADR 0004's table.
+"""Tests the two s3-mode following the below table.
 
 | Transfer mode | s3_key_prefix | Behaviour       |
 |---------------|---------------|-----------------|
