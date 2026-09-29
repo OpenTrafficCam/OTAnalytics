@@ -8,6 +8,7 @@ from nicegui.testing import User
 
 from OTAnalytics.application.progress import Cancellation
 from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.domain.progress import CompletionProgress
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
     MARKER_PROGRESSBAR_CANCEL,
     NiceguiProgressbar,
@@ -178,6 +179,48 @@ class TestNiceguiProgressbarBuilder:
 
         assert progressbars[0].is_open is False
         assert progressbars[1].is_open is True
+
+
+class TestProgressbarForWorkOffTheEventLoop:
+    @pytest.mark.asyncio
+    async def test_stays_open_until_the_caller_closes_it(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """Parsing on a worker thread reports nothing until it is done.
+
+        Requirement https://openproject.platomo.de/wp/10282
+        """
+        given = create_given(resource_manager)
+        target = create_builder(given)
+        progressbars = []
+
+        @ui.page("/test")
+        def page() -> None:
+            progressbars.append(target.start("Parsing track files", "files", 2))
+
+        await user.open("/test")
+        await user.should_see("Parsing track files 0 / 2 files")
+        assert progressbars[0].is_open is True
+
+        progressbars[0].close()
+
+        assert progressbars[0].is_open is False
+
+
+class TestCompletionProgressContract:
+    def test_reports_cancellation_to_the_caller(
+        self, resource_manager: ResourceManager
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given(resource_manager)
+        target = create_target(given)
+
+        assert isinstance(target, CompletionProgress)
+        assert target.is_cancelled is False
+
+        given.cancellation.cancel()
+
+        assert target.is_cancelled is True
 
 
 class TestProgressbarWithoutABrowser:

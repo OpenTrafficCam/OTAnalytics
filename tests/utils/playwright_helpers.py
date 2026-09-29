@@ -38,6 +38,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
+    MARKER_PROGRESSBAR_CANCEL,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_TRACK_TAB,
     MARKER_VIDEO_TAB,
@@ -92,6 +95,7 @@ from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_TRACK_FILES,
     ACCEPTANCE_TEST_VIDEO_FILE,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
+    EXPORT_TIMEOUT_MS,
     IMPORT_VERIFY_MAX_POLLS,
     PLAYWRIGHT_POLL_INTERVAL_MS,
     PLAYWRIGHT_POLL_INTERVAL_SECONDS,
@@ -99,6 +103,7 @@ from tests.acceptance.conftest import (
     PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
     PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+    TRACK_LOADING_TIMEOUT_MS,
 )
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
@@ -453,13 +458,35 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     search_for_marker_element(page, MARKER_FILENAME).first.fill(path.name)
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
 
-    # Wait for tracks to load after opening the project
-    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    wait_for_track_loading_to_finish(page)
 
 
 # ----------------------
 # Save / Export helpers
 # ----------------------
+
+
+def wait_for_track_loading_to_finish(page: Page) -> None:
+    """Wait until the progressbar shown while track files are parsed is gone.
+
+    Track files are parsed off the event loop, so the click that starts loading
+    returns long before the tracks are in the repository. Acting on the page in
+    between finds an application without tracks: exporting track statistics, for
+    one, then reports that there are none rather than opening its dialog.
+
+    Nothing is parsed when every file is loaded already, so no progressbar appears
+    at all. Give it a short while to show up and take its absence as nothing left
+    to wait for.
+
+    Args:
+        page: the Playwright page object.
+    """
+    progressbar = search_for_marker_element(page, MARKER_PROGRESSBAR_CANCEL).first
+    try:
+        progressbar.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    except TimeoutError:
+        return
+    progressbar.wait_for(state="hidden", timeout=TRACK_LOADING_TIMEOUT_MS)
 
 
 def save_project_as(page: Page, rm: ResourceManager, path: Path) -> None:
@@ -521,11 +548,26 @@ def export_file_via_dialog(page: Page, output_dir: Path) -> Path:
     # Click OK/Apply
     dialog_apply.click()
 
-    # Wait for file to be created (export operation takes several seconds)
-    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    output_path = output_dir / current_filename
+    wait_for_file_to_be_written(page, output_path)
+    return output_path
 
-    # Return the expected output path
-    return output_dir / current_filename
+
+def wait_for_file_to_be_written(page: Page, path: Path) -> None:
+    """Wait until an export has written the given file.
+
+    Exporting takes seconds rather than milliseconds, and how many depends on the
+    machine, so poll for the file instead of guessing how long to sleep.
+
+    Args:
+        page: the Playwright page object.
+        path: the file the export is expected to write.
+    """
+    deadline = time.time() + EXPORT_TIMEOUT_MS / 1000
+    while time.time() < deadline:
+        if path.exists():
+            return
+        page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
 
 
 def export_track_statistics(
@@ -1067,6 +1109,8 @@ def add_track_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
     ui_path = path.relative_to(file_picker_directory())
     for part in ui_path.parts:
         open_part(page, part)
+
+    wait_for_track_loading_to_finish(page)
 
 
 def setup_with_preconfigured_otconfig(
