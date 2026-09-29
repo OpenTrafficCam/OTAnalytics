@@ -243,6 +243,19 @@ class TrackDataset(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def track_ids_ending_before(self, date: datetime) -> TrackIdSet:
+        """Return ids of tracks whose last detection occurred before ``date``.
+
+        Args:
+            date (datetime): exclusive upper bound on a track's last occurrence.
+
+        Returns:
+            TrackIdSet: ids of tracks whose last occurrence is strictly before
+                ``date`` (i.e. tracks that received no detection since ``date``).
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def as_list(self) -> list[Track]:
         raise NotImplementedError
 

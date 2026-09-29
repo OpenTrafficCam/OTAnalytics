@@ -80,6 +80,9 @@ class FilteredTrackDataset(TrackDataset):
     def split_finished(self) -> tuple[TrackDataset, TrackDataset]:
         return self._filter().split_finished()
 
+    def track_ids_ending_before(self, date: datetime) -> TrackIdSet:
+        return self._filter().track_ids_ending_before(date)
+
 
 class FilterByClassTrackDataset(FilteredTrackDataset):
     @property

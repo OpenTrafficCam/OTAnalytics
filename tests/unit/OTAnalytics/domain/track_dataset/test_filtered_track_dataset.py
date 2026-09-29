@@ -407,6 +407,14 @@ class TestFilteredTrackDataset:
             dataset.calculate_geometries_for(offsets)
             mock_other.calculate_geometries_for.assert_called_once_with(offsets)
 
+    def test_track_ids_ending_before(self) -> None:
+        date = Mock()
+        mocked_datasets = self.get_mocked_datasets([], [])
+        for dataset, mock_other in mocked_datasets:
+            result = dataset.track_ids_ending_before(date)
+            assert result == mock_other.track_ids_ending_before.return_value
+            mock_other.track_ids_ending_before.assert_called_once_with(date)
+
     def test_cut_with_section(self) -> None:
         section = Mock()
         offset = Mock()
