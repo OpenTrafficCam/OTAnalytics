@@ -100,14 +100,14 @@ class TestUserSourceLifecycle:
 
 
 class TestOtconfigUpload:
-    """#Requirement https://openproject.platomo.de/wp/10323"""
-
     def test_local_mode_never_uploads(self, local_mode: None) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10323"""
         target = create_target(create_given())
 
         assert isinstance(target.otconfig_upload, NoOtconfigUpload)
 
     def test_s3_mode_uploads_beside_the_project_data(self, s3_mode: None) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10323"""
         target = create_target(create_given())
 
         assert isinstance(target.otconfig_upload, S3OtconfigUpload)

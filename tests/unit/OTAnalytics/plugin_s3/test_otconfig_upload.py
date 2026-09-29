@@ -24,6 +24,7 @@ def create_target(given: Given) -> S3OtconfigUpload:
 
 class TestS3OtconfigUpload:
     async def test_uploads_under_the_prefix_by_file_name(self, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10323"""
         given = create_given()
         target = create_target(given)
         file = tmp_path / "my_project.otconfig"

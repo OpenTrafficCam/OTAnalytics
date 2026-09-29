@@ -155,6 +155,8 @@ class TestOtConfigParser:
         references have no reader in s3 mode. Recording paths into
         `user_source` would only leave stale references after the startup
         wipe. See OP#10323's decision log.
+
+        #Requirement https://openproject.platomo.de/wp/10323
         """
         video_parser = Mock(spec=VideoParser)
         flow_parser = Mock(spec=FlowParser)
@@ -204,6 +206,8 @@ class TestOtConfigParser:
         the two calls and report themselves as permanently unsaved. Putting
         the omission inside `convert`, keyed only on `s3_key_prefix`, makes
         both calls agree regardless. See decision 4 in OP#10323.
+
+        #Requirement https://openproject.platomo.de/wp/10323
         """
         video_parser = Mock(spec=VideoParser)
         flow_parser = Mock(spec=FlowParser)
