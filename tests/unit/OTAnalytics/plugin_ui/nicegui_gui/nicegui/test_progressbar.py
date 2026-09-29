@@ -8,6 +8,7 @@ from nicegui.testing import User
 
 from OTAnalytics.application.progress import Cancellation
 from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.domain.progress import CompletionProgress
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
     MARKER_PROGRESSBAR_CANCEL,
     NiceguiProgressbar,
@@ -204,6 +205,22 @@ class TestProgressbarForWorkOffTheEventLoop:
         progressbars[0].close()
 
         assert progressbars[0].is_open is False
+
+
+class TestCompletionProgressContract:
+    def test_reports_cancellation_to_the_caller(
+        self, resource_manager: ResourceManager
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given(resource_manager)
+        target = create_target(given)
+
+        assert isinstance(target, CompletionProgress)
+        assert target.is_cancelled is False
+
+        given.cancellation.cancel()
+
+        assert target.is_cancelled is True
 
 
 class TestProgressbarWithoutABrowser:

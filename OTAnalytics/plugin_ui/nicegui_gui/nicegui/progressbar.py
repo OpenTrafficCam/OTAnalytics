@@ -12,7 +12,12 @@ from OTAnalytics.application.resources.resource_manager import (
     GeneralKeys,
     ResourceManager,
 )
-from OTAnalytics.domain.progress import Counter, ProgressbarBuilder, RunningProgressbar
+from OTAnalytics.domain.progress import (
+    CompletionProgress,
+    CompletionProgressBuilder,
+    Counter,
+    ProgressbarBuilder,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_PROGRESSBAR_CANCEL = "progressbar-cancel"
@@ -20,7 +25,7 @@ MARKER_MESSAGE = "progressbar-message"
 MARKER_CURRENT_ITEM = "progressbar-current-item"
 
 
-class NiceguiProgressbar(RunningProgressbar):
+class NiceguiProgressbar(CompletionProgress):
     """A determinate progressbar rendered in the browser.
 
     Shows how many of the expected items are done, which item was completed last,
@@ -65,6 +70,11 @@ class NiceguiProgressbar(RunningProgressbar):
     def cancellation(self) -> Cancellation:
         """The signal set when the user presses cancel."""
         return self._cancellation
+
+    @property
+    def is_cancelled(self) -> bool:
+        """Whether the user pressed cancel."""
+        return self._cancellation.is_cancelled
 
     @property
     def is_open(self) -> bool:
@@ -132,7 +142,7 @@ class NiceguiProgressbar(RunningProgressbar):
             self.close()
 
 
-class NiceguiProgressbarBuilder(ProgressbarBuilder):
+class NiceguiProgressbarBuilder(ProgressbarBuilder, CompletionProgressBuilder):
     """Builds progressbars rendering in the browser.
 
     The most recently built progressbar is kept accessible, so a caller driving

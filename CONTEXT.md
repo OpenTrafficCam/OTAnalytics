@@ -36,6 +36,15 @@ _Avoid_: cache (implies reuse across runs, which there is none of).
 **Load Window**:
 The start and end time a user selects to decide which Tracks and Videos to load.
 Bounded by a configured maximum duration, because continuous processing produces
-far more data than can be held at once.
+far more data than can be held at once. An over-long selection is _clamped_ —
+its end snaps to the maximum and the user is told — never rejected.
 _Avoid_: time range, date range (`DateRange` already means the filter applied to
 already-loaded Tracks, which is a different thing).
+
+**Track File Provider** / **Video File Provider**:
+What a request for input files is asked of. Each implementation owns its own way
+of asking the user, so nothing downstream knows where files came from: the local
+one opens a file chooser, the S3 one asks for a Load Window and downloads. This
+is the seam that makes the Transfer Mode interchangeable.
+_Avoid_: file loader, importer (both suggest they also parse, which they do not —
+they only obtain paths).
