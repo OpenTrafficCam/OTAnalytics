@@ -119,10 +119,10 @@ class TestCanvasFormHelperFunctions:
 
     def test_create_circle(self) -> None:
         # Arrange
-        event_data = {IMAGE_X: 100.7, IMAGE_Y: 200.3, ELEMENT_ID: "test-element"}
+        event_data = {IMAGE_X: 100.7, IMAGE_Y: 200.3}
 
         # Act
-        circle = create_circle(event_data, fill="red")
+        circle = create_circle(event_data, element_id="test-element", fill="red")
 
         # Assert
         assert circle.x == 101  # rounded
@@ -136,7 +136,7 @@ class TestCanvasFormHelperFunctions:
         event_data = {IMAGE_X: 50, IMAGE_Y: 75, ELEMENT_ID: "default-element"}
 
         # Act
-        circle = create_circle(event_data)
+        circle = create_circle(event_data, element_id="default-element")
 
         # Assert
         assert circle.fill == NORMAL_COLOR
@@ -146,7 +146,9 @@ class TestCanvasFormHelperFunctions:
         event_data = {IMAGE_X: 150.2, IMAGE_Y: 250.8, ELEMENT_ID: "moving-element"}
 
         # Act
-        circle = create_moving_circle(event_data, fill="blue")
+        circle = create_moving_circle(
+            event_data, element_id="moving-element", fill="blue"
+        )
 
         # Assert
         assert circle.x == 150  # rounded
