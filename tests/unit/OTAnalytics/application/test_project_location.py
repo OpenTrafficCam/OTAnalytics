@@ -43,12 +43,12 @@ class TestRefuseAnyProjectLocation:
     def test_accepts_a_project_that_names_no_location(self) -> None:
         given = create_given(key_prefix=None)
 
-        create_target(given)(given.key_prefix)
+        create_target(given).validate(given.key_prefix)
 
     def test_refuses_a_project_stored_in_s3(self) -> None:
         given = create_given()
 
         with pytest.raises(UnsupportedProjectLocation) as error:
-            create_target(given)(given.key_prefix)
+            create_target(given).validate(given.key_prefix)
 
         assert "local filesystem" in str(error.value)

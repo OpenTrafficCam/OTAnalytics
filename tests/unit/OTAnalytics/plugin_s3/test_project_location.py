@@ -39,13 +39,13 @@ class TestRequireWellFormedKeyPrefix:
     def test_accepts_a_prefix_inside_the_bucket(self) -> None:
         given = create_given()
 
-        create_target(given)(given.key_prefix)
+        create_target(given).validate(given.key_prefix)
 
     def test_refuses_a_project_that_does_not_say_where_its_data_lives(self) -> None:
         given = create_given(key_prefix=None)
 
         with pytest.raises(UnsupportedProjectLocation) as error:
-            create_target(given)(given.key_prefix)
+            create_target(given).validate(given.key_prefix)
 
         assert "does not say where its data lives" in str(error.value)
 
@@ -62,9 +62,9 @@ class TestRequireWellFormedKeyPrefix:
         given = create_given(key_prefix=S3KeyPrefix(malformed))
 
         with pytest.raises(UnsupportedProjectLocation):
-            create_target(given)(given.key_prefix)
+            create_target(given).validate(given.key_prefix)
 
     def test_accepts_a_name_that_merely_contains_dots(self) -> None:
         given = create_given(key_prefix=S3KeyPrefix("project-1/v1.2..3/site/"))
 
-        create_target(given)(given.key_prefix)
+        create_target(given).validate(given.key_prefix)

@@ -147,14 +147,7 @@ class ConfigParser(ABC):
         remark: str | None,
         s3_key_prefix: S3KeyPrefix | None,
     ) -> dict:
-        """Converts the given information into a dictionary.
-
-        `s3_key_prefix` is required rather than defaulted: SaveOtconfig and
-        OtconfigHasChanged both call this and must pass the same value. If only
-        the save side passed it, the written file would carry the key while
-        `convert` omitted it, and every project would report itself as
-        permanently unsaved.
-        """
+        """Converts the given information into a dictionary."""
         raise NotImplementedError
 
 

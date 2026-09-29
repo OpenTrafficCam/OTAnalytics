@@ -19,7 +19,7 @@ class RequireWellFormedKeyPrefix(ValidateProjectLocation):
     an S3 key that means it literally would not resolve to the object intended.
     """
 
-    def __call__(self, key_prefix: S3KeyPrefix | None) -> None:
+    def validate(self, key_prefix: S3KeyPrefix | None) -> None:
         if key_prefix is None:
             raise UnsupportedProjectLocation(
                 "This project does not say where its data lives, and this "

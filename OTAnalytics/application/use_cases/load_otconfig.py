@@ -97,7 +97,7 @@ class LoadOtconfig:
         """
         self._reset_application.reset()
         config = self._config_parser.parse(file)
-        self._validate_project_location(config.s3_key_prefix)
+        self._validate_project_location.validate(config.s3_key_prefix)
         return config
 
     def _publish_before_tracks(self, config: OtConfig) -> None:

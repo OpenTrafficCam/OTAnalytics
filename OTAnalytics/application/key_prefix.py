@@ -11,12 +11,12 @@ class InvalidS3KeyPrefix(ValueError):
 class S3KeyPrefix:
     """Where in the bucket a project's tracks and videos live.
 
-    Declared by the otconfig rather than the environment (ADR 0004), so that one
+    Declared by the otconfig rather than the environment, so that one
     deployment can open projects stored under different prefixes of the bucket
     it is configured for.
 
     This type only guarantees that the string names something. Whether a prefix
-    may be honoured by *this* installation is a separate question, answered on
+    may be honored by *this* installation is a separate question, answered on
     load by ValidateProjectLocation: local mode refuses any prefix, s3 mode
     requires one that stays inside the bucket.
     """
