@@ -24,6 +24,7 @@ def create_target(given: Given) -> NoOtconfigUpload:
 
 class TestNoOtconfigUpload:
     async def test_does_nothing(self, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10323"""
         given = create_given(tmp_path)
 
         await create_target(given).upload(given.file, A_PREFIX)
