@@ -37,11 +37,13 @@ def create_target(given: Given) -> RequireWellFormedKeyPrefix:
 
 class TestRequireWellFormedKeyPrefix:
     def test_accepts_a_prefix_inside_the_bucket(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = create_given()
 
         create_target(given).validate(given.key_prefix)
 
     def test_refuses_a_project_that_does_not_say_where_its_data_lives(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = create_given(key_prefix=None)
 
         with pytest.raises(UnsupportedProjectLocation) as error:

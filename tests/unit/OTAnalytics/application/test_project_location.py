@@ -41,11 +41,14 @@ def create_target(given: Given) -> RefuseAnyProjectLocation:
 
 class TestRefuseAnyProjectLocation:
     def test_accepts_a_project_that_names_no_location(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
+
         given = create_given(key_prefix=None)
 
         create_target(given).validate(given.key_prefix)
 
     def test_refuses_a_project_stored_in_s3(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = create_given()
 
         with pytest.raises(UnsupportedProjectLocation) as error:

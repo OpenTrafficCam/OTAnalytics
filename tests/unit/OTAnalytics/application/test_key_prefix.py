@@ -33,6 +33,7 @@ def create_target(given: Given) -> S3KeyPrefix:
 
 class TestS3KeyPrefix:
     def test_carries_the_declared_prefix(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = create_given()
 
         target = create_target(given)
@@ -42,10 +43,12 @@ class TestS3KeyPrefix:
 
     @pytest.mark.parametrize("blank", ["", "   "])
     def test_refuses_a_prefix_that_names_nothing(self, blank: str) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = create_given(value=blank)
 
         with pytest.raises(InvalidS3KeyPrefix):
             create_target(given)
 
     def test_two_prefixes_with_the_same_value_are_equal(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         assert create_target(create_given()) == create_target(create_given())

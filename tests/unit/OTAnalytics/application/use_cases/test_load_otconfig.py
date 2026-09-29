@@ -158,6 +158,7 @@ class TestRefusingAProjectStoredElsewhere:
     """
 
     def test_validates_the_location_the_project_declared(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = setup_default()
         target = create_target(given)
 
@@ -168,6 +169,7 @@ class TestRefusingAProjectStoredElsewhere:
         )
 
     def test_publishes_nothing_when_the_location_is_refused(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = setup_default()
         given.validate_project_location.side_effect = UnsupportedProjectLocation(
             "stored in S3"
@@ -189,9 +191,7 @@ class TestRefusingAProjectStoredElsewhere:
         given.reset_application.reset.assert_called_once()
 
     def test_holds_the_prefix_while_track_files_load(self) -> None:
-        """Slice 7 saves beside the inputs, so the prefix has to be in effect
-        while they are loaded -- after `_begin`'s reset has cleared it.
-        """
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = setup_default()
         target = create_target(given)
 
@@ -202,6 +202,7 @@ class TestRefusingAProjectStoredElsewhere:
         )
 
     def test_holds_no_prefix_when_the_location_is_refused(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = setup_default()
         given.validate_project_location.side_effect = UnsupportedProjectLocation(
             "stored in S3"
@@ -214,6 +215,7 @@ class TestRefusingAProjectStoredElsewhere:
         given.current_key_prefix.set.assert_not_called()
 
     async def test_refuses_an_async_load_the_same_way(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = setup_default()
         given.load_track_files = Mock(spec=LoadTrackFiles)
         given.load_track_files.load = AsyncMock()

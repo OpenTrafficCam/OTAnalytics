@@ -90,6 +90,7 @@ def create_target(given: Given) -> OtConfigParser:
 
 class TestParseKeyPrefix:
     def test_reads_the_declared_prefix(self, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = create_given(tmp_path)
 
         config = create_target(given).parse_from_dict(given.content, tmp_path)
@@ -99,6 +100,7 @@ class TestParseKeyPrefix:
     def test_an_otconfig_without_the_key_declares_no_prefix(
         self, tmp_path: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = create_given(tmp_path, prefix=None)
 
         config = create_target(given).parse_from_dict(given.content, tmp_path)
@@ -110,6 +112,8 @@ class TestParseKeyPrefix:
     ) -> None:
         """The save and the load have to be exact inverses: slice 7 reopens a
         project from the file this writes.
+
+        #Requirement https://openproject.platomo.de/wp/10322
         """
         given = create_given(tmp_path)
         target = create_target(given)
@@ -132,6 +136,8 @@ class TestParseKeyPrefix:
         """A local-mode file must stay exactly as it is today. A key written as
         null would also be read back as `None`, but it would appear in every
         otconfig OTCloud has ever seen.
+
+        #Requirement https://openproject.platomo.de/wp/10322
         """
         given = create_given(tmp_path)
 
@@ -149,6 +155,7 @@ class TestParseKeyPrefix:
         assert S3_KEY_PREFIX not in written
 
     def test_refuses_a_key_that_names_nothing(self, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
         given = create_given(tmp_path, prefix="")
 
         with pytest.raises(InvalidS3KeyPrefix):
