@@ -164,15 +164,15 @@ class TestRefusingAProjectStoredElsewhere:
 
         target.load(Mock())
 
-        given.validate_project_location.assert_called_once_with(
+        given.validate_project_location.validate.assert_called_once_with(
             given.otconfig.s3_key_prefix
         )
 
     def test_publishes_nothing_when_the_location_is_refused(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10322"""
         given = setup_default()
-        given.validate_project_location.side_effect = UnsupportedProjectLocation(
-            "stored in S3"
+        given.validate_project_location.validate.side_effect = (
+            UnsupportedProjectLocation("stored in S3")
         )
         target = create_target(given)
         observer = Mock()
@@ -204,8 +204,8 @@ class TestRefusingAProjectStoredElsewhere:
     def test_holds_no_prefix_when_the_location_is_refused(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10322"""
         given = setup_default()
-        given.validate_project_location.side_effect = UnsupportedProjectLocation(
-            "stored in S3"
+        given.validate_project_location.validate.side_effect = (
+            UnsupportedProjectLocation("stored in S3")
         )
         target = create_target(given)
 
@@ -219,8 +219,8 @@ class TestRefusingAProjectStoredElsewhere:
         given = setup_default()
         given.load_track_files = Mock(spec=LoadTrackFiles)
         given.load_track_files.load = AsyncMock()
-        given.validate_project_location.side_effect = UnsupportedProjectLocation(
-            "stored in S3"
+        given.validate_project_location.validate.side_effect = (
+            UnsupportedProjectLocation("stored in S3")
         )
         target = create_target(given)
 
