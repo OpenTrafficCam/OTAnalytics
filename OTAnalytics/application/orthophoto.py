@@ -9,6 +9,7 @@ from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.orthophoto import (
     Orthophoto,
     OrthophotoLocked,
+    OrthophotoNotFound,
     OrthophotoRequired,
 )
 from OTAnalytics.domain.section import SectionRepository
@@ -168,3 +169,36 @@ class ResolveMissingOrthophoto:
         if (file := await self._provide_orthophoto.provide()) is None:
             raise OrthophotoRequired(ORTHOPHOTO_REQUIRED)
         self._choose_orthophoto.choose(file)
+
+
+class ObtainOrthophoto(ABC):
+    """Makes the Orthophoto an otconfig declares available as a local file."""
+
+    @abstractmethod
+    async def obtain(self, reference: Path, base_folder: Path) -> Path:
+        """Obtain the declared Orthophoto.
+
+        Args:
+            reference (Path): the path the otconfig declares.
+            base_folder (Path): the otconfig's folder.
+
+        Returns:
+            Path: the local file.
+
+        Raises:
+            OrthophotoNotFound: if it cannot be obtained.
+        """
+        raise NotImplementedError
+
+
+class LocalObtainOrthophoto(ObtainOrthophoto):
+    """The Orthophoto lies on disk next to the otconfig, as videos do."""
+
+    async def obtain(self, reference: Path, base_folder: Path) -> Path:
+        file = base_folder / reference
+        if not file.exists():
+            raise OrthophotoNotFound(
+                f"The project's orthophoto '{file}' does not exist. Nothing was"
+                " loaded."
+            )
+        return file

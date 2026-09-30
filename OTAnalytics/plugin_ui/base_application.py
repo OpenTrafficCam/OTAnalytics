@@ -29,7 +29,9 @@ from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.orthophoto import (
     ChooseOrthophoto,
     CurrentOrthophotoGeoreference,
+    LocalObtainOrthophoto,
     NoOrthophotoToProvide,
+    ObtainOrthophoto,
     ProvideOrthophoto,
     ProvideOrthophotoGeoreference,
     ResolveMissingOrthophoto,
@@ -372,6 +374,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                 self.get_all_track_files,
                 self.get_current_remark,
                 self.current_key_prefix,
+                self.current_orthophoto,
             ),
             OtflowHasChanged(
                 self.flow_parser, self.get_all_sections, self.get_all_flows
@@ -401,6 +404,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             parse_json,
             self.validate_project_location,
             self.current_key_prefix,
+            self.current_orthophoto,
+            self.obtain_orthophoto,
         )
 
     @cached_property
@@ -451,6 +456,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.get_current_remark,
             self.current_key_prefix,
             self.otconfig_upload,
+            self.current_orthophoto,
         )
 
     @cached_property
@@ -476,6 +482,11 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def current_orthophoto(self) -> CurrentOrthophoto:
         """One holder for the whole application, like `current_key_prefix`."""
         return CurrentOrthophoto()
+
+    @cached_property
+    def obtain_orthophoto(self) -> ObtainOrthophoto:
+        """Overridden in S3 mode."""
+        return LocalObtainOrthophoto()
 
     @cached_property
     def orthophoto_georeference(self) -> ProvideOrthophotoGeoreference:
