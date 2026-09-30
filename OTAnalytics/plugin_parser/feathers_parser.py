@@ -11,11 +11,19 @@ from typing import Optional, cast
 
 import polars as pl
 
+from OTAnalytics.application.logger import logger
+from OTAnalytics.application.orthophoto import (
+    FALLBACK_GEO_CRS,
+    NoOrthophotoGeoreference,
+    ProvideOrthophotoGeoreference,
+)
 from OTAnalytics.application.parser.track_parser import (
     DetectionMetadata,
     TrackParser,
     TrackParseResult,
 )
+from OTAnalytics.domain import track
+from OTAnalytics.domain.georeference import GeoreferenceMetadata, geo_to_pixel_transform
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import (
@@ -34,10 +42,33 @@ from OTAnalytics.plugin_parser.convert_ottrk_to_feathers import (
     METADATA_SUFFIX,
     convert_ottrk_to_feather,
 )
+from OTAnalytics.plugin_parser.geo_only import is_geo_only
 from OTAnalytics.plugin_parser.georeference_parsing import (
     GeoreferenceMetadataParsingMixin,
 )
 from OTAnalytics.plugin_parser.json_parser import parse_json
+
+
+def place_on_orthophoto(
+    df: pl.DataFrame, georeference: GeoreferenceMetadata
+) -> pl.DataFrame:
+    """Derive image coordinates from geo coordinates.
+
+    Recomputed on every parse rather than stored in the feather: the feather is
+    cached next to the ottrk and must not bind a file to one Orthophoto.
+
+    Args:
+        df (pl.DataFrame): detections with geo_x / geo_y.
+        georeference (GeoreferenceMetadata): the Orthophoto's mapping.
+
+    Returns:
+        pl.DataFrame: the detections with x / y on the Orthophoto's pixels.
+    """
+    transform = geo_to_pixel_transform(georeference)
+    return df.with_columns(
+        (pl.col(track.GEO_X) * transform.scale_x + transform.offset_x).alias(track.X),
+        (pl.col(track.GEO_Y) * transform.scale_y + transform.offset_y).alias(track.Y),
+    )
 
 
 def use_feather_file(file: Path) -> Path:
@@ -68,16 +99,22 @@ class FeathersParser(TrackParser, GeoreferenceMetadataParsingMixin):
     def __init__(
         self,
         track_geometry_factory: Optional[POLARS_TRACK_GEOMETRY_FACTORY] = None,
+        orthophoto_georeference: ProvideOrthophotoGeoreference = (
+            NoOrthophotoGeoreference()
+        ),
     ) -> None:
         """
         Initialize the FeathersParser.
 
         Args: track_geometry_factory: Factory for creating track geometry datasets.
             If None, uses PandasTrackGeometryDataset.from_track_dataset.
+            orthophoto_georeference: Tells where the project's Orthophoto lies.
+            Needed to place Geo-only Track Files; by default there is none.
         """
         if track_geometry_factory is None:
             track_geometry_factory = PolarsTrackGeometryDataset.from_track_dataset
         self._track_geometry_factory = track_geometry_factory
+        self._orthophoto_georeference = orthophoto_georeference
 
     def parse(self, file: Path) -> TrackParseResult:
         """Parse feather file and its metadata to create TrackParseResult.
@@ -102,20 +139,39 @@ class FeathersParser(TrackParser, GeoreferenceMetadataParsingMixin):
         df = pl.read_ipc(file)
         metadata = parse_json(metadata_file)
 
-        calculator = PolarsByMaxConfidence()
-        tracks: TrackDataset = PolarsTrackDataset.from_dataframe(
-            df, self._track_geometry_factory, calculator=calculator
-        )
-
-        video_metadata = self._parse_video_metadata(metadata[KEY_VIDEO_METADATA])
-        detection_metadata = self._parse_detection_metadata(
-            metadata[KEY_DETECTION_METADATA]
-        )
         georeference_metadata = self.parse_georeference_metadata(metadata)
+        geo_only = is_geo_only(
+            has_georeference=georeference_metadata is not None,
+            carries_geo_coordinates=track.GEO_X in df.columns,
+        )
+        if geo_only:
+            georeference_metadata = self._orthophoto_georeference.for_crs(
+                self._geo_coordinates_crs(metadata, file)
+            )
+            df = place_on_orthophoto(df, georeference_metadata)
+
+        tracks: TrackDataset = PolarsTrackDataset.from_dataframe(
+            df, self._track_geometry_factory, calculator=PolarsByMaxConfidence()
+        )
         if georeference_metadata is not None:
             tracks = tracks.with_georeference_metadata(georeference_metadata)
 
-        return TrackParseResult(tracks, detection_metadata, video_metadata)
+        return TrackParseResult(
+            tracks,
+            self._parse_detection_metadata(metadata[KEY_DETECTION_METADATA]),
+            self._parse_video_metadata(metadata[KEY_VIDEO_METADATA]),
+            geo_coordinates_crs=self.parse_geo_coordinates_crs(metadata),
+            is_geo_only=geo_only,
+        )
+
+    def _geo_coordinates_crs(self, metadata: dict, file: Path) -> str:
+        if (crs := self.parse_geo_coordinates_crs(metadata)) is not None:
+            return crs
+        logger().warning(
+            f"'{file.name}' does not say which CRS its geo coordinates are in."
+            f" Assuming {FALLBACK_GEO_CRS}."
+        )
+        return FALLBACK_GEO_CRS
 
     def _parse_video_metadata(self, metadata: dict) -> VideoMetadata:
         """

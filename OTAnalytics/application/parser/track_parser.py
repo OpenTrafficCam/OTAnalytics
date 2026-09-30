@@ -17,6 +17,7 @@ class TrackParseResult:
     detection_metadata: DetectionMetadata
     video_metadata: VideoMetadata
     geo_coordinates_crs: str | None = None
+    is_geo_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,7 @@ class TracksParseResult:
     tracks: TrackDataset
     detections_metadata: list[DetectionMetadata]
     videos_metadata: list[VideoMetadata]
+    geo_only_per_file: list[bool]
 
 
 def combine_track_datasets(results: list[TrackParseResult]) -> TrackDataset:
@@ -43,7 +45,10 @@ class TrackParser(ABC):
         tracks = self._combine_track_datasets(results)
         detections_metadata = [result.detection_metadata for result in results]
         videos_metadata = [result.video_metadata for result in results]
-        return TracksParseResult(tracks, detections_metadata, videos_metadata)
+        geo_only_per_file = [result.is_geo_only for result in results]
+        return TracksParseResult(
+            tracks, detections_metadata, videos_metadata, geo_only_per_file
+        )
 
     def _combine_track_datasets(
         self, parse_results: list[TrackParseResult]

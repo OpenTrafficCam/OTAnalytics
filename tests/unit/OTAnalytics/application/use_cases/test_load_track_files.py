@@ -230,6 +230,7 @@ class TestLoadTrackFile:
                 tracks=first_tracks,
                 detections_metadata=[DetectionMetadata(frozenset(["car"]))],
                 videos_metadata=[create_video_metadata(Path("video1.mp4"))],
+                geo_only_per_file=[False],
             ),
         )
         target_first([some_file])
@@ -244,6 +245,7 @@ class TestLoadTrackFile:
                 tracks=second_tracks,
                 detections_metadata=[DetectionMetadata(frozenset(["car"]))],
                 videos_metadata=[create_video_metadata(Path("video2.mp4"))],
+                geo_only_per_file=[False],
             ),
         )
 
