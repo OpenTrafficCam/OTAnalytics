@@ -29,6 +29,10 @@ from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
+from OTAnalytics.application.project_location import (
+    RefuseAnyProjectLocation,
+    ValidateProjectLocation,
+)
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.run_configuration import (
     RunConfiguration,
@@ -36,6 +40,7 @@ from OTAnalytics.application.run_configuration import (
 )
 from OTAnalytics.application.state import (
     ActionState,
+    CurrentKeyPrefix,
     FileState,
     FlowState,
     SectionState,
@@ -353,6 +358,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                 self.get_all_videos,
                 self.get_all_track_files,
                 self.get_current_remark,
+                self.current_key_prefix,
             ),
             OtflowHasChanged(
                 self.flow_parser, self.get_all_sections, self.get_all_flows
@@ -380,7 +386,19 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.load_track_files,
             self.add_new_remark,
             parse_json,
+            self.validate_project_location,
+            self.current_key_prefix,
         )
+
+    @cached_property
+    def validate_project_location(self) -> ValidateProjectLocation:
+        """Refuse a project stored in S3; this starter reads the filesystem.
+
+        Overridden where S3 can be configured. Choosing the implementation here
+        is how the application answers the transfer-mode question, so no code
+        downstream has to ask it.
+        """
+        return RefuseAnyProjectLocation()
 
     @cached_property
     def reset_application(self) -> ResetApplication:
@@ -397,6 +415,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.flow_state,
             self.action_state,
             self.file_state,
+            self.current_key_prefix,
         )
 
     @cached_property
@@ -416,7 +435,18 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.otconfig_parser,
             self.file_state,
             self.get_current_remark,
+            self.current_key_prefix,
         )
+
+    @cached_property
+    def current_key_prefix(self) -> CurrentKeyPrefix:
+        """One holder for the whole application.
+
+        Save, dirty-tracking and the S3 providers all have to read the same
+        prefix; a second instance would split that between owners and let a
+        save write a location the providers never read from.
+        """
+        return CurrentKeyPrefix()
 
     @cached_property
     def get_current_remark(self) -> GetCurrentRemark:
