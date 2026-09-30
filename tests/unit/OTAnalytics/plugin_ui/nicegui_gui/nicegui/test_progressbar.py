@@ -1,5 +1,6 @@
 """Tests for the in-browser progressbar of the webui."""
 
+import asyncio
 from dataclasses import dataclass
 
 import pytest
@@ -241,6 +242,24 @@ class TestProgressbarWithoutABrowser:
         assert target.is_open is False
 
     @pytest.mark.asyncio
+    async def test_shows_nothing_when_opened_outside_any_page(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """A load requested over HTTP, not from a page, has no browser to show in.
+
+        OTCloud hands the UI Worker an otconfig through a plain HTTP endpoint,
+        whose task carries no NiceGUI slot at all.
+
+        #Requirement https://openproject.platomo.de/wp/10281
+        """
+        given = create_given(resource_manager)
+        target = create_target(given, total=2)
+
+        await asyncio.create_task(open_outside_any_page(target))
+
+        assert target.is_open is False
+
+    @pytest.mark.asyncio
     async def test_still_tracks_progress_when_no_browser_is_connected(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
@@ -253,3 +272,8 @@ class TestProgressbarWithoutABrowser:
         target.complete("first.mp4")
 
         assert target.state.message == "Downloading 1 / 2 files"
+
+
+async def open_outside_any_page(progressbar: NiceguiProgressbar) -> None:
+    """Open the progressbar in a fresh task, whose NiceGUI slot stack is empty."""
+    progressbar.open()

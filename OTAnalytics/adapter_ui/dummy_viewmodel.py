@@ -627,6 +627,12 @@ class DummyViewModel(
 
     async def save_otconfig(self) -> None:
         save_suggestion = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
+        if self._application.get_current_key_prefix() is not None:
+            # A project that names a location was opened by an operator naming
+            # it, not chosen from a picker (OP#10323 decision 1), so it always
+            # re-saves to its own name and place with no new UI.
+            await self._save_otconfig(save_suggestion.file_path)
+            return
         configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")],
@@ -636,9 +642,9 @@ class DummyViewModel(
         )
         if not configuration_file:
             return
-        self._save_otconfig(configuration_file)
+        await self._save_otconfig(configuration_file)
 
-    def _save_otconfig(self, otconfig_file: Path) -> None:
+    async def _save_otconfig(self, otconfig_file: Path) -> None:
         # Ensure the file has the correct extension
         otconfig_file_str = ensure_file_extension_is_present(
             str(otconfig_file), [f"*.{OTCONFIG_FILE_TYPE}"], f".{OTCONFIG_FILE_TYPE}"
@@ -647,7 +653,7 @@ class DummyViewModel(
 
         logger().info(f"Config file to save: {otconfig_file}")
         try:
-            self._application.save_otconfig(otconfig_file)
+            await self._application.save_otconfig(otconfig_file)
         except NoSectionsToSave:
             message = (
                 f"{MESSAGE_CONFIGURATION_NOT_SAVED}"
@@ -943,6 +949,12 @@ class DummyViewModel(
 
     async def save_configuration(self) -> None:
         save_suggestion = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
+        if self._application.get_current_key_prefix() is not None:
+            # A project that names a location is always an otconfig and always
+            # re-saves to its own name and place with no new UI (OP#10323
+            # decision 1 & 5).
+            await self._save_otconfig(save_suggestion.file_path)
+            return
         configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
@@ -967,13 +979,13 @@ class DummyViewModel(
         if configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
             self._save_otflow(configuration_file)
         elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
-            self._save_otconfig(configuration_file)
+            await self._save_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to save has unknown file extension")
 
     async def quick_save_configuration(self) -> None:
         try:
-            self._application.quick_save_configuration()
+            await self._application.quick_save_configuration()
         except NoExistingFileToSave:
             await self.save_configuration()
 
