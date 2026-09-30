@@ -27,8 +27,12 @@ from OTAnalytics.application.config_specification import OtConfigDefaultValuePro
 from OTAnalytics.application.datastore import Datastore, EventListParser, VideoParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.orthophoto import (
+    ChooseOrthophoto,
     CurrentOrthophotoGeoreference,
+    NoOrthophotoToProvide,
+    ProvideOrthophoto,
     ProvideOrthophotoGeoreference,
+    ResolveMissingOrthophoto,
 )
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.parser.track_parser import TrackParser
@@ -480,6 +484,20 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     @cached_property
+    def provide_orthophoto(self) -> ProvideOrthophoto:
+        """Overridden by front-ends that can ask the user for a file."""
+        return NoOrthophotoToProvide()
+
+    @cached_property
+    def resolve_missing_orthophoto(self) -> ResolveMissingOrthophoto:
+        return ResolveMissingOrthophoto(
+            self.provide_orthophoto,
+            ChooseOrthophoto(
+                self.current_orthophoto, self.section_repository, self.track_repository
+            ),
+        )
+
+    @cached_property
     def get_current_remark(self) -> GetCurrentRemark:
         return GetCurrentRemark(self.remark_repository)
 
@@ -926,6 +944,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.progressbar_builder,
             self.tracks_metadata,
             self.videos_metadata,
+            current_orthophoto=self.current_orthophoto,
+            resolve_missing_orthophoto=self.resolve_missing_orthophoto,
         )
 
     @cached_property

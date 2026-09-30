@@ -1,15 +1,25 @@
 from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from OTAnalytics.application.orthophoto import CurrentOrthophotoGeoreference
+from OTAnalytics.application.orthophoto import (
+    ChooseOrthophoto,
+    CurrentOrthophotoGeoreference,
+    ProvideOrthophoto,
+    ResolveMissingOrthophoto,
+)
 from OTAnalytics.application.state import CurrentOrthophoto
-from OTAnalytics.domain.orthophoto import Orthophoto, OrthophotoRequired
+from OTAnalytics.domain.orthophoto import (
+    Orthophoto,
+    OrthophotoLocked,
+    OrthophotoRequired,
+)
 
 ORTHOPHOTO_FILE = Path("site/map.tiff")
 CRS = "EPSG:25833"
+PICKED_FILE = Path("picked/map.tiff")
 
 
 @dataclass
@@ -67,3 +77,103 @@ class TestCurrentOrthophoto:
         given.current_orthophoto.reset()
 
         assert given.current_orthophoto.get() is None
+
+
+@dataclass
+class GivenChoose:
+    current_orthophoto: CurrentOrthophoto
+    section_repository: Mock
+    track_repository: Mock
+
+
+def create_given_choose() -> GivenChoose:
+    return GivenChoose(
+        current_orthophoto=CurrentOrthophoto(),
+        section_repository=Mock(),
+        track_repository=Mock(),
+    )
+
+
+def setup_default_choose(given: GivenChoose) -> GivenChoose:
+    given.section_repository.get_all.return_value = []
+    given.track_repository.get_all.return_value.empty = True
+    return given
+
+
+def setup_with_sections(given: GivenChoose) -> GivenChoose:
+    given.section_repository.get_all.return_value = [Mock()]
+    return given
+
+
+def setup_with_tracks(given: GivenChoose) -> GivenChoose:
+    given.track_repository.get_all.return_value.empty = False
+    return given
+
+
+def create_target_choose(given: GivenChoose) -> ChooseOrthophoto:
+    return ChooseOrthophoto(
+        given.current_orthophoto, given.section_repository, given.track_repository
+    )
+
+
+class TestChooseOrthophoto:
+    def test_choose_sets_the_orthophoto(self) -> None:
+        given = setup_default_choose(create_given_choose())
+
+        create_target_choose(given).choose(PICKED_FILE)
+
+        assert given.current_orthophoto.get() == Orthophoto(file=PICKED_FILE)
+
+    def test_choose_is_refused_when_sections_exist(self) -> None:
+        given = setup_with_sections(setup_default_choose(create_given_choose()))
+
+        with pytest.raises(OrthophotoLocked):
+            create_target_choose(given).choose(PICKED_FILE)
+
+    def test_choose_is_refused_when_tracks_exist(self) -> None:
+        given = setup_with_tracks(setup_default_choose(create_given_choose()))
+
+        with pytest.raises(OrthophotoLocked):
+            create_target_choose(given).choose(PICKED_FILE)
+
+
+@dataclass
+class GivenResolve:
+    provide_orthophoto: AsyncMock
+    choose_orthophoto: Mock
+
+
+def create_given_resolve() -> GivenResolve:
+    return GivenResolve(
+        provide_orthophoto=AsyncMock(spec=ProvideOrthophoto),
+        choose_orthophoto=Mock(spec=ChooseOrthophoto),
+    )
+
+
+def setup_default_resolve(given: GivenResolve) -> GivenResolve:
+    given.provide_orthophoto.provide.return_value = PICKED_FILE
+    return given
+
+
+def setup_with_nothing_provided(given: GivenResolve) -> GivenResolve:
+    given.provide_orthophoto.provide.return_value = None
+    return given
+
+
+def create_target_resolve(given: GivenResolve) -> ResolveMissingOrthophoto:
+    return ResolveMissingOrthophoto(given.provide_orthophoto, given.choose_orthophoto)
+
+
+class TestResolveMissingOrthophoto:
+    async def test_chooses_the_provided_file(self) -> None:
+        given = setup_default_resolve(create_given_resolve())
+
+        await create_target_resolve(given).resolve()
+
+        given.choose_orthophoto.choose.assert_called_once_with(PICKED_FILE)
+
+    async def test_refuses_when_nothing_is_provided(self) -> None:
+        given = setup_with_nothing_provided(create_given_resolve())
+
+        with pytest.raises(OrthophotoRequired):
+            await create_target_resolve(given).resolve()
