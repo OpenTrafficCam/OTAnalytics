@@ -28,3 +28,17 @@ class GeoreferenceMetadataParsingMixin:
             padding=georeference[ottrk_format.BEV_PADDING],
             crs=georeference[ottrk_format.CRS],
         )
+
+    @classmethod
+    def parse_geo_coordinates_crs(cls, metadata: dict) -> str | None:
+        """Read the CRS of the detections' geo coordinates, if the file names one.
+
+        Args:
+            metadata: The full metadata dict from an ottrk file or feather sidecar.
+
+        Returns:
+            The CRS string, or None when the file does not state it.
+        """
+        if (block := metadata.get(ottrk_format.GEO_COORDINATES)) is None:
+            return None
+        return block.get(ottrk_format.CRS)

@@ -16,6 +16,7 @@ class TrackParseResult:
     tracks: TrackDataset
     detection_metadata: DetectionMetadata
     video_metadata: VideoMetadata
+    geo_coordinates_crs: str | None = None
 
 
 @dataclass(frozen=True)

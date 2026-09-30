@@ -1,5 +1,6 @@
 """Tests for the convert_ottrk_to_feathers module."""
 
+from datetime import datetime, timezone
 from unittest.mock import Mock
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
@@ -66,3 +67,31 @@ class TestCreateMetadataDict:
         result = create_metadata_dict(parse_result)
 
         assert ottrk_format.GEOREFERENCE not in result
+
+
+def create_video_metadata() -> VideoMetadata:
+    """Create a test VideoMetadata object."""
+    return VideoMetadata(
+        path="v.mp4",
+        recorded_start_date=datetime(2026, 4, 22, tzinfo=timezone.utc),
+        expected_duration=None,
+        recorded_fps=20.0,
+        actual_fps=None,
+        number_of_frames=1,
+    )
+
+
+class TestCreateMetadataDictGeoCoordinates:
+    def test_writes_crs_of_geo_coordinates(self) -> None:
+        tracks = Mock()
+        tracks.georeference_metadata = None
+        result = TrackParseResult(
+            tracks=tracks,
+            detection_metadata=DetectionMetadata(frozenset({"car"})),
+            video_metadata=create_video_metadata(),
+            geo_coordinates_crs="EPSG:25833",
+        )
+
+        actual = create_metadata_dict(result)
+
+        assert actual[ottrk_format.GEO_COORDINATES] == {ottrk_format.CRS: "EPSG:25833"}
