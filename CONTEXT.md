@@ -54,3 +54,18 @@ one opens a file chooser, the S3 one asks for a Load Window and downloads. This
 is the seam that makes the Transfer Mode interchangeable.
 _Avoid_: file loader, importer (both suggest they also parse, which they do not —
 they only obtain paths).
+
+### Placing Tracks in the world
+
+**Geo-only Track File**:
+A Track file whose positions are given only in geo coordinates, with no image
+coordinates and no Video. OTFusion produces these, because it fuses several
+cameras into one world view rather than into any single camera's image.
+_Avoid_: fusion video, bird's-eye-view file (there is no video or rendered image).
+
+**Orthophoto**:
+A georeferenced aerial image of a site, shown as the background for Tracks that
+have no Video. Its own georeference is what relates a point on the image to a
+point in the world.
+_Avoid_: map, GeoTIFF (a file format, not the concept), bird's-eye view (the image
+OTFusion used to render, which no longer exists).
