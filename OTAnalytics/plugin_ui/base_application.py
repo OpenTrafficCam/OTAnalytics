@@ -26,6 +26,10 @@ from OTAnalytics.application.analysis.traffic_counting_specification import Expo
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import Datastore, EventListParser, VideoParser
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.orthophoto import (
+    CurrentOrthophotoGeoreference,
+    ProvideOrthophotoGeoreference,
+)
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
@@ -41,6 +45,7 @@ from OTAnalytics.application.run_configuration import (
 from OTAnalytics.application.state import (
     ActionState,
     CurrentKeyPrefix,
+    CurrentOrthophoto,
     FileState,
     FlowState,
     SectionState,
@@ -237,6 +242,9 @@ from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.number_of_tracks_to
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.tracks_as_dataframe_provider import (  # noqa
     TracksAsDataFrameProvider,
 )
+from OTAnalytics.plugin_orthophoto.rasterio_orthophoto import (
+    read_orthophoto_georeference,
+)
 from OTAnalytics.plugin_parser.export import (
     AddSectionInformationExporterFactory,
     CachedExporterFactory,
@@ -417,6 +425,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.action_state,
             self.file_state,
             self.current_key_prefix,
+            self.current_orthophoto,
         )
 
     @cached_property
@@ -458,6 +467,17 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         save write a location the providers never read from.
         """
         return CurrentKeyPrefix()
+
+    @cached_property
+    def current_orthophoto(self) -> CurrentOrthophoto:
+        """One holder for the whole application, like `current_key_prefix`."""
+        return CurrentOrthophoto()
+
+    @cached_property
+    def orthophoto_georeference(self) -> ProvideOrthophotoGeoreference:
+        return CurrentOrthophotoGeoreference(
+            self.current_orthophoto, read_orthophoto_georeference
+        )
 
     @cached_property
     def get_current_remark(self) -> GetCurrentRemark:
@@ -685,7 +705,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     def _create_track_parser(self) -> TrackParser:
-        return FeathersParser(self.track_geometry_factory)
+        return FeathersParser(self.track_geometry_factory, self.orthophoto_georeference)
 
     def _create_stream_track_parser(self) -> StreamTrackParser:
         return StreamOttrkParser(

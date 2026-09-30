@@ -17,6 +17,7 @@ from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import VALUE, Subject
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
@@ -810,3 +811,26 @@ class FileState:
 
     def reset(self) -> None:
         self.last_saved_config.set(None)
+
+
+class CurrentOrthophoto:
+    """The Orthophoto the loaded project shows behind its Geo-only Track Files.
+
+    Held like `CurrentKeyPrefix`: it arrives with the project, or is picked while
+    loading, and must not outlive the project it belongs to.
+    """
+
+    def __init__(self) -> None:
+        self._orthophoto = ObservableOptionalProperty[Orthophoto]()
+
+    def get(self) -> Orthophoto | None:
+        return self._orthophoto.get()
+
+    def set(self, orthophoto: Orthophoto | None) -> None:
+        self._orthophoto.set(orthophoto)
+
+    def register(self, observer: Callable[[Orthophoto | None], None]) -> None:
+        self._orthophoto.register(observer)
+
+    def reset(self) -> None:
+        self._orthophoto.set(None)
