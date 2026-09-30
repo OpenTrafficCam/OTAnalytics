@@ -561,6 +561,9 @@ KNOWN_GEO = (449226.28994160134, 5699327.2198470775)
 # Independently computed: see test_georeference.py
 KNOWN_ORTHOPHOTO_PIXEL = (279.11129753049903, 439.5834846490163)
 WEST_OF_ORTHOPHOTO_GEO_X = 449189.0
+# (449189.0 - geo_min_x) / ((geo_max_x - geo_min_x) / 983), computed by hand.
+WEST_OF_ORTHOPHOTO_PIXEL_X = -103.62984022117577
+CAMERA_PIXEL = (100.0, 100.0)
 
 
 @dataclass
@@ -603,6 +606,25 @@ def setup_default_geo_only(
         sidecar[ottrk_format.GEO_COORDINATES] = {ottrk_format.CRS: GEO_ONLY_CRS}
     (given.tmp_dir / "fusion_metadata.json").write_text(json.dumps(sidecar))
     given.orthophoto_georeference.for_crs.return_value = ORTHOPHOTO_GEOREFERENCE
+    return given
+
+
+def setup_camera_file_with_geo_columns(
+    given: GivenGeoOnlyFeather,
+) -> GivenGeoOnlyFeather:
+    row = SINGLE_ROW | {track.GEO_X: KNOWN_GEO[0], track.GEO_Y: KNOWN_GEO[1]}
+    polars.DataFrame(row).write_ipc(given.feather_file)
+    sidecar: dict[str, Any] = {
+        "detection_metadata": {"detection_classes": ["car"]},
+        "video_metadata": {
+            "path": "camera.mp4",
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
+            "recorded_fps": 20.0,
+            "number_of_frames": 1,
+        },
+        ottrk_format.GEOREFERENCE: SAMPLE_GEOREFERENCE_METADATA_DICT,
+    }
+    (given.tmp_dir / "fusion_metadata.json").write_text(json.dumps(sidecar))
     return given
 
 
@@ -666,7 +688,7 @@ class TestFeathersParserGeoOnly:
 
         result = target.parse(given.feather_file)
 
-        assert placed_pixel(result)[0] < 0
+        assert placed_pixel(result)[0] == approx(WEST_OF_ORTHOPHOTO_PIXEL_X, rel=1e-9)
 
     def test_refuses_without_an_orthophoto(self, test_data_tmp_dir: Path) -> None:
         given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
@@ -682,6 +704,54 @@ class TestFeathersParserGeoOnly:
         result = target.parse(given.feather_files[0])
 
         assert not result.is_geo_only
+
+    def test_camera_file_with_geo_columns_is_not_geo_only(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_camera_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert not result.is_geo_only
+
+    def test_camera_file_with_geo_columns_keeps_its_pixels(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_camera_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert placed_pixel(result) == CAMERA_PIXEL
+
+    def test_camera_file_with_geo_columns_keeps_its_own_georeference(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_camera_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert result.tracks.georeference_metadata == GEOREF_METADATA
+
+    def test_camera_file_with_geo_columns_does_not_ask_for_the_orthophoto(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_camera_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        target.parse(given.feather_file)
+
+        given.orthophoto_georeference.for_crs.assert_not_called()
 
     def test_parse_files_reports_geo_only_per_file(
         self, test_data_tmp_dir: Path
