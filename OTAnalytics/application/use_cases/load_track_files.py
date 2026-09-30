@@ -13,7 +13,11 @@ from OTAnalytics.application.state import (
     TracksMetadata,
     VideosMetadata,
 )
-from OTAnalytics.domain.orthophoto import MixedTrackFiles, OrthophotoRequired
+from OTAnalytics.domain.orthophoto import (
+    MixedTrackFiles,
+    Orthophoto,
+    OrthophotoRequired,
+)
 from OTAnalytics.domain.progress import CompletionProgress, ProgressbarBuilder
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
@@ -68,6 +72,8 @@ class LoadTrackFiles:
 
         Raises:
             RuntimeError: if called while an event loop is running.
+            OrthophotoRequired: if the files are geo-only and the project has no
+                orthophoto, because the blocking path cannot ask the user for one.
         """
         if self._event_loop_is_running():
             raise RuntimeError(
@@ -92,14 +98,27 @@ class LoadTrackFiles:
         """
         if files_to_load := self._files_to_load(files):
             progressbar = self._start_progress(files_to_load)
+            orthophoto_before_load = self._current_orthophoto.get()
             try:
                 # parse_files must stay pure: no repository, no observer, no ui. It
                 # runs on a worker thread here, and repositories notify observers
                 # that mutate widgets, which is only safe on the event loop.
                 parse_result = await self._parse_resolving_orthophoto(files_to_load)
                 self._publish(parse_result, files_to_load)
+            except Exception:
+                self._restore_orthophoto(orthophoto_before_load)
+                raise
             finally:
                 progressbar.close()
+
+    def _restore_orthophoto(self, orthophoto: Orthophoto | None) -> None:
+        """Undo an Orthophoto chosen for a load that then failed.
+
+        A failed load must leave the project as it was, or every later camera
+        load would be refused as mixed.
+        """
+        if self._current_orthophoto.get() != orthophoto:
+            self._current_orthophoto.set(orthophoto)
 
     async def _parse_resolving_orthophoto(
         self, files_to_load: list[Path]

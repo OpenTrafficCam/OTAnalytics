@@ -12,13 +12,19 @@ from OTAnalytics.application.parser.track_parser import (
     TrackParser,
     TracksParseResult,
 )
+from OTAnalytics.application.state import CurrentOrthophoto
 from OTAnalytics.application.use_cases.load_track_files import (
     PARSING_DESCRIPTION,
     PARSING_UNIT,
     LoadTrackFiles,
 )
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
-from OTAnalytics.domain.orthophoto import MixedTrackFiles, OrthophotoRequired
+from OTAnalytics.domain.orthophoto import (
+    MixedTrackFiles,
+    Orthophoto,
+    OrthophotoLocked,
+    OrthophotoRequired,
+)
 from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IncompatibleGeoreferenceMetadataError,
@@ -573,6 +579,7 @@ class TestLoadTrackFilesGeoOnly:
         target([some_file])
 
         given.video_parser.parse.assert_not_called()
+        given.video_repository.add_all.assert_called_once_with([])
         given.track_repository.add_all.assert_called_once()
 
     def test_camera_file_is_refused_when_project_shows_an_orthophoto(self) -> None:
@@ -632,6 +639,70 @@ class TestLoadTrackFilesGeoOnly:
         given.videos_metadata.update.assert_not_called()
         given.track_repository.add_all.assert_not_called()
 
+    async def test_propagates_a_locked_orthophoto_and_publishes_nothing(self) -> None:
+        given = setup_needing_an_orthophoto()
+        given.resolve_missing_orthophoto.resolve.side_effect = OrthophotoLocked(
+            "locked"
+        )
+        target = create_target(given)
+
+        with pytest.raises(OrthophotoLocked):
+            await target.load_async([some_file])
+
+        given.videos_metadata.update.assert_not_called()
+        given.track_repository.add_all.assert_not_called()
+
+    async def test_restores_the_orthophoto_when_publishing_is_refused(self) -> None:
+        given = setup_needing_an_orthophoto(
+            video_files=[Path("fusion.mp4"), Path("video.mp4")],
+            track_files=[some_file, other_file],
+            geo_only_per_file=[True, False],
+        )
+        target = create_target(given)
+
+        with pytest.raises(MixedTrackFiles):
+            await target.load_async([some_file, other_file])
+
+        assert given.current_orthophoto.get() is None
+
+    async def test_restores_the_orthophoto_when_the_second_parse_fails(self) -> None:
+        given = setup_needing_an_orthophoto()
+        given.track_parser.parse_files.side_effect = [
+            OrthophotoRequired("needs one"),
+            ValueError("broken track file"),
+        ]
+        target = create_target(given)
+
+        with pytest.raises(ValueError):
+            await target.load_async([some_file])
+
+        assert given.current_orthophoto.get() is None
+
+
+def setup_needing_an_orthophoto(
+    video_files: list[Path] | None = None,
+    track_files: list[Path] | None = None,
+    geo_only_per_file: list[bool] | None = None,
+) -> "Given":
+    """The first parse asks for an orthophoto, which resolving then sets."""
+    given = setup(
+        track_ids=[TrackId("1")],
+        video_files=video_files or [Path("fusion.mp4")],
+        track_files=track_files or [some_file],
+        existing_track_files=[],
+        classes={"car"},
+        geo_only_per_file=geo_only_per_file or [True],
+    )
+    given.current_orthophoto = CurrentOrthophoto()  # type: ignore[assignment]
+    given.resolve_missing_orthophoto.resolve.side_effect = (
+        lambda: given.current_orthophoto.set(Orthophoto(file=Path("map.tiff")))
+    )
+    given.track_parser.parse_files.side_effect = [
+        OrthophotoRequired("needs one"),
+        given.parse_result,
+    ]
+    return given
+
 
 def call_names(given: "Given") -> list[str]:
     """The collaborator methods called, in call order."""
@@ -681,7 +752,7 @@ def setup(
     classes: set[str],
     georeference_metadata: GeoreferenceMetadata | None = None,
     geo_only_per_file: list[bool] | None = None,
-) -> Given:
+) -> "Given":
     videos = create_videos(video_files)
     videos_metadata = [create_video_metadata(video_file) for video_file in video_files]
     detections_metadata = [create_detection_metadata(classes) for _ in track_files]
