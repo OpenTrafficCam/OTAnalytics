@@ -51,6 +51,11 @@ class TestReadVideoName:
 
         assert read_video_name(given.ottrk) == "something_else.mkv"
 
+    def test_a_geo_only_track_file_has_no_video(self, tmp_path: Path) -> None:
+        given = create_given(tmp_path, geo_only_content())
+
+        assert read_video_name(given.ottrk) is None
+
     def test_a_track_file_without_video_metadata_is_reported(
         self, tmp_path: Path
     ) -> None:
@@ -128,3 +133,7 @@ def create_given(tmp_path: Path, metadata: dict | None, name: str = "a.ottrk") -
 
 def metadata_naming(filename: str, filetype: str) -> dict:
     return {"metadata": {"video": {"filename": filename, "filetype": filetype}}}
+
+
+def geo_only_content() -> dict:
+    return {"metadata": {}, "data": {"detections": [{"geo_x": 1.0, "geo_y": 2.0}]}}
