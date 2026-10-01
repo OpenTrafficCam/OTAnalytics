@@ -105,7 +105,8 @@ class LoadTrackFiles:
                 # that mutate widgets, which is only safe on the event loop.
                 parse_result = await self._parse_resolving_orthophoto(files_to_load)
                 self._publish(parse_result, files_to_load)
-            except Exception:
+            except BaseException:
+                # Also on cancellation, which is no Exception.
                 self._restore_orthophoto(orthophoto_before_load)
                 raise
             finally:

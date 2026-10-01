@@ -678,6 +678,19 @@ class TestLoadTrackFilesGeoOnly:
 
         assert given.current_orthophoto.get() is None
 
+    async def test_restores_the_orthophoto_when_the_load_is_cancelled(self) -> None:
+        given = setup_needing_an_orthophoto()
+        given.track_parser.parse_files.side_effect = [
+            OrthophotoRequired("needs one"),
+            asyncio.CancelledError(),
+        ]
+        target = create_target(given)
+
+        with pytest.raises(asyncio.CancelledError):
+            await target.load_async([some_file])
+
+        assert given.current_orthophoto.get() is None
+
 
 def setup_needing_an_orthophoto(
     video_files: list[Path] | None = None,
