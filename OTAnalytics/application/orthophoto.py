@@ -65,6 +65,14 @@ class NoOrthophotoGeoreference(ProvideOrthophotoGeoreference):
     """For parsers that are never given an Orthophoto."""
 
     def for_crs(self, crs: str) -> GeoreferenceMetadata:
+        """Refuse, as there is never an Orthophoto here.
+
+        Args:
+            crs (str): the CRS of the tracks' geo coordinates.
+
+        Raises:
+            OrthophotoRequired: always.
+        """
         raise OrthophotoRequired(ORTHOPHOTO_REQUIRED)
 
 
@@ -93,6 +101,17 @@ class CurrentOrthophotoGeoreference(ProvideOrthophotoGeoreference):
         self._cache: dict[tuple[Path, str], GeoreferenceMetadata] = {}
 
     def for_crs(self, crs: str) -> GeoreferenceMetadata:
+        """The pixel-geo mapping of the current Orthophoto.
+
+        Args:
+            crs (str): the CRS of the tracks' geo coordinates.
+
+        Returns:
+            GeoreferenceMetadata: bounds in `crs` and the image size.
+
+        Raises:
+            OrthophotoRequired: if the project has no Orthophoto.
+        """
         if (orthophoto := self._current_orthophoto.get()) is None:
             raise OrthophotoRequired(ORTHOPHOTO_REQUIRED)
         key = (orthophoto.file, crs)

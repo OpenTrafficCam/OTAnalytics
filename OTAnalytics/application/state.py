@@ -295,6 +295,11 @@ class OrthophotoImageSizeUpdater:
         self._updater = updater
 
     def notify(self, orthophoto: Orthophoto | None) -> None:
+        """Size the canvas to the Orthophoto's image, if there is one.
+
+        Args:
+            orthophoto (Orthophoto | None): the project's new Orthophoto.
+        """
         if (image := self._orthophoto_image()) is not None:
             self._updater.notify(image)
 
@@ -840,13 +845,30 @@ class CurrentOrthophoto:
         self._orthophoto = ObservableOptionalProperty[Orthophoto]()
 
     def get(self) -> Orthophoto | None:
+        """The project's Orthophoto.
+
+        Returns:
+            Orthophoto | None: the Orthophoto, or None for a project without one.
+        """
         return self._orthophoto.get()
 
     def set(self, orthophoto: Orthophoto | None) -> None:
+        """Make `orthophoto` the project's and notify the observers.
+
+        Args:
+            orthophoto (Orthophoto | None): the new Orthophoto, or None for none.
+        """
         self._orthophoto.set(orthophoto)
 
     def register(self, observer: Callable[[Orthophoto | None], None]) -> None:
+        """Notify `observer` whenever the project's Orthophoto changes.
+
+        Args:
+            observer (Callable[[Orthophoto | None], None]): called with the new
+                Orthophoto.
+        """
         self._orthophoto.register(observer)
 
     def reset(self) -> None:
+        """Forget the Orthophoto, as for a new project, and notify the observers."""
         self._orthophoto.set(None)
