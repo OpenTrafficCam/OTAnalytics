@@ -1,6 +1,6 @@
+import asyncio
 from collections.abc import Callable, Iterator, Sequence
 from typing import Any, Optional
-import asyncio
 
 from OTAnalytics.application.config import DEFAULT_PROGRESSBAR_STEP_PERCENTAGE
 from OTAnalytics.domain.progress import Counter, Progressbar
