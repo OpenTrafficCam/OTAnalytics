@@ -10,6 +10,7 @@ from OTAnalytics.application.orthophoto import (
     ChooseOrthophoto,
     CurrentOrthophotoGeoreference,
     CurrentOrthophotoImage,
+    LocalObtainOrthophoto,
     ProvideOrthophoto,
     ResolveMissingOrthophoto,
 )
@@ -18,6 +19,7 @@ from OTAnalytics.domain.orthophoto import (
     MixedTrackFiles,
     Orthophoto,
     OrthophotoLocked,
+    OrthophotoNotFound,
     OrthophotoRequired,
 )
 from OTAnalytics.domain.track import TrackImage
@@ -283,3 +285,45 @@ class TestCurrentOrthophotoImage:
         given = create_given_image()
 
         assert create_target_image(given).get() is None
+
+
+DECLARED_ORTHOPHOTO = Path("map.tiff")
+
+
+@dataclass
+class GivenLocalObtain:
+    base_folder: Path
+
+
+def create_given_local_obtain(tmp_path: Path) -> GivenLocalObtain:
+    return GivenLocalObtain(base_folder=tmp_path)
+
+
+def setup_with_orthophoto_on_disk(given: GivenLocalObtain) -> GivenLocalObtain:
+    (given.base_folder / DECLARED_ORTHOPHOTO).touch()
+    return given
+
+
+def create_target_local_obtain() -> LocalObtainOrthophoto:
+    return LocalObtainOrthophoto()
+
+
+class TestLocalObtainOrthophoto:
+    async def test_finds_the_orthophoto_next_to_the_otconfig(
+        self, tmp_path: Path
+    ) -> None:
+        given = setup_with_orthophoto_on_disk(create_given_local_obtain(tmp_path))
+
+        actual = await create_target_local_obtain().obtain(
+            DECLARED_ORTHOPHOTO, given.base_folder
+        )
+
+        assert actual == given.base_folder / DECLARED_ORTHOPHOTO
+
+    async def test_reports_a_missing_orthophoto(self, tmp_path: Path) -> None:
+        given = create_given_local_obtain(tmp_path)
+
+        with pytest.raises(OrthophotoNotFound):
+            await create_target_local_obtain().obtain(
+                DECLARED_ORTHOPHOTO, given.base_folder
+            )

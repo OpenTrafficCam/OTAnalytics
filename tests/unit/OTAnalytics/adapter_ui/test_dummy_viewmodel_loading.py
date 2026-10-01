@@ -14,7 +14,7 @@ from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideTrackFiles,
     ProvideVideoFiles,
 )
-from OTAnalytics.domain.orthophoto import MixedTrackFiles
+from OTAnalytics.domain.orthophoto import MixedTrackFiles, OrthophotoRequired
 
 TRACK_FILES = [Path("folder/a.ottrk"), Path("folder/b.ottrk")]
 VIDEO_FILES = [Path("folder/a.mp4"), Path("folder/b.mp4")]
@@ -49,6 +49,13 @@ def create_given(
 
 def setup_with_videos_refused(given: Given) -> Given:
     given.application.add_videos.side_effect = MixedTrackFiles(REFUSAL)
+    return given
+
+
+def setup_with_tracks_refused(given: Given) -> Given:
+    given.application.add_tracks_of_files_async.side_effect = OrthophotoRequired(
+        REFUSAL
+    )
     return given
 
 
@@ -105,6 +112,15 @@ class TestLoadTracks:
         await target.load_tracks()
 
         given.application.add_tracks_of_files_async.assert_not_awaited()
+
+    async def test_reports_an_orthophoto_error(self) -> None:
+        given = setup_with_tracks_refused(create_given(tracks=TRACK_FILES))
+        target = create_target(given)
+
+        await target.load_tracks()
+
+        given.ui_factory.info_box.assert_called_once()
+        assert given.ui_factory.info_box.call_args.kwargs["message"] == REFUSAL
 
 
 class TestAddVideo:

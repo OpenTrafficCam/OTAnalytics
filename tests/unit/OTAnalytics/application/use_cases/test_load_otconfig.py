@@ -14,12 +14,18 @@ from OTAnalytics.application.use_cases.load_otconfig import (
 )
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.section_repository import SectionAlreadyExists
-from OTAnalytics.domain.orthophoto import Orthophoto, OrthophotoLocked
+from OTAnalytics.domain.orthophoto import (
+    Orthophoto,
+    OrthophotoLocked,
+    OrthophotoNotFound,
+)
 
 REMARK = "my remark"
 OTCONFIG_FILE = Path("/project/site/project.otconfig")
 DECLARED_ORTHOPHOTO = Path("map2.tiff")
 OBTAINED_FILE = Path("/local/map2.tiff")
+# Once when loading starts, once more when it aborts.
+RESET_BEFORE_AND_ON_ABORT = 2
 
 
 class TestLoadOtconfig:
@@ -260,6 +266,23 @@ class TestLoadOtconfigOrthophoto:
 
         given.reset_application.reset.assert_called()
 
+    async def test_load_aborts_when_the_orthophoto_is_not_found(self) -> None:
+        given = setup_with_orthophoto_not_found(setup_with_orthophoto(setup_default()))
+        target = create_target(given)
+
+        with pytest.raises(UnableToLoadOtconfigFile):
+            await target.load_async(OTCONFIG_FILE)
+
+    async def test_resets_when_the_orthophoto_is_not_found(self) -> None:
+        given = setup_with_orthophoto_not_found(setup_with_orthophoto(setup_default()))
+        target = create_target(given)
+
+        with pytest.raises(UnableToLoadOtconfigFile):
+            await target.load_async(OTCONFIG_FILE)
+
+        assert given.reset_application.reset.call_count == RESET_BEFORE_AND_ON_ABORT
+        given.load_track_files.load_async.assert_not_awaited()
+
     def test_blocking_load_sets_the_obtained_orthophoto(self) -> None:
         given = setup_with_orthophoto(setup_default())
         target = create_target(given)
@@ -305,6 +328,11 @@ def setup_with_orthophoto(given: Given) -> Given:
     given.obtain_orthophoto.obtain.return_value = OBTAINED_FILE
     given.load_track_files = Mock(spec=LoadTrackFiles)
     given.load_track_files.load_async = AsyncMock()
+    return given
+
+
+def setup_with_orthophoto_not_found(given: Given) -> Given:
+    given.obtain_orthophoto.obtain.side_effect = OrthophotoNotFound("missing")
     return given
 
 
