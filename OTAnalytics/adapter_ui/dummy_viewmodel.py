@@ -137,6 +137,7 @@ from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.files import DifferentDrivesException
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
+from OTAnalytics.domain.orthophoto import OrthophotoError
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
@@ -148,6 +149,9 @@ from OTAnalytics.domain.section import (
     SectionRepositoryEvent,
 )
 from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    IncompatibleGeoreferenceMetadataError,
+)
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
@@ -903,7 +907,13 @@ class DummyViewModel(
         if not track_files:
             return
         logger().info(f"Tracks files to load: {track_files}")
-        await self._application.add_tracks_of_files_async(track_files=track_files)
+        try:
+            await self._application.add_tracks_of_files_async(track_files=track_files)
+        except (OrthophotoError, IncompatibleGeoreferenceMetadataError) as cause:
+            logger().warning(str(cause))
+            self._ui_factory.info_box(
+                message=str(cause), initial_position=self._get_window_position()
+            )
 
     async def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections

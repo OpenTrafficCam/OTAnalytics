@@ -7,6 +7,7 @@ import pytest
 from OTAnalytics.application.orthophoto import (
     ChooseOrthophoto,
     CurrentOrthophotoGeoreference,
+    CurrentOrthophotoImage,
     ProvideOrthophoto,
     ResolveMissingOrthophoto,
 )
@@ -16,6 +17,7 @@ from OTAnalytics.domain.orthophoto import (
     OrthophotoLocked,
     OrthophotoRequired,
 )
+from OTAnalytics.domain.track import TrackImage
 
 ORTHOPHOTO_FILE = Path("site/map.tiff")
 CRS = "EPSG:25833"
@@ -177,3 +179,42 @@ class TestResolveMissingOrthophoto:
 
         with pytest.raises(OrthophotoRequired):
             await create_target_resolve(given).resolve()
+
+
+@dataclass
+class GivenImage:
+    current_orthophoto: CurrentOrthophoto
+    read_image: Mock
+
+
+def create_given_image() -> GivenImage:
+    return GivenImage(
+        current_orthophoto=CurrentOrthophoto(),
+        read_image=Mock(return_value=Mock(spec=TrackImage)),
+    )
+
+
+def setup_image_with_orthophoto(given: GivenImage) -> GivenImage:
+    given.current_orthophoto.set(Orthophoto(file=ORTHOPHOTO_FILE))
+    return given
+
+
+def create_target_image(given: GivenImage) -> CurrentOrthophotoImage:
+    return CurrentOrthophotoImage(given.current_orthophoto, given.read_image)
+
+
+class TestCurrentOrthophotoImage:
+    def test_reads_the_image_once_per_file(self) -> None:
+        given = setup_image_with_orthophoto(create_given_image())
+        target = create_target_image(given)
+
+        target.get()
+        actual = target.get()
+
+        assert actual == given.read_image.return_value
+        given.read_image.assert_called_once_with(ORTHOPHOTO_FILE)
+
+    def test_no_orthophoto_yields_no_image(self) -> None:
+        given = create_given_image()
+
+        assert create_target_image(given).get() is None

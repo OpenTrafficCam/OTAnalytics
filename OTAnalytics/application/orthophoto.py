@@ -13,6 +13,7 @@ from OTAnalytics.domain.orthophoto import (
     OrthophotoRequired,
 )
 from OTAnalytics.domain.section import SectionRepository
+from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackRepository
 
 # The CRS OTFusion's default geo offset shifts local world coordinates into.
@@ -92,6 +93,37 @@ class CurrentOrthophotoGeoreference(ProvideOrthophotoGeoreference):
         if key not in self._cache:
             self._cache[key] = self._read_georeference(orthophoto.file, crs)
         return self._cache[key]
+
+
+ReadOrthophotoImage = Callable[[Path], TrackImage]
+
+
+class CurrentOrthophotoImage:
+    """The current Orthophoto's pixels, read once per file.
+
+    Args:
+        current_orthophoto (CurrentOrthophoto): the project's Orthophoto.
+        read_image (ReadOrthophotoImage): reads a file's pixels.
+    """
+
+    def __init__(
+        self, current_orthophoto: CurrentOrthophoto, read_image: ReadOrthophotoImage
+    ) -> None:
+        self._current_orthophoto = current_orthophoto
+        self._read_image = read_image
+        self._cached: tuple[Path, TrackImage] | None = None
+
+    def get(self) -> TrackImage | None:
+        """The Orthophoto's image.
+
+        Returns:
+            TrackImage | None: the pixels, or None without an Orthophoto.
+        """
+        if (orthophoto := self._current_orthophoto.get()) is None:
+            return None
+        if self._cached is None or self._cached[0] != orthophoto.file:
+            self._cached = (orthophoto.file, self._read_image(orthophoto.file))
+        return self._cached[1]
 
 
 class ProvideOrthophoto(ABC):

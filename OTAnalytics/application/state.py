@@ -283,6 +283,22 @@ class VideoImageSizeUpdater:
             self._updater.notify(image)
 
 
+class OrthophotoImageSizeUpdater:
+    """Sizes the canvas to the Orthophoto whenever the project's one changes."""
+
+    def __init__(
+        self,
+        orthophoto_image: Callable[[], TrackImage | None],
+        updater: TrackImageSizeUpdater,
+    ) -> None:
+        self._orthophoto_image = orthophoto_image
+        self._updater = updater
+
+    def notify(self, orthophoto: Orthophoto | None) -> None:
+        if (image := self._orthophoto_image()) is not None:
+            self._updater.notify(image)
+
+
 class Plotter(ABC):
     """Abstraction to plot the background image."""
 

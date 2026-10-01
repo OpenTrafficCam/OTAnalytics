@@ -29,6 +29,7 @@ from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.orthophoto import (
     ChooseOrthophoto,
     CurrentOrthophotoGeoreference,
+    CurrentOrthophotoImage,
     LocalObtainOrthophoto,
     NoOrthophotoToProvide,
     ObtainOrthophoto,
@@ -250,6 +251,7 @@ from OTAnalytics.plugin_number_of_tracks_to_be_validated.tracks_as_dataframe_pro
 )
 from OTAnalytics.plugin_orthophoto.rasterio_orthophoto import (
     read_orthophoto_georeference,
+    read_orthophoto_image,
 )
 from OTAnalytics.plugin_parser.export import (
     AddSectionInformationExporterFactory,
@@ -482,6 +484,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     def current_orthophoto(self) -> CurrentOrthophoto:
         """One holder for the whole application, like `current_key_prefix`."""
         return CurrentOrthophoto()
+
+    @cached_property
+    def current_orthophoto_image(self) -> CurrentOrthophotoImage:
+        return CurrentOrthophotoImage(self.current_orthophoto, read_orthophoto_image)
 
     @cached_property
     def obtain_orthophoto(self) -> ObtainOrthophoto:
@@ -787,6 +793,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.progressbar_builder,
             self.track_image_factory,
             self.track_id_set_factory,
+            self.current_orthophoto_image.get,
         )
 
     @cached_property

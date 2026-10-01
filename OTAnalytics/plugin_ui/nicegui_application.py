@@ -5,11 +5,17 @@ from typing import Protocol
 from nicegui import app as nicegui_app
 
 from OTAnalytics.adapter_ui.local_file_providers import (
+    LocalOrthophotoProvider,
     LocalTrackFileProvider,
     LocalVideoFileProvider,
 )
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
-from OTAnalytics.application.orthophoto import LocalObtainOrthophoto, ObtainOrthophoto
+from OTAnalytics.application.orthophoto import (
+    LocalObtainOrthophoto,
+    NoOrthophotoToProvide,
+    ObtainOrthophoto,
+    ProvideOrthophoto,
+)
 from OTAnalytics.application.project_location import (
     RefuseAnyProjectLocation,
     ValidateProjectLocation,
@@ -320,6 +326,12 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         if self.s3_config:
             return S3ObtainOrthophoto(self.download_objects, self.current_key_prefix)
         return LocalObtainOrthophoto()
+
+    @cached_property
+    def provide_orthophoto(self) -> ProvideOrthophoto:
+        if self.s3_config:
+            return NoOrthophotoToProvide()
+        return LocalOrthophotoProvider(self.ui_factory)
 
     @cached_property
     def provide_video_files(self) -> ProvideVideoFiles:
