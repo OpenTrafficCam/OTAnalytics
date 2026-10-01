@@ -32,6 +32,14 @@ EXPECTED_MAX_Y = 5699370.047860203
 BOUNDS_TOLERANCE = 1e-6
 RED = (255, 0, 0, 255)
 NORTH_UP = Affine(PIXEL_SIZE, 0, ORIGIN_X, 0, -PIXEL_SIZE, ORIGIN_Y)
+# The neighbouring UTM zone: the same site, but turned by several degrees.
+UTM_32N = "EPSG:25832"
+# (EXPECTED_MIN_X, EXPECTED_MAX_Y) transformed from EPSG:25833 into EPSG:25832.
+UTM_32N_ORIGIN_X = 866077.0888323912
+UTM_32N_ORIGIN_Y = 5712296.144890503
+NORTH_UP_IN_UTM_32N = Affine(
+    PIXEL_SIZE, 0, UTM_32N_ORIGIN_X, 0, -PIXEL_SIZE, UTM_32N_ORIGIN_Y
+)
 
 
 @dataclass
@@ -57,13 +65,21 @@ def setup_with_rotation(given: Given) -> Given:
     return given
 
 
+def setup_with_utm_32n(given: Given) -> Given:
+    data = numpy.zeros((RGBA_BANDS, SIZE, SIZE), dtype=numpy.uint8)
+    write_tiff(given.file, data, NORTH_UP_IN_UTM_32N, crs=UTM_32N)
+    return given
+
+
 def setup_with_16_bit(given: Given) -> Given:
     data = numpy.zeros((RGBA_BANDS, SIZE, SIZE), dtype=numpy.uint16)
     write_tiff(given.file, data, NORTH_UP)
     return given
 
 
-def write_tiff(file: Path, data: numpy.ndarray, transform: Affine) -> None:
+def write_tiff(
+    file: Path, data: numpy.ndarray, transform: Affine, crs: str = SHIFTED_UTM_33N
+) -> None:
     bands, height, width = data.shape
     with rasterio.open(
         file,
@@ -73,7 +89,7 @@ def write_tiff(file: Path, data: numpy.ndarray, transform: Affine) -> None:
         height=height,
         count=bands,
         dtype=data.dtype,
-        crs=SHIFTED_UTM_33N,
+        crs=crs,
         transform=transform,
     ) as dataset:
         dataset.write(data)
@@ -110,6 +126,15 @@ class TestReadOrthophotoGeoreference:
         given = setup_with_rotation(create_given(tmp_path))
 
         with pytest.raises(UnsupportedOrthophoto):
+            read_orthophoto_georeference(given.file, TRACKS_CRS)
+
+    def test_orthophoto_turned_against_the_tracks_crs_is_unsupported(
+        self, tmp_path: Path
+    ) -> None:
+        """Squeezing a turned image into an upright box misplaces tracks by metres."""
+        given = setup_with_utm_32n(create_given(tmp_path))
+
+        with pytest.raises(UnsupportedOrthophoto, match=f"into {TRACKS_CRS}"):
             read_orthophoto_georeference(given.file, TRACKS_CRS)
 
 
