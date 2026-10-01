@@ -62,6 +62,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             ).notify
         )
         self.current_orthophoto.register(self._redraw_for_orthophoto)
+        self.current_orthophoto.register(self.view_model.notify_orthophoto)
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
         self.tracks_metadata._classifications.register(
@@ -171,6 +172,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             update_section_coordinates=self.update_section_coordinates,
             provide_track_files=self.provide_track_files,
             provide_video_files=self.provide_video_files,
+            current_orthophoto=self.current_orthophoto,
         )
 
     @cached_property

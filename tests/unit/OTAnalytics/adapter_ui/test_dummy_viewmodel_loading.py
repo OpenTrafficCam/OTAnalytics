@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import DummyViewModel
+from OTAnalytics.application.state import CurrentOrthophoto
 from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideTrackFiles,
     ProvideVideoFiles,
@@ -84,6 +85,7 @@ def _build(given: Given) -> DummyViewModel:
         update_section_coordinates=Mock(),
         provide_track_files=given.provide_track_files,
         provide_video_files=given.provide_video_files,
+        current_orthophoto=CurrentOrthophoto(),
     )
 
 
