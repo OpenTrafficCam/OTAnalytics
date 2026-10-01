@@ -19,6 +19,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
+from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
@@ -26,6 +27,7 @@ from OTAnalytics.application.parser.config_parser import (
     ExportConfig,
     OtConfig,
     StartDateMissing,
+    SubstitutedFile,
 )
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import (
@@ -49,6 +51,7 @@ from OTAnalytics.application.project import (
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.files import build_relative_path
 from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.observer import OBSERVER, Subject
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
@@ -69,6 +72,7 @@ NUM_PROCESSES = "num_processes"
 LOGFILE = "logfile"
 DEBUG = "debug"
 PATH = "path"
+S3_KEY_PREFIX = "s3_key_prefix"
 
 
 class OtConfigFormatFixer(ABC):
@@ -127,6 +131,16 @@ class OtConfigParser(ConfigParser):
         self._format_fixer = format_fixer
         self._video_parser = video_parser
         self._flow_parser = flow_parser
+        self._substitutions = Subject[Sequence[SubstitutedFile]]()
+
+    def register(self, observer: OBSERVER[Sequence[SubstitutedFile]]) -> None:
+        """Listen for file references that were rebound during a parse.
+
+        Registration is optional so that construction stays a three-argument
+        call: OTCloud builds an `OtConfigParser` of its own and has no channel
+        to report a substitution through.
+        """
+        self._substitutions.register(observer)
 
     def parse(self, file: Path) -> OtConfig:
         base_folder = file.parent
@@ -136,8 +150,18 @@ class OtConfigParser(ConfigParser):
     def parse_from_dict(self, data: dict, base_folder: Path) -> OtConfig:
         fixed_content = self._format_fixer.fix(data)
         _project = self._parse_project(fixed_content[PROJECT])
-        analysis_config = self._parse_analysis(fixed_content[ANALYSIS], base_folder)
-        videos = self._parse_videos(fixed_content[video.VIDEOS], base_folder)
+        # Collected separately so the report reads in the otconfig's own key
+        # order, rather than the order the sections happen to be parsed in.
+        track_substitutions: list[SubstitutedFile] = []
+        video_substitutions: list[SubstitutedFile] = []
+        analysis_config = self._parse_analysis(
+            fixed_content[ANALYSIS], base_folder, track_substitutions
+        )
+        videos = self._parse_videos(
+            fixed_content[video.VIDEOS], base_folder, video_substitutions
+        )
+        if substitutions := [*video_substitutions, *track_substitutions]:
+            self._substitutions.notify(substitutions)
         sections, flows = self._flow_parser.parse_content(
             fixed_content[section.SECTIONS], fixed_content[flow.FLOWS]
         )
@@ -149,31 +173,64 @@ class OtConfigParser(ConfigParser):
             sections=sections,
             flows=flows,
             remark=remark,
+            s3_key_prefix=self._parse_s3_key_prefix(fixed_content),
         )
 
+    def _parse_s3_key_prefix(self, data: dict) -> S3KeyPrefix | None:
+        """Read where the project says its data lives, if it says so at all."""
+        if (prefix := data.get(S3_KEY_PREFIX)) is None:
+            return None
+        return S3KeyPrefix(prefix)
+
     def _parse_videos(
-        self, video_entries: list[dict], base_folder: Path
+        self,
+        video_entries: list[dict],
+        base_folder: Path,
+        substitutions: list[SubstitutedFile] | None = None,
     ) -> Sequence[Video]:
         existing_entries = []
         for video_entry in video_entries:
             video_file = base_folder / video_entry[PATH]
-            if video_file.exists():
+            substitution = self._resolve(
+                video_file, base_folder, "video", substitutions
+            )
+            if substitution is None:
                 existing_entries.append(video_entry)
             else:
-                alternative_file = base_folder / video_file.name
-                logger().warning(
-                    f"Unable to find video file '{video_file}'. "
-                    "Try searching for video file with same name in "
-                    f"base_folder '{base_folder}'."
-                )
-                if alternative_file.exists():
-                    existing_entries.append({PATH: alternative_file.name})
-                else:
-                    raise FileNotFoundError(
-                        f"Searching for alternative video file '{alternative_file}'"
-                        "unsuccessful. Can not parse OTConfig."
-                    )
+                existing_entries.append({PATH: substitution.used.name})
         return self._video_parser.parse_list(existing_entries, base_folder)
+
+    def _resolve(
+        self,
+        requested: Path,
+        base_folder: Path,
+        kind: str,
+        substitutions: list[SubstitutedFile] | None,
+    ) -> SubstitutedFile | None:
+        """Resolve a reference, falling back to a same-named neighbour.
+
+        Shared by videos and track files so the two cannot drift apart. Returns
+        the substitution that was made, or `None` when the reference resolved
+        where the otconfig said. The fallback itself is deliberate and
+        unchanged; only its silence is not.
+        """
+        if requested.exists():
+            return None
+        alternative = base_folder / requested.name
+        logger().warning(
+            f"Unable to find {kind} file '{requested}'. "
+            f"Try searching for {kind} file with same name in "
+            f"base_folder '{base_folder}'."
+        )
+        if not alternative.exists():
+            raise FileNotFoundError(
+                f"Searching for alternative {kind} file '{alternative}' "
+                "unsuccessful. Can not parse OTConfig."
+            )
+        substitution = SubstitutedFile(requested=requested, used=alternative)
+        if substitutions is not None:
+            substitutions.append(substitution)
+        return substitution
 
     def _parse_project(self, data: dict) -> Project:
         _validate_data(data, [project.NAME, project.START_DATE])
@@ -214,7 +271,12 @@ class OtConfigParser(ConfigParser):
             coordinate_y=coordinate_y,
         )
 
-    def _parse_analysis(self, data: dict, base_folder: Path) -> AnalysisConfig:
+    def _parse_analysis(
+        self,
+        data: dict,
+        base_folder: Path,
+        substitutions: list[SubstitutedFile] | None = None,
+    ) -> AnalysisConfig:
         _validate_data(
             data,
             [
@@ -230,7 +292,9 @@ class OtConfigParser(ConfigParser):
         analysis_config = AnalysisConfig(
             do_events=data[DO_EVENTS],
             do_counting=data[DO_COUNTING],
-            track_files=self._parse_track_files(data[TRACKS], base_folder),
+            track_files=self._parse_track_files(
+                data[TRACKS], base_folder, substitutions
+            ),
             export_config=export_config,
             num_processes=data[NUM_PROCESSES],
             logfile=Path(data[LOGFILE]),
@@ -250,27 +314,20 @@ class OtConfigParser(ConfigParser):
         return export_config
 
     def _parse_track_files(
-        self, track_files: list[str], base_folder: Path
+        self,
+        track_files: list[str],
+        base_folder: Path,
+        substitutions: list[SubstitutedFile] | None = None,
     ) -> set[Path]:
         existing_track_files: set[Path] = set()
         for _file in track_files:
             file_in_config = base_folder / _file
-            if file_in_config.exists():
-                existing_track_files.add(file_in_config)
-            else:
-                alternative_file = base_folder / file_in_config.name
-                logger().warning(
-                    f"Unable to find track file '{file_in_config}'. "
-                    "Try searching for track file with same name in "
-                    f"base_folder '{base_folder}'."
-                )
-                if alternative_file.exists():
-                    existing_track_files.add(alternative_file)
-                else:
-                    raise FileNotFoundError(
-                        f"Searching for alternative track file '{alternative_file}'"
-                        "unsuccessful. Can not parse OTConfig."
-                    )
+            substitution = self._resolve(
+                file_in_config, base_folder, "track", substitutions
+            )
+            existing_track_files.add(
+                file_in_config if substitution is None else substitution.used
+            )
         return existing_track_files
 
     def serialize(
@@ -282,10 +339,18 @@ class OtConfigParser(ConfigParser):
         flows: Iterable[Flow],
         file: Path,
         remark: str | None,
+        s3_key_prefix: S3KeyPrefix | None,
     ) -> None:
         self._validate_data(project)
         content = self.convert(
-            project, video_files, track_files, sections, flows, file, remark
+            project,
+            video_files,
+            track_files,
+            sections,
+            flows,
+            file,
+            remark,
+            s3_key_prefix,
         )
         write_json(data=content, path=file)
 
@@ -298,6 +363,7 @@ class OtConfigParser(ConfigParser):
             config.flows,
             file,
             config.remark,
+            config.s3_key_prefix,
         )
 
     @staticmethod
@@ -314,9 +380,17 @@ class OtConfigParser(ConfigParser):
         flows: Iterable[Flow],
         file: Path,
         remark: str | None,
+        s3_key_prefix: S3KeyPrefix | None,
     ) -> dict:
         parent_folder = file.parent
         project_content = project.to_dict()
+        if s3_key_prefix is not None:
+            # Data is picked per session by time range (OP#10283), so a
+            # project's own file references have no reader in s3 mode.
+            # Recording them would only leave stale paths into the ephemeral
+            # `user_source` staging area behind. See OP#10323's decision log.
+            video_files = []
+            track_files = []
         video_content = self._video_parser.convert(
             video_files,
             relative_to=parent_folder,
@@ -353,7 +427,12 @@ class OtConfigParser(ConfigParser):
                 LOGFILE: str(DEFAULT_LOG_FILE),
             }
         }
-        content: dict[str, list[dict] | dict] = {PROJECT: project_content}
+        content: dict[str, list[dict] | dict | str] = {PROJECT: project_content}
+        if s3_key_prefix is not None:
+            # Omitted rather than written as null when a project names no
+            # location, so a local-mode otconfig stays byte-for-byte what it is
+            # today.
+            content[S3_KEY_PREFIX] = s3_key_prefix.value
         content |= video_content
         content |= analysis_content
         content |= section_content

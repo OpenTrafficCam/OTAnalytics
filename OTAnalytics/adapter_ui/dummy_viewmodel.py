@@ -1,9 +1,10 @@
 import contextlib
 import functools
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import datetime
 from pathlib import Path
 from time import sleep
+
 from typing import Any, Optional
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
@@ -71,7 +72,10 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.logger import logger
-from OTAnalytics.application.parser.config_parser import StartDateMissing
+from OTAnalytics.application.parser.config_parser import (
+    StartDateMissing,
+    SubstitutedFile,
+)
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.project import (
@@ -91,6 +95,7 @@ from OTAnalytics.application.project import (
     SvzMetadata,
     WeatherType,
 )
+from OTAnalytics.application.project_location import UnsupportedProjectLocation
 from OTAnalytics.application.use_cases.config import ConfigValidationError
 from OTAnalytics.application.use_cases.config_has_changed import NoExistingConfigFound
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
@@ -106,6 +111,11 @@ from OTAnalytics.application.use_cases.export_events import (
 )
 from OTAnalytics.application.use_cases.flow_repository import FlowAlreadyExists
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
+from OTAnalytics.application.use_cases.load_otconfig import UnableToLoadOtconfigFile
+from OTAnalytics.application.use_cases.provide_input_files import (
+    ProvideTrackFiles,
+    ProvideVideoFiles,
+)
 from OTAnalytics.application.use_cases.quick_save_configuration import (
     NoExistingFileToSave,
 )
@@ -145,10 +155,25 @@ from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
 MESSAGE_CONFIGURATION_NOT_SAVED = "The configuration has not been saved.\n"
-SUPPORTED_VIDEO_FILE_TYPES = [".mp4", ".avi", ".mkv", ".mov"]
+MESSAGE_CONFIGURATION_NOT_LOADED = "The configuration has not been loaded.\n"
+MESSAGE_CONFIGURATION_FILES_SUBSTITUTED = (
+    "The configuration references files that were not found.\n"
+)
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
 FROM_SECTION = "from_section"
+
+
+def _explain(cause: BaseException) -> str:
+    """Name the underlying failure, not the wrapper.
+
+    `UnableToLoadOtconfigFile` carries a fixed string and keeps the real reason
+    in `__cause__`, so reporting the wrapper alone tells the user nothing they
+    can act on.
+    """
+    if cause.__cause__ is not None:
+        return f"{cause} {cause.__cause__}"
+    return f"{cause}"
 
 
 class MissingInjectedInstanceError(Exception):
@@ -315,9 +340,13 @@ class DummyViewModel(
         show_svz: bool,
         add_new_section: AddNewSection,
         update_section_coordinates: UpdateSectionCoordinates,
+        provide_track_files: ProvideTrackFiles,
+        provide_video_files: ProvideVideoFiles,
     ) -> None:
         self._application = application
         self._ui_factory = ui_factory
+        self._provide_track_files = provide_track_files
+        self._provide_video_files = provide_video_files
         self._flow_parser: FlowParser = flow_parser
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
@@ -558,24 +587,7 @@ class DummyViewModel(
         self._update_enabled_video_buttons()
 
     async def add_video(self) -> None:
-        # Generate extension_options dynamically from SUPPORTED_VIDEO_FILE_TYPES
-        extension_options: dict[str, Optional[list[str]]] = {}
-
-        # Convert "*.ext" format to ".ext" format for extension_options
-        clean_extensions = [ext for ext in SUPPORTED_VIDEO_FILE_TYPES]
-
-        # Add "All File Endings" option with all supported extensions
-        extension_options["All File Endings"] = clean_extensions
-
-        # Add individual extension options
-        for ext in clean_extensions:
-            extension_options[ext] = [ext]
-
-        video_files = await self._ui_factory.askopenfilenames(
-            title="Load video files",
-            filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
-            extension_options=extension_options,
-        )
+        video_files = await self._provide_video_files.provide()
         if not video_files:
             return
         logger().info(f"Video files to load: {video_files}")
@@ -617,6 +629,12 @@ class DummyViewModel(
 
     async def save_otconfig(self) -> None:
         save_suggestion = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
+        if self._application.get_current_key_prefix() is not None:
+            # A project that names a location was opened by an operator naming
+            # it, not chosen from a picker (OP#10323 decision 1), so it always
+            # re-saves to its own name and place with no new UI.
+            await self._save_otconfig(save_suggestion.file_path)
+            return
         configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[(f"{OTCONFIG_FILE_TYPE} file", f"*.{OTCONFIG_FILE_TYPE}")],
@@ -626,9 +644,9 @@ class DummyViewModel(
         )
         if not configuration_file:
             return
-        self._save_otconfig(configuration_file)
+        await self._save_otconfig(configuration_file)
 
-    def _save_otconfig(self, otconfig_file: Path) -> None:
+    async def _save_otconfig(self, otconfig_file: Path) -> None:
         # Ensure the file has the correct extension
         otconfig_file_str = ensure_file_extension_is_present(
             str(otconfig_file), [f"*.{OTCONFIG_FILE_TYPE}"], f".{OTCONFIG_FILE_TYPE}"
@@ -637,7 +655,7 @@ class DummyViewModel(
 
         logger().info(f"Config file to save: {otconfig_file}")
         try:
-            self._application.save_otconfig(otconfig_file)
+            await self._application.save_otconfig(otconfig_file)
         except NoSectionsToSave:
             message = (
                 f"{MESSAGE_CONFIGURATION_NOT_SAVED}"
@@ -697,9 +715,9 @@ class DummyViewModel(
         )
         if not otconfig_file:
             return
-        self._load_otconfig(otconfig_file)
+        await self._load_otconfig(otconfig_file)
 
-    def _load_otconfig(self, otconfig_file: Path) -> None:
+    async def _load_otconfig(self, otconfig_file: Path) -> None:
         proceed = self._ui_factory.info_box(
             message=(
                 "This will load a stored configuration from file. \n"
@@ -712,9 +730,72 @@ class DummyViewModel(
         if proceed.canceled:
             return
         logger().info(f"{OTCONFIG_FILE_TYPE} file to load: {otconfig_file}")
-        self._application.load_otconfig(file=Path(otconfig_file))
+        try:
+            await self._application.load_otconfig_async(file=Path(otconfig_file))
+        except (
+            UnableToLoadOtconfigFile,
+            UnsupportedProjectLocation,
+            OSError,
+        ) as cause:
+            # A file the config references is missing, the config contradicts
+            # itself, or its data lives where this installation cannot read it.
+            # All are the user's to act on, so name the cause.
+            self._report_load_failure(_explain(cause))
+            return
+        except Exception as cause:
+            # The boundary of a user action: without this, a malformed config
+            # reaches the browser as a traceback. The traceback still logs.
+            logger().exception("Failed to load configuration file", exc_info=cause)
+            self._report_load_failure("An unexpected error occurred.")
+            return
         self.show_current_project()
         self.update_svz_metadata_view()
+
+    def report_substituted_files(
+        self, substitutions: Sequence[SubstitutedFile]
+    ) -> None:
+        """Tell the user which references were rebound while loading.
+
+        The parser resolves a missing reference to a same-named file beside the
+        otconfig. The names match but the contents need not: re-detected or
+        re-tracked output reuses the filename with different detections. So the
+        project is loaded, and the user is told what it actually holds.
+        """
+        if not substitutions:
+            return
+        rebound = "\n".join(
+            f"• '{substitution.requested}' → '{substitution.used}'"
+            for substitution in substitutions
+        )
+        self._tell_user(
+            f"{MESSAGE_CONFIGURATION_FILES_SUBSTITUTED}"
+            f"The files below were not found where the configuration says, so a "
+            f"file of the same name next to the configuration was loaded "
+            f"instead. Check that this is the data you meant:\n{rebound}"
+        )
+
+    def _report_load_failure(self, reason: str) -> None:
+        self._tell_user(f"{MESSAGE_CONFIGURATION_NOT_LOADED}{reason}")
+
+    def _tell_user(self, message: str) -> None:
+        """Log a message and show it if the ui can be reached.
+
+        Reporting must never break what it reports on. Nicegui resolves the
+        client through the slot stack and raises when that stack is empty, so
+        `info_box` fails whenever no browser is attached — during the startup
+        preload of a `--config` file, for one. Left unguarded, reporting a
+        substitution there would propagate out of the parse and stop the server
+        from starting. The log is the guarantee; the box is best effort.
+        """
+        logger().warning(message)
+        try:
+            self._ui_factory.info_box(
+                message=message, initial_position=self._get_window_position()
+            )
+        except Exception as cause:
+            logger().exception(
+                "Could not show this message to the user", exc_info=cause
+            )
 
     def set_tracks_frame(self, frame: AbstractFrame) -> None:
         self._frame_tracks = frame
@@ -820,17 +901,11 @@ class DummyViewModel(
 
     @action
     async def load_tracks(self) -> None:
-        track_files = await self._ui_factory.askopenfilenames(
-            title="Load track files",
-            filetypes=[
-                ("tracks file", "*.ottrk"),
-            ],
-        )
+        track_files = await self._provide_track_files.provide()
         if not track_files:
             return
         logger().info(f"Tracks files to load: {track_files}")
-        track_paths = [Path(file) for file in track_files]
-        self._application.add_tracks_of_files(track_files=track_paths)
+        await self._application.add_tracks_of_files_async(track_files=track_files)
 
     async def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
@@ -849,7 +924,7 @@ class DummyViewModel(
         elif configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
             self._load_otflow(configuration_file)
         elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
-            self._load_otconfig(configuration_file)
+            await self._load_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to load has unknown file extension")
 
@@ -876,6 +951,12 @@ class DummyViewModel(
 
     async def save_configuration(self) -> None:
         save_suggestion = self._application.suggest_save_path(OTCONFIG_FILE_TYPE)
+        if self._application.get_current_key_prefix() is not None:
+            # A project that names a location is always an otconfig and always
+            # re-saves to its own name and place with no new UI (OP#10323
+            # decision 1 & 5).
+            await self._save_otconfig(save_suggestion.file_path)
+            return
         configuration_file = await self._ui_factory.ask_for_save_file_path(
             title="Save configuration as",
             filetypes=[
@@ -900,13 +981,13 @@ class DummyViewModel(
         if configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
             self._save_otflow(configuration_file)
         elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
-            self._save_otconfig(configuration_file)
+            await self._save_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to save has unknown file extension")
 
     async def quick_save_configuration(self) -> None:
         try:
-            self._application.quick_save_configuration()
+            await self._application.quick_save_configuration()
         except NoExistingFileToSave:
             await self.save_configuration()
 

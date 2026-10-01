@@ -9,9 +9,11 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
 )
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.project import SvzMetadata
 from OTAnalytics.application.state import (
     ActionState,
+    CurrentKeyPrefix,
     FileState,
     FlowState,
     SectionState,
@@ -158,6 +160,7 @@ class OTAnalyticsApplication:
         export_track_statistics: ExportTrackStatistics,
         get_current_remark: GetCurrentRemark,
         update_count_plots: CountPlotsUpdater,
+        current_key_prefix: CurrentKeyPrefix,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -205,6 +208,7 @@ class OTAnalyticsApplication:
         self._export_track_statistics = export_track_statistics
         self._get_current_remark = get_current_remark
         self._update_count_plots = update_count_plots
+        self._current_key_prefix = current_key_prefix
 
     def connect_observers(self) -> None:
         """
@@ -306,20 +310,47 @@ class OTAnalyticsApplication:
     def update_flow(self, flow: Flow) -> None:
         self._datastore.update_flow(flow)
 
-    def save_otconfig(self, file: Path) -> None:
-        self._save_otconfig(file)
+    async def save_otconfig(self, file: Path) -> None:
+        await self._save_otconfig(file)
+
+    def get_current_key_prefix(self) -> S3KeyPrefix | None:
+        """Where the current project's data lives, or None outside s3 mode.
+
+        A project naming a prefix is how the save path knows to skip the
+        file-picker dialog: see OP#10323.
+        """
+        return self._current_key_prefix.get()
 
     def load_otconfig(self, file: Path) -> None:
+        """Load an otconfig, blocking. Outside an event loop only."""
         self._load_otconfig.load(file)
+
+    async def load_otconfig_async(self, file: Path) -> None:
+        """Load an otconfig without blocking the event loop.
+
+        Args:
+            file (Path): the otconfig file.
+        """
+        await self._load_otconfig.load_async(file)
 
     def add_tracks_of_files(self, track_files: list[Path]) -> None:
         """
         Load a multiple track files.
 
+        Outside an event loop only. Inside one use `add_tracks_of_files_async`.
+
         Args:
             track_files (list[Path]): files in ottrk format
         """
         self._load_track_files(track_files)
+
+    async def add_tracks_of_files_async(self, track_files: list[Path]) -> None:
+        """Load multiple track files without blocking the event loop.
+
+        Args:
+            track_files (list[Path]): files in ottrk format
+        """
+        await self._load_track_files.load_async(track_files)
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks."""
@@ -657,8 +688,8 @@ class OTAnalyticsApplication:
     def get_track_repository_size(self) -> int:
         return self._track_repository_size.get()
 
-    def quick_save_configuration(self) -> None:
-        self._quick_save_configuration.save()
+    async def quick_save_configuration(self) -> None:
+        await self._quick_save_configuration.save()
 
     def config_has_changed(self) -> bool:
         return self._config_has_changed.has_changed()

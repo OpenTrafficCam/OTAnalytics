@@ -2,8 +2,11 @@ from abc import abstractmethod
 from functools import cached_property
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import DummyViewModel
+from OTAnalytics.adapter_ui.local_file_providers import (
+    LocalTrackFileProvider,
+    LocalVideoFileProvider,
+)
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
-from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
@@ -12,6 +15,10 @@ from OTAnalytics.application.use_cases.create_events import (
     MissingEventsSectionProvider,
     SectionProvider,
     SimpleCreateIntersectionEvents,
+)
+from OTAnalytics.application.use_cases.provide_input_files import (
+    ProvideTrackFiles,
+    ProvideVideoFiles,
 )
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.plugin_filter.pandas_track_id import PandasTrackIdProvider
@@ -105,6 +112,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.event_repository.register_observer(self.view_model.update_track_statistics)
         self.load_otflow.register(self.file_state.last_saved_config.set)
         self.load_otconfig.register(self.file_state.last_saved_config.set)
+        # The cli builds its own parser and registers nothing, so a headless
+        # run keeps the log warning as its only signal.
+        self.otconfig_parser.register(self.view_model.report_substituted_files)
         self.load_otconfig.register(self.view_model.update_remark_view)
         self.project_updater.register(self.view_model.update_quick_save_button)
         self.track_file_repository.register(self.view_model.update_quick_save_button)
@@ -129,7 +139,14 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         )
 
     @cached_property
-    def view_model(self) -> ViewModel:
+    def view_model(self) -> DummyViewModel:
+        """Typed concretely so wiring can reach methods the `ViewModel` port
+        does not declare.
+
+        Adding them to the port instead is ruled out: `ViewModel` and
+        `UiFactory` must not gain abstract methods, because OTCloud implements
+        those ports and a new one breaks it at its next pin bump.
+        """
         return DummyViewModel(
             self.application,
             self.ui_factory,
@@ -139,7 +156,17 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             show_svz=self.run_config.show_svz,
             add_new_section=self.add_new_section,
             update_section_coordinates=self.update_section_coordinates,
+            provide_track_files=self.provide_track_files,
+            provide_video_files=self.provide_video_files,
         )
+
+    @cached_property
+    def provide_track_files(self) -> ProvideTrackFiles:
+        return LocalTrackFileProvider(self.ui_factory)
+
+    @cached_property
+    def provide_video_files(self) -> ProvideVideoFiles:
+        return LocalVideoFileProvider(self.ui_factory)
 
     @cached_property
     def application(self) -> OTAnalyticsApplication:
@@ -182,6 +209,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.export_track_statistics,
             self.get_current_remark,
             self.update_count_plots,
+            self.current_key_prefix,
         )
 
     @cached_property
