@@ -25,6 +25,7 @@ from OTAnalytics.application.parser.track_parser import (
 )
 from OTAnalytics.domain import track
 from OTAnalytics.domain.georeference import GeoreferenceMetadata, geo_to_pixel_transform
+from OTAnalytics.domain.orthophoto import MixedTrackFiles
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import (
@@ -48,6 +49,12 @@ from OTAnalytics.plugin_parser.georeference_parsing import (
     GeoreferenceMetadataParsingMixin,
 )
 from OTAnalytics.plugin_parser.json_parser import parse_json
+
+MIXED_BATCH = (
+    "These track files cannot be loaded together: {geo_only} place road users by"
+    " geo coordinates only (OTFusion output) and {camera} come with their own"
+    " video. Load them in separate projects. Nothing was loaded."
+)
 
 
 def place_on_orthophoto(
@@ -224,9 +231,27 @@ class FeathersParser(TrackParser, GeoreferenceMetadataParsingMixin):
     def _combine_track_datasets(
         self, parse_results: list[TrackParseResult]
     ) -> TrackDataset:
+        _refuse_mixed_batch(parse_results)
         datasets = [r.tracks for r in parse_results]
         if all(isinstance(ds, PolarsTrackDataset) for ds in datasets):
             return PolarsTrackDataset.merge_all(
                 cast(list[PolarsTrackDataset], datasets)
             )
         return super()._combine_track_datasets(parse_results)
+
+
+def _refuse_mixed_batch(parse_results: list[TrackParseResult]) -> None:
+    """Keep one load to one kind of placement (ADR 0005).
+
+    A load window over a whole site selects OTFusion's output together with the
+    per-camera files it was fused from. Their pixel spaces are unrelated, so the
+    batch is refused with a message naming the cause, before merging fails on it.
+    """
+    geo_only_count = sum(result.is_geo_only for result in parse_results)
+    if 0 < geo_only_count < len(parse_results):
+        raise MixedTrackFiles(
+            MIXED_BATCH.format(
+                geo_only=geo_only_count,
+                camera=len(parse_results) - geo_only_count,
+            )
+        )

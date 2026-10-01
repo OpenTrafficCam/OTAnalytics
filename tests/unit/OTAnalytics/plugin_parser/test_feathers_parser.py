@@ -26,7 +26,7 @@ from OTAnalytics.application.parser.track_parser import (
 )
 from OTAnalytics.domain import track
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
-from OTAnalytics.domain.orthophoto import OrthophotoRequired
+from OTAnalytics.domain.orthophoto import MixedTrackFiles, OrthophotoRequired
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IncompatibleGeoreferenceMetadataError,
 )
@@ -780,3 +780,27 @@ class TestFeathersParserGeoOnly:
         result = target.parse_files([given.feather_file])
 
         assert result.geo_only_per_file == [True]
+
+    def test_parse_files_refuses_a_batch_mixing_geo_only_and_camera_files(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """A load window can select fused and per-camera files at once.
+
+        #Requirement https://openproject.platomo.de/wp/10404
+        """
+        fused = setup_default_geo_only(
+            create_given_geo_only(subfolder(test_data_tmp_dir, "output"))
+        )
+        camera = setup_camera_file_with_geo_columns(
+            create_given_geo_only(subfolder(test_data_tmp_dir, "OTCamera04"))
+        )
+        target = create_target_geo_only(fused)
+
+        with pytest.raises(MixedTrackFiles):
+            target.parse_files([camera.feather_file, fused.feather_file])
+
+
+def subfolder(tmp_dir: Path, name: str) -> Path:
+    folder = tmp_dir / name
+    folder.mkdir()
+    return folder
