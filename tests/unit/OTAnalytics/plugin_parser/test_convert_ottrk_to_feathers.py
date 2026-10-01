@@ -1,6 +1,6 @@
 """Tests for the convert_ottrk_to_feathers module."""
 
-from datetime import datetime, timezone
+from dataclasses import dataclass
 from unittest.mock import Mock
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
@@ -69,29 +69,47 @@ class TestCreateMetadataDict:
         assert ottrk_format.GEOREFERENCE not in result
 
 
-def create_video_metadata() -> VideoMetadata:
-    """Create a test VideoMetadata object."""
-    return VideoMetadata(
-        path="v.mp4",
-        recorded_start_date=datetime(2026, 4, 22, tzinfo=timezone.utc),
-        expected_duration=None,
-        recorded_fps=20.0,
-        actual_fps=None,
-        number_of_frames=1,
+GEO_COORDINATES_CRS = "EPSG:25833"
+
+
+@dataclass
+class Given:
+    geo_coordinates_crs: str | None
+
+
+def create_given() -> Given:
+    return Given(geo_coordinates_crs=None)
+
+
+def setup_with_geo_coordinates_crs(given: Given) -> Given:
+    given.geo_coordinates_crs = GEO_COORDINATES_CRS
+    return given
+
+
+def create_parse_result(given: Given) -> TrackParseResult:
+    tracks = Mock()
+    tracks.georeference_metadata = None
+    return TrackParseResult(
+        tracks=tracks,
+        detection_metadata=DetectionMetadata(frozenset({"car"})),
+        video_metadata=Mock(spec=VideoMetadata),
+        geo_coordinates_crs=given.geo_coordinates_crs,
     )
 
 
 class TestCreateMetadataDictGeoCoordinates:
     def test_writes_crs_of_geo_coordinates(self) -> None:
-        tracks = Mock()
-        tracks.georeference_metadata = None
-        result = TrackParseResult(
-            tracks=tracks,
-            detection_metadata=DetectionMetadata(frozenset({"car"})),
-            video_metadata=create_video_metadata(),
-            geo_coordinates_crs="EPSG:25833",
-        )
+        given = setup_with_geo_coordinates_crs(create_given())
 
-        actual = create_metadata_dict(result)
+        actual = create_metadata_dict(create_parse_result(given))
 
-        assert actual[ottrk_format.GEO_COORDINATES] == {ottrk_format.CRS: "EPSG:25833"}
+        assert actual[ottrk_format.GEO_COORDINATES] == {
+            ottrk_format.CRS: GEO_COORDINATES_CRS
+        }
+
+    def test_omits_geo_coordinates_without_a_crs(self) -> None:
+        given = create_given()
+
+        actual = create_metadata_dict(create_parse_result(given))
+
+        assert ottrk_format.GEO_COORDINATES not in actual

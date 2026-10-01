@@ -45,6 +45,7 @@ other_file = Path("other.file.ottrk")
 
 FOLDER_A = Path("folder_a")
 FOLDER_B = Path("folder_b")
+PROJECT_ORTHOPHOTO = Orthophoto(file=Path("map.tiff"))
 
 GEOREF_METADATA = GeoreferenceMetadata(
     geo_min_x=449199.096512522,
@@ -573,7 +574,7 @@ class TestLoadTrackFilesGeoOnly:
             classes={"car"},
             geo_only_per_file=[True],
         )
-        given.current_orthophoto.get.return_value = Mock()
+        given.current_orthophoto.set(PROJECT_ORTHOPHOTO)
         target = create_target(given)
 
         target([some_file])
@@ -590,7 +591,7 @@ class TestLoadTrackFilesGeoOnly:
             existing_track_files=[],
             classes={"car"},
         )
-        given.current_orthophoto.get.return_value = Mock()
+        given.current_orthophoto.set(PROJECT_ORTHOPHOTO)
         target = create_target(given)
 
         with pytest.raises(MixedTrackFiles):
@@ -706,9 +707,8 @@ def setup_needing_an_orthophoto(
         classes={"car"},
         geo_only_per_file=geo_only_per_file or [True],
     )
-    given.current_orthophoto = CurrentOrthophoto()  # type: ignore[assignment]
     given.resolve_missing_orthophoto.resolve.side_effect = (
-        lambda: given.current_orthophoto.set(Orthophoto(file=Path("map.tiff")))
+        lambda: given.current_orthophoto.set(PROJECT_ORTHOPHOTO)
     )
     given.track_parser.parse_files.side_effect = [
         OrthophotoRequired("needs one"),
@@ -736,7 +736,7 @@ class Given:
     progressbar: Mock
     tracks_metadata: Mock
     videos_metadata: Mock
-    current_orthophoto: Mock
+    current_orthophoto: CurrentOrthophoto
     resolve_missing_orthophoto: AsyncMock
     order: MagicMock
 
@@ -793,11 +793,10 @@ def setup(
         progressbar=Mock(),
         tracks_metadata=Mock(),
         videos_metadata=Mock(),
-        current_orthophoto=Mock(),
+        current_orthophoto=CurrentOrthophoto(),
         resolve_missing_orthophoto=AsyncMock(),
         order=MagicMock(),
     )
-    given.current_orthophoto.get.return_value = None
     given.track_file_repository.get_all.return_value = existing_track_files
     given.track_parser.parse_files.return_value = parse_result
     given.video_parser.parse.side_effect = videos
@@ -864,8 +863,6 @@ def create_target_for_repo(
         for metadata in parse_result.videos_metadata
     ]
 
-    current_orthophoto = Mock()
-    current_orthophoto.get.return_value = None
     return LoadTrackFiles(
         track_parser=track_parser,
         track_repository=repository,
@@ -875,6 +872,6 @@ def create_target_for_repo(
         progressbar=Mock(),
         tracks_metadata=Mock(),
         videos_metadata=Mock(),
-        current_orthophoto=current_orthophoto,
+        current_orthophoto=CurrentOrthophoto(),
         resolve_missing_orthophoto=AsyncMock(),
     )
