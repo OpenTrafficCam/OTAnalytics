@@ -5,8 +5,9 @@ about the staging layout, which is what keeps lazy or streaming loading cheap to
 adopt later.
 """
 
+from contextlib import closing
 from pathlib import Path, PurePosixPath
-from typing import Callable
+from typing import Callable, Generator, TypeVar, cast
 
 import ijson
 
@@ -28,6 +29,8 @@ from OTAnalytics.plugin_track_input_source.template import (
     metadata_from_json_events,
     parse_json_bz2_events,
 )
+
+_T = TypeVar("_T")
 
 TRACK_SUFFIXES = {".ottrk"}
 VIDEO_SUFFIXES = {".mp4", ".avi", ".mkv", ".mov"}
@@ -80,24 +83,10 @@ def read_video_name(ottrk: Path) -> str | None:
             message is what the user is shown and they lead to different places
             to look.
     """
-    try:
-        metadata = metadata_from_json_events(parse_json_bz2_events(ottrk))
-    except FileNotFoundError as cause:
-        raise UnreadableTrackFile(f"'{ottrk.name}' is missing: {ottrk}.") from cause
-    except OSError as cause:
-        raise UnreadableTrackFile(
-            f"'{ottrk.name}' could not be read: {cause}."
-        ) from cause
-    except ijson.JSONError as cause:
-        # The parser reports the offending line with a caret pointing into it,
-        # which belongs in the log, not in a dialog the user has to read.
-        raise UnreadableTrackFile(
-            f"'{ottrk.name}' is not a valid track file."
-        ) from cause
-    if is_geo_only(
-        has_georeference=ottrk_dataformat.GEOREFERENCE in metadata,
-        carries_geo_coordinates=_first_detection_has_geo_coordinates(ottrk),
-    ):
+    metadata = _translating_read_errors(
+        ottrk, lambda: metadata_from_json_events(parse_json_bz2_events(ottrk))
+    )
+    if _is_geo_only_file(ottrk, metadata):
         return None
     try:
         video = metadata[ottrk_dataformat.VIDEO]
@@ -110,9 +99,37 @@ def read_video_name(ottrk: Path) -> str | None:
         ) from cause
 
 
+def _is_geo_only_file(ottrk: Path, metadata: dict) -> bool:
+    """Apply the Geo-only rule, reading detections only when it is undecided."""
+    has_georeference = ottrk_dataformat.GEOREFERENCE in metadata
+    carries_geo_coordinates = not has_georeference and _translating_read_errors(
+        ottrk, lambda: _first_detection_has_geo_coordinates(ottrk)
+    )
+    return is_geo_only(has_georeference, carries_geo_coordinates)
+
+
+def _translating_read_errors(ottrk: Path, read: Callable[[], _T]) -> _T:
+    """Run a read of the track file, reporting failures as UnreadableTrackFile."""
+    try:
+        return read()
+    except FileNotFoundError as cause:
+        raise UnreadableTrackFile(f"'{ottrk.name}' is missing: {ottrk}.") from cause
+    except OSError as cause:
+        raise UnreadableTrackFile(
+            f"'{ottrk.name}' could not be read: {cause}."
+        ) from cause
+    except ijson.JSONError as cause:
+        # The parser reports the offending line with a caret pointing into it,
+        # which belongs in the log, not in a dialog the user has to read.
+        raise UnreadableTrackFile(
+            f"'{ottrk.name}' is not a valid track file."
+        ) from cause
+
+
 def _first_detection_has_geo_coordinates(ottrk: Path) -> bool:
-    detections = ijson.items(parse_json_bz2_events(ottrk), DETECTIONS_ITEMS)
-    first = next(iter(detections), None)
+    with closing(cast(Generator, parse_json_bz2_events(ottrk))) as events:
+        detections = ijson.items(events, DETECTIONS_ITEMS)
+        first = next(iter(detections), None)
     return first is not None and ottrk_dataformat.GEO_X in first
 
 

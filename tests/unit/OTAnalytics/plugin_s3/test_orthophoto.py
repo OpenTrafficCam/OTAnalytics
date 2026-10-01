@@ -59,6 +59,14 @@ class TestS3ObtainOrthophoto:
 
         given.download_objects.download_all.assert_not_called()
 
+    async def test_refuses_when_no_project_is_loaded(self) -> None:
+        given = create_given()
+
+        with pytest.raises(OrthophotoNotFound):
+            await create_target(given).obtain(Path("map2.tiff"), ANY_FOLDER)
+
+        given.download_objects.download_all.assert_not_called()
+
     @pytest.mark.parametrize(
         "failure", [DownloadCancelled("cancel"), RuntimeError("network down")]
     )

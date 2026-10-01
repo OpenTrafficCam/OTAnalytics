@@ -31,6 +31,20 @@ class S3ObtainOrthophoto(ObtainOrthophoto):
         self._current_key_prefix = current_key_prefix
 
     async def obtain(self, reference: Path, base_folder: Path) -> Path:
+        """Download the Orthophoto the project declares.
+
+        Args:
+            reference (Path): the declared location, relative to the Key Prefix.
+            base_folder (Path): unused in S3 mode, because keys are resolved
+                under the Key Prefix rather than next to the project file.
+
+        Returns:
+            Path: the local copy of the Orthophoto.
+
+        Raises:
+            OrthophotoNotFound: if the reference leaves the Key Prefix, no
+                project is loaded, or the download fails.
+        """
         key = self._key_of(PurePosixPath(reference.as_posix()))
         try:
             [local_file] = await self._download_objects.download_all(
