@@ -105,6 +105,7 @@ from OTAnalytics.application.use_cases.track_statistics_export import (
     TrackStatisticsExportSpecification,
 )
 from OTAnalytics.domain.event import EventRepository
+from OTAnalytics.domain.orthophoto import OrthophotoRequired
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId, SectionRepository, SectionType
 from OTAnalytics.domain.track import TrackId
@@ -1236,6 +1237,40 @@ class TestOTAnalyticsCli:
         await cli.start()
         logger.exception.assert_called_once_with(exception, exc_info=True)
         mock_run_analysis.assert_called_once()
+
+    @patch("OTAnalytics.plugin_ui.cli.logger")
+    @pytest.mark.parametrize(
+        "mode",
+        [CliMode.STREAM, CliMode.BULK],
+    )
+    async def test_refuses_geo_only_files_without_orthophoto(
+        self,
+        get_logger: Mock,
+        mode: CliMode,
+        mock_cli_bulk_dependencies: dict[str, Mock],
+        mock_cli_stream_dependencies: dict[str, Mock],
+    ) -> None:
+        logger = Mock()
+        get_logger.return_value = logger
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode,
+            mock_cli_bulk_dependencies,
+            mock_cli_stream_dependencies,
+            Mock(),
+        )
+
+        with (
+            patch.object(cli, "_prepare_analysis"),
+            patch.object(
+                cli, "_run_analysis", side_effect=OrthophotoRequired("needs one")
+            ),
+            patch.object(cli, "_export_analysis") as mock_export_analysis,
+        ):
+            with pytest.raises(OrthophotoRequired):
+                await cli.start()
+
+        logger.error.assert_called_once_with("needs one")
+        mock_export_analysis.assert_not_called()
 
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._do_export_counts")
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._export_events")

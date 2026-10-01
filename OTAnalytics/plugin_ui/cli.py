@@ -51,6 +51,7 @@ from OTAnalytics.application.use_cases.track_statistics_export import (
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.orthophoto import OrthophotoError
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
@@ -128,6 +129,11 @@ class OTAnalyticsCli(ABC):
             await self._run_analysis(self.ottrk_file_input_source)
             await self._export_analysis(sections, ExportMode.create(True, True))
 
+        except OrthophotoError as cause:
+            # Counting Geo-only Track Files in pixel space would silently give
+            # wrong numbers (every detection sits at 0, 0), so stop instead.
+            logger().error(str(cause))
+            raise
         except Exception as cause:
             logger().exception(cause, exc_info=True)
         await self._after()
