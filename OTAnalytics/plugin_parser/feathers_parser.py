@@ -11,6 +11,7 @@ from typing import Optional, cast
 
 import polars as pl
 
+import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.orthophoto import (
     FALLBACK_GEO_CRS,
@@ -62,8 +63,11 @@ def place_on_orthophoto(
         georeference (GeoreferenceMetadata): the Orthophoto's mapping.
 
     Returns:
-        pl.DataFrame: the detections with x / y on the Orthophoto's pixels.
+        pl.DataFrame: the detections with x / y on the Orthophoto's pixels, or
+            the detections unchanged if there are none to place.
     """
+    if track.GEO_X not in df.columns:
+        return df
     transform = geo_to_pixel_transform(georeference)
     return df.with_columns(
         (pl.col(track.GEO_X) * transform.scale_x + transform.offset_x).alias(track.X),
@@ -143,6 +147,7 @@ class FeathersParser(TrackParser, GeoreferenceMetadataParsingMixin):
         geo_only = is_geo_only(
             has_georeference=georeference_metadata is not None,
             carries_geo_coordinates=track.GEO_X in df.columns,
+            declares_geo_coordinates=ottrk_format.GEO_COORDINATES in metadata,
         )
         if geo_only:
             georeference_metadata = self._orthophoto_georeference.for_crs(

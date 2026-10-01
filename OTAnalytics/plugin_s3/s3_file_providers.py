@@ -102,10 +102,17 @@ def read_video_name(ottrk: Path) -> str | None:
 def _is_geo_only_file(ottrk: Path, metadata: dict) -> bool:
     """Apply the Geo-only rule, reading detections only when it is undecided."""
     has_georeference = ottrk_dataformat.GEOREFERENCE in metadata
-    carries_geo_coordinates = not has_georeference and _translating_read_errors(
-        ottrk, lambda: _first_detection_has_geo_coordinates(ottrk)
+    declares_geo_coordinates = ottrk_dataformat.GEO_COORDINATES in metadata
+    carries_geo_coordinates = (
+        not has_georeference
+        and not declares_geo_coordinates
+        and _translating_read_errors(
+            ottrk, lambda: _first_detection_has_geo_coordinates(ottrk)
+        )
     )
-    return is_geo_only(has_georeference, carries_geo_coordinates)
+    return is_geo_only(
+        has_georeference, carries_geo_coordinates, declares_geo_coordinates
+    )
 
 
 def _translating_read_errors(ottrk: Path, read: Callable[[], _T]) -> _T:

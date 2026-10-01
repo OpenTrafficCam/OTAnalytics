@@ -609,6 +609,13 @@ def setup_default_geo_only(
     return given
 
 
+def setup_empty_geo_only(given: GivenGeoOnlyFeather) -> GivenGeoOnlyFeather:
+    """A quiet period: OTFusion wrote the file, but no road user passed."""
+    setup_default_geo_only(given)
+    polars.DataFrame().write_ipc(given.feather_file)
+    return given
+
+
 def setup_camera_file_with_geo_columns(
     given: GivenGeoOnlyFeather,
 ) -> GivenGeoOnlyFeather:
@@ -696,6 +703,17 @@ class TestFeathersParserGeoOnly:
 
         with pytest.raises(OrthophotoRequired):
             target.parse(given.feather_file)
+
+    def test_file_without_detections_is_geo_only_by_its_metadata(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_empty_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert result.is_geo_only
+        assert result.tracks.empty
 
     def test_camera_file_is_not_geo_only(self, test_data_tmp_dir: Path) -> None:
         given = setup_default_feathers_parser_with_georeference(test_data_tmp_dir)

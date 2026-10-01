@@ -56,6 +56,14 @@ class TestReadVideoName:
 
         assert read_video_name(given.ottrk) is None
 
+    def test_a_geo_only_track_file_without_detections_has_no_video(
+        self, tmp_path: Path
+    ) -> None:
+        """A quiet period must not ask for a video the file never had."""
+        given = create_given(tmp_path, empty_geo_only_content())
+
+        assert read_video_name(given.ottrk) is None
+
     def test_a_georeferenced_file_with_geo_coordinates_keeps_its_video(
         self, tmp_path: Path
     ) -> None:
@@ -173,3 +181,10 @@ def metadata_naming(filename: str, filetype: str) -> dict:
 
 def geo_only_content() -> dict:
     return {"metadata": {}, "data": {"detections": [{"geo_x": 1.0, "geo_y": 2.0}]}}
+
+
+def empty_geo_only_content() -> dict:
+    return {
+        "metadata": {"geo_coordinates": {"crs": "EPSG:25833"}},
+        "data": {"detections": []},
+    }
