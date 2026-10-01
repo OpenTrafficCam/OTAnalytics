@@ -122,3 +122,22 @@ class TestLocalOrthophotoProvider:
         given = create_given_orthophoto("")
 
         assert await create_orthophoto_target(given).provide() is None
+
+    async def test_offers_tif_and_tiff_files(self) -> None:
+        given = create_given_orthophoto("/site/map.tiff")
+
+        await create_orthophoto_target(given).provide()
+
+        given.ui_factory.askopenfilename.assert_awaited_once_with(
+            title="Choose the orthophoto for these track files",
+            filetypes=[
+                ("orthophoto (.tif)", "*.tif"),
+                ("orthophoto (.tiff)", "*.tiff"),
+            ],
+            defaultextension=".tif",
+            extension_options={
+                "All File Endings": [".tif", ".tiff"],
+                ".tif": [".tif"],
+                ".tiff": [".tiff"],
+            },
+        )

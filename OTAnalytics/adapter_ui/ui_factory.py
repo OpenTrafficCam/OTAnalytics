@@ -36,6 +36,7 @@ class UiFactory(ABC):
         title: str,
         filetypes: list[tuple[str, str]],
         defaultextension: str,
+        extension_options: dict[str, list[str] | None] | None = None,
     ) -> str:
         raise NotImplementedError
 

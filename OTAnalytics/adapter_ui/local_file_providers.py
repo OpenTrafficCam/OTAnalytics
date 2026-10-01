@@ -11,8 +11,12 @@ from OTAnalytics.application.use_cases.provide_input_files import (
 )
 
 ALL_FILE_ENDINGS = "All File Endings"
-ORTHOPHOTO_FILE_TYPES = [("orthophoto", "*.tif"), ("orthophoto", "*.tiff")]
-ORTHOPHOTO_DEFAULT_EXTENSION = ".tif"
+ORTHOPHOTO_EXTENSIONS = [".tif", ".tiff"]
+ORTHOPHOTO_FILE_TYPES = [
+    (f"orthophoto ({extension})", f"*{extension}")
+    for extension in ORTHOPHOTO_EXTENSIONS
+]
+ORTHOPHOTO_DEFAULT_EXTENSION = ORTHOPHOTO_EXTENSIONS[0]
 NO_FILE_CHOSEN = ""
 
 
@@ -47,7 +51,7 @@ class LocalVideoFileProvider(ProvideVideoFiles):
         return await self._ui_factory.askopenfilenames(
             title="Load video files",
             filetypes=[("video file", SUPPORTED_VIDEO_FILE_TYPES)],
-            extension_options=_video_extension_options(),
+            extension_options=_extension_options(SUPPORTED_VIDEO_FILE_TYPES),
         )
 
 
@@ -66,17 +70,20 @@ class LocalOrthophotoProvider(ProvideOrthophoto):
             title="Choose the orthophoto for these track files",
             filetypes=ORTHOPHOTO_FILE_TYPES,
             defaultextension=ORTHOPHOTO_DEFAULT_EXTENSION,
+            extension_options=_extension_options(ORTHOPHOTO_EXTENSIONS),
         )
         if chosen == NO_FILE_CHOSEN:
             return None
         return Path(chosen)
 
 
-def _video_extension_options() -> dict[str, list[str] | None]:
-    """One entry offering every supported type, then one per type."""
-    options: dict[str, list[str] | None] = {
-        ALL_FILE_ENDINGS: list(SUPPORTED_VIDEO_FILE_TYPES)
-    }
-    for extension in SUPPORTED_VIDEO_FILE_TYPES:
+def _extension_options(extensions: list[str]) -> dict[str, list[str] | None]:
+    """One entry offering every given extension, then one per extension.
+
+    Without these options the file picker falls back to its otflow/otconfig filter
+    and hides every other file.
+    """
+    options: dict[str, list[str] | None] = {ALL_FILE_ENDINGS: list(extensions)}
+    for extension in extensions:
         options[extension] = [extension]
     return options
