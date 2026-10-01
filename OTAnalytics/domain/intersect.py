@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 
 from OTAnalytics.domain.event import EventBuilder, EventDataset
 from OTAnalytics.domain.geometry import Coordinate, Line, Polygon

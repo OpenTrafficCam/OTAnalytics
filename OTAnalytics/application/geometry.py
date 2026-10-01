@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from functools import singledispatchmethod
-from typing import Generic, Iterable, TypeVar
+from typing import Generic, TypeVar
 
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.track import Track

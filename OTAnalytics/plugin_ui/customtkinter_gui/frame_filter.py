@@ -1,9 +1,10 @@
 import tkinter
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from datetime import datetime, timezone
 from tkinter import END, IntVar
 from tkinter.ttk import Treeview
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from customtkinter import (
     CTkButton,

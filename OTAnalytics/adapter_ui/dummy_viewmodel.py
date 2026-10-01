@@ -1,9 +1,11 @@
 import contextlib
 import functools
+from collections.abc import Iterable, Sequence
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Any, Iterable, Optional, Sequence
+
+from typing import Any, Optional
 
 from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
     AbstractButtonQuickSaveConfig,

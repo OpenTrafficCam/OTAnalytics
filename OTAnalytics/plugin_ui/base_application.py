@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from functools import cached_property
 from pathlib import Path
-from typing import Sequence
 
 from OTAnalytics.adapter_visualization.color_provider import (
     DEFAULT_COLOR_PALETTE,

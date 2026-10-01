@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Iterable, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 from OTAnalytics.application.config import CUTTING_SECTION_MARKER
 from OTAnalytics.domain.common import DataclassValidation

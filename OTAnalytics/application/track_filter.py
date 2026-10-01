@@ -1,5 +1,6 @@
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Iterable, Optional
+from typing import Optional
 
 from OTAnalytics.domain.filter import Conjunction, Filter, FilterBuilder, Predicate
 from OTAnalytics.domain.track import Track

@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from OTAnalytics.application.analysis.intersect import TracksIntersectingSections
 from OTAnalytics.application.use_cases.track_repository import GetAllTracks

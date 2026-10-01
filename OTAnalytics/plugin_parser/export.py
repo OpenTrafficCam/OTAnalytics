@@ -1,7 +1,7 @@
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import timedelta
 from pathlib import Path
-from typing import Iterable
 
 from pandas import DataFrame, to_datetime
 

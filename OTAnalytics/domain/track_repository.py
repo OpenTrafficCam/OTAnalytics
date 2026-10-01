@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain.observer import OBSERVER, Subject

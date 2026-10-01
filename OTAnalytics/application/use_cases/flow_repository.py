@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 

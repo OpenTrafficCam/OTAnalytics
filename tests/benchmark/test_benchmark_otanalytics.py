@@ -1,6 +1,6 @@
+from collections.abc import Callable, Iterable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Iterable
 
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture

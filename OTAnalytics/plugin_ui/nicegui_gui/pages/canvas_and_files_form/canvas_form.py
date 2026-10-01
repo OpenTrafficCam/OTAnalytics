@@ -1,4 +1,5 @@
-from typing import Iterable, Optional, Self
+from collections.abc import Iterable
+from typing import Optional, Self
 
 from nicegui import events, ui
 from nicegui.elements.interactive_image import InteractiveImage

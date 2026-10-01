@@ -1,6 +1,7 @@
 import math
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
-from typing import Any, Iterable, Iterator, Optional, Sequence
+from typing import Any, Optional
 
 import polars as pl
 

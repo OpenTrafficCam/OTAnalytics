@@ -1,9 +1,9 @@
 from abc import ABC
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Iterable
 
 from OTAnalytics.application.export_formats.export_mode import ExportMode
 

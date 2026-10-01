@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Generic, Iterable, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 from OTAnalytics.domain.date import DateRange
 

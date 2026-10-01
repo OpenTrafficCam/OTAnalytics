@@ -1,5 +1,6 @@
 import tkinter
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from customtkinter import CTkButton, CTkCheckBox, CTkLabel
 

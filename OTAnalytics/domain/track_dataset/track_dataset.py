@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Iterable, Iterator, Optional, Sequence
+from typing import Any, Optional
 
 from OTAnalytics.domain.event import (
     Event,

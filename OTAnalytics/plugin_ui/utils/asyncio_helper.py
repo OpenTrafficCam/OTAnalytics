@@ -1,5 +1,5 @@
 import asyncio
-from typing import Coroutine
+from collections.abc import Coroutine
 
 
 def run_async(coro: Coroutine) -> None:

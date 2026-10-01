@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,

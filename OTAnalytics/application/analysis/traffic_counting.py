@@ -2,10 +2,11 @@ import re
 import unicodedata
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Callable, Iterable, Optional
+from typing import Optional
 
 from PIL.Image import Image
 

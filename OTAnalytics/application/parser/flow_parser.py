@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Iterable, Sequence
 
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.section import Section

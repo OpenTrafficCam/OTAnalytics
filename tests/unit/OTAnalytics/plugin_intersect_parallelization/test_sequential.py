@@ -1,4 +1,5 @@
-from typing import Callable, cast
+from collections.abc import Callable
+from typing import cast
 from unittest.mock import Mock, call
 
 from OTAnalytics.domain.event import Event, PythonEventDataset

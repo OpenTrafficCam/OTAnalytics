@@ -2,9 +2,10 @@ import itertools
 import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Iterable, Iterator, Optional, Sequence
+from typing import Optional
 
 from OTAnalytics.domain.common import DataclassValidation
 from OTAnalytics.domain.geometry import DirectionVector2D, ImageCoordinate

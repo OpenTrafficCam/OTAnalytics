@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Protocol
+from typing import Protocol
 
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportFormat
 from OTAnalytics.application.config import CONTEXT_FILE_TYPE_TRACK_STATISTICS

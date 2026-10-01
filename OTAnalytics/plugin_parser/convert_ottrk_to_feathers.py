@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.application.logger import logger
@@ -54,7 +54,7 @@ def convert_to_pandas_dataset(
     return PandasTrackDataset.from_list(tracks_list, track_geometry_factory)
 
 
-def _serialize_georeference_metadata(metadata: GeoreferenceMetadata) -> Dict[str, Any]:
+def _serialize_georeference_metadata(metadata: GeoreferenceMetadata) -> dict[str, Any]:
     """Serialize a GeoreferenceMetadata to a plain dict using ottrk_dataformat keys."""
     return {
         ottrk_format.GEO_BOUNDS: {
@@ -72,9 +72,9 @@ def _serialize_georeference_metadata(metadata: GeoreferenceMetadata) -> Dict[str
     }
 
 
-def create_metadata_dict(parse_result: TrackParseResult) -> Dict[str, Any]:
+def create_metadata_dict(parse_result: TrackParseResult) -> dict[str, Any]:
     """Create a metadata dictionary from TrackParseResult."""
-    metadata: Dict[str, Any] = {
+    metadata: dict[str, Any] = {
         KEY_DETECTION_METADATA: {
             KEY_DETECTION_CLASSES: list(
                 parse_result.detection_metadata.detection_classes

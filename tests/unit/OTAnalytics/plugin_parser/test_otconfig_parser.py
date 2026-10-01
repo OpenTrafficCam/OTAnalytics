@@ -1,7 +1,8 @@
 import shutil
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 from unittest.mock import Mock, PropertyMock, call, patch
 
 import pytest

@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from shapely import LineString as ShapelyLineString
 from shapely import Point as ShapelyPoint

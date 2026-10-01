@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import Callable, Generic, Iterable, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 from OTAnalytics.domain.section import SectionId
 

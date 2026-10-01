@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from datetime import date, datetime, time, timezone
-from typing import Callable, Generic, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 from nicegui import ui
 from nicegui.element import Element

@@ -1,5 +1,5 @@
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import AsyncIterator
 
 from OTAnalytics.plugin_parser.otvision_parser import OttrkFormatFixer
 from OTAnalytics.plugin_track_input_source.template import OttrkFileInputSourceTemplate
