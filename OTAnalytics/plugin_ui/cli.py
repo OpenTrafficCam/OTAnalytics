@@ -136,7 +136,8 @@ class OTAnalyticsCli(ABC):
             raise
         except Exception as cause:
             logger().exception(cause, exc_info=True)
-        await self._after()
+        finally:
+            await self._after()
 
     def _add_sections(self, sections: Iterable[Section]) -> None:
         """Add sections to section repository."""

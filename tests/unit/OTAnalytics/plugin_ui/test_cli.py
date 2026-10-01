@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from shutil import copy2, rmtree
 from typing import Any, AsyncIterator
-from unittest.mock import Mock, PropertyMock, patch
+from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 import pytest
 
@@ -1265,12 +1265,14 @@ class TestOTAnalyticsCli:
                 cli, "_run_analysis", side_effect=OrthophotoRequired("needs one")
             ),
             patch.object(cli, "_export_analysis") as mock_export_analysis,
+            patch.object(cli, "_after", new_callable=AsyncMock) as mock_after,
+            pytest.raises(OrthophotoRequired),
         ):
-            with pytest.raises(OrthophotoRequired):
-                await cli.start()
+            await cli.start()
 
         logger.error.assert_called_once_with("needs one")
         mock_export_analysis.assert_not_called()
+        mock_after.assert_awaited_once()
 
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._do_export_counts")
     @patch("OTAnalytics.plugin_ui.cli.OTAnalyticsCli._export_events")
