@@ -27,6 +27,7 @@ from OTAnalytics.application.config_specification import OtConfigDefaultValuePro
 from OTAnalytics.application.datastore import Datastore, EventListParser, VideoParser
 from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.orthophoto import (
+    AddVideoFiles,
     ChooseOrthophoto,
     CurrentOrthophotoGeoreference,
     CurrentOrthophotoImage,
@@ -510,9 +511,16 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         return ResolveMissingOrthophoto(
             self.provide_orthophoto,
             ChooseOrthophoto(
-                self.current_orthophoto, self.section_repository, self.track_repository
+                self.current_orthophoto,
+                self.section_repository,
+                self.track_repository,
+                self.video_repository,
             ),
         )
+
+    @cached_property
+    def add_video_files(self) -> AddVideoFiles:
+        return AddVideoFiles(self.datastore.load_video_files, self.current_orthophoto)
 
     @cached_property
     def get_current_remark(self) -> GetCurrentRemark:

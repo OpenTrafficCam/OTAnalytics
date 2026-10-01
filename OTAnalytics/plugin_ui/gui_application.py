@@ -227,6 +227,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.get_current_remark,
             self.update_count_plots,
             self.current_key_prefix,
+            self.add_video_files,
         )
 
     @cached_property

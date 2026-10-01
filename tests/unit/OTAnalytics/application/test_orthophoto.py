@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from OTAnalytics.application.orthophoto import (
+    VIDEOS_BESIDE_ORTHOPHOTO,
+    AddVideoFiles,
     ChooseOrthophoto,
     CurrentOrthophotoGeoreference,
     CurrentOrthophotoImage,
@@ -13,6 +15,7 @@ from OTAnalytics.application.orthophoto import (
 )
 from OTAnalytics.application.state import CurrentOrthophoto
 from OTAnalytics.domain.orthophoto import (
+    MixedTrackFiles,
     Orthophoto,
     OrthophotoLocked,
     OrthophotoRequired,
@@ -22,6 +25,7 @@ from OTAnalytics.domain.track import TrackImage
 ORTHOPHOTO_FILE = Path("site/map.tiff")
 CRS = "EPSG:25833"
 PICKED_FILE = Path("picked/map.tiff")
+VIDEO_FILES = [Path("site/camera.mp4")]
 
 
 @dataclass
@@ -86,6 +90,7 @@ class GivenChoose:
     current_orthophoto: CurrentOrthophoto
     section_repository: Mock
     track_repository: Mock
+    video_repository: Mock
 
 
 def create_given_choose() -> GivenChoose:
@@ -93,12 +98,14 @@ def create_given_choose() -> GivenChoose:
         current_orthophoto=CurrentOrthophoto(),
         section_repository=Mock(),
         track_repository=Mock(),
+        video_repository=Mock(),
     )
 
 
 def setup_default_choose(given: GivenChoose) -> GivenChoose:
     given.section_repository.get_all.return_value = []
     given.track_repository.get_all.return_value.empty = True
+    given.video_repository.get_all.return_value = []
     return given
 
 
@@ -112,9 +119,17 @@ def setup_with_tracks(given: GivenChoose) -> GivenChoose:
     return given
 
 
+def setup_with_videos(given: GivenChoose) -> GivenChoose:
+    given.video_repository.get_all.return_value = [Mock()]
+    return given
+
+
 def create_target_choose(given: GivenChoose) -> ChooseOrthophoto:
     return ChooseOrthophoto(
-        given.current_orthophoto, given.section_repository, given.track_repository
+        given.current_orthophoto,
+        given.section_repository,
+        given.track_repository,
+        given.video_repository,
     )
 
 
@@ -137,6 +152,56 @@ class TestChooseOrthophoto:
 
         with pytest.raises(OrthophotoLocked):
             create_target_choose(given).choose(PICKED_FILE)
+
+    def test_choose_is_refused_when_videos_exist(self) -> None:
+        given = setup_with_videos(setup_default_choose(create_given_choose()))
+
+        with pytest.raises(OrthophotoLocked):
+            create_target_choose(given).choose(PICKED_FILE)
+
+
+@dataclass
+class GivenAddVideos:
+    current_orthophoto: CurrentOrthophoto
+    load_video_files: Mock
+
+
+def create_given_add_videos() -> GivenAddVideos:
+    return GivenAddVideos(
+        current_orthophoto=CurrentOrthophoto(), load_video_files=Mock()
+    )
+
+
+def setup_add_videos_with_orthophoto(given: GivenAddVideos) -> GivenAddVideos:
+    given.current_orthophoto.set(Orthophoto(file=ORTHOPHOTO_FILE))
+    return given
+
+
+def create_target_add_videos(given: GivenAddVideos) -> AddVideoFiles:
+    return AddVideoFiles(given.load_video_files, given.current_orthophoto)
+
+
+class TestAddVideoFiles:
+    def test_loads_the_videos_of_a_camera_project(self) -> None:
+        given = create_given_add_videos()
+
+        create_target_add_videos(given).add(VIDEO_FILES)
+
+        given.load_video_files.assert_called_once_with(VIDEO_FILES)
+
+    def test_refuses_videos_beside_an_orthophoto(self) -> None:
+        given = setup_add_videos_with_orthophoto(create_given_add_videos())
+
+        with pytest.raises(MixedTrackFiles, match=VIDEOS_BESIDE_ORTHOPHOTO):
+            create_target_add_videos(given).add(VIDEO_FILES)
+
+    def test_loads_nothing_beside_an_orthophoto(self) -> None:
+        given = setup_add_videos_with_orthophoto(create_given_add_videos())
+
+        with pytest.raises(MixedTrackFiles):
+            create_target_add_videos(given).add(VIDEO_FILES)
+
+        given.load_video_files.assert_not_called()
 
 
 @dataclass

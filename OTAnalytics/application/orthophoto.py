@@ -7,6 +7,7 @@ from typing import Callable
 from OTAnalytics.application.state import CurrentOrthophoto
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.orthophoto import (
+    MixedTrackFiles,
     Orthophoto,
     OrthophotoLocked,
     OrthophotoNotFound,
@@ -15,6 +16,7 @@ from OTAnalytics.domain.orthophoto import (
 from OTAnalytics.domain.section import SectionRepository
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.domain.video import VideoRepository
 
 # The CRS OTFusion's default geo offset shifts local world coordinates into.
 # Files written before OTFusion declared its CRS (OTCloud OP#10404) are assumed
@@ -25,14 +27,18 @@ ORTHOPHOTO_REQUIRED = (
     " orthophoto to be shown and counted. Nothing was loaded."
 )
 ORTHOPHOTO_LOCKED = (
-    "An orthophoto can only be chosen for a project without sections or tracks,"
-    " because sections are drawn on it. Start a new project to use this"
+    "An orthophoto can only be chosen for a project without sections, tracks or"
+    " videos, because sections are drawn on it. Start a new project to use this"
     " orthophoto. Nothing was loaded."
 )
 MIXED_TRACK_FILES = (
     "This project shows an orthophoto, so it can only hold track files that place"
     " road users by geo coordinates. Track files with their own video belong in a"
     " separate project. Nothing was loaded."
+)
+VIDEOS_BESIDE_ORTHOPHOTO = (
+    "This project shows an orthophoto, so it cannot hold videos. Videos and the"
+    " track files made from them belong in a separate project. Nothing was loaded."
 )
 
 
@@ -150,7 +156,8 @@ class ChooseOrthophoto:
     """Makes a file the project's Orthophoto, while that is still possible.
 
     Sections are stored as pixels on the Orthophoto (ADR 0005), so once any exist,
-    or tracks were placed on it, a different image would silently move them.
+    or tracks were placed on it, a different image would silently move them. A
+    project with videos places its tracks on those instead.
     """
 
     def __init__(
@@ -158,10 +165,12 @@ class ChooseOrthophoto:
         current_orthophoto: CurrentOrthophoto,
         section_repository: SectionRepository,
         track_repository: TrackRepository,
+        video_repository: VideoRepository,
     ) -> None:
         self._current_orthophoto = current_orthophoto
         self._section_repository = section_repository
         self._track_repository = track_repository
+        self._video_repository = video_repository
 
     def choose(self, file: Path) -> None:
         """Show `file` behind the project's tracks.
@@ -170,16 +179,49 @@ class ChooseOrthophoto:
             file (Path): the GeoTIFF.
 
         Raises:
-            OrthophotoLocked: if the project has sections or tracks.
+            OrthophotoLocked: if the project has sections, tracks or videos.
         """
-        if self._has_sections_or_tracks():
+        if self._has_sections_tracks_or_videos():
             raise OrthophotoLocked(ORTHOPHOTO_LOCKED)
         self._current_orthophoto.set(Orthophoto(file=file))
 
-    def _has_sections_or_tracks(self) -> bool:
-        return bool(self._section_repository.get_all()) or (
-            not self._track_repository.get_all().empty
+    def _has_sections_tracks_or_videos(self) -> bool:
+        return (
+            bool(self._section_repository.get_all())
+            or not self._track_repository.get_all().empty
+            or bool(self._video_repository.get_all())
         )
+
+
+LoadVideoFiles = Callable[[list[Path]], None]
+
+
+class AddVideoFiles:
+    """Adds videos to a project, unless it shows an Orthophoto (ADR 0005).
+
+    Args:
+        load_video_files (LoadVideoFiles): loads the videos into the project.
+        current_orthophoto (CurrentOrthophoto): the project's Orthophoto.
+    """
+
+    def __init__(
+        self, load_video_files: LoadVideoFiles, current_orthophoto: CurrentOrthophoto
+    ) -> None:
+        self._load_video_files = load_video_files
+        self._current_orthophoto = current_orthophoto
+
+    def add(self, files: list[Path]) -> None:
+        """Load `files` as the project's videos.
+
+        Args:
+            files (list[Path]): the video files.
+
+        Raises:
+            MixedTrackFiles: if the project shows an Orthophoto.
+        """
+        if self._current_orthophoto.get() is not None:
+            raise MixedTrackFiles(VIDEOS_BESIDE_ORTHOPHOTO)
+        self._load_video_files(files)
 
 
 class ResolveMissingOrthophoto:

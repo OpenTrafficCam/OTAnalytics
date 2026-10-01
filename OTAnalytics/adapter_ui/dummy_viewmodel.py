@@ -593,7 +593,13 @@ class DummyViewModel(
         if not video_files:
             return
         logger().info(f"Video files to load: {video_files}")
-        self._application.add_videos(files=video_files)
+        try:
+            self._application.add_videos(files=video_files)
+        except OrthophotoError as cause:
+            logger().warning(str(cause))
+            self._ui_factory.info_box(
+                message=str(cause), initial_position=self._get_window_position()
+            )
 
     def remove_videos(self) -> None:
         self._application.remove_videos()

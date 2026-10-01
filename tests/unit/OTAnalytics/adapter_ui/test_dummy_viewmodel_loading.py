@@ -14,9 +14,11 @@ from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideTrackFiles,
     ProvideVideoFiles,
 )
+from OTAnalytics.domain.orthophoto import MixedTrackFiles
 
 TRACK_FILES = [Path("folder/a.ottrk"), Path("folder/b.ottrk")]
 VIDEO_FILES = [Path("folder/a.mp4"), Path("folder/b.mp4")]
+REFUSAL = "This project shows an orthophoto."
 
 
 @dataclass
@@ -24,6 +26,7 @@ class Given:
     application: Mock
     provide_track_files: Mock
     provide_video_files: Mock
+    ui_factory: Mock
 
 
 def create_given(
@@ -40,7 +43,13 @@ def create_given(
         application=application,
         provide_track_files=provide_track_files,
         provide_video_files=provide_video_files,
+        ui_factory=Mock(),
     )
+
+
+def setup_with_videos_refused(given: Given) -> Given:
+    given.application.add_videos.side_effect = MixedTrackFiles(REFUSAL)
+    return given
 
 
 def create_target(given: Given) -> DummyViewModel:
@@ -59,7 +68,7 @@ def create_target(given: Given) -> DummyViewModel:
 def _build(given: Given) -> DummyViewModel:
     return DummyViewModel(
         application=given.application,
-        ui_factory=Mock(),
+        ui_factory=given.ui_factory,
         flow_parser=Mock(),
         name_generator=Mock(),
         event_list_export_formats={},
@@ -116,3 +125,12 @@ class TestAddVideo:
         await target.add_video()
 
         given.application.add_videos.assert_not_called()
+
+    async def test_reports_videos_refused_beside_an_orthophoto(self) -> None:
+        given = setup_with_videos_refused(create_given(videos=VIDEO_FILES))
+        target = create_target(given)
+
+        await target.add_video()
+
+        given.ui_factory.info_box.assert_called_once()
+        assert given.ui_factory.info_box.call_args.kwargs["message"] == REFUSAL

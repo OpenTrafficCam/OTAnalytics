@@ -9,6 +9,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.key_prefix import S3KeyPrefix
+from OTAnalytics.application.orthophoto import AddVideoFiles
 from OTAnalytics.application.project import SvzMetadata
 from OTAnalytics.application.state import (
     ActionState,
@@ -160,6 +161,7 @@ class OTAnalyticsApplication:
         get_current_remark: GetCurrentRemark,
         update_count_plots: CountPlotsUpdater,
         current_key_prefix: CurrentKeyPrefix,
+        add_video_files: AddVideoFiles,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -208,6 +210,7 @@ class OTAnalyticsApplication:
         self._get_current_remark = get_current_remark
         self._update_count_plots = update_count_plots
         self._current_key_prefix = current_key_prefix
+        self._add_video_files = add_video_files
 
     def connect_observers(self) -> None:
         """
@@ -248,7 +251,15 @@ class OTAnalyticsApplication:
         return self._datastore.get_section_for(section_id)
 
     def add_videos(self, files: list[Path]) -> None:
-        self._datastore.load_video_files(files)
+        """Load video files into the project.
+
+        Args:
+            files (list[Path]): the video files.
+
+        Raises:
+            MixedTrackFiles: if the project shows an Orthophoto.
+        """
+        self._add_video_files.add(files)
 
     def remove_videos(self) -> None:
         """
