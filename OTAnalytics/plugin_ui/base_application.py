@@ -62,10 +62,9 @@ from OTAnalytics.application.upload_otconfig import NoOtconfigUpload, UploadOtco
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.assignment_repository import (
+    ClearAssignmentsOnChangedFlows,
     GetRoadUserAssignments,
-    RemoveAssignmentsOfChangedFlow,
     RemoveAssignmentsOfRemovedEvents,
-    RemoveAssignmentsOfRemovedFlows,
 )
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.config import SaveOtconfig
@@ -971,14 +970,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     @cached_property
-    def remove_assignments_of_removed_flows(self) -> RemoveAssignmentsOfRemovedFlows:
-        return RemoveAssignmentsOfRemovedFlows(
-            self.assignment_repository, self.get_all_flows
-        )
-
-    @cached_property
-    def remove_assignments_of_changed_flows(self) -> RemoveAssignmentsOfChangedFlow:
-        return RemoveAssignmentsOfChangedFlow(self.assignment_repository)
+    def clear_assignments_on_changed_flows(self) -> ClearAssignmentsOnChangedFlows:
+        return ClearAssignmentsOnChangedFlows(self.assignment_repository)
 
     @cached_property
     def get_all_assignments(self) -> GetRoadUserAssignments:

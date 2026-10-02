@@ -105,9 +105,29 @@ class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
         self._flow_id_resolver = flow_id_resolver
 
     def notify_flow(self, flow: FlowId) -> None:
+        """Handle a changed flow.
+
+        All layers are invalidated because road users are assigned to exactly
+        one flow. Changing a single flow can therefore change the tracks
+        plotted for every other flow as well.
+
+        Args:
+            flow (FlowId): the changed flow.
+        """
+        self.notify_invalidate(None)
         self.notify_layers_changed([flow])
 
     def notify_flows(self, flows: list[FlowId]) -> None:
+        """Handle added or removed flows.
+
+        All layers are invalidated because road users are assigned to exactly
+        one flow. Changing a single flow can therefore change the tracks
+        plotted for every other flow as well.
+
+        Args:
+            flows (list[FlowId]): the added flows, empty if flows were removed.
+        """
+        self.notify_invalidate(None)
         self.notify_layers_changed(flows)
 
     def notify_events(self, events: EventRepositoryEvent) -> None:
