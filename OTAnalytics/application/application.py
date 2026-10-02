@@ -86,7 +86,7 @@ from OTAnalytics.application.use_cases.update_count_plots import CountPlotsUpdat
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
-from OTAnalytics.domain.flow import Flow, FlowChangedObserver, FlowId, FlowListObserver
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     Section,
@@ -237,9 +237,6 @@ class OTAnalyticsApplication:
 
     def register_flows_observer(self, observer: FlowListObserver) -> None:
         self._datastore.register_flows_observer(observer)
-
-    def register_flow_changed_observer(self, observer: FlowChangedObserver) -> None:
-        self._datastore.register_flow_changed_observer(observer)
 
     def get_all_sections(self) -> list[Section]:
         return self._datastore.get_all_sections()
