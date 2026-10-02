@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Generic, Iterable, Optional, TypeVar
+from typing import Iterable, Optional
 
 from OTAnalytics.domain.section import SectionId
 
@@ -84,44 +84,15 @@ class FlowListObserver(ABC):
     @abstractmethod
     def notify_flows(self, flows: list[FlowId]) -> None:
         """
-        Notifies that the given flows have been added or removed.
+        Notifies that the given flows have been added or updated.
+
+        An empty list indicates that flows have been removed.
 
         Args:
-            flows (list[FlowId]): list of added or removed flows
+            flows (list[FlowId]): list of added or updated flows, empty if flows
+                have been removed
         """
         pass
-
-
-VALUE = TypeVar("VALUE")
-
-FlowChangedObserver = Callable[[FlowId], None]
-
-
-class FlowChangedSubject(Generic[VALUE]):
-    """
-    Helper class to handle and notify observers
-    """
-
-    def __init__(self) -> None:
-        self.observers: set[FlowChangedObserver] = set()
-
-    def register(self, observer: FlowChangedObserver) -> None:
-        """
-        Listen to events.
-
-        Args:
-            observer (FlowChangedObserver): listener to add
-        """
-        self.observers.add(observer)
-
-    def notify(self, value: FlowId) -> None:
-        """
-        Notifies observers about the changed value.
-
-        Args:
-            value (FlowId): changed value
-        """
-        [observer(value) for observer in self.observers]
 
 
 class FlowListSubject:
@@ -146,7 +117,8 @@ class FlowListSubject:
         Notifies observers about the list of flows.
 
         Args:
-            flows (list[FlowId]): list of added flows
+            flows (list[FlowId]): list of added or updated flows, empty if flows
+                have been removed
         """
         [observer.notify_flows(flows) for observer in self.observers]
 
@@ -156,13 +128,9 @@ class FlowRepository:
         self._flows: dict[FlowId, Flow] = {}
         self._current_id = 0
         self._repository_content_observers: FlowListSubject = FlowListSubject()
-        self._flow_content_observers: FlowChangedSubject = FlowChangedSubject()
 
     def register_flows_observer(self, observer: FlowListObserver) -> None:
         self._repository_content_observers.register(observer)
-
-    def register_flow_changed_observer(self, observer: FlowChangedObserver) -> None:
-        self._flow_content_observers.register(observer)
 
     def get_id(self) -> FlowId:
         """
@@ -219,7 +187,7 @@ class FlowRepository:
 
     def update(self, flow: Flow) -> None:
         self._flows[flow.id] = flow
-        self._flow_content_observers.notify(flow.id)
+        self._repository_content_observers.notify([flow.id])
 
     def get(self, flow_id: FlowId) -> Optional[Flow]:
         return self._flows.get(flow_id)

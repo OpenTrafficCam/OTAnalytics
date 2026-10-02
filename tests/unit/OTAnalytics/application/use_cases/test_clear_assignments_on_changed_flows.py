@@ -14,7 +14,7 @@ class TestClearAssignmentsOnChangedFlows:
         assignment_repository = Mock(spec=RoadUserAssignmentRepository)
         target = ClearAssignmentsOnChangedFlows(assignment_repository)
 
-        target(FlowId("1"))
+        target.notify_flows([FlowId("1")])
 
         assignment_repository.clear.assert_called_once()
 

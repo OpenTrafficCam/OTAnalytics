@@ -10,13 +10,7 @@ from OTAnalytics.application.use_cases.export_events import (
     EventListExporter,
 )
 from OTAnalytics.domain.event import Event, EventRepository
-from OTAnalytics.domain.flow import (
-    Flow,
-    FlowChangedObserver,
-    FlowId,
-    FlowListObserver,
-    FlowRepository,
-)
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import (
@@ -300,15 +294,6 @@ class Datastore:
             observer (SectionChangedObserver): observer to notify about changes
         """
         self._section_repository.register_section_changed_observer(observer)
-
-    def register_flow_changed_observer(self, observer: FlowChangedObserver) -> None:
-        """
-        Listen to changes of sections in the repository.
-
-        Args:
-            observer (FlowChangedObserver): observer to notify about changes
-        """
-        self._flow_repository.register_flow_changed_observer(observer)
 
     def update_section(self, section: Section) -> None:
         """

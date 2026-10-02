@@ -80,20 +80,11 @@ class ClearAssignmentsOnChangedFlows(FlowListObserver):
     def __init__(self, assignment_repository: RoadUserAssignmentRepository) -> None:
         self._assignment_repository = assignment_repository
 
-    def __call__(self, flow: FlowId) -> None:
-        """Clear all assignments after the given flow has been changed.
-
-        Serves as FlowChangedObserver.
-
-        Args:
-            flow (FlowId): the changed flow.
-        """
-        self._assignment_repository.clear()
-
     def notify_flows(self, flows: list[FlowId]) -> None:
-        """Clear all assignments after flows have been added or removed.
+        """Clear all assignments after flows have been changed.
 
         Args:
-            flows (list[FlowId]): the added flows, empty if flows were removed.
+            flows (list[FlowId]): the added or updated flows, empty if flows
+                have been removed.
         """
         self._assignment_repository.clear()
