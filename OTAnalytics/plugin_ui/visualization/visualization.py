@@ -13,6 +13,8 @@ from OTAnalytics.application.plotting import (
     GetCurrentFrame,
     GetCurrentVideoPath,
     LayerGroup,
+    OrthophotoBackgroundPlotter,
+    OrthophotoImageProvider,
     PlottingLayer,
     TrackBackgroundPlotter,
     VisualizationTimeProvider,
@@ -199,6 +201,7 @@ class VisualizationBuilder:
         pulling_progressbar_builder: ProgressbarBuilder,
         track_image_factory: TrackImageFactory,
         track_id_set_factory: TrackIdSetFactory,
+        orthophoto_image: OrthophotoImageProvider,
         enable_single_legend: bool = True,
         enable_multi_legend: bool = False,
     ) -> None:
@@ -209,6 +212,7 @@ class VisualizationBuilder:
         self._pulling_progressbar_builder = pulling_progressbar_builder
         self._track_image_factory = track_image_factory
         self._track_id_set_factory = track_id_set_factory
+        self._orthophoto_image = orthophoto_image
         self._enable_single_legend = enable_single_legend
         self._enable_multi_legend = enable_multi_legend
         self._track_repository = datastore._track_repository
@@ -375,9 +379,12 @@ class VisualizationBuilder:
 
     @cached_property
     def background_plotter(self) -> Plotter:
-        return TrackBackgroundPlotter(
-            self._track_view_state.selected_videos.get,
-            self._visualization_time_provider,
+        return OrthophotoBackgroundPlotter(
+            self._orthophoto_image,
+            TrackBackgroundPlotter(
+                self._track_view_state.selected_videos.get,
+                self._visualization_time_provider,
+            ),
         )
 
     @cached_property

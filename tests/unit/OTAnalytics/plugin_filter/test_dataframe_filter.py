@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Iterable
 from unittest.mock import Mock, PropertyMock
@@ -10,7 +11,7 @@ from OTAnalytics.application.plotting import GetCurrentFrame
 from OTAnalytics.application.use_cases.video_repository import GetVideos
 from OTAnalytics.domain import track
 from OTAnalytics.domain.track import CLASSIFICATION, OCCURRENCE, Detection, Track
-from OTAnalytics.domain.video import Video
+from OTAnalytics.domain.video import Video, VideoRepository
 from OTAnalytics.plugin_filter.dataframe_filter import (
     DataFrameEndsBeforeOrAtDate,
     DataFrameEndsBeforeOrAtFrame,
@@ -31,6 +32,13 @@ THIRD_HOSTNAME = "thirdhostname"
 THIRD_VIDEO_NAME = f"{THIRD_HOSTNAME}_file.mp4"
 FORTH_HOSTNAME = "forthhostname"
 FORTH_VIDEO_NAME = f"{FORTH_HOSTNAME}_file.mp4"
+GEO_ONLY_TRACK_FILE_NAME = "fusion.ottrk"
+GEO_ONLY_TRACK_ID = "1"
+BEFORE_RANGE = datetime(2000, 1, 1, tzinfo=timezone.utc)
+RANGE_START = datetime(2000, 1, 2, tzinfo=timezone.utc)
+INSIDE_RANGE = datetime(2000, 1, 3, tzinfo=timezone.utc)
+RANGE_END = datetime(2000, 1, 4, tzinfo=timezone.utc)
+AFTER_RANGE = datetime(2000, 1, 5, tzinfo=timezone.utc)
 
 
 def convert_tracks_to_dataframe(tracks: Iterable[Track]) -> DataFrame:
@@ -274,6 +282,7 @@ class TestDataFrameFilterBuilder:
     @pytest.fixture
     def get_videos(self) -> Mock:
         get_videos = Mock(spec=GetVideos)
+        get_videos.has_videos.return_value = True
         video: Video = Mock(spec=Video)
         get_videos.get.return_value = video
         get_videos.get_before.return_value = [video]
@@ -455,3 +464,55 @@ class TestDataFrameFilterBuilder:
         assert builder._complex_predicate is None
         assert builder._classification_column is None
         assert builder._occurrence_column is None
+
+
+@dataclass
+class Given:
+    current_frame: Mock
+    get_videos: GetVideos
+    geo_only_tracks: DataFrame
+
+
+def create_given() -> Given:
+    return Given(
+        current_frame=Mock(spec=GetCurrentFrame),
+        get_videos=GetVideos(VideoRepository()),
+        geo_only_tracks=DataFrame(),
+    )
+
+
+def setup_default(given: Given) -> Given:
+    given.current_frame.get_frame_number_for.return_value = DEFAULT_FRAME
+    occurrences = [BEFORE_RANGE, RANGE_START, INSIDE_RANGE, RANGE_END, AFTER_RANGE]
+    given.geo_only_tracks = DataFrame(
+        {
+            track.TRACK_ID: [GEO_ONLY_TRACK_ID] * len(occurrences),
+            track.OCCURRENCE: occurrences,
+            track.FRAME: list(range(len(occurrences))),
+            track.VIDEO_NAME: [GEO_ONLY_TRACK_FILE_NAME] * len(occurrences),
+        }
+    ).set_index([track.TRACK_ID, track.OCCURRENCE])
+    return given
+
+
+def create_target(given: Given) -> DataFrameFilterBuilder:
+    builder = DataFrameFilterBuilder(given.current_frame, given.get_videos)
+    builder.set_occurrence_column(OCCURRENCE)
+    return builder
+
+
+def occurrences_of(tracks: DataFrame) -> list[datetime]:
+    return list(tracks.index.get_level_values(track.OCCURRENCE))
+
+
+class TestDataFrameFilterBuilderWithoutVideos:
+    def test_keeps_geo_only_rows_inside_the_date_range(self) -> None:
+        given = setup_default(create_given())
+        target = create_target(given)
+
+        target.add_starts_at_or_after_date_predicate(RANGE_START)
+        target.add_ends_before_or_at_date_predicate(RANGE_END)
+        target.build()
+        [actual] = target.get_result().apply([given.geo_only_tracks])
+
+        assert occurrences_of(actual) == [RANGE_START, INSIDE_RANGE, RANGE_END]

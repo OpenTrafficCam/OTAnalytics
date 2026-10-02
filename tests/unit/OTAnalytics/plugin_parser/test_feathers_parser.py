@@ -7,20 +7,26 @@ import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import Mock, patch
 
 import pandas as pd
 import polars
 import pytest
+from pytest import approx
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics.application.orthophoto import (
+    FALLBACK_GEO_CRS,
+    ProvideOrthophotoGeoreference,
+)
 from OTAnalytics.application.parser.track_parser import (
     DetectionMetadata,
     TrackParseResult,
 )
 from OTAnalytics.domain import track
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
+from OTAnalytics.domain.orthophoto import MixedTrackFiles, OrthophotoRequired
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IncompatibleGeoreferenceMetadataError,
 )
@@ -538,3 +544,263 @@ def setup_default_feathers_parser_mismatched_georeference(
     given: GivenFeathersParserMismatchedGeoreference,
 ) -> GivenFeathersParserMismatchedGeoreference:
     return given
+
+
+ORTHOPHOTO_GEOREFERENCE = GeoreferenceMetadata(
+    geo_min_x=449199.096512522,
+    geo_min_y=5699274.275524861,
+    geo_max_x=449294.8688478645,
+    geo_max_y=5699370.047860203,
+    birds_eye_view_width=983,
+    birds_eye_view_height=983,
+    padding=0,
+    crs="EPSG:25833",
+)
+GEO_ONLY_CRS = "EPSG:25833"
+KNOWN_GEO = (449226.28994160134, 5699327.2198470775)
+# Independently computed: see test_georeference.py
+KNOWN_ORTHOPHOTO_PIXEL = (279.11129753049903, 439.5834846490163)
+WEST_OF_ORTHOPHOTO_GEO_X = 449189.0
+# (449189.0 - geo_min_x) / ((geo_max_x - geo_min_x) / 983), computed by hand.
+WEST_OF_ORTHOPHOTO_PIXEL_X = -103.62984022117577
+CAMERA_PIXEL = (100.0, 100.0)
+
+
+@dataclass
+class GivenGeoOnlyFeather:
+    tmp_dir: Path
+    feather_file: Path
+    orthophoto_georeference: Mock
+
+
+def create_given_geo_only(tmp_dir: Path) -> GivenGeoOnlyFeather:
+    return GivenGeoOnlyFeather(
+        tmp_dir=tmp_dir,
+        feather_file=tmp_dir / "fusion.feather",
+        orthophoto_georeference=Mock(spec=ProvideOrthophotoGeoreference),
+    )
+
+
+def setup_default_geo_only(
+    given: GivenGeoOnlyFeather,
+    geo_x: float = KNOWN_GEO[0],
+    declares_crs: bool = True,
+) -> GivenGeoOnlyFeather:
+    row = SINGLE_ROW | {
+        track.X: 0.0,
+        track.Y: 0.0,
+        track.GEO_X: geo_x,
+        track.GEO_Y: KNOWN_GEO[1],
+    }
+    polars.DataFrame(row).write_ipc(given.feather_file)
+    sidecar: dict[str, Any] = {
+        "detection_metadata": {"detection_classes": ["car"]},
+        "video_metadata": {
+            "path": "fusion.mp4",
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
+            "recorded_fps": 20.0,
+            "number_of_frames": 1,
+        },
+    }
+    if declares_crs:
+        sidecar[ottrk_format.GEO_COORDINATES] = {ottrk_format.CRS: GEO_ONLY_CRS}
+    (given.tmp_dir / "fusion_metadata.json").write_text(json.dumps(sidecar))
+    given.orthophoto_georeference.for_crs.return_value = ORTHOPHOTO_GEOREFERENCE
+    return given
+
+
+def setup_empty_geo_only(given: GivenGeoOnlyFeather) -> GivenGeoOnlyFeather:
+    """A quiet period: OTFusion wrote the file, but no road user passed."""
+    setup_default_geo_only(given)
+    polars.DataFrame().write_ipc(given.feather_file)
+    return given
+
+
+def setup_camera_file_with_geo_columns(
+    given: GivenGeoOnlyFeather,
+) -> GivenGeoOnlyFeather:
+    row = SINGLE_ROW | {track.GEO_X: KNOWN_GEO[0], track.GEO_Y: KNOWN_GEO[1]}
+    polars.DataFrame(row).write_ipc(given.feather_file)
+    sidecar: dict[str, Any] = {
+        "detection_metadata": {"detection_classes": ["car"]},
+        "video_metadata": {
+            "path": "camera.mp4",
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
+            "recorded_fps": 20.0,
+            "number_of_frames": 1,
+        },
+        ottrk_format.GEOREFERENCE: SAMPLE_GEOREFERENCE_METADATA_DICT,
+    }
+    (given.tmp_dir / "fusion_metadata.json").write_text(json.dumps(sidecar))
+    return given
+
+
+def create_target_geo_only(given: GivenGeoOnlyFeather) -> FeathersParser:
+    return FeathersParser(orthophoto_georeference=given.orthophoto_georeference)
+
+
+def placed_pixel(result: TrackParseResult) -> tuple[float, float]:
+    data = cast(PolarsTrackDataset, result.tracks).get_data()
+    return data[track.X][0], data[track.Y][0]
+
+
+class TestFeathersParserGeoOnly:
+    def test_places_detections_on_the_orthophoto(self, test_data_tmp_dir: Path) -> None:
+        given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert placed_pixel(result) == approx(KNOWN_ORTHOPHOTO_PIXEL, rel=1e-9)
+
+    def test_attaches_the_orthophoto_mapping(self, test_data_tmp_dir: Path) -> None:
+        given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert result.tracks.georeference_metadata == ORTHOPHOTO_GEOREFERENCE
+        assert result.is_geo_only
+
+    def test_asks_for_the_mapping_in_the_declared_crs(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        target.parse(given.feather_file)
+
+        given.orthophoto_georeference.for_crs.assert_called_once_with(GEO_ONLY_CRS)
+
+    def test_falls_back_to_default_crs_when_none_is_declared(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_geo_only(
+            create_given_geo_only(test_data_tmp_dir), declares_crs=False
+        )
+        target = create_target_geo_only(given)
+
+        target.parse(given.feather_file)
+
+        given.orthophoto_georeference.for_crs.assert_called_once_with(FALLBACK_GEO_CRS)
+
+    def test_places_detections_outside_the_orthophoto_without_clipping(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_geo_only(
+            create_given_geo_only(test_data_tmp_dir),
+            geo_x=WEST_OF_ORTHOPHOTO_GEO_X,
+        )
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert placed_pixel(result)[0] == approx(WEST_OF_ORTHOPHOTO_PIXEL_X, rel=1e-9)
+
+    def test_refuses_without_an_orthophoto(self, test_data_tmp_dir: Path) -> None:
+        given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = FeathersParser()
+
+        with pytest.raises(OrthophotoRequired):
+            target.parse(given.feather_file)
+
+    def test_file_without_detections_is_geo_only_by_its_metadata(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_empty_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert result.is_geo_only
+        assert result.tracks.empty
+
+    def test_camera_file_is_not_geo_only(self, test_data_tmp_dir: Path) -> None:
+        given = setup_default_feathers_parser_with_georeference(test_data_tmp_dir)
+        target = create_target()
+
+        result = target.parse(given.feather_files[0])
+
+        assert not result.is_geo_only
+
+    def test_camera_file_with_geo_columns_is_not_geo_only(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_camera_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert not result.is_geo_only
+
+    def test_camera_file_with_geo_columns_keeps_its_pixels(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_camera_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert placed_pixel(result) == CAMERA_PIXEL
+
+    def test_camera_file_with_geo_columns_keeps_its_own_georeference(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_camera_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert result.tracks.georeference_metadata == GEOREF_METADATA
+
+    def test_camera_file_with_geo_columns_does_not_ask_for_the_orthophoto(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_camera_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        target.parse(given.feather_file)
+
+        given.orthophoto_georeference.for_crs.assert_not_called()
+
+    def test_parse_files_reports_geo_only_per_file(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        result = target.parse_files([given.feather_file])
+
+        assert result.geo_only_per_file == [True]
+
+    def test_parse_files_refuses_a_batch_mixing_geo_only_and_camera_files(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """A load window can select fused and per-camera files at once.
+
+        #Requirement https://openproject.platomo.de/wp/10404
+        """
+        fused = setup_default_geo_only(
+            create_given_geo_only(subfolder(test_data_tmp_dir, "output"))
+        )
+        camera = setup_camera_file_with_geo_columns(
+            create_given_geo_only(subfolder(test_data_tmp_dir, "OTCamera04"))
+        )
+        target = create_target_geo_only(fused)
+
+        with pytest.raises(MixedTrackFiles):
+            target.parse_files([camera.feather_file, fused.feather_file])
+
+
+def subfolder(tmp_dir: Path, name: str) -> Path:
+    folder = tmp_dir / name
+    folder.mkdir()
+    return folder

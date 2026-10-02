@@ -5,10 +5,17 @@ from typing import Protocol
 from nicegui import app as nicegui_app
 
 from OTAnalytics.adapter_ui.local_file_providers import (
+    LocalOrthophotoProvider,
     LocalTrackFileProvider,
     LocalVideoFileProvider,
 )
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
+from OTAnalytics.application.orthophoto import (
+    LocalObtainOrthophoto,
+    NoOrthophotoToProvide,
+    ObtainOrthophoto,
+    ProvideOrthophoto,
+)
 from OTAnalytics.application.project_location import (
     RefuseAnyProjectLocation,
     ValidateProjectLocation,
@@ -33,6 +40,7 @@ from OTAnalytics.plugin_s3.config.s3 import S3Config
 from OTAnalytics.plugin_s3.download import S3Download
 from OTAnalytics.plugin_s3.download_objects import DownloadObjects
 from OTAnalytics.plugin_s3.list_objects import S3ListObjects
+from OTAnalytics.plugin_s3.orthophoto import S3ObtainOrthophoto
 from OTAnalytics.plugin_s3.otconfig_upload import S3OtconfigUpload
 from OTAnalytics.plugin_s3.project_location import RequireWellFormedKeyPrefix
 from OTAnalytics.plugin_s3.s3_file_providers import (
@@ -312,6 +320,18 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
                 current_key_prefix=self.current_key_prefix,
             )
         return LocalTrackFileProvider(self.ui_factory)
+
+    @cached_property
+    def obtain_orthophoto(self) -> ObtainOrthophoto:
+        if self.s3_config:
+            return S3ObtainOrthophoto(self.download_objects, self.current_key_prefix)
+        return LocalObtainOrthophoto()
+
+    @cached_property
+    def provide_orthophoto(self) -> ProvideOrthophoto:
+        if self.s3_config:
+            return NoOrthophotoToProvide()
+        return LocalOrthophotoProvider(self.ui_factory)
 
     @cached_property
     def provide_video_files(self) -> ProvideVideoFiles:

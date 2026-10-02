@@ -51,6 +51,55 @@ class TestReadVideoName:
 
         assert read_video_name(given.ottrk) == "something_else.mkv"
 
+    def test_a_geo_only_track_file_has_no_video(self, tmp_path: Path) -> None:
+        given = create_given(tmp_path, geo_only_content())
+
+        assert read_video_name(given.ottrk) is None
+
+    def test_a_geo_only_track_file_without_detections_has_no_video(
+        self, tmp_path: Path
+    ) -> None:
+        """A quiet period must not ask for a video the file never had."""
+        given = create_given(tmp_path, empty_geo_only_content())
+
+        assert read_video_name(given.ottrk) is None
+
+    def test_a_georeferenced_file_with_geo_coordinates_keeps_its_video(
+        self, tmp_path: Path
+    ) -> None:
+        content = geo_only_content()
+        content["metadata"] = {
+            **metadata_naming("cam", ".mp4")["metadata"],
+            "georeference": {},
+        }
+        given = create_given(tmp_path, content)
+
+        assert read_video_name(given.ottrk) == "cam.mp4"
+
+    def test_a_geo_only_file_with_corrupt_detections_is_reported(
+        self, tmp_path: Path
+    ) -> None:
+        given = create_given(tmp_path, None)
+        given.ottrk.write_bytes(
+            bz2.compress(b'{"metadata": {}, "data": {"detections": [{"geo_x": ')
+        )
+
+        with pytest.raises(UnreadableTrackFile, match="is not a valid track file"):
+            read_video_name(given.ottrk)
+
+    def test_a_georeferenced_file_does_not_read_its_detections(
+        self, tmp_path: Path
+    ) -> None:
+        given = create_given(tmp_path, None)
+        given.ottrk.write_bytes(
+            bz2.compress(
+                b'{"metadata": {"georeference": {}, "video":'
+                b' {"filename": "cam", "filetype": ".mp4"}}, "data": {"detections": ['
+            )
+        )
+
+        assert read_video_name(given.ottrk) == "cam.mp4"
+
     def test_a_track_file_without_video_metadata_is_reported(
         self, tmp_path: Path
     ) -> None:
@@ -128,3 +177,14 @@ def create_given(tmp_path: Path, metadata: dict | None, name: str = "a.ottrk") -
 
 def metadata_naming(filename: str, filetype: str) -> dict:
     return {"metadata": {"video": {"filename": filename, "filetype": filetype}}}
+
+
+def geo_only_content() -> dict:
+    return {"metadata": {}, "data": {"detections": [{"geo_x": 1.0, "geo_y": 2.0}]}}
+
+
+def empty_geo_only_content() -> dict:
+    return {
+        "metadata": {"geo_coordinates": {"crs": "EPSG:25833"}},
+        "data": {"detections": []},
+    }

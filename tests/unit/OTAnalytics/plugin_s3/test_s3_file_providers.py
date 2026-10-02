@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Callable
 from unittest.mock import AsyncMock, Mock
 
 from OTAnalytics.application.key_prefix import S3KeyPrefix
@@ -107,6 +108,14 @@ class TestS3TrackFileProvider:
         assert [description for _, description in given.downloads] == [
             "Downloading tracks"
         ]
+
+    async def test_downloads_no_video_for_a_geo_only_track_file(self) -> None:
+        given = create_given()
+        target = create_track_target(given, read_video_name=no_video)
+
+        await target.provide()
+
+        assert given.downloads[1][0] == []
 
     async def test_choosing_no_window_loads_nothing(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10283"""
@@ -300,7 +309,13 @@ def read_video_name(ottrk: Path) -> str:
     return VIDEO_NAMES[ottrk]
 
 
-def create_track_target(given: Given) -> S3TrackFileProvider:
+def no_video(ottrk: Path) -> None:
+    return None
+
+
+def create_track_target(
+    given: Given, read_video_name: Callable[[Path], str | None] = read_video_name
+) -> S3TrackFileProvider:
     return S3TrackFileProvider(
         dialog=given.dialog,
         list_objects=given.list_objects,

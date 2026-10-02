@@ -15,6 +15,7 @@ from OTAnalytics.adapter_ui.dummy_viewmodel import (
 )
 from OTAnalytics.application.parser.config_parser import SubstitutedFile
 from OTAnalytics.application.project_location import UnsupportedProjectLocation
+from OTAnalytics.application.state import CurrentOrthophoto
 from OTAnalytics.application.use_cases.load_otconfig import UnableToLoadOtconfigFile
 
 OTCONFIG_FILE = Path("folder/project.otconfig")
@@ -61,6 +62,7 @@ def _build(given: Given) -> DummyViewModel:
         update_section_coordinates=Mock(),
         provide_track_files=Mock(),
         provide_video_files=Mock(),
+        current_orthophoto=CurrentOrthophoto(),
     )
 
 

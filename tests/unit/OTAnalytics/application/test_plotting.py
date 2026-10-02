@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from unittest.mock import Mock, call
 
@@ -7,6 +8,7 @@ from OTAnalytics.application.plotting import (
     GetCurrentFrame,
     GetCurrentVideoPath,
     LayeredPlotter,
+    OrthophotoBackgroundPlotter,
     PlottingLayer,
     TrackBackgroundPlotter,
     VideoProvider,
@@ -173,3 +175,52 @@ class TestGetCurrentFrame:
 
         videos_metadata.get_metadata_for.assert_called_with(filter_end_date)
         time_provider.get_time.assert_called_once()
+
+
+@dataclass
+class GivenOrthophotoBackground:
+    orthophoto_image: Mock
+    video_background: Mock
+
+
+def create_given_orthophoto_background() -> GivenOrthophotoBackground:
+    return GivenOrthophotoBackground(
+        orthophoto_image=Mock(), video_background=Mock(spec=Plotter)
+    )
+
+
+def setup_with_orthophoto(
+    given: GivenOrthophotoBackground,
+) -> GivenOrthophotoBackground:
+    given.orthophoto_image.return_value = Mock(spec=TrackImage)
+    return given
+
+
+def setup_without_orthophoto(
+    given: GivenOrthophotoBackground,
+) -> GivenOrthophotoBackground:
+    given.orthophoto_image.return_value = None
+    return given
+
+
+def create_target_orthophoto_background(
+    given: GivenOrthophotoBackground,
+) -> OrthophotoBackgroundPlotter:
+    return OrthophotoBackgroundPlotter(given.orthophoto_image, given.video_background)
+
+
+class TestOrthophotoBackgroundPlotter:
+    def test_shows_the_orthophoto_when_there_is_one(self) -> None:
+        given = setup_with_orthophoto(create_given_orthophoto_background())
+
+        actual = create_target_orthophoto_background(given).plot()
+
+        assert actual == given.orthophoto_image.return_value
+        given.video_background.plot.assert_not_called()
+
+    def test_falls_back_to_the_video_frame(self) -> None:
+        given = setup_without_orthophoto(create_given_orthophoto_background())
+
+        actual = create_target_orthophoto_background(given).plot()
+
+        assert actual == given.video_background.plot.return_value

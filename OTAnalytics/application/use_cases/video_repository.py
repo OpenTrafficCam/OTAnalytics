@@ -44,6 +44,15 @@ class GetVideos:
     def __init__(self, video_repository: VideoRepository) -> None:
         self._video_repository = video_repository
 
+    def has_videos(self) -> bool:
+        """Whether the repository holds any video at all.
+
+        Returns:
+            bool: False for a project without videos, e.g. one of Geo-only Track
+                Files on an Orthophoto.
+        """
+        return bool(self._video_repository.get_all())
+
     def get(self, date: datetime) -> Optional[Video]:
         """
         This method retrieves a Video object based on the specified date.

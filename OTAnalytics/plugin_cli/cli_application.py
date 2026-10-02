@@ -7,6 +7,7 @@ from OTAnalytics.application.use_cases.create_events import (
     SectionProvider,
 )
 from OTAnalytics.application.use_cases.track_repository import AllTrackIdsProvider
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
@@ -30,6 +31,8 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
         asyncio.run(self.async_start())
 
     async def async_start(self) -> None:
+        if (orthophoto := self.run_config.orthophoto) is not None:
+            self.current_orthophoto.set(Orthophoto(file=orthophoto))
         await self.application.start()
 
     @cached_property

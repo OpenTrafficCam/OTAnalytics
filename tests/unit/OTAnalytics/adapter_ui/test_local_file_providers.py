@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
 from OTAnalytics.adapter_ui.local_file_providers import (
+    LocalOrthophotoProvider,
     LocalTrackFileProvider,
     LocalVideoFileProvider,
 )
@@ -92,3 +93,51 @@ class TestLocalVideoFileProvider:
         target = create_video_target(given)
 
         assert await target.provide() == []
+
+
+@dataclass
+class GivenOrthophoto:
+    ui_factory: Mock
+
+
+def create_given_orthophoto(chosen: str) -> GivenOrthophoto:
+    ui_factory = Mock(spec=UiFactory)
+    ui_factory.askopenfilename = AsyncMock(return_value=chosen)
+    return GivenOrthophoto(ui_factory=ui_factory)
+
+
+def create_orthophoto_target(given: GivenOrthophoto) -> LocalOrthophotoProvider:
+    return LocalOrthophotoProvider(given.ui_factory)
+
+
+class TestLocalOrthophotoProvider:
+    async def test_returns_the_chosen_file(self) -> None:
+        given = create_given_orthophoto("/site/map.tiff")
+
+        actual = await create_orthophoto_target(given).provide()
+
+        assert actual == Path("/site/map.tiff")
+
+    async def test_cancel_returns_none(self) -> None:
+        given = create_given_orthophoto("")
+
+        assert await create_orthophoto_target(given).provide() is None
+
+    async def test_offers_tif_and_tiff_files(self) -> None:
+        given = create_given_orthophoto("/site/map.tiff")
+
+        await create_orthophoto_target(given).provide()
+
+        given.ui_factory.askopenfilename.assert_awaited_once_with(
+            title="Choose the orthophoto for these track files",
+            filetypes=[
+                ("orthophoto (.tif)", "*.tif"),
+                ("orthophoto (.tiff)", "*.tiff"),
+            ],
+            defaultextension=".tif",
+            extension_options={
+                "All File Endings": [".tif", ".tiff"],
+                ".tif": [".tif"],
+                ".tiff": [".tiff"],
+            },
+        )
