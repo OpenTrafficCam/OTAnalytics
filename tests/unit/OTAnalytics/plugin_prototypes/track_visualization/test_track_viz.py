@@ -85,7 +85,7 @@ class TestPlotterPrototype:
         assert image == plotted_tracks
 
 
-class TestPandasDataProvider:
+class TestMatplotlibTrackPlotter:
     def test_plot(self) -> None:
         width = 100
         height = 100
