@@ -3,9 +3,10 @@ from datetime import datetime, timezone
 from typing import Iterable
 from unittest.mock import Mock, PropertyMock
 
-import pandas
+import polars as pl
 import pytest
-from pandas import DataFrame
+from polars import DataFrame
+from polars.testing import assert_frame_equal
 
 from OTAnalytics.application.plotting import GetCurrentFrame
 from OTAnalytics.application.use_cases.video_repository import GetVideos
@@ -55,8 +56,7 @@ def convert_tracks_to_dataframe(tracks: Iterable[Track]) -> DataFrame:
     for current_track in tracks:
         detections.extend(current_track.detections)
     prepared = [detection.to_dict() for detection in detections]
-    converted = DataFrame(prepared).set_index([track.TRACK_ID, track.OCCURRENCE])
-    return converted.sort_values([track.TRACK_ID, track.FRAME])
+    return DataFrame(prepared).sort([track.TRACK_ID, track.FRAME])
 
 
 @pytest.fixture
@@ -84,7 +84,7 @@ def track_dataframe(simple_track: Track) -> DataFrame:
 
 
 class TestDataFrameStartsAtOrAfterDate:
-    def test_dataframe_with_wrong_index(self) -> None:
+    def test_dataframe_without_occurrence_column(self) -> None:
         df = DataFrame()
         df_filter = DataFrameStartsAtOrAfterDate(
             OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
@@ -94,7 +94,7 @@ class TestDataFrameStartsAtOrAfterDate:
 
 
 class TestDataFrameEndsBeforeOrAtDate:
-    def test_dataframe_with_wrong_index(self) -> None:
+    def test_dataframe_without_occurrence_column(self) -> None:
         df = DataFrame()
         df_filter = DataFrameEndsBeforeOrAtDate(
             OCCURRENCE, datetime(2000, 1, 1, tzinfo=timezone.utc)
@@ -232,9 +232,9 @@ class TestDataFramePredicates:
         track_dataframe: DataFrame,
     ) -> None:
         result = predicate.test(track_dataframe)
-        expected_result = track_dataframe[expected_mask]
+        expected_result = track_dataframe.filter(pl.Series(expected_mask))
 
-        pandas.testing.assert_frame_equal(result, expected_result)
+        assert_frame_equal(result, expected_result)
 
 
 class TestDataFrameFilter:

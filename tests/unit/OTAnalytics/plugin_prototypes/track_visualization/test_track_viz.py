@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
+import polars as pl
 import pytest
-from pandas import DataFrame
+from polars import DataFrame
 
 from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
 from OTAnalytics.application.state import TrackViewState
@@ -33,17 +34,17 @@ from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    CachedPandasTrackProvider,
+    CachedPolarsTrackProvider,
     EventToFlowResolver,
     FilterByClassification,
     FilterById,
     FilterByOccurrence,
     MatplotlibPlotterImplementation,
     MatplotlibTrackPlotter,
-    PandasDataFrameProvider,
-    PandasTrackProvider,
     PilImageFactory,
     PlotterPrototype,
+    PolarsDataFrameProvider,
+    PolarsTrackProvider,
     TrackGeometryPlotter,
     TrackPlotter,
     TrackStartEndPointPlotter,
@@ -98,7 +99,7 @@ class TestMatplotlibTrackPlotter:
         plotter_implementation.plot.assert_called_once()
 
 
-class TestPandasTrackProvider:
+class TestPolarsTrackProvider:
     def test_get_data_empty_track_repository(self) -> None:
         track_repository = Mock(spec=TrackRepository)
         track_repository.get_all.return_value = PythonTrackDataset.from_list(
@@ -107,16 +108,16 @@ class TestPandasTrackProvider:
         )
         filter_builder = Mock(FilterBuilder)
 
-        provider = PandasTrackProvider(
+        provider = PolarsTrackProvider(
             track_repository, filter_builder, NoProgressbarBuilder()
         )
         result = provider.get_data()
 
         track_repository.get_all.assert_called_once()
-        assert result.empty
+        assert result.is_empty()
 
 
-class TestCachedPandasTrackProvider:
+class TestCachedPolarsTrackProvider:
     @pytest.fixture
     def track_1(self) -> Track:
         """Create dummy track with id 1 and 5 detections."""
@@ -211,7 +212,7 @@ class TestCachedPandasTrackProvider:
 
     def set_up_provider(
         self, init_tracks: list[Track], query_tracks: list[Track]
-    ) -> CachedPandasTrackProvider:
+    ) -> CachedPolarsTrackProvider:
         """Create cached track provider with mocked datastore.
 
         Mocked datastore uses given query_tracks for track repository id queries.
@@ -221,11 +222,11 @@ class TestCachedPandasTrackProvider:
         track_repository.get_for.side_effect = query_tracks
 
         filter_builder = Mock(spec=FilterBuilder)
-        provider = CachedPandasTrackProvider(
+        provider = CachedPolarsTrackProvider(
             track_repository, filter_builder, NoProgressbarBuilder()
         )
 
-        assert provider._cache_df.empty
+        assert provider._cache_df.is_empty()
         result = provider._convert_tracks(init_tracks)
         assert result is provider._cache_df
         self.check_expected_ids(provider, init_tracks)
@@ -233,14 +234,16 @@ class TestCachedPandasTrackProvider:
         return provider
 
     def check_expected_ids(
-        self, provider: CachedPandasTrackProvider, expected_tracks: list[Track]
+        self, provider: CachedPolarsTrackProvider, expected_tracks: list[Track]
     ) -> None:
         """Check whether provider cache contains the expected tracks/detections."""
         if not expected_tracks:
-            assert provider._cache_df.empty
+            assert provider._cache_df.is_empty()
 
         else:
-            cached_ids = provider._cache_df.index.get_level_values(0).unique()
+            cached_ids = (
+                provider._cache_df.get_column(track.TRACK_ID).unique().to_list()
+            )
 
             expected_detections = sum(len(t.detections) for t in expected_tracks)
             assert expected_detections == len(provider._cache_df)
@@ -370,9 +373,7 @@ class TestTrackGeometryPlotter:
         [
             (DataFrame(), 0),
             (
-                DataFrame.from_dict(
-                    {"row_1": [0, 2, 3], "row_2": [4, 5, 6]}, orient="index"
-                ),
+                DataFrame({"column_1": [0, 2, 3], "column_2": [4, 5, 6]}),
                 1,
             ),
         ],
@@ -389,7 +390,7 @@ class TestTrackGeometryPlotter:
         data_frame: DataFrame,
         call_count: int,
     ) -> None:
-        data_provider = Mock(spec=PandasTrackProvider)
+        data_provider = Mock(spec=PolarsTrackProvider)
         color_palette_provider = Mock(spec=ColorPaletteProvider)
         axes = Mock()
 
@@ -410,9 +411,7 @@ class TestStartEndPointPlotter:
         [
             (DataFrame(), 0),
             (
-                DataFrame.from_dict(
-                    {"row_1": [0, 2, 3], "row_2": [4, 5, 6]}, orient="index"
-                ),
+                DataFrame({"column_1": [0, 2, 3], "column_2": [4, 5, 6]}),
                 1,
             ),
         ],
@@ -429,7 +428,7 @@ class TestStartEndPointPlotter:
         data_frame: DataFrame,
         call_count: int,
     ) -> None:
-        data_provider = Mock(spec=PandasTrackProvider)
+        data_provider = Mock(spec=PolarsTrackProvider)
         data_provider.get_data.return_value = data_frame
         axes = Mock()
 
@@ -452,10 +451,9 @@ class TestDataFrameProviderFilter:
         d = {
             track.TRACK_ID: ["1", "2"],
             track.OCCURRENCE: [first_occurrence, second_occurrence],
-            "data": [Mock(), Mock()],
+            "data": [1, 2],
         }
-        df = DataFrame(data=d)
-        return df.set_index([track.TRACK_ID, track.OCCURRENCE])
+        return DataFrame(data=d)
 
     @pytest.fixture
     def filter_result(self) -> Mock:
@@ -463,7 +461,7 @@ class TestDataFrameProviderFilter:
 
     @pytest.fixture
     def data_provider(self, filter_input: DataFrame) -> Mock:
-        provider = Mock(spec=PandasDataFrameProvider)
+        provider = Mock(spec=PolarsDataFrameProvider)
         provider.get_data.return_value = filter_input
         return provider
 
@@ -498,16 +496,14 @@ class TestDataFrameProviderFilter:
 
         filter_by_id = FilterById(data_provider, id_filter)
         result = filter_by_id.get_data()
-        expected = filter_input.drop("2", level=track.TRACK_ID)
+        expected = filter_input.filter(pl.col(track.TRACK_ID) == "1")
 
         assert result.equals(expected)
         data_provider.get_data.assert_called_once()
         id_filter.get_ids.assert_called_once()
 
     def test_filter_by_id_with_no_index_set(self, data_provider: Mock) -> None:
-        data_provider.get_data.return_value = DataFrame.from_dict(
-            {1: {"classification": "car", "track_id": "1"}}, orient="index"
-        )
+        data_provider.get_data.return_value = DataFrame({"classification": ["car"]})
         id_filter = Mock()
         filter_by_id = FilterById(data_provider, id_filter)
         with pytest.raises(ValueError):
