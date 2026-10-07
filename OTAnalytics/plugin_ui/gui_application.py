@@ -108,7 +108,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
         # cut_tracks_intersecting_section.register(
-        #    cached_pandas_track_provider.on_tracks_cut
+        #    cached_polars_track_provider.on_tracks_cut
         # )
         self.cut_tracks_intersecting_section.register(self.view_model.on_tracks_cut)
         self.view_model.register_observers()

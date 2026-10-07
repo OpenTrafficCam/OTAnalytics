@@ -170,20 +170,20 @@ class TracksNotAssignedToSelection(PolarsDataFrameProvider):
 
 
 def create_track_geometry_plotter(
-    pandas_data_provider: PolarsDataFrameProvider,
+    polars_data_provider: PolarsDataFrameProvider,
     color_palette_provider: ColorPaletteProvider,
     alpha: float,
     enable_legend: bool,
 ) -> MatplotlibPlotterImplementation:
     if enable_legend:
         return TrackGeometryPlotter(
-            pandas_data_provider,
+            polars_data_provider,
             color_palette_provider,
             alpha=alpha,
             enable_legend=enable_legend,
         )
     return NonLegendTrackGeometryPlotter(
-        pandas_data_provider,
+        polars_data_provider,
         color_palette_provider,
         alpha=alpha,
     )
@@ -230,14 +230,14 @@ class VisualizationBuilder:
             self._visualization_time_provider, videos_metadata
         )
         self._get_videos = GetVideos(video_repository=self._datastore._video_repository)
-        self._pandas_data_provider: Optional[PolarsDataFrameProvider] = None
-        self._pandas_event_data_provider: Optional[PolarsDataFrameProvider] = None
-        self._pandas_data_provider_with_offset: Optional[PolarsDataFrameProvider] = None
+        self._polars_data_provider: Optional[PolarsDataFrameProvider] = None
+        self._polars_event_data_provider: Optional[PolarsDataFrameProvider] = None
+        self._polars_data_provider_with_offset: Optional[PolarsDataFrameProvider] = None
         self._data_provider_all_filters: Optional[PolarsDataFrameProvider] = None
         self._data_provider_all_filters_with_offset: Optional[
             PolarsDataFrameProvider
         ] = None
-        self._pandas_event_data_provider_all_filters: Optional[
+        self._polars_event_data_provider_all_filters: Optional[
             PolarsDataFrameProvider
         ] = None
         self._data_provider_class_filter: Optional[PolarsDataFrameProvider] = None
@@ -465,13 +465,13 @@ class VisualizationBuilder:
 
     def _create_highlight_start_end_point_assigned_to_flows_factory(
         self,
-        pandas_data_provider_factory: Callable[[FlowId], PolarsDataFrameProvider],
+        polars_data_provider_factory: Callable[[FlowId], PolarsDataFrameProvider],
         color_palette_provider: ColorPaletteProvider,
         alpha: float,
         enable_legend: bool,
     ) -> Callable[[FlowId], Plotter]:
         return lambda flow: self._create_track_start_end_point_plotter(
-            pandas_data_provider_factory(flow),
+            polars_data_provider_factory(flow),
             color_palette_provider,
             alpha,
             enable_legend,
@@ -608,22 +608,22 @@ class VisualizationBuilder:
         if not self._event_data_provider_class_filter:
             self._event_data_provider_class_filter = (
                 self._build_filter_by_classification(
-                    self._get_pandas_event_data_provider()
+                    self._get_polars_event_data_provider()
                 )
             )
         return self._event_data_provider_class_filter
 
     def _get_event_data_provider_all_filters(self) -> PolarsDataFrameProvider:
-        if not self._pandas_event_data_provider_all_filters:
-            self._pandas_event_data_provider_all_filters = self._create_all_filters(
-                self._get_pandas_event_data_provider()
+        if not self._polars_event_data_provider_all_filters:
+            self._polars_event_data_provider_all_filters = self._create_all_filters(
+                self._get_polars_event_data_provider()
             )
-        return self._pandas_event_data_provider_all_filters
+        return self._polars_event_data_provider_all_filters
 
     def _get_data_provider_class_filter(self) -> PolarsDataFrameProvider:
         if not self._data_provider_class_filter:
             self._data_provider_class_filter = self._build_filter_by_classification(
-                self._get_pandas_data_provider()
+                self._get_polars_data_provider()
             )
         return self._data_provider_class_filter
 
@@ -631,7 +631,7 @@ class VisualizationBuilder:
         if not self._data_provider_class_filter_with_offset:
             self._data_provider_class_filter_with_offset = (
                 self._build_filter_by_classification(
-                    self._get_pandas_data_provider_with_offset()
+                    self._get_polars_data_provider_with_offset()
                 )
             )
         return self._data_provider_class_filter_with_offset
@@ -639,14 +639,14 @@ class VisualizationBuilder:
     def _get_data_provider_all_filters(self) -> PolarsDataFrameProvider:
         if not self._data_provider_all_filters:
             self._data_provider_all_filters = self._create_all_filters(
-                self._get_pandas_data_provider()
+                self._get_polars_data_provider()
             )
         return self._data_provider_all_filters
 
     def _get_data_provider_all_filters_with_offset(self) -> PolarsDataFrameProvider:
         if not self._data_provider_all_filters_with_offset:
             self._data_provider_all_filters_with_offset = self._create_all_filters(
-                self._get_pandas_data_provider_with_offset()
+                self._get_polars_data_provider_with_offset()
             )
         return self._data_provider_all_filters_with_offset
 
@@ -694,14 +694,14 @@ class VisualizationBuilder:
             self._create_dataframe_filter_builder(),
         )
 
-    def _get_pandas_data_provider_with_offset(self) -> PolarsDataFrameProvider:
-        if not self._pandas_data_provider_with_offset:
-            self._pandas_data_provider_with_offset = (
-                self._wrap_pandas_track_offset_provider(
-                    self._get_pandas_data_provider()
+    def _get_polars_data_provider_with_offset(self) -> PolarsDataFrameProvider:
+        if not self._polars_data_provider_with_offset:
+            self._polars_data_provider_with_offset = (
+                self._wrap_polars_track_offset_provider(
+                    self._get_polars_data_provider()
                 )
             )
-        return self._pandas_data_provider_with_offset
+        return self._polars_data_provider_with_offset
 
     def _wrap_plotter_with_cache(self, other: Plotter) -> Plotter:
         """
@@ -714,41 +714,41 @@ class VisualizationBuilder:
         self._track_view_state.track_offset.register(invalidate)
         return cached_plotter
 
-    def _get_pandas_data_provider(self) -> PolarsDataFrameProvider:
+    def _get_polars_data_provider(self) -> PolarsDataFrameProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
-        if not self._pandas_data_provider:
-            self._pandas_data_provider = PolarsTrackProvider(
+        if not self._polars_data_provider:
+            self._polars_data_provider = PolarsTrackProvider(
                 self._track_repository,
                 dataframe_filter_builder,
                 self._pulling_progressbar_builder,
             )
-        return self._pandas_data_provider
+        return self._polars_data_provider
 
-    def _get_pandas_event_data_provider(self) -> PolarsDataFrameProvider:
+    def _get_polars_event_data_provider(self) -> PolarsDataFrameProvider:
         dataframe_filter_builder = self._create_dataframe_filter_builder()
-        if not self._pandas_event_data_provider:
-            self._pandas_event_data_provider = PolarsEventProvider(
+        if not self._polars_event_data_provider:
+            self._polars_event_data_provider = PolarsEventProvider(
                 self._event_repository,
                 dataframe_filter_builder,
                 self._pulling_progressbar_builder,
             )
-        return self._pandas_event_data_provider
+        return self._polars_event_data_provider
 
-    def _wrap_pandas_track_offset_provider(
+    def _wrap_polars_track_offset_provider(
         self, other: PolarsDataFrameProvider
     ) -> PolarsDataFrameProvider:
         return PolarsTracksOffsetProvider(other, self._track_view_state)
 
     def _create_track_geometry_plotter(
         self,
-        pandas_data_provider: PolarsDataFrameProvider,
+        polars_data_provider: PolarsDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
         alpha: float,
         enable_legend: bool,
     ) -> Plotter:
         track_plotter = MatplotlibTrackPlotter(
             create_track_geometry_plotter(
-                pandas_data_provider, color_palette_provider, alpha, enable_legend
+                polars_data_provider, color_palette_provider, alpha, enable_legend
             ),
             track_image_factory=self._track_image_factory,
         )
@@ -756,11 +756,11 @@ class VisualizationBuilder:
 
     def _create_track_start_end_point_data_provider(
         self,
-        pandas_data_provider: PolarsDataFrameProvider,
+        polars_data_provider: PolarsDataFrameProvider,
         id_filter: Optional[TrackIdProvider] = None,
     ) -> FilterById:
         return FilterById(
-            pandas_data_provider,
+            polars_data_provider,
             id_filter=TracksOverlapOccurrenceWindow(
                 other=id_filter,
                 track_repository=self._track_repository,
@@ -802,13 +802,13 @@ class VisualizationBuilder:
 
     def _create_highlight_tracks_intersecting_section_factory(
         self,
-        pandas_data_provider_factory: Callable[[SectionId], PolarsDataFrameProvider],
+        polars_data_provider_factory: Callable[[SectionId], PolarsDataFrameProvider],
         color_palette_provider: ColorPaletteProvider,
         alpha: float,
         enable_legend: bool,
     ) -> Callable[[SectionId], Plotter]:
         return lambda section: self._create_track_geometry_plotter(
-            pandas_data_provider_factory(section),
+            polars_data_provider_factory(section),
             color_palette_provider,
             alpha,
             enable_legend,
@@ -832,12 +832,12 @@ class VisualizationBuilder:
 
     def _create_tracks_start_end_point_intersecting_given_sections_filter(
         self,
-        pandas_data_provider: PolarsDataFrameProvider,
+        polars_data_provider: PolarsDataFrameProvider,
         tracks_intersecting_sections: TracksIntersectingSections,
         get_sections_by_id: GetSectionsById,
     ) -> Callable[[SectionId], PolarsDataFrameProvider]:
         return lambda section: FilterById(
-            pandas_data_provider,
+            polars_data_provider,
             id_filter=TracksOverlapOccurrenceWindow(
                 other=TracksIntersectingGivenSections(
                     {section},
@@ -853,13 +853,13 @@ class VisualizationBuilder:
 
     def _create_start_end_point_intersecting_section_factory(
         self,
-        pandas_data_provider_factory: Callable[[SectionId], PolarsDataFrameProvider],
+        polars_data_provider_factory: Callable[[SectionId], PolarsDataFrameProvider],
         color_palette_provider: ColorPaletteProvider,
         alpha: float,
         enable_legend: bool,
     ) -> Callable[[SectionId], Plotter]:
         return lambda section: self._create_track_start_end_point_plotter(
-            pandas_data_provider_factory(section),
+            polars_data_provider_factory(section),
             color_palette_provider,
             alpha,
             enable_legend,
@@ -868,14 +868,14 @@ class VisualizationBuilder:
     def _create_start_end_point_tracks_not_intersecting_sections_plotter(
         self,
         tracks_not_intersecting_sections: TracksNotIntersectingSelection,
-        pandas_track_provider: PolarsDataFrameProvider,
+        polars_track_provider: PolarsDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
         alpha: float,
         enable_legend: bool,
     ) -> Plotter:
         return self._create_track_start_end_point_plotter(
             self._create_track_start_end_point_data_provider(
-                pandas_track_provider, tracks_not_intersecting_sections
+                polars_track_provider, tracks_not_intersecting_sections
             ),
             color_palette_provider,
             alpha,
@@ -884,12 +884,12 @@ class VisualizationBuilder:
 
     def _create_tracks_start_end_point_not_intersecting_given_sections_filter(
         self,
-        pandas_data_provider: PolarsDataFrameProvider,
+        polars_data_provider: PolarsDataFrameProvider,
         tracks_intersecting_sections: TracksIntersectingSections,
         get_sections_by_id: GetSectionsById,
     ) -> Callable[[SectionId], PolarsDataFrameProvider]:
         return lambda section: FilterById(
-            pandas_data_provider,
+            polars_data_provider,
             id_filter=TracksOverlapOccurrenceWindow(
                 other=TracksNotIntersectingSelection(
                     TracksIntersectingGivenSections(
@@ -908,11 +908,11 @@ class VisualizationBuilder:
 
     def _create_tracks_assigned_to_flows_filter(
         self,
-        pandas_data_provider: PolarsDataFrameProvider,
+        polars_data_provider: PolarsDataFrameProvider,
         get_assignments: GetRoadUserAssignments,
     ) -> Callable[[FlowId], PolarsDataFrameProvider]:
         return lambda flow: FilterById(
-            pandas_data_provider,
+            polars_data_provider,
             TracksAssignedToGivenFlows(
                 get_assignments,
                 [flow],
@@ -922,13 +922,13 @@ class VisualizationBuilder:
 
     def _create_highlight_tracks_assigned_to_flows_factory(
         self,
-        pandas_data_provider_factory: Callable[[FlowId], PolarsDataFrameProvider],
+        polars_data_provider_factory: Callable[[FlowId], PolarsDataFrameProvider],
         color_palette_provider: ColorPaletteProvider,
         alpha: float,
         enable_legend: bool,
     ) -> Callable[[FlowId], Plotter]:
         return lambda flow: self._create_track_geometry_plotter(
-            pandas_data_provider_factory(flow),
+            polars_data_provider_factory(flow),
             color_palette_provider,
             alpha,
             enable_legend,
@@ -953,11 +953,11 @@ class VisualizationBuilder:
 
     def _create_tracks_not_assigned_to_flows_filter(
         self,
-        pandas_data_provider: PolarsDataFrameProvider,
+        polars_data_provider: PolarsDataFrameProvider,
         get_assignments: GetRoadUserAssignments,
     ) -> Callable[[FlowId], PolarsDataFrameProvider]:
         return lambda flow: FilterById(
-            pandas_data_provider,
+            polars_data_provider,
             TracksNotIntersectingSelection(
                 TracksAssignedToGivenFlows(
                     get_assignments,
