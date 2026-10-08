@@ -476,9 +476,6 @@ class DummyViewModel(
     def _on_section_changed(self, section: SectionId) -> None:
         self._refresh_sections_in_ui()
 
-    def on_flow_changed(self, flow_id: FlowId) -> None:
-        self.notify_flows([flow_id])
-
     def on_background_updated(self, image: Optional[TrackImage]) -> None:
         if image:
             self.frame_canvas.update_background(image)

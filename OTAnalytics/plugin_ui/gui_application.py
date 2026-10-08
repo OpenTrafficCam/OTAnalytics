@@ -67,7 +67,6 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.application.register_video_observer(self.view_model)
         self.application.register_sections_observer(self.view_model)
         self.application.register_flows_observer(self.view_model)
-        self.application.register_flow_changed_observer(self.view_model.on_flow_changed)
         self.track_view_state.selected_videos.register(
             self.view_model.update_selected_videos
         )
@@ -127,15 +126,12 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         # configure observers for count plot saver
         self.track_view_state.count_plots.register(self.save_count_plots.save)
 
-        # configure assignment repository update on flow/event deletion
+        # configure assignment repository update on flow and event changes
         self.event_repository.register_observer(
             self.remove_assignments_of_removed_events
         )
-        self.flow_repository.register_flow_changed_observer(
-            self.remove_assignments_of_changed_flows
-        )
         self.flow_repository.register_flows_observer(
-            self.remove_assignments_of_removed_flows
+            self.clear_assignments_on_changed_flows
         )
 
     @cached_property
