@@ -46,28 +46,33 @@ ELEMENT_ID = "element_id"
 
 CURSOR = "pointer"
 NEW_SECTION_ID = "new-section-id"
+DRAG_OVERLAY_ID = "drag-overlay"
+DRAG_OVERLAY_SVG = (
+    f'<rect id="{DRAG_OVERLAY_ID}" x="0" y="0" width="9999" height="9999" '
+    f'fill-opacity="0" pointer-events="all"/>'
+)
 
 
 def circle_to_coordinates(circles: Iterable[Circle]) -> list[tuple[int, int]]:
     return [circle.to_tuple() for circle in circles]
 
 
-def create_circle(e: dict, fill: str = NORMAL_COLOR) -> Circle:
+def create_circle(e: dict, element_id: str, fill: str = NORMAL_COLOR) -> Circle:
     return Circle(
         x=round(e[IMAGE_X]),
         y=round(e[IMAGE_Y]),
         pointer_event=POINTER_EVENT_ALL,
-        id=e[ELEMENT_ID],
+        id=element_id,
         fill=fill,
     )
 
 
-def create_moving_circle(e: dict, fill: str = NORMAL_COLOR) -> Circle:
+def create_moving_circle(e: dict, element_id: str, fill: str = NORMAL_COLOR) -> Circle:
     return Circle(
         x=round(e[IMAGE_X]),
         y=round(e[IMAGE_Y]),
         pointer_event=POINTER_EVENT_ALL,
-        id=e[ELEMENT_ID],
+        id=element_id,
         fill=fill,
         stroke=MOVING_COLOR,
         stroke_width=MOVING_STROKE_WIDTH,
@@ -96,6 +101,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_section_points: list[Circle] = []
         self._new_section = False
         self._new_area_section = False
+        self._new_section_dragging_index: int | None = None
         self._sections: SectionResource = SectionResource({})
         self._flows: LineResources = LineResources({})
         self._circles: CircleResources = CircleResources({})
@@ -175,6 +181,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._current_section = None
         self._current_point = None
         self._new_section_points = []
+        self._new_section_dragging_index = None
 
     async def __get_metadata(self) -> dict:
         title = self._resource_manager.get(
@@ -197,6 +204,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             if self._new_point:
                 self._background_image.content += self._new_point.to_svg()
             self.draw_new_section()
+            if self._new_section_dragging_index is not None or self._current_point:
+                self._background_image.content += DRAG_OVERLAY_SVG
 
     def draw_new_section(self) -> None:
         for point in self._new_section_points:
@@ -234,23 +243,38 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def on_svg_pointer_down(self, e: dict) -> None:
         if self._new_section:
-            pass
+            element_id = e.get(ELEMENT_ID, "")
+            if element_id.startswith("new_point-"):
+                self._new_section_dragging_index = int(element_id.split("-")[1])
+                self.draw_all()
         elif self._current_section:
-            self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
+            self._current_point = create_moving_circle(
+                e, element_id=e[ELEMENT_ID], fill=EDIT_COLOR
+            )
             self.draw_all()
 
     def on_svg_pointer_move(self, e: dict) -> None:
-        if self._current_section and self._current_point:
-            self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
+        if self._new_section and self._new_section_dragging_index is not None:
+            index = self._new_section_dragging_index
+            self._new_section_points[index] = create_circle(
+                e, element_id=f"new_point-{index}", fill=EDIT_COLOR
+            )
+            self.draw_all()
+        elif self._current_section and self._current_point:
+            self._current_point = create_moving_circle(
+                e, element_id=self._current_point.id, fill=EDIT_COLOR
+            )
             self._circles.add(self._current_section.id.id, self._current_point)
             self.draw_all()
 
     def on_svg_pointer_up(self, e: dict) -> None:
-        if self._new_section:
-            pass
+        if self._new_section and self._new_section_dragging_index is not None:
+            self._new_section_dragging_index = None
+            self.draw_all()
         elif self._current_section and self._current_point:
             self._circles.add(
-                self._current_section.id.id, create_circle(e, fill=EDIT_COLOR)
+                self._current_section.id.id,
+                create_circle(e, element_id=self._current_point.id, fill=EDIT_COLOR),
             )
             self._current_point = None
             self.draw_all()
