@@ -47,6 +47,7 @@ from tests.utils.playwright_helpers import (
     click_update_offset_button,
     create_flow,
     create_section,
+    export_road_user_assignments,
     export_track_statistics,
     get_loaded_tracks_canvas_from_otconfig,
     load_main_page,
@@ -310,4 +311,40 @@ class TestCreateImportantTestData:
 
         # Copy to the main test data directory for reuse
         permanent_path = data_dir / "track_statistics_reference.csv"
+        shutil.copy(output_path, permanent_path)
+
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_generate_road_user_assignments_reference_file(
+        self,
+        external_app: NiceGUITestServer,
+        page: Page,
+        resource_manager: ResourceManager,
+        test_data_tmp_dir: Path,
+    ) -> None:
+        """Generate reference road_user_assignments.csv file using Desktop GUI.
+
+        This test:
+        - Loads a pre-configured project with video, tracks, sections, and flows
+        - Clicks "Export road user assignments ..."
+        - Uses default values in the export dialog
+        - Saves the file
+        - Copies it to the test data directory as reference
+
+        The resulting file can be used by other tests to compare exported output.
+        """
+        data_dir = Path(__file__).parents[1] / "data"
+        otconfig_path = data_dir / "sections_created_test_file.otconfig"
+
+        # Export road user assignments
+        output_path = export_road_user_assignments(
+            page, external_app, resource_manager, test_data_tmp_dir, otconfig_path
+        )
+
+        # Copy to the main test data directory for reuse
+        permanent_path = (
+            data_dir
+            / "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.road_user_assignments.csv"  # noqa
+        )
         shutil.copy(output_path, permanent_path)
