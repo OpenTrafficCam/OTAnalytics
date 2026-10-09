@@ -18,10 +18,6 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import VideoRepository
 
-# The CRS OTFusion's default geo offset shifts local world coordinates into.
-# Files written before OTFusion declared its CRS (OTCloud OP#10404) are assumed
-# to be in it.
-FALLBACK_GEO_CRS = "EPSG:25833"
 ORTHOPHOTO_REQUIRED = (
     "These track files place road users only by geo coordinates, so they need an"
     " orthophoto to be shown and counted. Nothing was loaded."

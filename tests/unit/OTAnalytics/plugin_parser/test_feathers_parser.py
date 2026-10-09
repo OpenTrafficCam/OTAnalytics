@@ -16,17 +16,18 @@ import pytest
 from pytest import approx
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.application.orthophoto import (
-    FALLBACK_GEO_CRS,
-    ProvideOrthophotoGeoreference,
-)
+from OTAnalytics.application.orthophoto import ProvideOrthophotoGeoreference
 from OTAnalytics.application.parser.track_parser import (
     DetectionMetadata,
     TrackParseResult,
 )
 from OTAnalytics.domain import track
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
-from OTAnalytics.domain.orthophoto import MixedTrackFiles, OrthophotoRequired
+from OTAnalytics.domain.orthophoto import (
+    MissingGeoCoordinatesCrs,
+    MixedTrackFiles,
+    OrthophotoRequired,
+)
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IncompatibleGeoreferenceMetadataError,
 )
@@ -672,17 +673,34 @@ class TestFeathersParserGeoOnly:
 
         given.orthophoto_georeference.for_crs.assert_called_once_with(GEO_ONLY_CRS)
 
-    def test_falls_back_to_default_crs_when_none_is_declared(
-        self, test_data_tmp_dir: Path
-    ) -> None:
+    def test_refuses_when_no_crs_is_declared(self, test_data_tmp_dir: Path) -> None:
         given = setup_default_geo_only(
             create_given_geo_only(test_data_tmp_dir), declares_crs=False
         )
         target = create_target_geo_only(given)
 
-        target.parse(given.feather_file)
+        with pytest.raises(MissingGeoCoordinatesCrs, match=given.feather_file.name):
+            target.parse(given.feather_file)
 
-        given.orthophoto_georeference.for_crs.assert_called_once_with(FALLBACK_GEO_CRS)
+        given.orthophoto_georeference.for_crs.assert_not_called()
+
+    @pytest.mark.parametrize("blank_crs", ["", "   ", None])
+    def test_refuses_when_the_declared_crs_is_blank(
+        self, test_data_tmp_dir: Path, blank_crs: str | None
+    ) -> None:
+        given = setup_default_geo_only(
+            create_given_geo_only(test_data_tmp_dir), declares_crs=False
+        )
+        sidecar_file = given.tmp_dir / "fusion_metadata.json"
+        sidecar = json.loads(sidecar_file.read_text())
+        sidecar[ottrk_format.GEO_COORDINATES] = {ottrk_format.CRS: blank_crs}
+        sidecar_file.write_text(json.dumps(sidecar))
+        target = create_target_geo_only(given)
+
+        with pytest.raises(MissingGeoCoordinatesCrs):
+            target.parse(given.feather_file)
+
+        given.orthophoto_georeference.for_crs.assert_not_called()
 
     def test_places_detections_outside_the_orthophoto_without_clipping(
         self, test_data_tmp_dir: Path

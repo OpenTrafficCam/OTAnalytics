@@ -35,6 +35,10 @@ class MixedTrackFiles(OrthophotoError):
     """Camera Track Files were loaded into a project that shows an Orthophoto."""
 
 
+class MissingGeoCoordinatesCrs(OrthophotoError):
+    """A Geo-only Track File does not say which CRS its geo coordinates are in."""
+
+
 class OrthophotoNotFound(OrthophotoError):
     """The Orthophoto the project declares cannot be obtained."""
 

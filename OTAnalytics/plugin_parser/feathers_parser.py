@@ -12,9 +12,7 @@ from typing import Optional, cast
 import polars as pl
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
-from OTAnalytics.application.logger import logger
 from OTAnalytics.application.orthophoto import (
-    FALLBACK_GEO_CRS,
     NoOrthophotoGeoreference,
     ProvideOrthophotoGeoreference,
 )
@@ -25,7 +23,7 @@ from OTAnalytics.application.parser.track_parser import (
 )
 from OTAnalytics.domain import track
 from OTAnalytics.domain.georeference import GeoreferenceMetadata, geo_to_pixel_transform
-from OTAnalytics.domain.orthophoto import MixedTrackFiles
+from OTAnalytics.domain.orthophoto import MissingGeoCoordinatesCrs, MixedTrackFiles
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import (
@@ -54,6 +52,11 @@ MIXED_BATCH = (
     "These track files cannot be loaded together: {geo_only} place road users by"
     " geo coordinates only (OTFusion output) and {camera} come with their own"
     " video. Load them in separate projects. Nothing was loaded."
+)
+MISSING_GEO_COORDINATES_CRS = (
+    "'{file}' does not say which CRS its geo coordinates are in, so it cannot be"
+    " placed on the orthophoto. Export it again with a current OTFusion."
+    " Nothing was loaded."
 )
 
 
@@ -177,13 +180,12 @@ class FeathersParser(TrackParser, GeoreferenceMetadataParsingMixin):
         )
 
     def _geo_coordinates_crs(self, metadata: dict, file: Path) -> str:
-        if (crs := self.parse_geo_coordinates_crs(metadata)) is not None:
-            return crs
-        logger().warning(
-            f"'{file.name}' does not say which CRS its geo coordinates are in."
-            f" Assuming {FALLBACK_GEO_CRS}."
-        )
-        return FALLBACK_GEO_CRS
+        crs = self.parse_geo_coordinates_crs(metadata)
+        if crs is None or not crs.strip():
+            raise MissingGeoCoordinatesCrs(
+                MISSING_GEO_COORDINATES_CRS.format(file=file.name)
+            )
+        return crs
 
     def _parse_video_metadata(self, metadata: dict) -> VideoMetadata:
         """
