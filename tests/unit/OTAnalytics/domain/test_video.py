@@ -105,6 +105,13 @@ class TestVideoRepository:
         result = repository.get_by_date(START_DATE)
         assert result == [video_2]
 
+    def test_is_empty(self, video_1: Video) -> None:
+        target = VideoRepository()
+        assert target.is_empty()
+
+        target.add(video_1)
+        assert not target.is_empty()
+
 
 class TestVideoMetadata:
     @pytest.fixture
