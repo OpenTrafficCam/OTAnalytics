@@ -19,7 +19,14 @@ MARKER_PROJECT_NAME = "marker-project-name"
 MARKER_START_DATE = "marker-start-date"
 MARKER_START_TIME = "marker-start-time"
 MARKER_VISUALIZATION_LAYERS_ALL = "marker-visualization-layers-all"
+MARKER_VISUALIZATION_LAYERS = "marker-visualization-layers"
 MARKER_UPDATE_FLOW_HIGHLIGHTING = "marker-update-flow-highlighting"
+
+
+def layer_marker(group_name: str, layer_name: str) -> str:
+    """Test marker of the checkbox of a layer, unique across the layer groups."""
+    words = f"{group_name} {layer_name}".lower().split()
+    return "-".join([MARKER_VISUALIZATION_LAYERS, *words])
 
 
 class LayersForm(AbstractFrameTrackPlotting):
@@ -49,10 +56,11 @@ class LayersForm(AbstractFrameTrackPlotting):
                     ),
                 )
                 if layer_group.name == "Show tracks" and layer.get_name() == ALL:
-                    checkbox.mark(MARKER_VISUALIZATION_LAYERS_ALL)
-                    checkbox.props(
-                        f"{TestIdAttributes.DATA_TESTID}={MARKER_VISUALIZATION_LAYERS_ALL}"  # noqa
-                    )
+                    marker = MARKER_VISUALIZATION_LAYERS_ALL
+                else:
+                    marker = layer_marker(layer_group.name, layer.get_name())
+                checkbox.mark(marker)
+                checkbox.props(f"{TestIdAttributes.DATA_TESTID}={marker}")
         button = ui.button(
             self._resource_manager.get(
                 VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING
