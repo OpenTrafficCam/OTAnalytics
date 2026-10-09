@@ -105,24 +105,24 @@ def create_given_choose() -> GivenChoose:
 
 
 def setup_default_choose(given: GivenChoose) -> GivenChoose:
-    given.section_repository.get_all.return_value = []
-    given.track_repository.get_all.return_value.empty = True
-    given.video_repository.get_all.return_value = []
+    given.section_repository.is_empty.return_value = True
+    given.track_repository.is_empty.return_value = True
+    given.video_repository.is_empty.return_value = True
     return given
 
 
 def setup_with_sections(given: GivenChoose) -> GivenChoose:
-    given.section_repository.get_all.return_value = [Mock()]
+    given.section_repository.is_empty.return_value = False
     return given
 
 
 def setup_with_tracks(given: GivenChoose) -> GivenChoose:
-    given.track_repository.get_all.return_value.empty = False
+    given.track_repository.is_empty.return_value = False
     return given
 
 
 def setup_with_videos(given: GivenChoose) -> GivenChoose:
-    given.video_repository.get_all.return_value = [Mock()]
+    given.video_repository.is_empty.return_value = False
     return given
 
 

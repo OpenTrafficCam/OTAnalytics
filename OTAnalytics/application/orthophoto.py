@@ -206,9 +206,9 @@ class ChooseOrthophoto:
 
     def _has_sections_tracks_or_videos(self) -> bool:
         return (
-            bool(self._section_repository.get_all())
-            or not self._track_repository.get_all().empty
-            or bool(self._video_repository.get_all())
+            not self._section_repository.is_empty()
+            or not self._track_repository.is_empty()
+            or not self._video_repository.is_empty()
         )
 
 
