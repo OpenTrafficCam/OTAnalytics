@@ -248,6 +248,9 @@ class TrackRepository:
         self._dataset = updated_dataset
         self.observers.notify(TrackRepositoryEvent.create_removed(removed_ids))
 
+    def is_empty(self) -> bool:
+        return self._dataset.empty
+
 
 @dataclass(frozen=True)
 class TrackFileRepositoryEvent:

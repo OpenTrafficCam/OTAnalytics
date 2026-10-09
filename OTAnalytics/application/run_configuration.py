@@ -85,6 +85,15 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         return None
 
     @property
+    def orthophoto(self) -> Path | None:
+        """The Orthophoto the otconfig declares, as a local file."""
+        if self._otconfig is None or self._otconfig.orthophoto is None:
+            return None
+        if self.config_file is None:
+            return None
+        return self.config_file.parent / self._otconfig.orthophoto
+
+    @property
     def track_files(self) -> set[Path]:
         if self._cli_args.track_files:
             return {Path(track) for track in self._cli_args.track_files}

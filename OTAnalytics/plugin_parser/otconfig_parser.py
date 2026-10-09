@@ -52,6 +52,7 @@ from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.files import build_relative_path
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.observer import OBSERVER, Subject
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
@@ -73,6 +74,7 @@ LOGFILE = "logfile"
 DEBUG = "debug"
 PATH = "path"
 S3_KEY_PREFIX = "s3_key_prefix"
+ORTHOPHOTO = "orthophoto"
 
 
 class OtConfigFormatFixer(ABC):
@@ -174,6 +176,7 @@ class OtConfigParser(ConfigParser):
             flows=flows,
             remark=remark,
             s3_key_prefix=self._parse_s3_key_prefix(fixed_content),
+            orthophoto=self._parse_orthophoto(fixed_content),
         )
 
     def _parse_s3_key_prefix(self, data: dict) -> S3KeyPrefix | None:
@@ -181,6 +184,12 @@ class OtConfigParser(ConfigParser):
         if (prefix := data.get(S3_KEY_PREFIX)) is None:
             return None
         return S3KeyPrefix(prefix)
+
+    def _parse_orthophoto(self, data: dict) -> Path | None:
+        """The Orthophoto as the project declares it, relative to the otconfig."""
+        if (reference := data.get(ORTHOPHOTO)) is None:
+            return None
+        return Path(reference)
 
     def _parse_videos(
         self,
@@ -340,6 +349,7 @@ class OtConfigParser(ConfigParser):
         file: Path,
         remark: str | None,
         s3_key_prefix: S3KeyPrefix | None,
+        orthophoto: Orthophoto | None,
     ) -> None:
         self._validate_data(project)
         content = self.convert(
@@ -351,6 +361,7 @@ class OtConfigParser(ConfigParser):
             file,
             remark,
             s3_key_prefix,
+            orthophoto,
         )
         write_json(data=content, path=file)
 
@@ -364,6 +375,13 @@ class OtConfigParser(ConfigParser):
             file,
             config.remark,
             config.s3_key_prefix,
+            (
+                Orthophoto(
+                    file=file.parent / config.orthophoto, reference=config.orthophoto
+                )
+                if config.orthophoto
+                else None
+            ),
         )
 
     @staticmethod
@@ -381,6 +399,7 @@ class OtConfigParser(ConfigParser):
         file: Path,
         remark: str | None,
         s3_key_prefix: S3KeyPrefix | None,
+        orthophoto: Orthophoto | None,
     ) -> dict:
         parent_folder = file.parent
         project_content = project.to_dict()
@@ -433,8 +452,39 @@ class OtConfigParser(ConfigParser):
             # location, so a local-mode otconfig stays byte-for-byte what it is
             # today.
             content[S3_KEY_PREFIX] = s3_key_prefix.value
+        if orthophoto is not None:
+            content[ORTHOPHOTO] = self._orthophoto_reference(
+                orthophoto, parent_folder, s3_key_prefix
+            )
         content |= video_content
         content |= analysis_content
         content |= section_content
         content |= remark_content
         return content
+
+    @staticmethod
+    def _orthophoto_reference(
+        orthophoto: Orthophoto,
+        parent_folder: Path,
+        s3_key_prefix: S3KeyPrefix | None,
+    ) -> str:
+        """Where the otconfig says the Orthophoto is.
+
+        In S3 mode the local file sits in the ephemeral user source, so the
+        reference the project declared is kept rather than a path into staging.
+        Unlike video and track references, it is kept at all: it is part of the
+        project, not a per-session pick.
+        """
+        if s3_key_prefix is not None and orthophoto.reference is not None:
+            return orthophoto.reference.as_posix()
+        return Path(
+            build_relative_path(
+                orthophoto.file,
+                parent_folder,
+                lambda actual, other: (
+                    "Orthophoto and config files are stored on different drives."
+                    f" Orthophoto is stored on {actual}."
+                    f" Configuration is stored on {other}"
+                ),
+            )
+        ).as_posix()

@@ -505,3 +505,22 @@ class TestRunConfiguration:
         assert build_config(cli_args, otconfig).exclude_classes == exclude_classes
         cli_args.exclude_classes = None
         assert build_config(cli_args, otconfig).exclude_classes == frozenset()
+
+    def test_orthophoto_is_resolved_next_to_the_otconfig(
+        self, cli_args: Mock, otconfig: Mock
+    ) -> None:
+        cli_args.config_file = "/site/project.otconfig"
+        otconfig.orthophoto = Path("map2.tiff")
+
+        assert build_config(cli_args, otconfig).orthophoto == Path("/site/map2.tiff")
+
+    def test_no_otconfig_means_no_orthophoto(self, cli_args: Mock) -> None:
+        assert build_config(cli_args, None).orthophoto is None
+
+    def test_otconfig_without_orthophoto_means_no_orthophoto(
+        self, cli_args: Mock, otconfig: Mock
+    ) -> None:
+        cli_args.config_file = "/site/project.otconfig"
+        otconfig.orthophoto = None
+
+        assert build_config(cli_args, otconfig).orthophoto is None

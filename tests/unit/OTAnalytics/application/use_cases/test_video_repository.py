@@ -96,6 +96,17 @@ class TestGetVideos:
         assert actual_video == first_video
         repository.get_by_date.assert_called_once_with(current)
 
+    @pytest.mark.parametrize(
+        "all_videos, expected", [([], False), ([lf("first_video")], True)]
+    )
+    def test_has_videos(self, all_videos: list[Video], expected: bool) -> None:
+        repository = Mock(spec=VideoRepository)
+        repository.get_all.return_value = all_videos
+
+        actual = GetVideos(repository).has_videos()
+
+        assert actual is expected
+
     def test_get_not_found(self) -> None:
         current = first_video_date()
         repository = Mock(spec=VideoRepository)

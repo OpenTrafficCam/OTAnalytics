@@ -10,13 +10,16 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import DummyViewModel
+from OTAnalytics.application.state import CurrentOrthophoto
 from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideTrackFiles,
     ProvideVideoFiles,
 )
+from OTAnalytics.domain.orthophoto import MixedTrackFiles, OrthophotoRequired
 
 TRACK_FILES = [Path("folder/a.ottrk"), Path("folder/b.ottrk")]
 VIDEO_FILES = [Path("folder/a.mp4"), Path("folder/b.mp4")]
+REFUSAL = "This project shows an orthophoto."
 
 
 @dataclass
@@ -24,6 +27,7 @@ class Given:
     application: Mock
     provide_track_files: Mock
     provide_video_files: Mock
+    ui_factory: Mock
 
 
 def create_given(
@@ -40,7 +44,20 @@ def create_given(
         application=application,
         provide_track_files=provide_track_files,
         provide_video_files=provide_video_files,
+        ui_factory=Mock(),
     )
+
+
+def setup_with_videos_refused(given: Given) -> Given:
+    given.application.add_videos.side_effect = MixedTrackFiles(REFUSAL)
+    return given
+
+
+def setup_with_tracks_refused(given: Given) -> Given:
+    given.application.add_tracks_of_files_async.side_effect = OrthophotoRequired(
+        REFUSAL
+    )
+    return given
 
 
 def create_target(given: Given) -> DummyViewModel:
@@ -59,7 +76,7 @@ def create_target(given: Given) -> DummyViewModel:
 def _build(given: Given) -> DummyViewModel:
     return DummyViewModel(
         application=given.application,
-        ui_factory=Mock(),
+        ui_factory=given.ui_factory,
         flow_parser=Mock(),
         name_generator=Mock(),
         event_list_export_formats={},
@@ -68,6 +85,7 @@ def _build(given: Given) -> DummyViewModel:
         update_section_coordinates=Mock(),
         provide_track_files=given.provide_track_files,
         provide_video_files=given.provide_video_files,
+        current_orthophoto=CurrentOrthophoto(),
     )
 
 
@@ -97,6 +115,15 @@ class TestLoadTracks:
 
         given.application.add_tracks_of_files_async.assert_not_awaited()
 
+    async def test_reports_an_orthophoto_error(self) -> None:
+        given = setup_with_tracks_refused(create_given(tracks=TRACK_FILES))
+        target = create_target(given)
+
+        await target.load_tracks()
+
+        given.ui_factory.info_box.assert_called_once()
+        assert given.ui_factory.info_box.call_args.kwargs["message"] == REFUSAL
+
 
 class TestAddVideo:
     async def test_forwards_the_provided_files(self) -> None:
@@ -116,3 +143,12 @@ class TestAddVideo:
         await target.add_video()
 
         given.application.add_videos.assert_not_called()
+
+    async def test_reports_videos_refused_beside_an_orthophoto(self) -> None:
+        given = setup_with_videos_refused(create_given(videos=VIDEO_FILES))
+        target = create_target(given)
+
+        await target.add_video()
+
+        given.ui_factory.info_box.assert_called_once()
+        assert given.ui_factory.info_box.call_args.kwargs["message"] == REFUSAL

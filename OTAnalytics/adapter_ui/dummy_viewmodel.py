@@ -94,6 +94,7 @@ from OTAnalytics.application.project import (
     WeatherType,
 )
 from OTAnalytics.application.project_location import UnsupportedProjectLocation
+from OTAnalytics.application.state import CurrentOrthophoto
 from OTAnalytics.application.use_cases.config import ConfigValidationError
 from OTAnalytics.application.use_cases.config_has_changed import NoExistingConfigFound
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
@@ -137,6 +138,7 @@ from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.files import DifferentDrivesException
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
+from OTAnalytics.domain.orthophoto import Orthophoto, OrthophotoError
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
@@ -148,6 +150,9 @@ from OTAnalytics.domain.section import (
     SectionRepositoryEvent,
 )
 from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    IncompatibleGeoreferenceMetadataError,
+)
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
@@ -340,8 +345,10 @@ class DummyViewModel(
         update_section_coordinates: UpdateSectionCoordinates,
         provide_track_files: ProvideTrackFiles,
         provide_video_files: ProvideVideoFiles,
+        current_orthophoto: CurrentOrthophoto,
     ) -> None:
         self._application = application
+        self._current_orthophoto = current_orthophoto
         self._ui_factory = ui_factory
         self._provide_track_files = provide_track_files
         self._provide_video_files = provide_video_files
@@ -380,6 +387,10 @@ class DummyViewModel(
     def notify_videos(self, videos: list[Video]) -> None:
         self.update_quick_save_button(videos)
         self.treeview_videos.update_items()
+        self._update_enabled_buttons()
+
+    def notify_orthophoto(self, _: Orthophoto | None) -> None:
+        """Re-enable the buttons that wait for a background to draw on."""
         self._update_enabled_buttons()
 
     def notify_files(self) -> None:
@@ -432,12 +443,11 @@ class DummyViewModel(
 
     def _update_enabled_section_buttons(self) -> None:
         action_running = self._application.action_state.action_running.get()
-        videos_exist = len(self._application.get_all_videos()) > 0
         selected_section_ids = self.get_selected_section_ids()
         single_section_selected = len(selected_section_ids) == 1
         any_section_selected = len(selected_section_ids) > 0
 
-        add_section_enabled = (not action_running) and videos_exist
+        add_section_enabled = (not action_running) and self._background_exists()
         single_section_enabled = add_section_enabled and single_section_selected
         multiple_sections_enabled = add_section_enabled and any_section_selected
 
@@ -469,9 +479,13 @@ class DummyViewModel(
 
     def _update_enabled_video_control_buttons(self) -> None:
         action_running = self._application.action_state.action_running.get()
-        videos_exist = len(self._application.get_all_videos()) > 0
-        general_activated = not action_running and videos_exist
+        general_activated = not action_running and self._background_exists()
         self.frame_video_control.set_enabled_general_buttons(general_activated)
+
+    def _background_exists(self) -> bool:
+        """Whether a Video or an Orthophoto is there to draw Sections on."""
+        videos_exist = len(self._application.get_all_videos()) > 0
+        return videos_exist or self._current_orthophoto.get() is not None
 
     def _on_section_changed(self, section: SectionId) -> None:
         self._refresh_sections_in_ui()
@@ -586,7 +600,13 @@ class DummyViewModel(
         if not video_files:
             return
         logger().info(f"Video files to load: {video_files}")
-        self._application.add_videos(files=video_files)
+        try:
+            self._application.add_videos(files=video_files)
+        except OrthophotoError as cause:
+            logger().warning(str(cause))
+            self._ui_factory.info_box(
+                message=str(cause), initial_position=self._get_window_position()
+            )
 
     def remove_videos(self) -> None:
         self._application.remove_videos()
@@ -900,7 +920,13 @@ class DummyViewModel(
         if not track_files:
             return
         logger().info(f"Tracks files to load: {track_files}")
-        await self._application.add_tracks_of_files_async(track_files=track_files)
+        try:
+            await self._application.add_tracks_of_files_async(track_files=track_files)
+        except (OrthophotoError, IncompatibleGeoreferenceMetadataError) as cause:
+            logger().warning(str(cause))
+            self._ui_factory.info_box(
+                message=str(cause), initial_position=self._get_window_position()
+            )
 
     async def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections

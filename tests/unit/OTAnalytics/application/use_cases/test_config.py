@@ -29,6 +29,7 @@ class TestSaveOtconfig:
         get_current_remark = Mock()
         current_key_prefix = Mock()
         current_key_prefix.get.return_value = A_PREFIX
+        current_orthophoto = Mock()
         otconfig_upload = AsyncMock()
         use_case = SaveOtconfig(
             datastore,
@@ -37,12 +38,21 @@ class TestSaveOtconfig:
             get_current_remark,
             current_key_prefix,
             otconfig_upload,
+            current_orthophoto,
         )
 
         await use_case(output)
 
         config_parser.serialize.assert_called_once()
         assert config_parser.serialize.call_args.kwargs["s3_key_prefix"] == A_PREFIX
+        assert (
+            config_parser.serialize.call_args.kwargs["orthophoto"]
+            == current_orthophoto.get.return_value
+        )
+        assert (
+            config_parser.convert.call_args.args[-1]
+            == current_orthophoto.get.return_value
+        )
         file_state.last_saved_config.set.assert_called_once_with(
             ConfigurationFile(output, convert_result)
         )
@@ -72,12 +82,13 @@ class TestSaveOtconfig:
             Mock(),
             current_key_prefix,
             AsyncMock(),
+            Mock(),
         )
 
         await use_case(test_data_tmp_dir / "test.otconfig")
 
         written = config_parser.serialize.call_args.kwargs["s3_key_prefix"]
-        recorded = config_parser.convert.call_args.args[-1]
+        recorded = config_parser.convert.call_args.args[-2]
         assert written == recorded == A_PREFIX
 
     async def test_uploads_when_project_names_a_key_prefix(
@@ -100,6 +111,7 @@ class TestSaveOtconfig:
             Mock(),
             current_key_prefix,
             otconfig_upload,
+            Mock(),
         )
 
         await use_case(output)
@@ -125,6 +137,7 @@ class TestSaveOtconfig:
             Mock(),
             current_key_prefix,
             otconfig_upload,
+            Mock(),
         )
 
         await use_case(test_data_tmp_dir / "test.otconfig")
@@ -145,6 +158,7 @@ class TestSaveOtconfig:
             get_current_remark,
             Mock(),
             AsyncMock(),
+            Mock(),
         )
 
         with pytest.raises(ConfigValidationError) as exc_info:

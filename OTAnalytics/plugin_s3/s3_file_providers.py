@@ -5,8 +5,9 @@ about the staging layout, which is what keeps lazy or streaming loading cheap to
 adopt later.
 """
 
+from contextlib import closing
 from pathlib import Path, PurePosixPath
-from typing import Callable
+from typing import Callable, Generator, TypeVar, cast
 
 import ijson
 
@@ -19,6 +20,7 @@ from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideVideoFiles,
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat
+from OTAnalytics.plugin_parser.geo_only import is_geo_only
 from OTAnalytics.plugin_s3.config.s3 import S3Config
 from OTAnalytics.plugin_s3.download_objects import DownloadCancelled, DownloadObjects
 from OTAnalytics.plugin_s3.list_objects import S3ListObjects
@@ -28,6 +30,8 @@ from OTAnalytics.plugin_track_input_source.template import (
     parse_json_bz2_events,
 )
 
+_T = TypeVar("_T")
+
 TRACK_SUFFIXES = {".ottrk"}
 VIDEO_SUFFIXES = {".mp4", ".avi", ".mkv", ".mov"}
 
@@ -35,6 +39,7 @@ LOAD_TRACKS_TITLE = "Load tracks from S3"
 LOAD_VIDEOS_TITLE = "Load videos from S3"
 DOWNLOADING_TRACKS = "Downloading tracks"
 DOWNLOADING_VIDEOS = "Downloading videos"
+DETECTIONS_ITEMS = "data.detections.item"
 
 CANCELLED = "Loading from S3 cancelled. Nothing was loaded."
 NO_PROJECT = (
@@ -59,7 +64,7 @@ class UnreadableTrackFile(Exception):
     """
 
 
-def read_video_name(ottrk: Path) -> str:
+def read_video_name(ottrk: Path) -> str | None:
     """Read the name of the video a track file was produced from.
 
     The name comes from the ottrk's own metadata rather than from swapping the
@@ -69,7 +74,8 @@ def read_video_name(ottrk: Path) -> str:
         ottrk (Path): the downloaded track file.
 
     Returns:
-        str: the video file name, with extension.
+        str | None: the video file name, with extension. None for a Geo-only
+            Track File, which has no video.
 
     Raises:
         UnreadableTrackFile: if the file is missing, cannot be read, or carries
@@ -77,8 +83,42 @@ def read_video_name(ottrk: Path) -> str:
             message is what the user is shown and they lead to different places
             to look.
     """
+    metadata = _translating_read_errors(
+        ottrk, lambda: metadata_from_json_events(parse_json_bz2_events(ottrk))
+    )
+    if _is_geo_only_file(ottrk, metadata):
+        return None
     try:
-        metadata = metadata_from_json_events(parse_json_bz2_events(ottrk))
+        video = metadata[ottrk_dataformat.VIDEO]
+        return str(video[ottrk_dataformat.FILENAME]) + str(
+            video[ottrk_dataformat.FILETYPE]
+        )
+    except (KeyError, TypeError) as cause:
+        raise UnreadableTrackFile(
+            f"'{ottrk.name}' does not say which video it belongs to."
+        ) from cause
+
+
+def _is_geo_only_file(ottrk: Path, metadata: dict) -> bool:
+    """Apply the Geo-only rule, reading detections only when it is undecided."""
+    has_georeference = ottrk_dataformat.GEOREFERENCE in metadata
+    declares_geo_coordinates = ottrk_dataformat.GEO_COORDINATES in metadata
+    carries_geo_coordinates = (
+        not has_georeference
+        and not declares_geo_coordinates
+        and _translating_read_errors(
+            ottrk, lambda: _first_detection_has_geo_coordinates(ottrk)
+        )
+    )
+    return is_geo_only(
+        has_georeference, carries_geo_coordinates, declares_geo_coordinates
+    )
+
+
+def _translating_read_errors(ottrk: Path, read: Callable[[], _T]) -> _T:
+    """Run a read of the track file, reporting failures as UnreadableTrackFile."""
+    try:
+        return read()
     except FileNotFoundError as cause:
         raise UnreadableTrackFile(f"'{ottrk.name}' is missing: {ottrk}.") from cause
     except OSError as cause:
@@ -91,15 +131,13 @@ def read_video_name(ottrk: Path) -> str:
         raise UnreadableTrackFile(
             f"'{ottrk.name}' is not a valid track file."
         ) from cause
-    try:
-        video = metadata[ottrk_dataformat.VIDEO]
-        return str(video[ottrk_dataformat.FILENAME]) + str(
-            video[ottrk_dataformat.FILETYPE]
-        )
-    except (KeyError, TypeError) as cause:
-        raise UnreadableTrackFile(
-            f"'{ottrk.name}' does not say which video it belongs to."
-        ) from cause
+
+
+def _first_detection_has_geo_coordinates(ottrk: Path) -> bool:
+    with closing(cast(Generator, parse_json_bz2_events(ottrk))) as events:
+        detections = ijson.items(events, DETECTIONS_ITEMS)
+        first = next(iter(detections), None)
+    return first is not None and ottrk_dataformat.GEO_X in first
 
 
 class _S3Provider:
@@ -199,7 +237,8 @@ class S3TrackFileProvider(_S3Provider, ProvideTrackFiles):
         download_objects (DownloadObjects): downloads the selected objects.
         config (S3Config): the S3 settings fixed at startup.
         current_key_prefix (CurrentKeyPrefix): where the loaded project's data lives.
-        read_video_name (Callable[[Path], str]): reads a track file's video name.
+        read_video_name (Callable[[Path], str | None]): reads a track file's
+            video name, None if it has no video.
     """
 
     def __init__(
@@ -209,7 +248,7 @@ class S3TrackFileProvider(_S3Provider, ProvideTrackFiles):
         download_objects: DownloadObjects,
         config: S3Config,
         current_key_prefix: CurrentKeyPrefix,
-        read_video_name: Callable[[Path], str] = read_video_name,
+        read_video_name: Callable[[Path], str | None] = read_video_name,
     ) -> None:
         super().__init__(
             dialog, list_objects, download_objects, config, current_key_prefix
@@ -246,6 +285,8 @@ class S3TrackFileProvider(_S3Provider, ProvideTrackFiles):
         video_keys = []
         for track_file in track_files:
             video_name = self._read_video_name(track_file)
+            if video_name is None:
+                continue
             if video_name not in by_name:
                 raise MissingVideoForTrackFile(
                     f"'{track_file.name}' needs video '{video_name}', which is not"

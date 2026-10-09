@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Optional
@@ -14,6 +15,7 @@ from OTAnalytics.application.state import (
     FlowState,
     ObservableOptionalProperty,
     ObservableProperty,
+    OrthophotoImageSizeUpdater,
     Plotter,
     SectionState,
     TrackImageUpdater,
@@ -26,6 +28,7 @@ from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import FlowId
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.section import (
     Section,
     SectionId,
@@ -620,3 +623,52 @@ class TestFlowState:
         target.reset()
 
         assert target.selected_flows.get() == []
+
+
+ORTHOPHOTO = Orthophoto(file=Path("site/map.tiff"))
+
+
+@dataclass
+class GivenOrthophotoSize:
+    orthophoto_image: Mock
+    updater: Mock
+
+
+def create_given_orthophoto_size() -> GivenOrthophotoSize:
+    return GivenOrthophotoSize(orthophoto_image=Mock(), updater=Mock())
+
+
+def setup_default_orthophoto_size(given: GivenOrthophotoSize) -> GivenOrthophotoSize:
+    given.orthophoto_image.return_value = Mock(spec=TrackImage)
+    return given
+
+
+def setup_without_orthophoto_image(
+    given: GivenOrthophotoSize,
+) -> GivenOrthophotoSize:
+    given.orthophoto_image.return_value = None
+    return given
+
+
+def create_target_orthophoto_size(
+    given: GivenOrthophotoSize,
+) -> OrthophotoImageSizeUpdater:
+    return OrthophotoImageSizeUpdater(given.orthophoto_image, given.updater)
+
+
+class TestOrthophotoImageSizeUpdater:
+    def test_sizes_the_canvas_to_the_orthophoto_image(self) -> None:
+        given = setup_default_orthophoto_size(create_given_orthophoto_size())
+
+        create_target_orthophoto_size(given).notify(ORTHOPHOTO)
+
+        given.updater.notify.assert_called_once_with(
+            given.orthophoto_image.return_value
+        )
+
+    def test_keeps_the_size_without_an_orthophoto_image(self) -> None:
+        given = setup_without_orthophoto_image(create_given_orthophoto_size())
+
+        create_target_orthophoto_size(given).notify(None)
+
+        given.updater.notify.assert_not_called()

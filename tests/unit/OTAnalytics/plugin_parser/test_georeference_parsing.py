@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+
+import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
 from OTAnalytics.plugin_parser.georeference_parsing import (
     GeoreferenceMetadataParsingMixin,
 )
@@ -21,3 +24,38 @@ class TestGeoreferenceParsing:
 
 def create_target() -> GeoreferenceMetadataParsingMixin:
     return GeoreferenceMetadataParsingMixin()
+
+
+GEO_COORDINATES_CRS = "EPSG:25833"
+
+
+@dataclass
+class Given:
+    metadata: dict
+
+
+def create_given() -> Given:
+    return Given(metadata={})
+
+
+def setup_with_geo_coordinates_crs(given: Given) -> Given:
+    given.metadata[ottrk_format.GEO_COORDINATES] = {
+        ottrk_format.CRS: GEO_COORDINATES_CRS
+    }
+    return given
+
+
+class TestParseGeoCoordinatesCrs:
+    def test_reads_crs_of_geo_coordinates(self) -> None:
+        given = setup_with_geo_coordinates_crs(create_given())
+
+        actual = create_target().parse_geo_coordinates_crs(given.metadata)
+
+        assert actual == GEO_COORDINATES_CRS
+
+    def test_missing_block_yields_none(self) -> None:
+        given = create_given()
+
+        actual = create_target().parse_geo_coordinates_crs(given.metadata)
+
+        assert actual is None

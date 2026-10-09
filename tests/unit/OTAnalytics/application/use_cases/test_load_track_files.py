@@ -3,7 +3,7 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, Mock, call
+from unittest.mock import AsyncMock, MagicMock, Mock, call
 
 import pytest
 
@@ -12,12 +12,19 @@ from OTAnalytics.application.parser.track_parser import (
     TrackParser,
     TracksParseResult,
 )
+from OTAnalytics.application.state import CurrentOrthophoto
 from OTAnalytics.application.use_cases.load_track_files import (
     PARSING_DESCRIPTION,
     PARSING_UNIT,
     LoadTrackFiles,
 )
 from OTAnalytics.domain.georeference import GeoreferenceMetadata
+from OTAnalytics.domain.orthophoto import (
+    MixedTrackFiles,
+    Orthophoto,
+    OrthophotoLocked,
+    OrthophotoRequired,
+)
 from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IncompatibleGeoreferenceMetadataError,
@@ -38,6 +45,7 @@ other_file = Path("other.file.ottrk")
 
 FOLDER_A = Path("folder_a")
 FOLDER_B = Path("folder_b")
+PROJECT_ORTHOPHOTO = Orthophoto(file=Path("map.tiff"))
 
 GEOREF_METADATA = GeoreferenceMetadata(
     geo_min_x=449199.096512522,
@@ -230,6 +238,7 @@ class TestLoadTrackFile:
                 tracks=first_tracks,
                 detections_metadata=[DetectionMetadata(frozenset(["car"]))],
                 videos_metadata=[create_video_metadata(Path("video1.mp4"))],
+                geo_only_per_file=[False],
             ),
         )
         target_first([some_file])
@@ -244,6 +253,7 @@ class TestLoadTrackFile:
                 tracks=second_tracks,
                 detections_metadata=[DetectionMetadata(frozenset(["car"]))],
                 videos_metadata=[create_video_metadata(Path("video2.mp4"))],
+                geo_only_per_file=[False],
             ),
         )
 
@@ -554,6 +564,159 @@ class TestLoadTrackFilesShowsProgress:
         given.progressbar.start.assert_not_called()
 
 
+class TestLoadTrackFilesGeoOnly:
+    def test_geo_only_file_gets_no_video(self) -> None:
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("fusion.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"car"},
+            geo_only_per_file=[True],
+        )
+        given.current_orthophoto.set(PROJECT_ORTHOPHOTO)
+        target = create_target(given)
+
+        target([some_file])
+
+        given.video_parser.parse.assert_not_called()
+        given.video_repository.add_all.assert_called_once_with([])
+        given.track_repository.add_all.assert_called_once()
+
+    def test_camera_file_is_refused_when_project_shows_an_orthophoto(self) -> None:
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("video1.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"car"},
+        )
+        given.current_orthophoto.set(PROJECT_ORTHOPHOTO)
+        target = create_target(given)
+
+        with pytest.raises(MixedTrackFiles):
+            target([some_file])
+
+        given.videos_metadata.update.assert_not_called()
+
+    async def test_asks_for_a_missing_orthophoto_and_parses_again(self) -> None:
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("fusion.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"car"},
+            geo_only_per_file=[True],
+        )
+        given.track_parser.parse_files.side_effect = [
+            OrthophotoRequired("needs one"),
+            given.parse_result,
+        ]
+        target = create_target(given)
+
+        await target.load_async([some_file])
+
+        given.resolve_missing_orthophoto.resolve.assert_awaited_once()
+        given.track_repository.add_all.assert_called_once()
+
+    async def test_publishes_nothing_when_the_orthophoto_stays_missing(self) -> None:
+        given = setup(
+            track_ids=[TrackId("1")],
+            video_files=[Path("fusion.mp4")],
+            track_files=[some_file],
+            existing_track_files=[],
+            classes={"car"},
+            geo_only_per_file=[True],
+        )
+        given.track_parser.parse_files.side_effect = OrthophotoRequired("needs one")
+        given.resolve_missing_orthophoto.resolve.side_effect = OrthophotoRequired(
+            "declined"
+        )
+        target = create_target(given)
+
+        with pytest.raises(OrthophotoRequired):
+            await target.load_async([some_file])
+
+        given.videos_metadata.update.assert_not_called()
+        given.track_repository.add_all.assert_not_called()
+
+    async def test_propagates_a_locked_orthophoto_and_publishes_nothing(self) -> None:
+        given = setup_needing_an_orthophoto()
+        given.resolve_missing_orthophoto.resolve.side_effect = OrthophotoLocked(
+            "locked"
+        )
+        target = create_target(given)
+
+        with pytest.raises(OrthophotoLocked):
+            await target.load_async([some_file])
+
+        given.videos_metadata.update.assert_not_called()
+        given.track_repository.add_all.assert_not_called()
+
+    async def test_restores_the_orthophoto_when_publishing_is_refused(self) -> None:
+        given = setup_needing_an_orthophoto(
+            video_files=[Path("fusion.mp4"), Path("video.mp4")],
+            track_files=[some_file, other_file],
+            geo_only_per_file=[True, False],
+        )
+        target = create_target(given)
+
+        with pytest.raises(MixedTrackFiles):
+            await target.load_async([some_file, other_file])
+
+        assert given.current_orthophoto.get() is None
+
+    async def test_restores_the_orthophoto_when_the_second_parse_fails(self) -> None:
+        given = setup_needing_an_orthophoto()
+        given.track_parser.parse_files.side_effect = [
+            OrthophotoRequired("needs one"),
+            ValueError("broken track file"),
+        ]
+        target = create_target(given)
+
+        with pytest.raises(ValueError):
+            await target.load_async([some_file])
+
+        assert given.current_orthophoto.get() is None
+
+    async def test_restores_the_orthophoto_when_the_load_is_cancelled(self) -> None:
+        given = setup_needing_an_orthophoto()
+        given.track_parser.parse_files.side_effect = [
+            OrthophotoRequired("needs one"),
+            asyncio.CancelledError(),
+        ]
+        target = create_target(given)
+
+        with pytest.raises(asyncio.CancelledError):
+            await target.load_async([some_file])
+
+        assert given.current_orthophoto.get() is None
+
+
+def setup_needing_an_orthophoto(
+    video_files: list[Path] | None = None,
+    track_files: list[Path] | None = None,
+    geo_only_per_file: list[bool] | None = None,
+) -> "Given":
+    """The first parse asks for an orthophoto, which resolving then sets."""
+    given = setup(
+        track_ids=[TrackId("1")],
+        video_files=video_files or [Path("fusion.mp4")],
+        track_files=track_files or [some_file],
+        existing_track_files=[],
+        classes={"car"},
+        geo_only_per_file=geo_only_per_file or [True],
+    )
+    given.resolve_missing_orthophoto.resolve.side_effect = (
+        lambda: given.current_orthophoto.set(PROJECT_ORTHOPHOTO)
+    )
+    given.track_parser.parse_files.side_effect = [
+        OrthophotoRequired("needs one"),
+        given.parse_result,
+    ]
+    return given
+
+
 def call_names(given: "Given") -> list[str]:
     """The collaborator methods called, in call order."""
     return [name for name, _, _ in given.order.mock_calls]
@@ -573,6 +736,8 @@ class Given:
     progressbar: Mock
     tracks_metadata: Mock
     videos_metadata: Mock
+    current_orthophoto: CurrentOrthophoto
+    resolve_missing_orthophoto: AsyncMock
     order: MagicMock
 
     def parsed_video_calls(self) -> list[tuple[Path, Any]]:
@@ -599,7 +764,8 @@ def setup(
     existing_track_files: list[Path],
     classes: set[str],
     georeference_metadata: GeoreferenceMetadata | None = None,
-) -> Given:
+    geo_only_per_file: list[bool] | None = None,
+) -> "Given":
     videos = create_videos(video_files)
     videos_metadata = [create_video_metadata(video_file) for video_file in video_files]
     detections_metadata = [create_detection_metadata(classes) for _ in track_files]
@@ -612,6 +778,7 @@ def setup(
     parse_result.tracks = track_dataset_result
     parse_result.videos_metadata = videos_metadata
     parse_result.detections_metadata = detections_metadata
+    parse_result.geo_only_per_file = geo_only_per_file or [False] * len(video_files)
 
     given = Given(
         track_ids=track_ids,
@@ -626,6 +793,8 @@ def setup(
         progressbar=Mock(),
         tracks_metadata=Mock(),
         videos_metadata=Mock(),
+        current_orthophoto=CurrentOrthophoto(),
+        resolve_missing_orthophoto=AsyncMock(),
         order=MagicMock(),
     )
     given.track_file_repository.get_all.return_value = existing_track_files
@@ -667,6 +836,8 @@ def create_target(given: Given) -> LoadTrackFiles:
         progressbar=given.progressbar,
         tracks_metadata=given.tracks_metadata,
         videos_metadata=given.videos_metadata,
+        current_orthophoto=given.current_orthophoto,
+        resolve_missing_orthophoto=given.resolve_missing_orthophoto,
     )
 
 
@@ -701,4 +872,6 @@ def create_target_for_repo(
         progressbar=Mock(),
         tracks_metadata=Mock(),
         videos_metadata=Mock(),
+        current_orthophoto=CurrentOrthophoto(),
+        resolve_missing_orthophoto=AsyncMock(),
     )

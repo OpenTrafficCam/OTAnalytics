@@ -1,20 +1,31 @@
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
-from OTAnalytics.application.parser.config_parser import OtConfig
+from OTAnalytics.application.orthophoto import ObtainOrthophoto
 from OTAnalytics.application.project_location import UnsupportedProjectLocation
-from OTAnalytics.application.state import ConfigurationFile
+from OTAnalytics.application.state import ConfigurationFile, CurrentOrthophoto
 from OTAnalytics.application.use_cases.load_otconfig import (
     LoadOtconfig,
     UnableToLoadOtconfigFile,
 )
 from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.section_repository import SectionAlreadyExists
+from OTAnalytics.domain.orthophoto import (
+    Orthophoto,
+    OrthophotoLocked,
+    OrthophotoNotFound,
+)
 
 REMARK = "my remark"
+OTCONFIG_FILE = Path("/project/site/project.otconfig")
+DECLARED_ORTHOPHOTO = Path("map2.tiff")
+OBTAINED_FILE = Path("/local/map2.tiff")
+# Once when loading starts, once more when it aborts.
+RESET_BEFORE_AND_ON_ABORT = 2
 
 
 class TestLoadOtconfig:
@@ -231,9 +242,71 @@ class TestRefusingAProjectStoredElsewhere:
         given.update_project.assert_not_called()
 
 
+class TestLoadOtconfigOrthophoto:
+    async def test_sets_the_obtained_orthophoto_before_loading_tracks(self) -> None:
+        given = setup_with_orthophoto(setup_default())
+        target = create_target(given)
+
+        await target.load_async(OTCONFIG_FILE)
+
+        given.obtain_orthophoto.obtain.assert_awaited_once_with(
+            DECLARED_ORTHOPHOTO, OTCONFIG_FILE.parent
+        )
+        assert given.current_orthophoto.get() == Orthophoto(
+            file=OBTAINED_FILE, reference=DECLARED_ORTHOPHOTO
+        )
+
+    async def test_load_aborts_when_orthophoto_cannot_be_chosen(self) -> None:
+        given = setup_with_orthophoto(setup_default())
+        given.load_track_files.load_async.side_effect = OrthophotoLocked("locked")
+        target = create_target(given)
+
+        with pytest.raises(UnableToLoadOtconfigFile):
+            await target.load_async(OTCONFIG_FILE)
+
+        given.reset_application.reset.assert_called()
+
+    async def test_load_aborts_when_the_orthophoto_is_not_found(self) -> None:
+        given = setup_with_orthophoto_not_found(setup_with_orthophoto(setup_default()))
+        target = create_target(given)
+
+        with pytest.raises(UnableToLoadOtconfigFile):
+            await target.load_async(OTCONFIG_FILE)
+
+    async def test_resets_when_the_orthophoto_is_not_found(self) -> None:
+        given = setup_with_orthophoto_not_found(setup_with_orthophoto(setup_default()))
+        target = create_target(given)
+
+        with pytest.raises(UnableToLoadOtconfigFile):
+            await target.load_async(OTCONFIG_FILE)
+
+        assert given.reset_application.reset.call_count == RESET_BEFORE_AND_ON_ABORT
+        given.load_track_files.load_async.assert_not_awaited()
+
+    def test_blocking_load_sets_the_obtained_orthophoto(self) -> None:
+        given = setup_with_orthophoto(setup_default())
+        target = create_target(given)
+
+        target.load(OTCONFIG_FILE)
+
+        assert given.current_orthophoto.get() == Orthophoto(
+            file=OBTAINED_FILE, reference=DECLARED_ORTHOPHOTO
+        )
+
+    async def test_obtains_nothing_when_the_otconfig_declares_none(self) -> None:
+        given = setup_with_orthophoto(setup_default())
+        given.otconfig.orthophoto = None
+        target = create_target(given)
+
+        await target.load_async(OTCONFIG_FILE)
+
+        given.obtain_orthophoto.obtain.assert_not_awaited()
+        assert given.current_orthophoto.get() is None
+
+
 @dataclass
 class Given:
-    otconfig: OtConfig
+    otconfig: Mock
     reset_application: Mock
     config_parser: Mock
     update_project: Mock
@@ -246,6 +319,21 @@ class Given:
     deserialization_result: Mock
     validate_project_location: Mock
     current_key_prefix: Mock
+    current_orthophoto: CurrentOrthophoto
+    obtain_orthophoto: Mock
+
+
+def setup_with_orthophoto(given: Given) -> Given:
+    given.otconfig.orthophoto = DECLARED_ORTHOPHOTO
+    given.obtain_orthophoto.obtain.return_value = OBTAINED_FILE
+    given.load_track_files = Mock(spec=LoadTrackFiles)
+    given.load_track_files.load_async = AsyncMock()
+    return given
+
+
+def setup_with_orthophoto_not_found(given: Given) -> Given:
+    given.obtain_orthophoto.obtain.side_effect = OrthophotoNotFound("missing")
+    return given
 
 
 def setup_default() -> Given:
@@ -301,6 +389,8 @@ def setup(
         deserialization_result=deserialization_result,
         validate_project_location=validate_project_location,
         current_key_prefix=current_key_prefix,
+        current_orthophoto=CurrentOrthophoto(),
+        obtain_orthophoto=Mock(spec=ObtainOrthophoto, obtain=AsyncMock()),
     )
 
 
@@ -309,7 +399,7 @@ def create_otconfig(
     start_date: datetime,
     track_files: set[str],
     remark: str,
-) -> OtConfig:
+) -> Mock:
     project = Mock()
     project.name = project_name
     project.start_date = start_date
@@ -324,6 +414,7 @@ def create_otconfig(
     otconfig.flows = Mock()
     otconfig.analysis = analysis
     otconfig.remark = remark
+    otconfig.orthophoto = None
     return otconfig
 
 
@@ -340,4 +431,6 @@ def create_target(given: Given) -> LoadOtconfig:
         given.deserializer,
         given.validate_project_location,
         given.current_key_prefix,
+        given.current_orthophoto,
+        given.obtain_orthophoto,
     )
