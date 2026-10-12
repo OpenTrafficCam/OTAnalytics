@@ -13,6 +13,7 @@ from OTAnalytics.application.project_location import (
     RefuseAnyProjectLocation,
     ValidateProjectLocation,
 )
+from OTAnalytics.application.state import CurrentExportConfigState
 from OTAnalytics.application.upload_otconfig import NoOtconfigUpload, UploadOtconfig
 from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.application.use_cases.provide_input_files import (
@@ -20,6 +21,26 @@ from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideVideoFiles,
 )
 from OTAnalytics.application.use_cases.reset_application import ResetApplication
+from OTAnalytics.application.use_cases.static_analysis_config import (
+    GetCountingEventOfCurrentAnalysisConfig,
+    GetCountIntervalsOfCurrentAnalysisConfig,
+    GetDoCountingOfCurrentAnalysisConfig,
+    GetDoEventsOfCurrentAnalysisConfig,
+    GetEventFormatsOfCurrentAnalysisConfig,
+    GetLogfileOfCurrentAnalysisConfig,
+    GetNumProcessesOfCurrentAnalysisConfig,
+    GetSaveNameOfCurrentAnalysisConfig,
+    GetSaveSuffixOfCurrentAnalysisConfig,
+    SetCountingEventInCurrentAnalysisConfig,
+    SetCountIntervalsInCurrentAnalysisConfig,
+    SetDoCountingInCurrentAnalysisConfig,
+    SetDoEventsInCurrentAnalysisConfig,
+    SetEventFormatsInCurrentAnalysisConfig,
+    SetLogfileInCurrentAnalysisConfig,
+    SetNumProcessesInCurrentAnalysisConfig,
+    SetSaveNameInCurrentAnalysisConfig,
+    SetSaveSuffixInCurrentAnalysisConfig,
+)
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.transfer_mode import TransferMode
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
@@ -70,6 +91,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import 
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     ProjectForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.static_analysis_config_form import (  # noqa
+    StaticAnalysisConfigForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import RemarkForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
@@ -166,6 +190,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return ConfigurationBar(
             resource_manager=self.resource_manager,
             project_form=self.project_form,
+            static_analysis_config_form=self.static_analysis_config_form,
             svz_metadata_form=self.svz_metadata_form,
             track_form=self.track_form,
             sections_and_flow_form=self.sections_and_flow_form,
@@ -238,6 +263,174 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return ProjectForm(self.view_model, self.resource_manager)
 
     @cached_property
+    def get_do_events_of_current_analysis_config(
+        self,
+    ) -> GetDoEventsOfCurrentAnalysisConfig:
+        return GetDoEventsOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def get_do_counting_of_current_analysis_config(
+        self,
+    ) -> GetDoCountingOfCurrentAnalysisConfig:
+        return GetDoCountingOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def get_save_name_of_current_analysis_config(
+        self,
+    ) -> GetSaveNameOfCurrentAnalysisConfig:
+        return GetSaveNameOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_save_suffix_of_current_analysis_config(
+        self,
+    ) -> GetSaveSuffixOfCurrentAnalysisConfig:
+        return GetSaveSuffixOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_event_formats_of_current_analysis_config(
+        self,
+    ) -> GetEventFormatsOfCurrentAnalysisConfig:
+        return GetEventFormatsOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_count_intervals_of_current_analysis_config(
+        self,
+    ) -> GetCountIntervalsOfCurrentAnalysisConfig:
+        return GetCountIntervalsOfCurrentAnalysisConfig(
+            self.current_export_config_state
+        )
+
+    @cached_property
+    def get_counting_event_of_current_analysis_config(
+        self,
+    ) -> GetCountingEventOfCurrentAnalysisConfig:
+        return GetCountingEventOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_num_processes_of_current_analysis_config(
+        self,
+    ) -> GetNumProcessesOfCurrentAnalysisConfig:
+        return GetNumProcessesOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def get_logfile_of_current_analysis_config(
+        self,
+    ) -> GetLogfileOfCurrentAnalysisConfig:
+        return GetLogfileOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def set_do_events_in_current_analysis_config(
+        self,
+    ) -> SetDoEventsInCurrentAnalysisConfig:
+        return SetDoEventsInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def set_do_counting_in_current_analysis_config(
+        self,
+    ) -> SetDoCountingInCurrentAnalysisConfig:
+        return SetDoCountingInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def set_save_name_in_current_analysis_config(
+        self,
+    ) -> SetSaveNameInCurrentAnalysisConfig:
+        return SetSaveNameInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_save_suffix_in_current_analysis_config(
+        self,
+    ) -> SetSaveSuffixInCurrentAnalysisConfig:
+        return SetSaveSuffixInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_event_formats_in_current_analysis_config(
+        self,
+    ) -> SetEventFormatsInCurrentAnalysisConfig:
+        return SetEventFormatsInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_count_intervals_in_current_analysis_config(
+        self,
+    ) -> SetCountIntervalsInCurrentAnalysisConfig:
+        return SetCountIntervalsInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_counting_event_in_current_analysis_config(
+        self,
+    ) -> SetCountingEventInCurrentAnalysisConfig:
+        return SetCountingEventInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_num_processes_in_current_analysis_config(
+        self,
+    ) -> SetNumProcessesInCurrentAnalysisConfig:
+        return SetNumProcessesInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def set_logfile_in_current_analysis_config(
+        self,
+    ) -> SetLogfileInCurrentAnalysisConfig:
+        return SetLogfileInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def current_export_config_state(self) -> CurrentExportConfigState:
+        return self.current_static_analysis_config_state.export_config
+
+    @cached_property
+    def static_analysis_config_form(self) -> StaticAnalysisConfigForm:
+        return StaticAnalysisConfigForm(
+            resource_manager=self.resource_manager,
+            get_do_events=self.get_do_events_of_current_analysis_config,
+            set_do_events=self.set_do_events_in_current_analysis_config,
+            get_do_counting=self.get_do_counting_of_current_analysis_config,
+            set_do_counting=self.set_do_counting_in_current_analysis_config,
+            get_save_name=self.get_save_name_of_current_analysis_config,
+            set_save_name=self.set_save_name_in_current_analysis_config,
+            get_save_suffix=self.get_save_suffix_of_current_analysis_config,
+            set_save_suffix=self.set_save_suffix_in_current_analysis_config,
+            get_event_formats=self.get_event_formats_of_current_analysis_config,
+            set_event_formats=self.set_event_formats_in_current_analysis_config,
+            get_count_intervals=self.get_count_intervals_of_current_analysis_config,
+            set_count_intervals=self.set_count_intervals_in_current_analysis_config,
+            get_counting_event=self.get_counting_event_of_current_analysis_config,
+            set_counting_event=self.set_counting_event_in_current_analysis_config,
+            get_num_processes=self.get_num_processes_of_current_analysis_config,
+            set_num_processes=self.set_num_processes_in_current_analysis_config,
+            get_logfile=self.get_logfile_of_current_analysis_config,
+            set_logfile=self.set_logfile_in_current_analysis_config,
+        )
+
+    @cached_property
     def layers_form(self) -> LayersForm:
         layer_groups, layers = self.layers
         return LayersForm(self.view_model, self.resource_manager, layer_groups)
@@ -274,7 +467,12 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     @cached_property
     def ui_factory(self) -> UiFactory:
         return NiceGuiUiFactory(
-            self.resource_manager, self.run_config.file_picker_directory
+            self.resource_manager,
+            get_count_intervals=self.get_count_intervals_of_current_analysis_config,
+            get_counting_event=self.get_counting_event_of_current_analysis_config,
+            get_save_name=self.get_save_name_of_current_analysis_config,
+            get_save_suffix=self.get_save_suffix_of_current_analysis_config,
+            base_directory=self.run_config.file_picker_directory,
         )
 
     @cached_property

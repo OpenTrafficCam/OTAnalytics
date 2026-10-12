@@ -49,6 +49,8 @@ class TestLoadOtconfig:
         )
         given.reset_application.reset.assert_called_once()
         given.remark_repository.add.assert_called_once_with(REMARK)
+        state = given.current_static_analysis_config_state
+        state.set_from_analysis_config.assert_called_once_with(given.otconfig.analysis)
 
     def test_load_error(self) -> None:
         given = setup(
@@ -246,6 +248,7 @@ class Given:
     deserialization_result: Mock
     validate_project_location: Mock
     current_key_prefix: Mock
+    current_static_analysis_config_state: Mock
 
 
 def setup_default() -> Given:
@@ -280,6 +283,7 @@ def setup(
     deserializer.return_value = deserialization_result
     validate_project_location = Mock()
     current_key_prefix = Mock()
+    current_static_analysis_config_state = Mock()
 
     if raise_error:
         add_sections = MagicMock()
@@ -301,6 +305,7 @@ def setup(
         deserialization_result=deserialization_result,
         validate_project_location=validate_project_location,
         current_key_prefix=current_key_prefix,
+        current_static_analysis_config_state=current_static_analysis_config_state,
     )
 
 
@@ -340,4 +345,5 @@ def create_target(given: Given) -> LoadOtconfig:
         given.deserializer,
         given.validate_project_location,
         given.current_key_prefix,
+        given.current_static_analysis_config_state,
     )

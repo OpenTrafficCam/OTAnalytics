@@ -40,14 +40,14 @@ class TestOtconfigHasChanged:
     ) -> None:
         current_project = Mock()
         videos = Mock()
-        track_files = Mock()
+        analysis_config = Mock()
         sections = Mock()
         flows = Mock()
         get_sections = Mock()
         get_flows = Mock()
         get_current_project = Mock()
         get_videos = Mock()
-        get_track_files = Mock()
+        get_current_analysis_config = Mock()
         config_parser = Mock()
         get_remark = Mock()
         current_key_prefix = Mock()
@@ -59,7 +59,7 @@ class TestOtconfigHasChanged:
         get_flows.get.return_value = flows
         get_current_project.get.return_value = current_project
         get_videos.get.return_value = videos
-        get_track_files.return_value = track_files
+        get_current_analysis_config.get.return_value = analysis_config
         config_parser.convert.return_value = current_data
 
         use_case = OtconfigHasChanged(
@@ -68,26 +68,26 @@ class TestOtconfigHasChanged:
             get_flows,
             get_current_project,
             get_videos,
-            get_track_files,
             get_remark,
             current_key_prefix,
+            get_current_analysis_config,
         )
         config_file = ConfigurationFile(Mock(), previous_data)
 
         assert use_case.has_changed(config_file) is expected
         config_parser.convert.assert_called_once_with(
-            current_project,
-            videos,
-            track_files,
-            sections,
-            flows,
-            config_file.file,
-            remark,
-            key_prefix,
+            project=current_project,
+            analysis_config=analysis_config,
+            video_files=videos,
+            sections=sections,
+            flows=flows,
+            file=config_file.file,
+            remark=remark,
+            s3_key_prefix=key_prefix,
         )
         get_current_project.get.assert_called_once()
         get_videos.get.assert_called_once()
-        get_track_files.assert_called_once()
+        get_current_analysis_config.get.assert_called_once()
         get_sections.assert_called_once()
         get_flows.get.assert_called_once()
         get_remark.get.assert_called_once()

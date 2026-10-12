@@ -117,6 +117,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.load_otconfig.register(self.view_model.update_remark_view)
         self.project_updater.register(self.view_model.update_quick_save_button)
         self.track_file_repository.register(self.view_model.update_quick_save_button)
+        self.static_analysis_config_changed.register(
+            self.view_model.update_quick_save_button
+        )
         self.project_updater.register(self.view_model.show_current_project)
         self.project_updater.register(self.view_model.update_svz_metadata_view)
         layer_groups, layers = self.layers
@@ -206,6 +209,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.get_current_remark,
             self.update_count_plots,
             self.current_key_prefix,
+            self.current_static_analysis_config_state,
         )
 
     @cached_property

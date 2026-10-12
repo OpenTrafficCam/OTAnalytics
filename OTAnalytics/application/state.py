@@ -6,9 +6,28 @@ from pathlib import Path
 from typing import Callable, Generic, Optional
 
 from OTAnalytics.application.analysis.traffic_counting import CountImage
-from OTAnalytics.application.config import DEFAULT_TRACK_OFFSET
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
+from OTAnalytics.application.config import (
+    DEFAULT_COUNTING_EVENT,
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+    DEFAULT_DO_COUNTING,
+    DEFAULT_DO_EVENTS,
+    DEFAULT_EVENT_FORMATS,
+    DEFAULT_LOG_FILE,
+    DEFAULT_NUM_PROCESSES,
+    DEFAULT_SAVE_NAME,
+    DEFAULT_SAVE_SUFFIX,
+    DEFAULT_TRACK_OFFSET,
+)
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.key_prefix import S3KeyPrefix
+from OTAnalytics.application.parser.config_parser import (
+    AnalysisConfig,
+    ExportConfig,
+    StaticAnalysisConfig,
+)
 from OTAnalytics.application.playback import SkipTime
 from OTAnalytics.application.use_cases.section_repository import GetSectionsById
 from OTAnalytics.domain.date import DateRange
@@ -810,3 +829,69 @@ class FileState:
 
     def reset(self) -> None:
         self.last_saved_config.set(None)
+
+
+class CurrentExportConfigState:
+    def __init__(self) -> None:
+        self.save_name: str
+        self.save_suffix: str
+        self.event_formats: set[str]
+        self.count_intervals: set[int]
+        self.counting_event: CountingEvent
+        self.reset()
+
+    def get(self) -> ExportConfig:
+        return ExportConfig(
+            save_name=self.save_name,
+            save_suffix=self.save_suffix,
+            event_formats=self.event_formats,
+            count_intervals=self.count_intervals,
+            counting_event=self.counting_event,
+        )
+
+    def set(self, export_config: ExportConfig) -> None:
+        self.save_name = export_config.save_name
+        self.save_suffix = export_config.save_suffix
+        self.event_formats = export_config.event_formats
+        self.count_intervals = export_config.count_intervals
+        self.counting_event = export_config.counting_event
+
+    def reset(self) -> None:
+        self.save_name = DEFAULT_SAVE_NAME
+        self.save_suffix = DEFAULT_SAVE_SUFFIX
+        self.event_formats = DEFAULT_EVENT_FORMATS
+        self.count_intervals = {DEFAULT_COUNTING_INTERVAL_IN_MINUTES}
+        self.counting_event = CountingEvent.parse(DEFAULT_COUNTING_EVENT)
+
+
+class CurrentStaticAnalysisConfigState:
+    def __init__(self) -> None:
+        self.do_events: bool
+        self.do_counting: bool
+        self.export_config: CurrentExportConfigState = CurrentExportConfigState()
+        self.num_processes: int
+        self.logfile: Path
+        self.reset()
+
+    def get(self) -> StaticAnalysisConfig:
+        return StaticAnalysisConfig(
+            do_events=self.do_events,
+            do_counting=self.do_counting,
+            export_config=self.export_config.get(),
+            num_processes=self.num_processes,
+            logfile=self.logfile,
+        )
+
+    def set_from_analysis_config(self, analysis_config: AnalysisConfig) -> None:
+        self.do_events = analysis_config.do_events
+        self.do_counting = analysis_config.do_counting
+        self.export_config.set(analysis_config.export_config)
+        self.num_processes = analysis_config.num_processes
+        self.logfile = analysis_config.logfile
+
+    def reset(self) -> None:
+        self.do_events = DEFAULT_DO_EVENTS
+        self.do_counting = DEFAULT_DO_COUNTING
+        self.export_config.reset()
+        self.num_processes = DEFAULT_NUM_PROCESSES
+        self.logfile = DEFAULT_LOG_FILE

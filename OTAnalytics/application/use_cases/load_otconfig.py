@@ -4,7 +4,11 @@ from pathlib import Path
 from OTAnalytics.application.parser.config_parser import ConfigParser, OtConfig
 from OTAnalytics.application.parser.deserializer import Deserializer
 from OTAnalytics.application.project_location import ValidateProjectLocation
-from OTAnalytics.application.state import ConfigurationFile, CurrentKeyPrefix
+from OTAnalytics.application.state import (
+    ConfigurationFile,
+    CurrentKeyPrefix,
+    CurrentStaticAnalysisConfigState,
+)
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.flow_repository import (
     AddAllFlows,
@@ -35,6 +39,7 @@ class LoadOtconfig:
         deserialize: Deserializer,
         validate_project_location: ValidateProjectLocation,
         current_key_prefix: CurrentKeyPrefix,
+        current_static_analysis_config_state: CurrentStaticAnalysisConfigState,
     ) -> None:
         self._add_new_remark = add_new_remark
         self._reset_application = reset_application
@@ -47,6 +52,9 @@ class LoadOtconfig:
         self._deserialize = deserialize
         self._validate_project_location = validate_project_location
         self._current_key_prefix = current_key_prefix
+        self._current_static_analysis_config_state = (
+            current_static_analysis_config_state
+        )
         self._subject = Subject[ConfigurationFile]()
 
     def load(self, file: Path) -> None:
@@ -104,6 +112,9 @@ class LoadOtconfig:
         # After `_begin`'s reset cleared it, and before the track files load:
         # they are read from under this prefix.
         self._current_key_prefix.set(config.s3_key_prefix)
+        self._current_static_analysis_config_state.set_from_analysis_config(
+            config.analysis
+        )
         self._update_project(
             config.project.name, config.project.start_date, config.project.metadata
         )

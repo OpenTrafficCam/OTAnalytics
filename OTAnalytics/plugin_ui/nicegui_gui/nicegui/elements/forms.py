@@ -842,3 +842,64 @@ class FormFieldSelect(FormField[Select, str]):
         if self._on_value_change:
             self._instance.on_value_change(self._on_value_change)
         self._apply(self.element)
+
+
+class FormFieldMultiSelect(FormField[Select, list[str]]):
+    """A class representing a select form field allowing multiple selections.
+
+    Args:
+        label_text (str): The label for the select field.
+        options (list[str]): The values to be selected from.
+        initial_value (list[str] | None): The initially selected values.
+        on_value_change (Callable[[ValueChangeEventArguments], None] | None): callback
+            to be notified about changed selections.
+        props (list[str] | None): props to be set for the select element.
+        marker (str | None): marker to be set for the select element.
+
+    """
+
+    @property
+    def value(self) -> list[str]:
+        """Provides the current selection of the form field.
+
+        Returns:
+            list[str]: The currently selected values.
+        """
+        return self.element.value
+
+    @property
+    def props(self) -> list[str] | None:
+        return self._props
+
+    @property
+    def marker(self) -> str | None:
+        return self._marker
+
+    def __init__(
+        self,
+        label_text: str,
+        options: list[str],
+        initial_value: list[str] | None = None,
+        on_value_change: Callable[[ValueChangeEventArguments], None] | None = None,
+        props: list[str] | None = None,
+        marker: str | None = None,
+    ) -> None:
+        super().__init__()
+        self._label_text = label_text
+        self._options = options
+        self._initial_value = initial_value if initial_value else []
+        self._on_value_change = on_value_change
+        self._props = props
+        self._marker = marker
+
+    def build(self) -> None:
+        """Builds the UI form element."""
+        self._instance = ui.select(
+            label=self._label_text,
+            options=self._options,
+            value=self._initial_value,
+            multiple=True,
+        ).classes("w-full")
+        if self._on_value_change:
+            self._instance.on_value_change(self._on_value_change)
+        self._apply(self.element)

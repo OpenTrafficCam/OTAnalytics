@@ -41,6 +41,7 @@ from OTAnalytics.application.run_configuration import (
 from OTAnalytics.application.state import (
     ActionState,
     CurrentKeyPrefix,
+    CurrentStaticAnalysisConfigState,
     FileState,
     FlowState,
     SectionState,
@@ -124,6 +125,9 @@ from OTAnalytics.application.use_cases.generate_flows import (
     GenerateFlows,
     RepositoryFlowIdGenerator,
 )
+from OTAnalytics.application.use_cases.get_current_analysis_config import (
+    GetCurrentAnalysisConfig,
+)
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
 from OTAnalytics.application.use_cases.highlight_intersections import (
@@ -161,6 +165,9 @@ from OTAnalytics.application.use_cases.section_repository import (
     RemoveSection,
 )
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
+from OTAnalytics.application.use_cases.static_analysis_config import (
+    StaticAnalysisConfigChanged,
+)
 from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
@@ -348,17 +355,24 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     @cached_property
+    def get_current_analysis_config(self) -> GetCurrentAnalysisConfig:
+        return GetCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.get_all_track_files,
+        )
+
+    @cached_property
     def config_has_changed(self) -> ConfigHasChanged:
         return ConfigHasChanged(
             OtconfigHasChanged(
-                self.otconfig_parser,
-                self.get_all_sections,
-                self.get_all_flows,
-                self.get_current_project,
-                self.get_all_videos,
-                self.get_all_track_files,
-                self.get_current_remark,
-                self.current_key_prefix,
+                config_parser=self.otconfig_parser,
+                get_sections=self.get_all_sections,
+                get_flows=self.get_all_flows,
+                get_current_project=self.get_current_project,
+                get_videos=self.get_all_videos,
+                get_remark=self.get_current_remark,
+                current_key_prefix=self.current_key_prefix,
+                get_current_analysis_config=self.get_current_analysis_config,
             ),
             OtflowHasChanged(
                 self.flow_parser, self.get_all_sections, self.get_all_flows
@@ -388,6 +402,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             parse_json,
             self.validate_project_location,
             self.current_key_prefix,
+            self.current_static_analysis_config_state,
         )
 
     @cached_property
@@ -416,6 +431,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.action_state,
             self.file_state,
             self.current_key_prefix,
+            self.current_static_analysis_config_state,
         )
 
     @cached_property
@@ -436,6 +452,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.file_state,
             self.get_current_remark,
             self.current_key_prefix,
+            self.get_current_analysis_config,
             self.otconfig_upload,
         )
 
@@ -457,6 +474,19 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         save write a location the providers never read from.
         """
         return CurrentKeyPrefix()
+
+    @cached_property
+    def current_static_analysis_config_state(self) -> CurrentStaticAnalysisConfigState:
+        return CurrentStaticAnalysisConfigState()
+
+    @cached_property
+    def static_analysis_config_changed(self) -> StaticAnalysisConfigChanged:
+        """One notifier for the whole application.
+
+        Every use case changing a single analysis setting publishes here, so
+        observers do not have to know which setting was changed.
+        """
+        return StaticAnalysisConfigChanged()
 
     @cached_property
     def get_current_remark(self) -> GetCurrentRemark:

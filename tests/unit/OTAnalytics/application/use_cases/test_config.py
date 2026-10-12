@@ -10,16 +10,13 @@ from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.config import ConfigValidationError, SaveOtconfig
-from OTAnalytics.domain.track_repository import TrackFileRepository
 
 A_PREFIX = S3KeyPrefix("project-1/site-2/otcamera19/")
 
 
 class TestSaveOtconfig:
     async def test_correct_date(self, test_data_tmp_dir: Path) -> None:
-        track_file_repository = Mock(spec=TrackFileRepository)
         datastore = Mock(spec=Datastore)
-        datastore._track_file_repository = track_file_repository
         datastore.project = Project("name", start_date=datetime(2023, 1, 1))
         convert_result = Mock()
         config_parser = Mock(spec=ConfigParser)
@@ -36,6 +33,7 @@ class TestSaveOtconfig:
             file_state,
             get_current_remark,
             current_key_prefix,
+            Mock(),
             otconfig_upload,
         )
 
@@ -58,9 +56,7 @@ class TestSaveOtconfig:
 
         #Requirement https://openproject.platomo.de/wp/10322
         """
-        track_file_repository = Mock(spec=TrackFileRepository)
         datastore = Mock(spec=Datastore)
-        datastore._track_file_repository = track_file_repository
         datastore.project = Project("name", start_date=datetime(2023, 1, 1))
         config_parser = Mock(spec=ConfigParser)
         current_key_prefix = Mock()
@@ -71,22 +67,21 @@ class TestSaveOtconfig:
             Mock(),
             Mock(),
             current_key_prefix,
+            Mock(),
             AsyncMock(),
         )
 
         await use_case(test_data_tmp_dir / "test.otconfig")
 
         written = config_parser.serialize.call_args.kwargs["s3_key_prefix"]
-        recorded = config_parser.convert.call_args.args[-1]
+        recorded = config_parser.convert.call_args.kwargs["s3_key_prefix"]
         assert written == recorded == A_PREFIX
 
     async def test_uploads_when_project_names_a_key_prefix(
         self, test_data_tmp_dir: Path
     ) -> None:
         """#Requirement https://openproject.platomo.de/wp/10323"""
-        track_file_repository = Mock(spec=TrackFileRepository)
         datastore = Mock(spec=Datastore)
-        datastore._track_file_repository = track_file_repository
         datastore.project = Project("name", start_date=datetime(2023, 1, 1))
         config_parser = Mock(spec=ConfigParser)
         current_key_prefix = Mock()
@@ -99,6 +94,7 @@ class TestSaveOtconfig:
             Mock(),
             Mock(),
             current_key_prefix,
+            Mock(),
             otconfig_upload,
         )
 
@@ -110,9 +106,7 @@ class TestSaveOtconfig:
         self, test_data_tmp_dir: Path
     ) -> None:
         """#Requirement https://openproject.platomo.de/wp/10323"""
-        track_file_repository = Mock(spec=TrackFileRepository)
         datastore = Mock(spec=Datastore)
-        datastore._track_file_repository = track_file_repository
         datastore.project = Project("name", start_date=datetime(2023, 1, 1))
         config_parser = Mock(spec=ConfigParser)
         current_key_prefix = Mock()
@@ -124,6 +118,7 @@ class TestSaveOtconfig:
             Mock(),
             Mock(),
             current_key_prefix,
+            Mock(),
             otconfig_upload,
         )
 
@@ -143,6 +138,7 @@ class TestSaveOtconfig:
             config_parser,
             file_state,
             get_current_remark,
+            Mock(),
             Mock(),
             AsyncMock(),
         )
