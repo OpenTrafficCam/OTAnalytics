@@ -9,10 +9,12 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.key_prefix import S3KeyPrefix
+from OTAnalytics.application.parser.config_parser import StaticAnalysisConfig
 from OTAnalytics.application.project import SvzMetadata
 from OTAnalytics.application.state import (
     ActionState,
     CurrentKeyPrefix,
+    CurrentStaticAnalysisConfigState,
     FileState,
     FlowState,
     SectionState,
@@ -160,6 +162,7 @@ class OTAnalyticsApplication:
         get_current_remark: GetCurrentRemark,
         update_count_plots: CountPlotsUpdater,
         current_key_prefix: CurrentKeyPrefix,
+        current_static_analysis_config_state: CurrentStaticAnalysisConfigState,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -208,6 +211,9 @@ class OTAnalyticsApplication:
         self._get_current_remark = get_current_remark
         self._update_count_plots = update_count_plots
         self._current_key_prefix = current_key_prefix
+        self._current_static_analysis_config_state = (
+            current_static_analysis_config_state
+        )
 
     def connect_observers(self) -> None:
         """
@@ -316,6 +322,14 @@ class OTAnalyticsApplication:
         file-picker dialog: see OP#10323.
         """
         return self._current_key_prefix.get()
+
+    def get_current_static_analysis_config(self) -> StaticAnalysisConfig:
+        """Get the current static analysis configuration.
+
+        Returns:
+            StaticAnalysisConfig: the current static analysis configuration.
+        """
+        return self._current_static_analysis_config_state.get()
 
     def load_otconfig(self, file: Path) -> None:
         """Load an otconfig, blocking. Outside an event loop only."""

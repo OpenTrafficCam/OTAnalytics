@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -7,16 +8,7 @@ from OTAnalytics.application import project
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
-from OTAnalytics.application.config import (
-    DEFAULT_COUNTING_EVENT,
-    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
-    DEFAULT_DO_COUNTING,
-    DEFAULT_DO_EVENTS,
-    DEFAULT_EVENT_FORMATS,
-    DEFAULT_LOG_FILE,
-    DEFAULT_SAVE_NAME,
-    DEFAULT_SAVE_SUFFIX,
-)
+from OTAnalytics.application.config import DEFAULT_COUNTING_EVENT
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.key_prefix import S3KeyPrefix
@@ -333,8 +325,8 @@ class OtConfigParser(ConfigParser):
     def serialize(
         self,
         project: Project,
+        analysis_config: AnalysisConfig,
         video_files: Iterable[Video],
-        track_files: Iterable[Path],
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
@@ -344,8 +336,8 @@ class OtConfigParser(ConfigParser):
         self._validate_data(project)
         content = self.convert(
             project,
+            analysis_config,
             video_files,
-            track_files,
             sections,
             flows,
             file,
@@ -356,14 +348,14 @@ class OtConfigParser(ConfigParser):
 
     def serialize_from_config(self, config: OtConfig, file: Path) -> None:
         self.serialize(
-            config.project,
-            config.videos,
-            config.analysis.track_files,
-            config.sections,
-            config.flows,
-            file,
-            config.remark,
-            config.s3_key_prefix,
+            project=config.project,
+            analysis_config=config.analysis,
+            video_files=config.videos,
+            sections=config.sections,
+            flows=config.flows,
+            file=file,
+            remark=config.remark,
+            s3_key_prefix=config.s3_key_prefix,
         )
 
     @staticmethod
@@ -374,8 +366,8 @@ class OtConfigParser(ConfigParser):
     def convert(
         self,
         project: Project,
+        analysis_config: AnalysisConfig,
         video_files: Iterable[Video],
-        track_files: Iterable[Path],
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
@@ -390,7 +382,7 @@ class OtConfigParser(ConfigParser):
             # Recording them would only leave stale paths into the ephemeral
             # `user_source` staging area behind. See OP#10323's decision log.
             video_files = []
-            track_files = []
+            analysis_config = replace(analysis_config, track_files=set())
         video_content = self._video_parser.convert(
             video_files,
             relative_to=parent_folder,
@@ -398,34 +390,7 @@ class OtConfigParser(ConfigParser):
         remark_content: dict = {"remark": remark}
         section_content = self._flow_parser.convert(sections, flows)
         analysis_content: dict = {
-            ANALYSIS: {
-                DO_EVENTS: DEFAULT_DO_EVENTS,
-                DO_COUNTING: DEFAULT_DO_COUNTING,
-                TRACKS: sorted(
-                    [
-                        build_relative_path(
-                            file,
-                            parent_folder,
-                            lambda actual, other: (
-                                "Track and config files are stored on "
-                                "different drives. "
-                                f"Track file is stored on {actual}."
-                                f"Configuration is stored on {other}"
-                            ),
-                        )
-                        for file in track_files
-                    ]
-                ),
-                EXPORT: {
-                    SAVE_NAME: DEFAULT_SAVE_NAME,
-                    SAVE_SUFFIX: DEFAULT_SAVE_SUFFIX,
-                    EVENT_FORMATS: list(DEFAULT_EVENT_FORMATS),
-                    COUNT_INTERVALS: [DEFAULT_COUNTING_INTERVAL_IN_MINUTES],
-                    COUNTING_EVENT: DEFAULT_COUNTING_EVENT,
-                },
-                NUM_PROCESSES: 1,
-                LOGFILE: str(DEFAULT_LOG_FILE),
-            }
+            ANALYSIS: self._convert_analysis_config(analysis_config, parent_folder)
         }
         content: dict[str, list[dict] | dict | str] = {PROJECT: project_content}
         if s3_key_prefix is not None:
@@ -438,3 +403,35 @@ class OtConfigParser(ConfigParser):
         content |= section_content
         content |= remark_content
         return content
+
+    def _convert_analysis_config(
+        self, analysis_config: AnalysisConfig, parent_folder: Path
+    ) -> dict:
+        return {
+            DO_EVENTS: analysis_config.do_events,
+            DO_COUNTING: analysis_config.do_counting,
+            TRACKS: sorted(
+                [
+                    build_relative_path(
+                        file,
+                        parent_folder,
+                        lambda actual, other: (
+                            "Track and config files are stored on "
+                            "different drives. "
+                            f"Track file is stored on {actual}."
+                            f"Configuration is stored on {other}"
+                        ),
+                    )
+                    for file in analysis_config.track_files
+                ]
+            ),
+            EXPORT: {
+                SAVE_NAME: analysis_config.export_config.save_name,
+                SAVE_SUFFIX: analysis_config.export_config.save_suffix,
+                EVENT_FORMATS: list(analysis_config.export_config.event_formats),
+                COUNT_INTERVALS: list(analysis_config.export_config.count_intervals),
+                COUNTING_EVENT: analysis_config.export_config.counting_event.value,
+            },
+            NUM_PROCESSES: analysis_config.num_processes,
+            LOGFILE: str(analysis_config.logfile),
+        }
