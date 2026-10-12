@@ -21,6 +21,12 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 from OTAnalytics.application.application import CancelAddFlow, CancelAddSection
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
+from OTAnalytics.application.use_cases.static_analysis_config import (
+    GetCountingEventOfCurrentAnalysisConfig,
+    GetCountIntervalsOfCurrentAnalysisConfig,
+    GetSaveNameOfCurrentAnalysisConfig,
+    GetSaveSuffixOfCurrentAnalysisConfig,
+)
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.helpers.file_helpers import (
     get_all_files_with_correct_file_ending_in_directory,
@@ -82,9 +88,17 @@ class NiceGuiUiFactory(UiFactory):
     def __init__(
         self,
         resource_manager: ResourceManager,
+        get_count_intervals: GetCountIntervalsOfCurrentAnalysisConfig,
+        get_counting_event: GetCountingEventOfCurrentAnalysisConfig,
+        get_save_name: GetSaveNameOfCurrentAnalysisConfig,
+        get_save_suffix: GetSaveSuffixOfCurrentAnalysisConfig,
         base_directory: Path = BASE_FILE_PICKER_DIRECTORY,
     ) -> None:
         self._resource_manager = resource_manager
+        self._get_count_intervals = get_count_intervals
+        self._get_counting_event = get_counting_event
+        self._get_save_name = get_save_name
+        self._get_save_suffix = get_save_suffix
         self._base_directory = base_directory
 
     def info_box(
@@ -245,6 +259,10 @@ class NiceGuiUiFactory(UiFactory):
             default_format=default_format,
             modes=modes,
             export_formats=export_formats,
+            get_count_intervals=self._get_count_intervals,
+            get_counting_event=self._get_counting_event,
+            get_save_name=self._get_save_name,
+            get_save_suffix=self._get_save_suffix,
         )
 
         result = await dialog.result
