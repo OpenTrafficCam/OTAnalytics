@@ -51,7 +51,7 @@ class GetVideos:
             bool: False for a project without videos, e.g. one of Geo-only Track
                 Files on an Orthophoto.
         """
-        return bool(self._video_repository.get_all())
+        return not self._video_repository.is_empty()
 
     def get(self, date: datetime) -> Optional[Video]:
         """
