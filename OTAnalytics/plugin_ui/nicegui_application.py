@@ -265,42 +265,53 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     def static_analysis_config_form(self) -> StaticAnalysisConfigForm:
         analysis_config_state = self.current_static_analysis_config_state
         export_config_state = analysis_config_state.export_config
+        config_changed = self.static_analysis_config_changed
         return StaticAnalysisConfigForm(
             resource_manager=self.resource_manager,
             get_do_events=GetDoEventsOfCurrentAnalysisConfig(analysis_config_state),
-            set_do_events=SetDoEventsInCurrentAnalysisConfig(analysis_config_state),
+            set_do_events=SetDoEventsInCurrentAnalysisConfig(
+                analysis_config_state, config_changed
+            ),
             get_do_counting=GetDoCountingOfCurrentAnalysisConfig(analysis_config_state),
-            set_do_counting=SetDoCountingInCurrentAnalysisConfig(analysis_config_state),
+            set_do_counting=SetDoCountingInCurrentAnalysisConfig(
+                analysis_config_state, config_changed
+            ),
             get_save_name=GetSaveNameOfCurrentAnalysisConfig(export_config_state),
-            set_save_name=SetSaveNameInCurrentAnalysisConfig(export_config_state),
+            set_save_name=SetSaveNameInCurrentAnalysisConfig(
+                export_config_state, config_changed
+            ),
             get_save_suffix=GetSaveSuffixOfCurrentAnalysisConfig(export_config_state),
-            set_save_suffix=SetSaveSuffixInCurrentAnalysisConfig(export_config_state),
+            set_save_suffix=SetSaveSuffixInCurrentAnalysisConfig(
+                export_config_state, config_changed
+            ),
             get_event_formats=GetEventFormatsOfCurrentAnalysisConfig(
                 export_config_state
             ),
             set_event_formats=SetEventFormatsInCurrentAnalysisConfig(
-                export_config_state
+                export_config_state, config_changed
             ),
             get_count_intervals=GetCountIntervalsOfCurrentAnalysisConfig(
                 export_config_state
             ),
             set_count_intervals=SetCountIntervalsInCurrentAnalysisConfig(
-                export_config_state
+                export_config_state, config_changed
             ),
             get_counting_event=GetCountingEventOfCurrentAnalysisConfig(
                 export_config_state
             ),
             set_counting_event=SetCountingEventInCurrentAnalysisConfig(
-                export_config_state
+                export_config_state, config_changed
             ),
             get_num_processes=GetNumProcessesOfCurrentAnalysisConfig(
                 analysis_config_state
             ),
             set_num_processes=SetNumProcessesInCurrentAnalysisConfig(
-                analysis_config_state
+                analysis_config_state, config_changed
             ),
             get_logfile=GetLogfileOfCurrentAnalysisConfig(analysis_config_state),
-            set_logfile=SetLogfileInCurrentAnalysisConfig(analysis_config_state),
+            set_logfile=SetLogfileInCurrentAnalysisConfig(
+                analysis_config_state, config_changed
+            ),
         )
 
     @cached_property

@@ -165,6 +165,9 @@ from OTAnalytics.application.use_cases.section_repository import (
     RemoveSection,
 )
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
+from OTAnalytics.application.use_cases.static_analysis_config import (
+    StaticAnalysisConfigChanged,
+)
 from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
@@ -475,6 +478,15 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def current_static_analysis_config_state(self) -> CurrentStaticAnalysisConfigState:
         return CurrentStaticAnalysisConfigState()
+
+    @cached_property
+    def static_analysis_config_changed(self) -> StaticAnalysisConfigChanged:
+        """One notifier for the whole application.
+
+        Every use case changing a single analysis setting publishes here, so
+        observers do not have to know which setting was changed.
+        """
+        return StaticAnalysisConfigChanged()
 
     @cached_property
     def get_current_remark(self) -> GetCurrentRemark:

@@ -9,6 +9,31 @@ from OTAnalytics.application.state import (
     CurrentExportConfigState,
     CurrentStaticAnalysisConfigState,
 )
+from OTAnalytics.domain.observer import OBSERVER, Subject
+
+
+class StaticAnalysisConfigChanged:
+    """Notify observers that a value of the static analysis config was changed.
+
+    Only changes made by the user are published. Loading a project replaces the
+    whole configuration without passing this notifier, so a load does not look
+    like an unsaved change.
+    """
+
+    def __init__(self) -> None:
+        self._subject = Subject[None]()
+
+    def register(self, observer: OBSERVER[None]) -> None:
+        """Listen to changes of the static analysis config.
+
+        Args:
+            observer (OBSERVER[None]): the observer to be registered.
+        """
+        self._subject.register(observer)
+
+    def notify(self) -> None:
+        """Notify all observers about a changed static analysis config."""
+        self._subject.notify(None)
 
 
 class GetDoEventsOfCurrentAnalysisConfig:
@@ -37,10 +62,17 @@ class SetDoEventsInCurrentAnalysisConfig:
     Args:
         state (CurrentStaticAnalysisConfigState): the state holding the analysis
             settings.
+        config_changed (StaticAnalysisConfigChanged): notifies observers about
+            the change.
     """
 
-    def __init__(self, state: CurrentStaticAnalysisConfigState) -> None:
+    def __init__(
+        self,
+        state: CurrentStaticAnalysisConfigState,
+        config_changed: StaticAnalysisConfigChanged,
+    ) -> None:
         self._state = state
+        self._config_changed = config_changed
 
     def set(self, do_events: bool) -> None:
         """Set whether events are to be detected.
@@ -49,6 +81,7 @@ class SetDoEventsInCurrentAnalysisConfig:
             do_events (bool): True if events are to be detected.
         """
         self._state.do_events = do_events
+        self._config_changed.notify()
 
 
 class GetDoCountingOfCurrentAnalysisConfig:
@@ -77,10 +110,17 @@ class SetDoCountingInCurrentAnalysisConfig:
     Args:
         state (CurrentStaticAnalysisConfigState): the state holding the analysis
             settings.
+        config_changed (StaticAnalysisConfigChanged): notifies observers about
+            the change.
     """
 
-    def __init__(self, state: CurrentStaticAnalysisConfigState) -> None:
+    def __init__(
+        self,
+        state: CurrentStaticAnalysisConfigState,
+        config_changed: StaticAnalysisConfigChanged,
+    ) -> None:
         self._state = state
+        self._config_changed = config_changed
 
     def set(self, do_counting: bool) -> None:
         """Set whether counts are to be created.
@@ -89,6 +129,7 @@ class SetDoCountingInCurrentAnalysisConfig:
             do_counting (bool): True if counts are to be created.
         """
         self._state.do_counting = do_counting
+        self._config_changed.notify()
 
 
 class GetNumProcessesOfCurrentAnalysisConfig:
@@ -117,10 +158,17 @@ class SetNumProcessesInCurrentAnalysisConfig:
     Args:
         state (CurrentStaticAnalysisConfigState): the state holding the analysis
             settings.
+        config_changed (StaticAnalysisConfigChanged): notifies observers about
+            the change.
     """
 
-    def __init__(self, state: CurrentStaticAnalysisConfigState) -> None:
+    def __init__(
+        self,
+        state: CurrentStaticAnalysisConfigState,
+        config_changed: StaticAnalysisConfigChanged,
+    ) -> None:
         self._state = state
+        self._config_changed = config_changed
 
     def set(self, num_processes: int) -> None:
         """Set the number of processes to be used for the analysis.
@@ -129,6 +177,7 @@ class SetNumProcessesInCurrentAnalysisConfig:
             num_processes (int): the number of processes.
         """
         self._state.num_processes = num_processes
+        self._config_changed.notify()
 
 
 class GetLogfileOfCurrentAnalysisConfig:
@@ -157,10 +206,17 @@ class SetLogfileInCurrentAnalysisConfig:
     Args:
         state (CurrentStaticAnalysisConfigState): the state holding the analysis
             settings.
+        config_changed (StaticAnalysisConfigChanged): notifies observers about
+            the change.
     """
 
-    def __init__(self, state: CurrentStaticAnalysisConfigState) -> None:
+    def __init__(
+        self,
+        state: CurrentStaticAnalysisConfigState,
+        config_changed: StaticAnalysisConfigChanged,
+    ) -> None:
         self._state = state
+        self._config_changed = config_changed
 
     def set(self, logfile: Path) -> None:
         """Set the logfile the analysis log is written to.
@@ -169,6 +225,7 @@ class SetLogfileInCurrentAnalysisConfig:
             logfile (Path): the logfile.
         """
         self._state.logfile = logfile
+        self._config_changed.notify()
 
 
 class GetSaveNameOfCurrentAnalysisConfig:
@@ -195,10 +252,17 @@ class SetSaveNameInCurrentAnalysisConfig:
 
     Args:
         state (CurrentExportConfigState): the state holding the export settings.
+        config_changed (StaticAnalysisConfigChanged): notifies observers about
+            the change.
     """
 
-    def __init__(self, state: CurrentExportConfigState) -> None:
+    def __init__(
+        self,
+        state: CurrentExportConfigState,
+        config_changed: StaticAnalysisConfigChanged,
+    ) -> None:
         self._state = state
+        self._config_changed = config_changed
 
     def set(self, save_name: str) -> None:
         """Set the name used to save analysis results.
@@ -207,6 +271,7 @@ class SetSaveNameInCurrentAnalysisConfig:
             save_name (str): the save name.
         """
         self._state.save_name = save_name
+        self._config_changed.notify()
 
 
 class GetSaveSuffixOfCurrentAnalysisConfig:
@@ -233,10 +298,17 @@ class SetSaveSuffixInCurrentAnalysisConfig:
 
     Args:
         state (CurrentExportConfigState): the state holding the export settings.
+        config_changed (StaticAnalysisConfigChanged): notifies observers about
+            the change.
     """
 
-    def __init__(self, state: CurrentExportConfigState) -> None:
+    def __init__(
+        self,
+        state: CurrentExportConfigState,
+        config_changed: StaticAnalysisConfigChanged,
+    ) -> None:
         self._state = state
+        self._config_changed = config_changed
 
     def set(self, save_suffix: str) -> None:
         """Set the suffix appended to the save name.
@@ -245,6 +317,7 @@ class SetSaveSuffixInCurrentAnalysisConfig:
             save_suffix (str): the save suffix.
         """
         self._state.save_suffix = save_suffix
+        self._config_changed.notify()
 
 
 class GetEventFormatsOfCurrentAnalysisConfig:
@@ -271,10 +344,17 @@ class SetEventFormatsInCurrentAnalysisConfig:
 
     Args:
         state (CurrentExportConfigState): the state holding the export settings.
+        config_changed (StaticAnalysisConfigChanged): notifies observers about
+            the change.
     """
 
-    def __init__(self, state: CurrentExportConfigState) -> None:
+    def __init__(
+        self,
+        state: CurrentExportConfigState,
+        config_changed: StaticAnalysisConfigChanged,
+    ) -> None:
         self._state = state
+        self._config_changed = config_changed
 
     def set(self, event_formats: set[str]) -> None:
         """Set the formats the event list is exported to.
@@ -283,6 +363,7 @@ class SetEventFormatsInCurrentAnalysisConfig:
             event_formats (set[str]): the event formats.
         """
         self._state.event_formats = event_formats
+        self._config_changed.notify()
 
 
 class GetCountIntervalsOfCurrentAnalysisConfig:
@@ -309,10 +390,17 @@ class SetCountIntervalsInCurrentAnalysisConfig:
 
     Args:
         state (CurrentExportConfigState): the state holding the export settings.
+        config_changed (StaticAnalysisConfigChanged): notifies observers about
+            the change.
     """
 
-    def __init__(self, state: CurrentExportConfigState) -> None:
+    def __init__(
+        self,
+        state: CurrentExportConfigState,
+        config_changed: StaticAnalysisConfigChanged,
+    ) -> None:
         self._state = state
+        self._config_changed = config_changed
 
     def set(self, count_intervals: set[int]) -> None:
         """Set the count intervals in minutes.
@@ -321,6 +409,7 @@ class SetCountIntervalsInCurrentAnalysisConfig:
             count_intervals (set[int]): the count intervals in minutes.
         """
         self._state.count_intervals = count_intervals
+        self._config_changed.notify()
 
 
 class GetCountingEventOfCurrentAnalysisConfig:
@@ -347,10 +436,17 @@ class SetCountingEventInCurrentAnalysisConfig:
 
     Args:
         state (CurrentExportConfigState): the state holding the export settings.
+        config_changed (StaticAnalysisConfigChanged): notifies observers about
+            the change.
     """
 
-    def __init__(self, state: CurrentExportConfigState) -> None:
+    def __init__(
+        self,
+        state: CurrentExportConfigState,
+        config_changed: StaticAnalysisConfigChanged,
+    ) -> None:
         self._state = state
+        self._config_changed = config_changed
 
     def set(self, counting_event: CountingEvent) -> None:
         """Set the event a road user is counted at.
@@ -359,3 +455,4 @@ class SetCountingEventInCurrentAnalysisConfig:
             counting_event (CountingEvent): the counting event.
         """
         self._state.counting_event = counting_event
+        self._config_changed.notify()
