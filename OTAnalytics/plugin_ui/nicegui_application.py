@@ -20,6 +20,26 @@ from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideVideoFiles,
 )
 from OTAnalytics.application.use_cases.reset_application import ResetApplication
+from OTAnalytics.application.use_cases.static_analysis_config import (
+    GetCountingEventOfCurrentAnalysisConfig,
+    GetCountIntervalsOfCurrentAnalysisConfig,
+    GetDoCountingOfCurrentAnalysisConfig,
+    GetDoEventsOfCurrentAnalysisConfig,
+    GetEventFormatsOfCurrentAnalysisConfig,
+    GetLogfileOfCurrentAnalysisConfig,
+    GetNumProcessesOfCurrentAnalysisConfig,
+    GetSaveNameOfCurrentAnalysisConfig,
+    GetSaveSuffixOfCurrentAnalysisConfig,
+    SetCountingEventInCurrentAnalysisConfig,
+    SetCountIntervalsInCurrentAnalysisConfig,
+    SetDoCountingInCurrentAnalysisConfig,
+    SetDoEventsInCurrentAnalysisConfig,
+    SetEventFormatsInCurrentAnalysisConfig,
+    SetLogfileInCurrentAnalysisConfig,
+    SetNumProcessesInCurrentAnalysisConfig,
+    SetSaveNameInCurrentAnalysisConfig,
+    SetSaveSuffixInCurrentAnalysisConfig,
+)
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.transfer_mode import TransferMode
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
@@ -70,6 +90,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import 
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     ProjectForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.static_analysis_config_form import (  # noqa
+    StaticAnalysisConfigForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import RemarkForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
@@ -166,6 +189,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return ConfigurationBar(
             resource_manager=self.resource_manager,
             project_form=self.project_form,
+            static_analysis_config_form=self.static_analysis_config_form,
             svz_metadata_form=self.svz_metadata_form,
             track_form=self.track_form,
             sections_and_flow_form=self.sections_and_flow_form,
@@ -236,6 +260,48 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     @cached_property
     def project_form(self) -> ProjectForm:
         return ProjectForm(self.view_model, self.resource_manager)
+
+    @cached_property
+    def static_analysis_config_form(self) -> StaticAnalysisConfigForm:
+        analysis_config_state = self.current_static_analysis_config_state
+        export_config_state = analysis_config_state.export_config
+        return StaticAnalysisConfigForm(
+            resource_manager=self.resource_manager,
+            get_do_events=GetDoEventsOfCurrentAnalysisConfig(analysis_config_state),
+            set_do_events=SetDoEventsInCurrentAnalysisConfig(analysis_config_state),
+            get_do_counting=GetDoCountingOfCurrentAnalysisConfig(analysis_config_state),
+            set_do_counting=SetDoCountingInCurrentAnalysisConfig(analysis_config_state),
+            get_save_name=GetSaveNameOfCurrentAnalysisConfig(export_config_state),
+            set_save_name=SetSaveNameInCurrentAnalysisConfig(export_config_state),
+            get_save_suffix=GetSaveSuffixOfCurrentAnalysisConfig(export_config_state),
+            set_save_suffix=SetSaveSuffixInCurrentAnalysisConfig(export_config_state),
+            get_event_formats=GetEventFormatsOfCurrentAnalysisConfig(
+                export_config_state
+            ),
+            set_event_formats=SetEventFormatsInCurrentAnalysisConfig(
+                export_config_state
+            ),
+            get_count_intervals=GetCountIntervalsOfCurrentAnalysisConfig(
+                export_config_state
+            ),
+            set_count_intervals=SetCountIntervalsInCurrentAnalysisConfig(
+                export_config_state
+            ),
+            get_counting_event=GetCountingEventOfCurrentAnalysisConfig(
+                export_config_state
+            ),
+            set_counting_event=SetCountingEventInCurrentAnalysisConfig(
+                export_config_state
+            ),
+            get_num_processes=GetNumProcessesOfCurrentAnalysisConfig(
+                analysis_config_state
+            ),
+            set_num_processes=SetNumProcessesInCurrentAnalysisConfig(
+                analysis_config_state
+            ),
+            get_logfile=GetLogfileOfCurrentAnalysisConfig(analysis_config_state),
+            set_logfile=SetLogfileInCurrentAnalysisConfig(analysis_config_state),
+        )
 
     @cached_property
     def layers_form(self) -> LayersForm:

@@ -36,6 +36,20 @@ class AnalysisKeys(ResourceKey):
     BUTTON_TEXT_EXPORT_TRACK_STATISTICS = "button-export-track-statistics"
 
 
+class StaticAnalysisConfigKeys(ResourceKey):
+    LABEL_STATIC_ANALYSIS_CONFIG_FORM_HEADER = "label-static-analysis-config-header"
+    LABEL_DO_EVENTS = "label-do-events"
+    LABEL_DO_COUNTING = "label-do-counting"
+    LABEL_SAVE_NAME = "label-save-name"
+    LABEL_SAVE_SUFFIX = "label-save-suffix"
+    LABEL_EVENT_FORMATS = "label-event-formats"
+    LABEL_COUNT_INTERVALS = "label-count-intervals"
+    LABEL_COUNTING_EVENT = "label-counting-event"
+    LABEL_NUM_PROCESSES = "label-num-processes"
+    LABEL_LOGFILE = "label-logfile"
+    VALIDATION_COUNT_INTERVALS = "validation-count-intervals"
+
+
 class ProjectKeys(ResourceKey):
     LABEL_OPEN_PROJECT = "label-open-project"
     LABEL_PROJECT_FORM_HEADER = "label-project-form-header"
@@ -260,6 +274,17 @@ DEFAULT_RESOURCE_MAP = {
     SectionKeys.BUTTON_PROPERTIES: "Properties...",
     SectionKeys.BUTTON_REMOVE: "Remove...",
     SectionKeys.TABLE_COLUMN_NAME: "Sections",
+    StaticAnalysisConfigKeys.LABEL_STATIC_ANALYSIS_CONFIG_FORM_HEADER: "Analysis Configuration",  # noqa
+    StaticAnalysisConfigKeys.LABEL_DO_EVENTS: "Create events",
+    StaticAnalysisConfigKeys.LABEL_DO_COUNTING: "Create counts",
+    StaticAnalysisConfigKeys.LABEL_SAVE_NAME: "Save name",
+    StaticAnalysisConfigKeys.LABEL_SAVE_SUFFIX: "Save suffix",
+    StaticAnalysisConfigKeys.LABEL_EVENT_FORMATS: "Event formats",
+    StaticAnalysisConfigKeys.LABEL_COUNT_INTERVALS: "Count intervals [min]",
+    StaticAnalysisConfigKeys.LABEL_COUNTING_EVENT: "Counting event",
+    StaticAnalysisConfigKeys.LABEL_NUM_PROCESSES: "Number of processes",
+    StaticAnalysisConfigKeys.LABEL_LOGFILE: "Logfile",
+    StaticAnalysisConfigKeys.VALIDATION_COUNT_INTERVALS: "Enter positive whole numbers separated by commas",  # noqa
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
     SvzMetadataKeys.LABEL_TK_NUMBER: "TK-Nummer",
     SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER: "Zählstellennummer",
