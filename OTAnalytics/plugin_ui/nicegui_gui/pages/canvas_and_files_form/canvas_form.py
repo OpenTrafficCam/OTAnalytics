@@ -1,4 +1,4 @@
-from typing import Iterable, Optional, Self
+from typing import Any, Final, Iterable, Optional, Self
 
 from nicegui import events, ui
 from nicegui.elements.interactive_image import InteractiveImage
@@ -27,6 +27,12 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geometry import (  # noqa
+    Point,
+    close_area,
+    has_enough_knobs,
+    minimum_knob_count,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 NORMAL_COLOR = "green"
@@ -38,6 +44,13 @@ MOVING_STROKE_OPACITY = 0.0
 MARKER_INTERACTIVE_IMAGE = "marker-interactive-image"
 
 CLICK = "click"
+MOUSE_MOVE = "mousemove"
+MOUSE_UP = "mouseup"
+CONTEXT_MENU = "contextmenu.prevent"
+PASSIVE_MOUSE_EVENTS = [CLICK]
+EDITOR_MOUSE_EVENTS = [CLICK, MOUSE_MOVE, MOUSE_UP]
+EVENTS_PROP = "events"
+NOTIFICATION_TYPE_WARNING: Final = "warning"
 POINTER_EVENT_ALL = "all"
 POINTER_EVENT_NONE = ""
 IMAGE_X = "image_x"
@@ -94,6 +107,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_point: Circle | None = None
         self.add_preview_image()
         self._new_section_points: list[Circle] = []
+        self._preview_point: Point | None = None
         self._new_section = False
         self._new_area_section = False
         self._sections: SectionResource = SectionResource({})
@@ -110,7 +124,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def build(self) -> Self:
         self._background_image = ui.interactive_image(
-            "", on_mouse=self._on_pointer_down, events=[CLICK]
+            "", on_mouse=self.on_mouse, events=list(PASSIVE_MOUSE_EVENTS)
         )
         self._background_image.props(f"{TEST_ID}={MARKER_INTERACTIVE_IMAGE}")
         self._background_image.on(
@@ -122,31 +136,66 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._background_image.on(
             "svg:pointerup", lambda e: self.on_svg_pointer_up(e.args)
         )
+        self._background_image.on(CONTEXT_MENU, self.on_right_click)
 
         self._change_image()
         ui.keyboard(on_key=self.handle_key)
         self.load_sections()
         return self
 
+    def _is_editor_active(self) -> bool:
+        return self._new_section or self._current_section is not None
+
+    def _is_hotkey(self, e: KeyEventArguments, hotkey: HotKeys) -> bool:
+        return e.key == self._resource_manager.get_hotkey(hotkey)
+
     async def handle_key(self, e: KeyEventArguments) -> None:
-        if e.key == self._resource_manager.get_hotkey(HotKeys.SAVE_SECTION_HOTKEY):
-            if self._new_section:
-                await self._save_new_section()
-            elif self._current_section:
-                self._save_edit_section()
-        if e.key == self._resource_manager.get_hotkey(
-            HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY
-        ):
+        """Handle key presses. Keys are only evaluated while an editor is active.
+
+        This prevents key presses in other parts of the page from being handled by
+        the canvas.
+        """
+        if not self._is_editor_active() or not e.action.keydown:
+            return
+        if self._is_hotkey(e, HotKeys.SAVE_SECTION_HOTKEY):
+            await self._finish_editor()
+        elif self._is_hotkey(e, HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY):
             self._cancel_action()
 
+    async def on_right_click(self, _: Any = None) -> None:
+        """Finish the active editor like the save hotkey does."""
+        if self._is_editor_active():
+            await self._finish_editor()
+
+    async def _finish_editor(self) -> None:
+        if self._new_section:
+            await self._save_new_section()
+        elif self._current_section:
+            self._save_edit_section()
+
     async def _save_new_section(self) -> None:
-        """Save a new section with the current points."""
+        """Save a new section with the current points.
+
+        The section is only saved if enough points have been added. Otherwise, the
+        user is notified and can continue adding points.
+        """
         coordinates = [circle.to_tuple() for circle in self._new_section_points]
+        is_area_section = self._new_area_section
+        if not has_enough_knobs(coordinates, is_area_section):
+            self._notify_not_enough_points(is_area_section)
+            return
         self.__reset_editor()
         await self._viewmodel.add_new_section(
-            coordinates=coordinates,
-            is_area_section=self._new_area_section,
+            coordinates=close_area(coordinates, is_area_section),
+            is_area_section=is_area_section,
             get_metadata=self.__get_metadata,
+        )
+
+    def _notify_not_enough_points(self, is_area_section: bool) -> None:
+        message = self._resource_manager.get(CanvasKeys.MESSAGE_NOT_ENOUGH_POINTS)
+        ui.notify(
+            message.format(count=minimum_knob_count(is_area_section)),
+            type=NOTIFICATION_TYPE_WARNING,
         )
 
     def _save_edit_section(self) -> None:
@@ -175,6 +224,21 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._current_section = None
         self._current_point = None
         self._new_section_points = []
+        self._preview_point = None
+        self._update_mouse_events()
+
+    def _update_mouse_events(self) -> None:
+        """Subscribe to mouse movements only while an editor is active.
+
+        This avoids sending every mouse movement to the server if nobody needs it.
+        """
+        if self._background_image is None:
+            return
+        events = (
+            EDITOR_MOUSE_EVENTS if self._is_editor_active() else PASSIVE_MOUSE_EVENTS
+        )
+        self._background_image._props[EVENTS_PROP] = list(events)
+        self._background_image.update()
 
     async def __get_metadata(self) -> dict:
         title = self._resource_manager.get(
@@ -199,16 +263,18 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self.draw_new_section()
 
     def draw_new_section(self) -> None:
-        for point in self._new_section_points:
-            if self._background_image:
-                self._background_image.content += point.to_svg()
-        if len(self._new_section_points) >= 2:
-            coordinates = circle_to_coordinates(self._new_section_points)
+        if not self._background_image:
+            return
+        coordinates = circle_to_coordinates(self._new_section_points)
+        if coordinates and self._preview_point:
+            coordinates.append(self._preview_point)
+        if len(coordinates) >= 2:
             if self._new_area_section:
-                coordinates.append(coordinates[0])
+                coordinates = close_area(coordinates, is_area_section=True)
             line = Polyline(id=NEW_SECTION_ID, points=coordinates, color=EDIT_COLOR)
-            if self._background_image:
-                self._background_image.content += line.to_svg()
+            self._background_image.content += line.to_svg()
+        for point in self._new_section_points:
+            self._background_image.content += point.to_svg()
 
     def _edit_geometry(self) -> str:
         if self._current_section is None:
@@ -218,13 +284,25 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             id=section_id, points=self._current_section_geometry(), color=EDIT_COLOR
         ).to_svg()
 
+    def on_mouse(self, e: events.MouseEventArguments) -> None:
+        """Dispatch mouse events of the interactive image."""
+        if e.type == MOUSE_MOVE:
+            self._on_mouse_move(e)
+        elif e.type == CLICK:
+            self._on_pointer_down(e)
+
+    def _on_mouse_move(self, e: events.MouseEventArguments) -> None:
+        if self._new_section:
+            self._preview_point = (round(e.image_x), round(e.image_y))
+            self.draw_all()
+
     def _on_pointer_down(self, e: events.MouseEventArguments) -> None:
         if self._new_section:
             self._new_section_points.append(
                 Circle(
                     x=round(e.image_x),
                     y=round(e.image_y),
-                    pointer_event=POINTER_EVENT_ALL,
+                    pointer_event=POINTER_EVENT_NONE,
                     cursor=CURSOR,
                     fill=EDIT_COLOR,
                     id=f"new_point-{len(self._new_section_points)}",
@@ -359,6 +437,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     ) -> None:
         self._new_section = True
         self._new_area_section = is_area_section
+        self._new_section_points = []
+        self._preview_point = None
+        self._update_mouse_events()
+        self.draw_all()
 
     def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:
         return 0, 0

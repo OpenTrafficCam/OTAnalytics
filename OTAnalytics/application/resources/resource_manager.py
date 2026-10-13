@@ -22,6 +22,7 @@ class CanvasKeys(ResourceKey):
     LABEL_ADD_SECTION = "label-add-section"
     LABEL_EDIT_SECTION = "label-edit-section"
     IMAGE_DEFAULT = "image-default"
+    MESSAGE_NOT_ENOUGH_POINTS = "message-not-enough-points"
 
 
 class ConfigurationBarKeys(ResourceKey):
@@ -210,6 +211,9 @@ DEFAULT_RESOURCE_MAP = {
     AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS: "Export track statistics",
     CanvasKeys.LABEL_ADD_SECTION: "Add section",
     CanvasKeys.LABEL_EDIT_SECTION: "Edit section",
+    CanvasKeys.MESSAGE_NOT_ENOUGH_POINTS: (
+        "Please add at least {count} points to finish the section."
+    ),
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
     FlowAndSectionKeys.TAB_SECTION: "Section",
     FlowAndSectionKeys.TAB_FLOW: "Flow",

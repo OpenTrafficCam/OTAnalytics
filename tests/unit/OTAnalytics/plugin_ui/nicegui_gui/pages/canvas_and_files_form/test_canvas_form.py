@@ -10,6 +10,7 @@ from PIL import Image
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
     CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE,
+    DEFAULT_HOTKEYS,
     SAVE_SECTION_HOTKEY_VALUE,
     HotKeys,
     ResourceManager,
@@ -20,10 +21,13 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+    CLICK,
     EDIT_COLOR,
     ELEMENT_ID,
     IMAGE_X,
     IMAGE_Y,
+    MOUSE_MOVE,
+    MOUSE_UP,
     MOVING_COLOR,
     NORMAL_COLOR,
     SELECTED_COLOR,
@@ -688,6 +692,7 @@ class TestCanvasFormKeyboardEvents:
             mock_resource_manager,
             hotkey_side_effect=hotkey_side_effect,
         )
+        canvas_form.start_section_builder()
 
         key_event = MagicMock(spec=KeyEventArguments)
         key_event.key = CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE
@@ -1105,3 +1110,269 @@ class TestCanvasFormImageHandling:
         assert len(canvas_form._sections.lines) == 0
         # CircleResources.clear() only clears the circles dict, not by_section
         assert len(canvas_form._circles.circles) == 0
+
+
+def create_mouse_event(event_type: str, x: float, y: float) -> MagicMock:
+    event = MagicMock(spec=events.MouseEventArguments)
+    event.type = event_type
+    event.image_x = x
+    event.image_y = y
+    return event
+
+
+def create_key_event(key: str, keydown: bool = True) -> MagicMock:
+    event = MagicMock(spec=KeyEventArguments)
+    event.key = key
+    event.action = MagicMock()
+    event.action.keydown = keydown
+    return event
+
+
+def hotkeys_by_default(key: HotKeys) -> str | None:
+    return DEFAULT_HOTKEYS.get(key)
+
+
+class TestCanvasFormSectionBuilder:
+    """Drawing a new section on the canvas (reference: SectionBuilder)."""
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_start_section_builder_subscribes_mouse_move(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+
+        canvas_form.start_section_builder()
+
+        background_image = mock_ui.interactive_image.return_value
+        background_image._props.__setitem__.assert_called_with(
+            "events", [CLICK, MOUSE_MOVE, MOUSE_UP]
+        )
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_mouse_move_draws_preview_line_from_last_point(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas_form.start_section_builder()
+        canvas_form.on_mouse(create_mouse_event(CLICK, 10, 20))
+
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 50.4, 60.6))
+
+        assert canvas_form._preview_point == (50, 61)
+        assert len(canvas_form._new_section_points) == 1
+        content = mock_ui.interactive_image.return_value.content
+        assert 'points="10,20 50,61"' in content
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_mouse_move_without_builder_does_nothing(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 50, 60))
+
+        assert canvas_form._preview_point is None
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_click_adds_points(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas_form.start_section_builder()
+
+        canvas_form.on_mouse(create_mouse_event(CLICK, 10, 20))
+        canvas_form.on_mouse(create_mouse_event(CLICK, 30, 40))
+
+        assert circle_to_coordinates(canvas_form._new_section_points) == [
+            (10, 20),
+            (30, 40),
+        ]
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    @pytest.mark.asyncio
+    async def test_right_click_finishes_new_section(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas_form.start_section_builder()
+        canvas_form.on_mouse(create_mouse_event(CLICK, 10, 20))
+        canvas_form.on_mouse(create_mouse_event(CLICK, 30, 40))
+
+        await canvas_form.on_right_click()
+
+        mock_viewmodel.add_new_section.assert_called_once()
+        call_args = mock_viewmodel.add_new_section.call_args
+        assert call_args[1]["coordinates"] == [(10, 20), (30, 40)]
+        assert canvas_form._new_section is False
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    @pytest.mark.asyncio
+    async def test_right_click_without_editor_does_nothing(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+
+        await canvas_form.on_right_click()
+
+        mock_viewmodel.add_new_section.assert_not_called()
+        mock_viewmodel.update_section_coordinates.assert_not_called()
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    @pytest.mark.asyncio
+    async def test_finish_line_section_with_one_point_is_ignored(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            hotkey_side_effect=hotkeys_by_default,
+        )
+        canvas_form.start_section_builder()
+        canvas_form.on_mouse(create_mouse_event(CLICK, 10, 20))
+
+        await canvas_form.handle_key(create_key_event(SAVE_SECTION_HOTKEY_VALUE))
+
+        mock_viewmodel.add_new_section.assert_not_called()
+        mock_ui.notify.assert_called_once()
+        assert canvas_form._new_section is True
+        assert len(canvas_form._new_section_points) == 1
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    @pytest.mark.asyncio
+    async def test_finish_area_section_with_two_points_is_ignored(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas_form.start_section_builder(is_area_section=True)
+        canvas_form.on_mouse(create_mouse_event(CLICK, 10, 20))
+        canvas_form.on_mouse(create_mouse_event(CLICK, 30, 40))
+
+        await canvas_form.on_right_click()
+
+        mock_viewmodel.add_new_section.assert_not_called()
+        mock_ui.notify.assert_called_once()
+        assert canvas_form._new_section is True
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    @pytest.mark.asyncio
+    async def test_finish_area_section_closes_area(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas_form.start_section_builder(is_area_section=True)
+        for x, y in [(10, 20), (30, 40), (50, 20)]:
+            canvas_form.on_mouse(create_mouse_event(CLICK, x, y))
+
+        await canvas_form.on_right_click()
+
+        mock_viewmodel.add_new_section.assert_called_once()
+        call_args = mock_viewmodel.add_new_section.call_args
+        assert call_args[1]["coordinates"] == [(10, 20), (30, 40), (50, 20), (10, 20)]
+        assert call_args[1]["is_area_section"] is True
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    @pytest.mark.asyncio
+    async def test_escape_aborts_new_section(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            hotkey_side_effect=hotkeys_by_default,
+        )
+        canvas_form.start_section_builder()
+        canvas_form.on_mouse(create_mouse_event(CLICK, 10, 20))
+
+        await canvas_form.handle_key(
+            create_key_event(CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE)
+        )
+
+        mock_viewmodel.cancel_action.assert_called_once()
+        assert canvas_form._new_section is False
+        assert canvas_form._new_section_points == []
+        assert canvas_form._preview_point is None
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    @pytest.mark.asyncio
+    async def test_keys_are_ignored_without_active_editor(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            hotkey_side_effect=hotkeys_by_default,
+        )
+
+        await canvas_form.handle_key(
+            create_key_event(CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE)
+        )
+        await canvas_form.handle_key(create_key_event(SAVE_SECTION_HOTKEY_VALUE))
+
+        mock_viewmodel.cancel_action.assert_not_called()
+        mock_viewmodel.add_new_section.assert_not_called()
+        mock_viewmodel.update_section_coordinates.assert_not_called()
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    @pytest.mark.asyncio
+    async def test_key_up_is_ignored(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui,
+            mock_viewmodel,
+            mock_resource_manager,
+            hotkey_side_effect=hotkeys_by_default,
+        )
+        canvas_form.start_section_builder()
+        canvas_form.on_mouse(create_mouse_event(CLICK, 10, 20))
+        canvas_form.on_mouse(create_mouse_event(CLICK, 30, 40))
+
+        await canvas_form.handle_key(
+            create_key_event(SAVE_SECTION_HOTKEY_VALUE, keydown=False)
+        )
+
+        mock_viewmodel.add_new_section.assert_not_called()
+        assert canvas_form._new_section is True
