@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from unittest.mock import Mock
 
 import pytest
+from nicegui import ui
+from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.dto import DateRangeDto
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
@@ -83,3 +85,104 @@ class TestBeforeThePageIsBuilt:
         target = create_target(create_given())
 
         assert target.get_general_buttons() == []
+
+
+BICYCLE = "bicycle"
+CAR = "car"
+TRUCK = "truck"
+ALL_CLASSES = [BICYCLE, CAR, TRUCK]
+APPLY = "Apply"
+
+
+async def open_classification_dialog(
+    user: User, given: Given, selection: list[str] | None
+) -> None:
+    given.view_model.get_classes.return_value = ALL_CLASSES
+    given.view_model.get_class_filter_selection.return_value = selection
+    target = create_target(given)
+
+    @ui.page("/test")
+    def page() -> None:
+        target.open_classification_dialog()
+
+    await user.open("/test")
+    await user.should_see(APPLY)
+
+
+def checked_classes(user: User) -> list[str]:
+    return sorted(
+        checkbox.text
+        for checkbox in user.find(kind=ui.checkbox).elements
+        if checkbox.value
+    )
+
+
+class TestClassificationDialog:
+    async def test_toggling_a_checkbox_changes_only_its_own_class(
+        self, user: User
+    ) -> None:
+        given = create_given()
+        await open_classification_dialog(user, given, selection=None)
+
+        user.find(kind=ui.checkbox, content=BICYCLE).click()
+        assert checked_classes(user) == [CAR, TRUCK]
+        user.find(APPLY).click()
+
+        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
+            [CAR, TRUCK]
+        )
+
+    async def test_checking_an_unselected_class_adds_only_that_class(
+        self, user: User
+    ) -> None:
+        given = create_given()
+        await open_classification_dialog(user, given, selection=[CAR])
+
+        user.find(kind=ui.checkbox, content=TRUCK).click()
+        user.find(APPLY).click()
+
+        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
+            [CAR, TRUCK]
+        )
+
+    async def test_applying_unchanged_partial_selection_keeps_it(
+        self, user: User
+    ) -> None:
+        given = create_given()
+        await open_classification_dialog(user, given, selection=[CAR, TRUCK])
+
+        assert checked_classes(user) == [CAR, TRUCK]
+        user.find(APPLY).click()
+
+        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
+            [CAR, TRUCK]
+        )
+
+    async def test_without_selection_all_classes_are_selected(self, user: User) -> None:
+        given = create_given()
+        await open_classification_dialog(user, given, selection=None)
+
+        assert checked_classes(user) == ALL_CLASSES
+        user.find(APPLY).click()
+
+        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
+            ALL_CLASSES
+        )
+
+    async def test_empty_selection_selects_no_class(self, user: User) -> None:
+        given = create_given()
+        await open_classification_dialog(user, given, selection=[])
+
+        assert checked_classes(user) == []
+        user.find(APPLY).click()
+
+        given.view_model.apply_filter_tracks_by_class.assert_called_once_with([])
+
+    async def test_apply_closes_the_dialog(self, user: User) -> None:
+        given = create_given()
+        await open_classification_dialog(user, given, selection=None)
+
+        user.find(APPLY).click()
+
+        dialog = user.find(kind=ui.dialog).elements.pop()
+        assert dialog.value is False
