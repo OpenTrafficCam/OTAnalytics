@@ -462,10 +462,6 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def on_flow_changed(self, flow_id: FlowId) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
     def on_background_updated(self, image: Optional[TrackImage]) -> None:
         raise NotImplementedError
 
