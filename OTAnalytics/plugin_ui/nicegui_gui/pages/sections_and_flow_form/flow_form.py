@@ -1,4 +1,4 @@
-from typing import Iterable, Self
+from typing import Iterable, Mapping, Self
 
 from nicegui import ui
 from nicegui.elements.button import Button
@@ -9,7 +9,7 @@ from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewI
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import FlowKeys, ResourceManager
 from OTAnalytics.application.state import FlowState
-from OTAnalytics.domain.flow import FLOW_NAME, Flow
+from OTAnalytics.domain.flow import FLOW_NAME, Flow, FlowId
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
@@ -25,6 +25,7 @@ MARKER_BUTTON_ADD = "marker-button-add"
 MARKER_BUTTON_GENERATE = "marker-button-generate"
 MARKER_BUTTON_REMOVE = "marker-button-remove"
 MARKER_BUTTON_PROPERTIES = "marker-button-properties"
+COLUMN_TRACKS_ASSIGNED = "tracks_assigned"
 
 
 def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
@@ -34,13 +35,27 @@ def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
             "label": resource_manager.get(FlowKeys.TABLE_COLUMN_NAME),
             "field": "name",
         },
+        {
+            "name": COLUMN_TRACKS_ASSIGNED,
+            "label": resource_manager.get(FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED),
+            "field": COLUMN_TRACKS_ASSIGNED,
+        },
     ]
 
 
-def map_to_ui(flows: Iterable[Flow]) -> list:
+def map_to_ui(
+    flows: Iterable[Flow], tracks_assigned_to_each_flow: Mapping[FlowId, int]
+) -> list:
+    """Map flows to table rows including the number of assigned tracks.
+
+    Flows without an entry in `tracks_assigned_to_each_flow` are shown with 0
+    assigned tracks.
+    """
     list_of_flows = []
     for flow in flows:
-        list_of_flows.append(flow.to_dict())
+        row = flow.to_dict()
+        row[COLUMN_TRACKS_ASSIGNED] = tracks_assigned_to_each_flow.get(flow.id, 0)
+        list_of_flows.append(row)
     return list_of_flows
 
 
@@ -125,7 +140,12 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         pass
 
     def update_items(self) -> None:
-        self._flow_table.update(map_to_ui(self._viewmodel.get_all_flows()))
+        self._flow_table.update(
+            map_to_ui(
+                self._viewmodel.get_all_flows(),
+                self._viewmodel.get_tracks_assigned_to_each_flow(),
+            )
+        )
         selected_flows = [flow.id for flow in self._flow_state.selected_flows.get()]
         self.update_selected_items(selected_flows)
 

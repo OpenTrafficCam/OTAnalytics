@@ -69,6 +69,7 @@ class SvzMetadataKeys(ResourceKey):
 
 class FlowKeys(ResourceKey):
     TABLE_COLUMN_NAME = "table-flow-column-name"
+    TABLE_COLUMN_TRACKS_ASSIGNED = "table-flow-column-tracks-assigned"
     BUTTON_ADD = "button-add"
     BUTTON_GENERATE = "button-generate"
     BUTTON_PROPERTIES = "button-properties"
@@ -214,6 +215,7 @@ DEFAULT_RESOURCE_MAP = {
     FlowAndSectionKeys.TAB_SECTION: "Section",
     FlowAndSectionKeys.TAB_FLOW: "Flow",
     FlowKeys.TABLE_COLUMN_NAME: "Flows",
+    FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED: "Tracks",
     FlowKeys.BUTTON_ADD: "Add",
     FlowKeys.BUTTON_GENERATE: "Generate",
     FlowKeys.BUTTON_REMOVE: "Remove",
