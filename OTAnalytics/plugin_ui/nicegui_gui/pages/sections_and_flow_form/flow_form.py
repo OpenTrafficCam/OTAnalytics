@@ -1,4 +1,4 @@
-from typing import Iterable, Self
+from typing import Any, Iterable, Self
 
 from nicegui import ui
 from nicegui.elements.button import Button
@@ -62,7 +62,9 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             marker=MARKER_FLOW_TABLE,
             # Let the table auto-select the row on click and forward selection
             auto_select_on_row_click=True,
+            on_row_double_click_method=self._edit_flow,
         )
+        self._disabled = False
         self._button_remove: ui.button | None = None
         self._button_add: ui.button | None = None
         self._button_generate: ui.button | None = None
@@ -73,10 +75,16 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         self._viewmodel.set_flows_frame(self)
         self._viewmodel.set_treeview_flows(self)
 
-    def _select_flow(self, e: dict) -> None:
+    def _select_flow(self, e: list[dict[str, Any]]) -> None:
         flow_ids = [event[COLUMN_ID] for event in e]
         self._viewmodel.set_selected_flow_ids(flow_ids)
         self._viewmodel.refresh_items_on_canvas()
+
+    async def _edit_flow(self, row: dict[str, Any]) -> None:
+        if self._disabled:
+            return
+        self._select_flow([row])
+        await self._viewmodel.edit_selected_flow()
 
     def build(self) -> Self:
         self._flow_table.build()
@@ -133,6 +141,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         self._flow_table.select(item_ids)
 
     def enable(self) -> None:
+        self._disabled = False
         if (
             self._button_remove
             and self._button_properties
@@ -145,6 +154,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             self._button_properties.enable()
 
     def disable(self) -> None:
+        self._disabled = True
         if (
             self._button_remove
             and self._button_properties
