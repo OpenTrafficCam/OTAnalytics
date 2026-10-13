@@ -244,6 +244,7 @@ class TestRefusingAProjectStoredElsewhere:
 
 class TestLoadOtconfigOrthophoto:
     async def test_sets_the_obtained_orthophoto_before_loading_tracks(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_orthophoto(setup_default())
         target = create_target(given)
 
@@ -257,6 +258,7 @@ class TestLoadOtconfigOrthophoto:
         )
 
     async def test_load_aborts_when_orthophoto_cannot_be_chosen(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_orthophoto(setup_default())
         given.load_track_files.load_async.side_effect = OrthophotoLocked("locked")
         target = create_target(given)
@@ -267,6 +269,7 @@ class TestLoadOtconfigOrthophoto:
         given.reset_application.reset.assert_called()
 
     async def test_load_aborts_when_the_orthophoto_is_not_found(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_orthophoto_not_found(setup_with_orthophoto(setup_default()))
         target = create_target(given)
 
@@ -274,6 +277,7 @@ class TestLoadOtconfigOrthophoto:
             await target.load_async(OTCONFIG_FILE)
 
     async def test_resets_when_the_orthophoto_is_not_found(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_orthophoto_not_found(setup_with_orthophoto(setup_default()))
         target = create_target(given)
 
@@ -284,6 +288,7 @@ class TestLoadOtconfigOrthophoto:
         given.load_track_files.load_async.assert_not_awaited()
 
     def test_blocking_load_sets_the_obtained_orthophoto(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_orthophoto(setup_default())
         target = create_target(given)
 
@@ -294,6 +299,7 @@ class TestLoadOtconfigOrthophoto:
         )
 
     async def test_obtains_nothing_when_the_otconfig_declares_none(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_orthophoto(setup_default())
         given.otconfig.orthophoto = None
         target = create_target(given)

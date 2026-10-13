@@ -566,6 +566,7 @@ class TestLoadTrackFilesShowsProgress:
 
 class TestLoadTrackFilesGeoOnly:
     def test_geo_only_file_gets_no_video(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("fusion.mp4")],
@@ -584,6 +585,7 @@ class TestLoadTrackFilesGeoOnly:
         given.track_repository.add_all.assert_called_once()
 
     def test_camera_file_is_refused_when_project_shows_an_orthophoto(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("video1.mp4")],
@@ -600,6 +602,7 @@ class TestLoadTrackFilesGeoOnly:
         given.videos_metadata.update.assert_not_called()
 
     async def test_asks_for_a_missing_orthophoto_and_parses_again(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("fusion.mp4")],
@@ -620,6 +623,7 @@ class TestLoadTrackFilesGeoOnly:
         given.track_repository.add_all.assert_called_once()
 
     async def test_publishes_nothing_when_the_orthophoto_stays_missing(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup(
             track_ids=[TrackId("1")],
             video_files=[Path("fusion.mp4")],
@@ -641,6 +645,7 @@ class TestLoadTrackFilesGeoOnly:
         given.track_repository.add_all.assert_not_called()
 
     async def test_propagates_a_locked_orthophoto_and_publishes_nothing(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_needing_an_orthophoto()
         given.resolve_missing_orthophoto.resolve.side_effect = OrthophotoLocked(
             "locked"
@@ -654,6 +659,7 @@ class TestLoadTrackFilesGeoOnly:
         given.track_repository.add_all.assert_not_called()
 
     async def test_restores_the_orthophoto_when_publishing_is_refused(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_needing_an_orthophoto(
             video_files=[Path("fusion.mp4"), Path("video.mp4")],
             track_files=[some_file, other_file],
@@ -667,6 +673,7 @@ class TestLoadTrackFilesGeoOnly:
         assert given.current_orthophoto.get() is None
 
     async def test_restores_the_orthophoto_when_the_second_parse_fails(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_needing_an_orthophoto()
         given.track_parser.parse_files.side_effect = [
             OrthophotoRequired("needs one"),
@@ -680,6 +687,7 @@ class TestLoadTrackFilesGeoOnly:
         assert given.current_orthophoto.get() is None
 
     async def test_restores_the_orthophoto_when_the_load_is_cancelled(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_needing_an_orthophoto()
         given.track_parser.parse_files.side_effect = [
             OrthophotoRequired("needs one"),

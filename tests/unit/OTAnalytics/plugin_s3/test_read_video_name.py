@@ -52,6 +52,7 @@ class TestReadVideoName:
         assert read_video_name(given.ottrk) == "something_else.mkv"
 
     def test_a_geo_only_track_file_has_no_video(self, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given(tmp_path, geo_only_content())
 
         assert read_video_name(given.ottrk) is None
@@ -59,7 +60,10 @@ class TestReadVideoName:
     def test_a_geo_only_track_file_without_detections_has_no_video(
         self, tmp_path: Path
     ) -> None:
-        """A quiet period must not ask for a video the file never had."""
+        """A quiet period must not ask for a video the file never had.
+
+        #Requirement https://openproject.platomo.de/wp/10404
+        """
         given = create_given(tmp_path, empty_geo_only_content())
 
         assert read_video_name(given.ottrk) is None
@@ -67,6 +71,7 @@ class TestReadVideoName:
     def test_a_georeferenced_file_with_geo_coordinates_keeps_its_video(
         self, tmp_path: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         content = geo_only_content()
         content["metadata"] = {
             **metadata_naming("cam", ".mp4")["metadata"],
@@ -79,6 +84,7 @@ class TestReadVideoName:
     def test_a_geo_only_file_with_corrupt_detections_is_reported(
         self, tmp_path: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given(tmp_path, None)
         given.ottrk.write_bytes(
             bz2.compress(b'{"metadata": {}, "data": {"detections": [{"geo_x": ')
@@ -90,6 +96,7 @@ class TestReadVideoName:
     def test_a_georeferenced_file_does_not_read_its_detections(
         self, tmp_path: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given(tmp_path, None)
         given.ottrk.write_bytes(
             bz2.compress(

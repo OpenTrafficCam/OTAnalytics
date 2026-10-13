@@ -47,6 +47,7 @@ def setup_with_geo_coordinates_crs(given: Given) -> Given:
 
 class TestParseGeoCoordinatesCrs:
     def test_reads_crs_of_geo_coordinates(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_geo_coordinates_crs(create_given())
 
         actual = create_target().parse_geo_coordinates_crs(given.metadata)
@@ -54,6 +55,7 @@ class TestParseGeoCoordinatesCrs:
         assert actual == GEO_COORDINATES_CRS
 
     def test_missing_block_yields_none(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given()
 
         actual = create_target().parse_geo_coordinates_crs(given.metadata)

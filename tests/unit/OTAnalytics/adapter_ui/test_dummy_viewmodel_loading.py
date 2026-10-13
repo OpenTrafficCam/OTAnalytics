@@ -116,6 +116,7 @@ class TestLoadTracks:
         given.application.add_tracks_of_files_async.assert_not_awaited()
 
     async def test_reports_an_orthophoto_error(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_tracks_refused(create_given(tracks=TRACK_FILES))
         target = create_target(given)
 
@@ -145,6 +146,7 @@ class TestAddVideo:
         given.application.add_videos.assert_not_called()
 
     async def test_reports_videos_refused_beside_an_orthophoto(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_videos_refused(create_given(videos=VIDEO_FILES))
         target = create_target(given)
 

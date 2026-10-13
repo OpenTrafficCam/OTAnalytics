@@ -80,18 +80,21 @@ def test_pixel_to_geo_bottom_right_corner(
 
 
 def test_geo_to_pixel_known_detection(sample_metadata: GeoreferenceMetadata) -> None:
+    """#Requirement https://openproject.platomo.de/wp/10404"""
     pixel_x, pixel_y = geo_to_pixel(KNOWN_GEO_X, KNOWN_GEO_Y, sample_metadata)
     assert pixel_x == approx(KNOWN_PIXEL_X, rel=1e-6)
     assert pixel_y == approx(KNOWN_PIXEL_Y, rel=1e-6)
 
 
 def test_geo_to_pixel_on_unpadded_orthophoto() -> None:
+    """#Requirement https://openproject.platomo.de/wp/10404"""
     pixel_x, pixel_y = geo_to_pixel(KNOWN_GEO_X, KNOWN_GEO_Y, ORTHOPHOTO_METADATA)
     assert pixel_x == approx(KNOWN_ORTHOPHOTO_PIXEL_X, rel=1e-9)
     assert pixel_y == approx(KNOWN_ORTHOPHOTO_PIXEL_Y, rel=1e-9)
 
 
 def test_geo_to_pixel_top_left_of_unpadded_orthophoto_is_origin() -> None:
+    """#Requirement https://openproject.platomo.de/wp/10404"""
     pixel_x, pixel_y = geo_to_pixel(GEO_MIN_X, GEO_MAX_Y, ORTHOPHOTO_METADATA)
     assert pixel_x == approx(0.0, abs=1e-6)
     assert pixel_y == approx(0.0, abs=1e-6)

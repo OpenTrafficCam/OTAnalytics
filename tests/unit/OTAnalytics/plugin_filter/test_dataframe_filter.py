@@ -507,6 +507,7 @@ def occurrences_of(tracks: DataFrame) -> list[datetime]:
 
 class TestDataFrameFilterBuilderWithoutVideos:
     def test_keeps_geo_only_rows_inside_the_date_range(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default(create_given())
         target = create_target(given)
 

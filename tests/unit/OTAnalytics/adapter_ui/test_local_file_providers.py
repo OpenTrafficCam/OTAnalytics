@@ -112,6 +112,7 @@ def create_orthophoto_target(given: GivenOrthophoto) -> LocalOrthophotoProvider:
 
 class TestLocalOrthophotoProvider:
     async def test_returns_the_chosen_file(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given_orthophoto("/site/map.tiff")
 
         actual = await create_orthophoto_target(given).provide()
@@ -119,11 +120,13 @@ class TestLocalOrthophotoProvider:
         assert actual == Path("/site/map.tiff")
 
     async def test_cancel_returns_none(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given_orthophoto("")
 
         assert await create_orthophoto_target(given).provide() is None
 
     async def test_offers_tif_and_tiff_files(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given_orthophoto("/site/map.tiff")
 
         await create_orthophoto_target(given).provide()

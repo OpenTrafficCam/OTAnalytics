@@ -1250,6 +1250,7 @@ class TestOTAnalyticsCli:
         mock_cli_bulk_dependencies: dict[str, Mock],
         mock_cli_stream_dependencies: dict[str, Mock],
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         logger = Mock()
         get_logger.return_value = logger
         cli: OTAnalyticsCli = self.init_cli_with(

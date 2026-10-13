@@ -42,6 +42,7 @@ def create_target(given: Given) -> S3ObtainOrthophoto:
 
 class TestS3ObtainOrthophoto:
     async def test_downloads_the_key_under_the_prefix(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default(create_given())
 
         actual = await create_target(given).obtain(Path("map2.tiff"), ANY_FOLDER)
@@ -52,6 +53,7 @@ class TestS3ObtainOrthophoto:
 
     @pytest.mark.parametrize("reference", ["../site-2/map.tiff", "/etc/map.tiff"])
     async def test_refuses_a_reference_outside_the_prefix(self, reference: str) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default(create_given())
 
         with pytest.raises(OrthophotoNotFound):
@@ -60,6 +62,7 @@ class TestS3ObtainOrthophoto:
         given.download_objects.download_all.assert_not_called()
 
     async def test_refuses_when_no_project_is_loaded(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given()
 
         with pytest.raises(OrthophotoNotFound):
@@ -73,6 +76,7 @@ class TestS3ObtainOrthophoto:
     async def test_download_failure_becomes_orthophoto_not_found(
         self, failure: Exception
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_failing_download(setup_default(create_given()), failure)
 
         with pytest.raises(OrthophotoNotFound):

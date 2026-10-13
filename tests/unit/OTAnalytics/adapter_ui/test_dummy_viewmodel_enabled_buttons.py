@@ -94,6 +94,7 @@ def last_video_control_enabled(given: Given) -> bool:
 
 class TestSectionButtons:
     def test_disabled_without_video_or_orthophoto(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given()
 
         create_target(given)
@@ -101,6 +102,7 @@ class TestSectionButtons:
         assert last_add_sections_enabled(given) is False
 
     def test_enabled_with_a_video(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_video(create_given())
 
         create_target(given)
@@ -138,6 +140,7 @@ class TestVideoControlButtons:
         assert last_video_control_enabled(given) is True
 
     def test_disabled_once_the_orthophoto_is_gone(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_orthophoto(create_given())
         target = create_target(given)
         given.current_orthophoto.reset()

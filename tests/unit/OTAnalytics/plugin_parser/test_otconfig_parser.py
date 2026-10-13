@@ -522,6 +522,7 @@ class TestOtConfigParserOrthophoto:
     def test_writes_orthophoto_relative_to_the_otconfig(
         self, test_data_tmp_dir: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given_orthophoto_config(test_data_tmp_dir)
         orthophoto = Orthophoto(file=given.output.parent / "map2.tiff")
 
@@ -532,6 +533,7 @@ class TestOtConfigParserOrthophoto:
     def test_keeps_the_declared_reference_in_s3_mode(
         self, test_data_tmp_dir: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given_orthophoto_config(test_data_tmp_dir)
         orthophoto = Orthophoto(
             file=Path("/staging/projects/demo/site-1/map2.tiff"),
@@ -543,6 +545,7 @@ class TestOtConfigParserOrthophoto:
         assert actual[ORTHOPHOTO] == "map2.tiff"
 
     def test_omits_orthophoto_when_there_is_none(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given_orthophoto_config(test_data_tmp_dir)
 
         actual = convert_with(given, None)
@@ -550,6 +553,7 @@ class TestOtConfigParserOrthophoto:
         assert ORTHOPHOTO not in actual
 
     def test_parses_the_declared_reference(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given_orthophoto_config(test_data_tmp_dir)
         data = convert_with(given, Orthophoto(file=given.output.parent / "map2.tiff"))
 

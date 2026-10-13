@@ -658,6 +658,7 @@ def create_target_orthophoto_size(
 
 class TestOrthophotoImageSizeUpdater:
     def test_sizes_the_canvas_to_the_orthophoto_image(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default_orthophoto_size(create_given_orthophoto_size())
 
         create_target_orthophoto_size(given).notify(ORTHOPHOTO)
@@ -667,6 +668,7 @@ class TestOrthophotoImageSizeUpdater:
         )
 
     def test_keeps_the_size_without_an_orthophoto_image(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_without_orthophoto_image(create_given_orthophoto_size())
 
         create_target_orthophoto_size(given).notify(None)

@@ -97,6 +97,7 @@ def write_tiff(
 
 class TestReadOrthophotoGeoreference:
     def test_bounds_are_expressed_in_the_tracks_crs(self, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default(create_given(tmp_path))
 
         actual = read_orthophoto_georeference(given.file, TRACKS_CRS)
@@ -111,6 +112,7 @@ class TestReadOrthophotoGeoreference:
     def test_image_size_is_the_raster_size_without_padding(
         self, tmp_path: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default(create_given(tmp_path))
 
         actual = read_orthophoto_georeference(given.file, TRACKS_CRS)
@@ -123,6 +125,7 @@ class TestReadOrthophotoGeoreference:
         assert actual.crs == TRACKS_CRS
 
     def test_rotated_orthophoto_is_unsupported(self, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_rotation(create_given(tmp_path))
 
         with pytest.raises(UnsupportedOrthophoto):
@@ -131,7 +134,10 @@ class TestReadOrthophotoGeoreference:
     def test_orthophoto_turned_against_the_tracks_crs_is_unsupported(
         self, tmp_path: Path
     ) -> None:
-        """Squeezing a turned image into an upright box misplaces tracks by metres."""
+        """Squeezing a turned image into an upright box misplaces tracks by metres.
+
+        #Requirement https://openproject.platomo.de/wp/10404
+        """
         given = setup_with_utm_32n(create_given(tmp_path))
 
         with pytest.raises(UnsupportedOrthophoto, match=f"into {TRACKS_CRS}"):
@@ -140,6 +146,7 @@ class TestReadOrthophotoGeoreference:
 
 class TestReadOrthophotoImage:
     def test_image_keeps_size_and_pixels(self, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default(create_given(tmp_path))
 
         image = read_orthophoto_image(given.file).as_image()
@@ -148,6 +155,7 @@ class TestReadOrthophotoImage:
         assert image.getpixel((0, 0)) == RED
 
     def test_image_of_16_bit_orthophoto_is_unsupported(self, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_16_bit(create_given(tmp_path))
 
         with pytest.raises(UnsupportedOrthophoto):

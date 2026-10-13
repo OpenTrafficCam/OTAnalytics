@@ -110,6 +110,7 @@ class TestS3TrackFileProvider:
         ]
 
     async def test_downloads_no_video_for_a_geo_only_track_file(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given()
         target = create_track_target(given, read_video_name=no_video)
 

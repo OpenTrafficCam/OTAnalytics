@@ -617,7 +617,7 @@ def setup_empty_geo_only(given: GivenGeoOnlyFeather) -> GivenGeoOnlyFeather:
     return given
 
 
-def setup_camera_file_with_geo_columns(
+def setup_track_file_with_geo_columns(
     given: GivenGeoOnlyFeather,
 ) -> GivenGeoOnlyFeather:
     row = SINGLE_ROW | {track.GEO_X: KNOWN_GEO[0], track.GEO_Y: KNOWN_GEO[1]}
@@ -647,6 +647,7 @@ def placed_pixel(result: TrackParseResult) -> tuple[float, float]:
 
 class TestFeathersParserGeoOnly:
     def test_places_detections_on_the_orthophoto(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
         target = create_target_geo_only(given)
 
@@ -655,6 +656,7 @@ class TestFeathersParserGeoOnly:
         assert placed_pixel(result) == approx(KNOWN_ORTHOPHOTO_PIXEL, rel=1e-9)
 
     def test_attaches_the_orthophoto_mapping(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
         target = create_target_geo_only(given)
 
@@ -666,6 +668,7 @@ class TestFeathersParserGeoOnly:
     def test_asks_for_the_mapping_in_the_declared_crs(
         self, test_data_tmp_dir: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
         target = create_target_geo_only(given)
 
@@ -674,6 +677,7 @@ class TestFeathersParserGeoOnly:
         given.orthophoto_georeference.for_crs.assert_called_once_with(GEO_ONLY_CRS)
 
     def test_refuses_when_no_crs_is_declared(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default_geo_only(
             create_given_geo_only(test_data_tmp_dir), declares_crs=False
         )
@@ -688,6 +692,7 @@ class TestFeathersParserGeoOnly:
     def test_refuses_when_the_declared_crs_is_blank(
         self, test_data_tmp_dir: Path, blank_crs: str | None
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default_geo_only(
             create_given_geo_only(test_data_tmp_dir), declares_crs=False
         )
@@ -705,6 +710,7 @@ class TestFeathersParserGeoOnly:
     def test_places_detections_outside_the_orthophoto_without_clipping(
         self, test_data_tmp_dir: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default_geo_only(
             create_given_geo_only(test_data_tmp_dir),
             geo_x=WEST_OF_ORTHOPHOTO_GEO_X,
@@ -716,6 +722,7 @@ class TestFeathersParserGeoOnly:
         assert placed_pixel(result)[0] == approx(WEST_OF_ORTHOPHOTO_PIXEL_X, rel=1e-9)
 
     def test_refuses_without_an_orthophoto(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
         target = FeathersParser()
 
@@ -725,6 +732,7 @@ class TestFeathersParserGeoOnly:
     def test_file_without_detections_is_geo_only_by_its_metadata(
         self, test_data_tmp_dir: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_empty_geo_only(create_given_geo_only(test_data_tmp_dir))
         target = create_target_geo_only(given)
 
@@ -733,7 +741,8 @@ class TestFeathersParserGeoOnly:
         assert result.is_geo_only
         assert result.tracks.empty
 
-    def test_camera_file_is_not_geo_only(self, test_data_tmp_dir: Path) -> None:
+    def test_track_file_is_not_geo_only(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default_feathers_parser_with_georeference(test_data_tmp_dir)
         target = create_target()
 
@@ -741,10 +750,11 @@ class TestFeathersParserGeoOnly:
 
         assert not result.is_geo_only
 
-    def test_camera_file_with_geo_columns_is_not_geo_only(
+    def test_track_file_with_geo_columns_is_not_geo_only(
         self, test_data_tmp_dir: Path
     ) -> None:
-        given = setup_camera_file_with_geo_columns(
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_track_file_with_geo_columns(
             create_given_geo_only(test_data_tmp_dir)
         )
         target = create_target_geo_only(given)
@@ -753,10 +763,11 @@ class TestFeathersParserGeoOnly:
 
         assert not result.is_geo_only
 
-    def test_camera_file_with_geo_columns_keeps_its_pixels(
+    def test_track_file_with_geo_columns_keeps_its_pixels(
         self, test_data_tmp_dir: Path
     ) -> None:
-        given = setup_camera_file_with_geo_columns(
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_track_file_with_geo_columns(
             create_given_geo_only(test_data_tmp_dir)
         )
         target = create_target_geo_only(given)
@@ -765,10 +776,11 @@ class TestFeathersParserGeoOnly:
 
         assert placed_pixel(result) == CAMERA_PIXEL
 
-    def test_camera_file_with_geo_columns_keeps_its_own_georeference(
+    def test_track_file_with_geo_columns_keeps_its_own_georeference(
         self, test_data_tmp_dir: Path
     ) -> None:
-        given = setup_camera_file_with_geo_columns(
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_track_file_with_geo_columns(
             create_given_geo_only(test_data_tmp_dir)
         )
         target = create_target_geo_only(given)
@@ -777,10 +789,11 @@ class TestFeathersParserGeoOnly:
 
         assert result.tracks.georeference_metadata == GEOREF_METADATA
 
-    def test_camera_file_with_geo_columns_does_not_ask_for_the_orthophoto(
+    def test_track_file_with_geo_columns_does_not_ask_for_the_orthophoto(
         self, test_data_tmp_dir: Path
     ) -> None:
-        given = setup_camera_file_with_geo_columns(
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_track_file_with_geo_columns(
             create_given_geo_only(test_data_tmp_dir)
         )
         target = create_target_geo_only(given)
@@ -792,6 +805,7 @@ class TestFeathersParserGeoOnly:
     def test_parse_files_reports_geo_only_per_file(
         self, test_data_tmp_dir: Path
     ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
         target = create_target_geo_only(given)
 
@@ -799,17 +813,17 @@ class TestFeathersParserGeoOnly:
 
         assert result.geo_only_per_file == [True]
 
-    def test_parse_files_refuses_a_batch_mixing_geo_only_and_camera_files(
+    def test_parse_files_refuses_a_batch_mixing_geo_only_and_track_files(
         self, test_data_tmp_dir: Path
     ) -> None:
-        """A load window can select fused and per-camera files at once.
+        """A load window can select fused and per-camera track files at once.
 
         #Requirement https://openproject.platomo.de/wp/10404
         """
         fused = setup_default_geo_only(
             create_given_geo_only(subfolder(test_data_tmp_dir, "output"))
         )
-        camera = setup_camera_file_with_geo_columns(
+        camera = setup_track_file_with_geo_columns(
             create_given_geo_only(subfolder(test_data_tmp_dir, "OTCamera04"))
         )
         target = create_target_geo_only(fused)

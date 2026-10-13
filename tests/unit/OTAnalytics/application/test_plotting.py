@@ -211,6 +211,7 @@ def create_target_orthophoto_background(
 
 class TestOrthophotoBackgroundPlotter:
     def test_shows_the_orthophoto_when_there_is_one(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_with_orthophoto(create_given_orthophoto_background())
 
         actual = create_target_orthophoto_background(given).plot()
@@ -219,6 +220,7 @@ class TestOrthophotoBackgroundPlotter:
         given.video_background.plot.assert_not_called()
 
     def test_falls_back_to_the_video_frame(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
         given = setup_without_orthophoto(create_given_orthophoto_background())
 
         actual = create_target_orthophoto_background(given).plot()

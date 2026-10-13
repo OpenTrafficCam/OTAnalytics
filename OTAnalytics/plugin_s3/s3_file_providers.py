@@ -7,7 +7,7 @@ adopt later.
 
 from contextlib import closing
 from pathlib import Path, PurePosixPath
-from typing import Callable, Generator, TypeVar, cast
+from typing import Callable, Generator, cast
 
 import ijson
 
@@ -29,8 +29,6 @@ from OTAnalytics.plugin_track_input_source.template import (
     metadata_from_json_events,
     parse_json_bz2_events,
 )
-
-_T = TypeVar("_T")
 
 TRACK_SUFFIXES = {".ottrk"}
 VIDEO_SUFFIXES = {".mp4", ".avi", ".mkv", ".mov"}
@@ -115,7 +113,7 @@ def _is_geo_only_file(ottrk: Path, metadata: dict) -> bool:
     )
 
 
-def _translating_read_errors(ottrk: Path, read: Callable[[], _T]) -> _T:
+def _translating_read_errors[T](ottrk: Path, read: Callable[[], T]) -> T:
     """Run a read of the track file, reporting failures as UnreadableTrackFile."""
     try:
         return read()
