@@ -30,8 +30,14 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geometry import (  # noqa
     Point,
     close_area,
+    closest_knob_index,
+    delete_knob,
     has_enough_knobs,
+    insert_knob,
     minimum_knob_count,
+    open_area,
+    shift_knob_backward,
+    shift_knob_forward,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
@@ -39,6 +45,7 @@ NORMAL_COLOR = "green"
 SELECTED_COLOR = "red"
 EDIT_COLOR = "orange"
 MOVING_COLOR = "blue"
+HOVERED_KNOB_COLOR = "yellow"
 MOVING_STROKE_WIDTH = 400
 MOVING_STROKE_OPACITY = 0.0
 MARKER_INTERACTIVE_IMAGE = "marker-interactive-image"
@@ -58,34 +65,67 @@ IMAGE_Y = "image_y"
 ELEMENT_ID = "element_id"
 
 CURSOR = "pointer"
+CURSOR_MOVE = "move"
 NEW_SECTION_ID = "new-section-id"
+EDIT_KNOB_ID_PREFIX = "edit-knob-"
+KNOB_RADIUS = 6
+HIGHLIGHTED_KNOB_RADIUS = 8
+HIGHLIGHTED_KNOB_STROKE_WIDTH = 3
+KNOB_CATCH_RADIUS = 15
 
 
 def circle_to_coordinates(circles: Iterable[Circle]) -> list[tuple[int, int]]:
     return [circle.to_tuple() for circle in circles]
 
 
-def create_circle(e: dict, fill: str = NORMAL_COLOR) -> Circle:
-    return Circle(
-        x=round(e[IMAGE_X]),
-        y=round(e[IMAGE_Y]),
-        pointer_event=POINTER_EVENT_ALL,
-        id=e[ELEMENT_ID],
-        fill=fill,
-    )
+def to_point(x: float, y: float) -> Point:
+    return round(x), round(y)
 
 
-def create_moving_circle(e: dict, fill: str = NORMAL_COLOR) -> Circle:
-    return Circle(
-        x=round(e[IMAGE_X]),
-        y=round(e[IMAGE_Y]),
+def svg_event_to_point(e: dict) -> Point:
+    return to_point(e[IMAGE_X], e[IMAGE_Y])
+
+
+def knob_index_from_element_id(element_id: str | None) -> int | None:
+    if not element_id or not element_id.startswith(EDIT_KNOB_ID_PREFIX):
+        return None
+    try:
+        return int(element_id.removeprefix(EDIT_KNOB_ID_PREFIX))
+    except ValueError:
+        return None
+
+
+def create_knob(
+    index: int, point: Point, is_hovered: bool = False, is_selected: bool = False
+) -> Circle:
+    """Create the circle of a knob of the section geometry editor.
+
+    A selected knob gets a large transparent stroke. Thereby, the svg keeps
+    receiving pointer events while the knob is moved.
+    """
+    knob = Circle(
+        id=f"{EDIT_KNOB_ID_PREFIX}{index}",
+        x=point[0],
+        y=point[1],
+        fill=EDIT_COLOR,
         pointer_event=POINTER_EVENT_ALL,
-        id=e[ELEMENT_ID],
-        fill=fill,
-        stroke=MOVING_COLOR,
-        stroke_width=MOVING_STROKE_WIDTH,
-        stroke_opacity=MOVING_STROKE_OPACITY,
+        radius=KNOB_RADIUS,
+        stroke=EDIT_COLOR,
+        stroke_width=0,
+        cursor=CURSOR_MOVE,
     )
+    if is_selected:
+        knob.fill = MOVING_COLOR
+        knob.radius = HIGHLIGHTED_KNOB_RADIUS
+        knob.stroke = MOVING_COLOR
+        knob.stroke_width = MOVING_STROKE_WIDTH
+        knob.stroke_opacity = MOVING_STROKE_OPACITY
+    elif is_hovered:
+        knob.radius = HIGHLIGHTED_KNOB_RADIUS
+        knob.stroke = HOVERED_KNOB_COLOR
+        knob.stroke_width = HIGHLIGHTED_KNOB_STROKE_WIDTH
+        knob.stroke_opacity = 1.0
+    return knob
 
 
 class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface):
@@ -103,8 +143,15 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_sections = self._current_sections
         self._introduce_to_viewmodel()
         self._current_section: Section | None = None
-        self._current_point: Circle | None = None
-        self._new_point: Circle | None = None
+        self._edit_is_area_section = False
+        self._edit_coordinates: list[Point] = []
+        self._edit_temporary: list[Point] = []
+        self._hovered_knob_index: int | None = None
+        self._selected_knob_index: int | None = None
+        self._dragging = False
+        self._drop_on_release = False
+        self._knob_moved = False
+        self._mouse_position: Point | None = None
         self.add_preview_image()
         self._new_section_points: list[Circle] = []
         self._preview_point: Point | None = None
@@ -160,7 +207,76 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._is_hotkey(e, HotKeys.SAVE_SECTION_HOTKEY):
             await self._finish_editor()
         elif self._is_hotkey(e, HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY):
+            self._on_cancel_key()
+        elif self._current_section is not None:
+            self._handle_geometry_editor_key(e)
+
+    def _on_cancel_key(self) -> None:
+        if self._current_section is not None and self._selected_knob_index is not None:
+            self._deselect_knob(revert=True)
+            self.draw_all()
+        else:
             self._cancel_action()
+
+    def _handle_geometry_editor_key(self, e: KeyEventArguments) -> None:
+        if self._is_hotkey(e, HotKeys.ADD_KNOB_HOTKEY):
+            self._add_knob()
+        elif self._is_hotkey(e, HotKeys.DELETE_KNOB_HOTKEY) or self._is_hotkey(
+            e, HotKeys.DELETE_KNOB_ALTERNATIVE_HOTKEY
+        ):
+            self._delete_selected_knob()
+        elif self._is_hotkey(e, HotKeys.SHIFT_KNOB_BACKWARD_HOTKEY):
+            self._shift_selected_knob(forward=False)
+        elif self._is_hotkey(e, HotKeys.SHIFT_KNOB_FORWARD_HOTKEY):
+            self._shift_selected_knob(forward=True)
+
+    def _add_knob(self) -> None:
+        """Insert a knob at the mouse position between the closest knobs.
+
+        The new knob is selected and follows the mouse until it is placed by a click.
+        """
+        if self._selected_knob_index is not None or self._mouse_position is None:
+            return
+        self._edit_temporary, self._selected_knob_index = insert_knob(
+            self._edit_temporary, self._mouse_position, self._edit_is_area_section
+        )
+        self._hovered_knob_index = None
+        self._dragging = False
+        self.draw_all()
+
+    def _delete_selected_knob(self) -> None:
+        if self._selected_knob_index is None:
+            return
+        self._edit_temporary = delete_knob(
+            self._edit_temporary,
+            self._selected_knob_index,
+            self._edit_is_area_section,
+        )
+        self._commit_edit()
+        self._deselect_knob(revert=False)
+        self.draw_all()
+
+    def _shift_selected_knob(self, forward: bool) -> None:
+        if self._selected_knob_index is None:
+            return
+        shift = shift_knob_forward if forward else shift_knob_backward
+        self._edit_temporary, self._selected_knob_index = shift(
+            self._edit_temporary,
+            self._selected_knob_index,
+            self._edit_is_area_section,
+        )
+        self.draw_all()
+
+    def _commit_edit(self) -> None:
+        self._edit_coordinates = list(self._edit_temporary)
+
+    def _deselect_knob(self, revert: bool) -> None:
+        if revert:
+            self._edit_temporary = list(self._edit_coordinates)
+        self._selected_knob_index = None
+        self._dragging = False
+        self._drop_on_release = False
+        self._knob_moved = False
 
     async def on_right_click(self, _: Any = None) -> None:
         """Finish the active editor like the save hotkey does."""
@@ -203,7 +319,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._current_section is None:
             return
         metadata = self._current_section.to_dict()
-        coordinates = self._current_section_geometry()
+        coordinates = close_area(self._edit_temporary, self._edit_is_area_section)
         self.__reset_editor()
         self._viewmodel.update_section_coordinates(metadata, coordinates)
 
@@ -213,19 +329,20 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._viewmodel.cancel_action()
         self._viewmodel.refresh_items_on_canvas()
 
-    def _current_section_geometry(self) -> list[tuple[int, int]]:
-        if self._current_section is None:
-            return []
-        circles = self._circles.by_section.get(self._current_section.id.id, {})
-        return circle_to_coordinates(circles.values())
-
     def __reset_editor(self) -> None:
         self._new_section = False
         self._current_section = None
-        self._current_point = None
         self._new_section_points = []
         self._preview_point = None
+        self._reset_geometry_editor()
         self._update_mouse_events()
+
+    def _reset_geometry_editor(self) -> None:
+        self._edit_coordinates = []
+        self._edit_temporary = []
+        self._hovered_knob_index = None
+        self._mouse_position = None
+        self._deselect_knob(revert=False)
 
     def _update_mouse_events(self) -> None:
         """Subscribe to mouse movements only while an editor is active.
@@ -252,14 +369,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def draw_all(self) -> None:
         if self._background_image:
-            self._background_image.content = self._edit_geometry()
-            self._background_image.content += self._sections.to_svg()
+            self._background_image.content = self._sections.to_svg()
             self._background_image.content += self._flows.to_svg()
             self._background_image.content += self._circles.to_svg()
-            if self._current_point:
-                self._background_image.content += self._current_point.to_svg()
-            if self._new_point:
-                self._background_image.content += self._new_point.to_svg()
+            self._background_image.content += self._edit_geometry()
             self.draw_new_section()
 
     def draw_new_section(self) -> None:
@@ -280,21 +393,83 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._current_section is None:
             return ""
         section_id = f"{self._current_section.id.id}-edit"
-        return Polyline(
-            id=section_id, points=self._current_section_geometry(), color=EDIT_COLOR
+        svg = Polyline(
+            id=section_id,
+            points=close_area(self._edit_temporary, self._edit_is_area_section),
+            color=EDIT_COLOR,
         ).to_svg()
+        for index, point in enumerate(self._edit_temporary):
+            knob = create_knob(
+                index,
+                point,
+                is_hovered=index == self._hovered_knob_index,
+                is_selected=index == self._selected_knob_index,
+            )
+            svg += knob.to_svg()
+        return svg
 
     def on_mouse(self, e: events.MouseEventArguments) -> None:
         """Dispatch mouse events of the interactive image."""
+        point = to_point(e.image_x, e.image_y)
         if e.type == MOUSE_MOVE:
-            self._on_mouse_move(e)
+            self._on_move(point)
+        elif e.type == MOUSE_UP:
+            self._on_release(point)
         elif e.type == CLICK:
-            self._on_pointer_down(e)
+            if self._current_section is not None:
+                self._on_canvas_click(point)
+            else:
+                self._on_pointer_down(e)
 
-    def _on_mouse_move(self, e: events.MouseEventArguments) -> None:
+    def _on_move(self, point: Point) -> None:
         if self._new_section:
-            self._preview_point = (round(e.image_x), round(e.image_y))
+            self._preview_point = point
             self.draw_all()
+        elif self._current_section is not None:
+            self._mouse_position = point
+            if self._selected_knob_index is not None:
+                self._move_selected_knob(point)
+            else:
+                self._hover_knob(point)
+
+    def _move_selected_knob(self, point: Point) -> None:
+        if self._selected_knob_index is None:
+            return
+        self._edit_temporary[self._selected_knob_index] = point
+        if self._dragging:
+            self._knob_moved = True
+        self.draw_all()
+
+    def _hover_knob(self, point: Point) -> None:
+        hovered = closest_knob_index(self._edit_temporary, point, KNOB_CATCH_RADIUS)
+        if hovered != self._hovered_knob_index:
+            self._hovered_knob_index = hovered
+            self.draw_all()
+
+    def _on_release(self, point: Point) -> None:
+        """Place the selected knob if it was dragged or picked up before."""
+        if self._current_section is None or not self._dragging:
+            return
+        self._dragging = False
+        if self._selected_knob_index is None:
+            return
+        if self._knob_moved or self._drop_on_release:
+            self._place_selected_knob(point)
+        self.draw_all()
+
+    def _on_canvas_click(self, point: Point) -> None:
+        if self._selected_knob_index is not None and not self._dragging:
+            self._place_selected_knob(point)
+            self.draw_all()
+
+    def _place_selected_knob(self, point: Point) -> None:
+        index = self._selected_knob_index
+        if index is None:
+            return
+        self._edit_temporary[index] = point
+        self._commit_edit()
+        self._deselect_knob(revert=False)
+        self._hovered_knob_index = index
 
     def _on_pointer_down(self, e: events.MouseEventArguments) -> None:
         if self._new_section:
@@ -311,27 +486,32 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self.draw_all()
 
     def on_svg_pointer_down(self, e: dict) -> None:
-        if self._new_section:
-            pass
-        elif self._current_section:
-            self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
-            self.draw_all()
+        """Select a knob of the edited section or pick up the selected knob."""
+        if self._current_section is None:
+            return
+        point = svg_event_to_point(e)
+        self._mouse_position = point
+        if self._selected_knob_index is None:
+            index = knob_index_from_element_id(e.get(ELEMENT_ID))
+            if index is None:
+                index = closest_knob_index(
+                    self._edit_temporary, point, KNOB_CATCH_RADIUS
+                )
+            if index is None:
+                return
+            self._selected_knob_index = index
+            self._drop_on_release = False
+        else:
+            self._drop_on_release = True
+        self._dragging = True
+        self._knob_moved = False
+        self.draw_all()
 
     def on_svg_pointer_move(self, e: dict) -> None:
-        if self._current_section and self._current_point:
-            self._current_point = create_moving_circle(e, fill=EDIT_COLOR)
-            self._circles.add(self._current_section.id.id, self._current_point)
-            self.draw_all()
+        self._on_move(svg_event_to_point(e))
 
     def on_svg_pointer_up(self, e: dict) -> None:
-        if self._new_section:
-            pass
-        elif self._current_section and self._current_point:
-            self._circles.add(
-                self._current_section.id.id, create_circle(e, fill=EDIT_COLOR)
-            )
-            self._current_point = None
-            self.draw_all()
+        self._on_release(svg_event_to_point(e))
 
     def update_background(self, image: TrackImage) -> None:
         self._current_image = image.as_image()
@@ -349,11 +529,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def load_sections(self) -> None:
         self._viewmodel.refresh_items_on_canvas()
-
-    def draw_current_point(self) -> None:
-        if self._background_image:
-            if self._current_point:
-                self._background_image.content += self._current_point.to_svg()
 
     def draw_section(
         self,
@@ -388,8 +563,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self._circles.add(id, circle)
         polyline = Polyline(id, coordinates, color=color)
         self._sections.add(id, polyline)
-        if self._current_point:
-            self.draw_current_point()
         self.draw_all()
 
     def start_section_geometry_editor(
@@ -398,7 +571,19 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         hovered_knob_style: dict | None = None,
         is_area_section: bool = False,
     ) -> None:
+        self._new_section = False
+        self._new_section_points = []
+        self._preview_point = None
+        self._reset_geometry_editor()
         self._current_section = section
+        self._edit_is_area_section = is_area_section
+        coordinates = [
+            to_point(coordinate.x, coordinate.y)
+            for coordinate in section.get_coordinates()
+        ]
+        self._edit_coordinates = open_area(coordinates, is_area_section)
+        self._edit_temporary = list(self._edit_coordinates)
+        self._update_mouse_events()
         self.draw_all()
 
     def draw_arrow(
@@ -435,6 +620,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         is_area_section: bool = False,
         section: Optional[Section] = None,
     ) -> None:
+        self._current_section = None
+        self._reset_geometry_editor()
         self._new_section = True
         self._new_area_section = is_area_section
         self._new_section_points = []

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Iterator
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -9,12 +9,18 @@ from PIL import Image
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
+    ADD_KNOB_HOTKEY_VALUE,
     CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE,
     DEFAULT_HOTKEYS,
+    DELETE_KNOB_ALTERNATIVE_HOTKEY_VALUE,
+    DELETE_KNOB_HOTKEY_VALUE,
     SAVE_SECTION_HOTKEY_VALUE,
+    SHIFT_KNOB_BACKWARD_HOTKEY_VALUE,
+    SHIFT_KNOB_FORWARD_HOTKEY_VALUE,
     HotKeys,
     ResourceManager,
 )
+from OTAnalytics.domain.geometry import Coordinate
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
@@ -23,18 +29,16 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     CLICK,
     EDIT_COLOR,
+    EDIT_KNOB_ID_PREFIX,
     ELEMENT_ID,
+    HOVERED_KNOB_COLOR,
     IMAGE_X,
     IMAGE_Y,
     MOUSE_MOVE,
     MOUSE_UP,
-    MOVING_COLOR,
-    NORMAL_COLOR,
     SELECTED_COLOR,
     CanvasForm,
     circle_to_coordinates,
-    create_circle,
-    create_moving_circle,
 )
 
 
@@ -77,6 +81,11 @@ def mock_section() -> Mock:
     section.id = Mock()
     section.id.id = "test-section-id"
     section.to_dict.return_value = {"id": "test-section-id", "name": "Test Section"}
+    section.get_coordinates.return_value = [
+        Coordinate(10, 20),
+        Coordinate(110, 20),
+        Coordinate(210, 20),
+    ]
     return section
 
 
@@ -113,52 +122,13 @@ def setup_canvas_form_with_mocks(
     canvas_form.build()
 
     if current_section is not None:
-        canvas_form._current_section = current_section
+        canvas_form.start_section_geometry_editor(current_section)
 
     return canvas_form
 
 
 class TestCanvasFormHelperFunctions:
     """Test helper functions used by CanvasForm."""
-
-    def test_create_circle(self) -> None:
-        # Arrange
-        event_data = {IMAGE_X: 100.7, IMAGE_Y: 200.3, ELEMENT_ID: "test-element"}
-
-        # Act
-        circle = create_circle(event_data, fill="red")
-
-        # Assert
-        assert circle.x == 101  # rounded
-        assert circle.y == 200  # rounded
-        assert circle.id == "test-element"
-        assert circle.fill == "red"
-        assert circle.pointer_event == "all"
-
-    def test_create_circle_with_default_fill(self) -> None:
-        # Arrange
-        event_data = {IMAGE_X: 50, IMAGE_Y: 75, ELEMENT_ID: "default-element"}
-
-        # Act
-        circle = create_circle(event_data)
-
-        # Assert
-        assert circle.fill == NORMAL_COLOR
-
-    def test_create_moving_circle(self) -> None:
-        # Arrange
-        event_data = {IMAGE_X: 150.2, IMAGE_Y: 250.8, ELEMENT_ID: "moving-element"}
-
-        # Act
-        circle = create_moving_circle(event_data, fill="blue")
-
-        # Assert
-        assert circle.x == 150  # rounded
-        assert circle.y == 251  # rounded
-        assert circle.id == "moving-element"
-        assert circle.fill == "blue"
-        assert circle.stroke == MOVING_COLOR
-        assert circle.pointer_event == "all"
 
     def test_circle_to_coordinates(self) -> None:
         # Arrange
@@ -464,84 +434,6 @@ class TestCanvasFormPointerEvents:
         assert canvas_form._new_section_points[0].x == 100
         assert canvas_form._new_section_points[1].x == 150
         assert canvas_form._new_section_points[2].x == 200
-
-    @patch(
-        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
-    )
-    def test_on_svg_pointer_down_edit_mode(
-        self,
-        mock_ui: Any,
-        mock_viewmodel: Mock,
-        mock_resource_manager: Mock,
-        mock_section: Mock,
-    ) -> None:
-        # Arrange
-        canvas_form = setup_canvas_form_with_mocks(
-            mock_ui, mock_viewmodel, mock_resource_manager, current_section=mock_section
-        )
-
-        event_data = {IMAGE_X: 100, IMAGE_Y: 200, ELEMENT_ID: "test-element"}
-
-        # Act
-        canvas_form.on_svg_pointer_down(event_data)
-
-        # Assert
-        assert canvas_form._current_point is not None
-        assert canvas_form._current_point.x == 100
-        assert canvas_form._current_point.y == 200
-        assert canvas_form._current_point.fill == EDIT_COLOR
-
-    @patch(
-        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
-    )
-    def test_on_svg_pointer_move_edit_mode(
-        self,
-        mock_ui: Any,
-        mock_viewmodel: Mock,
-        mock_resource_manager: Mock,
-        mock_section: Mock,
-    ) -> None:
-        # Arrange
-        canvas_form = setup_canvas_form_with_mocks(
-            mock_ui, mock_viewmodel, mock_resource_manager, current_section=mock_section
-        )
-        canvas_form._current_point = MagicMock()
-
-        event_data = {IMAGE_X: 150, IMAGE_Y: 250, ELEMENT_ID: "test-element"}
-
-        # Act
-        canvas_form.on_svg_pointer_move(event_data)
-
-        # Assert
-        assert canvas_form._current_point.x == 150
-        assert canvas_form._current_point.y == 250
-
-    @patch(
-        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
-    )
-    def test_on_svg_pointer_up_edit_mode(
-        self,
-        mock_ui: Any,
-        mock_viewmodel: Mock,
-        mock_resource_manager: Mock,
-        mock_section: Mock,
-    ) -> None:
-        # Arrange
-        canvas_form = setup_canvas_form_with_mocks(
-            mock_ui, mock_viewmodel, mock_resource_manager, current_section=mock_section
-        )
-        canvas_form._current_point = MagicMock()
-
-        event_data = {IMAGE_X: 175, IMAGE_Y: 275, ELEMENT_ID: "test-element"}
-
-        # Act
-        canvas_form.on_svg_pointer_up(event_data)
-
-        # Assert
-        assert canvas_form._current_point is None
-        # Verify circle was added to the section
-        circles = canvas_form._circles.by_section.get(mock_section.id.id, {})
-        assert len(circles) > 0
 
 
 class TestCanvasFormKeyboardEvents:
@@ -1376,3 +1268,292 @@ class TestCanvasFormSectionBuilder:
 
         mock_viewmodel.add_new_section.assert_not_called()
         assert canvas_form._new_section is True
+
+
+def svg_event(x: float, y: float, element_id: str = "") -> dict:
+    return {IMAGE_X: x, IMAGE_Y: y, ELEMENT_ID: element_id}
+
+
+def knob_id(index: int) -> str:
+    return f"{EDIT_KNOB_ID_PREFIX}{index}"
+
+
+ORIGINAL_COORDINATES = [(10, 20), (110, 20), (210, 20)]
+CANVAS_UI = (
+    "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+)
+
+
+class TestCanvasFormSectionGeometryEditor:
+    """Editing an existing section (reference: SectionGeometryEditor)."""
+
+    @pytest.fixture
+    def canvas_form(
+        self, mock_viewmodel: Mock, mock_resource_manager: Mock, mock_section: Mock
+    ) -> Iterator[Any]:
+        with patch(CANVAS_UI) as mock_ui:
+            canvas_form = setup_canvas_form_with_mocks(
+                mock_ui,
+                mock_viewmodel,
+                mock_resource_manager,
+                hotkey_side_effect=hotkeys_by_default,
+                current_section=mock_section,
+            )
+            canvas_form.mock_ui = mock_ui  # type: ignore[attr-defined]
+            yield canvas_form
+
+    @pytest.fixture
+    def area_section(self, mock_section: Mock) -> Mock:
+        mock_section.get_coordinates.return_value = [
+            Coordinate(0, 0),
+            Coordinate(10, 0),
+            Coordinate(10, 10),
+            Coordinate(0, 0),
+        ]
+        return mock_section
+
+    def test_start_editor_loads_coordinates(self, canvas_form: Any) -> None:
+        assert canvas_form._edit_coordinates == ORIGINAL_COORDINATES
+        assert canvas_form._edit_temporary == ORIGINAL_COORDINATES
+        assert canvas_form._selected_knob_index is None
+
+    def test_start_editor_for_area_drops_closing_coordinate(
+        self, mock_viewmodel: Mock, mock_resource_manager: Mock, area_section: Mock
+    ) -> None:
+        with patch(CANVAS_UI) as mock_ui:
+            canvas_form = setup_canvas_form_with_mocks(
+                mock_ui, mock_viewmodel, mock_resource_manager
+            )
+            canvas_form.start_section_geometry_editor(
+                area_section, is_area_section=True
+            )
+
+        assert canvas_form._edit_coordinates == [(0, 0), (10, 0), (10, 10)]
+
+    def test_start_editor_subscribes_mouse_move(self, canvas_form: Any) -> None:
+        background_image = canvas_form.mock_ui.interactive_image.return_value
+        background_image._props.__setitem__.assert_called_with(
+            "events", [CLICK, MOUSE_MOVE, MOUSE_UP]
+        )
+
+    def test_hover_highlights_knob_under_mouse(self, canvas_form: Any) -> None:
+        canvas_form.on_svg_pointer_move(svg_event(112, 22))
+
+        assert canvas_form._hovered_knob_index == 1
+        content = canvas_form.mock_ui.interactive_image.return_value.content
+        assert HOVERED_KNOB_COLOR in content
+
+    def test_hover_far_from_knob_highlights_nothing(self, canvas_form: Any) -> None:
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 60, 100))
+
+        assert canvas_form._hovered_knob_index is None
+
+    def test_drag_knob_moves_it(self, canvas_form: Any) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(110, 20, knob_id(1)))
+        assert canvas_form._selected_knob_index == 1
+
+        canvas_form.on_svg_pointer_move(svg_event(120, 50, knob_id(1)))
+        assert canvas_form._edit_temporary[1] == (120, 50)
+        assert canvas_form._edit_coordinates == ORIGINAL_COORDINATES
+
+        canvas_form.on_svg_pointer_up(svg_event(121, 51, knob_id(1)))
+
+        assert canvas_form._edit_coordinates == [(10, 20), (121, 51), (210, 20)]
+        assert canvas_form._selected_knob_index is None
+
+    def test_drag_released_outside_of_svg_moves_knob(self, canvas_form: Any) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(10, 20, knob_id(0)))
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 30, 70))
+
+        canvas_form.on_mouse(create_mouse_event(MOUSE_UP, 31, 71))
+
+        assert canvas_form._edit_coordinates == [(31, 71), (110, 20), (210, 20)]
+        assert canvas_form._selected_knob_index is None
+
+    def test_click_selects_knob_and_second_click_places_it(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(210, 20, knob_id(2)))
+        canvas_form.on_svg_pointer_up(svg_event(210, 20, knob_id(2)))
+        assert canvas_form._selected_knob_index == 2
+
+        canvas_form.on_svg_pointer_move(svg_event(250, 80, knob_id(2)))
+        canvas_form.on_svg_pointer_down(svg_event(250, 80, knob_id(2)))
+        canvas_form.on_svg_pointer_up(svg_event(250, 80, knob_id(2)))
+
+        assert canvas_form._edit_coordinates == [(10, 20), (110, 20), (250, 80)]
+        assert canvas_form._selected_knob_index is None
+
+    def test_click_on_image_places_selected_knob(self, canvas_form: Any) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(210, 20, knob_id(2)))
+        canvas_form.on_svg_pointer_up(svg_event(210, 20, knob_id(2)))
+
+        canvas_form.on_mouse(create_mouse_event(CLICK, 230, 90))
+
+        assert canvas_form._edit_coordinates == [(10, 20), (110, 20), (230, 90)]
+        assert canvas_form._selected_knob_index is None
+
+    def test_pointer_down_next_to_knob_selects_closest_knob(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(113, 18, "other-element"))
+
+        assert canvas_form._selected_knob_index == 1
+
+    def test_pointer_down_far_from_knobs_selects_nothing(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(60, 100, "other-element"))
+
+        assert canvas_form._selected_knob_index is None
+
+    @pytest.mark.asyncio
+    async def test_plus_inserts_knob_at_mouse_position(self, canvas_form: Any) -> None:
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 60, 30))
+
+        await canvas_form.handle_key(create_key_event(ADD_KNOB_HOTKEY_VALUE))
+
+        assert canvas_form._edit_temporary == [
+            (10, 20),
+            (60, 30),
+            (110, 20),
+            (210, 20),
+        ]
+        assert canvas_form._selected_knob_index == 1
+
+    @pytest.mark.asyncio
+    async def test_inserted_knob_is_placed_with_click(self, canvas_form: Any) -> None:
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 60, 30))
+        await canvas_form.handle_key(create_key_event(ADD_KNOB_HOTKEY_VALUE))
+
+        canvas_form.on_svg_pointer_move(svg_event(65, 35, knob_id(1)))
+        canvas_form.on_svg_pointer_down(svg_event(65, 35, knob_id(1)))
+        canvas_form.on_svg_pointer_up(svg_event(65, 35, knob_id(1)))
+
+        assert canvas_form._edit_coordinates == [
+            (10, 20),
+            (65, 35),
+            (110, 20),
+            (210, 20),
+        ]
+        assert canvas_form._selected_knob_index is None
+
+    @pytest.mark.asyncio
+    async def test_escape_after_insert_removes_new_knob(
+        self, canvas_form: Any, mock_viewmodel: Mock
+    ) -> None:
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 60, 30))
+        await canvas_form.handle_key(create_key_event(ADD_KNOB_HOTKEY_VALUE))
+
+        await canvas_form.handle_key(
+            create_key_event(CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE)
+        )
+
+        assert canvas_form._edit_temporary == ORIGINAL_COORDINATES
+        assert canvas_form._selected_knob_index is None
+        assert canvas_form._current_section is not None
+        mock_viewmodel.cancel_action.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_escape_without_selected_knob_cancels(
+        self, canvas_form: Any, mock_viewmodel: Mock
+    ) -> None:
+        await canvas_form.handle_key(
+            create_key_event(CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE)
+        )
+
+        mock_viewmodel.cancel_action.assert_called_once()
+        mock_viewmodel.update_section_coordinates.assert_not_called()
+        assert canvas_form._current_section is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "key", [DELETE_KNOB_HOTKEY_VALUE, DELETE_KNOB_ALTERNATIVE_HOTKEY_VALUE]
+    )
+    async def test_delete_removes_selected_knob(
+        self, canvas_form: Any, key: str
+    ) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(110, 20, knob_id(1)))
+        canvas_form.on_svg_pointer_up(svg_event(110, 20, knob_id(1)))
+
+        await canvas_form.handle_key(create_key_event(key))
+
+        assert canvas_form._edit_coordinates == [(10, 20), (210, 20)]
+        assert canvas_form._selected_knob_index is None
+
+    @pytest.mark.asyncio
+    async def test_delete_keeps_minimum_number_of_knobs(self, canvas_form: Any) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(110, 20, knob_id(1)))
+        canvas_form.on_svg_pointer_up(svg_event(110, 20, knob_id(1)))
+        await canvas_form.handle_key(create_key_event(DELETE_KNOB_HOTKEY_VALUE))
+        canvas_form.on_svg_pointer_down(svg_event(10, 20, knob_id(0)))
+        canvas_form.on_svg_pointer_up(svg_event(10, 20, knob_id(0)))
+
+        await canvas_form.handle_key(create_key_event(DELETE_KNOB_HOTKEY_VALUE))
+
+        assert canvas_form._edit_coordinates == [(10, 20), (210, 20)]
+
+    @pytest.mark.asyncio
+    async def test_arrow_keys_shift_selected_knob(self, canvas_form: Any) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(10, 20, knob_id(0)))
+        canvas_form.on_svg_pointer_up(svg_event(10, 20, knob_id(0)))
+
+        await canvas_form.handle_key(create_key_event(SHIFT_KNOB_FORWARD_HOTKEY_VALUE))
+
+        assert canvas_form._edit_temporary == [(110, 20), (10, 20), (210, 20)]
+        assert canvas_form._selected_knob_index == 1
+
+        await canvas_form.handle_key(create_key_event(SHIFT_KNOB_BACKWARD_HOTKEY_VALUE))
+
+        assert canvas_form._edit_temporary == ORIGINAL_COORDINATES
+        assert canvas_form._selected_knob_index == 0
+
+    @pytest.mark.asyncio
+    async def test_enter_saves_edited_coordinates(
+        self, canvas_form: Any, mock_viewmodel: Mock, mock_section: Mock
+    ) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(110, 20, knob_id(1)))
+        canvas_form.on_svg_pointer_move(svg_event(120, 50, knob_id(1)))
+        canvas_form.on_svg_pointer_up(svg_event(120, 50, knob_id(1)))
+
+        await canvas_form.handle_key(create_key_event(SAVE_SECTION_HOTKEY_VALUE))
+
+        mock_viewmodel.update_section_coordinates.assert_called_once_with(
+            mock_section.to_dict.return_value, [(10, 20), (120, 50), (210, 20)]
+        )
+        assert canvas_form._current_section is None
+
+    @pytest.mark.asyncio
+    async def test_right_click_saves_edited_coordinates(
+        self, canvas_form: Any, mock_viewmodel: Mock, mock_section: Mock
+    ) -> None:
+        await canvas_form.on_right_click()
+
+        mock_viewmodel.update_section_coordinates.assert_called_once_with(
+            mock_section.to_dict.return_value, ORIGINAL_COORDINATES
+        )
+
+    @pytest.mark.asyncio
+    async def test_save_area_closes_area(
+        self, mock_viewmodel: Mock, mock_resource_manager: Mock, area_section: Mock
+    ) -> None:
+        with patch(CANVAS_UI) as mock_ui:
+            canvas_form = setup_canvas_form_with_mocks(
+                mock_ui, mock_viewmodel, mock_resource_manager
+            )
+            canvas_form.start_section_geometry_editor(
+                area_section, is_area_section=True
+            )
+
+            await canvas_form.on_right_click()
+
+        mock_viewmodel.update_section_coordinates.assert_called_once_with(
+            area_section.to_dict.return_value, [(0, 0), (10, 0), (10, 10), (0, 0)]
+        )
+
+    def test_edit_knobs_are_drawn(self, canvas_form: Any) -> None:
+        content = canvas_form.mock_ui.interactive_image.return_value.content
+
+        for index in range(len(ORIGINAL_COORDINATES)):
+            assert f'id="{knob_id(index)}"' in content
+        assert EDIT_COLOR in content
