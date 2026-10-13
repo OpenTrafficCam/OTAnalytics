@@ -3,11 +3,14 @@ from functools import cached_property
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import DummyViewModel
 from OTAnalytics.adapter_ui.local_file_providers import (
+    LocalOrthophotoProvider,
     LocalTrackFileProvider,
     LocalVideoFileProvider,
 )
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.application.orthophoto import ProvideOrthophoto
+from OTAnalytics.application.state import OrthophotoImageSizeUpdater
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
@@ -20,6 +23,7 @@ from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideTrackFiles,
     ProvideVideoFiles,
 )
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.plugin_filter.pandas_track_id import PandasTrackIdProvider
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
@@ -32,6 +36,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def start(self) -> None:
         self.register_observers()
         self.start_ui()
+
+    def _redraw_for_orthophoto(self, _: Orthophoto | None) -> None:
+        self.track_image_updater.update_image()
 
     @abstractmethod
     def start_ui(self) -> None:
@@ -49,6 +56,13 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.track_view_state.selected_videos.register(
             self.track_image_updater.notify_video
         )
+        self.current_orthophoto.register(
+            OrthophotoImageSizeUpdater(
+                self.current_orthophoto_image.get, self.track_image_size_updater
+            ).notify
+        )
+        self.current_orthophoto.register(self._redraw_for_orthophoto)
+        self.current_orthophoto.register(self.view_model.notify_orthophoto)
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
         self.tracks_metadata._classifications.register(
@@ -154,11 +168,16 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             update_section_coordinates=self.update_section_coordinates,
             provide_track_files=self.provide_track_files,
             provide_video_files=self.provide_video_files,
+            current_orthophoto=self.current_orthophoto,
         )
 
     @cached_property
     def provide_track_files(self) -> ProvideTrackFiles:
         return LocalTrackFileProvider(self.ui_factory)
+
+    @cached_property
+    def provide_orthophoto(self) -> ProvideOrthophoto:
+        return LocalOrthophotoProvider(self.ui_factory)
 
     @cached_property
     def provide_video_files(self) -> ProvideVideoFiles:
@@ -206,6 +225,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.get_current_remark,
             self.update_count_plots,
             self.current_key_prefix,
+            self.add_video_files,
         )
 
     @cached_property

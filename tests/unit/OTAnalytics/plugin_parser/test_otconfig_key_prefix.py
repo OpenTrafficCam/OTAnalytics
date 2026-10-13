@@ -126,6 +126,7 @@ class TestParseKeyPrefix:
             file=tmp_path / "config.otconfig",
             remark=None,
             s3_key_prefix=S3KeyPrefix(A_PREFIX),
+            orthophoto=None,
         )
 
         assert target.parse_from_dict(written, tmp_path).s3_key_prefix == S3KeyPrefix(
@@ -150,6 +151,7 @@ class TestParseKeyPrefix:
             file=tmp_path / "config.otconfig",
             remark=None,
             s3_key_prefix=None,
+            orthophoto=None,
         )
 
         assert S3_KEY_PREFIX not in written

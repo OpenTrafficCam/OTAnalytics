@@ -87,6 +87,8 @@ def create_metadata_dict(parse_result: TrackParseResult) -> Dict[str, Any]:
         metadata[ottrk_format.GEOREFERENCE] = _serialize_georeference_metadata(
             georeference
         )
+    if (crs := parse_result.geo_coordinates_crs) is not None:
+        metadata[ottrk_format.GEO_COORDINATES] = {ottrk_format.CRS: crs}
     return metadata
 
 

@@ -17,6 +17,7 @@ from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.observer import VALUE, Subject
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.section import (
     SectionId,
     SectionListObserver,
@@ -279,6 +280,27 @@ class VideoImageSizeUpdater:
     def notify_videos(self, video: list[Video]) -> None:
         if video:
             image = video[0].get_frame(0)
+            self._updater.notify(image)
+
+
+class OrthophotoImageSizeUpdater:
+    """Sizes the canvas to the Orthophoto whenever the project's one changes."""
+
+    def __init__(
+        self,
+        orthophoto_image: Callable[[], TrackImage | None],
+        updater: TrackImageSizeUpdater,
+    ) -> None:
+        self._orthophoto_image = orthophoto_image
+        self._updater = updater
+
+    def notify(self, orthophoto: Orthophoto | None) -> None:
+        """Size the canvas to the Orthophoto's image, if there is one.
+
+        Args:
+            orthophoto (Orthophoto | None): the project's new Orthophoto.
+        """
+        if (image := self._orthophoto_image()) is not None:
             self._updater.notify(image)
 
 
@@ -810,3 +832,43 @@ class FileState:
 
     def reset(self) -> None:
         self.last_saved_config.set(None)
+
+
+class CurrentOrthophoto:
+    """The Orthophoto the loaded project shows behind its Geo-only Track Files.
+
+    Held like `CurrentKeyPrefix`: it arrives with the project, or is picked while
+    loading, and must not outlive the project it belongs to.
+    """
+
+    def __init__(self) -> None:
+        self._orthophoto = ObservableOptionalProperty[Orthophoto]()
+
+    def get(self) -> Orthophoto | None:
+        """The project's Orthophoto.
+
+        Returns:
+            Orthophoto | None: the Orthophoto, or None for a project without one.
+        """
+        return self._orthophoto.get()
+
+    def set(self, orthophoto: Orthophoto | None) -> None:
+        """Make `orthophoto` the project's and notify the observers.
+
+        Args:
+            orthophoto (Orthophoto | None): the new Orthophoto, or None for none.
+        """
+        self._orthophoto.set(orthophoto)
+
+    def register(self, observer: Callable[[Orthophoto | None], None]) -> None:
+        """Notify `observer` whenever the project's Orthophoto changes.
+
+        Args:
+            observer (Callable[[Orthophoto | None], None]): called with the new
+                Orthophoto.
+        """
+        self._orthophoto.register(observer)
+
+    def reset(self) -> None:
+        """Forget the Orthophoto, as for a new project, and notify the observers."""
+        self._orthophoto.set(None)

@@ -3,7 +3,12 @@ from pathlib import Path
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.config_parser import ConfigParser
-from OTAnalytics.application.state import ConfigurationFile, CurrentKeyPrefix, FileState
+from OTAnalytics.application.state import (
+    ConfigurationFile,
+    CurrentKeyPrefix,
+    CurrentOrthophoto,
+    FileState,
+)
 from OTAnalytics.application.upload_otconfig import UploadOtconfig
 from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
 
@@ -25,6 +30,7 @@ class SaveOtconfig:
         get_current_remark: GetCurrentRemark,
         current_key_prefix: CurrentKeyPrefix,
         otconfig_upload: UploadOtconfig,
+        current_orthophoto: CurrentOrthophoto,
     ) -> None:
         self._datastore = datastore
         self._config_parser = config_parser
@@ -32,6 +38,7 @@ class SaveOtconfig:
         self._get_current_remark = get_current_remark
         self._current_key_prefix = current_key_prefix
         self._otconfig_upload = otconfig_upload
+        self._current_orthophoto = current_orthophoto
 
     async def __call__(self, file: Path) -> None:
         project = self._datastore.project
@@ -54,6 +61,8 @@ class SaveOtconfig:
         # The same value reaches `convert` below. Passing it to only one of the
         # two would make every project report itself as permanently unsaved.
         s3_key_prefix = self._current_key_prefix.get()
+        # Read once for the same reason as the prefix.
+        orthophoto = self._current_orthophoto.get()
         logger().info(f"Saving otconfig to '{file}'")
         self._config_parser.serialize(
             project=project,
@@ -64,6 +73,7 @@ class SaveOtconfig:
             file=file,
             remark=remark,
             s3_key_prefix=s3_key_prefix,
+            orthophoto=orthophoto,
         )
         self._state.last_saved_config.set(
             ConfigurationFile(
@@ -77,6 +87,7 @@ class SaveOtconfig:
                     file,
                     remark,
                     s3_key_prefix,
+                    orthophoto,
                 ),
             )
         )

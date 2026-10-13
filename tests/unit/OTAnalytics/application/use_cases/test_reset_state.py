@@ -17,6 +17,7 @@ class TestResetState:
         action_state: Mock,
         file_state: Mock,
         current_key_prefix: Mock,
+        current_orthophoto: Mock,
     ) -> None:
         target = ResetState(
             videos_metadata,
@@ -28,6 +29,7 @@ class TestResetState:
             action_state,
             file_state,
             current_key_prefix,
+            current_orthophoto,
         )
 
         target.reset()
@@ -41,6 +43,7 @@ class TestResetState:
         action_state.reset.assert_called_once()
         file_state.reset.assert_called_once()
         current_key_prefix.reset.assert_called_once()
+        current_orthophoto.reset.assert_called_once()
 
 
 @pytest.fixture
@@ -90,4 +93,9 @@ def current_key_prefix() -> Mock:
 
     #Requirement https://openproject.platomo.de/wp/10322
     """
+    return Mock()
+
+
+@pytest.fixture
+def current_orthophoto() -> Mock:
     return Mock()

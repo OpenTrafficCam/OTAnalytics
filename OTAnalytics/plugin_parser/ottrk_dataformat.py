@@ -76,3 +76,6 @@ BIRDS_EYE_VIEW_WIDTH: str = "width"
 BIRDS_EYE_VIEW_HEIGHT: str = "height"
 BEV_PADDING: str = "padding"
 CRS: str = "crs"
+
+# CRS of per-detection geo coordinates, written by OTFusion without a georeference
+GEO_COORDINATES: str = "geo_coordinates"
