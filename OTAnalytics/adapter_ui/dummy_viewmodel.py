@@ -41,6 +41,7 @@ from OTAnalytics.adapter_ui.flow_adapter import (
 )
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.helpers import ensure_file_extension_is_present
+from OTAnalytics.adapter_ui.message_type import MessageType
 from OTAnalytics.adapter_ui.text_resources import (
     COLUMN_NAME,
     ColumnResource,
@@ -604,8 +605,10 @@ class DummyViewModel(
             self._application.add_videos(files=video_files)
         except OrthophotoError as cause:
             logger().warning(str(cause))
-            self._ui_factory.info_box(
-                message=str(cause), initial_position=self._get_window_position()
+            self._ui_factory.show_message(
+                message=str(cause),
+                initial_position=self._get_window_position(),
+                message_type=MessageType.ERROR,
             )
 
     def remove_videos(self) -> None:
@@ -712,9 +715,10 @@ class DummyViewModel(
 
     def __show_error(self, message: str) -> None:
         logger().warning(message)
-        self._ui_factory.info_box(
+        self._ui_factory.show_message(
             message=message,
             initial_position=self.treeview_sections.get_position(),
+            message_type=MessageType.ERROR,
         )
 
     async def load_otconfig(self) -> None:
@@ -733,16 +737,15 @@ class DummyViewModel(
         await self._load_otconfig(otconfig_file)
 
     async def _load_otconfig(self, otconfig_file: Path) -> None:
-        proceed = self._ui_factory.info_box(
+        confirmed = await self._ui_factory.ask_for_confirmation(
             message=(
                 "This will load a stored configuration from file. \n"
                 "All configured sections, flows and videos will be removed before "
                 "loading."
             ),
             initial_position=self._get_window_position(),
-            show_cancel=True,
         )
-        if proceed.canceled:
+        if not confirmed:
             return
         logger().info(f"{OTCONFIG_FILE_TYPE} file to load: {otconfig_file}")
         try:
@@ -786,26 +789,31 @@ class DummyViewModel(
             f"{MESSAGE_CONFIGURATION_FILES_SUBSTITUTED}"
             f"The files below were not found where the configuration says, so a "
             f"file of the same name next to the configuration was loaded "
-            f"instead. Check that this is the data you meant:\n{rebound}"
+            f"instead. Check that this is the data you meant:\n{rebound}",
+            MessageType.WARNING,
         )
 
     def _report_load_failure(self, reason: str) -> None:
-        self._tell_user(f"{MESSAGE_CONFIGURATION_NOT_LOADED}{reason}")
+        self._tell_user(
+            f"{MESSAGE_CONFIGURATION_NOT_LOADED}{reason}", MessageType.ERROR
+        )
 
-    def _tell_user(self, message: str) -> None:
+    def _tell_user(self, message: str, message_type: MessageType) -> None:
         """Log a message and show it if the ui can be reached.
 
         Reporting must never break what it reports on. Nicegui resolves the
         client through the slot stack and raises when that stack is empty, so
-        `info_box` fails whenever no browser is attached — during the startup
+        `show_message` fails whenever no browser is attached — during the startup
         preload of a `--config` file, for one. Left unguarded, reporting a
         substitution there would propagate out of the parse and stop the server
         from starting. The log is the guarantee; the box is best effort.
         """
         logger().warning(message)
         try:
-            self._ui_factory.info_box(
-                message=message, initial_position=self._get_window_position()
+            self._ui_factory.show_message(
+                message=message,
+                initial_position=self._get_window_position(),
+                message_type=message_type,
             )
         except Exception as cause:
             logger().exception(
@@ -924,8 +932,10 @@ class DummyViewModel(
             await self._application.add_tracks_of_files_async(track_files=track_files)
         except (OrthophotoError, IncompatibleGeoreferenceMetadataError) as cause:
             logger().warning(str(cause))
-            self._ui_factory.info_box(
-                message=str(cause), initial_position=self._get_window_position()
+            self._ui_factory.show_message(
+                message=str(cause),
+                initial_position=self._get_window_position(),
+                message_type=MessageType.ERROR,
             )
 
     async def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
@@ -943,26 +953,25 @@ class DummyViewModel(
         if not configuration_file.stem:
             return
         elif configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
-            self._load_otflow(configuration_file)
+            await self._load_otflow(configuration_file)
         elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
             await self._load_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to load has unknown file extension")
 
-    def _load_otflow(self, otflow_file: Path) -> None:
+    async def _load_otflow(self, otflow_file: Path) -> None:
         sections = self._application.get_all_sections()
         flows = self._application.get_all_flows()
         if sections or flows:
-            proceed = self._ui_factory.info_box(
+            confirmed = await self._ui_factory.ask_for_confirmation(
                 message=(
                     "This will load a stored otflow configuration from file. \n"
                     "All configured sections and flows will be removed before "
                     "loading."
                 ),
                 initial_position=self._get_window_position(),
-                show_cancel=True,
             )
-            if proceed.canceled:
+            if not confirmed:
                 return
         logger().info(f"otflow file to load: {otflow_file}")
         self._application.load_otflow(sections_file=Path(otflow_file))
@@ -1024,18 +1033,20 @@ class DummyViewModel(
             self._application.save_otflow(Path(otflow_file))
         except NoSectionsToSave:
             position = self.treeview_sections.get_position()
-            self._ui_factory.info_box(
+            self._ui_factory.show_message(
                 message="No sections to save, please add new sections first",
                 initial_position=position,
+                message_type=MessageType.WARNING,
             )
             return
         except Exception as e:
             position = self.treeview_sections.get_position()
             message = "Failed to save sections file.\nAn unexpected error occurred."
             logger().exception("Failed to save sections file", exc_info=e)
-            self._ui_factory.info_box(
+            self._ui_factory.show_message(
                 message=message,
                 initial_position=position,
+                message_type=MessageType.ERROR,
             )
             return
 
@@ -1128,8 +1139,10 @@ class DummyViewModel(
     async def edit_selected_section_metadata(self) -> None:
         if not (selected_section_ids := self.get_selected_section_ids()):
             position = self.treeview_sections.get_position()
-            self._ui_factory.info_box(
-                message="Please select a section to edit", initial_position=position
+            self._ui_factory.show_message(
+                message="Please select a section to edit",
+                initial_position=position,
+                message_type=MessageType.WARNING,
             )
             return
 
@@ -1177,9 +1190,10 @@ class DummyViewModel(
     async def remove_sections(self) -> None:
         if not (selected_section_ids := self.get_selected_section_ids()):
             position = self.treeview_sections.get_position()
-            self._ui_factory.info_box(
+            self._ui_factory.show_message(
                 message="Please select one or more sections to remove",
                 initial_position=position,
+                message_type=MessageType.WARNING,
             )
             return
 
@@ -1193,9 +1207,10 @@ class DummyViewModel(
                 for flow in self._application.flows_using_section(section_id):
                     message += flow.name + "\n"
                 position = self.treeview_sections.get_position()
-                self._ui_factory.info_box(
+                self._ui_factory.show_message(
                     message=message,
                     initial_position=position,
+                    message_type=MessageType.WARNING,
                 )
                 return
 
@@ -1328,9 +1343,10 @@ class DummyViewModel(
         position = self.treeview_flows.get_position()
         sections = list(self.get_all_sections())
         if len(sections) < 2:
-            self._ui_factory.info_box(
+            self._ui_factory.show_message(
                 message="To add a flow, at least two sections are needed",
                 initial_position=position,
+                message_type=MessageType.WARNING,
             )
             raise CancelAddFlow()
         section_ids = ColumnResources(
@@ -1352,9 +1368,10 @@ class DummyViewModel(
             new_entry_name = flow_data.name
             if (input_values is not None) and (new_entry_name == input_values.name):
                 break
-            self._ui_factory.info_box(
+            self._ui_factory.show_message(
                 message="To add a flow, a unique name is necessary",
                 initial_position=position,
+                message_type=MessageType.WARNING,
             )
             flow_data = flow_data.derive_name("")
             flow_data = await self.__get_flow_data(
@@ -1386,7 +1403,11 @@ class DummyViewModel(
             self._application.add_flow(flow)
         except FlowAlreadyExists as cause:
             position = self.treeview_flows.get_position()
-            self._ui_factory.info_box(message=str(cause), initial_position=position)
+            self._ui_factory.show_message(
+                message=str(cause),
+                initial_position=position,
+                message_type=MessageType.ERROR,
+            )
             raise CancelAddFlow()
 
     def _show_distance(self) -> bool:
@@ -1435,8 +1456,10 @@ class DummyViewModel(
                 await self._edit_flow(flows[0])
             else:
                 position = self.treeview_flows.get_position()
-                self._ui_factory.info_box(
-                    message="Please select a flow to edit", initial_position=position
+                self._ui_factory.show_message(
+                    message="Please select a flow to edit",
+                    initial_position=position,
+                    message_type=MessageType.WARNING,
                 )
 
     async def _edit_flow(self, flow: Flow) -> None:
@@ -1462,8 +1485,10 @@ class DummyViewModel(
                 self.refresh_items_on_canvas()
         else:
             position = self.treeview_flows.get_position()
-            self._ui_factory.info_box(
-                message="Please select a flow to remove", initial_position=position
+            self._ui_factory.show_message(
+                message="Please select a flow to remove",
+                initial_position=position,
+                message_type=MessageType.WARNING,
             )
 
     def create_events(self) -> None:
@@ -1694,13 +1719,14 @@ class DummyViewModel(
 
     async def export_counts(self) -> None:
         if len(self._application.get_all_flows()) == 0:
-            self._ui_factory.info_box(
+            self._ui_factory.show_message(
                 message=(
                     "Counting needs at least one flow.\n"
                     "There is no flow configurated.\n"
                     "Please create a flow."
                 ),
                 initial_position=self.get_position(),
+                message_type=MessageType.WARNING,
             )
             return
         export_formats: dict = {
@@ -1726,17 +1752,16 @@ class DummyViewModel(
         except CancelExportCounts:
             logger().info("User canceled configuration of export")
 
-    def start_new_project(self) -> None:
-        proceed = self._ui_factory.info_box(
+    async def start_new_project(self) -> None:
+        confirmed = await self._ui_factory.ask_for_confirmation(
             message=(
                 "This will start a new project. \n"
                 "All configured project settings, sections, flows, tracks, and videos "
                 "will be reset to the default application settings."
             ),
             initial_position=self._get_window_position(),
-            show_cancel=True,
         )
-        if proceed.canceled:
+        if not confirmed:
             return
         self._application.start_new_project()
         self.show_current_project()
@@ -1770,7 +1795,11 @@ class DummyViewModel(
         )
 
         logger().info(msg)
-        self._ui_factory.info_box(msg, window_position)
+        self._ui_factory.show_message(
+            message=msg,
+            initial_position=window_position,
+            message_type=MessageType.INFO,
+        )
 
     def set_remark_frame(self, frame: AbstractFrameRemark) -> None:
         self._frame_remarks = frame
@@ -1797,9 +1826,10 @@ class DummyViewModel(
 
     async def export_road_user_assignments(self) -> None:
         if len(self._application.get_all_flows()) == 0:
-            self._ui_factory.info_box(
+            self._ui_factory.show_message(
                 message=("There is no flow configured.\n" "Please create a flow."),
                 initial_position=self.get_position(),
+                message_type=MessageType.WARNING,
             )
             return
         export_formats: dict = {
@@ -1909,12 +1939,13 @@ class DummyViewModel(
 
     async def export_track_statistics(self) -> None:
         if self._application.get_track_repository_size() == 0:
-            self._ui_factory.info_box(
+            self._ui_factory.show_message(
                 message=(
                     "Calculating track statistics is impossible without tracks.\n"
                     "Please add tracks."
                 ),
                 initial_position=self.get_position(),
+                message_type=MessageType.WARNING,
             )
             return
         export_formats: dict = {

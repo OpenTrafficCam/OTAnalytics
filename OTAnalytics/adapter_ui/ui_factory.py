@@ -27,9 +27,7 @@ class UiFactory(ABC):
     """
 
     @abstractmethod
-    def info_box(
-        self, message: str, initial_position: tuple[int, int], show_cancel: bool = False
-    ) -> InfoBox:
+    def info_box(self, message: str, initial_position: tuple[int, int]) -> InfoBox:
         raise NotImplementedError
 
     def show_message(

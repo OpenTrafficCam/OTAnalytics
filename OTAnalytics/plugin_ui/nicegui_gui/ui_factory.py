@@ -122,9 +122,7 @@ class NiceGuiUiFactory(UiFactory):
         self._resource_manager = resource_manager
         self._base_directory = base_directory
 
-    def info_box(
-        self, message: str, initial_position: tuple[int, int], show_cancel: bool = False
-    ) -> InfoBox:
+    def info_box(self, message: str, initial_position: tuple[int, int]) -> InfoBox:
         self.show_message(
             message=message,
             initial_position=initial_position,
