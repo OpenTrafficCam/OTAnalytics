@@ -9,7 +9,8 @@ from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewI
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import FlowKeys, ResourceManager
 from OTAnalytics.application.state import FlowState
-from OTAnalytics.domain.flow import FLOW_NAME, Flow, FlowId
+from OTAnalytics.domain.event import EventRepositoryEvent
+from OTAnalytics.domain.flow import FLOW_NAME, Flow, FlowId, FlowListObserver
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
@@ -59,7 +60,7 @@ def map_to_ui(
     return list_of_flows
 
 
-class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
+class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObserver):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -138,6 +139,18 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
 
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
         pass
+
+    def notify_flows(self, flows: list[FlowId]) -> None:
+        """Refresh the table after flows changed.
+
+        Must be called after the road user assignments of the changed flows have
+        been cleared, so the number of assigned tracks is up to date.
+        """
+        self.update_items()
+
+    def notify_events(self, _: EventRepositoryEvent) -> None:
+        """Refresh the number of assigned tracks after events changed."""
+        self.update_items()
 
     def update_items(self) -> None:
         self._flow_table.update(

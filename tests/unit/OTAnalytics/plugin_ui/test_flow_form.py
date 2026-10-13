@@ -8,6 +8,7 @@ from nicegui.testing import User
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import FlowKeys, ResourceManager
 from OTAnalytics.application.state import FlowState
+from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
@@ -230,3 +231,26 @@ class TestFlowFormTrackCount:
 
         counts = [row[COLUMN_TRACKS_ASSIGNED] for row in flow_form._flow_table._rows]
         assert counts == [3, 0]
+
+    def test_notify_flows_refreshes_assigned_tracks(
+        self, flow_form: FlowForm, viewmodel: Mock
+    ) -> None:
+        viewmodel.get_tracks_assigned_to_each_flow.return_value = {FLOW_ID_1: 5}
+
+        flow_form.notify_flows([])
+
+        counts = [row[COLUMN_TRACKS_ASSIGNED] for row in flow_form._flow_table._rows]
+        assert counts == [5, 0]
+
+    def test_notify_events_refreshes_assigned_tracks(
+        self, flow_form: FlowForm, viewmodel: Mock
+    ) -> None:
+        viewmodel.get_tracks_assigned_to_each_flow.return_value = {
+            FLOW_ID_1: 1,
+            FLOW_ID_2: 9,
+        }
+
+        flow_form.notify_events(Mock(spec=EventRepositoryEvent))
+
+        counts = [row[COLUMN_TRACKS_ASSIGNED] for row in flow_form._flow_table._rows]
+        assert counts == [1, 9]
