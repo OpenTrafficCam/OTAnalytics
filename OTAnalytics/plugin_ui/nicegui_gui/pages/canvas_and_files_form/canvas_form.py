@@ -59,6 +59,7 @@ CONTEXT_MENU = "contextmenu.prevent"
 PASSIVE_MOUSE_EVENTS = [CLICK]
 EDITOR_MOUSE_EVENTS = [CLICK, MOUSE_MOVE, MOUSE_UP]
 EVENTS_PROP = "events"
+RELEASE_FOCUS = "document.activeElement?.blur()"
 NOTIFICATION_TYPE_WARNING: Final = "warning"
 POINTER_EVENT_ALL = "all"
 POINTER_EVENT_NONE = ""
@@ -379,6 +380,15 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._background_image._props[EVENTS_PROP] = list(events)
         self._background_image.update()
 
+    def _release_focus(self) -> None:
+        """Release the focus of the button that started the editor.
+
+        Key presses are ignored while a button has the focus. Releasing it enables
+        the hotkeys of the editor right away.
+        """
+        if self._background_image is not None:
+            self._background_image.client.run_javascript(RELEASE_FOCUS)
+
     async def __get_metadata(self) -> dict:
         title = self._resource_manager.get(
             CanvasKeys.LABEL_EDIT_SECTION
@@ -623,6 +633,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._edit_coordinates = open_area(coordinates, is_area_section)
         self._edit_temporary = list(self._edit_coordinates)
         self._update_mouse_events()
+        self._release_focus()
         self.draw_all()
 
     def draw_arrow(
@@ -671,6 +682,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_section_points = []
         self._preview_point = None
         self._update_mouse_events()
+        self._release_focus()
         self.draw_all()
 
     def get_position(self, offset: tuple[float, float] = (0.5, 0.5)) -> tuple[int, int]:

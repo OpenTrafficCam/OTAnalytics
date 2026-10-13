@@ -38,6 +38,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     MOUSE_MOVE,
     MOUSE_UP,
     NORMAL_COLOR,
+    RELEASE_FOCUS,
     SELECTED_COLOR,
     CanvasForm,
     circle_to_coordinates,
@@ -1049,6 +1050,21 @@ class TestCanvasFormSectionBuilder:
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
     )
+    def test_start_section_builder_releases_focus_for_hotkeys(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+
+        canvas_form.start_section_builder()
+
+        background_image = mock_ui.interactive_image.return_value
+        background_image.client.run_javascript.assert_called_once_with(RELEASE_FOCUS)
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
     def test_mouse_move_draws_preview_line_from_last_point(
         self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
     ) -> None:
@@ -1313,6 +1329,10 @@ class TestCanvasFormSectionGeometryEditor:
             Coordinate(0, 0),
         ]
         return mock_section
+
+    def test_start_editor_releases_focus_for_hotkeys(self, canvas_form: Any) -> None:
+        background_image = canvas_form.mock_ui.interactive_image.return_value
+        background_image.client.run_javascript.assert_called_with(RELEASE_FOCUS)
 
     def test_start_editor_loads_coordinates(self, canvas_form: Any) -> None:
         assert canvas_form._edit_coordinates == ORIGINAL_COORDINATES
