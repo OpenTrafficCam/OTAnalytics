@@ -25,6 +25,7 @@ from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polygon import Polygon
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     CLICK,
@@ -36,6 +37,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     IMAGE_Y,
     MOUSE_MOVE,
     MOUSE_UP,
+    NORMAL_COLOR,
     SELECTED_COLOR,
     CanvasForm,
     circle_to_coordinates,
@@ -1557,3 +1559,168 @@ class TestCanvasFormSectionGeometryEditor:
         for index in range(len(ORIGINAL_COORDINATES)):
             assert f'id="{knob_id(index)}"' in content
         assert EDIT_COLOR in content
+
+
+class TestCanvasFormPresentation:
+    """Presentation of sections and flows (reference: SectionPainter, ArrowPainter)."""
+
+    @pytest.fixture
+    def canvas_form(
+        self, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> Iterator[Any]:
+        with patch(CANVAS_UI) as mock_ui:
+            canvas_form = setup_canvas_form_with_mocks(
+                mock_ui,
+                mock_viewmodel,
+                mock_resource_manager,
+                hotkey_side_effect=hotkeys_by_default,
+            )
+            canvas_form.mock_ui = mock_ui  # type: ignore[attr-defined]
+            yield canvas_form
+
+    def content(self, canvas_form: Any) -> str:
+        return canvas_form.mock_ui.interactive_image.return_value.content
+
+    def test_area_section_is_drawn_as_filled_polygon(self, canvas_form: Any) -> None:
+        canvas_form.draw_section(
+            id="area",
+            coordinates=[(0, 0), (10, 0), (10, 10), (0, 0)],
+            is_selected_section=False,
+            is_area_section=True,
+        )
+
+        shape = canvas_form._sections.lines["area"]
+        assert isinstance(shape, Polygon)
+        assert shape.points == [(0, 0), (10, 0), (10, 10)]
+        assert 0 < shape.fill_opacity < 1
+        assert len(canvas_form._circles.by_section["area"]) == 3
+        assert "<polygon" in self.content(canvas_form)
+
+    def test_line_section_is_drawn_as_polyline(self, canvas_form: Any) -> None:
+        canvas_form.draw_section(
+            id="line", coordinates=[(0, 0), (10, 0)], is_selected_section=False
+        )
+
+        assert isinstance(canvas_form._sections.lines["line"], Polyline)
+
+    def test_section_name_is_drawn(self, canvas_form: Any) -> None:
+        canvas_form.draw_section(
+            id="line",
+            coordinates=[(5, 30), (10, 0)],
+            is_selected_section=False,
+            text="North",
+        )
+
+        content = self.content(canvas_form)
+        assert ">North</text>" in content
+        assert 'x="5"' in content
+
+    def test_section_without_name_has_no_text(self, canvas_form: Any) -> None:
+        canvas_form.draw_section(
+            id="line", coordinates=[(0, 0), (10, 0)], is_selected_section=False
+        )
+
+        assert "<text" not in self.content(canvas_form)
+
+    def test_section_texts_are_removed_with_sections(self, canvas_form: Any) -> None:
+        canvas_form.draw_section(
+            id="line",
+            coordinates=[(0, 0), (10, 0)],
+            is_selected_section=False,
+            text="North",
+        )
+
+        canvas_form.delete_element("line_section")
+        canvas_form.draw_all()
+
+        assert "North" not in self.content(canvas_form)
+
+    def test_new_area_section_is_drawn_as_polygon(self, canvas_form: Any) -> None:
+        canvas_form.start_section_builder(is_area_section=True)
+        for x, y in [(0, 0), (10, 0)]:
+            canvas_form.on_mouse(create_mouse_event(CLICK, x, y))
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 10, 10))
+
+        assert 'points="0,0 10,0 10,10"' in self.content(canvas_form)
+        assert "<polygon" in self.content(canvas_form)
+
+    def test_draw_arrow_uses_arrow_style(self, canvas_form: Any) -> None:
+        start_section, end_section, start_calculator, end_calculator = arrow_mocks()
+
+        canvas_form.draw_arrow(
+            start_section=start_section,
+            end_section=end_section,
+            start_refpt_calculator=start_calculator,
+            end_refpt_calculator=end_calculator,
+            arrow_style={"fill": "#8CFFC2", "width": 4, "dash": (5, 5)},
+        )
+
+        arrow = canvas_form._flows.lines["arrow-start-section-end-section"]
+        assert arrow.color == "#8CFFC2"
+        assert arrow.width == 4
+        assert arrow.dash == (5, 5)
+        assert 'stroke="#8CFFC2"' in self.content(canvas_form)
+
+    def test_draw_arrow_without_style_uses_default(self, canvas_form: Any) -> None:
+        start_section, end_section, start_calculator, end_calculator = arrow_mocks()
+
+        canvas_form.draw_arrow(
+            start_section=start_section,
+            end_section=end_section,
+            start_refpt_calculator=start_calculator,
+            end_refpt_calculator=end_calculator,
+        )
+
+        arrow = canvas_form._flows.lines["arrow-start-section-end-section"]
+        assert arrow.color == NORMAL_COLOR
+
+    def test_disabled_canvas_ignores_editor_input(
+        self, canvas_form: Any, mock_section: Mock
+    ) -> None:
+        canvas_form.start_section_builder()
+        canvas_form.disable()
+
+        canvas_form.on_mouse(create_mouse_event(CLICK, 10, 20))
+
+        assert canvas_form._new_section_points == []
+
+        canvas_form.enable()
+        canvas_form.on_mouse(create_mouse_event(CLICK, 10, 20))
+
+        assert len(canvas_form._new_section_points) == 1
+
+    @pytest.mark.asyncio
+    async def test_disabled_canvas_ignores_keys_and_right_click(
+        self, canvas_form: Any, mock_viewmodel: Mock, mock_section: Mock
+    ) -> None:
+        canvas_form.start_section_geometry_editor(mock_section)
+        canvas_form.disable()
+
+        await canvas_form.handle_key(create_key_event(SAVE_SECTION_HOTKEY_VALUE))
+        await canvas_form.on_right_click()
+        canvas_form.on_svg_pointer_down(svg_event(110, 20, knob_id(1)))
+
+        mock_viewmodel.update_section_coordinates.assert_not_called()
+        assert canvas_form._selected_knob_index is None
+
+    def test_editor_started_by_running_action_is_enabled(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.disable()
+        canvas_form.start_section_builder()
+
+        canvas_form.on_mouse(create_mouse_event(CLICK, 10, 20))
+
+        assert len(canvas_form._new_section_points) == 1
+
+
+def arrow_mocks() -> tuple[Mock, Mock, Mock, Mock]:
+    start_section = Mock()
+    start_section.id = "start-section"
+    end_section = Mock()
+    end_section.id = "end-section"
+    start_calculator = Mock()
+    start_calculator.get_reference_point.return_value = (100, 200)
+    end_calculator = Mock()
+    end_calculator.get_reference_point.return_value = (300, 400)
+    return start_section, end_section, start_calculator, end_calculator

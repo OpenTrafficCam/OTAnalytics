@@ -17,16 +17,18 @@ from OTAnalytics.application.resources.resource_manager import (
 )
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.arrow import Arrow
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle_resources import (
     CircleResources,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line_resources import LineResources
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polygon import Polygon
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.text import Text
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geometry import (  # noqa
     Point,
     close_area,
@@ -72,10 +74,26 @@ KNOB_RADIUS = 6
 HIGHLIGHTED_KNOB_RADIUS = 8
 HIGHLIGHTED_KNOB_STROKE_WIDTH = 3
 KNOB_CATCH_RADIUS = 15
+SECTION_TEXT_OFFSET_Y = -12
+
+# Keys of the arrow style, named like the options of the customtkinter canvas
+ARROW_STYLE_COLOR = "fill"
+ARROW_STYLE_WIDTH = "width"
+ARROW_STYLE_DASH = "dash"
+DEFAULT_ARROW_STYLE: dict = {ARROW_STYLE_COLOR: NORMAL_COLOR, ARROW_STYLE_WIDTH: 2}
 
 
 def circle_to_coordinates(circles: Iterable[Circle]) -> list[tuple[int, int]]:
     return [circle.to_tuple() for circle in circles]
+
+
+def create_section_shape(
+    id: str, coordinates: list[Point], color: str, is_area_section: bool
+) -> Polyline | Polygon:
+    """Area sections are drawn closed and filled, line sections as polyline."""
+    if is_area_section:
+        return Polygon(id=id, points=open_area(coordinates, True), color=color)
+    return Polyline(id=id, points=coordinates, color=color)
 
 
 def to_point(x: float, y: float) -> Point:
@@ -152,6 +170,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._drop_on_release = False
         self._knob_moved = False
         self._mouse_position: Point | None = None
+        self._enabled = True
         self.add_preview_image()
         self._new_section_points: list[Circle] = []
         self._preview_point: Point | None = None
@@ -193,6 +212,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def _is_editor_active(self) -> bool:
         return self._new_section or self._current_section is not None
 
+    def _accepts_input(self) -> bool:
+        return self._enabled and self._is_editor_active()
+
     def _is_hotkey(self, e: KeyEventArguments, hotkey: HotKeys) -> bool:
         return e.key == self._resource_manager.get_hotkey(hotkey)
 
@@ -202,7 +224,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         This prevents key presses in other parts of the page from being handled by
         the canvas.
         """
-        if not self._is_editor_active() or not e.action.keydown:
+        if not self._accepts_input() or not e.action.keydown:
             return
         if self._is_hotkey(e, HotKeys.SAVE_SECTION_HOTKEY):
             await self._finish_editor()
@@ -280,7 +302,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     async def on_right_click(self, _: Any = None) -> None:
         """Finish the active editor like the save hotkey does."""
-        if self._is_editor_active():
+        if self._accepts_input():
             await self._finish_editor()
 
     async def _finish_editor(self) -> None:
@@ -382,10 +404,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if coordinates and self._preview_point:
             coordinates.append(self._preview_point)
         if len(coordinates) >= 2:
-            if self._new_area_section:
-                coordinates = close_area(coordinates, is_area_section=True)
-            line = Polyline(id=NEW_SECTION_ID, points=coordinates, color=EDIT_COLOR)
-            self._background_image.content += line.to_svg()
+            shape = create_section_shape(
+                NEW_SECTION_ID, coordinates, EDIT_COLOR, self._new_area_section
+            )
+            self._background_image.content += shape.to_svg()
         for point in self._new_section_points:
             self._background_image.content += point.to_svg()
 
@@ -393,10 +415,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._current_section is None:
             return ""
         section_id = f"{self._current_section.id.id}-edit"
-        svg = Polyline(
-            id=section_id,
-            points=close_area(self._edit_temporary, self._edit_is_area_section),
-            color=EDIT_COLOR,
+        svg = create_section_shape(
+            section_id, self._edit_temporary, EDIT_COLOR, self._edit_is_area_section
         ).to_svg()
         for index, point in enumerate(self._edit_temporary):
             knob = create_knob(
@@ -410,6 +430,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def on_mouse(self, e: events.MouseEventArguments) -> None:
         """Dispatch mouse events of the interactive image."""
+        if not self._accepts_input():
+            return
         point = to_point(e.image_x, e.image_y)
         if e.type == MOUSE_MOVE:
             self._on_move(point)
@@ -487,7 +509,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def on_svg_pointer_down(self, e: dict) -> None:
         """Select a knob of the edited section or pick up the selected knob."""
-        if self._current_section is None:
+        if self._current_section is None or not self._enabled:
             return
         point = svg_event_to_point(e)
         self._mouse_position = point
@@ -508,10 +530,12 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self.draw_all()
 
     def on_svg_pointer_move(self, e: dict) -> None:
-        self._on_move(svg_event_to_point(e))
+        if self._accepts_input():
+            self._on_move(svg_event_to_point(e))
 
     def on_svg_pointer_up(self, e: dict) -> None:
-        self._on_release(svg_event_to_point(e))
+        if self._accepts_input():
+            self._on_release(svg_event_to_point(e))
 
     def update_background(self, image: TrackImage) -> None:
         self._current_image = image.as_image()
@@ -547,7 +571,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if is_selected_section:
             color = SELECTED_COLOR
             pointer_event = POINTER_EVENT_ALL
-        for index, coordinate in enumerate(coordinates):
+        knobs = open_area(coordinates, is_area_section)
+        for index, coordinate in enumerate(knobs):
             x = coordinate[0]
             y = coordinate[1]
             list_of_circle.append(
@@ -561,8 +586,21 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             )
         for circle in list_of_circle:
             self._circles.add(id, circle)
-        polyline = Polyline(id, coordinates, color=color)
-        self._sections.add(id, polyline)
+        self._sections.add(
+            id, create_section_shape(id, coordinates, color, is_area_section)
+        )
+        if text is not None and coordinates:
+            x, y = coordinates[0]
+            self._sections.add_text(
+                id,
+                Text(
+                    id=f"{id}-text",
+                    x=x,
+                    y=y + SECTION_TEXT_OFFSET_Y,
+                    text=text,
+                    color=color,
+                ),
+            )
         self.draw_all()
 
     def start_section_geometry_editor(
@@ -575,6 +613,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_section_points = []
         self._preview_point = None
         self._reset_geometry_editor()
+        self._enabled = True
         self._current_section = section
         self._edit_is_area_section = is_area_section
         coordinates = [
@@ -597,15 +636,19 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     ) -> None:
         start_x, start_y = start_refpt_calculator.get_reference_point(start_section)
         end_x, end_y = end_refpt_calculator.get_reference_point(end_section)
-        new_line = Line(
+        style = {**DEFAULT_ARROW_STYLE, **(arrow_style or {})}
+        dash = style.get(ARROW_STYLE_DASH)
+        arrow = Arrow(
             id=f"arrow-{start_section.id}-{end_section.id}",
             x1=int(start_x),
             x2=int(end_x),
             y1=int(start_y),
             y2=int(end_y),
-            stroke=NORMAL_COLOR,
+            color=style[ARROW_STYLE_COLOR],
+            width=style[ARROW_STYLE_WIDTH],
+            dash=tuple(dash) if dash else None,
         )
-        self._flows.add(new_line)
+        self._flows.add(arrow)
         self.draw_all()
 
     def delete_element(self, tag_or_id: str) -> None:
@@ -620,6 +663,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         is_area_section: bool = False,
         section: Optional[Section] = None,
     ) -> None:
+        self._enabled = True
         self._current_section = None
         self._reset_geometry_editor()
         self._new_section = True
@@ -636,10 +680,15 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         pass
 
     def disable(self) -> None:
-        pass
+        """Ignore canvas input while an action is running.
+
+        An editor started by the running action enables the canvas again, because
+        the editor is part of this action.
+        """
+        self._enabled = False
 
     def enable(self) -> None:
-        pass
+        self._enabled = True
 
     def update_items(self) -> None:
         pass
