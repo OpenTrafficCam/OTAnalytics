@@ -204,26 +204,31 @@ class TestRoadUserAssignmentBuilder:
 class TestComputeRoadUserAssignmentFlowMetrics:
     def test_no_distance_leaves_speed_none(self) -> None:
         t0 = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        t1 = t0 + timedelta(seconds=2)
+        time_in_seconds = 2
+        t1 = t0 + timedelta(seconds=time_in_seconds)
         d, dt, v = compute_road_user_assignment_flow_metrics(None, t0, t1)
         assert d is None
-        assert dt == 2.0
+        assert dt == time_in_seconds
         assert v is None
 
     def test_distance_and_positive_time_gives_speed(self) -> None:
         t0 = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        t1 = t0 + timedelta(seconds=4)
-        d, dt, v = compute_road_user_assignment_flow_metrics(8.0, t0, t1)
-        assert d == 8.0
-        assert dt == 4.0
+        time_in_seconds = 4
+        t1 = t0 + timedelta(seconds=time_in_seconds)
+        distance_in_meter = 8.0
+        d, dt, v = compute_road_user_assignment_flow_metrics(distance_in_meter, t0, t1)
+        assert d == distance_in_meter
+        assert dt == time_in_seconds
         assert v == 2.0
 
     def test_zero_distance_with_positive_time_gives_zero_speed(self) -> None:
         t0 = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        t1 = t0 + timedelta(seconds=2)
-        d, dt, v = compute_road_user_assignment_flow_metrics(0.0, t0, t1)
-        assert d == 0.0
-        assert dt == 2.0
+        time_in_seconds = 2
+        t1 = t0 + timedelta(seconds=time_in_seconds)
+        distance_in_meter = 0.0
+        d, dt, v = compute_road_user_assignment_flow_metrics(distance_in_meter, t0, t1)
+        assert d == distance_in_meter
+        assert dt == time_in_seconds
         assert v == 0.0
 
 
