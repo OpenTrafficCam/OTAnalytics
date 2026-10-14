@@ -1,4 +1,5 @@
 import shutil
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
@@ -20,6 +21,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
+from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ExportConfig,
@@ -30,6 +32,7 @@ from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_parser.json_parser import parse_json
@@ -44,8 +47,10 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     EXPORT,
     LOGFILE,
     NUM_PROCESSES,
+    ORTHOPHOTO,
     PATH,
     PROJECT,
+    S3_KEY_PREFIX,
     SAVE_NAME,
     SAVE_SUFFIX,
     TRACKS,
@@ -130,6 +135,8 @@ class TestOtConfigParser:
             flows=flows,
             file=output,
             remark=remark,
+            s3_key_prefix=None,
+            orthophoto=None,
         )
 
         serialized_content = parse_json(output)
@@ -144,6 +151,106 @@ class TestOtConfigParser:
             call(videos, relative_to=test_data_tmp_dir)
         ]
         assert flow_parser.convert.call_args_list == [call(sections, flows)]
+
+    def test_serialize_config_omits_file_references_in_s3_mode(
+        self, test_data_tmp_dir: Path, do_nothing_fixer: OtConfigFormatFixer
+    ) -> None:
+        """Data is picked per session by time range, so a project's own file
+        references have no reader in s3 mode. Recording paths into
+        `user_source` would only leave stale references after the startup
+        wipe. See OP#10323's decision log.
+
+        #Requirement https://openproject.platomo.de/wp/10323
+        """
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+            format_fixer=do_nothing_fixer,
+        )
+        project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
+        videos: list[Video] = [Mock(spec=Video)]
+        track_files: list[Path] = [test_data_tmp_dir / "a.ottrk"]
+        sections: list[Section] = []
+        flows: list[Flow] = []
+        output = test_data_tmp_dir / "config.otconfig"
+        prefix = S3KeyPrefix("project-1/site-2/otcamera19")
+        serialized_videos: dict = {video.VIDEOS: []}
+        serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
+
+        video_parser.convert.return_value = serialized_videos
+        flow_parser.convert.return_value = serialized_sections
+
+        config_parser.serialize(
+            project=project,
+            video_files=videos,
+            track_files=track_files,
+            sections=sections,
+            flows=flows,
+            file=output,
+            remark=None,
+            s3_key_prefix=prefix,
+            orthophoto=None,
+        )
+
+        serialized_content = parse_json(output)
+        assert serialized_content[S3_KEY_PREFIX] == prefix.value
+        assert serialized_content[ANALYSIS][TRACKS] == []
+        assert video_parser.convert.call_args_list == [
+            call([], relative_to=test_data_tmp_dir)
+        ]
+
+    def test_convert_agrees_across_calls_in_s3_mode_despite_live_repo_drift(
+        self, test_data_tmp_dir: Path, do_nothing_fixer: OtConfigFormatFixer
+    ) -> None:
+        """`SaveOtconfig` and `OtconfigHasChanged` both call `convert` with
+        whatever the live repositories hold right now, which can differ
+        between the save call and a later dirty-check call. If the omission
+        depended on that repository content, s3 projects could drift between
+        the two calls and report themselves as permanently unsaved. Putting
+        the omission inside `convert`, keyed only on `s3_key_prefix`, makes
+        both calls agree regardless. See decision 4 in OP#10323.
+
+        #Requirement https://openproject.platomo.de/wp/10323
+        """
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+            format_fixer=do_nothing_fixer,
+        )
+        video_parser.convert.return_value = {video.VIDEOS: []}
+        flow_parser.convert.return_value = {section.SECTIONS: {}}
+        project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
+        output = test_data_tmp_dir / "config.otconfig"
+        prefix = S3KeyPrefix("project-1/site-2/otcamera19")
+
+        at_save_time = config_parser.convert(
+            project,
+            [Mock(spec=Video)],
+            [test_data_tmp_dir / "a.ottrk"],
+            [],
+            [],
+            output,
+            None,
+            prefix,
+            None,
+        )
+        at_dirty_check_time = config_parser.convert(
+            project,
+            [Mock(spec=Video), Mock(spec=Video)],
+            [test_data_tmp_dir / "a.ottrk", test_data_tmp_dir / "b.ottrk"],
+            [],
+            [],
+            output,
+            None,
+            prefix,
+            None,
+        )
+
+        assert at_save_time == at_dirty_check_time
 
     @patch("OTAnalytics.plugin_parser.otconfig_parser.OtConfigParser.serialize")
     def test_serialize_from_config(
@@ -162,6 +269,8 @@ class TestOtConfigParser:
             mock_otconfig.flows,
             save_path,
             mock_otconfig.remark,
+            mock_otconfig.s3_key_prefix,
+            None,
         )
 
     def test_parse_config(
@@ -313,12 +422,12 @@ class TestFixMissingAnalysis:
         logfile = "logfile.log"
         debug = True
         event_formats = ["csv", "xlsx"]
-        save_name = "my_name"
+        save_stem = "my_name"
         save_suffix = "my_suffix"
         count_intervals = [2, 3, 4]
         export = {
             EVENT_FORMATS: event_formats,
-            SAVE_NAME: save_name,
+            SAVE_NAME: save_stem,
             SAVE_SUFFIX: save_suffix,
             COUNT_INTERVALS: count_intervals,
             COUNTING_EVENT: CountingEvent.START.value,
@@ -343,7 +452,7 @@ class TestFixMissingAnalysis:
         type(value_provider).do_counting = PropertyMock(return_value=do_counting)
         type(value_provider).track_files = PropertyMock(return_value=track_files)
         type(value_provider).event_formats = PropertyMock(return_value=event_formats)
-        type(value_provider).save_name = PropertyMock(return_value=save_name)
+        type(value_provider).save_stem = PropertyMock(return_value=save_stem)
         type(value_provider).save_suffix = PropertyMock(return_value=save_suffix)
         type(value_provider).count_intervals = PropertyMock(
             return_value=count_intervals
@@ -361,3 +470,93 @@ class TestFixMissingAnalysis:
         fixed_content = fixer.fix(original_content)
 
         assert fixed_content == expected_content
+
+
+def do_nothing_fixer_instance() -> Mock:
+    fixer = Mock(spec=OtConfigFormatFixer)
+    fixer.fix.side_effect = do_nothing
+    return fixer
+
+
+@dataclass
+class GivenOrthophotoConfig:
+    config_parser: OtConfigParser
+    output: Path
+
+
+def create_given_orthophoto_config(test_data_tmp_dir: Path) -> GivenOrthophotoConfig:
+    video_parser = Mock(spec=VideoParser)
+    video_parser.convert.return_value = {video.VIDEOS: []}
+    flow_parser = Mock(spec=FlowParser)
+    flow_parser.convert.return_value = {section.SECTIONS: [], flow.FLOWS: []}
+    flow_parser.parse_content.return_value = ([], [])
+    return GivenOrthophotoConfig(
+        config_parser=OtConfigParser(
+            format_fixer=do_nothing_fixer_instance(),
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+        ),
+        output=test_data_tmp_dir / "site" / "project.otconfig",
+    )
+
+
+def convert_with(
+    given: GivenOrthophotoConfig,
+    orthophoto: Orthophoto | None,
+    s3_key_prefix: S3KeyPrefix | None = None,
+) -> dict:
+    return given.config_parser.convert(
+        Project(name="p", start_date=datetime(2026, 4, 22)),
+        [],
+        [],
+        [],
+        [],
+        given.output,
+        None,
+        s3_key_prefix,
+        orthophoto,
+    )
+
+
+class TestOtConfigParserOrthophoto:
+    def test_writes_orthophoto_relative_to_the_otconfig(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        orthophoto = Orthophoto(file=given.output.parent / "map2.tiff")
+
+        actual = convert_with(given, orthophoto)
+
+        assert actual[ORTHOPHOTO] == "map2.tiff"
+
+    def test_keeps_the_declared_reference_in_s3_mode(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        orthophoto = Orthophoto(
+            file=Path("/staging/projects/demo/site-1/map2.tiff"),
+            reference=Path("map2.tiff"),
+        )
+
+        actual = convert_with(given, orthophoto, S3KeyPrefix("projects/demo/site-1"))
+
+        assert actual[ORTHOPHOTO] == "map2.tiff"
+
+    def test_omits_orthophoto_when_there_is_none(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+
+        actual = convert_with(given, None)
+
+        assert ORTHOPHOTO not in actual
+
+    def test_parses_the_declared_reference(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, Orthophoto(file=given.output.parent / "map2.tiff"))
+
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        assert actual.orthophoto == Path("map2.tiff")

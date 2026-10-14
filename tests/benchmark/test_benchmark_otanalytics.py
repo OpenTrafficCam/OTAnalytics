@@ -14,9 +14,9 @@ from OTAnalytics.application.config import (
     CLI_CUTTING_SECTION_MARKER,
     CUTTING_SECTION_MARKER,
 )
-from OTAnalytics.application.datastore import DetectionMetadata, TrackParser
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.parser.cli_parser import CliMode
+from OTAnalytics.application.parser.track_parser import DetectionMetadata, TrackParser
 from OTAnalytics.application.run_configuration import RunConfiguration
 from OTAnalytics.application.use_cases.create_events import CreateEvents
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import (
@@ -222,7 +222,8 @@ class UseCaseProvider:
             ),
             interval_in_minutes=15,
             modes=list(self._detection_metadata.detection_classes),
-            output_file=f"{save_dir / self._otflow_file.with_suffix('.csv').name}",
+            export_directory=save_dir,
+            export_filename_stem=self._otflow_file.stem,
             output_format="CSV",
             export_mode=OVERWRITE,
         )

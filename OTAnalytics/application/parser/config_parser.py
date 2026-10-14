@@ -6,8 +6,10 @@ from typing import Iterable, Sequence
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
+from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
 
@@ -32,6 +34,20 @@ class AnalysisConfig:
 
 
 @dataclass(frozen=True)
+class SubstitutedFile:
+    """A reference an otconfig named, and the file loaded in its place.
+
+    The parser falls back to a same-named file beside the otconfig when a
+    reference does not resolve, which keeps a moved project openable. The two
+    files share a name but not necessarily their contents, so every
+    substitution has to be reported rather than merely logged.
+    """
+
+    requested: Path
+    used: Path
+
+
+@dataclass(frozen=True)
 class OtConfig:
     project: Project
     analysis: AnalysisConfig
@@ -39,6 +55,13 @@ class OtConfig:
     sections: Sequence[Section]
     flows: Sequence[Flow]
     remark: str | None
+    # Defaulted, and it has to stay that way: OTCloud rebuilds an OtConfig by
+    # keyword (plugin_video_validate/ui.py:165) and its keyword list cannot name
+    # this field until it bumps its OTAnalytics pin.
+    s3_key_prefix: S3KeyPrefix | None = None
+    # Defaulted for the same reason as `s3_key_prefix`. The path as the otconfig
+    # declares it, relative to the otconfig.
+    orthophoto: Path | None = None
 
 
 class ConfigParser(ABC):
@@ -84,6 +107,8 @@ class ConfigParser(ABC):
         flows: Iterable[Flow],
         file: Path,
         remark: str | None,
+        s3_key_prefix: S3KeyPrefix | None,
+        orthophoto: Orthophoto | None,
     ) -> None:
         """Serializes the project with the given videos, sections and flows into the
         file.
@@ -96,6 +121,10 @@ class ConfigParser(ABC):
             flows (Iterable[Flow]): flows to store
             file (Path): output file
             remark(str | None): comment on this file
+            s3_key_prefix(S3KeyPrefix | None): where this project's data lives,
+                or None when it lives on the local filesystem
+            orthophoto (Orthophoto | None): the project's Orthophoto, written
+                relative to the file, or None
 
         Raises:
             StartDateMissing: if start date is not configured
@@ -123,6 +152,8 @@ class ConfigParser(ABC):
         flows: Iterable[Flow],
         file: Path,
         remark: str | None,
+        s3_key_prefix: S3KeyPrefix | None,
+        orthophoto: Orthophoto | None,
     ) -> dict:
         """Converts the given information into a dictionary."""
         raise NotImplementedError

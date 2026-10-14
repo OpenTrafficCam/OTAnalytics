@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Iterable, Protocol
 
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportFormat
+from OTAnalytics.application.config import CONTEXT_FILE_TYPE_TRACK_STATISTICS
 from OTAnalytics.application.export_formats import track_statistics as ts
 from OTAnalytics.application.export_formats.export_mode import ExportMode
 from OTAnalytics.application.use_cases.track_statistics import (
@@ -40,30 +41,67 @@ class TrackStatisticsExportError(Exception):
     pass
 
 
+@dataclass(frozen=True)
+class TrackStatisticsExportSpecification:
+    export_directory: Path
+    export_filename_stem: str
+    format: str
+    export_mode: ExportMode
+
+
 class TrackStatisticsExporter(ABC):
+    CONTEXT_FILE_TYPE = CONTEXT_FILE_TYPE_TRACK_STATISTICS
+
     @property
     @abstractmethod
     def format(self) -> ExportFormat:
         raise NotImplementedError
 
+    @property
+    def _outputfile(self) -> Path:
+        return self._specification.export_directory / (
+            f"{self._specification.export_filename_stem}.{self.CONTEXT_FILE_TYPE}"
+            f"{self.format.file_extension}"
+        )
+
     def __init__(
         self,
         builder: TrackStatisticsBuilder,
-        output_file: Path,
+        specification: TrackStatisticsExportSpecification,
     ) -> None:
         self._builder = builder
-        self._outputfile = output_file
+        self._specification = specification
         self.reset_track_statistics()
 
     def export(
         self, track_statistics: TrackStatistics, export_mode: ExportMode
-    ) -> None:
-        self._preliminary_track_statistics += track_statistics
+    ) -> Path:
+        """Exports track statistics to an output file.
 
+        This function processes track statistics incrementally, combining them if
+        necessary, and writes the data to a file using a specified export mode. If the
+        export mode represents a final write operation, the statistics are converted
+        into the required data objects, serialized, and the tracking statistics are
+        reset. The output is returned as a file path.
+
+        Args:
+            track_statistics (TrackStatistics): The track statistics to be exported.
+                This parameter is a single unit of track-related data that will be
+                processed and added to any previously stored statistics.
+            export_mode (ExportMode): Specifies the mode of export. Determines whether
+                the current operation is part of an incremental process or a final
+                overall write operation.
+
+        Returns:
+            Path: The file path of the exported output file.
+        """
+        self._preliminary_track_statistics += track_statistics
+        output_file = self._outputfile
         if export_mode.is_final_write():
             dtos = self._convert(self._preliminary_track_statistics)
             self._serialize(dtos)
             self.reset_track_statistics()
+        return output_file
 
     @abstractmethod
     def _serialize(self, dtos: dict) -> None:
@@ -79,13 +117,6 @@ class TrackStatisticsExporter(ABC):
 
     def reset_track_statistics(self) -> None:
         self._preliminary_track_statistics = TrackStatistics()
-
-
-@dataclass(frozen=True)
-class TrackStatisticsExportSpecification:
-    save_path: Path
-    format: str
-    export_mode: ExportMode
 
 
 class TrackStatisticsExporterFactory(Protocol):
@@ -117,6 +148,8 @@ class TrackStatisticsExporterFactory(Protocol):
 class ExportTrackStatistics:
     """Use case to export track statistics"""
 
+    CONTEXT_FILE_TYPE = CONTEXT_FILE_TYPE_TRACK_STATISTICS
+
     def __init__(
         self,
         calculate_track_statistics: CalculateTrackStatistics,
@@ -125,10 +158,11 @@ class ExportTrackStatistics:
         self._calculate_track_statistics = calculate_track_statistics
         self._exporter_factory = exporter_factory
 
-    def export(self, specification: TrackStatisticsExportSpecification) -> None:
+    def export(self, specification: TrackStatisticsExportSpecification) -> Path:
         track_statistics = self._calculate_track_statistics.get_statistics()
         exporter = self._exporter_factory.create(specification)
-        exporter.export(track_statistics, specification.export_mode)
+        export_file = exporter.export(track_statistics, specification.export_mode)
+        return export_file
 
     def get_supported_formats(self) -> Iterable[ExportFormat]:
         """

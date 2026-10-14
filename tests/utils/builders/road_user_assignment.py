@@ -64,4 +64,8 @@ def create_road_user_assignment(
         ras.FLOW_DISTANCE_M: flow_distance_m,
         ras.TRAVEL_TIME_S: travel_time_s,
         ras.AVG_SPEED_MPS: avg_speed_mps,
+        ras.START_GEO_X: start_event.geo_x,
+        ras.START_GEO_Y: start_event.geo_y,
+        ras.END_GEO_X: end_event.geo_x,
+        ras.END_GEO_Y: end_event.geo_y,
     }

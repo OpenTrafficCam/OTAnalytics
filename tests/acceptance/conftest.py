@@ -10,6 +10,7 @@ import pytest
 import requests
 
 from OTAnalytics.plugin_ui.nicegui_application import DEFAULT_HOSTNAME, DEFAULT_PORT
+from tests.utils.app_environment import local_filesystem_environment
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
 # Centralized timeouts and settings used by Playwright-based acceptance tests
@@ -22,6 +23,12 @@ PLAYWRIGHT_VISIBLE_TIMEOUT_MS = 5000
 PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS = 1000
 # Short one-off UI settle wait (milliseconds)
 PLAYWRIGHT_SHORT_WAIT_MS = 150
+# Parsing track files runs off the event loop and may take a while on a cold
+# feather cache, so waiting it out needs far more headroom than the other ui waits
+TRACK_LOADING_TIMEOUT_MS = 120_000
+# Exports take seconds rather than milliseconds, and more of them on a busy
+# machine, so give them room instead of guessing a sleep
+EXPORT_TIMEOUT_MS = 120_000
 # Polling intervals (milliseconds)
 PLAYWRIGHT_POLL_INTERVAL_MS = 50
 PLAYWRIGHT_POLL_INTERVAL_SLOW_MS = 100
@@ -57,7 +64,11 @@ class NiceGUITestServer:
         self.base_url = f"http://{DEFAULT_HOSTNAME}:{port}"
 
     def start(self) -> None:
-        """Start NiceGUI server in subprocess."""
+        """Start NiceGUI server in subprocess.
+
+        The environment is stated rather than inherited, so a shell configured
+        for s3 work cannot start these local mode tests in s3 mode.
+        """
         self.process = subprocess.Popen(
             [
                 sys.executable,
@@ -67,6 +78,7 @@ class NiceGUITestServer:
                 "--file-picker-directory",
                 file_picker_directory(),
             ],
+            env=local_filesystem_environment(),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

@@ -40,7 +40,8 @@ def test_export_track_statistics(
     3. Verify popup appears for selecting output format
     4. Use default values
     5. Click "Ok"
-    6. Verify file is created in execution folder with name "track_statistics.csv"
+    6. Verify file is created in execution folder under the dialog-suggested
+       name (``<config_stem>.track_statistics.csv``)
     7. Compare the exported file with reference file from Desktop GUI
 
     Expected Results:

@@ -481,3 +481,6 @@ class SectionRepository:
         self._repository_content_observers.notify(
             SectionRepositoryEvent.create_removed(removed)
         )
+
+    def is_empty(self) -> bool:
+        return not self._sections

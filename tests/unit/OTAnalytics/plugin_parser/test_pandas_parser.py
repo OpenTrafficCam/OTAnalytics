@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from unittest.mock import Mock
 
 import pytest
@@ -119,3 +120,89 @@ class TestPandasDetectionParser:
         )
         assert actual.empty
         assert isinstance(actual, PandasTrackDataset)
+
+
+GEO_X_VALUE = 449245.82
+GEO_Y_VALUE = 5699325.96
+
+SAMPLE_METADATA_VIDEO = {
+    ottrk_dataformat.FILENAME: "cam",
+    ottrk_dataformat.FILETYPE: ".mp4",
+}
+
+
+@dataclass
+class GeoParserGiven:
+    detections_with_geo: list[dict]
+    detections_without_geo: list[dict]
+
+
+def _make_detection(frame: int, track_id: int, **extra: object) -> dict:
+    """Creates a detection dict with standard fields plus optional extras."""
+    return {
+        ottrk_dataformat.CLASS: "car",
+        ottrk_dataformat.CONFIDENCE: 0.9,
+        ottrk_dataformat.X: float(frame * 10),
+        ottrk_dataformat.Y: float(frame * 10),
+        ottrk_dataformat.W: 0.0,
+        ottrk_dataformat.H: 0.0,
+        ottrk_dataformat.FRAME: frame,
+        ottrk_dataformat.OCCURRENCE: float(1_700_000_000 + frame),
+        ottrk_dataformat.INTERPOLATED_DETECTION: False,
+        ottrk_dataformat.TRACK_ID: track_id,
+        **extra,
+    }
+
+
+def create_geo_parser_given() -> GeoParserGiven:
+    """Creates a GeoParserGiven with a parser and detection dicts with/without geo."""
+    detections_with_geo = [
+        _make_detection(
+            frame=i,
+            track_id=1,
+            **{
+                ottrk_dataformat.GEO_X: GEO_X_VALUE,
+                ottrk_dataformat.GEO_Y: GEO_Y_VALUE,
+            },
+        )
+        for i in range(1, 5)
+    ]
+    detections_without_geo = [_make_detection(frame=i, track_id=1) for i in range(1, 5)]
+    return GeoParserGiven(
+        detections_with_geo=detections_with_geo,
+        detections_without_geo=detections_without_geo,
+    )
+
+
+def create_target() -> PandasDetectionParser:
+    return PandasDetectionParser(
+        PandasByMaxConfidence(),
+        ShapelyTrackGeometryDataset.from_track_dataset,
+        track_length_limit=DEFAULT_TRACK_LENGTH_LIMIT,
+    )
+
+
+class TestPandasDetectionParserGeoCoordinates:
+    def test_geo_coordinates_mapped_when_present(self) -> None:
+        given = create_geo_parser_given()
+        target = create_target()
+        actual = target.parse_tracks(
+            given.detections_with_geo, SAMPLE_METADATA_VIDEO, "cam.ottrk"
+        )
+        tracks = actual.as_list()
+        assert len(tracks) == 1
+        first_detection = tracks[0].detections[0]
+        assert first_detection.geo_x == GEO_X_VALUE
+        assert first_detection.geo_y == GEO_Y_VALUE
+
+    def test_geo_coordinates_absent_when_not_in_source(self) -> None:
+        given = create_geo_parser_given()
+        target = create_target()
+        actual = target.parse_tracks(
+            given.detections_without_geo, SAMPLE_METADATA_VIDEO, "cam.ottrk"
+        )
+        tracks = actual.as_list()
+        assert len(tracks) == 1
+        first_detection = tracks[0].detections[0]
+        assert first_detection.geo_x is None
+        assert first_detection.geo_y is None

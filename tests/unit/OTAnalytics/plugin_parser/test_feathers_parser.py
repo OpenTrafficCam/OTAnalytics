@@ -2,18 +2,35 @@
 Tests for the FeathersParser module.
 """
 
+import json
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import Mock, patch
 
 import pandas as pd
 import polars
 import pytest
+from pytest import approx
 
-from OTAnalytics.application.datastore import DetectionMetadata, TrackParseResult
+import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics.application.orthophoto import ProvideOrthophotoGeoreference
+from OTAnalytics.application.parser.track_parser import (
+    DetectionMetadata,
+    TrackParseResult,
+)
 from OTAnalytics.domain import track
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
+from OTAnalytics.domain.orthophoto import (
+    MissingGeoCoordinatesCrs,
+    MixedTrackFiles,
+    OrthophotoRequired,
+)
+from OTAnalytics.domain.track_dataset.track_dataset import (
+    IncompatibleGeoreferenceMetadataError,
+)
 from OTAnalytics.domain.video import VideoMetadata
 from OTAnalytics.plugin_datastore.polars_track_store import PolarsTrackDataset
 from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
@@ -21,6 +38,51 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
 )
 from OTAnalytics.plugin_parser import ottrk_dataformat as ottrk
 from OTAnalytics.plugin_parser.feathers_parser import FeathersParser
+
+GEOREF_METADATA = GeoreferenceMetadata(
+    geo_min_x=449199.0,
+    geo_min_y=5699274.0,
+    geo_max_x=449294.0,
+    geo_max_y=5699370.0,
+    birds_eye_view_width=983,
+    birds_eye_view_height=983,
+    padding=20,
+    crs="EPSG:25833",
+)
+
+SAMPLE_GEOREFERENCE_METADATA_DICT = {
+    ottrk_format.GEO_BOUNDS: {
+        ottrk_format.GEO_BOUNDS_MIN_X: GEOREF_METADATA.geo_min_x,
+        ottrk_format.GEO_BOUNDS_MIN_Y: GEOREF_METADATA.geo_min_y,
+        ottrk_format.GEO_BOUNDS_MAX_X: GEOREF_METADATA.geo_max_x,
+        ottrk_format.GEO_BOUNDS_MAX_Y: GEOREF_METADATA.geo_max_y,
+    },
+    ottrk_format.BIRDS_EYE_VIEW_SIZE: {
+        ottrk_format.BIRDS_EYE_VIEW_WIDTH: GEOREF_METADATA.birds_eye_view_width,
+        ottrk_format.BIRDS_EYE_VIEW_HEIGHT: GEOREF_METADATA.birds_eye_view_height,
+    },
+    ottrk_format.BEV_PADDING: GEOREF_METADATA.padding,
+    ottrk_format.CRS: GEOREF_METADATA.crs,
+}
+
+SINGLE_ROW = {
+    track.CLASSIFICATION: "car",
+    track.CONFIDENCE: 0.9,
+    track.X: 100.0,
+    track.Y: 100.0,
+    track.W: 50.0,
+    track.H: 80.0,
+    track.FRAME: 1,
+    track.INTERPOLATED_DETECTION: False,
+    ottrk.FIRST: True,
+    ottrk.FINISHED: False,
+    track.VIDEO_NAME: "test.mp4",
+    track.INPUT_FILE: "test.ottrk",
+    track.ORIGINAL_TRACK_ID: "1",
+    track.TRACK_CLASSIFICATION: "car",
+    track.TRACK_ID: "1",
+    track.OCCURRENCE: datetime(2023, 1, 1, 10, 0, 0),
+}
 
 
 @pytest.fixture
@@ -263,13 +325,8 @@ class TestFeathersParser:
         assert result.detection_classes == frozenset()
 
     @patch("OTAnalytics.plugin_parser.feathers_parser.parse_json")
-    @patch(
-        "OTAnalytics.plugin_datastore.polars_track_store."
-        "PolarsTrackDataset.from_dataframe"
-    )
     def test_parse_files_with_different_column_order(
         self,
-        mock_from_dataframe: Mock,
         mock_parse_json: Mock,
         parser: FeathersParser,
         sample_metadata: dict[str, Any],
@@ -281,6 +338,7 @@ class TestFeathersParser:
         See: https://openproject.platomo.de/work_packages/9514
         """
 
+        row_two = {**SINGLE_ROW, track.TRACK_ID: "2", track.ORIGINAL_TRACK_ID: "2"}
         columns_order_a = [
             track.CLASSIFICATION,
             track.CONFIDENCE,
@@ -317,29 +375,10 @@ class TestFeathersParser:
             track.TRACK_ID,
             track.OCCURRENCE,
         ]
-        row = {
-            track.CLASSIFICATION: "car",
-            track.CONFIDENCE: 0.9,
-            track.X: 100.0,
-            track.Y: 100.0,
-            track.W: 50.0,
-            track.H: 80.0,
-            track.FRAME: 1,
-            track.INTERPOLATED_DETECTION: False,
-            ottrk.FIRST: True,
-            ottrk.FINISHED: False,
-            track.VIDEO_NAME: "test.mp4",
-            track.INPUT_FILE: "test.ottrk",
-            track.ORIGINAL_TRACK_ID: "1",
-            track.TRACK_CLASSIFICATION: "car",
-            track.TRACK_ID: "1",
-            track.OCCURRENCE: datetime(2023, 1, 1, 10, 0, 0),
-        }
-        df_a = polars.DataFrame(row).select(columns_order_a)
-        df_b = polars.DataFrame(row).select(columns_order_b)
+        df_a = polars.DataFrame(SINGLE_ROW).select(columns_order_a)
+        df_b = polars.DataFrame(row_two).select(columns_order_b)
 
         mock_parse_json.return_value = sample_metadata
-        mock_from_dataframe.return_value = Mock(spec=PolarsTrackDataset)
 
         tmpdir_path = test_data_tmp_dir
 
@@ -352,8 +391,448 @@ class TestFeathersParser:
             metadata_path = tmpdir_path / f"{stem}_metadata.json"
             metadata_path.write_text('{"test": "data"}')
 
-        parser.parse_files([file_a, file_b])
+        # Must not raise polars ShapeError when files have different column orders.
+        result = parser.parse_files([file_a, file_b])
 
-        concat_df = mock_from_dataframe.call_args[0][0]
-        assert concat_df.shape[0] == 2
-        assert set(concat_df.columns) == set(columns_order_a)
+        assert len(result.tracks) == 2
+
+    def test_parse_embeds_georeference_metadata_in_tracks(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_feathers_parser_with_georeference(test_data_tmp_dir)
+        target = create_target()
+
+        parse_result = target.parse(given.feather_files[0])
+
+        assert parse_result.tracks.georeference_metadata == given.expected_metadata
+
+    def test_parse_files_with_matching_metadata_carries_through(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_feathers_parser_with_georeference(
+            test_data_tmp_dir,
+            stems=("file_a", "file_b"),
+            metadata=GEOREF_METADATA,
+        )
+        target = create_target()
+
+        parse_result = target.parse_files(list(given.feather_files))
+
+        assert parse_result.tracks.georeference_metadata == given.expected_metadata
+
+    def test_parse_files_with_no_metadata_yields_none(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_feathers_parser_with_georeference(
+            test_data_tmp_dir,
+            stems=("no_geo",),
+            metadata=None,
+        )
+        target = create_target()
+
+        parse_result = target.parse_files(list(given.feather_files))
+
+        assert parse_result.tracks.georeference_metadata is None
+
+    def test_parse_files_raises_on_mismatched_georeference_metadata(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_feathers_parser_mismatched_georeference(
+            create_given_feathers_parser_mismatched_georeference(test_data_tmp_dir)
+        )
+        target = create_target()
+
+        with pytest.raises(IncompatibleGeoreferenceMetadataError):
+            target.parse_files(list(given.feather_files))
+
+
+@dataclass
+class GivenFeathersParserWithGeoreference:
+    feather_files: tuple[Path, ...]
+    expected_metadata: GeoreferenceMetadata | None
+
+
+def setup_default_feathers_parser_with_georeference(
+    test_data_tmp_dir: Path,
+    stems: tuple[str, ...] = ("georeferenced",),
+    metadata: GeoreferenceMetadata | None = GEOREF_METADATA,
+) -> GivenFeathersParserWithGeoreference:
+    sidecar: dict[str, Any] = {
+        "detection_metadata": {"detection_classes": ["car"]},
+        "video_metadata": {
+            "path": "test_video.mp4",
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
+            "recorded_fps": 30.0,
+            "number_of_frames": 900,
+        },
+    }
+    if metadata is not None:
+        sidecar[ottrk_format.GEOREFERENCE] = SAMPLE_GEOREFERENCE_METADATA_DICT
+
+    feather_paths: list[Path] = []
+    for stem in stems:
+        feather_path = test_data_tmp_dir / f"{stem}.feather"
+        polars.DataFrame(SINGLE_ROW).write_ipc(feather_path)
+        metadata_path = test_data_tmp_dir / f"{stem}_metadata.json"
+        metadata_path.write_text(json.dumps(sidecar))
+        feather_paths.append(feather_path)
+
+    return GivenFeathersParserWithGeoreference(
+        feather_files=tuple(feather_paths),
+        expected_metadata=metadata,
+    )
+
+
+def create_target() -> FeathersParser:
+    return FeathersParser()
+
+
+DIFFERENT_GEOREF_METADATA_DICT = {
+    ottrk_format.GEO_BOUNDS: {
+        ottrk_format.GEO_BOUNDS_MIN_X: 0.0,
+        ottrk_format.GEO_BOUNDS_MIN_Y: 0.0,
+        ottrk_format.GEO_BOUNDS_MAX_X: 1.0,
+        ottrk_format.GEO_BOUNDS_MAX_Y: 1.0,
+    },
+    ottrk_format.BIRDS_EYE_VIEW_SIZE: {
+        ottrk_format.BIRDS_EYE_VIEW_WIDTH: 100,
+        ottrk_format.BIRDS_EYE_VIEW_HEIGHT: 100,
+    },
+    ottrk_format.BEV_PADDING: 0,
+    ottrk_format.CRS: "EPSG:4326",
+}
+
+
+@dataclass
+class GivenFeathersParserMismatchedGeoreference:
+    feather_files: tuple[Path, ...]
+
+
+def create_given_feathers_parser_mismatched_georeference(
+    test_data_tmp_dir: Path,
+) -> GivenFeathersParserMismatchedGeoreference:
+    base_sidecar: dict[str, Any] = {
+        "detection_metadata": {"detection_classes": ["car"]},
+        "video_metadata": {
+            "path": "test_video.mp4",
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
+            "recorded_fps": 30.0,
+            "number_of_frames": 900,
+        },
+    }
+    sidecar_a = {
+        **base_sidecar,
+        ottrk_format.GEOREFERENCE: SAMPLE_GEOREFERENCE_METADATA_DICT,
+    }
+    sidecar_b = {
+        **base_sidecar,
+        ottrk_format.GEOREFERENCE: DIFFERENT_GEOREF_METADATA_DICT,
+    }
+
+    file_a = test_data_tmp_dir / "mismatch_a.feather"
+    file_b = test_data_tmp_dir / "mismatch_b.feather"
+    polars.DataFrame(SINGLE_ROW).write_ipc(file_a)
+    polars.DataFrame(SINGLE_ROW).write_ipc(file_b)
+    (test_data_tmp_dir / "mismatch_a_metadata.json").write_text(json.dumps(sidecar_a))
+    (test_data_tmp_dir / "mismatch_b_metadata.json").write_text(json.dumps(sidecar_b))
+
+    return GivenFeathersParserMismatchedGeoreference(
+        feather_files=(file_a, file_b),
+    )
+
+
+def setup_default_feathers_parser_mismatched_georeference(
+    given: GivenFeathersParserMismatchedGeoreference,
+) -> GivenFeathersParserMismatchedGeoreference:
+    return given
+
+
+ORTHOPHOTO_GEOREFERENCE = GeoreferenceMetadata(
+    geo_min_x=449199.096512522,
+    geo_min_y=5699274.275524861,
+    geo_max_x=449294.8688478645,
+    geo_max_y=5699370.047860203,
+    birds_eye_view_width=983,
+    birds_eye_view_height=983,
+    padding=0,
+    crs="EPSG:25833",
+)
+GEO_ONLY_CRS = "EPSG:25833"
+KNOWN_GEO = (449226.28994160134, 5699327.2198470775)
+# Independently computed: see test_georeference.py
+KNOWN_ORTHOPHOTO_PIXEL = (279.11129753049903, 439.5834846490163)
+WEST_OF_ORTHOPHOTO_GEO_X = 449189.0
+# (449189.0 - geo_min_x) / ((geo_max_x - geo_min_x) / 983), computed by hand.
+WEST_OF_ORTHOPHOTO_PIXEL_X = -103.62984022117577
+CAMERA_PIXEL = (100.0, 100.0)
+
+
+@dataclass
+class GivenGeoOnlyFeather:
+    tmp_dir: Path
+    feather_file: Path
+    orthophoto_georeference: Mock
+
+
+def create_given_geo_only(tmp_dir: Path) -> GivenGeoOnlyFeather:
+    return GivenGeoOnlyFeather(
+        tmp_dir=tmp_dir,
+        feather_file=tmp_dir / "fusion.feather",
+        orthophoto_georeference=Mock(spec=ProvideOrthophotoGeoreference),
+    )
+
+
+def setup_default_geo_only(
+    given: GivenGeoOnlyFeather,
+    geo_x: float = KNOWN_GEO[0],
+    declares_crs: bool = True,
+) -> GivenGeoOnlyFeather:
+    row = SINGLE_ROW | {
+        track.X: 0.0,
+        track.Y: 0.0,
+        track.GEO_X: geo_x,
+        track.GEO_Y: KNOWN_GEO[1],
+    }
+    polars.DataFrame(row).write_ipc(given.feather_file)
+    sidecar: dict[str, Any] = {
+        "detection_metadata": {"detection_classes": ["car"]},
+        "video_metadata": {
+            "path": "fusion.mp4",
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
+            "recorded_fps": 20.0,
+            "number_of_frames": 1,
+        },
+    }
+    if declares_crs:
+        sidecar[ottrk_format.GEO_COORDINATES] = {ottrk_format.CRS: GEO_ONLY_CRS}
+    (given.tmp_dir / "fusion_metadata.json").write_text(json.dumps(sidecar))
+    given.orthophoto_georeference.for_crs.return_value = ORTHOPHOTO_GEOREFERENCE
+    return given
+
+
+def setup_empty_geo_only(given: GivenGeoOnlyFeather) -> GivenGeoOnlyFeather:
+    """A quiet period: OTFusion wrote the file, but no road user passed."""
+    setup_default_geo_only(given)
+    polars.DataFrame().write_ipc(given.feather_file)
+    return given
+
+
+def setup_track_file_with_geo_columns(
+    given: GivenGeoOnlyFeather,
+) -> GivenGeoOnlyFeather:
+    row = SINGLE_ROW | {track.GEO_X: KNOWN_GEO[0], track.GEO_Y: KNOWN_GEO[1]}
+    polars.DataFrame(row).write_ipc(given.feather_file)
+    sidecar: dict[str, Any] = {
+        "detection_metadata": {"detection_classes": ["car"]},
+        "video_metadata": {
+            "path": "camera.mp4",
+            "recorded_start_date": GIVEN_RECORDED_START_DATE,
+            "recorded_fps": 20.0,
+            "number_of_frames": 1,
+        },
+        ottrk_format.GEOREFERENCE: SAMPLE_GEOREFERENCE_METADATA_DICT,
+    }
+    (given.tmp_dir / "fusion_metadata.json").write_text(json.dumps(sidecar))
+    return given
+
+
+def create_target_geo_only(given: GivenGeoOnlyFeather) -> FeathersParser:
+    return FeathersParser(orthophoto_georeference=given.orthophoto_georeference)
+
+
+def placed_pixel(result: TrackParseResult) -> tuple[float, float]:
+    data = cast(PolarsTrackDataset, result.tracks).get_data()
+    return data[track.X][0], data[track.Y][0]
+
+
+class TestFeathersParserGeoOnly:
+    def test_places_detections_on_the_orthophoto(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert placed_pixel(result) == approx(KNOWN_ORTHOPHOTO_PIXEL, rel=1e-9)
+
+    def test_attaches_the_orthophoto_mapping(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert result.tracks.georeference_metadata == ORTHOPHOTO_GEOREFERENCE
+        assert result.is_geo_only
+
+    def test_asks_for_the_mapping_in_the_declared_crs(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        target.parse(given.feather_file)
+
+        given.orthophoto_georeference.for_crs.assert_called_once_with(GEO_ONLY_CRS)
+
+    def test_refuses_when_no_crs_is_declared(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_default_geo_only(
+            create_given_geo_only(test_data_tmp_dir), declares_crs=False
+        )
+        target = create_target_geo_only(given)
+
+        with pytest.raises(MissingGeoCoordinatesCrs, match=given.feather_file.name):
+            target.parse(given.feather_file)
+
+        given.orthophoto_georeference.for_crs.assert_not_called()
+
+    @pytest.mark.parametrize("blank_crs", ["", "   ", None])
+    def test_refuses_when_the_declared_crs_is_blank(
+        self, test_data_tmp_dir: Path, blank_crs: str | None
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_default_geo_only(
+            create_given_geo_only(test_data_tmp_dir), declares_crs=False
+        )
+        sidecar_file = given.tmp_dir / "fusion_metadata.json"
+        sidecar = json.loads(sidecar_file.read_text())
+        sidecar[ottrk_format.GEO_COORDINATES] = {ottrk_format.CRS: blank_crs}
+        sidecar_file.write_text(json.dumps(sidecar))
+        target = create_target_geo_only(given)
+
+        with pytest.raises(MissingGeoCoordinatesCrs):
+            target.parse(given.feather_file)
+
+        given.orthophoto_georeference.for_crs.assert_not_called()
+
+    def test_places_detections_outside_the_orthophoto_without_clipping(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_default_geo_only(
+            create_given_geo_only(test_data_tmp_dir),
+            geo_x=WEST_OF_ORTHOPHOTO_GEO_X,
+        )
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert placed_pixel(result)[0] == approx(WEST_OF_ORTHOPHOTO_PIXEL_X, rel=1e-9)
+
+    def test_refuses_without_an_orthophoto(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = FeathersParser()
+
+        with pytest.raises(OrthophotoRequired):
+            target.parse(given.feather_file)
+
+    def test_file_without_detections_is_geo_only_by_its_metadata(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_empty_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert result.is_geo_only
+        assert result.tracks.empty
+
+    def test_track_file_is_not_geo_only(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_default_feathers_parser_with_georeference(test_data_tmp_dir)
+        target = create_target()
+
+        result = target.parse(given.feather_files[0])
+
+        assert not result.is_geo_only
+
+    def test_track_file_with_geo_columns_is_not_geo_only(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_track_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert not result.is_geo_only
+
+    def test_track_file_with_geo_columns_keeps_its_pixels(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_track_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert placed_pixel(result) == CAMERA_PIXEL
+
+    def test_track_file_with_geo_columns_keeps_its_own_georeference(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_track_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+
+        assert result.tracks.georeference_metadata == GEOREF_METADATA
+
+    def test_track_file_with_geo_columns_does_not_ask_for_the_orthophoto(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_track_file_with_geo_columns(
+            create_given_geo_only(test_data_tmp_dir)
+        )
+        target = create_target_geo_only(given)
+
+        target.parse(given.feather_file)
+
+        given.orthophoto_georeference.for_crs.assert_not_called()
+
+    def test_parse_files_reports_geo_only_per_file(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_default_geo_only(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        result = target.parse_files([given.feather_file])
+
+        assert result.geo_only_per_file == [True]
+
+    def test_parse_files_refuses_a_batch_mixing_geo_only_and_track_files(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """A load window can select fused and per-camera track files at once.
+
+        #Requirement https://openproject.platomo.de/wp/10404
+        """
+        fused = setup_default_geo_only(
+            create_given_geo_only(subfolder(test_data_tmp_dir, "output"))
+        )
+        camera = setup_track_file_with_geo_columns(
+            create_given_geo_only(subfolder(test_data_tmp_dir, "OTCamera04"))
+        )
+        target = create_target_geo_only(fused)
+
+        with pytest.raises(MixedTrackFiles):
+            target.parse_files([camera.feather_file, fused.feather_file])
+
+
+def subfolder(tmp_dir: Path, name: str) -> Path:
+    folder = tmp_dir / name
+    folder.mkdir()
+    return folder

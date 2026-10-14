@@ -220,6 +220,14 @@ class TestTrackRepository:
             TrackRepositoryEvent.create_removed(removed_ids)
         )
 
+    @pytest.mark.parametrize("is_empty", [True, False])
+    def test_is_empty(self, is_empty: bool) -> None:
+        given_dataset = Mock()
+        given_dataset.empty = is_empty
+        target = TrackRepository(given_dataset)
+        actual = target.is_empty()
+        assert actual == is_empty
+
 
 class TestTrackFileRepository:
     @pytest.fixture

@@ -50,6 +50,12 @@ class TestOtconfigHasChanged:
         get_track_files = Mock()
         config_parser = Mock()
         get_remark = Mock()
+        current_key_prefix = Mock()
+        key_prefix = Mock()
+        current_orthophoto = Mock()
+        orthophoto = Mock()
+        current_orthophoto.get.return_value = orthophoto
+        current_key_prefix.get.return_value = key_prefix
         remark = Mock()
         get_remark.get.return_value = remark
         get_sections.return_value = sections
@@ -67,6 +73,8 @@ class TestOtconfigHasChanged:
             get_videos,
             get_track_files,
             get_remark,
+            current_key_prefix,
+            current_orthophoto,
         )
         config_file = ConfigurationFile(Mock(), previous_data)
 
@@ -79,6 +87,8 @@ class TestOtconfigHasChanged:
             flows,
             config_file.file,
             remark,
+            key_prefix,
+            orthophoto,
         )
         get_current_project.get.assert_called_once()
         get_videos.get.assert_called_once()

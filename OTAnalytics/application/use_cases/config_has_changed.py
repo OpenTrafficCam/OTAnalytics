@@ -1,6 +1,11 @@
 from OTAnalytics.application.parser.config_parser import ConfigParser
 from OTAnalytics.application.parser.flow_parser import FlowParser
-from OTAnalytics.application.state import ConfigurationFile, FileState
+from OTAnalytics.application.state import (
+    ConfigurationFile,
+    CurrentKeyPrefix,
+    CurrentOrthophoto,
+    FileState,
+)
 from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
@@ -19,6 +24,8 @@ class OtconfigHasChanged:
         get_videos: GetAllVideos,
         get_track_files: GetAllTrackFiles,
         get_remark: GetCurrentRemark,
+        current_key_prefix: CurrentKeyPrefix,
+        current_orthophoto: CurrentOrthophoto,
     ):
         self._config_parser = config_parser
         self._get_sections = get_sections
@@ -27,6 +34,8 @@ class OtconfigHasChanged:
         self._get_videos = get_videos
         self._get_track_files = get_track_files
         self._get_remark = get_remark
+        self._current_key_prefix = current_key_prefix
+        self._current_orthophoto = current_orthophoto
 
     def has_changed(self, prev_config: ConfigurationFile) -> bool:
         """
@@ -46,6 +55,8 @@ class OtconfigHasChanged:
             self._get_flows.get(),
             prev_config.file,
             self._get_remark.get(),
+            self._current_key_prefix.get(),
+            self._current_orthophoto.get(),
         )
         return prev_config.content != current_content
 

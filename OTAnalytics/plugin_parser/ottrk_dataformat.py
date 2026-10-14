@@ -61,3 +61,21 @@ INTERPOLATED_DETECTION = "interpolated-detection"
 FIRST = "first"
 FINISHED = "finished"
 TRACK_ID = "track-id"
+GEO_X: str = "geo_x"
+GEO_Y: str = "geo_y"
+
+# Georeference metadata
+GEOREFERENCE: str = "georeference"
+GEO_BOUNDS: str = "geo_bounds"
+GEO_BOUNDS_MIN_X: str = "min_x"
+GEO_BOUNDS_MIN_Y: str = "min_y"
+GEO_BOUNDS_MAX_X: str = "max_x"
+GEO_BOUNDS_MAX_Y: str = "max_y"
+BIRDS_EYE_VIEW_SIZE: str = "birds_eye_view_size"
+BIRDS_EYE_VIEW_WIDTH: str = "width"
+BIRDS_EYE_VIEW_HEIGHT: str = "height"
+BEV_PADDING: str = "padding"
+CRS: str = "crs"
+
+# CRS of per-detection geo coordinates, written by OTFusion without a georeference
+GEO_COORDINATES: str = "geo_coordinates"
