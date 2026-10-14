@@ -107,6 +107,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             self._button_properties.mark(MARKER_BUTTON_PROPERTIES)
             self._button_properties.props(f"{TEST_ID}={MARKER_BUTTON_PROPERTIES}")
         self.update_items()
+        # Buttons did not exist on first introduction, apply their states now
+        self._viewmodel.set_flows_frame(self)
         return self
 
     async def add_flow(self, _: ClickEventArguments) -> None:
@@ -160,8 +162,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         return 0, 0
 
     def get_add_buttons(self) -> list[Button]:
-        if self._button_add:
-            return [self._button_add]
+        if self._button_add and self._button_generate:
+            return [self._button_add, self._button_generate]
         return []
 
     def get_single_item_buttons(self) -> list[Button]:
@@ -173,3 +175,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         if self._button_remove:
             return [self._button_remove]
         return []
+
+    def _set_enabled_buttons(self, buttons: list[Button], enabled: bool) -> None:
+        super()._set_enabled_buttons(buttons, enabled)
+        if self._button_generate and len(list(self._viewmodel.get_all_flows())) > 0:
+            self._button_generate.disable()

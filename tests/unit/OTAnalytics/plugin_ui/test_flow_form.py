@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 from nicegui import ui
+from nicegui.elements.button import Button
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -167,3 +168,57 @@ class TestFlowForm:
 
         # Verify that the new flow is in the table's rows
         assert names == [FLOW_NAME_1, FLOW_NAME_2]
+
+    @pytest.mark.asyncio
+    async def test_build_applies_button_states_from_viewmodel(
+        self,
+        user: User,
+        flow_form: FlowForm,
+        viewmodel: Mock,
+    ) -> None:
+        """Test that button states of the viewmodel are applied after building."""
+
+        def disable_all_buttons(frame: FlowForm) -> None:
+            frame.set_enabled_add_buttons(False)
+            frame.set_enabled_change_single_item_buttons(False)
+            frame.set_enabled_change_multiple_items_buttons(False)
+
+        viewmodel.set_flows_frame.side_effect = disable_all_buttons
+
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            flow_form.build()
+
+        await user.open(ENDPOINT_NAME)
+
+        for marker in [
+            MARKER_BUTTON_ADD,
+            MARKER_BUTTON_GENERATE,
+            MARKER_BUTTON_REMOVE,
+            MARKER_BUTTON_PROPERTIES,
+        ]:
+            button = user.find(kind=Button, marker=marker).elements.pop()
+            assert not button.enabled
+
+    @pytest.mark.asyncio
+    async def test_generate_button_disabled_if_flows_exist(
+        self,
+        user: User,
+        flow_form: FlowForm,
+    ) -> None:
+        """Test that flows can only be generated if no flows exist."""
+
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            flow_form.build()
+
+        await user.open(ENDPOINT_NAME)
+
+        flow_form.set_enabled_add_buttons(True)
+
+        button_add = user.find(kind=Button, marker=MARKER_BUTTON_ADD).elements.pop()
+        button_generate = user.find(
+            kind=Button, marker=MARKER_BUTTON_GENERATE
+        ).elements.pop()
+        assert button_add.enabled
+        assert not button_generate.enabled

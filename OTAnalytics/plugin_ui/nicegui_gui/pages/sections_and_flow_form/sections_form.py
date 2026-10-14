@@ -118,6 +118,8 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
                 ).style(BASIC_WIDTH)
                 self._button_remove.mark(MARKER_BUTTON_REMOVE)
         self.update_items()
+        # Buttons did not exist on first introduction, apply their states now
+        self._viewmodel.set_sections_frame(self)
         return self
 
     def get_add_buttons(self) -> list[Button]:

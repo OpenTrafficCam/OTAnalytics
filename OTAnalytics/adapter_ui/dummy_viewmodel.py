@@ -825,6 +825,7 @@ class DummyViewModel(
 
     def set_offset_frame(self, offset_frame: AbstractFrameOffset) -> None:
         self._frame_offset = offset_frame
+        self.update_section_offset_button_state()
 
     def set_video_frame(self, frame: AbstractFrame) -> None:
         self._frame_videos = frame
