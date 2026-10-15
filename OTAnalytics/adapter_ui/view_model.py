@@ -294,7 +294,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def apply_filter_tracks_by_class(self, classes: list[str]) -> None:
+    def apply_filter_tracks_by_class(self, classes: set[str]) -> None:
         pass
 
     @abstractmethod
