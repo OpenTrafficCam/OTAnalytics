@@ -138,7 +138,10 @@ from OTAnalytics.application.use_cases.generate_flows import (
     RepositoryFlowIdGenerator,
 )
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
-from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
+from OTAnalytics.application.use_cases.get_current_remark import (
+    ClearRemark,
+    GetCurrentRemark,
+)
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToAllFlows,
@@ -437,6 +440,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.file_state,
             self.current_key_prefix,
             self.current_orthophoto,
+            self.filter_element_settings_restorer,
         )
 
     @cached_property
@@ -924,16 +928,12 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.clear_all_tracks,
             self.clear_all_track_files,
             self.clear_all_videos,
+            ClearRemark(self.remark_repository),
         )
 
     @cached_property
     def start_new_project(self) -> StartNewProject:
-        return StartNewProject(
-            self.clear_all_repositories,
-            self.reset_project_config,
-            self.track_view_state,
-            self.file_state,
-        )
+        return StartNewProject(self.reset_application, self.reset_project_config)
 
     @cached_property
     def reset_project_config(self) -> ResetProjectConfig:

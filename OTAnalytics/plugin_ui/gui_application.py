@@ -121,6 +121,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.track_image_updater.notify_section_changed
         )
         self.start_new_project.register(self.view_model.on_start_new_project)
+        self.start_new_project.register(self.view_model.update_remark_view)
         self.event_repository.register_observer(self.track_image_updater.notify_events)
         self.event_repository.register_observer(self.view_model.update_track_statistics)
         self.load_otflow.register(self.file_state.last_saved_config.set)

@@ -10,6 +10,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
+from OTAnalytics.domain.filter import FilterElementSettingRestorer
 
 
 class ResetState:
@@ -25,6 +26,7 @@ class ResetState:
         file_state: FileState,
         current_key_prefix: CurrentKeyPrefix,
         current_orthophoto: CurrentOrthophoto,
+        filter_element_setting_restorer: FilterElementSettingRestorer,
     ) -> None:
         self._videos_metadata = videos_metadata
         self._tracks_metadata = tracks_metadata
@@ -36,6 +38,7 @@ class ResetState:
         self._file_state = file_state
         self._current_key_prefix = current_key_prefix
         self._current_orthophoto = current_orthophoto
+        self._filter_element_setting_restorer = filter_element_setting_restorer
 
     def reset(self) -> None:
         self._videos_metadata.reset()
@@ -48,3 +51,4 @@ class ResetState:
         self._file_state.reset()
         self._current_key_prefix.reset()
         self._current_orthophoto.reset()
+        self._filter_element_setting_restorer.reset()

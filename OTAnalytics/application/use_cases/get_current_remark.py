@@ -7,3 +7,17 @@ class GetCurrentRemark:
 
     def get(self) -> str:
         return self.remark_repository.get()
+
+
+class ClearRemark:
+    """Clear the remark of the current project.
+
+    Args:
+        remark_repository (RemarkRepository): the repository holding the remark.
+    """
+
+    def __init__(self, remark_repository: RemarkRepository):
+        self._remark_repository = remark_repository
+
+    def __call__(self) -> None:
+        self._remark_repository.clear()

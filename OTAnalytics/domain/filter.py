@@ -254,3 +254,8 @@ class FilterElementSettingRestorer:
             return filter_element
 
         return FilterElement(filter_element.date_range, self._by_class_filter_setting)
+
+    def reset(self) -> None:
+        """Forget the saved filter settings, as for a new project."""
+        self._by_date_filter_setting = None
+        self._by_class_filter_setting = None
