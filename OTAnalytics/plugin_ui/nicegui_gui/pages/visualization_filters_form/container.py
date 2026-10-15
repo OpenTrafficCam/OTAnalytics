@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 from nicegui import ui
 from nicegui.elements.button import Button
@@ -201,13 +201,7 @@ class FilterClassificationForm:
             self._selected_classes.discard(classification)
 
     def _on_apply_button_clicked(self) -> None:
-        self._viewmodel.apply_filter_tracks_by_class(
-            [
-                classification
-                for classification in self._classes
-                if classification in self._selected_classes
-            ]
-        )
+        self._viewmodel.apply_filter_tracks_by_class(list(self._selected_classes))
         logger().info("Filter tracks by classification applied")
         self._dialog.close()
 
