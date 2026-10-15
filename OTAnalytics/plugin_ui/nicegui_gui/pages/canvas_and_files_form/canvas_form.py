@@ -352,6 +352,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._flows.clear()
         self._sections.clear()
         self._circles.clear()
+        # Redraw, otherwise the overlay keeps showing what was removed until the
+        # next item is drawn, e.g. after removing the last section.
+        self.draw_all()
 
     def start_section_builder(
         self,

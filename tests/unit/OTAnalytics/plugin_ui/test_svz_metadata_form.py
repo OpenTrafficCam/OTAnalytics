@@ -241,3 +241,76 @@ class TestSvzMetadataForm:
         assert (
             updated_metadata[COUNTING_LOCATION_NUMBER] == COUNTING_LOCATION_NUMBER_VALUE
         )
+
+    @pytest.mark.asyncio
+    async def test_showing_metadata_does_not_write_it_back(
+        self, user: User, svz_metadata_form: SvzMetadataForm, viewmodel: Mock
+    ) -> None:
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            svz_metadata_form.build()
+
+        await user.open(ENDPOINT_NAME)
+
+        svz_metadata_form.update(create_metadata())
+
+        viewmodel.update_svz_metadata.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_update_without_metadata_shows_a_fresh_form(
+        self, user: User, svz_metadata_form: SvzMetadataForm, viewmodel: Mock
+    ) -> None:
+        """Starting a new project shows no metadata. The form kept showing the
+        previous project's values, and editing one field wrote them all back.
+        """
+
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            svz_metadata_form.build()
+
+        await user.open(ENDPOINT_NAME)
+        svz_metadata_form.update(create_metadata())
+
+        svz_metadata_form.update({})
+
+        form = svz_metadata_form
+        assert form._tk_number.value == ""
+        assert form._counting_location_number.value == ""
+        assert form._direction_select.value == MockDirections().names[0]
+        assert form._direction_description.value == ""
+        assert form._has_bicycle_lane.value is False
+        assert form._is_bicycle_counting.value is False
+        assert form._counting_day_select.value == MockCountingDayTypes().names[0]
+        assert form._weather_type_select.value == MockWeatherTypes().names[0]
+        assert form._remark.value == ""
+        assert form._coordinate_x.value == ""
+        assert form._coordinate_y.value == ""
+        viewmodel.update_svz_metadata.assert_not_called()
+
+    def test_shows_metadata_when_introduced_to_the_view_model(
+        self, viewmodel: Mock, resource_manager: ResourceManager
+    ) -> None:
+        """The view model shows the current metadata as soon as the form
+        introduces itself, which happens while the form is constructed.
+        """
+        viewmodel.set_svz_metadata_frame.side_effect = lambda form: form.update({})
+
+        SvzMetadataForm(viewmodel, resource_manager)
+
+        viewmodel.set_svz_metadata_frame.assert_called_once()
+
+
+def create_metadata() -> dict:
+    return {
+        TK_NUMBER: TK_NUMBER_VALUE,
+        COUNTING_LOCATION_NUMBER: COUNTING_LOCATION_NUMBER_VALUE,
+        DIRECTION: "South",
+        DIRECTION_DESCRIPTION: DIRECTION_DESCRIPTION_VALUE,
+        HAS_BICYCLE_LANE: True,
+        IS_BICYCLE_COUNTING: True,
+        COUNTING_DAY: "Weekend",
+        WEATHER: "Rainy",
+        REMARK: REMARK_VALUE,
+        COORDINATE_X: COORDINATE_X_VALUE,
+        COORDINATE_Y: COORDINATE_Y_VALUE,
+    }
