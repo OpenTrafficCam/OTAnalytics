@@ -133,7 +133,7 @@ class TestClassificationDialog:
         user.find(APPLY).click()
 
         given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
-            [CAR, TRUCK]
+            {CAR, TRUCK}
         )
 
     async def test_checking_an_unselected_class_adds_only_that_class(
@@ -146,7 +146,7 @@ class TestClassificationDialog:
         user.find(APPLY).click()
 
         given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
-            [CAR, TRUCK]
+            {CAR, TRUCK}
         )
 
     async def test_applying_unchanged_partial_selection_keeps_it(
@@ -159,7 +159,7 @@ class TestClassificationDialog:
         user.find(APPLY).click()
 
         given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
-            [CAR, TRUCK]
+            {CAR, TRUCK}
         )
 
     async def test_without_selection_all_classes_are_selected(self, user: User) -> None:
@@ -170,7 +170,7 @@ class TestClassificationDialog:
         user.find(APPLY).click()
 
         given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
-            ALL_CLASSES
+            set(ALL_CLASSES)
         )
 
     async def test_empty_selection_selects_no_class(self, user: User) -> None:
@@ -180,7 +180,7 @@ class TestClassificationDialog:
         assert checked_classes(user) == []
         user.find(APPLY).click()
 
-        given.view_model.apply_filter_tracks_by_class.assert_called_once_with([])
+        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(set())
 
     async def test_apply_closes_the_dialog(self, user: User) -> None:
         given = create_given()

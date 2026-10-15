@@ -778,7 +778,7 @@ class FilterTracksByClassPopup(CTkToplevel, WidgetPositionProvider):
 
     def _on_apply_button_clicked(self) -> None:
         self._viewmodel.apply_filter_tracks_by_class(
-            list(self.treeview_classes.selection())
+            set(self.treeview_classes.selection())
         )
         logger().info("Filter tracks by classification applied")
         self._close()
