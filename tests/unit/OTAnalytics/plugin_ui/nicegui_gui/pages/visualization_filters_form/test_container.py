@@ -11,9 +11,14 @@ from nicegui import ui
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.dto import DateRangeDto
+from OTAnalytics.application.resources.resource_manager import GeneralKeys
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
     VisualizationFiltersForm,
 )
+
+APPLY = "Apply from resources"
+RESET = "Reset from resources"
+LABELS = {GeneralKeys.LABEL_APPLY: APPLY, GeneralKeys.LABEL_RESET: RESET}
 
 A_RANGE: DateRangeDto = {"start_date": "2023-05-24", "end_date": "2023-05-25"}
 NO_RANGE: DateRangeDto = {"start_date": "", "end_date": ""}
@@ -27,7 +32,7 @@ class Given:
 
 def create_given() -> Given:
     resource_manager = Mock()
-    resource_manager.get.return_value = "label"
+    resource_manager.get.side_effect = lambda key: LABELS.get(key, "label")
     view_model = Mock()
     view_model.get_skip_seconds.return_value = 1
     view_model.get_skip_frames.return_value = 1
@@ -91,7 +96,6 @@ BICYCLE = "bicycle"
 CAR = "car"
 TRUCK = "truck"
 ALL_CLASSES = [BICYCLE, CAR, TRUCK]
-APPLY = "Apply"
 
 
 async def open_classification_dialog(
@@ -184,5 +188,24 @@ class TestClassificationDialog:
 
         user.find(APPLY).click()
 
+        dialog = user.find(kind=ui.dialog).elements.pop()
+        assert dialog.value is False
+
+    async def test_shows_reset_label_from_resources(self, user: User) -> None:
+        given = create_given()
+        await open_classification_dialog(user, given, selection=None)
+
+        await user.should_see(RESET)
+
+    async def test_reset_resets_the_class_filter_and_closes_the_dialog(
+        self, user: User
+    ) -> None:
+        given = create_given()
+        await open_classification_dialog(user, given, selection=[CAR])
+
+        user.find(RESET).click()
+
+        given.view_model.reset_filter_tracks_by_class.assert_called_once_with()
+        given.view_model.apply_filter_tracks_by_class.assert_not_called()
         dialog = user.find(kind=ui.dialog).elements.pop()
         assert dialog.value is False

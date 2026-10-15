@@ -149,7 +149,8 @@ class FilterClassificationForm:
     every class counts as selected, as in the customtkinter GUI.
     """
 
-    def __init__(self, viewmodel: ViewModel) -> None:
+    def __init__(self, resource_manager: ResourceManager, viewmodel: ViewModel) -> None:
+        self._resource_manager = resource_manager
         self._viewmodel = viewmodel
         self._classes: list[str] = []
         self._selected_classes: set[str] = set()
@@ -184,7 +185,14 @@ class FilterClassificationForm:
         return toggle
 
     def _build_buttons(self) -> None:
-        ui.button("Apply", on_click=self._on_apply_button_clicked)
+        ui.button(
+            self._resource_manager.get(GeneralKeys.LABEL_APPLY),
+            on_click=self._on_apply_button_clicked,
+        )
+        ui.button(
+            self._resource_manager.get(GeneralKeys.LABEL_RESET),
+            on_click=self._on_reset_button_clicked,
+        )
 
     def _select_class(self, classification: str, selected: bool) -> None:
         if selected:
@@ -201,6 +209,10 @@ class FilterClassificationForm:
             ]
         )
         logger().info("Filter tracks by classification applied")
+        self._dialog.close()
+
+    def _on_reset_button_clicked(self) -> None:
+        self._viewmodel.reset_filter_tracks_by_class()
         self._dialog.close()
 
 
@@ -243,7 +255,9 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._filter_by_date_popup = FilterDateRangeForm(
             self._resource_manager, self._viewmodel
         )
-        self._filter_by_class_popup = FilterClassificationForm(self._viewmodel)
+        self._filter_by_class_popup = FilterClassificationForm(
+            self._resource_manager, self._viewmodel
+        )
         self._input_seconds = FormFieldInteger(
             label_text=self._resource_manager.get(
                 VisualizationFiltersKeys.LABEL_SECONDS
