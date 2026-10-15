@@ -51,6 +51,12 @@ class CtkUiFactory(UiFactory):
             message=message, initial_position=initial_position, show_cancel=show_cancel
         )
 
+    async def ask_for_confirmation(
+        self, message: str, initial_position: tuple[int, int]
+    ) -> bool:
+        info_box = self.info_box(message, initial_position, show_cancel=True)
+        return not info_box.canceled
+
     def minimal_info_box(
         self, message: str, initial_position: tuple[int, int]
     ) -> MessageBox:

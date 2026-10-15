@@ -37,6 +37,7 @@ class AnalysisKeys(ResourceKey):
 
 
 class ProjectKeys(ResourceKey):
+    LABEL_NEW_PROJECT = "label-new-project"
     LABEL_OPEN_PROJECT = "label-open-project"
     LABEL_PROJECT_FORM_HEADER = "label-project-form-header"
     LABEL_PROJECT_NAME = "label-project-name"
@@ -244,6 +245,7 @@ DEFAULT_RESOURCE_MAP = {
     ExportCountsDialogKeys.LABEL_END_TIME: "End time",
     OffsetSliderKeys.LABEL_COORDINATE_X: "X:",
     OffsetSliderKeys.LABEL_COORDINATE_Y: "Y:",
+    ProjectKeys.LABEL_NEW_PROJECT: "New",
     ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
     ProjectKeys.LABEL_PROJECT_NAME: "Project name",
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",

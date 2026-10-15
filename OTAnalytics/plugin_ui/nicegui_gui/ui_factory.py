@@ -25,6 +25,9 @@ from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.helpers.file_helpers import (
     get_all_files_with_correct_file_ending_in_directory,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.confirmation_dialog import (
+    ConfirmationDialog,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import EditFlowDialog
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
     EditSectionDialog,
@@ -100,6 +103,15 @@ class NiceGuiUiFactory(UiFactory):
             multi_line=True,
         )
         return NiceGuiInfoBox()
+
+    async def ask_for_confirmation(
+        self, message: str, initial_position: tuple[int, int]
+    ) -> bool:
+        dialog = ConfirmationDialog(self._resource_manager, message).build()
+        dialog.open()
+        result = await dialog
+        dialog.delete()
+        return result == DialogResult.APPLY
 
     def minimal_info_box(
         self, message: str, initial_position: tuple[int, int]

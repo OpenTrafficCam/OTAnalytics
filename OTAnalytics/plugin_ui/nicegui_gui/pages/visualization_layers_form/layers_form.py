@@ -7,7 +7,7 @@ from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
     AbstractFrameTrackPlotting,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.plotting import LayerGroup
+from OTAnalytics.application.plotting import Layer, LayerGroup
 from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     VisualizationLayersKeys,
@@ -31,13 +31,15 @@ class LayersForm(AbstractFrameTrackPlotting):
     ) -> None:
         self._viewmodel = viewmodel
         self._resource_manager = resource_manager
-        self.introduce_to_viewmodel()
         self._layers = layers
+        self._checkboxes: list[tuple[Layer, ui.checkbox]] = []
+        self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
-        pass
+        self._viewmodel.set_frame_track_plotting(self)
 
     def build(self) -> Self:
+        self._checkboxes = []
         for layer_group in self._layers:
             ui.label(layer_group.name)
             for layer in layer_group.layers:
@@ -48,6 +50,7 @@ class LayersForm(AbstractFrameTrackPlotting):
                         event.value
                     ),
                 )
+                self._checkboxes.append((layer, checkbox))
                 if layer_group.name == "Show tracks" and layer.get_name() == ALL:
                     checkbox.mark(MARKER_VISUALIZATION_LAYERS_ALL)
                     checkbox.props(
@@ -72,4 +75,6 @@ class LayersForm(AbstractFrameTrackPlotting):
         pass
 
     def reset_layers(self) -> None:
-        pass
+        for layer, checkbox in self._checkboxes:
+            layer.reset()
+            checkbox.set_value(layer.is_enabled())

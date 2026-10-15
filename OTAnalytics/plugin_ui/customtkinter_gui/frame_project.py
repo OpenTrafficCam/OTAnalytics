@@ -114,7 +114,7 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             master=self._button_frame,
             text="New",
             width=10,
-            command=self._viewmodel.start_new_project,
+            command=self._do_new,
         )
         self.button_open = CTkButton(
             master=self._button_frame,
@@ -137,6 +137,9 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
 
     def _do_quick_save(self) -> None:
         asyncio.run(self._viewmodel.quick_save_configuration())
+
+    def _do_new(self) -> None:
+        asyncio.run(self._viewmodel.start_new_project())
 
     def _do_save_as(self) -> None:
         asyncio.run(self._viewmodel.save_configuration())

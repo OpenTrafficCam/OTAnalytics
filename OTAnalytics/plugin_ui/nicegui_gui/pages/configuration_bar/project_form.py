@@ -23,6 +23,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_PROJECT_NAME = "marker-project-name"
+MARKER_PROJECT_NEW = "marker-project-new"
 MARKER_PROJECT_OPEN = "marker-project-open"
 MARKER_PROJECT_SAVE_AS = "marker-project-save-as"
 MARKER_PROJECT_SAVE = "marker-project-save"
@@ -69,6 +70,7 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
     ) -> None:
         self._view_model = view_model
         self._resource_manager = resource_manager
+        self.new_project_button: ui.button | None = None
         self.save_project_button: ui.button | None = None
         self.open_project_button: ui.button | None = None
         self._quick_save_button = NiceGuiButtonQuickSaveConfig(
@@ -99,6 +101,12 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
             self._resource_manager.get(ProjectKeys.LABEL_PROJECT_FORM_HEADER)
         ).classes("text-lg font-bold")
         with ui.row():
+            self.new_project_button = ui.button(
+                self._resource_manager.get(ProjectKeys.LABEL_NEW_PROJECT),
+                on_click=self._new_project,
+            )
+            self.new_project_button.mark(MARKER_PROJECT_NEW)
+            self.new_project_button.props(f"{TEST_ID}={MARKER_PROJECT_NEW}")
             self.open_project_button = ui.button(
                 self._resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT),
                 on_click=self._open_project,
@@ -131,6 +139,9 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
     async def _save_project(self, _: ClickEventArguments) -> None:
         await self._view_model.save_configuration()
 
+    async def _new_project(self, _: ClickEventArguments) -> None:
+        await self._view_model.start_new_project()
+
     async def _open_project(self, _: ClickEventArguments) -> None:
         await self._view_model.load_configuration()
 
@@ -144,10 +155,23 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
         ):
             self._start_date.set_value(start_date)
 
+    def reset(self) -> None:
+        """Show an empty project.
+
+        Unlike `update`, this also clears the start date: `update` keeps it while
+        the model has none, so an incomplete date being typed is not wiped.
+        """
+        if self._project_name._instance:
+            self._project_name.set_value("")
+        if self._start_date._start_date._instance:
+            self._start_date.set_value(None)
+
     def get_general_buttons(self) -> list[Button]:
         buttons = []
         if self._quick_save_button._instance:
             buttons.append(self._quick_save_button._instance)
+        if self.new_project_button:
+            buttons.append(self.new_project_button)
         if self.open_project_button:
             buttons.append(self.open_project_button)
         if self.save_project_button:

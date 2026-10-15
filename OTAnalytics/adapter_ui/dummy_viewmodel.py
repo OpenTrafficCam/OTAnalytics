@@ -1726,17 +1726,16 @@ class DummyViewModel(
         except CancelExportCounts:
             logger().info("User canceled configuration of export")
 
-    def start_new_project(self) -> None:
-        proceed = self._ui_factory.info_box(
+    async def start_new_project(self) -> None:
+        proceed = await self._ui_factory.ask_for_confirmation(
             message=(
                 "This will start a new project. \n"
                 "All configured project settings, sections, flows, tracks, and videos "
                 "will be reset to the default application settings."
             ),
             initial_position=self._get_window_position(),
-            show_cancel=True,
         )
-        if proceed.canceled:
+        if not proceed:
             return
         self._application.start_new_project()
         self.show_current_project()
@@ -1750,6 +1749,7 @@ class DummyViewModel(
         self._application.update_project_start_date(start_date)
 
     def on_start_new_project(self, _: None) -> None:
+        self.frame_project.reset()
         self.frame_filter.reset()
         self.frame_track_plotting.reset_layers()
         self.canvas.add_preview_image()

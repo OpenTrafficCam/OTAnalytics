@@ -25,6 +25,21 @@ class UiFactory(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def ask_for_confirmation(
+        self, message: str, initial_position: tuple[int, int]
+    ) -> bool:
+        """Ask the user to confirm an action.
+
+        Args:
+            message (str): what the user is about to do.
+            initial_position (tuple[int, int]): where to show the question.
+
+        Returns:
+            bool: True if the user confirmed, False if they cancelled.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def minimal_info_box(
         self, message: str, initial_position: tuple[int, int]
     ) -> MessageBox:
