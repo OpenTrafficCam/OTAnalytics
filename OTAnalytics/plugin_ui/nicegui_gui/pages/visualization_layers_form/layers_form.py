@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Self, Sequence
+from typing import Callable, Optional, Self, Sequence
 
 from nicegui import ui
 
@@ -32,14 +32,17 @@ class LayersForm(AbstractFrameTrackPlotting):
         self._viewmodel = viewmodel
         self._resource_manager = resource_manager
         self._layers = layers
-        self._checkboxes: list[tuple[Layer, ui.checkbox]] = []
+        self._checkboxes: dict[Layer, ui.checkbox] = {}
+        for layer_group in layers:
+            for layer in layer_group.layers:
+                layer.register(self._follow(layer))
         self.introduce_to_viewmodel()
 
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_frame_track_plotting(self)
 
     def build(self) -> Self:
-        self._checkboxes = []
+        self._checkboxes = {}
         for layer_group in self._layers:
             ui.label(layer_group.name)
             for layer in layer_group.layers:
@@ -50,7 +53,7 @@ class LayersForm(AbstractFrameTrackPlotting):
                         event.value
                     ),
                 )
-                self._checkboxes.append((layer, checkbox))
+                self._checkboxes[layer] = checkbox
                 if layer_group.name == "Show tracks" and layer.get_name() == ALL:
                     checkbox.mark(MARKER_VISUALIZATION_LAYERS_ALL)
                     checkbox.props(
@@ -74,7 +77,14 @@ class LayersForm(AbstractFrameTrackPlotting):
     def update(self, name: str, start_date: Optional[datetime]) -> None:
         pass
 
-    def reset_layers(self) -> None:
-        for layer, checkbox in self._checkboxes:
-            layer.reset()
-            checkbox.set_value(layer.is_enabled())
+    def _follow(self, layer: Layer) -> Callable[[bool], None]:
+        return lambda enabled: self._show(layer, enabled)
+
+    def _show(self, layer: Layer, enabled: bool) -> None:
+        """Follow layer changes made elsewhere, e.g. by resetting the application.
+
+        The layers outlive the page: the checkboxes are rebuilt on every visit, so
+        only those of the latest build are updated.
+        """
+        if checkbox := self._checkboxes.get(layer):
+            checkbox.set_value(enabled)

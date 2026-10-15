@@ -733,16 +733,15 @@ class DummyViewModel(
         await self._load_otconfig(otconfig_file)
 
     async def _load_otconfig(self, otconfig_file: Path) -> None:
-        proceed = self._ui_factory.info_box(
+        proceed = await self._ui_factory.ask_for_confirmation(
             message=(
                 "This will load a stored configuration from file. \n"
                 "All configured sections, flows and videos will be removed before "
                 "loading."
             ),
             initial_position=self._get_window_position(),
-            show_cancel=True,
         )
-        if proceed.canceled:
+        if not proceed:
             return
         logger().info(f"{OTCONFIG_FILE_TYPE} file to load: {otconfig_file}")
         try:
@@ -943,26 +942,25 @@ class DummyViewModel(
         if not configuration_file.stem:
             return
         elif configuration_file.suffix == f".{OTFLOW_FILE_TYPE}":
-            self._load_otflow(configuration_file)
+            await self._load_otflow(configuration_file)
         elif configuration_file.suffix == f".{OTCONFIG_FILE_TYPE}":
             await self._load_otconfig(configuration_file)
         else:
             raise ValueError("Configuration file to load has unknown file extension")
 
-    def _load_otflow(self, otflow_file: Path) -> None:
+    async def _load_otflow(self, otflow_file: Path) -> None:
         sections = self._application.get_all_sections()
         flows = self._application.get_all_flows()
         if sections or flows:
-            proceed = self._ui_factory.info_box(
+            proceed = await self._ui_factory.ask_for_confirmation(
                 message=(
                     "This will load a stored otflow configuration from file. \n"
                     "All configured sections and flows will be removed before "
                     "loading."
                 ),
                 initial_position=self._get_window_position(),
-                show_cancel=True,
             )
-            if proceed.canceled:
+            if not proceed:
                 return
         logger().info(f"otflow file to load: {otflow_file}")
         self._application.load_otflow(sections_file=Path(otflow_file))
@@ -1748,10 +1746,14 @@ class DummyViewModel(
     def update_project_start_date(self, start_date: Optional[datetime]) -> None:
         self._application.update_project_start_date(start_date)
 
-    def on_start_new_project(self, _: None) -> None:
+    def on_application_reset(self, _: None) -> None:
+        """Show the views of a freshly started application.
+
+        Called on every reset of the application, i.e. when starting a new project
+        and when loading an otconfig.
+        """
         self.frame_project.reset()
         self.frame_filter.reset()
-        self.frame_track_plotting.reset_layers()
         self.canvas.add_preview_image()
 
     def set_frame_track_plotting(

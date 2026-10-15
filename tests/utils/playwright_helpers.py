@@ -16,6 +16,9 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     SectionKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.confirmation_dialog import (
+    MARKER_CONFIRMATION_MESSAGE,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_END_SECTION,
 )
@@ -457,8 +460,22 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
     search_for_marker_element(page, MARKER_FILENAME).first.fill(path.name)
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+    answer_confirmation(page, MARKER_DIALOG_APPLY)
 
     wait_for_track_loading_to_finish(page)
+
+
+def answer_confirmation(page: Page, button_marker: str) -> None:
+    """Click a button of the confirmation dialog, e.g. its Apply or Cancel.
+
+    Other dialogs use the same button markers, so the button is looked up within
+    the dialog that shows the confirmation message.
+    """
+    message = search_for_marker_element(page, MARKER_CONFIRMATION_MESSAGE).first
+    message.wait_for(state="visible")
+    dialog = page.locator(".q-dialog", has=message)
+    dialog.locator(f'[{TEST_ID}="{button_marker}"]').first.click()
+    message.wait_for(state="detached")
 
 
 # ----------------------

@@ -5,6 +5,10 @@ import pytest
 from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+    MARKER_DIRECTORY,
+    MARKER_FILENAME,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY,
     MARKER_CANCEL,
@@ -14,6 +18,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     MARKER_PROJECT_NEW,
+    MARKER_PROJECT_OPEN,
 )
 from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_FINAL_TIMEOUT_MS,
@@ -21,6 +26,7 @@ from tests.acceptance.conftest import (
     NiceGUITestServer,
 )
 from tests.utils.playwright_helpers import (
+    answer_confirmation,
     import_project_and_assert_values,
     load_main_page,
     read_project_info_values,
@@ -67,7 +73,7 @@ class TestStartNewProject:
         expect(overlay.first).to_be_attached()
 
         search_for_marker_element(page, MARKER_PROJECT_NEW).first.click()
-        search_for_marker_element(page, MARKER_APPLY).first.click()
+        answer_confirmation(page, MARKER_APPLY)
 
         expect(page.get_by_text(A_SECTION)).to_have_count(
             0, timeout=ACCEPTANCE_TEST_FINAL_TIMEOUT_MS
@@ -91,7 +97,36 @@ class TestStartNewProject:
         )
 
         search_for_marker_element(page, MARKER_PROJECT_NEW).first.click()
-        search_for_marker_element(page, MARKER_CANCEL).first.click()
+        answer_confirmation(page, MARKER_CANCEL)
+
+        expect(page.get_by_text(A_SECTION).first).to_be_visible()
+        assert read_project_info_values(page) == LOADED_PROJECT
+
+
+class TestOpenProject:
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_cancelling_keeps_the_loaded_project(
+        self,
+        page: Page,
+        external_app: NiceGUITestServer,
+        resource_manager: ResourceManager,
+        otconfig: Path,
+    ) -> None:
+        load_main_page(page, external_app)
+        import_project_and_assert_values(
+            page, resource_manager, otconfig, LOADED_PROJECT
+        )
+
+        search_for_marker_element(page, MARKER_PROJECT_OPEN).first.click()
+        search_for_marker_element(page, MARKER_APPLY).first.wait_for(state="visible")
+        search_for_marker_element(page, MARKER_DIRECTORY).first.fill(
+            str(otconfig.parent)
+        )
+        search_for_marker_element(page, MARKER_FILENAME).first.fill(otconfig.name)
+        search_for_marker_element(page, MARKER_APPLY).first.click()
+        answer_confirmation(page, MARKER_CANCEL)
 
         expect(page.get_by_text(A_SECTION).first).to_be_visible()
         assert read_project_info_values(page) == LOADED_PROJECT

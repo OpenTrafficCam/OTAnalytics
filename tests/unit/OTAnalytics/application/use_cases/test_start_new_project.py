@@ -9,18 +9,13 @@ class TestStartNewProject:
     def test_start_new_project(self) -> None:
         reset_application = Mock(spec=ResetApplication)
         reset_project_config = Mock(spec=ResetProjectConfig)
-        observer = Mock()
         order = Mock()
         order.attach_mock(reset_application.reset, "reset_application")
         order.attach_mock(reset_project_config, "reset_project_config")
-        order.attach_mock(observer, "observer")
 
-        start_new_project = StartNewProject(reset_application, reset_project_config)
-        start_new_project.register(observer)
-        start_new_project()
+        StartNewProject(reset_application, reset_project_config)()
 
         assert order.mock_calls == [
             call.reset_application(),
             call.reset_project_config(),
-            call.observer(None),
         ]

@@ -1,4 +1,4 @@
-"""Tests that the layer checkboxes return to their defaults for a new project."""
+"""Tests that the layer checkboxes follow the layers they show."""
 
 from unittest.mock import Mock
 
@@ -24,7 +24,7 @@ class TestLayersForm:
 
         viewmodel.set_frame_track_plotting.assert_called_once_with(target)
 
-    async def test_reset_layers_restores_the_defaults(
+    async def test_checkbox_enables_the_layer(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
         layer = PlottingLayer(LAYER_NAME, Mock(), enabled=True)
@@ -36,11 +36,25 @@ class TestLayersForm:
 
         await user.open("/test")
         user.find(LAYER_NAME).click()
+
         assert not layer.is_enabled()
 
-        target.reset_layers()
+    async def test_checkbox_follows_a_layer_reset(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """Resetting the application resets the layers, not the checkboxes."""
+        layer = PlottingLayer(LAYER_NAME, Mock(), enabled=True)
+        target = LayersForm(Mock(), resource_manager, [LayerGroup("Group", [layer])])
 
-        assert layer.is_enabled()
+        @ui.page("/test")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test")
+        user.find(LAYER_NAME).click()
+
+        layer.reset()
+
         checkbox = user.find(LAYER_NAME).elements.pop()
         assert isinstance(checkbox, ui.checkbox)
         assert checkbox.value is True

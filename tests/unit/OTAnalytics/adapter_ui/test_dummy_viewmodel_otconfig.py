@@ -32,8 +32,8 @@ def create_given(load_error: Exception | None = None) -> Given:
     application.load_otconfig_async = AsyncMock(side_effect=load_error)
     ui_factory = Mock()
     ui_factory.askopenfilename = AsyncMock(return_value=str(OTCONFIG_FILE))
-    # The confirmation box that precedes every load.
-    ui_factory.info_box.return_value = Mock(canceled=False)
+    # The confirmation that precedes every load.
+    ui_factory.ask_for_confirmation = AsyncMock(return_value=True)
     return Given(application=application, ui_factory=ui_factory)
 
 
@@ -247,10 +247,44 @@ class TestReportingCannotBreakALoad:
     async def test_a_failure_report_that_cannot_be_shown_still_returns(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10321"""
         given = create_given(load_error=FileNotFoundError("no such track file"))
-        given.ui_factory.info_box.side_effect = [
-            Mock(canceled=False),
-            RuntimeError("The current slot cannot be determined"),
-        ]
+        given.ui_factory.info_box.side_effect = RuntimeError(
+            "The current slot cannot be determined"
+        )
         target = create_target(given)
 
         await target.load_otconfig()
+
+
+class TestConfirmLoading:
+    async def test_loads_nothing_when_the_user_cancels(self) -> None:
+        given = create_given()
+        given.ui_factory.ask_for_confirmation.return_value = False
+        target = create_target(given)
+
+        await target.load_configuration()
+
+        given.ui_factory.ask_for_confirmation.assert_awaited_once()
+        given.application.load_otconfig_async.assert_not_awaited()
+
+    async def test_loads_when_the_user_confirms(self) -> None:
+        given = create_given()
+        target = create_target(given)
+
+        await target.load_configuration()
+
+        given.ui_factory.ask_for_confirmation.assert_awaited_once()
+        given.application.load_otconfig_async.assert_awaited_once_with(
+            file=OTCONFIG_FILE
+        )
+
+    async def test_loads_no_otflow_when_the_user_cancels(self) -> None:
+        given = create_given()
+        given.ui_factory.askopenfilename.return_value = "folder/sections.otflow"
+        given.application.get_all_sections.return_value = [Mock()]
+        given.ui_factory.ask_for_confirmation.return_value = False
+        target = create_target(given)
+
+        await target.load_configuration()
+
+        given.ui_factory.ask_for_confirmation.assert_awaited_once()
+        given.application.load_otflow.assert_not_called()
