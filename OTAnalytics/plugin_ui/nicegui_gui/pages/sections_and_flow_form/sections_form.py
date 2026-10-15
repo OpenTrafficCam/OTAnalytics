@@ -64,7 +64,9 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
             marker=MARKER_SECTION_TABLE,
             # Let the table auto-select the row on click and forward selection
             auto_select_on_row_click=True,
+            on_row_double_click_method=self._edit_section,
         )
+        self._disabled = False
         self._toggle = False
         self._button_edit: ui.button | None = None
         self._button_properties: ui.button | None = None
@@ -81,6 +83,12 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
     def _select_section(self, events: list[dict[str, Any]]) -> None:
         selected_sections = [event[COLUMN_ID] for event in events]
         self._viewmodel.set_selected_section_ids(selected_sections)
+
+    async def _edit_section(self, row: dict[str, Any]) -> None:
+        if self._disabled:
+            return
+        self._select_section([row])
+        await self._viewmodel.edit_selected_section_metadata()
 
     def build(self) -> Self:
         self._section_table.build()
@@ -152,6 +160,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
         self.update_selected_items(selected_sections)
 
     def disable(self) -> None:
+        self._disabled = True
         if (
             self._button_add_line
             and self._button_edit
@@ -166,6 +175,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
             self._button_remove.disable()
 
     def enable(self) -> None:
+        self._disabled = False
         if (
             self._button_add_line
             and self._button_edit
