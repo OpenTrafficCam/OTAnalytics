@@ -55,4 +55,4 @@ class ClearRepositories:
         self._clear_all_tracks()
         self._clear_all_track_files()
         self._clear_all_videos()
-        self._clear_remark()
+        self._clear_remark.clear()

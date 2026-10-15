@@ -44,4 +44,4 @@ class TestClearRepositories:
         clear_all_tracks.assert_called_once()
         clear_all_track_files.assert_called_once()
         clear_all_videos.assert_called_once()
-        clear_remark.assert_called_once()
+        clear_remark.clear.assert_called_once()

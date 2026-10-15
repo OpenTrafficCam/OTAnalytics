@@ -19,5 +19,5 @@ class ClearRemark:
     def __init__(self, remark_repository: RemarkRepository):
         self._remark_repository = remark_repository
 
-    def __call__(self) -> None:
+    def clear(self) -> None:
         self._remark_repository.clear()

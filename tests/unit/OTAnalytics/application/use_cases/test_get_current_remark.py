@@ -8,6 +8,6 @@ class TestClearRemark:
     def test_clear(self) -> None:
         remark_repository = Mock(spec=RemarkRepository)
 
-        ClearRemark(remark_repository)()
+        ClearRemark(remark_repository).clear()
 
         remark_repository.clear.assert_called_once()
