@@ -164,6 +164,10 @@ class VisualizationFiltersKeys(ResourceKey):
     LABEL_FILTER_BY_DATE_TITLE = "label-filter-by-date-title"
     LABEL_CHOOSE_DATE_RANGE = "label-choose-date-range"
     MESSAGE_INVALID_DATETIME = "message-invalid-datetime"
+    MESSAGE_INVALID_DATE_FORMAT = "message-invalid-date-format"
+    MESSAGE_INVALID_HOUR = "message-invalid-hour"
+    MESSAGE_INVALID_MINUTE = "message-invalid-minute"
+    MESSAGE_INVALID_SECOND = "message-invalid-second"
 
 
 class TrackStatisticKeys(ResourceKey):
@@ -308,6 +312,18 @@ DEFAULT_RESOURCE_MAP = {
     VisualizationFiltersKeys.LABEL_FILTER_BY_DATE_TITLE: "Filter tracks by date",
     VisualizationFiltersKeys.LABEL_CHOOSE_DATE_RANGE: "Choose date range",
     VisualizationFiltersKeys.MESSAGE_INVALID_DATETIME: "datetime is not valid.",
+    VisualizationFiltersKeys.MESSAGE_INVALID_DATE_FORMAT: (
+        "Date must be of format: 'yyyy-mm-dd'"
+    ),
+    VisualizationFiltersKeys.MESSAGE_INVALID_HOUR: (
+        "Hour must be a digit in range [0,23]"
+    ),
+    VisualizationFiltersKeys.MESSAGE_INVALID_MINUTE: (
+        "Minute must be a digit in range [0,59]"
+    ),
+    VisualizationFiltersKeys.MESSAGE_INVALID_SECOND: (
+        "Second must be a digit in range [0,59]"
+    ),
     VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING: "Update flow highlighting",
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
     VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
