@@ -70,6 +70,7 @@ class SvzMetadataKeys(ResourceKey):
 
 class FlowKeys(ResourceKey):
     TABLE_COLUMN_NAME = "table-flow-column-name"
+    TABLE_COLUMN_TRACKS_ASSIGNED = "table-flow-column-tracks-assigned"
     BUTTON_ADD = "button-add"
     BUTTON_GENERATE = "button-generate"
     BUTTON_PROPERTIES = "button-properties"
@@ -214,7 +215,8 @@ DEFAULT_RESOURCE_MAP = {
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
     FlowAndSectionKeys.TAB_SECTION: "Section",
     FlowAndSectionKeys.TAB_FLOW: "Flow",
-    FlowKeys.TABLE_COLUMN_NAME: "Flows",
+    FlowKeys.TABLE_COLUMN_NAME: "Flow",
+    FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED: "Tracks",
     FlowKeys.BUTTON_ADD: "Add",
     FlowKeys.BUTTON_GENERATE: "Generate",
     FlowKeys.BUTTON_REMOVE: "Remove",
@@ -261,7 +263,7 @@ DEFAULT_RESOURCE_MAP = {
     SectionKeys.BUTTON_EDIT: "Edit...",
     SectionKeys.BUTTON_PROPERTIES: "Properties...",
     SectionKeys.BUTTON_REMOVE: "Remove...",
-    SectionKeys.TABLE_COLUMN_NAME: "Sections",
+    SectionKeys.TABLE_COLUMN_NAME: "Section",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
     SvzMetadataKeys.LABEL_TK_NUMBER: "TK-Nummer",
     SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER: "Zählstellennummer",
