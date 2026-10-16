@@ -1,8 +1,8 @@
 from OTAnalytics.application.state import (
     ActionState,
     CurrentKeyPrefix,
-    CurrentStaticAnalysisConfigState,
     CurrentOrthophoto,
+    CurrentStaticAnalysisConfigState,
     FileState,
     FlowState,
     SectionState,

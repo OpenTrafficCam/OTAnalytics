@@ -9,8 +9,8 @@ from OTAnalytics.application.project_location import ValidateProjectLocation
 from OTAnalytics.application.state import (
     ConfigurationFile,
     CurrentKeyPrefix,
-    CurrentStaticAnalysisConfigState,
     CurrentOrthophoto,
+    CurrentStaticAnalysisConfigState,
 )
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.flow_repository import (

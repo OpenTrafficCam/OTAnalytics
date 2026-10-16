@@ -9,8 +9,8 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.key_prefix import S3KeyPrefix
-from OTAnalytics.application.parser.config_parser import StaticAnalysisConfig
 from OTAnalytics.application.orthophoto import AddVideoFiles
+from OTAnalytics.application.parser.config_parser import StaticAnalysisConfig
 from OTAnalytics.application.project import SvzMetadata
 from OTAnalytics.application.state import (
     ActionState,
