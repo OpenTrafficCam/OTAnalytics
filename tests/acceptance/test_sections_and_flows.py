@@ -284,9 +284,7 @@ def _open_sections_of_preconfigured_project(
         Path(__file__).parents[1] / "data" / "sections_created_test_file.otconfig"
     )
     setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
-    page.get_by_text(
-        resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
-    ).click()
+    search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
     _dismiss_notifications(page)
 
 
