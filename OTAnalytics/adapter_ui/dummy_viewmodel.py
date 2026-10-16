@@ -604,12 +604,7 @@ class DummyViewModel(
         try:
             self._application.add_videos(files=video_files)
         except OrthophotoError as cause:
-            logger().warning(str(cause))
-            self._ui_factory.show_message(
-                message=str(cause),
-                initial_position=self._get_window_position(),
-                message_type=MessageType.ERROR,
-            )
+            self.__show_error(str(cause))
 
     def remove_videos(self) -> None:
         self._application.remove_videos()
@@ -717,7 +712,7 @@ class DummyViewModel(
         logger().warning(message)
         self._ui_factory.show_message(
             message=message,
-            initial_position=self.treeview_sections.get_position(),
+            initial_position=self._get_window_position(),
             message_type=MessageType.ERROR,
         )
 
@@ -932,12 +927,7 @@ class DummyViewModel(
         try:
             await self._application.add_tracks_of_files_async(track_files=track_files)
         except (OrthophotoError, IncompatibleGeoreferenceMetadataError) as cause:
-            logger().warning(str(cause))
-            self._ui_factory.show_message(
-                message=str(cause),
-                initial_position=self._get_window_position(),
-                message_type=MessageType.ERROR,
-            )
+            self.__show_error(str(cause))
 
     async def load_configuration(self) -> None:  # sourcery skip: avoid-builtin-shadow
         # INFO: Current behavior: Overwrites existing sections
