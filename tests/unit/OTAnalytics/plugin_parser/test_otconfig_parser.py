@@ -76,6 +76,24 @@ def mock_otconfig() -> OtConfig:
     return OtConfig(project, analysis, videos, sections, flows, remark)
 
 
+def default_analysis_config(track_files: set[Path]) -> AnalysisConfig:
+    """An AnalysisConfig carrying the application defaults and the given tracks."""
+    return AnalysisConfig(
+        do_events=DEFAULT_DO_EVENTS,
+        do_counting=DEFAULT_DO_COUNTING,
+        track_files=track_files,
+        export_config=ExportConfig(
+            save_name=DEFAULT_SAVE_NAME,
+            save_suffix=DEFAULT_SAVE_SUFFIX,
+            event_formats=DEFAULT_EVENT_FORMATS,
+            count_intervals={DEFAULT_COUNTING_INTERVAL_IN_MINUTES},
+            counting_event=CountingEvent.START,
+        ),
+        num_processes=1,
+        logfile=DEFAULT_LOG_FILE,
+    )
+
+
 @pytest.fixture
 def base_dir(test_data_tmp_dir: Path) -> YieldFixture[Path]:
     base_folder = test_data_tmp_dir / "my_base_folder"
@@ -99,7 +117,7 @@ class TestOtConfigParser:
         )
         project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
         videos: list[Video] = []
-        track_files: list[Path] = []
+        analysis_config = default_analysis_config(set())
         sections: list[Section] = []
         flows: list[Flow] = []
         remark: str | None = "Comment"
@@ -129,8 +147,8 @@ class TestOtConfigParser:
 
         config_parser.serialize(
             project=project,
+            analysis_config=analysis_config,
             video_files=videos,
-            track_files=track_files,
             sections=sections,
             flows=flows,
             file=output,
@@ -171,7 +189,7 @@ class TestOtConfigParser:
         )
         project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
         videos: list[Video] = [Mock(spec=Video)]
-        track_files: list[Path] = [test_data_tmp_dir / "a.ottrk"]
+        analysis_config = default_analysis_config({test_data_tmp_dir / "a.ottrk"})
         sections: list[Section] = []
         flows: list[Flow] = []
         output = test_data_tmp_dir / "config.otconfig"
@@ -184,8 +202,8 @@ class TestOtConfigParser:
 
         config_parser.serialize(
             project=project,
+            analysis_config=analysis_config,
             video_files=videos,
-            track_files=track_files,
             sections=sections,
             flows=flows,
             file=output,
@@ -229,8 +247,8 @@ class TestOtConfigParser:
 
         at_save_time = config_parser.convert(
             project,
+            default_analysis_config({test_data_tmp_dir / "a.ottrk"}),
             [Mock(spec=Video)],
-            [test_data_tmp_dir / "a.ottrk"],
             [],
             [],
             output,
@@ -240,8 +258,10 @@ class TestOtConfigParser:
         )
         at_dirty_check_time = config_parser.convert(
             project,
+            default_analysis_config(
+                {test_data_tmp_dir / "a.ottrk", test_data_tmp_dir / "b.ottrk"}
+            ),
             [Mock(spec=Video), Mock(spec=Video)],
-            [test_data_tmp_dir / "a.ottrk", test_data_tmp_dir / "b.ottrk"],
             [],
             [],
             output,
@@ -262,15 +282,15 @@ class TestOtConfigParser:
         serializer.serialize_from_config(mock_otconfig, save_path)
 
         mock_serialize.assert_called_once_with(
-            mock_otconfig.project,
-            mock_otconfig.videos,
-            mock_otconfig.analysis.track_files,
-            mock_otconfig.sections,
-            mock_otconfig.flows,
-            save_path,
-            mock_otconfig.remark,
-            mock_otconfig.s3_key_prefix,
-            None,
+            project=mock_otconfig.project,
+            analysis_config=mock_otconfig.analysis,
+            video_files=mock_otconfig.videos,
+            sections=mock_otconfig.sections,
+            flows=mock_otconfig.flows,
+            file=save_path,
+            remark=mock_otconfig.remark,
+            s3_key_prefix=mock_otconfig.s3_key_prefix,
+            orthophoto=None,
         )
 
     def test_parse_config(
@@ -507,7 +527,7 @@ def convert_with(
 ) -> dict:
     return given.config_parser.convert(
         Project(name="p", start_date=datetime(2026, 4, 22)),
-        [],
+        default_analysis_config(set()),
         [],
         [],
         [],

@@ -49,6 +49,7 @@ DEFAULT_SAVE_NAME = ""
 DEFAULT_SAVE_SUFFIX = ""
 DEFAULT_EVENT_FORMATS = {"csv"}
 DEFAULT_LOG_FILE = Path("logs")
+DEFAULT_NUM_PROCESSES = 1
 
 
 OS: str = platform.system()

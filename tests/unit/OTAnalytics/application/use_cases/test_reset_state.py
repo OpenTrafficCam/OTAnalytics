@@ -17,6 +17,7 @@ class TestResetState:
         action_state: Mock,
         file_state: Mock,
         current_key_prefix: Mock,
+        current_static_analysis_config_state: Mock,
         current_orthophoto: Mock,
     ) -> None:
         target = ResetState(
@@ -29,6 +30,7 @@ class TestResetState:
             action_state,
             file_state,
             current_key_prefix,
+            current_static_analysis_config_state,
             current_orthophoto,
         )
 
@@ -43,6 +45,7 @@ class TestResetState:
         action_state.reset.assert_called_once()
         file_state.reset.assert_called_once()
         current_key_prefix.reset.assert_called_once()
+        current_static_analysis_config_state.reset.assert_called_once()
         current_orthophoto.reset.assert_called_once()
 
 
@@ -93,6 +96,11 @@ def current_key_prefix() -> Mock:
 
     #Requirement https://openproject.platomo.de/wp/10322
     """
+    return Mock()
+
+
+@pytest.fixture
+def current_static_analysis_config_state() -> Mock:
     return Mock()
 
 
