@@ -7,10 +7,12 @@ from OTAnalytics.application.state import (
     FileState,
 )
 from OTAnalytics.application.use_cases.flow_repository import GetAllFlows
+from OTAnalytics.application.use_cases.get_current_analysis_config import (
+    GetCurrentAnalysisConfig,
+)
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
 from OTAnalytics.application.use_cases.section_repository import GetAllSections
-from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
 from OTAnalytics.application.use_cases.video_repository import GetAllVideos
 
 
@@ -22,9 +24,9 @@ class OtconfigHasChanged:
         get_flows: GetAllFlows,
         get_current_project: GetCurrentProject,
         get_videos: GetAllVideos,
-        get_track_files: GetAllTrackFiles,
         get_remark: GetCurrentRemark,
         current_key_prefix: CurrentKeyPrefix,
+        get_current_analysis_config: GetCurrentAnalysisConfig,
         current_orthophoto: CurrentOrthophoto,
     ):
         self._config_parser = config_parser
@@ -32,9 +34,9 @@ class OtconfigHasChanged:
         self._get_flows = get_flows
         self._get_current_project = get_current_project
         self._get_videos = get_videos
-        self._get_track_files = get_track_files
         self._get_remark = get_remark
         self._current_key_prefix = current_key_prefix
+        self._get_current_analysis_config = get_current_analysis_config
         self._current_orthophoto = current_orthophoto
 
     def has_changed(self, prev_config: ConfigurationFile) -> bool:
@@ -48,15 +50,15 @@ class OtconfigHasChanged:
             bool: True if the OTConfig file has changed, False otherwise.
         """
         current_content = self._config_parser.convert(
-            self._get_current_project.get(),
-            self._get_videos.get(),
-            self._get_track_files(),
-            self._get_sections(),
-            self._get_flows.get(),
-            prev_config.file,
-            self._get_remark.get(),
-            self._current_key_prefix.get(),
-            self._current_orthophoto.get(),
+            project=self._get_current_project.get(),
+            analysis_config=self._get_current_analysis_config.get(),
+            video_files=self._get_videos.get(),
+            sections=self._get_sections(),
+            flows=self._get_flows.get(),
+            file=prev_config.file,
+            remark=self._get_remark.get(),
+            s3_key_prefix=self._current_key_prefix.get(),
+            orthophoto=self._current_orthophoto.get(),
         )
         return prev_config.content != current_content
 

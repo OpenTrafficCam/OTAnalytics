@@ -34,6 +34,18 @@ class AnalysisConfig:
 
 
 @dataclass(frozen=True)
+class StaticAnalysisConfig:
+    """The subset of the AnalysisConfig that stays fixed while the
+    application runs."""
+
+    do_events: bool
+    do_counting: bool
+    export_config: ExportConfig
+    num_processes: int
+    logfile: Path
+
+
+@dataclass(frozen=True)
 class SubstitutedFile:
     """A reference an otconfig named, and the file loaded in its place.
 
@@ -101,8 +113,8 @@ class ConfigParser(ABC):
     def serialize(
         self,
         project: Project,
+        analysis_config: AnalysisConfig,
         video_files: Iterable[Video],
-        track_files: Iterable[Path],
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
@@ -115,8 +127,9 @@ class ConfigParser(ABC):
 
         Args:
             project (Project): description of the project
+            analysis_config (AnalysisConfig): analysis settings to store,
+                including the track files to reference
             video_files (Iterable[Video]): video files to reference
-            track_files (Iterable[Path]): track files to reference
             sections (Iterable[Section]): sections to store
             flows (Iterable[Flow]): flows to store
             file (Path): output file
@@ -146,8 +159,8 @@ class ConfigParser(ABC):
     def convert(
         self,
         project: Project,
+        analysis_config: AnalysisConfig,
         video_files: Iterable[Video],
-        track_files: Iterable[Path],
         sections: Iterable[Section],
         flows: Iterable[Flow],
         file: Path,
