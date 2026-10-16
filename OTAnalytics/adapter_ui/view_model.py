@@ -354,7 +354,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def start_new_project(self) -> None:
+    async def start_new_project(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

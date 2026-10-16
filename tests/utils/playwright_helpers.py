@@ -13,6 +13,7 @@ from OTAnalytics.application.resources.resource_manager import (
     AddTracksKeys,
     AddVideoKeys,
     FlowKeys,
+    GeneralKeys,
     ResourceManager,
     SectionKeys,
 )
@@ -457,8 +458,19 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
     search_for_marker_element(page, MARKER_FILENAME).first.fill(path.name)
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+    confirm_dialog(page, rm)
 
     wait_for_track_loading_to_finish(page)
+
+
+def confirm_dialog(page: Page, rm: ResourceManager) -> None:
+    """Confirm the dialog asking whether the current project may be replaced."""
+    ok_button = page.get_by_role(
+        "button", name=rm.get(GeneralKeys.LABEL_OK), exact=True
+    )
+    ok_button.wait_for(state="visible")
+    ok_button.click()
+    ok_button.wait_for(state="hidden")
 
 
 # ----------------------

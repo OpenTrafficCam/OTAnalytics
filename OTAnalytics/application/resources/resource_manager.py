@@ -10,6 +10,7 @@ class ResourceKey(StrEnum):
 
 class GeneralKeys(ResourceKey):
     LABEL_APPLY = "label-apply"
+    LABEL_OK = "label-ok"
     LABEL_CANCEL = "label-cancel"
     LABEL_RESET = "label-reset"
     LABEL_MODES = "label-modes"
@@ -225,6 +226,7 @@ DEFAULT_RESOURCE_MAP = {
     EditFlowDialogKeys.LABEL_END_SECTION: "End section",
     EditFlowDialogKeys.LABEL_DISTANCE: "Distance",
     GeneralKeys.LABEL_APPLY: "Apply",
+    GeneralKeys.LABEL_OK: "OK",
     GeneralKeys.LABEL_RESET: "Reset",
     GeneralKeys.LABEL_CANCEL: "Cancel",
     GeneralKeys.LABEL_MODES: "Modes",
