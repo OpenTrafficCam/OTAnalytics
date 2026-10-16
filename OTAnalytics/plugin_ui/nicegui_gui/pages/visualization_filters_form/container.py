@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from datetime import datetime
+from typing import Any
 
 from nicegui import ui
 from nicegui.elements.button import Button
@@ -60,12 +61,16 @@ class FilterDateRangeForm:
             self._resource_manager.get(VisualizationFiltersKeys.LABEL_START_TIME),
             marker_date=MARKER_FILTER_START_DATE_INPUT,
             marker_time=MARKER_FILTER_START_TIME_INPUT,
+            date_validation=self._validate_date,
+            time_validation=self._validate_time,
         )
         self._end_date = DateTimeForm(
             self._resource_manager.get(VisualizationFiltersKeys.LABEL_END_DATE),
             self._resource_manager.get(VisualizationFiltersKeys.LABEL_END_TIME),
             marker_date=MARKER_FILTER_END_DATE_INPUT,
             marker_time=MARKER_FILTER_END_TIME_INPUT,
+            date_validation=self._validate_date,
+            time_validation=self._validate_time,
         )
 
     def open(self) -> None:
@@ -93,6 +98,9 @@ class FilterDateRangeForm:
                 current_date_range.start_date or first_occurrence
             )
             self._end_date.set_value(current_date_range.end_date or last_occurrence)
+            # Mark only what the user types, as in the customtkinter GUI.
+            self._start_date.clear_validation()
+            self._end_date.clear_validation()
             ui.label(
                 self._occurrence_text(
                     VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE,
@@ -120,6 +128,50 @@ class FilterDateRangeForm:
                     on_click=self._on_reset_button_clicked,
                 )
         self._dialog.open()
+
+    def _validate_date(self, value: Any) -> str | None:
+        """Validate the date while the user types.
+
+        Returns:
+            str | None: the error message, None if the date is valid or empty.
+        """
+        text = str(value) if value else ""
+        if not text or self._viewmodel.validate_date(text):
+            return None
+        return self._label(VisualizationFiltersKeys.MESSAGE_INVALID_DATE_FORMAT)
+
+    def _validate_time(self, value: Any) -> str | None:
+        """Validate the hour, minute and, if given, second while the user types.
+
+        Returns:
+            str | None: the message for the first invalid part, None if the time
+                is valid or empty.
+        """
+        text = str(value) if value else ""
+        if not text:
+            return None
+        parts = text.split(":")
+        checks = [
+            (
+                self._viewmodel.validate_hour,
+                VisualizationFiltersKeys.MESSAGE_INVALID_HOUR,
+            ),
+            (
+                self._viewmodel.validate_minute,
+                VisualizationFiltersKeys.MESSAGE_INVALID_MINUTE,
+            ),
+            (
+                self._viewmodel.validate_second,
+                VisualizationFiltersKeys.MESSAGE_INVALID_SECOND,
+            ),
+        ]
+        # Seconds are optional, as FormFieldTime accepts HH:MM as well.
+        required = max(len(parts), 2)
+        for index, (is_valid, message_key) in enumerate(checks[:required]):
+            part = parts[index] if index < len(parts) else ""
+            if not is_valid(part):
+                return self._label(message_key)
+        return None
 
     def _label(self, key: VisualizationFiltersKeys | GeneralKeys) -> str:
         return self._resource_manager.get(key)
