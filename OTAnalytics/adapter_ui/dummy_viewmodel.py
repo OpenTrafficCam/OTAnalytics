@@ -1603,8 +1603,8 @@ class DummyViewModel(
         self._application.update_date_range_tracks_filter(date_range)
         self.frame_filter.set_active_color_on_filter_by_date_button()
 
-    def apply_filter_tracks_by_class(self, classes: list[str]) -> None:
-        self._application.update_class_tracks_filter(set(classes))
+    def apply_filter_tracks_by_class(self, classes: set[str]) -> None:
+        self._application.update_class_tracks_filter(classes)
         self.frame_filter.set_active_color_on_filter_by_class_button()
 
     def reset_filter_tracks_by_date(self) -> None:
