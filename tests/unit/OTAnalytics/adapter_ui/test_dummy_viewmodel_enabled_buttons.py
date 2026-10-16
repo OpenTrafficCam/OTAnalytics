@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
+from OTAnalytics.adapter_ui.abstract_frame_offset import AbstractFrameOffset
 from OTAnalytics.adapter_ui.dummy_viewmodel import DummyViewModel
 from OTAnalytics.application.state import CurrentOrthophoto
 from OTAnalytics.domain.orthophoto import Orthophoto
@@ -148,3 +149,14 @@ class TestVideoControlButtons:
         target.notify_orthophoto(None)
 
         assert last_video_control_enabled(given) is False
+
+
+class TestSectionOffsetButton:
+    def test_disabled_without_selected_section(self) -> None:
+        given = create_given()
+        target = create_target(given)
+        frame_offset = Mock(spec=AbstractFrameOffset)
+
+        target.set_offset_frame(frame_offset)
+
+        frame_offset.enable_update_offset_button.assert_called_once_with(False)

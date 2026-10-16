@@ -11,7 +11,7 @@ MESSAGE = "This will start a new project."
 
 
 class TestAskForConfirmation:
-    @pytest.mark.parametrize("button, expected", [("Apply", True), ("Cancel", False)])
+    @pytest.mark.parametrize("button, expected", [("OK", True), ("Cancel", False)])
     async def test_provides_the_users_answer(
         self,
         user: User,

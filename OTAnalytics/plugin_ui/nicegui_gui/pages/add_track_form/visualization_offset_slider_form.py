@@ -46,6 +46,8 @@ class VisualizationOffSetSliderForm(AbstractFrameOffset, ButtonForm):
         self.update_offset_button.props(
             f"{TestIdAttributes.DATA_TESTID}={MARKER_UPDATE_OFFSET}"
         )
+        # Button did not exist on first introduction, apply its state now
+        self.introduce_to_viewmodel()
         return self
 
     def on_offset_change(self) -> None:

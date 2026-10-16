@@ -41,7 +41,7 @@ class BaseDialog:
             self.build_content()
             with ui.row():
                 apply = ui.button(
-                    self.resource_manager.get(GeneralKeys.LABEL_APPLY),
+                    self.apply_label(),
                     on_click=lambda: dialog.submit(DialogResult.APPLY),
                 )
                 cancel = ui.button(
@@ -55,6 +55,10 @@ class BaseDialog:
                 apply.props(f"{TEST_ID}={MARKER_APPLY}")
                 cancel.props(f"{TEST_ID}={MARKER_CANCEL}")
             return dialog
+
+    def apply_label(self) -> str:
+        """Label of the button that submits DialogResult.APPLY."""
+        return self.resource_manager.get(GeneralKeys.LABEL_APPLY)
 
     @abstractmethod
     def build_content(self) -> None:

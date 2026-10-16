@@ -127,6 +127,19 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     def start_ui(self) -> None:
         self.webserver.run()
 
+    def register_observers(self) -> None:
+        super().register_observers()
+        self.register_flow_track_count_observers()
+
+    def register_flow_track_count_observers(self) -> None:
+        """Keep the number of assigned tracks in the flow table up to date.
+
+        Registered after the base observers, so the assignments have already been
+        cleared when the flow table is refreshed.
+        """
+        self.flow_repository.register_flows_observer(self.flow_form)
+        self.event_repository.register_observer(self.flow_form.notify_events)
+
     @cached_property
     def webserver(self) -> Webserver:
         from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE

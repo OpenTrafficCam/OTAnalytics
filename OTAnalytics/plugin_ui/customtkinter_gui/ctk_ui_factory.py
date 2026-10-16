@@ -44,17 +44,15 @@ SELECTED_EXTENSION = "selected_extension"
 
 
 class CtkUiFactory(UiFactory):
-    def info_box(
-        self, message: str, initial_position: tuple[int, int], show_cancel: bool = False
-    ) -> InfoBox:
-        return CtkInfoBox(
-            message=message, initial_position=initial_position, show_cancel=show_cancel
-        )
+    def info_box(self, message: str, initial_position: tuple[int, int]) -> InfoBox:
+        return CtkInfoBox(message=message, initial_position=initial_position)
 
     async def ask_for_confirmation(
         self, message: str, initial_position: tuple[int, int]
     ) -> bool:
-        info_box = self.info_box(message, initial_position, show_cancel=True)
+        info_box = CtkInfoBox(
+            message=message, initial_position=initial_position, show_cancel=True
+        )
         return not info_box.canceled
 
     def minimal_info_box(

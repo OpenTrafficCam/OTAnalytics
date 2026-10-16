@@ -69,7 +69,7 @@ def _build(given: Given) -> DummyViewModel:
 def reported_messages(given: Given) -> list[str]:
     return [
         call.kwargs["message"]
-        for call in given.ui_factory.info_box.call_args_list
+        for call in given.ui_factory.show_message.call_args_list
         if "message" in call.kwargs
     ]
 
@@ -235,7 +235,7 @@ class TestReportingCannotBreakALoad:
         #Requirement https://openproject.platomo.de/wp/10321
         """
         given = create_given()
-        given.ui_factory.info_box.side_effect = RuntimeError(
+        given.ui_factory.show_message.side_effect = RuntimeError(
             "The current slot cannot be determined"
         )
         target = create_target(given)
@@ -247,7 +247,7 @@ class TestReportingCannotBreakALoad:
     async def test_a_failure_report_that_cannot_be_shown_still_returns(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10321"""
         given = create_given(load_error=FileNotFoundError("no such track file"))
-        given.ui_factory.info_box.side_effect = RuntimeError(
+        given.ui_factory.show_message.side_effect = RuntimeError(
             "The current slot cannot be determined"
         )
         target = create_target(given)
