@@ -4,6 +4,7 @@
 """
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -11,14 +12,39 @@ from nicegui import ui
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.dto import DateRangeDto
-from OTAnalytics.application.resources.resource_manager import GeneralKeys
+from OTAnalytics.application.resources.resource_manager import (
+    GeneralKeys,
+    VisualizationFiltersKeys,
+)
+from OTAnalytics.domain.date import DateRange
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+    MARKER_FILTER_END_DATE_INPUT,
+    MARKER_FILTER_END_TIME_INPUT,
+    MARKER_FILTER_START_DATE_INPUT,
+    MARKER_FILTER_START_TIME_INPUT,
     VisualizationFiltersForm,
 )
 
 APPLY = "Apply from resources"
 RESET = "Reset from resources"
-LABELS = {GeneralKeys.LABEL_APPLY: APPLY, GeneralKeys.LABEL_RESET: RESET}
+TITLE = "Filter tracks by date"
+CHOOSE = "Choose date range"
+FROM = "From"
+TO = "To"
+FIRST = "First detection occurrence"
+LAST = "Last detection occurrence"
+INVALID = "datetime is not valid."
+LABELS = {
+    GeneralKeys.LABEL_APPLY: APPLY,
+    GeneralKeys.LABEL_RESET: RESET,
+    VisualizationFiltersKeys.LABEL_FILTER_BY_DATE_TITLE: TITLE,
+    VisualizationFiltersKeys.LABEL_CHOOSE_DATE_RANGE: CHOOSE,
+    VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM: FROM,
+    VisualizationFiltersKeys.LABEL_DATE_RANGE_TO: TO,
+    VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE: FIRST,
+    VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE: LAST,
+    VisualizationFiltersKeys.MESSAGE_INVALID_DATETIME: INVALID,
+}
 
 A_RANGE: DateRangeDto = {"start_date": "2023-05-24", "end_date": "2023-05-25"}
 NO_RANGE: DateRangeDto = {"start_date": "", "end_date": ""}
@@ -209,3 +235,141 @@ class TestClassificationDialog:
         given.view_model.apply_filter_tracks_by_class.assert_not_called()
         dialog = user.find(kind=ui.dialog).elements.pop()
         assert dialog.value is False
+
+
+FIRST_OCCURRENCE = datetime(2023, 5, 24, 8, 0, 0, tzinfo=timezone.utc)
+LAST_OCCURRENCE = datetime(2023, 5, 24, 9, 30, 15, tzinfo=timezone.utc)
+FILTER_START = datetime(2023, 5, 24, 8, 15, 0, tzinfo=timezone.utc)
+FILTER_END = datetime(2023, 5, 24, 8, 45, 30, tzinfo=timezone.utc)
+
+
+async def open_date_dialog(
+    user: User,
+    given: Given,
+    current: DateRange = DateRange(None, None),
+    first: datetime | None = FIRST_OCCURRENCE,
+    last: datetime | None = LAST_OCCURRENCE,
+) -> None:
+    given.view_model.get_first_detection_occurrence.return_value = first
+    given.view_model.get_last_detection_occurrence.return_value = last
+    given.view_model.get_filter_tracks_by_date_setting.return_value = current
+    target = create_target(given)
+
+    @ui.page("/test")
+    def page() -> None:
+        target.open_range_dialog()
+
+    await user.open("/test")
+    await user.should_see(APPLY)
+
+
+def find_input(user: User, marker: str) -> ui.input:
+    return user.find(kind=ui.input, marker=marker).elements.pop()
+
+
+def input_value(user: User, marker: str) -> object:
+    return find_input(user, marker).value
+
+
+def set_input(user: User, marker: str, value: str) -> None:
+    find_input(user, marker).value = value
+
+
+def date_dialog_is_open(user: User) -> bool:
+    return user.find(kind=ui.dialog).elements.pop().value
+
+
+class TestDateRangeDialog:
+    """The dialog matches FilterTracksByDatePopup of the customtkinter GUI."""
+
+    async def test_shows_title_and_instruction(self, user: User) -> None:
+        await open_date_dialog(user, create_given())
+
+        await user.should_see(TITLE)
+        await user.should_see(CHOOSE)
+        await user.should_see(FROM)
+        await user.should_see(TO)
+
+    async def test_shows_first_and_last_detection_occurrence(self, user: User) -> None:
+        await open_date_dialog(user, create_given())
+
+        await user.should_see(f"{FIRST}: 2023-05-24 08:00:00")
+        await user.should_see(f"{LAST}: 2023-05-24 09:30:15")
+
+    async def test_shows_occurrence_labels_without_detections(self, user: User) -> None:
+        await open_date_dialog(user, create_given(), first=None, last=None)
+
+        await user.should_see(f"{FIRST}:")
+        await user.should_see(f"{LAST}:")
+
+    async def test_presets_the_current_filter(self, user: User) -> None:
+        await open_date_dialog(
+            user, create_given(), current=DateRange(FILTER_START, FILTER_END)
+        )
+
+        assert input_value(user, MARKER_FILTER_START_DATE_INPUT) == FILTER_START.date()
+        assert input_value(user, MARKER_FILTER_START_TIME_INPUT) == FILTER_START.time()
+        assert input_value(user, MARKER_FILTER_END_DATE_INPUT) == FILTER_END.date()
+        assert input_value(user, MARKER_FILTER_END_TIME_INPUT) == FILTER_END.time()
+
+    async def test_presets_detection_occurrences_without_filter(
+        self, user: User
+    ) -> None:
+        await open_date_dialog(user, create_given())
+
+        assert (
+            input_value(user, MARKER_FILTER_START_TIME_INPUT) == FIRST_OCCURRENCE.time()
+        )
+        assert input_value(user, MARKER_FILTER_END_TIME_INPUT) == LAST_OCCURRENCE.time()
+
+    async def test_apply_applies_the_entered_range_and_closes(self, user: User) -> None:
+        given = create_given()
+        await open_date_dialog(user, given, current=DateRange(FILTER_START, FILTER_END))
+
+        user.find(APPLY).click()
+
+        given.view_model.apply_filter_tracks_by_date.assert_called_once_with(
+            DateRange(FILTER_START, FILTER_END)
+        )
+        assert not date_dialog_is_open(user)
+
+    async def test_empty_fields_apply_an_open_range(self, user: User) -> None:
+        given = create_given()
+        await open_date_dialog(user, given, first=None, last=None)
+
+        user.find(APPLY).click()
+
+        given.view_model.apply_filter_tracks_by_date.assert_called_once_with(
+            DateRange(None, None)
+        )
+
+    async def test_incomplete_start_is_rejected(self, user: User) -> None:
+        given = create_given()
+        await open_date_dialog(user, given)
+
+        set_input(user, MARKER_FILTER_START_TIME_INPUT, "")
+        user.find(APPLY).click()
+
+        await user.should_see(f"{FROM} {INVALID}")
+        given.view_model.apply_filter_tracks_by_date.assert_not_called()
+        assert date_dialog_is_open(user)
+
+    async def test_unparsable_end_is_rejected(self, user: User) -> None:
+        given = create_given()
+        await open_date_dialog(user, given)
+
+        set_input(user, MARKER_FILTER_END_DATE_INPUT, "2023-13-45")
+        user.find(APPLY).click()
+
+        await user.should_see(f"{TO} {INVALID}")
+        given.view_model.apply_filter_tracks_by_date.assert_not_called()
+
+    async def test_reset_resets_the_date_filter_and_closes(self, user: User) -> None:
+        given = create_given()
+        await open_date_dialog(user, given)
+
+        user.find(RESET).click()
+
+        given.view_model.reset_filter_tracks_by_date.assert_called_once_with()
+        given.view_model.apply_filter_tracks_by_date.assert_not_called()
+        assert not date_dialog_is_open(user)

@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from datetime import datetime
 
 from nicegui import ui
 from nicegui.elements.button import Button
@@ -68,53 +69,45 @@ class FilterDateRangeForm:
         )
 
     def open(self) -> None:
-        first_occurrence_info_text = self._resource_manager.get(
-            VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE
-        )
-        last_occurrence_info_text = self._resource_manager.get(
-            VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE
-        )
+        """Open the dialog, preset with the current date filter.
 
-        # Get first and last occurrence values
+        Without a current filter, the start and end are preset with the first
+        and last detection occurrence, as in the customtkinter GUI.
+        """
         first_occurrence = self._viewmodel.get_first_detection_occurrence()
         last_occurrence = self._viewmodel.get_last_detection_occurrence()
-
-        # Update info text
-        if first_occurrence:
-            first_occurrence_info_text += first_occurrence.strftime(DATETIME_FORMAT)
-
-        if last_occurrence:
-            last_occurrence_info_text += last_occurrence.strftime(DATETIME_FORMAT)
+        current_date_range = self._viewmodel.get_filter_tracks_by_date_setting()
 
         with ui.dialog() as self._dialog, ui.card():
+            ui.label(
+                self._label(VisualizationFiltersKeys.LABEL_FILTER_BY_DATE_TITLE)
+            ).classes("text-lg")
+            ui.label(self._label(VisualizationFiltersKeys.LABEL_CHOOSE_DATE_RANGE))
             with ui.row():
-                ui.label(
-                    self._resource_manager.get(
-                        VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM
-                    )
-                )
+                ui.label(self._label(VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM))
                 self._start_date.build()
             with ui.row():
-                ui.label(
-                    self._resource_manager.get(
-                        VisualizationFiltersKeys.LABEL_DATE_RANGE_TO
-                    )
-                )
+                ui.label(self._label(VisualizationFiltersKeys.LABEL_DATE_RANGE_TO))
                 self._end_date.build()
-
-            # Set values after building the UI elements
-            if first_occurrence:
-                # Preset start date with first occurrence
-                self._start_date.set_value(first_occurrence)
-
-            if last_occurrence:
-                # Preset end date with last occurrence
-                self._end_date.set_value(last_occurrence)
-            ui.label(first_occurrence_info_text)
-            ui.label(last_occurrence_info_text)
+            self._start_date.set_value(
+                current_date_range.start_date or first_occurrence
+            )
+            self._end_date.set_value(current_date_range.end_date or last_occurrence)
+            ui.label(
+                self._occurrence_text(
+                    VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE,
+                    first_occurrence,
+                )
+            )
+            ui.label(
+                self._occurrence_text(
+                    VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE,
+                    last_occurrence,
+                )
+            )
             with ui.row():
                 apply_button = ui.button(
-                    self._resource_manager.get(GeneralKeys.LABEL_APPLY),
+                    self._label(GeneralKeys.LABEL_APPLY),
                     on_click=self._on_apply_button_clicked,
                 )
                 # marker for Playwright: Apply button inside the filter-by-date dialog
@@ -123,19 +116,57 @@ class FilterDateRangeForm:
                     f"{TestIdAttributes.DATA_TESTID}={MARKER_FILTER_BY_DATE_APPLY_BUTTON}"  # noqa
                 )
                 ui.button(
-                    self._resource_manager.get(GeneralKeys.LABEL_RESET),
+                    self._label(GeneralKeys.LABEL_RESET),
                     on_click=self._on_reset_button_clicked,
                 )
         self._dialog.open()
 
+    def _label(self, key: VisualizationFiltersKeys | GeneralKeys) -> str:
+        return self._resource_manager.get(key)
+
+    def _occurrence_text(
+        self, key: VisualizationFiltersKeys, occurrence: datetime | None
+    ) -> str:
+        occurrence_text = occurrence.strftime(DATETIME_FORMAT) if occurrence else ""
+        return f"{self._label(key)}: {occurrence_text}"
+
     def _on_apply_button_clicked(self) -> None:
+        keys = VisualizationFiltersKeys
         try:
-            date_range = DateRange(self._start_date.value, self._end_date.value)
+            date_range = DateRange(
+                self._read(self._start_date, keys.LABEL_DATE_RANGE_FROM),
+                self._read(self._end_date, keys.LABEL_DATE_RANGE_TO),
+            )
             self._viewmodel.apply_filter_tracks_by_date(date_range)
             logger().info("Filter tracks by date applied")
             self._dialog.close()
         except InvalidDatetimeFormatError as e:
             logger().info(e)
+            ui.notify(str(e), type="negative")
+
+    def _read(
+        self, date_time: DateTimeForm, name_key: VisualizationFiltersKeys
+    ) -> datetime | None:
+        """Read the entered date and time.
+
+        An empty field means no bound. A partially filled or unparsable field is
+        rejected, as in the customtkinter GUI.
+
+        Raises:
+            InvalidDatetimeFormatError: if the input is not a valid date and time.
+        """
+        if date_time.is_empty:
+            return None
+        try:
+            value = date_time.value
+        except ValueError:
+            value = None
+        if value is None:
+            raise InvalidDatetimeFormatError(
+                f"{self._label(name_key)} "
+                f"{self._label(VisualizationFiltersKeys.MESSAGE_INVALID_DATETIME)}"
+            )
+        return value
 
     def _on_reset_button_clicked(self) -> None:
         self._viewmodel.reset_filter_tracks_by_date()
