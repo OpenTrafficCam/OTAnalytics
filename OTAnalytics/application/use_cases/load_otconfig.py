@@ -10,6 +10,7 @@ from OTAnalytics.application.state import (
     ConfigurationFile,
     CurrentKeyPrefix,
     CurrentOrthophoto,
+    CurrentStaticAnalysisConfigState,
 )
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.flow_repository import (
@@ -42,6 +43,7 @@ class LoadOtconfig:
         deserialize: Deserializer,
         validate_project_location: ValidateProjectLocation,
         current_key_prefix: CurrentKeyPrefix,
+        current_static_analysis_config_state: CurrentStaticAnalysisConfigState,
         current_orthophoto: CurrentOrthophoto,
         obtain_orthophoto: ObtainOrthophoto,
     ) -> None:
@@ -56,6 +58,9 @@ class LoadOtconfig:
         self._deserialize = deserialize
         self._validate_project_location = validate_project_location
         self._current_key_prefix = current_key_prefix
+        self._current_static_analysis_config_state = (
+            current_static_analysis_config_state
+        )
         self._current_orthophoto = current_orthophoto
         self._obtain_orthophoto = obtain_orthophoto
         self._subject = Subject[ConfigurationFile]()
@@ -117,6 +122,9 @@ class LoadOtconfig:
         # After `_begin`'s reset cleared it, and before the track files load:
         # they are read from under this prefix.
         self._current_key_prefix.set(config.s3_key_prefix)
+        self._current_static_analysis_config_state.set_from_analysis_config(
+            config.analysis
+        )
         self._update_project(
             config.project.name, config.project.start_date, config.project.metadata
         )

@@ -14,7 +14,11 @@ from unittest.mock import Mock
 
 import pytest
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.key_prefix import InvalidS3KeyPrefix, S3KeyPrefix
+from OTAnalytics.application.parser.config_parser import AnalysisConfig, ExportConfig
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.plugin_parser.otconfig_parser import (
@@ -68,6 +72,23 @@ def create_given(base_folder: Path, prefix: str | None = A_PREFIX) -> Given:
     return Given(base_folder=base_folder, content=content)
 
 
+def create_analysis_config() -> AnalysisConfig:
+    return AnalysisConfig(
+        do_events=True,
+        do_counting=True,
+        track_files=set(),
+        export_config=ExportConfig(
+            save_name="name",
+            save_suffix="suffix",
+            event_formats={"csv"},
+            count_intervals={15},
+            counting_event=CountingEvent.START,
+        ),
+        num_processes=1,
+        logfile=Path("logs"),
+    )
+
+
 def create_project() -> Project:
     return Project(name="My Project", start_date=datetime(2020, 1, 1), metadata=None)
 
@@ -119,8 +140,8 @@ class TestParseKeyPrefix:
         target = create_target(given)
         written = target.convert(
             project=create_project(),
+            analysis_config=create_analysis_config(),
             video_files=[],
-            track_files=[],
             sections=[],
             flows=[],
             file=tmp_path / "config.otconfig",
@@ -144,8 +165,8 @@ class TestParseKeyPrefix:
 
         written = create_target(given).convert(
             project=create_project(),
+            analysis_config=create_analysis_config(),
             video_files=[],
-            track_files=[],
             sections=[],
             flows=[],
             file=tmp_path / "config.otconfig",
