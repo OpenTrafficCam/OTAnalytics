@@ -11,12 +11,22 @@ import pytest
 from nicegui import ui
 from nicegui.testing import User
 
+from OTAnalytics.adapter_ui.default_values import SUPPORTED_FORMATS
 from OTAnalytics.adapter_ui.dto import DateRangeDto
 from OTAnalytics.application.resources.resource_manager import (
     GeneralKeys,
     VisualizationFiltersKeys,
 )
-from OTAnalytics.domain.date import DateRange
+from OTAnalytics.domain.date import (
+    DateRange,
+    validate_date,
+    validate_hour,
+    validate_minute,
+    validate_second,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
+    VALID_FIELD_CLASS,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
     MARKER_FILTER_END_DATE_INPUT,
     MARKER_FILTER_END_TIME_INPUT,
@@ -34,6 +44,10 @@ TO = "To"
 FIRST = "First detection occurrence"
 LAST = "Last detection occurrence"
 INVALID = "datetime is not valid."
+INVALID_DATE = "Date must be of format: 'yyyy-mm-dd'"
+INVALID_HOUR = "Hour must be a digit in range [0,23]"
+INVALID_MINUTE = "Minute must be a digit in range [0,59]"
+INVALID_SECOND = "Second must be a digit in range [0,59]"
 LABELS = {
     GeneralKeys.LABEL_APPLY: APPLY,
     GeneralKeys.LABEL_RESET: RESET,
@@ -44,6 +58,10 @@ LABELS = {
     VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE: FIRST,
     VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE: LAST,
     VisualizationFiltersKeys.MESSAGE_INVALID_DATETIME: INVALID,
+    VisualizationFiltersKeys.MESSAGE_INVALID_DATE_FORMAT: INVALID_DATE,
+    VisualizationFiltersKeys.MESSAGE_INVALID_HOUR: INVALID_HOUR,
+    VisualizationFiltersKeys.MESSAGE_INVALID_MINUTE: INVALID_MINUTE,
+    VisualizationFiltersKeys.MESSAGE_INVALID_SECOND: INVALID_SECOND,
 }
 
 A_RANGE: DateRangeDto = {"start_date": "2023-05-24", "end_date": "2023-05-25"}
@@ -62,6 +80,18 @@ def create_given() -> Given:
     view_model = Mock()
     view_model.get_skip_seconds.return_value = 1
     view_model.get_skip_frames.return_value = 1
+    view_model.validate_date.side_effect = lambda value: any(
+        validate_date(value, date_format) for date_format in SUPPORTED_FORMATS
+    )
+    view_model.validate_hour.side_effect = lambda value: value.isdigit() and (
+        validate_hour(int(value))
+    )
+    view_model.validate_minute.side_effect = lambda value: value.isdigit() and (
+        validate_minute(int(value))
+    )
+    view_model.validate_second.side_effect = lambda value: value.isdigit() and (
+        validate_second(int(value))
+    )
     return Given(resource_manager=resource_manager, view_model=view_model)
 
 
@@ -373,3 +403,85 @@ class TestDateRangeDialog:
         given.view_model.reset_filter_tracks_by_date.assert_called_once_with()
         given.view_model.apply_filter_tracks_by_date.assert_not_called()
         assert not date_dialog_is_open(user)
+
+
+def is_marked_valid(user: User, marker: str) -> bool:
+    return VALID_FIELD_CLASS in find_input(user, marker).classes
+
+
+def error_of(user: User, marker: str) -> str | None:
+    return find_input(user, marker).error
+
+
+class TestDateRangeDialogValidatesWhileTyping:
+    """Fields are marked green or red as in DateRow of the customtkinter GUI."""
+
+    async def test_preset_fields_are_unmarked(self, user: User) -> None:
+        await open_date_dialog(user, create_given())
+
+        for marker in [
+            MARKER_FILTER_START_DATE_INPUT,
+            MARKER_FILTER_START_TIME_INPUT,
+            MARKER_FILTER_END_DATE_INPUT,
+            MARKER_FILTER_END_TIME_INPUT,
+        ]:
+            assert not is_marked_valid(user, marker)
+            assert error_of(user, marker) is None
+
+    @pytest.mark.parametrize(
+        "marker, value",
+        [
+            (MARKER_FILTER_START_DATE_INPUT, "2023-05-25"),
+            (MARKER_FILTER_END_TIME_INPUT, "23:59:59"),
+            (MARKER_FILTER_END_TIME_INPUT, "23:59"),
+        ],
+    )
+    async def test_marks_valid_input_green(
+        self, user: User, marker: str, value: str
+    ) -> None:
+        await open_date_dialog(user, create_given())
+
+        set_input(user, marker, value)
+
+        assert is_marked_valid(user, marker)
+        assert error_of(user, marker) is None
+
+    @pytest.mark.parametrize(
+        "marker, value, message",
+        [
+            (MARKER_FILTER_START_DATE_INPUT, "2023-13-45", INVALID_DATE),
+            (MARKER_FILTER_START_DATE_INPUT, "2023-05", INVALID_DATE),
+            (MARKER_FILTER_START_TIME_INPUT, "24:00:00", INVALID_HOUR),
+            (MARKER_FILTER_START_TIME_INPUT, "10:60:00", INVALID_MINUTE),
+            (MARKER_FILTER_START_TIME_INPUT, "10:00:60", INVALID_SECOND),
+            (MARKER_FILTER_START_TIME_INPUT, "10", INVALID_MINUTE),
+            (MARKER_FILTER_START_TIME_INPUT, "10:30:", INVALID_SECOND),
+        ],
+    )
+    async def test_marks_invalid_input_red_with_message(
+        self, user: User, marker: str, value: str, message: str
+    ) -> None:
+        await open_date_dialog(user, create_given())
+
+        set_input(user, marker, value)
+
+        assert not is_marked_valid(user, marker)
+        assert error_of(user, marker) == message
+
+    async def test_correcting_input_turns_the_field_green(self, user: User) -> None:
+        await open_date_dialog(user, create_given())
+
+        set_input(user, MARKER_FILTER_START_TIME_INPUT, "24:00:00")
+        set_input(user, MARKER_FILTER_START_TIME_INPUT, "23:00:00")
+
+        assert is_marked_valid(user, MARKER_FILTER_START_TIME_INPUT)
+        assert error_of(user, MARKER_FILTER_START_TIME_INPUT) is None
+
+    async def test_emptied_field_is_unmarked(self, user: User) -> None:
+        await open_date_dialog(user, create_given())
+
+        set_input(user, MARKER_FILTER_END_DATE_INPUT, "2023-05-25")
+        set_input(user, MARKER_FILTER_END_DATE_INPUT, "")
+
+        assert not is_marked_valid(user, MARKER_FILTER_END_DATE_INPUT)
+        assert error_of(user, MARKER_FILTER_END_DATE_INPUT) is None
