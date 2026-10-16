@@ -161,6 +161,9 @@ class VisualizationFiltersKeys(ResourceKey):
     LABEL_END_TIME = "label-end-time"
     LABEL_SECONDS = "Seconds"
     LABEL_FRAMES = "Frames"
+    LABEL_FILTER_BY_DATE_TITLE = "label-filter-by-date-title"
+    LABEL_CHOOSE_DATE_RANGE = "label-choose-date-range"
+    MESSAGE_INVALID_DATETIME = "message-invalid-datetime"
 
 
 class TrackStatisticKeys(ResourceKey):
@@ -298,6 +301,13 @@ DEFAULT_RESOURCE_MAP = {
     VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM: "From",
     VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE: "Last detection occurrence",  # noqa
     VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE: "First detection occurrence",  # noqa
+    VisualizationFiltersKeys.LABEL_START_DATE: "Start date",
+    VisualizationFiltersKeys.LABEL_START_TIME: "Start time",
+    VisualizationFiltersKeys.LABEL_END_DATE: "End date",
+    VisualizationFiltersKeys.LABEL_END_TIME: "End time",
+    VisualizationFiltersKeys.LABEL_FILTER_BY_DATE_TITLE: "Filter tracks by date",
+    VisualizationFiltersKeys.LABEL_CHOOSE_DATE_RANGE: "Choose date range",
+    VisualizationFiltersKeys.MESSAGE_INVALID_DATETIME: "datetime is not valid.",
     VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING: "Update flow highlighting",
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
     VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
