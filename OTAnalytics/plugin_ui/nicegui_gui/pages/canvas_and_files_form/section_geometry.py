@@ -67,10 +67,11 @@ def _projection(start: Point, end: Point, point: Point) -> float:
     """
     dx = end[0] - start[0]
     dy = end[1] - start[1]
-    length = dx**2 + dy**2
-    if length == 0:
+    squared_length = dx**2 + dy**2
+    if squared_length == 0:
         return 0.0
-    return ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / length
+    algebraic_dot = (point[0] - start[0]) * dx + (point[1] - start[1]) * dy
+    return algebraic_dot / squared_length
 
 
 def _squared_distance_to_segment(start: Point, end: Point, point: Point) -> float:
