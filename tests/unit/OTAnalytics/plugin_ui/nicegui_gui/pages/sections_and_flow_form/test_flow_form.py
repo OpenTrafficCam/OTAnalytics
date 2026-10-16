@@ -33,6 +33,7 @@ class FakeFlow:
 def create_viewmodel() -> MagicMock:
     viewmodel = MagicMock(spec=ViewModel)
     viewmodel.get_all_flows.return_value = [FakeFlow(FLOW_ID, "Flow 1")]
+    viewmodel.get_tracks_assigned_to_each_flow.return_value = {}
     return viewmodel
 
 
