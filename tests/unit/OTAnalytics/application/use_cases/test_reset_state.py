@@ -102,6 +102,8 @@ def current_key_prefix() -> Mock:
 @pytest.fixture
 def current_static_analysis_config_state() -> Mock:
     return Mock()
-  
+
+
+@pytest.fixture
 def current_orthophoto() -> Mock:
     return Mock()

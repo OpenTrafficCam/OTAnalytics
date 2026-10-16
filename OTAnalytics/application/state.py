@@ -917,6 +917,8 @@ class CurrentStaticAnalysisConfigState:
         self.export_config.reset()
         self.num_processes = DEFAULT_NUM_PROCESSES
         self.logfile = DEFAULT_LOG_FILE
+
+
 class CurrentOrthophoto:
     """The Orthophoto the loaded project shows behind its Geo-only Track Files.
 

@@ -458,6 +458,7 @@ class OtConfigParser(ConfigParser):
             NUM_PROCESSES: analysis_config.num_processes,
             LOGFILE: str(analysis_config.logfile),
         }
+
     @staticmethod
     def _orthophoto_reference(
         orthophoto: Orthophoto,

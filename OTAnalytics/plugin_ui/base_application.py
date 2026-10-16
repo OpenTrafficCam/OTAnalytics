@@ -53,8 +53,8 @@ from OTAnalytics.application.run_configuration import (
 from OTAnalytics.application.state import (
     ActionState,
     CurrentKeyPrefix,
-    CurrentStaticAnalysisConfigState,
     CurrentOrthophoto,
+    CurrentStaticAnalysisConfigState,
     FileState,
     FlowState,
     SectionState,
@@ -387,7 +387,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                 get_remark=self.get_current_remark,
                 current_key_prefix=self.current_key_prefix,
                 get_current_analysis_config=self.get_current_analysis_config,
-                orthophoto=self.current_orthophoto,
+                current_orthophoto=self.current_orthophoto,
             ),
             OtflowHasChanged(
                 self.flow_parser, self.get_all_sections, self.get_all_flows
@@ -497,6 +497,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def current_static_analysis_config_state(self) -> CurrentStaticAnalysisConfigState:
         return CurrentStaticAnalysisConfigState()
+
+    @cached_property
     def current_orthophoto(self) -> CurrentOrthophoto:
         """One holder for the whole application, like `current_key_prefix`."""
         return CurrentOrthophoto()

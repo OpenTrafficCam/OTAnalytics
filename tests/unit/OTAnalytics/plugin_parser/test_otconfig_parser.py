@@ -527,7 +527,7 @@ def convert_with(
 ) -> dict:
     return given.config_parser.convert(
         Project(name="p", start_date=datetime(2026, 4, 22)),
-        [],
+        default_analysis_config(set()),
         [],
         [],
         [],
