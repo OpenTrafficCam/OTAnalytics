@@ -10,6 +10,7 @@ class ResourceKey(StrEnum):
 
 class GeneralKeys(ResourceKey):
     LABEL_APPLY = "label-apply"
+    LABEL_OK = "label-ok"
     LABEL_CANCEL = "label-cancel"
     LABEL_RESET = "label-reset"
     LABEL_MODES = "label-modes"
@@ -69,6 +70,7 @@ class SvzMetadataKeys(ResourceKey):
 
 class FlowKeys(ResourceKey):
     TABLE_COLUMN_NAME = "table-flow-column-name"
+    TABLE_COLUMN_TRACKS_ASSIGNED = "table-flow-column-tracks-assigned"
     BUTTON_ADD = "button-add"
     BUTTON_GENERATE = "button-generate"
     BUTTON_PROPERTIES = "button-properties"
@@ -213,7 +215,8 @@ DEFAULT_RESOURCE_MAP = {
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
     FlowAndSectionKeys.TAB_SECTION: "Section",
     FlowAndSectionKeys.TAB_FLOW: "Flow",
-    FlowKeys.TABLE_COLUMN_NAME: "Flows",
+    FlowKeys.TABLE_COLUMN_NAME: "Flow",
+    FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED: "Tracks",
     FlowKeys.BUTTON_ADD: "Add",
     FlowKeys.BUTTON_GENERATE: "Generate",
     FlowKeys.BUTTON_REMOVE: "Remove",
@@ -223,6 +226,7 @@ DEFAULT_RESOURCE_MAP = {
     EditFlowDialogKeys.LABEL_END_SECTION: "End section",
     EditFlowDialogKeys.LABEL_DISTANCE: "Distance",
     GeneralKeys.LABEL_APPLY: "Apply",
+    GeneralKeys.LABEL_OK: "OK",
     GeneralKeys.LABEL_RESET: "Reset",
     GeneralKeys.LABEL_CANCEL: "Cancel",
     GeneralKeys.LABEL_MODES: "Modes",
@@ -259,7 +263,7 @@ DEFAULT_RESOURCE_MAP = {
     SectionKeys.BUTTON_EDIT: "Edit...",
     SectionKeys.BUTTON_PROPERTIES: "Properties...",
     SectionKeys.BUTTON_REMOVE: "Remove...",
-    SectionKeys.TABLE_COLUMN_NAME: "Sections",
+    SectionKeys.TABLE_COLUMN_NAME: "Section",
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
     SvzMetadataKeys.LABEL_TK_NUMBER: "TK-Nummer",
     SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER: "Zählstellennummer",
@@ -280,7 +284,7 @@ DEFAULT_RESOURCE_MAP = {
     TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER: "Track Statistics",
     TrackStatisticKeys.LABEL_ALL_TRACKS: "All tracks:",
     TrackStatisticKeys.LABEL_TRACKS_INTERSECTING_NOT_ASSIGNED: "Tracks intersecting not assigned:",  # noqa
-    TrackStatisticKeys.LABEL_TRACKS_ASSIGNED_TO_FLOWS: "Tracks assigend to flows:",
+    TrackStatisticKeys.LABEL_TRACKS_ASSIGNED_TO_FLOWS: "Tracks assigned to flows:",
     TrackStatisticKeys.LABEL_NUMBER_OF_TRACKS_WITH_SIMULTANEOUS_SECTION_EVENTS: "Number of tracks with simultaneous section events",  # noqa
     TrackStatisticKeys.LABEL_INSIDE_CUTTING_SECTIONS: "Inside cutting section:",
     TrackStatisticKeys.LABEL_TRACKS_NOT_INTERSECTING_SECTIONS: "Tracks not intersecting section:",  # noqa

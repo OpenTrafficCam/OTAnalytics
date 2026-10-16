@@ -14,6 +14,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+    MARKER_TAB_SECTION,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     MARKER_BUTTON_GENERATE,
     MARKER_BUTTON_PROPERTIES,
@@ -92,9 +95,8 @@ class TestAddLineSectionWithDialog:
         setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
 
         # Switch to Sections tab
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
-        ).click()
+
+        search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
 
         # Create two additional sections
         names = ["First-Line", "Second-Line"]

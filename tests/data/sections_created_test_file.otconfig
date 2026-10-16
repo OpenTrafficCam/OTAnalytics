@@ -80,7 +80,7 @@
             "name": "Test-Flow",
             "start": "2",
             "end": "1",
-            "distance": null
+            "distance": 42.0
         }
     ],
     "remark": ""

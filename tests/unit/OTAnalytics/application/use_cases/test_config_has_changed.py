@@ -52,6 +52,9 @@ class TestOtconfigHasChanged:
         get_remark = Mock()
         current_key_prefix = Mock()
         key_prefix = Mock()
+        current_orthophoto = Mock()
+        orthophoto = Mock()
+        current_orthophoto.get.return_value = orthophoto
         current_key_prefix.get.return_value = key_prefix
         remark = Mock()
         get_remark.get.return_value = remark
@@ -71,6 +74,7 @@ class TestOtconfigHasChanged:
             get_remark,
             current_key_prefix,
             get_current_analysis_config,
+            current_orthophoto,
         )
         config_file = ConfigurationFile(Mock(), previous_data)
 
@@ -84,6 +88,7 @@ class TestOtconfigHasChanged:
             file=config_file.file,
             remark=remark,
             s3_key_prefix=key_prefix,
+            orthophoto=orthophoto,
         )
         get_current_project.get.assert_called_once()
         get_videos.get.assert_called_once()

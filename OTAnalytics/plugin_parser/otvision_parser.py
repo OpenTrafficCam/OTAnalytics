@@ -608,7 +608,12 @@ class OttrkParser(TrackParser, GeoreferenceMetadataParsingMixin):
         )
         if georeference_metadata is not None:
             tracks = tracks.with_georeference_metadata(georeference_metadata)
-        return TrackParseResult(tracks, detection_metadata, video_metadata)
+        geo_coordinates_crs = self.parse_geo_coordinates_crs(
+            ottrk_dict[ottrk_format.METADATA]
+        )
+        return TrackParseResult(
+            tracks, detection_metadata, video_metadata, geo_coordinates_crs
+        )
 
     @classmethod
     def parse_video_metadata(cls, metadata_video: dict) -> VideoMetadata:

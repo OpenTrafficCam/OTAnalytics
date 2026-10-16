@@ -3,8 +3,21 @@ from pathlib import Path
 
 from OTAnalytics.application.datastore import VideoParser
 from OTAnalytics.application.logger import logger
+from OTAnalytics.application.orthophoto import (
+    MIXED_TRACK_FILES,
+    ResolveMissingOrthophoto,
+)
 from OTAnalytics.application.parser.track_parser import TrackParser, TracksParseResult
-from OTAnalytics.application.state import TracksMetadata, VideosMetadata
+from OTAnalytics.application.state import (
+    CurrentOrthophoto,
+    TracksMetadata,
+    VideosMetadata,
+)
+from OTAnalytics.domain.orthophoto import (
+    MixedTrackFiles,
+    Orthophoto,
+    OrthophotoRequired,
+)
 from OTAnalytics.domain.progress import CompletionProgress, ProgressbarBuilder
 from OTAnalytics.domain.track_repository import TrackFileRepository, TrackRepository
 from OTAnalytics.domain.video import VideoRepository
@@ -24,6 +37,8 @@ class LoadTrackFiles:
         progressbar: ProgressbarBuilder,
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
+        current_orthophoto: CurrentOrthophoto,
+        resolve_missing_orthophoto: ResolveMissingOrthophoto,
     ) -> None:
         self._track_parser = track_parser
         self._track_repository = track_repository
@@ -33,6 +48,8 @@ class LoadTrackFiles:
         self._progressbar = progressbar
         self._tracks_metadata = tracks_metadata
         self._videos_metadata = videos_metadata
+        self._current_orthophoto = current_orthophoto
+        self._resolve_missing_orthophoto = resolve_missing_orthophoto
 
     def __call__(self, files: list[Path]) -> None:
         """Load and parse track files together with their videos, blocking.
@@ -55,6 +72,8 @@ class LoadTrackFiles:
 
         Raises:
             RuntimeError: if called while an event loop is running.
+            OrthophotoRequired: if the files are geo-only and the project has no
+                orthophoto, because the blocking path cannot ask the user for one.
         """
         if self._event_loop_is_running():
             raise RuntimeError(
@@ -79,14 +98,42 @@ class LoadTrackFiles:
         """
         if files_to_load := self._files_to_load(files):
             progressbar = self._start_progress(files_to_load)
+            orthophoto_before_load = self._current_orthophoto.get()
             try:
                 # parse_files must stay pure: no repository, no observer, no ui. It
                 # runs on a worker thread here, and repositories notify observers
                 # that mutate widgets, which is only safe on the event loop.
-                parse_result = await asyncio.to_thread(self._parse, files_to_load)
+                parse_result = await self._parse_resolving_orthophoto(files_to_load)
                 self._publish(parse_result, files_to_load)
+            except BaseException:
+                # Also on cancellation, which is no Exception.
+                self._restore_orthophoto(orthophoto_before_load)
+                raise
             finally:
                 progressbar.close()
+
+    def _restore_orthophoto(self, orthophoto: Orthophoto | None) -> None:
+        """Undo an Orthophoto chosen for a load that then failed.
+
+        A failed load must leave the project as it was, or every later camera
+        load would be refused as mixed.
+        """
+        if self._current_orthophoto.get() != orthophoto:
+            self._current_orthophoto.set(orthophoto)
+
+    async def _parse_resolving_orthophoto(
+        self, files_to_load: list[Path]
+    ) -> TracksParseResult:
+        """Parse, and ask for an Orthophoto once if the files need one.
+
+        Parsing is pure, so a second attempt after the Orthophoto is chosen
+        starts from exactly the same place as the first.
+        """
+        try:
+            return await asyncio.to_thread(self._parse, files_to_load)
+        except OrthophotoRequired:
+            await self._resolve_missing_orthophoto.resolve()
+            return await asyncio.to_thread(self._parse, files_to_load)
 
     def _start_progress(self, files_to_load: list[Path]) -> CompletionProgress:
         """Show that track files are being parsed until the caller closes it again.
@@ -149,6 +196,8 @@ class LoadTrackFiles:
 
         Each video is resolved relative to the parent folder of the track file it was
         parsed from, so track files from different folders each find their own video.
+        Geo-only track files have no video, so none is created for them.
+
         This relies on `TrackParser.parse_files` returning exactly one `VideoMetadata`
         per input file, in input order; `strict=True` turns a violation of that into
         an error rather than silently dropping videos.
@@ -157,6 +206,7 @@ class LoadTrackFiles:
             parse_result (TracksParseResult): what the parser produced.
             files_to_load (list[Path]): the files handed to the parser.
         """
+        self._refuse_mixed_track_files(parse_result)
         for video_metadata in parse_result.videos_metadata:
             self._videos_metadata.update(video_metadata)
 
@@ -164,9 +214,13 @@ class LoadTrackFiles:
             self._video_parser.parse(
                 track_file.parent / video_metadata.path, video_metadata
             )
-            for track_file, video_metadata in zip(
-                files_to_load, parse_result.videos_metadata, strict=True
+            for track_file, video_metadata, geo_only in zip(
+                files_to_load,
+                parse_result.videos_metadata,
+                parse_result.geo_only_per_file,
+                strict=True,
             )
+            if not geo_only
         ]
         self._video_repository.add_all(videos)
         self._track_repository.add_all(parse_result.tracks)
@@ -176,6 +230,16 @@ class LoadTrackFiles:
                 detection_metadata.detection_classes
             )
         logger().info(f"Loaded {len(files_to_load)} track files and videos...")
+
+    def _refuse_mixed_track_files(self, parse_result: TracksParseResult) -> None:
+        """Keep a project to one kind of placement (ADR 0005).
+
+        Checked before anything is published, so a refusal leaves no trace.
+        """
+        if self._current_orthophoto.get() is not None and not all(
+            parse_result.geo_only_per_file
+        ):
+            raise MixedTrackFiles(MIXED_TRACK_FILES)
 
     def _is_file_already_loaded(self, file: Path) -> bool:
         return file in self._track_file_repository.get_all()

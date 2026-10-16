@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from nicegui import ui
+from nicegui.elements.notification import NotificationType
 
 from OTAnalytics.adapter_ui.cancel_export_counts import CancelExportCounts
 from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
@@ -12,6 +13,7 @@ from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.helpers import remove_wildcard_from
 from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
+from OTAnalytics.adapter_ui.message_type import MessageType
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -19,11 +21,15 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.application import CancelAddFlow, CancelAddSection
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.helpers.file_helpers import (
     get_all_files_with_correct_file_ending_in_directory,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.confirmation_dialog import (
+    ConfirmationDialog,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import EditFlowDialog
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
@@ -62,13 +68,42 @@ def build_file_extensions(filetypes: Iterable[tuple[str, str]]) -> dict[str, str
     }
 
 
+NOTIFICATION_TYPES: dict[MessageType, NotificationType] = {
+    MessageType.ERROR: "negative",
+    MessageType.WARNING: "warning",
+    MessageType.INFO: "info",
+}
+
+
 class NiceGuiMessageBox(MessageBox):
+    """Persistent notification with a spinner that stays until it is closed.
+
+    Without a client (e.g. while preloading files on startup) nothing can be
+    shown; the box then only logs and does nothing.
+    """
+
+    def __init__(self, message: str) -> None:
+        self._notification: ui.notification | None = None
+        try:
+            self._notification = ui.notification(
+                message,
+                position="top",
+                type="ongoing",
+                spinner=True,
+                timeout=None,
+                multi_line=True,
+            )
+        except RuntimeError as cause:
+            logger().debug(f"Could not show message '{message}': {cause}")
 
     def close(self) -> None:
-        pass
+        if self._notification is not None:
+            self._notification.dismiss()
+            self._notification = None
 
     def update_message(self, message: str) -> None:
-        pass
+        if self._notification is not None:
+            self._notification.message = message
 
 
 class NiceGuiInfoBox(InfoBox):
@@ -87,24 +122,43 @@ class NiceGuiUiFactory(UiFactory):
         self._resource_manager = resource_manager
         self._base_directory = base_directory
 
-    def info_box(
-        self, message: str, initial_position: tuple[int, int], show_cancel: bool = False
-    ) -> InfoBox:
+    def info_box(self, message: str, initial_position: tuple[int, int]) -> InfoBox:
+        self.show_message(
+            message=message,
+            initial_position=initial_position,
+            message_type=MessageType.ERROR,
+        )
+        return NiceGuiInfoBox()
+
+    def show_message(
+        self,
+        message: str,
+        initial_position: tuple[int, int],
+        message_type: MessageType,
+    ) -> None:
         # Use ui.notify for immediate feedback
         ui.notify(
             message,
-            type="negative",
+            type=NOTIFICATION_TYPES[message_type],
             position="top",
-            timeout=5000,  # 5 seconds for errors
+            timeout=5000,  # 5 seconds
             close_button=True,
             multi_line=True,
         )
-        return NiceGuiInfoBox()
+
+    async def ask_for_confirmation(
+        self, message: str, initial_position: tuple[int, int]
+    ) -> bool:
+        dialog = ConfirmationDialog(
+            resource_manager=self._resource_manager, message=message
+        )
+        result = await dialog.result
+        return result == DialogResult.APPLY
 
     def minimal_info_box(
         self, message: str, initial_position: tuple[int, int]
     ) -> MessageBox:
-        return NiceGuiMessageBox()
+        return NiceGuiMessageBox(message)
 
     async def askopenfilename(
         self,

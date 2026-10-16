@@ -26,6 +26,18 @@ from OTAnalytics.application.analysis.traffic_counting_specification import Expo
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import Datastore, EventListParser, VideoParser
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.orthophoto import (
+    AddVideoFiles,
+    ChooseOrthophoto,
+    CurrentOrthophotoGeoreference,
+    CurrentOrthophotoImage,
+    LocalObtainOrthophoto,
+    NoOrthophotoToProvide,
+    ObtainOrthophoto,
+    ProvideOrthophoto,
+    ProvideOrthophotoGeoreference,
+    ResolveMissingOrthophoto,
+)
 from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
@@ -42,6 +54,7 @@ from OTAnalytics.application.state import (
     ActionState,
     CurrentKeyPrefix,
     CurrentStaticAnalysisConfigState,
+    CurrentOrthophoto,
     FileState,
     FlowState,
     SectionState,
@@ -240,6 +253,10 @@ from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.number_of_tracks_to
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.tracks_as_dataframe_provider import (  # noqa
     TracksAsDataFrameProvider,
 )
+from OTAnalytics.plugin_orthophoto.rasterio_orthophoto import (
+    read_orthophoto_georeference,
+    read_orthophoto_image,
+)
 from OTAnalytics.plugin_parser.export import (
     AddSectionInformationExporterFactory,
     CachedExporterFactory,
@@ -370,6 +387,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
                 get_remark=self.get_current_remark,
                 current_key_prefix=self.current_key_prefix,
                 get_current_analysis_config=self.get_current_analysis_config,
+                orthophoto=self.current_orthophoto,
             ),
             OtflowHasChanged(
                 self.flow_parser, self.get_all_sections, self.get_all_flows
@@ -400,6 +418,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.validate_project_location,
             self.current_key_prefix,
             self.current_static_analysis_config_state,
+            self.current_orthophoto,
+            self.obtain_orthophoto,
         )
 
     @cached_property
@@ -429,6 +449,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.file_state,
             self.current_key_prefix,
             self.current_static_analysis_config_state,
+            self.current_orthophoto,
         )
 
     @cached_property
@@ -451,6 +472,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.current_key_prefix,
             self.get_current_analysis_config,
             self.otconfig_upload,
+            self.current_orthophoto,
         )
 
     @cached_property
@@ -475,6 +497,45 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def current_static_analysis_config_state(self) -> CurrentStaticAnalysisConfigState:
         return CurrentStaticAnalysisConfigState()
+    def current_orthophoto(self) -> CurrentOrthophoto:
+        """One holder for the whole application, like `current_key_prefix`."""
+        return CurrentOrthophoto()
+
+    @cached_property
+    def current_orthophoto_image(self) -> CurrentOrthophotoImage:
+        return CurrentOrthophotoImage(self.current_orthophoto, read_orthophoto_image)
+
+    @cached_property
+    def obtain_orthophoto(self) -> ObtainOrthophoto:
+        """Overridden in S3 mode."""
+        return LocalObtainOrthophoto()
+
+    @cached_property
+    def orthophoto_georeference(self) -> ProvideOrthophotoGeoreference:
+        return CurrentOrthophotoGeoreference(
+            self.current_orthophoto, read_orthophoto_georeference
+        )
+
+    @cached_property
+    def provide_orthophoto(self) -> ProvideOrthophoto:
+        """Overridden by front-ends that can ask the user for a file."""
+        return NoOrthophotoToProvide()
+
+    @cached_property
+    def resolve_missing_orthophoto(self) -> ResolveMissingOrthophoto:
+        return ResolveMissingOrthophoto(
+            self.provide_orthophoto,
+            ChooseOrthophoto(
+                self.current_orthophoto,
+                self.section_repository,
+                self.track_repository,
+                self.video_repository,
+            ),
+        )
+
+    @cached_property
+    def add_video_files(self) -> AddVideoFiles:
+        return AddVideoFiles(self.datastore.load_video_files, self.current_orthophoto)
 
     @cached_property
     def get_current_remark(self) -> GetCurrentRemark:
@@ -702,7 +763,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     def _create_track_parser(self) -> TrackParser:
-        return FeathersParser(self.track_geometry_factory)
+        return FeathersParser(self.track_geometry_factory, self.orthophoto_georeference)
 
     def _create_stream_track_parser(self) -> StreamTrackParser:
         return StreamOttrkParser(
@@ -755,6 +816,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.progressbar_builder,
             self.track_image_factory,
             self.track_id_set_factory,
+            self.current_orthophoto_image.get,
         )
 
     @cached_property
@@ -923,6 +985,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.progressbar_builder,
             self.tracks_metadata,
             self.videos_metadata,
+            current_orthophoto=self.current_orthophoto,
+            resolve_missing_orthophoto=self.resolve_missing_orthophoto,
         )
 
     @cached_property

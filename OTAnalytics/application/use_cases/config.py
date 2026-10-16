@@ -3,7 +3,12 @@ from pathlib import Path
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.config_parser import ConfigParser
-from OTAnalytics.application.state import ConfigurationFile, CurrentKeyPrefix, FileState
+from OTAnalytics.application.state import (
+    ConfigurationFile,
+    CurrentKeyPrefix,
+    CurrentOrthophoto,
+    FileState,
+)
 from OTAnalytics.application.upload_otconfig import UploadOtconfig
 from OTAnalytics.application.use_cases.get_current_analysis_config import (
     GetCurrentAnalysisConfig,
@@ -29,6 +34,7 @@ class SaveOtconfig:
         current_key_prefix: CurrentKeyPrefix,
         get_current_analysis_config: GetCurrentAnalysisConfig,
         otconfig_upload: UploadOtconfig,
+        current_orthophoto: CurrentOrthophoto,
     ) -> None:
         self._datastore = datastore
         self._config_parser = config_parser
@@ -37,6 +43,7 @@ class SaveOtconfig:
         self._current_key_prefix = current_key_prefix
         self._get_current_analysis_config = get_current_analysis_config
         self._otconfig_upload = otconfig_upload
+        self._current_orthophoto = current_orthophoto
 
     async def __call__(self, file: Path) -> None:
         project = self._datastore.project
@@ -59,6 +66,8 @@ class SaveOtconfig:
         # two would make every project report itself as permanently unsaved.
         s3_key_prefix = self._current_key_prefix.get()
         analysis_config = self._get_current_analysis_config.get()
+        # Read once for the same reason as the prefix.
+        orthophoto = self._current_orthophoto.get()
         logger().info(f"Saving otconfig to '{file}'")
         self._config_parser.serialize(
             project=project,
@@ -69,6 +78,7 @@ class SaveOtconfig:
             file=file,
             remark=remark,
             s3_key_prefix=s3_key_prefix,
+            orthophoto=orthophoto,
         )
         self._state.last_saved_config.set(
             ConfigurationFile(
@@ -82,6 +92,7 @@ class SaveOtconfig:
                     file=file,
                     remark=remark,
                     s3_key_prefix=s3_key_prefix,
+                    orthophoto=orthophoto,
                 ),
             )
         )

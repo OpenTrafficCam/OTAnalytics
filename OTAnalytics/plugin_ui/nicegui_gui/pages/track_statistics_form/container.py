@@ -13,38 +13,52 @@ COLUMN_NAME = "name"
 COLUMN_NUMBER = "number"
 
 
+def _count_with_percentage(count: int, percentage: float) -> str:
+    return f"{count} ({percentage:.1%})"
+
+
 def map_to_ui(
     resource_manager: ResourceManager, track_statistics: TrackStatistics
 ) -> list[dict[str, str]]:
+    rows: list[tuple[TrackStatisticKeys, str]] = [
+        (TrackStatisticKeys.LABEL_ALL_TRACKS, str(track_statistics.track_count)),
+        (
+            TrackStatisticKeys.LABEL_INSIDE_CUTTING_SECTIONS,
+            str(track_statistics.track_count_inside),
+        ),
+        (
+            TrackStatisticKeys.LABEL_TRACKS_ASSIGNED_TO_FLOWS,
+            _count_with_percentage(
+                track_statistics.track_count_inside_assigned,
+                track_statistics.percentage_inside_assigned,
+            ),
+        ),
+        (
+            TrackStatisticKeys.LABEL_TRACKS_NOT_INTERSECTING_SECTIONS,
+            _count_with_percentage(
+                track_statistics.track_count_inside_not_intersecting,
+                track_statistics.percentage_inside_not_intersection,
+            ),
+        ),
+        (
+            TrackStatisticKeys.LABEL_TRACKS_INTERSECTING_NOT_ASSIGNED,
+            _count_with_percentage(
+                track_statistics.track_count_inside_intersecting_but_unassigned,
+                track_statistics.percentage_inside_intersecting_but_unassigned,
+            ),
+        ),
+        (
+            TrackStatisticKeys.LABEL_NUMBER_OF_TRACKS_TO_BE_VALIDATED,
+            str(track_statistics.number_of_tracks_to_be_validated),
+        ),
+        (
+            TrackStatisticKeys.LABEL_NUMBER_OF_TRACKS_WITH_SIMULTANEOUS_SECTION_EVENTS,
+            str(track_statistics.number_of_tracks_with_simultaneous_section_events),
+        ),
+    ]
     return [
-        {
-            COLUMN_NAME: f"{resource_manager.get(TrackStatisticKeys.LABEL_ALL_TRACKS)}",  # noqa
-            COLUMN_NUMBER: f"{track_statistics.track_count}",
-        },
-        {
-            COLUMN_NAME: f"{resource_manager.get(TrackStatisticKeys.LABEL_TRACKS_ASSIGNED_TO_FLOWS)}",  # noqa
-            COLUMN_NUMBER: f"{track_statistics.track_count_inside}",
-        },
-        {
-            COLUMN_NAME: f"{resource_manager.get(TrackStatisticKeys.LABEL_TRACKS_INTERSECTING_NOT_ASSIGNED)}",  # noqa
-            COLUMN_NUMBER: f"{track_statistics.percentage_inside_assigned:.1%}",
-        },
-        {
-            COLUMN_NAME: f"{resource_manager.get(TrackStatisticKeys.LABEL_NUMBER_OF_TRACKS_WITH_SIMULTANEOUS_SECTION_EVENTS)}",  # noqa
-            COLUMN_NUMBER: f"{track_statistics.percentage_inside_not_intersection:.1%}",
-        },
-        {
-            COLUMN_NAME: f"{resource_manager.get(TrackStatisticKeys.LABEL_INSIDE_CUTTING_SECTIONS)}",  # noqa
-            COLUMN_NUMBER: f"{track_statistics.percentage_inside_intersecting_but_unassigned:.1%}",  # noqa
-        },
-        {
-            COLUMN_NAME: f"{resource_manager.get(TrackStatisticKeys.LABEL_TRACKS_NOT_INTERSECTING_SECTIONS)}",  # noqa
-            COLUMN_NUMBER: f"{track_statistics.number_of_tracks_to_be_validated}",
-        },
-        {
-            COLUMN_NAME: f"{resource_manager.get(TrackStatisticKeys.LABEL_NUMBER_OF_TRACKS_TO_BE_VALIDATED)}",  # noqa
-            COLUMN_NUMBER: f"{track_statistics.number_of_tracks_with_simultaneous_section_events}",  # noqa
-        },
+        {COLUMN_NAME: resource_manager.get(key), COLUMN_NUMBER: value}
+        for key, value in rows
     ]
 
 
