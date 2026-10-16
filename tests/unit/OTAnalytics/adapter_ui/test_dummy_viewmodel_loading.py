@@ -122,8 +122,8 @@ class TestLoadTracks:
 
         await target.load_tracks()
 
-        given.ui_factory.info_box.assert_called_once()
-        assert given.ui_factory.info_box.call_args.kwargs["message"] == REFUSAL
+        given.ui_factory.show_message.assert_called_once()
+        assert given.ui_factory.show_message.call_args.kwargs["message"] == REFUSAL
 
 
 class TestAddVideo:
@@ -152,5 +152,5 @@ class TestAddVideo:
 
         await target.add_video()
 
-        given.ui_factory.info_box.assert_called_once()
-        assert given.ui_factory.info_box.call_args.kwargs["message"] == REFUSAL
+        given.ui_factory.show_message.assert_called_once()
+        assert given.ui_factory.show_message.call_args.kwargs["message"] == REFUSAL
