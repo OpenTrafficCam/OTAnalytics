@@ -113,6 +113,24 @@ class TestOtconfigUpload:
         assert isinstance(target.otconfig_upload, S3OtconfigUpload)
 
 
+class TestFlowTrackCountObservers:
+    def test_refreshes_flow_form_on_flow_and_event_changes(self) -> None:
+        target = create_target(create_given())
+        flow_repository = Mock()
+        event_repository = Mock()
+        flow_form = Mock()
+        target.__dict__["flow_repository"] = flow_repository
+        target.__dict__["event_repository"] = event_repository
+        target.__dict__["flow_form"] = flow_form
+
+        target.register_flow_track_count_observers()
+
+        flow_repository.register_flows_observer.assert_called_once_with(flow_form)
+        event_repository.register_observer.assert_called_once_with(
+            flow_form.notify_events
+        )
+
+
 @dataclass
 class Given:
     run_config: Mock

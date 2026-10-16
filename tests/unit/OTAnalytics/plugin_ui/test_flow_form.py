@@ -6,15 +6,21 @@ from nicegui import ui
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.application.resources.resource_manager import FlowKeys, ResourceManager
 from OTAnalytics.application.state import FlowState
+from OTAnalytics.domain.event import EventRepositoryEvent
+from OTAnalytics.domain.flow import Flow, FlowId
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
+    COLUMN_TRACKS_ASSIGNED,
     MARKER_BUTTON_ADD,
     MARKER_BUTTON_GENERATE,
     MARKER_BUTTON_PROPERTIES,
     MARKER_BUTTON_REMOVE,
     MARKER_FLOW_TABLE,
     FlowForm,
+    create_columns,
+    map_to_ui,
 )
 
 # Constants for testing
@@ -43,6 +49,10 @@ def viewmodel() -> Mock:
         MockFlow(FLOW_ID_1, FLOW_NAME_1),
         MockFlow(FLOW_ID_2, FLOW_NAME_2),
     ]
+    viewmodel.get_tracks_assigned_to_each_flow.return_value = {
+        FLOW_ID_1: 3,
+        FLOW_ID_2: 0,
+    }
 
     return viewmodel
 
@@ -167,3 +177,80 @@ class TestFlowForm:
 
         # Verify that the new flow is in the table's rows
         assert names == [FLOW_NAME_1, FLOW_NAME_2]
+
+
+def create_flow(flow_id: str, name: str) -> Flow:
+    return Flow(
+        FlowId(flow_id),
+        name=name,
+        start=SectionId("start"),
+        end=SectionId("end"),
+    )
+
+
+class TestCreateColumns:
+    def test_contains_column_for_assigned_tracks(
+        self, resource_manager: ResourceManager
+    ) -> None:
+        columns = create_columns(resource_manager)
+
+        assert {
+            "name": COLUMN_TRACKS_ASSIGNED,
+            "label": resource_manager.get(FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED),
+            "field": COLUMN_TRACKS_ASSIGNED,
+        } in columns
+
+
+class TestMapToUi:
+    def test_adds_number_of_assigned_tracks_to_each_flow(self) -> None:
+        first = create_flow(FLOW_ID_1, FLOW_NAME_1)
+        second = create_flow(FLOW_ID_2, FLOW_NAME_2)
+        tracks_assigned = {first.id: 7, second.id: 2}
+
+        actual = map_to_ui([first, second], tracks_assigned)
+
+        assert actual == [
+            {**first.to_dict(), COLUMN_TRACKS_ASSIGNED: 7},
+            {**second.to_dict(), COLUMN_TRACKS_ASSIGNED: 2},
+        ]
+
+    def test_shows_zero_for_flow_without_assignment_entry(self) -> None:
+        first = create_flow(FLOW_ID_1, FLOW_NAME_1)
+        second = create_flow(FLOW_ID_2, FLOW_NAME_2)
+
+        actual = map_to_ui([first, second], {first.id: 4})
+
+        assert [row[COLUMN_TRACKS_ASSIGNED] for row in actual] == [4, 0]
+
+
+class TestFlowFormTrackCount:
+    def test_update_items_shows_assigned_tracks(
+        self, flow_form: FlowForm, viewmodel: Mock
+    ) -> None:
+        flow_form.update_items()
+
+        counts = [row[COLUMN_TRACKS_ASSIGNED] for row in flow_form._flow_table._rows]
+        assert counts == [3, 0]
+
+    def test_notify_flows_refreshes_assigned_tracks(
+        self, flow_form: FlowForm, viewmodel: Mock
+    ) -> None:
+        viewmodel.get_tracks_assigned_to_each_flow.return_value = {FLOW_ID_1: 5}
+
+        flow_form.notify_flows([])
+
+        counts = [row[COLUMN_TRACKS_ASSIGNED] for row in flow_form._flow_table._rows]
+        assert counts == [5, 0]
+
+    def test_notify_events_refreshes_assigned_tracks(
+        self, flow_form: FlowForm, viewmodel: Mock
+    ) -> None:
+        viewmodel.get_tracks_assigned_to_each_flow.return_value = {
+            FLOW_ID_1: 1,
+            FLOW_ID_2: 9,
+        }
+
+        flow_form.notify_events(Mock(spec=EventRepositoryEvent))
+
+        counts = [row[COLUMN_TRACKS_ASSIGNED] for row in flow_form._flow_table._rows]
+        assert counts == [1, 9]
