@@ -48,7 +48,7 @@ class TestSaveOtconfig:
             == current_orthophoto.get.return_value
         )
         assert (
-            config_parser.convert.call_args.args[-1]
+            config_parser.convert.call_args.kwargs["orthophoto"]
             == current_orthophoto.get.return_value
         )
         file_state.last_saved_config.set.assert_called_once_with(
