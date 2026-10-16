@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from datetime import date, datetime, time, timezone
-from typing import Callable, Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from nicegui import ui
 from nicegui.element import Element
@@ -14,6 +15,9 @@ from nicegui.events import ValueChangeEventArguments
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     MissingInstanceError,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
+    VALID_FIELD_CLASS,
 )
 
 YEAR_MONTH_DAY_FORMAT = "%Y-%m-%d"
@@ -104,6 +108,34 @@ class FormField(LazyInitializedElement[S], Generic[S, V]):
     def _apply(self, element: Element) -> None:
         self._apply_props(element)
         self._apply_marker(element)
+
+    def _validate_and_mark(
+        self, validation: Callable[[Any], str | None], value: Any
+    ) -> str | None:
+        """Validate the value and mark the field as valid or invalid.
+
+        An invalid field shows the error in red. A valid, non-empty field is
+        marked green. An empty field stays unmarked.
+        """
+        error = validation(value)
+        if error is None and value:
+            self.element.classes(add=VALID_FIELD_CLASS)
+        else:
+            self.element.classes(remove=VALID_FIELD_CLASS)
+        return error
+
+    def _marking_validation(
+        self,
+        validation: Callable[..., str | None] | dict[str, Callable[..., bool]] | None,
+    ) -> Callable[..., str | None] | dict[str, Callable[..., bool]] | None:
+        if callable(validation):
+            return lambda value: self._validate_and_mark(validation, value)
+        return validation
+
+    def clear_validation(self) -> None:
+        """Remove the valid and invalid marks, e.g. after presetting a value."""
+        self.element.error = None
+        self.element.classes(remove=VALID_FIELD_CLASS)
 
     def _apply_props(self, element: Element) -> None:
         if self.props:
@@ -513,7 +545,11 @@ class FormFieldDate(FormField[Input, Optional[date]]):
     def build(self) -> None:
         """Builds the UI form element."""
         self._instance = (
-            ui.input(self._label_text, value=self.initial_value_text)
+            ui.input(
+                self._label_text,
+                value=self.initial_value_text,
+                validation=self._marking_validation(self._validation),
+            )
             .style("max-width: 40%")
             .props("mask='####-##-##'")
         )
@@ -601,7 +637,11 @@ class FormFieldTime(FormField[Input, Optional[time]]):
 
     def build(self) -> None:
         self._instance = (
-            ui.input(self._label_text, value=self.initial_value_text)
+            ui.input(
+                self._label_text,
+                value=self.initial_value_text,
+                validation=self._marking_validation(self._validation),
+            )
             .style("max-width: 40%")
             .props("mask='##:##:##'")
         )
@@ -654,6 +694,18 @@ class DateTimeForm:
             return datetime.combine(start_date, start_time, tzinfo=timezone.utc)
         return None
 
+    @property
+    def is_empty(self) -> bool:
+        """Whether neither a date nor a time has been entered."""
+        return not self._start_date.element.value and not (
+            self._start_time.element.value
+        )
+
+    def clear_validation(self) -> None:
+        """Remove the valid and invalid marks of the date and time field."""
+        self._start_date.clear_validation()
+        self._start_time.clear_validation()
+
     def set_value(self, value: datetime | None) -> None:
         if value:
             self._start_date.set_value(value.date())
@@ -676,6 +728,8 @@ class DateTimeForm:
         props: list[str] | None = None,
         marker_date: str | None = None,
         marker_time: str | None = None,
+        date_validation: Callable[[Any], str | None] | None = None,
+        time_validation: Callable[[Any], str | None] | None = None,
     ) -> None:
         super().__init__()
         self._validation = validation
@@ -686,6 +740,7 @@ class DateTimeForm:
             initial_value=initial_value.date() if initial_value else None,
             min_value=min_value.date() if min_value else None,
             max_value=max_value.date() if max_value else None,
+            validation=date_validation,
             on_value_change=self.__internal_update,
             marker=marker_date,
         )
@@ -694,6 +749,7 @@ class DateTimeForm:
             initial_value=initial_value.time() if initial_value else None,
             min_value=min_value.time() if min_value else None,
             max_value=max_value.time() if max_value else None,
+            validation=time_validation,
             on_value_change=self.__internal_update,
             marker=marker_time,
         )
