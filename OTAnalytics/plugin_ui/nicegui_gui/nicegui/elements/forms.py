@@ -654,6 +654,13 @@ class DateTimeForm:
             return datetime.combine(start_date, start_time, tzinfo=timezone.utc)
         return None
 
+    @property
+    def is_empty(self) -> bool:
+        """Whether neither a date nor a time has been entered."""
+        return not self._start_date.element.value and not (
+            self._start_time.element.value
+        )
+
     def set_value(self, value: datetime | None) -> None:
         if value:
             self._start_date.set_value(value.date())
