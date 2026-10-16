@@ -18,6 +18,7 @@ class TestResetState:
         file_state: Mock,
         current_key_prefix: Mock,
         current_orthophoto: Mock,
+        filter_element_setting_restorer: Mock,
     ) -> None:
         target = ResetState(
             videos_metadata,
@@ -30,6 +31,7 @@ class TestResetState:
             file_state,
             current_key_prefix,
             current_orthophoto,
+            filter_element_setting_restorer,
         )
 
         target.reset()
@@ -44,6 +46,7 @@ class TestResetState:
         file_state.reset.assert_called_once()
         current_key_prefix.reset.assert_called_once()
         current_orthophoto.reset.assert_called_once()
+        filter_element_setting_restorer.reset.assert_called_once()
 
 
 @pytest.fixture
@@ -98,4 +101,12 @@ def current_key_prefix() -> Mock:
 
 @pytest.fixture
 def current_orthophoto() -> Mock:
+    return Mock()
+
+
+@pytest.fixture
+def filter_element_setting_restorer() -> Mock:
+    """Cleared with everything else: a filter setting saved in the previous
+    project would otherwise be restored when re-enabling a filter.
+    """
     return Mock()

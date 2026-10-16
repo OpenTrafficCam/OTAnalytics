@@ -37,6 +37,11 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.register_observers()
         self.start_ui()
 
+    def _reset_layers(self, _: None) -> None:
+        layer_groups, _layers = self.layers
+        for layer_group in layer_groups:
+            layer_group.reset()
+
     def _redraw_for_orthophoto(self, _: Orthophoto | None) -> None:
         self.track_image_updater.update_image()
 
@@ -120,7 +125,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.datastore.register_section_changed_observer(
             self.track_image_updater.notify_section_changed
         )
-        self.start_new_project.register(self.view_model.on_start_new_project)
+        self.reset_application.register(self._reset_layers)
+        self.reset_application.register(self.view_model.on_application_reset)
+        self.reset_application.register(self.view_model.update_remark_view)
         self.event_repository.register_observer(self.track_image_updater.notify_events)
         self.event_repository.register_observer(self.view_model.update_track_statistics)
         self.load_otflow.register(self.file_state.last_saved_config.set)

@@ -107,6 +107,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def add_preview_image(self) -> None:
         self._current_image = self._resource_manager.get_image(CanvasKeys.IMAGE_DEFAULT)
+        self._change_image()
 
     def build(self) -> Self:
         self._background_image = ui.interactive_image(
@@ -351,6 +352,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._flows.clear()
         self._sections.clear()
         self._circles.clear()
+        # Redraw, otherwise the overlay keeps showing what was removed until the
+        # next item is drawn, e.g. after removing the last section.
+        self.draw_all()
 
     def start_section_builder(
         self,

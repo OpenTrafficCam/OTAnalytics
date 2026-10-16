@@ -1765,9 +1765,14 @@ class DummyViewModel(
     def update_project_start_date(self, start_date: Optional[datetime]) -> None:
         self._application.update_project_start_date(start_date)
 
-    def on_start_new_project(self, _: None) -> None:
+    def on_application_reset(self, _: None) -> None:
+        """Show the views of a freshly started application.
+
+        Called on every reset of the application, i.e. when starting a new project
+        and when loading an otconfig.
+        """
+        self.frame_project.reset()
         self.frame_filter.reset()
-        self.frame_track_plotting.reset_layers()
         self.canvas.add_preview_image()
 
     def set_frame_track_plotting(

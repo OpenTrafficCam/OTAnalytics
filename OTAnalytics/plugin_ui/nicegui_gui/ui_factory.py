@@ -151,8 +151,11 @@ class NiceGuiUiFactory(UiFactory):
     ) -> bool:
         dialog = ConfirmationDialog(
             resource_manager=self._resource_manager, message=message
-        )
-        result = await dialog.result
+        ).build()
+        dialog.open()
+        result = await dialog
+        # Answered dialogs would otherwise pile up in the page.
+        dialog.delete()
         return result == DialogResult.APPLY
 
     def minimal_info_box(
