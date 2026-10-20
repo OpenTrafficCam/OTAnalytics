@@ -1480,20 +1480,33 @@ class TestCanvasFormSectionGeometryEditor:
         svg = canvas_form._edit_geometry()
         assert svg.count("<title>") == 2
 
-    def test_hovering_half_previews_swap_partner(self, canvas_form: Any) -> None:
+    def test_hovering_half_previews_new_geometry_in_own_color(
+        self, canvas_form: Any
+    ) -> None:
         self.pick_up(canvas_form, 1)
 
         canvas_form.on_svg_pointer_move(svg_event(135, 20, "edit-shift-forward"))
 
         svg = canvas_form._edit_geometry()
-        assert "stroke-dasharray" in svg
+        assert 'stroke="magenta"' in svg
+        assert 'points="10,20 210,20 110,20"' in svg
         assert canvas_form._shift_partner_index() == 2
         assert 'stroke="yellow"' in svg
+        assert canvas_form._edit_temporary == ORIGINAL_COORDINATES
+
+    def test_hovering_backward_half_previews_backward_shift(
+        self, canvas_form: Any
+    ) -> None:
+        self.pick_up(canvas_form, 1)
+
+        canvas_form.on_svg_pointer_move(svg_event(85, 20, "edit-shift-backward"))
+
+        assert 'points="110,20 10,20 210,20"' in canvas_form._edit_geometry()
 
     def test_no_swap_preview_without_hover(self, canvas_form: Any) -> None:
         self.pick_up(canvas_form, 1)
 
-        assert "stroke-dasharray" not in canvas_form._edit_geometry()
+        assert "magenta" not in canvas_form._edit_geometry()
 
     def test_midpoints_are_drawn_below_knobs(self, canvas_form: Any) -> None:
         svg = canvas_form._edit_geometry()

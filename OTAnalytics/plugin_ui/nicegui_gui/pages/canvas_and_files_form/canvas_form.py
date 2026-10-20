@@ -23,7 +23,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle_resources import (
     CircleResources,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line_resources import LineResources
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.midpoint_circle import MidpointCircle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polygon import Polygon
@@ -58,6 +57,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 NORMAL_COLOR = "green"
 SELECTED_COLOR = "red"
 EDIT_COLOR = "orange"
+SHIFT_PREVIEW_COLOR = "magenta"
 MOVING_COLOR = "blue"
 HOVERED_KNOB_COLOR = "yellow"
 MOVING_STROKE_WIDTH = 400
@@ -90,7 +90,6 @@ KNOB_LABEL_FONT_SIZE: Final = 12
 EDIT_SHIFT_ID: Final = "edit-shift"
 SHIFT_RING_INNER_RADIUS: Final = 14
 SHIFT_RING_OUTER_RADIUS: Final = 40
-SHIFT_PARTNER_LINE_DASH: Final = "4 3"
 SHIFT_RING_IDLE_SECONDS: Final = 0.3
 SHIFT_RING_POLL_SECONDS: Final = 0.1
 KNOB_RADIUS = 6
@@ -535,20 +534,22 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             return None
         return self._shift_targets().get(self._shift_hovered_forward)
 
-    def _shift_partner_line_svg(self) -> str:
-        partner = self._shift_partner_index()
-        if partner is None or self._shift_anchor is None:
+    def _shift_preview_svg(self) -> str:
+        """Section geometry as it would be after shifting in the hovered direction."""
+        index = self._selected_knob_index
+        if self._shift_hovered_forward is None or index is None:
             return ""
-        x, y = self._edit_temporary[partner]
-        return Line(
-            id=f"{EDIT_SHIFT_ID}-partner",
-            x1=self._shift_anchor[0],
-            y1=self._shift_anchor[1],
-            x2=x,
-            y2=y,
-            stroke=HOVERED_KNOB_COLOR,
-            dash=SHIFT_PARTNER_LINE_DASH,
-        ).to_svg()
+        shift = (
+            shift_knob_forward if self._shift_hovered_forward else shift_knob_backward
+        )
+        coordinates, _ = shift(self._edit_temporary, index, self._edit_is_area_section)
+        shape = create_section_shape(
+            f"{EDIT_SHIFT_ID}-preview",
+            coordinates,
+            SHIFT_PREVIEW_COLOR,
+            self._edit_is_area_section,
+        )
+        return f'<g pointer-events="none">{shape.to_svg()}</g>'
 
     @staticmethod
     def _shift_half_from_element_id(element_id: str | None) -> bool | None:
@@ -581,7 +582,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         ).to_svg()
         if self._selected_knob_index is None:
             svg += self._midpoints_svg()
-        svg += self._shift_partner_line_svg()
+        svg += self._shift_preview_svg()
         partner = self._shift_partner_index()
         for index, point in enumerate(self._edit_temporary):
             knob = create_knob(
