@@ -75,6 +75,11 @@ CURSOR_MOVE = "move"
 NEW_SECTION_ID = "new-section-id"
 EDIT_KNOB_ID_PREFIX = "edit-knob-"
 EDIT_MIDPOINT_ID_PREFIX = "edit-mid-"
+EDIT_KNOB_LABEL_ID_PREFIX = "edit-knob-label-"
+KNOB_LABEL_OFFSET: Final = (9, -9)
+KNOB_LABEL_FONT_SIZE: Final = 12
+ICON_SHIFT_BACKWARD: Final = "arrow_back"
+ICON_SHIFT_FORWARD: Final = "arrow_forward"
 KNOB_RADIUS = 6
 HIGHLIGHTED_KNOB_RADIUS = 8
 HIGHLIGHTED_KNOB_STROKE_WIDTH = 3
@@ -190,6 +195,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._preview_point: Point | None = None
         self._new_section = False
         self._new_area_section = False
+        self._shift_backward_button: ui.button | None = None
+        self._shift_forward_button: ui.button | None = None
         self._sections: SectionResource = SectionResource({})
         self._flows: LineResources = LineResources({})
         self._circles: CircleResources = CircleResources({})
@@ -217,6 +224,16 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             "svg:pointerup", lambda e: self.on_svg_pointer_up(e.args)
         )
         self._background_image.on(CONTEXT_MENU, self.on_right_click)
+        with ui.row():
+            self._shift_backward_button = ui.button(
+                icon=ICON_SHIFT_BACKWARD,
+                on_click=lambda: self._shift_selected_knob(forward=False),
+            )
+            self._shift_forward_button = ui.button(
+                icon=ICON_SHIFT_FORWARD,
+                on_click=lambda: self._shift_selected_knob(forward=True),
+            )
+        self._update_shift_buttons()
 
         self._change_image()
         ui.keyboard(on_key=self.handle_key)
@@ -419,6 +436,24 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self._background_image.content += self._circles.to_svg()
             self._background_image.content += self._edit_geometry()
             self.draw_new_section()
+        self._update_shift_buttons()
+
+    def _update_shift_buttons(self) -> None:
+        """Show the shift buttons while editing, enable them for a selected knob."""
+        buttons = (self._shift_backward_button, self._shift_forward_button)
+        for button, forward in zip(buttons, (False, True)):
+            if button is None:
+                continue
+            button.set_visibility(self._current_section is not None)
+            button.set_enabled(self._can_shift_selected_knob(forward))
+
+    def _can_shift_selected_knob(self, forward: bool) -> bool:
+        index = self._selected_knob_index
+        if index is None:
+            return False
+        if self._edit_is_area_section:
+            return True
+        return index < len(self._edit_temporary) - 1 if forward else index > 0
 
     def draw_new_section(self) -> None:
         if not self._background_image:
@@ -451,7 +486,19 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 is_selected=index == self._selected_knob_index,
             )
             svg += knob.to_svg()
+            svg += self._knob_label(index, point)
         return svg
+
+    def _knob_label(self, index: int, point: Point) -> str:
+        """Number of the knob so that the order of the knobs is visible."""
+        return Text(
+            id=f"{EDIT_KNOB_LABEL_ID_PREFIX}{index}",
+            x=point[0] + KNOB_LABEL_OFFSET[0],
+            y=point[1] + KNOB_LABEL_OFFSET[1],
+            text=str(index + 1),
+            color=EDIT_COLOR,
+            font_size=KNOB_LABEL_FONT_SIZE,
+        ).to_svg()
 
     def _midpoints_svg(self) -> str:
         """Affordances to insert a knob. Drawn below the knobs, which win overlaps."""

@@ -1370,6 +1370,45 @@ class TestCanvasFormSectionGeometryEditor:
 
         assert canvas_form._hovered_knob_index is None
 
+    def test_knobs_are_labeled_with_their_position(self, canvas_form: Any) -> None:
+        svg = canvas_form._edit_geometry()
+
+        for number in ("1", "2", "3"):
+            assert f">{number}</text>" in svg
+
+    def test_shift_buttons_are_disabled_without_selected_knob(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form._update_shift_buttons()
+
+        canvas_form._shift_backward_button.set_enabled.assert_called_with(False)
+        canvas_form._shift_forward_button.set_enabled.assert_called_with(False)
+
+    def test_line_section_ends_cannot_be_shifted_outwards(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(10, 20, knob_id(0)))
+        assert not canvas_form._can_shift_selected_knob(forward=False)
+        assert canvas_form._can_shift_selected_knob(forward=True)
+
+        canvas_form._shift_selected_knob(forward=True)
+        canvas_form._shift_selected_knob(forward=True)
+        assert canvas_form._can_shift_selected_knob(forward=False)
+        assert not canvas_form._can_shift_selected_knob(forward=True)
+
+    def test_shift_buttons_shift_selected_knob(self, canvas_form: Any) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(10, 20, knob_id(0)))
+        forward = canvas_form.mock_ui.button.call_args_list[1].kwargs["on_click"]
+        backward = canvas_form.mock_ui.button.call_args_list[0].kwargs["on_click"]
+
+        forward()
+        assert canvas_form._edit_temporary == [(110, 20), (10, 20), (210, 20)]
+        assert canvas_form._selected_knob_index == 1
+
+        backward()
+        assert canvas_form._edit_temporary == ORIGINAL_COORDINATES
+        assert canvas_form._selected_knob_index == 0
+
     def test_midpoints_are_drawn_below_knobs(self, canvas_form: Any) -> None:
         svg = canvas_form._edit_geometry()
 
