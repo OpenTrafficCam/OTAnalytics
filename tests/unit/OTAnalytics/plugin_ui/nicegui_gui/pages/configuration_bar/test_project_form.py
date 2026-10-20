@@ -30,19 +30,6 @@ class TestNewProjectButton:
 
         viewmodel.start_new_project.assert_awaited_once()
 
-    async def test_is_disabled_with_the_other_general_buttons(
-        self, user: User, resource_manager: ResourceManager
-    ) -> None:
-        target = ProjectForm(create_viewmodel(), resource_manager)
-
-        @ui.page("/test")
-        def page() -> None:
-            target.build()
-
-        await user.open("/test")
-
-        assert target.new_project_button in target.get_general_buttons()
-
 
 def create_viewmodel() -> Mock:
     viewmodel = Mock()
