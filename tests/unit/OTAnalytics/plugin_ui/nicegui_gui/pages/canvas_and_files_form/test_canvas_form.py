@@ -1380,7 +1380,8 @@ class TestCanvasFormSectionGeometryEditor:
         x, y = canvas_form._edit_temporary[index]
         canvas_form.on_svg_pointer_down(svg_event(x, y, knob_id(index)))
         canvas_form.on_svg_pointer_up(svg_event(x, y, knob_id(index)))
-        canvas_form.draw_all()
+        canvas_form._last_knob_motion = 0.0
+        canvas_form._show_shift_ring_when_still()
 
     def test_no_shift_ring_without_selected_knob(self, canvas_form: Any) -> None:
         assert "edit-shift-" not in canvas_form._edit_geometry()
@@ -1441,14 +1442,43 @@ class TestCanvasFormSectionGeometryEditor:
 
         assert canvas_form._edit_temporary[1] == (110, 20)
 
-    def test_picked_up_knob_follows_mouse_inside_shift_ring_hole(
+    def test_shift_ring_is_shown_only_when_mouse_is_still(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(110, 20, knob_id(1)))
+        canvas_form.on_svg_pointer_up(svg_event(110, 20, knob_id(1)))
+
+        canvas_form._show_shift_ring_when_still()
+        assert "edit-shift-" not in canvas_form._edit_geometry()
+
+        canvas_form._last_knob_motion -= 1
+        canvas_form._show_shift_ring_when_still()
+        assert "edit-shift-" in canvas_form._edit_geometry()
+
+    def test_shift_ring_is_placed_around_the_moved_knob(self, canvas_form: Any) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(110, 20, knob_id(1)))
+        canvas_form.on_svg_pointer_up(svg_event(110, 20, knob_id(1)))
+        canvas_form.on_svg_pointer_move(svg_event(300, 150, knob_id(1)))
+        canvas_form._last_knob_motion = 0.0
+        canvas_form._show_shift_ring_when_still()
+
+        assert canvas_form._shift_anchor == (300, 150)
+
+    def test_moving_out_of_shift_ring_hides_it_and_knob_follows(
         self, canvas_form: Any
     ) -> None:
         self.pick_up(canvas_form, 1)
 
-        canvas_form.on_svg_pointer_move(svg_event(115, 22, knob_id(1)))
+        canvas_form.on_svg_pointer_move(svg_event(200, 90, knob_id(1)))
 
-        assert canvas_form._edit_temporary[1] == (115, 22)
+        assert canvas_form._edit_temporary[1] == (200, 90)
+        assert "edit-shift-" not in canvas_form._edit_geometry()
+
+    def test_shift_ring_halves_have_tooltips(self, canvas_form: Any) -> None:
+        self.pick_up(canvas_form, 1)
+
+        svg = canvas_form._edit_geometry()
+        assert svg.count("<title>") == 2
 
     def test_hovering_half_previews_swap_partner(self, canvas_form: Any) -> None:
         self.pick_up(canvas_form, 1)

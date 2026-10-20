@@ -22,6 +22,8 @@ class ShiftRing:
     outer_radius: int
     backward_label: str | None
     forward_label: str | None
+    backward_tooltip: str = ""
+    forward_tooltip: str = ""
     hovered_forward: bool | None = None
     fill: str = "royalblue"
     hovered_fill: str = "dodgerblue"
@@ -42,15 +44,22 @@ class ShiftRing:
                 self.backward_id,
                 False,
                 self.backward_label,
+                self.backward_tooltip,
                 self.hovered_forward is False,
             )
         if self.forward_label is not None:
             svg += self._half(
-                self.forward_id, True, self.forward_label, self.hovered_forward is True
+                self.forward_id,
+                True,
+                self.forward_label,
+                self.forward_tooltip,
+                self.hovered_forward is True,
             )
         return svg
 
-    def _half(self, id: str, forward: bool, label: str, hovered: bool) -> str:
+    def _half(
+        self, id: str, forward: bool, label: str, tooltip: str, hovered: bool
+    ) -> str:
         x, y = self.x, self.y
         inner, outer = self.inner_radius, self.outer_radius
         # The forward half spans the right side of the ring, the backward half the
@@ -73,7 +82,8 @@ class ShiftRing:
         return (
             f'<path id="{escape(id)}" d="{path}" fill="{fill}" fill-opacity="0.9" '
             f'stroke="{self.color}" stroke-width="1" '
-            f'pointer-events="all" cursor="pointer" />'
+            f'pointer-events="all" cursor="pointer">'
+            f"<title>{escape(tooltip)}</title></path>"
             f'<text x="{text_x}" y="{y}" text-anchor="middle" '
             f'dominant-baseline="central" fill="{self.color}" '
             f'font-size="{FONT_SIZE}" pointer-events="none" '

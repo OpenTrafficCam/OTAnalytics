@@ -1,3 +1,4 @@
+import time
 from typing import Any, Final, Iterable, Optional, Self
 
 from nicegui import events, ui
@@ -90,6 +91,8 @@ EDIT_SHIFT_ID: Final = "edit-shift"
 SHIFT_RING_INNER_RADIUS: Final = 14
 SHIFT_RING_OUTER_RADIUS: Final = 40
 SHIFT_PARTNER_LINE_DASH: Final = "4 3"
+SHIFT_RING_IDLE_SECONDS: Final = 0.3
+SHIFT_RING_POLL_SECONDS: Final = 0.1
 KNOB_RADIUS = 6
 HIGHLIGHTED_KNOB_RADIUS = 8
 HIGHLIGHTED_KNOB_STROKE_WIDTH = 3
@@ -207,6 +210,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_area_section = False
         self._shift_anchor: Point | None = None
         self._shift_hovered_forward: bool | None = None
+        self._last_knob_motion = 0.0
         self._ignore_next_click = False
         self._sections: SectionResource = SectionResource({})
         self._flows: LineResources = LineResources({})
@@ -236,6 +240,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         )
         self._background_image.on(CONTEXT_MENU, self.on_right_click)
 
+        ui.timer(SHIFT_RING_POLL_SECONDS, self._show_shift_ring_when_still)
         self._change_image()
         ui.keyboard(on_key=self.handle_key)
         self.load_sections()
@@ -294,6 +299,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._edit_temporary, self._selected_knob_index = insert_knob(
             self._edit_temporary, self._mouse_position, self._edit_is_area_section
         )
+        self._last_knob_motion = time.monotonic()
         self._hovered_knob_index = None
         self._dragging = False
         self.draw_all()
@@ -440,16 +446,24 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self.draw_new_section()
 
     def _sync_shift_anchor(self) -> None:
-        """Pin the shift ring where the knob was picked up.
-
-        A picked up knob follows the mouse. A pinned ring stays reachable. It is
-        hidden while the knob is dragged.
-        """
+        """Hide the shift ring if no knob is picked up or if it is dragged."""
         if self._selected_knob_index is None or self._dragging:
             self._shift_anchor = None
             self._shift_hovered_forward = None
-        elif self._shift_anchor is None:
-            self._shift_anchor = self._edit_temporary[self._selected_knob_index]
+
+    def _show_shift_ring_when_still(self) -> None:
+        """Show the shift ring around the picked up knob once the mouse is still.
+
+        The ring is placed around the knob. While the mouse stays inside the ring,
+        the knob stays where it is so that the buttons of the ring can be reached.
+        """
+        index = self._selected_knob_index
+        if index is None or self._dragging or self._shift_anchor is not None:
+            return
+        if time.monotonic() - self._last_knob_motion < SHIFT_RING_IDLE_SECONDS:
+            return
+        self._shift_anchor = self._edit_temporary[index]
+        self.draw_all()
 
     def _shift_targets(self) -> dict[bool, int]:
         """Index of the knob swapped by a shift, for each available direction."""
@@ -478,6 +492,15 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         )
         return half if half in self._shift_targets() else None
 
+    def _is_in_shift_ring(self, point: Point) -> bool:
+        """Whether the point is on the ring or in its hole."""
+        if self._shift_anchor is None:
+            return False
+        return (
+            closest_knob_index([self._shift_anchor], point, SHIFT_RING_OUTER_RADIUS)
+            is not None
+        )
+
     def _shift_ring_svg(self) -> str:
         targets = self._shift_targets()
         if self._shift_anchor is None or not targets:
@@ -497,6 +520,12 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             outer_radius=SHIFT_RING_OUTER_RADIUS,
             backward_label=label(False),
             forward_label=label(True),
+            backward_tooltip=self._resource_manager.get(
+                CanvasKeys.TOOLTIP_SHIFT_KNOB_BACKWARD
+            ),
+            forward_tooltip=self._resource_manager.get(
+                CanvasKeys.TOOLTIP_SHIFT_KNOB_FORWARD
+            ),
             hovered_forward=self._shift_hovered_forward,
         ).to_svg()
 
@@ -619,13 +648,17 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         elif self._current_section is not None:
             self._mouse_position = point
             if self._selected_knob_index is not None:
-                hovered = self._shift_ring_half_at(point)
-                changed = hovered != self._shift_hovered_forward
-                self._shift_hovered_forward = hovered
-                if hovered is None:
+                self._last_knob_motion = time.monotonic()
+                if self._is_in_shift_ring(point):
+                    hovered = self._shift_ring_half_at(point)
+                    changed = hovered != self._shift_hovered_forward
+                    self._shift_hovered_forward = hovered
+                    if changed:
+                        self.draw_all()
+                else:
+                    self._shift_anchor = None
+                    self._shift_hovered_forward = None
                     self._move_selected_knob(point)
-                elif changed:
-                    self.draw_all()
             else:
                 self._hover_knob(point)
 
@@ -692,6 +725,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         point = svg_event_to_point(e)
         self._mouse_position = point
         self._ignore_next_click = False
+        self._last_knob_motion = time.monotonic()
         shift_forward = self._shift_half_from_element_id(e.get(ELEMENT_ID))
         if shift_forward in self._shift_targets():
             self._ignore_next_click = True
