@@ -491,7 +491,7 @@ def setup_default(given: Given) -> Given:
             track.FRAME: list(range(len(occurrences))),
             track.VIDEO_NAME: [GEO_ONLY_TRACK_FILE_NAME] * len(occurrences),
         }
-    ).set_index([track.TRACK_ID, track.OCCURRENCE])
+    )
     return given
 
 
@@ -502,7 +502,7 @@ def create_target(given: Given) -> DataFrameFilterBuilder:
 
 
 def occurrences_of(tracks: DataFrame) -> list[datetime]:
-    return list(tracks.index.get_level_values(track.OCCURRENCE))
+    return tracks.get_column(track.OCCURRENCE).to_list()
 
 
 class TestDataFrameFilterBuilderWithoutVideos:
