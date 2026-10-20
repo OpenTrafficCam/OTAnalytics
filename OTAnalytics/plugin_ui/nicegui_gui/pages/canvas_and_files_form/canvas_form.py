@@ -29,6 +29,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.shift_button import ShiftButton
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.text import Text
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geometry import (  # noqa
     Point,
@@ -78,8 +79,13 @@ EDIT_MIDPOINT_ID_PREFIX = "edit-mid-"
 EDIT_KNOB_LABEL_ID_PREFIX = "edit-knob-label-"
 KNOB_LABEL_OFFSET: Final = (9, -9)
 KNOB_LABEL_FONT_SIZE: Final = 12
-ICON_SHIFT_BACKWARD: Final = "arrow_back"
-ICON_SHIFT_FORWARD: Final = "arrow_forward"
+EDIT_SHIFT_BACKWARD_ID: Final = "edit-shift-backward"
+EDIT_SHIFT_FORWARD_ID: Final = "edit-shift-forward"
+SHIFT_BUTTON_OFFSET_X: Final = 22
+SHIFT_BUTTON_OFFSET_Y: Final = -26
+SHIFT_BUTTON_RADIUS: Final = 12
+GLYPH_SHIFT_BACKWARD: Final = "◀"
+GLYPH_SHIFT_FORWARD: Final = "▶"
 KNOB_RADIUS = 6
 HIGHLIGHTED_KNOB_RADIUS = 8
 HIGHLIGHTED_KNOB_STROKE_WIDTH = 3
@@ -195,8 +201,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._preview_point: Point | None = None
         self._new_section = False
         self._new_area_section = False
-        self._shift_backward_button: ui.button | None = None
-        self._shift_forward_button: ui.button | None = None
+        self._shift_anchor: Point | None = None
+        self._ignore_next_click = False
         self._sections: SectionResource = SectionResource({})
         self._flows: LineResources = LineResources({})
         self._circles: CircleResources = CircleResources({})
@@ -224,16 +230,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             "svg:pointerup", lambda e: self.on_svg_pointer_up(e.args)
         )
         self._background_image.on(CONTEXT_MENU, self.on_right_click)
-        with ui.row():
-            self._shift_backward_button = ui.button(
-                icon=ICON_SHIFT_BACKWARD,
-                on_click=lambda: self._shift_selected_knob(forward=False),
-            )
-            self._shift_forward_button = ui.button(
-                icon=ICON_SHIFT_FORWARD,
-                on_click=lambda: self._shift_selected_knob(forward=True),
-            )
-        self._update_shift_buttons()
 
         self._change_image()
         ui.keyboard(on_key=self.handle_key)
@@ -430,22 +426,67 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         )
 
     def draw_all(self) -> None:
+        self._sync_shift_anchor()
         if self._background_image:
             self._background_image.content = self._sections.to_svg()
             self._background_image.content += self._flows.to_svg()
             self._background_image.content += self._circles.to_svg()
             self._background_image.content += self._edit_geometry()
             self.draw_new_section()
-        self._update_shift_buttons()
 
-    def _update_shift_buttons(self) -> None:
-        """Show the shift buttons while editing, enable them for a selected knob."""
-        buttons = (self._shift_backward_button, self._shift_forward_button)
-        for button, forward in zip(buttons, (False, True)):
-            if button is None:
-                continue
-            button.set_visibility(self._current_section is not None)
-            button.set_enabled(self._can_shift_selected_knob(forward))
+    def _sync_shift_anchor(self) -> None:
+        """Pin the shift buttons where the knob was picked up.
+
+        A picked up knob follows the mouse. Pinned buttons stay reachable. They are
+        hidden while the knob is dragged.
+        """
+        if self._selected_knob_index is None or self._dragging:
+            self._shift_anchor = None
+        elif self._shift_anchor is None:
+            self._shift_anchor = self._edit_temporary[self._selected_knob_index]
+
+    def _shift_button_positions(self) -> dict[str, Point]:
+        """Positions of the buttons that can currently shift the selected knob."""
+        if self._shift_anchor is None:
+            return {}
+        x, y = self._shift_anchor
+        positions = {
+            EDIT_SHIFT_BACKWARD_ID: (
+                x - SHIFT_BUTTON_OFFSET_X,
+                y + SHIFT_BUTTON_OFFSET_Y,
+            ),
+            EDIT_SHIFT_FORWARD_ID: (
+                x + SHIFT_BUTTON_OFFSET_X,
+                y + SHIFT_BUTTON_OFFSET_Y,
+            ),
+        }
+        if not self._can_shift_selected_knob(forward=False):
+            del positions[EDIT_SHIFT_BACKWARD_ID]
+        if not self._can_shift_selected_knob(forward=True):
+            del positions[EDIT_SHIFT_FORWARD_ID]
+        return positions
+
+    def _shift_buttons_svg(self) -> str:
+        glyphs = {
+            EDIT_SHIFT_BACKWARD_ID: GLYPH_SHIFT_BACKWARD,
+            EDIT_SHIFT_FORWARD_ID: GLYPH_SHIFT_FORWARD,
+        }
+        return "".join(
+            ShiftButton(
+                id=button_id,
+                x=x,
+                y=y,
+                glyph=glyphs[button_id],
+                radius=SHIFT_BUTTON_RADIUS,
+            ).to_svg()
+            for button_id, (x, y) in self._shift_button_positions().items()
+        )
+
+    def _is_over_shift_button(self, point: Point) -> bool:
+        return any(
+            closest_knob_index([position], point, SHIFT_BUTTON_RADIUS) is not None
+            for position in self._shift_button_positions().values()
+        )
 
     def _can_shift_selected_knob(self, forward: bool) -> bool:
         index = self._selected_knob_index
@@ -487,7 +528,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             )
             svg += knob.to_svg()
             svg += self._knob_label(index, point)
-        return svg
+        return svg + self._shift_buttons_svg()
 
     def _knob_label(self, index: int, point: Point) -> str:
         """Number of the knob so that the order of the knobs is visible."""
@@ -543,7 +584,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         elif self._current_section is not None:
             self._mouse_position = point
             if self._selected_knob_index is not None:
-                self._move_selected_knob(point)
+                if not self._is_over_shift_button(point):
+                    self._move_selected_knob(point)
             else:
                 self._hover_knob(point)
 
@@ -573,6 +615,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self.draw_all()
 
     def _on_canvas_click(self, point: Point) -> None:
+        if self._ignore_next_click:
+            self._ignore_next_click = False
+            return
         if self._selected_knob_index is not None and not self._dragging:
             self._place_selected_knob(point)
             self.draw_all()
@@ -606,6 +651,12 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             return
         point = svg_event_to_point(e)
         self._mouse_position = point
+        self._ignore_next_click = False
+        shift_id = e.get(ELEMENT_ID)
+        if shift_id in self._shift_button_positions():
+            self._ignore_next_click = True
+            self._shift_selected_knob(forward=shift_id == EDIT_SHIFT_FORWARD_ID)
+            return
         segment = midpoint_index_from_element_id(e.get(ELEMENT_ID))
         if segment is not None and self._selected_knob_index is None:
             self._insert_knob_at_midpoint(segment)
