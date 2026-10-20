@@ -1376,68 +1376,94 @@ class TestCanvasFormSectionGeometryEditor:
         for number in ("1", "2", "3"):
             assert f">{number}</text>" in svg
 
-    def test_no_shift_buttons_without_selected_knob(self, canvas_form: Any) -> None:
+    def pick_up(self, canvas_form: Any, index: int) -> None:
+        x, y = canvas_form._edit_temporary[index]
+        canvas_form.on_svg_pointer_down(svg_event(x, y, knob_id(index)))
+        canvas_form.on_svg_pointer_up(svg_event(x, y, knob_id(index)))
+        canvas_form.draw_all()
+
+    def test_no_shift_ring_without_selected_knob(self, canvas_form: Any) -> None:
         assert "edit-shift-" not in canvas_form._edit_geometry()
 
-    def test_shift_buttons_are_shown_for_picked_up_knob(self, canvas_form: Any) -> None:
+    def test_shift_ring_is_hidden_while_dragging(self, canvas_form: Any) -> None:
         canvas_form.on_svg_pointer_down(svg_event(110, 20, knob_id(1)))
-        assert "edit-shift-" not in canvas_form._edit_geometry()  # dragging
 
-        canvas_form.on_svg_pointer_up(svg_event(110, 20, knob_id(1)))
-        canvas_form.draw_all()
+        assert "edit-shift-" not in canvas_form._edit_geometry()
+
+    def test_shift_ring_shows_target_positions(self, canvas_form: Any) -> None:
+        self.pick_up(canvas_form, 1)
 
         svg = canvas_form._edit_geometry()
         assert 'id="edit-shift-backward"' in svg
         assert 'id="edit-shift-forward"' in svg
+        assert ">◀1</text>" in svg
+        assert ">3▶</text>" in svg
 
-    def test_shift_buttons_of_line_ends_only_offer_possible_direction(
+    def test_shift_ring_of_line_end_only_offers_possible_direction(
         self, canvas_form: Any
     ) -> None:
-        canvas_form.on_svg_pointer_down(svg_event(10, 20, knob_id(0)))
-        canvas_form.on_svg_pointer_up(svg_event(10, 20, knob_id(0)))
-        canvas_form.draw_all()
+        self.pick_up(canvas_form, 0)
 
         svg = canvas_form._edit_geometry()
         assert "edit-shift-backward" not in svg
-        assert "edit-shift-forward" in svg
+        assert 'id="edit-shift-forward"' in svg
+        assert ">2▶</text>" in svg
 
-    def test_click_on_shift_button_shifts_knob_and_ignores_canvas_click(
+    def test_shift_ring_of_area_wraps_around(
+        self, canvas_form: Any, area_section: Mock
+    ) -> None:
+        canvas_form.start_section_geometry_editor(area_section, is_area_section=True)
+        self.pick_up(canvas_form, 0)
+
+        svg = canvas_form._edit_geometry()
+        assert ">◀3</text>" in svg
+        assert ">2▶</text>" in svg
+
+    def test_click_on_shift_half_shifts_knob_and_ignores_canvas_click(
         self, canvas_form: Any
     ) -> None:
-        canvas_form.on_svg_pointer_down(svg_event(10, 20, knob_id(0)))
-        canvas_form.on_svg_pointer_up(svg_event(10, 20, knob_id(0)))
-        canvas_form.draw_all()
+        self.pick_up(canvas_form, 0)
 
-        canvas_form.on_svg_pointer_down(svg_event(32, -6, "edit-shift-forward"))
-        canvas_form.on_svg_pointer_up(svg_event(32, -6, "edit-shift-forward"))
-        canvas_form._on_canvas_click((32, -6))
+        canvas_form.on_svg_pointer_down(svg_event(30, 20, "edit-shift-forward"))
+        canvas_form.on_svg_pointer_up(svg_event(30, 20, "edit-shift-forward"))
+        canvas_form._on_canvas_click((30, 20))
 
         assert canvas_form._edit_temporary == [(110, 20), (10, 20), (210, 20)]
         assert canvas_form._selected_knob_index == 1
         assert canvas_form._edit_coordinates == ORIGINAL_COORDINATES
 
-    def test_picked_up_knob_does_not_follow_mouse_over_shift_button(
+    def test_picked_up_knob_does_not_follow_mouse_over_shift_ring(
         self, canvas_form: Any
     ) -> None:
-        canvas_form.on_svg_pointer_down(svg_event(110, 20, knob_id(1)))
-        canvas_form.on_svg_pointer_up(svg_event(110, 20, knob_id(1)))
-        canvas_form.draw_all()
+        self.pick_up(canvas_form, 1)
 
-        canvas_form.on_svg_pointer_move(svg_event(132, -6, "edit-shift-forward"))
+        canvas_form.on_svg_pointer_move(svg_event(135, 20, "edit-shift-forward"))
 
         assert canvas_form._edit_temporary[1] == (110, 20)
 
-    def test_line_section_ends_cannot_be_shifted_outwards(
+    def test_picked_up_knob_follows_mouse_inside_shift_ring_hole(
         self, canvas_form: Any
     ) -> None:
-        canvas_form.on_svg_pointer_down(svg_event(10, 20, knob_id(0)))
-        assert not canvas_form._can_shift_selected_knob(forward=False)
-        assert canvas_form._can_shift_selected_knob(forward=True)
+        self.pick_up(canvas_form, 1)
 
-        canvas_form._shift_selected_knob(forward=True)
-        canvas_form._shift_selected_knob(forward=True)
-        assert canvas_form._can_shift_selected_knob(forward=False)
-        assert not canvas_form._can_shift_selected_knob(forward=True)
+        canvas_form.on_svg_pointer_move(svg_event(115, 22, knob_id(1)))
+
+        assert canvas_form._edit_temporary[1] == (115, 22)
+
+    def test_hovering_half_previews_swap_partner(self, canvas_form: Any) -> None:
+        self.pick_up(canvas_form, 1)
+
+        canvas_form.on_svg_pointer_move(svg_event(135, 20, "edit-shift-forward"))
+
+        svg = canvas_form._edit_geometry()
+        assert "stroke-dasharray" in svg
+        assert canvas_form._shift_partner_index() == 2
+        assert 'stroke="yellow"' in svg
+
+    def test_no_swap_preview_without_hover(self, canvas_form: Any) -> None:
+        self.pick_up(canvas_form, 1)
+
+        assert "stroke-dasharray" not in canvas_form._edit_geometry()
 
     def test_midpoints_are_drawn_below_knobs(self, canvas_form: Any) -> None:
         svg = canvas_form._edit_geometry()

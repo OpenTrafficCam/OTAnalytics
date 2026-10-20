@@ -22,6 +22,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle_resources import (
     CircleResources,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line_resources import LineResources
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.midpoint_circle import MidpointCircle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polygon import Polygon
@@ -29,7 +30,11 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.shift_button import ShiftButton
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.shift_ring import (
+    BACKWARD_SUFFIX,
+    FORWARD_SUFFIX,
+    ShiftRing,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.text import Text
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geometry import (  # noqa
     Point,
@@ -41,9 +46,11 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geome
     insert_knob_at_segment,
     minimum_knob_count,
     open_area,
+    ring_half_at,
     segment_midpoints,
     shift_knob_backward,
     shift_knob_forward,
+    shift_target_index,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
@@ -79,13 +86,10 @@ EDIT_MIDPOINT_ID_PREFIX = "edit-mid-"
 EDIT_KNOB_LABEL_ID_PREFIX = "edit-knob-label-"
 KNOB_LABEL_OFFSET: Final = (9, -9)
 KNOB_LABEL_FONT_SIZE: Final = 12
-EDIT_SHIFT_BACKWARD_ID: Final = "edit-shift-backward"
-EDIT_SHIFT_FORWARD_ID: Final = "edit-shift-forward"
-SHIFT_BUTTON_OFFSET_X: Final = 22
-SHIFT_BUTTON_OFFSET_Y: Final = -26
-SHIFT_BUTTON_RADIUS: Final = 12
-GLYPH_SHIFT_BACKWARD: Final = "◀"
-GLYPH_SHIFT_FORWARD: Final = "▶"
+EDIT_SHIFT_ID: Final = "edit-shift"
+SHIFT_RING_INNER_RADIUS: Final = 14
+SHIFT_RING_OUTER_RADIUS: Final = 40
+SHIFT_PARTNER_LINE_DASH: Final = "4 3"
 KNOB_RADIUS = 6
 HIGHLIGHTED_KNOB_RADIUS = 8
 HIGHLIGHTED_KNOB_STROKE_WIDTH = 3
@@ -202,6 +206,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_section = False
         self._new_area_section = False
         self._shift_anchor: Point | None = None
+        self._shift_hovered_forward: bool | None = None
         self._ignore_next_click = False
         self._sections: SectionResource = SectionResource({})
         self._flows: LineResources = LineResources({})
@@ -435,66 +440,94 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self.draw_new_section()
 
     def _sync_shift_anchor(self) -> None:
-        """Pin the shift buttons where the knob was picked up.
+        """Pin the shift ring where the knob was picked up.
 
-        A picked up knob follows the mouse. Pinned buttons stay reachable. They are
+        A picked up knob follows the mouse. A pinned ring stays reachable. It is
         hidden while the knob is dragged.
         """
         if self._selected_knob_index is None or self._dragging:
             self._shift_anchor = None
+            self._shift_hovered_forward = None
         elif self._shift_anchor is None:
             self._shift_anchor = self._edit_temporary[self._selected_knob_index]
 
-    def _shift_button_positions(self) -> dict[str, Point]:
-        """Positions of the buttons that can currently shift the selected knob."""
-        if self._shift_anchor is None:
-            return {}
-        x, y = self._shift_anchor
-        positions = {
-            EDIT_SHIFT_BACKWARD_ID: (
-                x - SHIFT_BUTTON_OFFSET_X,
-                y + SHIFT_BUTTON_OFFSET_Y,
-            ),
-            EDIT_SHIFT_FORWARD_ID: (
-                x + SHIFT_BUTTON_OFFSET_X,
-                y + SHIFT_BUTTON_OFFSET_Y,
-            ),
-        }
-        if not self._can_shift_selected_knob(forward=False):
-            del positions[EDIT_SHIFT_BACKWARD_ID]
-        if not self._can_shift_selected_knob(forward=True):
-            del positions[EDIT_SHIFT_FORWARD_ID]
-        return positions
-
-    def _shift_buttons_svg(self) -> str:
-        glyphs = {
-            EDIT_SHIFT_BACKWARD_ID: GLYPH_SHIFT_BACKWARD,
-            EDIT_SHIFT_FORWARD_ID: GLYPH_SHIFT_FORWARD,
-        }
-        return "".join(
-            ShiftButton(
-                id=button_id,
-                x=x,
-                y=y,
-                glyph=glyphs[button_id],
-                radius=SHIFT_BUTTON_RADIUS,
-            ).to_svg()
-            for button_id, (x, y) in self._shift_button_positions().items()
-        )
-
-    def _is_over_shift_button(self, point: Point) -> bool:
-        return any(
-            closest_knob_index([position], point, SHIFT_BUTTON_RADIUS) is not None
-            for position in self._shift_button_positions().values()
-        )
-
-    def _can_shift_selected_knob(self, forward: bool) -> bool:
+    def _shift_targets(self) -> dict[bool, int]:
+        """Index of the knob swapped by a shift, for each available direction."""
         index = self._selected_knob_index
-        if index is None:
-            return False
-        if self._edit_is_area_section:
+        if self._shift_anchor is None or index is None:
+            return {}
+        targets = {
+            forward: shift_target_index(
+                len(self._edit_temporary), index, forward, self._edit_is_area_section
+            )
+            for forward in (False, True)
+        }
+        return {
+            forward: target for forward, target in targets.items() if target is not None
+        }
+
+    def _shift_ring_half_at(self, point: Point) -> bool | None:
+        """Available half of the shift ring under the point."""
+        if self._shift_anchor is None:
+            return None
+        half = ring_half_at(
+            self._shift_anchor,
+            point,
+            SHIFT_RING_INNER_RADIUS,
+            SHIFT_RING_OUTER_RADIUS,
+        )
+        return half if half in self._shift_targets() else None
+
+    def _shift_ring_svg(self) -> str:
+        targets = self._shift_targets()
+        if self._shift_anchor is None or not targets:
+            return ""
+
+        def label(forward: bool) -> str | None:
+            if forward not in targets:
+                return None
+            position = targets[forward] + 1
+            return f"{position}▶" if forward else f"◀{position}"
+
+        return ShiftRing(
+            id=EDIT_SHIFT_ID,
+            x=self._shift_anchor[0],
+            y=self._shift_anchor[1],
+            inner_radius=SHIFT_RING_INNER_RADIUS,
+            outer_radius=SHIFT_RING_OUTER_RADIUS,
+            backward_label=label(False),
+            forward_label=label(True),
+            hovered_forward=self._shift_hovered_forward,
+        ).to_svg()
+
+    def _shift_partner_index(self) -> int | None:
+        """Knob that swaps with the selected one if the hovered half is clicked."""
+        if self._shift_hovered_forward is None:
+            return None
+        return self._shift_targets().get(self._shift_hovered_forward)
+
+    def _shift_partner_line_svg(self) -> str:
+        partner = self._shift_partner_index()
+        if partner is None or self._shift_anchor is None:
+            return ""
+        x, y = self._edit_temporary[partner]
+        return Line(
+            id=f"{EDIT_SHIFT_ID}-partner",
+            x1=self._shift_anchor[0],
+            y1=self._shift_anchor[1],
+            x2=x,
+            y2=y,
+            stroke=HOVERED_KNOB_COLOR,
+            dash=SHIFT_PARTNER_LINE_DASH,
+        ).to_svg()
+
+    @staticmethod
+    def _shift_half_from_element_id(element_id: str | None) -> bool | None:
+        if element_id == f"{EDIT_SHIFT_ID}-{FORWARD_SUFFIX}":
             return True
-        return index < len(self._edit_temporary) - 1 if forward else index > 0
+        if element_id == f"{EDIT_SHIFT_ID}-{BACKWARD_SUFFIX}":
+            return False
+        return None
 
     def draw_new_section(self) -> None:
         if not self._background_image:
@@ -519,16 +552,18 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         ).to_svg()
         if self._selected_knob_index is None:
             svg += self._midpoints_svg()
+        svg += self._shift_partner_line_svg()
+        partner = self._shift_partner_index()
         for index, point in enumerate(self._edit_temporary):
             knob = create_knob(
                 index,
                 point,
-                is_hovered=index == self._hovered_knob_index,
+                is_hovered=index in (self._hovered_knob_index, partner),
                 is_selected=index == self._selected_knob_index,
             )
             svg += knob.to_svg()
             svg += self._knob_label(index, point)
-        return svg + self._shift_buttons_svg()
+        return svg + self._shift_ring_svg()
 
     def _knob_label(self, index: int, point: Point) -> str:
         """Number of the knob so that the order of the knobs is visible."""
@@ -584,8 +619,13 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         elif self._current_section is not None:
             self._mouse_position = point
             if self._selected_knob_index is not None:
-                if not self._is_over_shift_button(point):
+                hovered = self._shift_ring_half_at(point)
+                changed = hovered != self._shift_hovered_forward
+                self._shift_hovered_forward = hovered
+                if hovered is None:
                     self._move_selected_knob(point)
+                elif changed:
+                    self.draw_all()
             else:
                 self._hover_knob(point)
 
@@ -652,10 +692,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         point = svg_event_to_point(e)
         self._mouse_position = point
         self._ignore_next_click = False
-        shift_id = e.get(ELEMENT_ID)
-        if shift_id in self._shift_button_positions():
+        shift_forward = self._shift_half_from_element_id(e.get(ELEMENT_ID))
+        if shift_forward in self._shift_targets():
             self._ignore_next_click = True
-            self._shift_selected_knob(forward=shift_id == EDIT_SHIFT_FORWARD_ID)
+            self._shift_selected_knob(forward=bool(shift_forward))
             return
         segment = midpoint_index_from_element_id(e.get(ELEMENT_ID))
         if segment is not None and self._selected_knob_index is None:

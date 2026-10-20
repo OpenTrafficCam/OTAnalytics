@@ -210,3 +210,31 @@ def delete_knob(
     new_coordinates = list(coordinates)
     del new_coordinates[index]
     return new_coordinates
+
+
+def shift_target_index(
+    count: int, index: int, forward: bool, is_area_section: bool
+) -> int | None:
+    """Index of the knob that swaps its position with the knob at index when it is
+    shifted. None if the knob cannot be shifted in that direction.
+    """
+    if not 0 <= index < count:
+        return None
+    target = index + 1 if forward else index - 1
+    if 0 <= target < count:
+        return target
+    return target % count if is_area_section and count > 1 else None
+
+
+def ring_half_at(
+    center: Point, point: Point, inner_radius: float, outer_radius: float
+) -> bool | None:
+    """Half of a ring around center that contains point.
+
+    True is the right (forward) half, False the left (backward) half. None if the
+    point is not on the ring.
+    """
+    distance = _squared_distance(center, point)
+    if not inner_radius**2 <= distance <= outer_radius**2:
+        return None
+    return point[0] >= center[0]
