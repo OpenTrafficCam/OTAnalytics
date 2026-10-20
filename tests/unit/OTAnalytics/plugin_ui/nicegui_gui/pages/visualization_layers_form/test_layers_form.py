@@ -27,7 +27,7 @@ class TestLayersForm:
     async def test_checkbox_enables_the_layer(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
-        layer = PlottingLayer(LAYER_NAME, Mock(), enabled=True)
+        layer = PlottingLayer(LAYER_NAME, Mock(), enabled=False)
         target = LayersForm(Mock(), resource_manager, [LayerGroup("Group", [layer])])
 
         @ui.page("/test")
@@ -37,7 +37,7 @@ class TestLayersForm:
         await user.open("/test")
         user.find(LAYER_NAME).click()
 
-        assert not layer.is_enabled()
+        assert layer.is_enabled()
 
     async def test_checkbox_follows_a_layer_reset(
         self, user: User, resource_manager: ResourceManager
