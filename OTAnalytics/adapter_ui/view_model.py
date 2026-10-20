@@ -28,6 +28,7 @@ from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.application import geometry
 from OTAnalytics.application.use_cases.cut_tracks_with_sections import CutTracksDto
 from OTAnalytics.application.use_cases.editor.section_editor import MetadataProvider
+from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggestion
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.filter import FilterElement
@@ -293,7 +294,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def apply_filter_tracks_by_class(self, classes: list[str]) -> None:
+    def apply_filter_tracks_by_class(self, classes: set[str]) -> None:
         pass
 
     @abstractmethod
@@ -353,7 +354,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def start_new_project(self) -> None:
+    async def start_new_project(self) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -447,7 +448,9 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def get_save_path_suggestion(self, file_type: str, context_file_type: str) -> Path:
+    def get_save_path_suggestion(
+        self, file_type: str, context_file_type: str
+    ) -> SavePathSuggestion:
         raise NotImplementedError
 
     @abstractmethod
@@ -456,10 +459,6 @@ class ViewModel(
 
     @abstractmethod
     async def export_track_statistics(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def on_flow_changed(self, flow_id: FlowId) -> None:
         raise NotImplementedError
 
     @abstractmethod

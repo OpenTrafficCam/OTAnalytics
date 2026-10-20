@@ -1,18 +1,31 @@
 from dataclasses import dataclass
 from datetime import datetime
-from unittest.mock import MagicMock, Mock
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
-from OTAnalytics.application.parser.config_parser import OtConfig
-from OTAnalytics.application.state import ConfigurationFile
+from OTAnalytics.application.orthophoto import ObtainOrthophoto
+from OTAnalytics.application.project_location import UnsupportedProjectLocation
+from OTAnalytics.application.state import ConfigurationFile, CurrentOrthophoto
 from OTAnalytics.application.use_cases.load_otconfig import (
     LoadOtconfig,
     UnableToLoadOtconfigFile,
 )
+from OTAnalytics.application.use_cases.load_track_files import LoadTrackFiles
 from OTAnalytics.application.use_cases.section_repository import SectionAlreadyExists
+from OTAnalytics.domain.orthophoto import (
+    Orthophoto,
+    OrthophotoLocked,
+    OrthophotoNotFound,
+)
 
 REMARK = "my remark"
+OTCONFIG_FILE = Path("/project/site/project.otconfig")
+DECLARED_ORTHOPHOTO = Path("map2.tiff")
+OBTAINED_FILE = Path("/local/map2.tiff")
+# Once when loading starts, once more when it aborts.
+RESET_BEFORE_AND_ON_ABORT = 2
 
 
 class TestLoadOtconfig:
@@ -39,7 +52,7 @@ class TestLoadOtconfig:
         given.add_videos.add.assert_called_once_with(given.otconfig.videos)
         given.add_sections.add.assert_called_once_with(given.otconfig.sections)
         given.add_flows.add.assert_called_once_with(given.otconfig.flows)
-        given.load_track_files.assert_called_once_with(
+        given.load_track_files.load.assert_called_once_with(
             list(given.otconfig.analysis.track_files)
         )
         observer.assert_called_once_with(
@@ -47,6 +60,8 @@ class TestLoadOtconfig:
         )
         given.reset_application.reset.assert_called_once()
         given.remark_repository.add.assert_called_once_with(REMARK)
+        state = given.current_static_analysis_config_state
+        state.set_from_analysis_config.assert_called_once_with(given.otconfig.analysis)
 
     def test_load_error(self) -> None:
         given = setup(
@@ -64,15 +79,242 @@ class TestLoadOtconfig:
         with pytest.raises(UnableToLoadOtconfigFile):
             target.load(file)
 
+        # once before loading, once to discard the half applied config
         assert given.reset_application.reset.call_count == 2
         given.config_parser.parse.assert_called_once_with(file)
         observer.assert_not_called()
         given.remark_repository.add.assert_not_called()
 
 
+class TestLoadOtconfigOnTheEventLoop:
+    """Loading an otconfig loads its track files, so it freezes the ui too."""
+
+    async def test_loads_track_files_off_the_event_loop(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
+
+        given = setup(
+            project_name="my project",
+            start_date=datetime(2021, 1, 1),
+            track_files={"path/to/first.ottrk"},
+            remark=REMARK,
+            raise_error=False,
+        )
+        given.load_track_files = Mock(spec=LoadTrackFiles)
+        given.load_track_files.load_async = AsyncMock()
+        target = create_target(given)
+        file = Mock()
+
+        await target.load_async(file)
+
+        given.load_track_files.load_async.assert_awaited_once_with(
+            list(given.otconfig.analysis.track_files)
+        )
+        given.load_track_files.load.assert_not_called()
+
+    async def test_publishes_everything_the_blocking_load_publishes(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
+
+        given = setup(
+            project_name="my project",
+            start_date=datetime(2021, 1, 1),
+            track_files={"path/to/first.ottrk"},
+            remark=REMARK,
+            raise_error=False,
+        )
+        given.load_track_files = Mock(spec=LoadTrackFiles)
+        given.load_track_files.load_async = AsyncMock()
+        target = create_target(given)
+        observer = Mock()
+        target.register(observer)
+        file = Mock()
+
+        await target.load_async(file)
+
+        given.update_project.assert_called_once()
+        given.add_videos.add.assert_called_once_with(given.otconfig.videos)
+        given.add_sections.add.assert_called_once_with(given.otconfig.sections)
+        given.add_flows.add.assert_called_once_with(given.otconfig.flows)
+        given.remark_repository.add.assert_called_once_with(REMARK)
+        observer.assert_called_once_with(
+            ConfigurationFile(file, given.deserialization_result)
+        )
+
+    async def test_reports_a_broken_otconfig_the_same_way(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10282"""
+
+        given = setup(
+            project_name="my project",
+            start_date=datetime(2021, 1, 1),
+            track_files={"path/to/first.ottrk"},
+            remark=REMARK,
+            raise_error=True,
+        )
+        given.load_track_files = Mock(spec=LoadTrackFiles)
+        given.load_track_files.load_async = AsyncMock()
+        target = create_target(given)
+        observer = Mock()
+        target.register(observer)
+
+        with pytest.raises(UnableToLoadOtconfigFile):
+            await target.load_async(Mock())
+
+        # once before loading, once to discard the half applied config
+        assert given.reset_application.reset.call_count == 2
+        observer.assert_not_called()
+
+
+class TestRefusingAProjectStoredElsewhere:
+    """A project whose data lives where this installation cannot read it.
+
+    The refusal happens in `_begin`, before anything is published, so
+    all-or-nothing holds without `_abort` having to undo a partial load.
+    """
+
+    def test_validates_the_location_the_project_declared(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
+        given = setup_default()
+        target = create_target(given)
+
+        target.load(Mock())
+
+        given.validate_project_location.validate.assert_called_once_with(
+            given.otconfig.s3_key_prefix
+        )
+
+    def test_publishes_nothing_when_the_location_is_refused(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
+        given = setup_default()
+        given.validate_project_location.validate.side_effect = (
+            UnsupportedProjectLocation("stored in S3")
+        )
+        target = create_target(given)
+        observer = Mock()
+        target.register(observer)
+
+        with pytest.raises(UnsupportedProjectLocation):
+            target.load(Mock())
+
+        given.update_project.assert_not_called()
+        given.add_videos.add.assert_not_called()
+        given.add_sections.add.assert_not_called()
+        given.add_flows.add.assert_not_called()
+        given.load_track_files.assert_not_called()
+        given.remark_repository.add.assert_not_called()
+        observer.assert_not_called()
+        given.reset_application.reset.assert_called_once()
+
+    def test_holds_the_prefix_while_track_files_load(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
+        given = setup_default()
+        target = create_target(given)
+
+        target.load(Mock())
+
+        given.current_key_prefix.set.assert_called_once_with(
+            given.otconfig.s3_key_prefix
+        )
+
+    def test_holds_no_prefix_when_the_location_is_refused(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
+        given = setup_default()
+        given.validate_project_location.validate.side_effect = (
+            UnsupportedProjectLocation("stored in S3")
+        )
+        target = create_target(given)
+
+        with pytest.raises(UnsupportedProjectLocation):
+            target.load(Mock())
+
+        given.current_key_prefix.set.assert_not_called()
+
+    async def test_refuses_an_async_load_the_same_way(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10322"""
+        given = setup_default()
+        given.load_track_files = Mock(spec=LoadTrackFiles)
+        given.load_track_files.load = AsyncMock()
+        given.validate_project_location.validate.side_effect = (
+            UnsupportedProjectLocation("stored in S3")
+        )
+        target = create_target(given)
+
+        with pytest.raises(UnsupportedProjectLocation):
+            await target.load_async(Mock())
+
+        given.load_track_files.load.assert_not_awaited()
+        given.update_project.assert_not_called()
+
+
+class TestLoadOtconfigOrthophoto:
+    async def test_sets_the_obtained_orthophoto_before_loading_tracks(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_with_orthophoto(setup_default())
+        target = create_target(given)
+
+        await target.load_async(OTCONFIG_FILE)
+
+        given.obtain_orthophoto.obtain.assert_awaited_once_with(
+            DECLARED_ORTHOPHOTO, OTCONFIG_FILE.parent
+        )
+        assert given.current_orthophoto.get() == Orthophoto(
+            file=OBTAINED_FILE, reference=DECLARED_ORTHOPHOTO
+        )
+
+    async def test_load_aborts_when_orthophoto_cannot_be_chosen(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_with_orthophoto(setup_default())
+        given.load_track_files.load_async.side_effect = OrthophotoLocked("locked")
+        target = create_target(given)
+
+        with pytest.raises(UnableToLoadOtconfigFile):
+            await target.load_async(OTCONFIG_FILE)
+
+        given.reset_application.reset.assert_called()
+
+    async def test_load_aborts_when_the_orthophoto_is_not_found(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_with_orthophoto_not_found(setup_with_orthophoto(setup_default()))
+        target = create_target(given)
+
+        with pytest.raises(UnableToLoadOtconfigFile):
+            await target.load_async(OTCONFIG_FILE)
+
+    async def test_resets_when_the_orthophoto_is_not_found(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_with_orthophoto_not_found(setup_with_orthophoto(setup_default()))
+        target = create_target(given)
+
+        with pytest.raises(UnableToLoadOtconfigFile):
+            await target.load_async(OTCONFIG_FILE)
+
+        assert given.reset_application.reset.call_count == RESET_BEFORE_AND_ON_ABORT
+        given.load_track_files.load_async.assert_not_awaited()
+
+    def test_blocking_load_sets_the_obtained_orthophoto(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_with_orthophoto(setup_default())
+        target = create_target(given)
+
+        target.load(OTCONFIG_FILE)
+
+        assert given.current_orthophoto.get() == Orthophoto(
+            file=OBTAINED_FILE, reference=DECLARED_ORTHOPHOTO
+        )
+
+    async def test_obtains_nothing_when_the_otconfig_declares_none(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_with_orthophoto(setup_default())
+        given.otconfig.orthophoto = None
+        target = create_target(given)
+
+        await target.load_async(OTCONFIG_FILE)
+
+        given.obtain_orthophoto.obtain.assert_not_awaited()
+        assert given.current_orthophoto.get() is None
+
+
 @dataclass
 class Given:
-    otconfig: OtConfig
+    otconfig: Mock
     reset_application: Mock
     config_parser: Mock
     update_project: Mock
@@ -83,6 +325,34 @@ class Given:
     remark_repository: Mock
     deserializer: Mock
     deserialization_result: Mock
+    validate_project_location: Mock
+    current_key_prefix: Mock
+    current_static_analysis_config_state: Mock
+    current_orthophoto: CurrentOrthophoto
+    obtain_orthophoto: Mock
+
+
+def setup_with_orthophoto(given: Given) -> Given:
+    given.otconfig.orthophoto = DECLARED_ORTHOPHOTO
+    given.obtain_orthophoto.obtain.return_value = OBTAINED_FILE
+    given.load_track_files = Mock(spec=LoadTrackFiles)
+    given.load_track_files.load_async = AsyncMock()
+    return given
+
+
+def setup_with_orthophoto_not_found(given: Given) -> Given:
+    given.obtain_orthophoto.obtain.side_effect = OrthophotoNotFound("missing")
+    return given
+
+
+def setup_default() -> Given:
+    return setup(
+        project_name="my project",
+        start_date=datetime(2021, 1, 1),
+        track_files={"path/to/first.ottrk"},
+        remark=REMARK,
+        raise_error=False,
+    )
 
 
 def setup(
@@ -105,6 +375,9 @@ def setup(
     deserialization_result = Mock()
     deserializer = Mock()
     deserializer.return_value = deserialization_result
+    validate_project_location = Mock()
+    current_key_prefix = Mock()
+    current_static_analysis_config_state = Mock()
 
     if raise_error:
         add_sections = MagicMock()
@@ -124,6 +397,11 @@ def setup(
         remark_repository=remark_repository,
         deserializer=deserializer,
         deserialization_result=deserialization_result,
+        validate_project_location=validate_project_location,
+        current_key_prefix=current_key_prefix,
+        current_static_analysis_config_state=current_static_analysis_config_state,
+        current_orthophoto=CurrentOrthophoto(),
+        obtain_orthophoto=Mock(spec=ObtainOrthophoto, obtain=AsyncMock()),
     )
 
 
@@ -132,7 +410,7 @@ def create_otconfig(
     start_date: datetime,
     track_files: set[str],
     remark: str,
-) -> OtConfig:
+) -> Mock:
     project = Mock()
     project.name = project_name
     project.start_date = start_date
@@ -147,6 +425,7 @@ def create_otconfig(
     otconfig.flows = Mock()
     otconfig.analysis = analysis
     otconfig.remark = remark
+    otconfig.orthophoto = None
     return otconfig
 
 
@@ -161,4 +440,9 @@ def create_target(given: Given) -> LoadOtconfig:
         given.load_track_files,
         given.remark_repository,
         given.deserializer,
+        given.validate_project_location,
+        given.current_key_prefix,
+        given.current_static_analysis_config_state,
+        given.current_orthophoto,
+        given.obtain_orthophoto,
     )

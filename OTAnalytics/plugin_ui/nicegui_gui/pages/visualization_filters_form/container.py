@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from nicegui import ui
 from nicegui.elements.button import Button
 from nicegui.events import ValueChangeEventArguments
@@ -140,6 +142,74 @@ class FilterDateRangeForm:
         self._dialog.close()
 
 
+class FilterClassificationForm:
+    """Dialog to select the classes whose tracks are shown.
+
+    The checkboxes show the current class filter selection. Without a selection,
+    every class counts as selected, as in the customtkinter GUI.
+    """
+
+    def __init__(self, resource_manager: ResourceManager, viewmodel: ViewModel) -> None:
+        self._resource_manager = resource_manager
+        self._viewmodel = viewmodel
+        self._classes: list[str] = []
+        self._selected_classes: set[str] = set()
+
+    def open(self) -> None:
+        self._classes = self._viewmodel.get_classes()
+        self._selected_classes = set(self._current_selection())
+        with ui.dialog() as self._dialog, ui.card():
+            for classification in self._classes:
+                self._build_checkbox(classification)
+            with ui.row():
+                self._build_buttons()
+        self._dialog.open()
+
+    def _current_selection(self) -> list[str]:
+        selection = self._viewmodel.get_class_filter_selection()
+        return self._classes if selection is None else selection
+
+    def _build_checkbox(self, classification: str) -> None:
+        FormFieldCheckbox(
+            label_text=classification,
+            initial_value=classification in self._selected_classes,
+            on_value_change=self._create_class_toggle(classification),
+        ).build()
+
+    def _create_class_toggle(
+        self, classification: str
+    ) -> Callable[[ValueChangeEventArguments], None]:
+        def toggle(event: ValueChangeEventArguments) -> None:
+            self._select_class(classification, event.value)
+
+        return toggle
+
+    def _build_buttons(self) -> None:
+        ui.button(
+            self._resource_manager.get(GeneralKeys.LABEL_APPLY),
+            on_click=self._on_apply_button_clicked,
+        )
+        ui.button(
+            self._resource_manager.get(GeneralKeys.LABEL_RESET),
+            on_click=self._on_reset_button_clicked,
+        )
+
+    def _select_class(self, classification: str, selected: bool) -> None:
+        if selected:
+            self._selected_classes.add(classification)
+        else:
+            self._selected_classes.discard(classification)
+
+    def _on_apply_button_clicked(self) -> None:
+        self._viewmodel.apply_filter_tracks_by_class(self._selected_classes)
+        logger().info("Filter tracks by classification applied")
+        self._dialog.close()
+
+    def _on_reset_button_clicked(self) -> None:
+        self._viewmodel.reset_filter_tracks_by_class()
+        self._dialog.close()
+
+
 class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
 
     def __init__(
@@ -151,13 +221,21 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._viewmodel = view_model
         self._filter_by_date: ui.checkbox
         self._filter_by_class: ui.checkbox
-        self._filter_by_class_list: list = []
         self._button_previous_second: ui.button | None = None
         self._button_previous_frame: ui.button | None = None
         self._button_previous_event: ui.button | None = None
         self._button_next_second: ui.button | None = None
         self._button_next_frame: ui.button | None = None
         self._button_next_event: ui.button | None = None
+        # Created by `build()`, which runs when a browser first asks for the
+        # page -- long after `_introduce_to_viewmodel` below makes this form
+        # reachable from the view model. Until then the form exists and has no
+        # widgets, and saying so here is what keeps that window harmless.
+        self._filter_by_date_button: ui.button | None = None
+        self._filter_by_date_button_left: ui.button | None = None
+        self._filter_by_date_button_right: ui.button | None = None
+        self._filter_by_class_button: ui.button | None = None
+        self._label_filter_by_date: ui.label | None = None
         self._introduce_to_viewmodel()
         self._frames_to_skip = 0
         self._seconds_to_skip = 0
@@ -169,6 +247,9 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
             on_value_change=lambda e: self.change_button_date(e.value),
         )
         self._filter_by_date_popup = FilterDateRangeForm(
+            self._resource_manager, self._viewmodel
+        )
+        self._filter_by_class_popup = FilterClassificationForm(
             self._resource_manager, self._viewmodel
         )
         self._input_seconds = FormFieldInteger(
@@ -311,71 +392,71 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         )
 
     def open_classification_dialog(self) -> None:
-        self._filter_by_class_list = self._viewmodel.get_classes()
-        with ui.dialog() as dialog, ui.card():
-            for classification_class in self._filter_by_class_list:
-                FormFieldCheckbox(
-                    label_text=classification_class,
-                    initial_value=classification_class in self._selected_classes(),
-                    on_value_change=lambda e: self.remove_or_add_class(
-                        classification_class
-                    ),
-                )
-            ui.button("Apply", on_click=lambda e: self.apply_new_classification(dialog))
-        dialog.open()
-
-    def _selected_classes(self) -> list[str]:
-        selected_classes = self._viewmodel.get_class_filter_selection()
-        return selected_classes if selected_classes else self._viewmodel.get_classes()
-
-    def apply_new_classification(self, dialog: ui.dialog) -> None:
-        self._viewmodel.apply_filter_tracks_by_class(self._filter_by_class_list)
-        self._filter_by_class_list = []
-        dialog.close()
-
-    def remove_or_add_class(self, class_name: str) -> None:
-        if class_name in self._filter_by_class_list:
-            self._filter_by_class_list.remove(class_name)
-        else:
-            self._filter_by_class_list.append(class_name)
+        self._filter_by_class_popup.open()
 
     def open_range_dialog(self) -> None:
         self._filter_by_date_popup.open()
 
+    def _date_buttons(self) -> list[ui.button]:
+        """Every date button, or none at all while the form is unbuilt."""
+        return [
+            button
+            for button in (
+                self._filter_by_date_button,
+                self._filter_by_date_button_left,
+                self._filter_by_date_button_right,
+            )
+            if button is not None
+        ]
+
     def set_active_color_on_filter_by_date_button(self) -> None:
+        if self._filter_by_date_button is None:
+            return
         self._filter_by_date_button.props("color=orange")
         # Expose active state for Playwright assertions
         self._filter_by_date_button.props("data-filter-by-date-active=true")
 
     def set_inactive_color_on_filter_by_date_button(self) -> None:
+        if self._filter_by_date_button is None:
+            return
         self._filter_by_date_button.props("color=primary")
         # Expose inactive state for Playwright assertions
         self._filter_by_date_button.props("data-filter-by-date-active=false")
 
     def set_active_color_on_filter_by_class_button(self) -> None:
+        if self._filter_by_class_button is None:
+            return
         self._filter_by_class_button.props("color=orange")
 
     def enable_filter_by_class_button(self) -> None:
+        if self._filter_by_class_button is None:
+            return
         self._filter_by_class_button.enable()
 
     def enable_filter_by_date_button(self) -> None:
-        self._filter_by_date_button.enable()
-        self._filter_by_date_button_left.enable()
-        self._filter_by_date_button_right.enable()
+        for button in self._date_buttons():
+            button.enable()
 
     def set_inactive_color_on_filter_by_class_button(self) -> None:
+        if self._filter_by_class_button is None:
+            return
         self._filter_by_class_button.props("color=primary")
 
     def disable_filter_by_date_button(self) -> None:
         self.set_inactive_color_on_filter_by_date_button()
-        self._filter_by_date_button.disable()
-        self._filter_by_date_button_left.disable()
-        self._filter_by_date_button_right.disable()
+        for button in self._date_buttons():
+            button.disable()
 
     def disable_filter_by_class_button(self) -> None:
+        if self._filter_by_class_button is None:
+            return
         self._filter_by_class_button.disable()
 
     def update_date_range(self, date_range: DateRangeDto) -> None:
+        if self._label_filter_by_date is None:
+            # The range still reaches the view model's state, so the label shows
+            # it as soon as `build()` reads that state. Nothing is lost here.
+            return
         start_date = date_range["start_date"]
         end_date = date_range["end_date"]
 

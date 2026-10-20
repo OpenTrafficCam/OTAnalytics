@@ -1,0 +1,34 @@
+---
+name: System Test With Pytest
+
+on:
+  # Run tests each time a PR is opened or changed.
+  # Allow other Workflows (e.g., build workflows) to call this workflow.
+  pull_request:
+  workflow_call:
+
+permissions: read-all
+
+jobs:
+  test:
+    name: Execute system tests across various operating systems and Python versions.
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        py: ["3.12"]
+      fail-fast: true
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Set up Python ${{ matrix.py }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.py }}
+      - name: Run Python System Tests
+        uses: platomo/test-python-app-action@v4
+        timeout-minutes: 60
+        with:
+          py-version: ${{ matrix.py }}
+          package-path: OTAnalytics
+          test-path: tests/system

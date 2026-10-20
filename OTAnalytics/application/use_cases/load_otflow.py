@@ -6,7 +6,7 @@ from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.state import ConfigurationFile
 from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import (
-    AddFlow,
+    AddAllFlows,
     ClearAllFlows,
     FlowAlreadyExists,
 )
@@ -34,7 +34,7 @@ class LoadOtflow:
         clear_all_events (ClearAllEvents): use case to clear event repository.
         flow_parser (FlowParser): to parse sections and flows from file.
         add_section (AddSection): use case to add sections to section repository.
-        add_flow (AddFlow): use case to add flows to flow repository.
+        add_all_flows (AddAllFlows): use case to batch-add flows to flow repository.
     """
 
     def __init__(
@@ -44,7 +44,7 @@ class LoadOtflow:
         clear_all_events: ClearAllEvents,
         flow_parser: FlowParser,
         add_section: AddSection,
-        add_flow: AddFlow,
+        add_all_flows: AddAllFlows,
         deserialize: Deserializer,
     ) -> None:
         self._clear_all_sections = clear_all_sections
@@ -52,7 +52,7 @@ class LoadOtflow:
         self._clear_all_events = clear_all_events
         self._flow_parser = flow_parser
         self._add_section = add_section
-        self._add_flow = add_flow
+        self._add_all_flows = add_all_flows
         self._deserialize = deserialize
         self._subject = Subject[ConfigurationFile]()
 
@@ -87,8 +87,7 @@ class LoadOtflow:
             self._add_section(section)
 
     def _add_flows(self, flows: Iterable[Flow]) -> None:
-        for flow in flows:
-            self._add_flow(flow)
+        self._add_all_flows.add(flows)
 
     def register(self, observer: OBSERVER[ConfigurationFile]) -> None:
         self._subject.register(observer)

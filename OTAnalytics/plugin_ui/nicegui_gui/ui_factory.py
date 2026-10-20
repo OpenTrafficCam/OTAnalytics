@@ -4,11 +4,16 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from nicegui import ui
+from nicegui.elements.notification import NotificationType
 
+from OTAnalytics.adapter_ui.cancel_export_counts import CancelExportCounts
+from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
 from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
+from OTAnalytics.adapter_ui.helpers import remove_wildcard_from
 from OTAnalytics.adapter_ui.info_box import InfoBox
 from OTAnalytics.adapter_ui.message_box import MessageBox
+from OTAnalytics.adapter_ui.message_type import MessageType
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -16,11 +21,15 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingSpecificationDto,
 )
 from OTAnalytics.application.application import CancelAddFlow, CancelAddSection
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.helpers.file_helpers import (
     get_all_files_with_correct_file_ending_in_directory,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.confirmation_dialog import (
+    ConfirmationDialog,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import EditFlowDialog
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
@@ -38,13 +47,63 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import DialogResu
 BASE_FILE_PICKER_DIRECTORY = Path.home()
 
 
+def build_file_extensions(filetypes: Iterable[tuple[str, str]]) -> dict[str, str]:
+    """Convert tkinter-style filetypes into a format-to-extension mapping.
+
+    The ``filetypes`` use glob patterns such as ``"*.otconfig"``. The
+    :class:`FileChooserDialog` expects bare extensions without a wildcard or
+    leading dot, because it adds the dot itself when building the locked
+    suffix. Leaving the ``*`` in place produces malformed filenames such as
+    ``project.*otconfig.otconfig``.
+
+    Args:
+        filetypes: Pairs of human-readable description and glob pattern.
+
+    Returns:
+        Mapping of description to bare extension (no wildcard, no leading dot).
+    """
+    return {
+        description: remove_wildcard_from(pattern).replace(".", "")
+        for description, pattern in filetypes
+    }
+
+
+NOTIFICATION_TYPES: dict[MessageType, NotificationType] = {
+    MessageType.ERROR: "negative",
+    MessageType.WARNING: "warning",
+    MessageType.INFO: "info",
+}
+
+
 class NiceGuiMessageBox(MessageBox):
+    """Persistent notification with a spinner that stays until it is closed.
+
+    Without a client (e.g. while preloading files on startup) nothing can be
+    shown; the box then only logs and does nothing.
+    """
+
+    def __init__(self, message: str) -> None:
+        self._notification: ui.notification | None = None
+        try:
+            self._notification = ui.notification(
+                message,
+                position="top",
+                type="ongoing",
+                spinner=True,
+                timeout=None,
+                multi_line=True,
+            )
+        except RuntimeError as cause:
+            logger().debug(f"Could not show message '{message}': {cause}")
 
     def close(self) -> None:
-        pass
+        if self._notification is not None:
+            self._notification.dismiss()
+            self._notification = None
 
     def update_message(self, message: str) -> None:
-        pass
+        if self._notification is not None:
+            self._notification.message = message
 
 
 class NiceGuiInfoBox(InfoBox):
@@ -63,24 +122,43 @@ class NiceGuiUiFactory(UiFactory):
         self._resource_manager = resource_manager
         self._base_directory = base_directory
 
-    def info_box(
-        self, message: str, initial_position: tuple[int, int], show_cancel: bool = False
-    ) -> InfoBox:
+    def info_box(self, message: str, initial_position: tuple[int, int]) -> InfoBox:
+        self.show_message(
+            message=message,
+            initial_position=initial_position,
+            message_type=MessageType.ERROR,
+        )
+        return NiceGuiInfoBox()
+
+    def show_message(
+        self,
+        message: str,
+        initial_position: tuple[int, int],
+        message_type: MessageType,
+    ) -> None:
         # Use ui.notify for immediate feedback
         ui.notify(
             message,
-            type="negative",
+            type=NOTIFICATION_TYPES[message_type],
             position="top",
-            timeout=5000,  # 5 seconds for errors
+            timeout=5000,  # 5 seconds
             close_button=True,
             multi_line=True,
         )
-        return NiceGuiInfoBox()
+
+    async def ask_for_confirmation(
+        self, message: str, initial_position: tuple[int, int]
+    ) -> bool:
+        dialog = ConfirmationDialog(
+            resource_manager=self._resource_manager, message=message
+        )
+        result = await dialog.result
+        return result == DialogResult.APPLY
 
     def minimal_info_box(
         self, message: str, initial_position: tuple[int, int]
     ) -> MessageBox:
-        return NiceGuiMessageBox()
+        return NiceGuiMessageBox(message)
 
     async def askopenfilename(
         self,
@@ -89,8 +167,7 @@ class NiceGuiUiFactory(UiFactory):
         defaultextension: str,
         extension_options: dict[str, list[str] | None] | None = None,
     ) -> str:
-        # Convert filetypes to the format expected by FileChooserDialog
-        file_extensions = {desc: ext.replace(".", "") for desc, ext in filetypes}
+        file_extensions = build_file_extensions(filetypes)
 
         dialog = FileChooserDialog(
             resource_manager=self._resource_manager,
@@ -98,6 +175,7 @@ class NiceGuiUiFactory(UiFactory):
             file_extensions=file_extensions,
             initial_file_stem="",
             extension_options=extension_options,
+            enforce_suffix=False,
         )
 
         result = await dialog.result
@@ -158,8 +236,7 @@ class NiceGuiUiFactory(UiFactory):
         initialfile: str,
         initialdir: Path,
     ) -> Path:
-        # Convert filetypes to the format expected by FileChooserDialog
-        file_extensions = {desc: ext.replace(".", "") for desc, ext in filetypes}
+        file_extensions = build_file_extensions(filetypes)
 
         dialog = FileChooserDialog(
             resource_manager=self._resource_manager,
@@ -167,6 +244,8 @@ class NiceGuiUiFactory(UiFactory):
             file_extensions=file_extensions,
             initial_file_stem=Path(initialfile).stem,
             initial_dir=initialdir,
+            context_file_type="",
+            enforce_suffix=True,
         )
 
         result = await dialog.result
@@ -178,23 +257,30 @@ class NiceGuiUiFactory(UiFactory):
         self,
         title: str,
         export_format_extensions: dict[str, str],
-        initial_file_stem: str,
+        context_file_type: str,
         viewmodel: ViewModel,
     ) -> ExportFileDto:
+        default_ext = next(iter(export_format_extensions.values())).lstrip(".")
+        suggestion = viewmodel.get_save_path_suggestion(default_ext, context_file_type)
         dialog = FileChooserDialog(
             resource_manager=self._resource_manager,
             title=title,
             file_extensions=export_format_extensions,
-            initial_file_stem=initial_file_stem,
+            initial_file_stem=suggestion.file_stem,
+            initial_dir=suggestion.save_directory,
+            context_file_type=context_file_type,
+            enforce_suffix=True,
         )
 
         result = await dialog.result
         if result == DialogResult.APPLY:
             return ExportFileDto(
-                file=dialog.get_file_path(),
+                export_directory=dialog.get_directory(),
+                file_stem=dialog.get_file_stem(),
+                export_format_extension=dialog.get_export_format_extension(),
                 export_format=dialog.get_format(),
             )
-        raise CancelAddFlow()
+        raise CancelExportFile()
 
     async def configure_export_counts(
         self,
@@ -218,7 +304,7 @@ class NiceGuiUiFactory(UiFactory):
         result = await dialog.result
         if result == DialogResult.APPLY:
             return dialog.get_specification()
-        raise CancelAddFlow()
+        raise CancelExportCounts()
 
     async def configure_section(
         self,

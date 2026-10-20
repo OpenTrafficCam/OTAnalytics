@@ -1,0 +1,197 @@
+"""Tests for reading which video a track file belongs to.
+
+The companion is named by the ottrk's own metadata, never guessed by swapping
+the suffix, because a companion may be any supported video type.
+"""
+
+import bz2
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
+import pytest
+
+from OTAnalytics.plugin_s3.s3_file_providers import UnreadableTrackFile, read_video_name
+
+
+class TestReadVideoName:
+
+    def test_reads_the_name_from_a_real_track_file(self, ottrk_path: Path) -> None:
+        """The crafted files below cannot catch drift in the real ottrk format.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
+        assert read_video_name(ottrk_path) == (
+            "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00.mp4"
+        )
+
+    @pytest.mark.parametrize("filetype", [".mp4", ".mkv", ".avi", ".mov"])
+    def test_resolves_any_supported_companion_type(
+        self, tmp_path: Path, filetype: str
+    ) -> None:
+        """Swapping in '.mp4' would silently look for the wrong object.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
+        given = create_given(
+            tmp_path, metadata_naming("OTCamera19_2023-05-24_06-00-00", filetype)
+        )
+
+        assert read_video_name(given.ottrk) == (
+            f"OTCamera19_2023-05-24_06-00-00{filetype}"
+        )
+
+    def test_the_video_name_need_not_match_the_track_file_name(
+        self, tmp_path: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given(
+            tmp_path, metadata_naming("something_else", ".mkv"), name="a.ottrk"
+        )
+
+        assert read_video_name(given.ottrk) == "something_else.mkv"
+
+    def test_a_geo_only_track_file_has_no_video(self, tmp_path: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = create_given(tmp_path, geo_only_content())
+
+        assert read_video_name(given.ottrk) is None
+
+    def test_a_geo_only_track_file_without_detections_has_no_video(
+        self, tmp_path: Path
+    ) -> None:
+        """A quiet period must not ask for a video the file never had.
+
+        #Requirement https://openproject.platomo.de/wp/10404
+        """
+        given = create_given(tmp_path, empty_geo_only_content())
+
+        assert read_video_name(given.ottrk) is None
+
+    def test_a_georeferenced_file_with_geo_coordinates_keeps_its_video(
+        self, tmp_path: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        content = geo_only_content()
+        content["metadata"] = {
+            **metadata_naming("cam", ".mp4")["metadata"],
+            "georeference": {},
+        }
+        given = create_given(tmp_path, content)
+
+        assert read_video_name(given.ottrk) == "cam.mp4"
+
+    def test_a_geo_only_file_with_corrupt_detections_is_reported(
+        self, tmp_path: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = create_given(tmp_path, None)
+        given.ottrk.write_bytes(
+            bz2.compress(b'{"metadata": {}, "data": {"detections": [{"geo_x": ')
+        )
+
+        with pytest.raises(UnreadableTrackFile, match="is not a valid track file"):
+            read_video_name(given.ottrk)
+
+    def test_a_georeferenced_file_does_not_read_its_detections(
+        self, tmp_path: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = create_given(tmp_path, None)
+        given.ottrk.write_bytes(
+            bz2.compress(
+                b'{"metadata": {"georeference": {}, "video":'
+                b' {"filename": "cam", "filetype": ".mp4"}}, "data": {"detections": ['
+            )
+        )
+
+        assert read_video_name(given.ottrk) == "cam.mp4"
+
+    def test_a_track_file_without_video_metadata_is_reported(
+        self, tmp_path: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = create_given(tmp_path, {"metadata": {}})
+
+        with pytest.raises(UnreadableTrackFile, match="does not say which video"):
+            read_video_name(given.ottrk)
+
+    def test_a_track_file_that_is_not_valid_json_is_reported(
+        self, tmp_path: Path
+    ) -> None:
+        """Naming the content as the problem, not the video metadata.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
+        given = create_given(tmp_path, None)
+
+        with pytest.raises(UnreadableTrackFile, match="is not a valid track file"):
+            read_video_name(given.ottrk)
+
+    def test_a_track_file_that_cannot_be_opened_is_reported(
+        self, tmp_path: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10283"""
+        given = Given(ottrk=tmp_path / "plain.ottrk")
+        given.ottrk.write_bytes(b"not compressed at all")
+
+        with pytest.raises(UnreadableTrackFile, match="could not be read"):
+            read_video_name(given.ottrk)
+
+    def test_every_report_stays_on_one_line(self, tmp_path: Path) -> None:
+        """The message is shown in a dialog, so a parser dump does not belong.
+
+        ijson names the offending line and points a caret into it, which is
+        several lines of diagram nobody can read in a popup.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
+        given = create_given(tmp_path, None)
+
+        with pytest.raises(UnreadableTrackFile) as reported:
+            read_video_name(given.ottrk)
+
+        assert "\n" not in str(reported.value)
+
+    def test_a_missing_track_file_says_it_is_missing(self, tmp_path: Path) -> None:
+        """A file that never arrived is a different problem from a corrupt one.
+
+        Reporting it as missing video metadata sends whoever reads the message
+        looking inside a file that is not there.
+
+        #Requirement https://openproject.platomo.de/wp/10283
+        """
+        absent = tmp_path / "absent.ottrk"
+
+        with pytest.raises(UnreadableTrackFile, match="is missing") as reported:
+            read_video_name(absent)
+
+        assert str(absent) in str(reported.value)
+        assert isinstance(reported.value.__cause__, FileNotFoundError)
+
+
+@dataclass
+class Given:
+    ottrk: Path
+
+
+def create_given(tmp_path: Path, metadata: dict | None, name: str = "a.ottrk") -> Given:
+    ottrk = tmp_path / name
+    content = b"not json" if metadata is None else json.dumps(metadata).encode()
+    ottrk.write_bytes(bz2.compress(content))
+    return Given(ottrk=ottrk)
+
+
+def metadata_naming(filename: str, filetype: str) -> dict:
+    return {"metadata": {"video": {"filename": filename, "filetype": filetype}}}
+
+
+def geo_only_content() -> dict:
+    return {"metadata": {}, "data": {"detections": [{"geo_x": 1.0, "geo_y": 2.0}]}}
+
+
+def empty_geo_only_content() -> dict:
+    return {
+        "metadata": {"geo_coordinates": {"crs": "EPSG:25833"}},
+        "data": {"detections": []},
+    }

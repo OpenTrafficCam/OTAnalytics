@@ -1,9 +1,9 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Optional
 
 
-class AbstractFrameProject:
+class AbstractFrameProject(ABC):
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         pass
@@ -17,7 +17,7 @@ class AbstractFrameProject:
         raise NotImplementedError
 
 
-class AbstractFrameSvzMetadata:
+class AbstractFrameSvzMetadata(ABC):
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         pass

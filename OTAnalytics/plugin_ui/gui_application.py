@@ -2,9 +2,15 @@ from abc import abstractmethod
 from functools import cached_property
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import DummyViewModel
+from OTAnalytics.adapter_ui.local_file_providers import (
+    LocalOrthophotoProvider,
+    LocalTrackFileProvider,
+    LocalVideoFileProvider,
+)
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
-from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.application import OTAnalyticsApplication
+from OTAnalytics.application.orthophoto import ProvideOrthophoto
+from OTAnalytics.application.state import OrthophotoImageSizeUpdater
 from OTAnalytics.application.use_cases.create_events import (
     CreateEvents,
     CreateIntersectionEvents,
@@ -13,6 +19,11 @@ from OTAnalytics.application.use_cases.create_events import (
     SectionProvider,
     SimpleCreateIntersectionEvents,
 )
+from OTAnalytics.application.use_cases.provide_input_files import (
+    ProvideTrackFiles,
+    ProvideVideoFiles,
+)
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
 from OTAnalytics.plugin_filter.pandas_track_id import PandasTrackIdProvider
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
@@ -25,6 +36,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def start(self) -> None:
         self.register_observers()
         self.start_ui()
+
+    def _redraw_for_orthophoto(self, _: Orthophoto | None) -> None:
+        self.track_image_updater.update_image()
 
     @abstractmethod
     def start_ui(self) -> None:
@@ -42,6 +56,13 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.track_view_state.selected_videos.register(
             self.track_image_updater.notify_video
         )
+        self.current_orthophoto.register(
+            OrthophotoImageSizeUpdater(
+                self.current_orthophoto_image.get, self.track_image_size_updater
+            ).notify
+        )
+        self.current_orthophoto.register(self._redraw_for_orthophoto)
+        self.current_orthophoto.register(self.view_model.notify_orthophoto)
         # TODO: Should not register to tracks_metadata._classifications but to
         # TODO: ottrk metadata detection classes
         self.tracks_metadata._classifications.register(
@@ -60,7 +81,6 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.application.register_video_observer(self.view_model)
         self.application.register_sections_observer(self.view_model)
         self.application.register_flows_observer(self.view_model)
-        self.application.register_flow_changed_observer(self.view_model.on_flow_changed)
         self.track_view_state.selected_videos.register(
             self.view_model.update_selected_videos
         )
@@ -105,6 +125,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.event_repository.register_observer(self.view_model.update_track_statistics)
         self.load_otflow.register(self.file_state.last_saved_config.set)
         self.load_otconfig.register(self.file_state.last_saved_config.set)
+        # The cli builds its own parser and registers nothing, so a headless
+        # run keeps the log warning as its only signal.
+        self.otconfig_parser.register(self.view_model.report_substituted_files)
         self.load_otconfig.register(self.view_model.update_remark_view)
         self.project_updater.register(self.view_model.update_quick_save_button)
         self.track_file_repository.register(self.view_model.update_quick_save_button)
@@ -117,19 +140,23 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         # configure observers for count plot saver
         self.track_view_state.count_plots.register(self.save_count_plots.save)
 
-        # configure assignment repository update on flow/event deletion
+        # configure assignment repository update on flow and event changes
         self.event_repository.register_observer(
             self.remove_assignments_of_removed_events
         )
-        self.flow_repository.register_flow_changed_observer(
-            self.remove_assignments_of_changed_flows
-        )
         self.flow_repository.register_flows_observer(
-            self.remove_assignments_of_removed_flows
+            self.clear_assignments_on_changed_flows
         )
 
     @cached_property
-    def view_model(self) -> ViewModel:
+    def view_model(self) -> DummyViewModel:
+        """Typed concretely so wiring can reach methods the `ViewModel` port
+        does not declare.
+
+        Adding them to the port instead is ruled out: `ViewModel` and
+        `UiFactory` must not gain abstract methods, because OTCloud implements
+        those ports and a new one breaks it at its next pin bump.
+        """
         return DummyViewModel(
             self.application,
             self.ui_factory,
@@ -139,7 +166,22 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             show_svz=self.run_config.show_svz,
             add_new_section=self.add_new_section,
             update_section_coordinates=self.update_section_coordinates,
+            provide_track_files=self.provide_track_files,
+            provide_video_files=self.provide_video_files,
+            current_orthophoto=self.current_orthophoto,
         )
+
+    @cached_property
+    def provide_track_files(self) -> ProvideTrackFiles:
+        return LocalTrackFileProvider(self.ui_factory)
+
+    @cached_property
+    def provide_orthophoto(self) -> ProvideOrthophoto:
+        return LocalOrthophotoProvider(self.ui_factory)
+
+    @cached_property
+    def provide_video_files(self) -> ProvideVideoFiles:
+        return LocalVideoFileProvider(self.ui_factory)
 
     @cached_property
     def application(self) -> OTAnalyticsApplication:
@@ -182,6 +224,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.export_track_statistics,
             self.get_current_remark,
             self.update_count_plots,
+            self.current_key_prefix,
+            self.current_static_analysis_config_state,
+            self.add_video_files,
         )
 
     @cached_property

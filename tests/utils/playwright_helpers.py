@@ -8,11 +8,12 @@ import pytest
 from PIL import Image, ImageChops  # type: ignore
 from playwright.sync_api import Error, Page, TimeoutError
 
-from OTAnalytics.adapter_ui.dummy_viewmodel import SUPPORTED_VIDEO_FILE_TYPES
+from OTAnalytics.application.config import SUPPORTED_VIDEO_FILE_TYPES
 from OTAnalytics.application.resources.resource_manager import (
     AddTracksKeys,
     AddVideoKeys,
     FlowKeys,
+    GeneralKeys,
     ResourceManager,
     SectionKeys,
 )
@@ -31,10 +32,15 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
     MARKER_DIRECTORY,
     MARKER_FILENAME,
+    MARKER_FILENAME_STEM,
+    MARKER_FILENAME_SUFFIX,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.endpoints import ENDPOINT_MAIN_PAGE
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
+    MARKER_PROGRESSBAR_CANCEL,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_TRACK_TAB,
@@ -48,6 +54,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
     MARKER_VIDEO_TABLE,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import (
+    MARKER_BUTTON_EXPORT_TRACK_STATISTICS,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     MARKER_INTERACTIVE_IMAGE,
@@ -87,6 +96,7 @@ from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_TRACK_FILES,
     ACCEPTANCE_TEST_VIDEO_FILE,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
+    EXPORT_TIMEOUT_MS,
     IMPORT_VERIFY_MAX_POLLS,
     PLAYWRIGHT_POLL_INTERVAL_MS,
     PLAYWRIGHT_POLL_INTERVAL_SECONDS,
@@ -94,6 +104,7 @@ from tests.acceptance.conftest import (
     PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS,
     PLAYWRIGHT_SHORT_WAIT_MS,
     PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+    TRACK_LOADING_TIMEOUT_MS,
 )
 from tests.utils.builders.otanalytics_builders import file_picker_directory
 
@@ -240,7 +251,7 @@ def save_project_otconfig(
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(
         str(target_path.parent)
     )
-    search_for_marker_element(page, MARKER_FILENAME).first.fill(target_path.stem)
+    search_for_marker_element(page, MARKER_FILENAME_STEM).first.fill(target_path.stem)
     # Confirm save
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
 
@@ -438,6 +449,7 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     - Wait for the file chooser dialog
     - Fill directory and filename via test-id markers
     - Apply the dialog
+    - Wait for tracks to load
     """
 
     search_for_marker_element(page, MARKER_PROJECT_OPEN).first.click()
@@ -446,11 +458,47 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
     search_for_marker_element(page, MARKER_FILENAME).first.fill(path.name)
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+    confirm_dialog(page, rm)
+
+    wait_for_track_loading_to_finish(page)
+
+
+def confirm_dialog(page: Page, rm: ResourceManager) -> None:
+    """Confirm the dialog asking whether the current project may be replaced."""
+    ok_button = page.get_by_role(
+        "button", name=rm.get(GeneralKeys.LABEL_OK), exact=True
+    )
+    ok_button.wait_for(state="visible")
+    ok_button.click()
+    ok_button.wait_for(state="hidden")
 
 
 # ----------------------
 # Save / Export helpers
 # ----------------------
+
+
+def wait_for_track_loading_to_finish(page: Page) -> None:
+    """Wait until the progressbar shown while track files are parsed is gone.
+
+    Track files are parsed off the event loop, so the click that starts loading
+    returns long before the tracks are in the repository. Acting on the page in
+    between finds an application without tracks: exporting track statistics, for
+    one, then reports that there are none rather than opening its dialog.
+
+    Nothing is parsed when every file is loaded already, so no progressbar appears
+    at all. Give it a short while to show up and take its absence as nothing left
+    to wait for.
+
+    Args:
+        page: the Playwright page object.
+    """
+    progressbar = search_for_marker_element(page, MARKER_PROGRESSBAR_CANCEL).first
+    try:
+        progressbar.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    except TimeoutError:
+        return
+    progressbar.wait_for(state="hidden", timeout=TRACK_LOADING_TIMEOUT_MS)
 
 
 def save_project_as(page: Page, rm: ResourceManager, path: Path) -> None:
@@ -467,13 +515,161 @@ def save_project_as(page: Page, rm: ResourceManager, path: Path) -> None:
     # Normalize filename: prefer basename without .otconfig extension if present
     filename = path.name[:-9] if path.name.endswith(".otconfig") else path.name
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
-    search_for_marker_element(page, MARKER_FILENAME).first.fill(filename)
+    search_for_marker_element(page, MARKER_FILENAME_STEM).first.fill(filename)
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+
+
+def export_file_via_dialog(page: Page, output_dir: Path) -> Path:
+    """Handle the export file dialog and return the output path.
+
+    This function:
+    - Waits for the export dialog to appear
+    - Creates the output directory if it doesn't exist
+    - Gets the default filename from the dialog
+    - Sets the output directory using JavaScript (to avoid Playwright input issues)
+    - Clicks Apply
+    - Waits for the file to be created (export operation takes several seconds)
+
+    Args:
+        page: The Playwright page object
+        output_dir: Directory where the file should be exported
+
+    Returns:
+        Path to the exported file
+    """
+    # Wait for export dialog to appear
+    dialog_apply = search_for_marker_element(page, MARKER_DIALOG_APPLY).first
+    dialog_apply.wait_for(state="visible")
+
+    # Create the directory first because the dialog validates it exists
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Get the current filename (stem + locked suffix) to determine output file
+    stem_field = search_for_marker_element(page, MARKER_FILENAME_STEM).first
+    suffix_field = search_for_marker_element(page, MARKER_FILENAME_SUFFIX).first
+    page.wait_for_timeout(500)
+    current_filename = stem_field.input_value() + suffix_field.input_value()
+
+    # Update directory field using Playwright
+    directory_field = search_for_marker_element(page, MARKER_DIRECTORY).first
+    directory_field.fill(str(output_dir))
+
+    # Wait for the directory field to update
+    page.wait_for_timeout(500)
+
+    # Click OK/Apply
+    dialog_apply.click()
+
+    output_path = output_dir / current_filename
+    wait_for_file_to_be_written(page, output_path)
+    return output_path
+
+
+def wait_for_file_to_be_written(page: Page, path: Path) -> None:
+    """Wait until an export has written the given file.
+
+    Exporting takes seconds rather than milliseconds, and how many depends on the
+    machine, so poll for the file instead of guessing how long to sleep.
+
+    Args:
+        page: the Playwright page object.
+        path: the file the export is expected to write.
+    """
+    deadline = time.time() + EXPORT_TIMEOUT_MS / 1000
+    while time.time() < deadline:
+        if path.exists():
+            return
+        page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
+
+
+def export_track_statistics(
+    page: Page,
+    external_app: Any,
+    resource_manager: Any,
+    test_data_tmp_dir: Path,
+    otconfig_path: Path,
+) -> Path:
+    """Export track statistics from a pre-configured project.
+
+    This function:
+    - Loads the main page
+    - Opens the specified otconfig file
+    - Clicks the export track statistics button
+    - Handles the export dialog
+    - Returns the path to the exported file
+
+    Args:
+        page: The Playwright page object
+        external_app: The NiceGUI test server
+        resource_manager: The resource manager for localized text
+        test_data_tmp_dir: Directory where the file should be exported
+        otconfig_path: Path to the otconfig file to load
+
+    Returns:
+        Path to the exported track statistics file
+    """
+    # Setup: Load tracks with preconfigured file
+    load_main_page(page, external_app)
+
+    # Load the otconfig file
+    open_project_otconfig(page, resource_manager, otconfig_path)
+
+    # Click "Export track statistics ..." button
+    export_button = search_for_marker_element(
+        page, MARKER_BUTTON_EXPORT_TRACK_STATISTICS
+    ).first
+    export_button.click()
+
+    # Handle export dialog and get output path
+    output_path = export_file_via_dialog(page, test_data_tmp_dir)
+
+    # Verify the file was created
+    assert output_path.exists(), f"Track statistics file not created: {output_path}"
+
+    return output_path
 
 
 # ----------------------
 # File comparison helpers
 # ----------------------
+
+
+def compare_csv_files(exported_path: Path, reference_path: Path) -> None:
+    """Compare two CSV files for equality.
+
+    Args:
+        exported_path: Path to the exported CSV file
+        reference_path: Path to the reference CSV file
+
+    Raises:
+        AssertionError: If files differ
+    """
+    import csv
+
+    assert exported_path.exists(), f"Exported file not found: {exported_path}"
+    assert reference_path.exists(), f"Reference file not found: {reference_path}"
+
+    with open(exported_path, "r", encoding="utf-8") as exported_file:
+        exported_reader = csv.reader(exported_file)
+        exported_rows = list(exported_reader)
+
+    with open(reference_path, "r", encoding="utf-8") as reference_file:
+        reference_reader = csv.reader(reference_file)
+        reference_rows = list(reference_reader)
+
+    assert len(exported_rows) == len(reference_rows), (
+        f"Row count mismatch: exported={len(exported_rows)}, "
+        f"reference={len(reference_rows)}"
+    )
+
+    for i, (exported_row, reference_row) in enumerate(
+        zip(exported_rows, reference_rows)
+    ):
+        assert exported_row == reference_row, (
+            f"Row {i} mismatch:\n"
+            f"  Exported: {exported_row}\n"
+            f"  Reference: {reference_row}"
+        )
 
 
 def compare_json_files(saved_path: Path, reference_path: Path) -> None:
@@ -925,6 +1121,8 @@ def add_track_via_picker(page: Page, rm: ResourceManager, path: Path) -> None:
     ui_path = path.relative_to(file_picker_directory())
     for part in ui_path.parts:
         open_part(page, part)
+
+    wait_for_track_loading_to_finish(page)
 
 
 def setup_with_preconfigured_otconfig(

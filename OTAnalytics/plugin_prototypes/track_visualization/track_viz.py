@@ -97,17 +97,24 @@ class FlowLayerPlotter(DynamicLayersPlotter[FlowId], FlowListObserver):
         super().__init__(plotter_factory, flow_state.selected_flows, self.get_flow_ids)
 
         flow_repository.register_flows_observer(self)
-        flow_repository.register_flow_changed_observer(self.notify_flow)
         track_repository.observers.register(self.notify_invalidate)
         event_repository.register_observer(self.notify_events)
 
         self._repository = flow_repository
         self._flow_id_resolver = flow_id_resolver
 
-    def notify_flow(self, flow: FlowId) -> None:
-        self.notify_layers_changed([flow])
-
     def notify_flows(self, flows: list[FlowId]) -> None:
+        """Handle added, updated or removed flows.
+
+        All layers are invalidated because road users are assigned to exactly
+        one flow. Changing a single flow can therefore change the tracks
+        plotted for every other flow as well.
+
+        Args:
+            flows (list[FlowId]): the added or updated flows, empty if flows
+                have been removed.
+        """
+        self.notify_invalidate(None)
         self.notify_layers_changed(flows)
 
     def notify_events(self, events: EventRepositoryEvent) -> None:
@@ -375,6 +382,13 @@ class PandasTracksOffsetProvider(PandasDataFrameProvider):
         self, tracks: DataFrame, offset: Optional[RelativeOffsetCoordinate]
     ) -> DataFrame:
         if new_offset := offset:
+            # The offset shifts the measurement point within the bounding box:
+            #   x_shifted = x + offset_x * w
+            #   y_shifted = y + offset_y * h
+            # For ottrk files produced by fusion (e.g. OTFusion outputs), detections
+            # are point-based and carry w=0, h=0 (no bounding box). In that case the
+            # offset evaluates to zero and has no visual effect — this is intentional,
+            # as a relative offset is undefined for point detections.
             tracks[track.X] = tracks[track.X] + new_offset.x * tracks[track.W]
             tracks[track.Y] = tracks[track.Y] + new_offset.y * tracks[track.H]
         return tracks

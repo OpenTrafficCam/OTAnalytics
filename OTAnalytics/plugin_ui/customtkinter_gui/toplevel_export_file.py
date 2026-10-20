@@ -1,13 +1,16 @@
 import contextlib
+from pathlib import Path
 from typing import Any
 
 from customtkinter import CTkLabel, CTkOptionMenu
 
 from OTAnalytics.adapter_ui.cancel_export_file import CancelExportFile
+from OTAnalytics.adapter_ui.file_export_dto import ExportFileDto
 from OTAnalytics.adapter_ui.file_selection_cancelled import (
     FileSelectionCancelledException,
 )
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.files import ensure_dot_in_extension, strip_extension
 from OTAnalytics.plugin_ui.customtkinter_gui.constants import PADX, PADY, STICKY
 from OTAnalytics.plugin_ui.customtkinter_gui.helpers import ask_for_save_file_name
 from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
@@ -17,6 +20,7 @@ from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_template import (
 
 EXPORT_FORMAT = "export_format"
 EXPORT_FILE = "export_file"
+SELECTED_EXTENSION = "selected_extension"
 
 
 class FrameConfigureExportFile(FrameContent):
@@ -64,19 +68,45 @@ class FrameConfigureExportFile(FrameContent):
 
 
 class ToplevelExportFile(ToplevelTemplate):
+    @property
+    def export_file(self) -> Path:
+        return Path(self._input_values[EXPORT_FILE])
+
+    @property
+    def export_directory(self) -> Path:
+        return self.export_file.parent
+
+    @property
+    def export_filename_stem(self) -> str:
+        return strip_extension(
+            file_name=self.export_file.name, extension=self.file_type_with_context_type
+        )
+
+    @property
+    def selected_filetype(self) -> str:
+        return ensure_dot_in_extension(
+            self._export_format_extensions[self._input_values[EXPORT_FORMAT]]
+        )
+
+    @property
+    def file_type_with_context_type(self) -> str:
+        return f".{self._context_file_type}{self.selected_filetype}"
+
     def __init__(
         self,
         viewmodel: ViewModel,
         export_format_extensions: dict[str, str],
         input_values: dict,
-        initial_file_stem: str,
+        context_file_type: str,
+        title: str,
         **kwargs: Any,
     ) -> None:
         self._viewmodel = viewmodel
         self._input_values = input_values
         self._export_format_extensions = export_format_extensions
-        self._initial_file_stem = initial_file_stem
-        super().__init__(**kwargs)
+        self._context_file_type = context_file_type
+        self._text_title = title
+        super().__init__(title=title, **kwargs)
 
     def _create_frame_content(self, master: Any) -> FrameContent:
         return FrameConfigureExportFile(
@@ -87,20 +117,23 @@ class ToplevelExportFile(ToplevelTemplate):
 
     def _choose_file(self) -> None:
         export_format = self._input_values[EXPORT_FORMAT]  #
-        export_file_type = self._export_format_extensions[export_format][1:]
-        export_extension = f"*.{export_file_type}"
-        # TODO refactor: inject get_save_path_suggestion as use case
-        suggested_save_path = self._viewmodel.get_save_path_suggestion(
-            export_file_type, context_file_type=self._initial_file_stem
+        export_file_type = ensure_dot_in_extension(
+            self._export_format_extensions[export_format]
         )
+        # TODO refactor: inject get_save_path_suggestion as use case
+        save_suggestion = self._viewmodel.get_save_path_suggestion(
+            file_type=export_file_type, context_file_type=self._context_file_type
+        )
+
         export_file = ask_for_save_file_name(
-            title="Save counts as",
-            filetypes=[(export_format, export_extension)],
-            defaultextension=export_extension,
-            initialfile=suggested_save_path.name,
-            initialdir=suggested_save_path.parent,
+            title=self._text_title or "Save file as",
+            filetypes=[(export_format, f"*{export_file_type}")],
+            defaultextension=export_file_type,
+            initialfile=save_suggestion.name_without_file_type,
+            initialdir=save_suggestion.save_directory,
         )
         self._input_values[EXPORT_FILE] = export_file
+        self._input_values[SELECTED_EXTENSION] = export_file_type
         if export_file == "":
             raise FileSelectionCancelledException
 
@@ -110,8 +143,17 @@ class ToplevelExportFile(ToplevelTemplate):
             self._choose_file()
             self._close()
 
-    def get_data(self) -> dict:
+    def get_data(self) -> ExportFileDto:
         self.wait_window()
         if self._canceled:
             raise CancelExportFile()
-        return self._input_values
+        return self._create_export_file_dto()
+
+    def _create_export_file_dto(self) -> ExportFileDto:
+        export_format = self._input_values[EXPORT_FORMAT]
+        return ExportFileDto(
+            export_directory=self.export_directory,
+            file_stem=self.export_filename_stem,
+            export_format_extension=self.selected_filetype,
+            export_format=export_format,
+        )

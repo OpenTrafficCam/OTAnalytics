@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock, call
@@ -14,6 +15,7 @@ from OTAnalytics.domain.geometry import (
     ImageCoordinate,
     RelativeOffsetCoordinate,
 )
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import (
     SECTIONS,
     Area,
@@ -30,10 +32,14 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.domain.track_repository import TrackRepository
 from OTAnalytics.domain.video import Video, VideoMetadata
+from OTAnalytics.plugin_datastore.polars_track_store import PolarsTrackDataset
 from OTAnalytics.plugin_datastore.python_track_store import (
     ByMaxConfidence,
     PythonTrack,
     PythonTrackDataset,
+)
+from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store import (
+    PolarsTrackGeometryDataset,
 )
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
@@ -51,6 +57,7 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     CachedVideo,
     CachedVideoParser,
     DetectionFixer,
+    DetectionParser,
     FormatVersions,
     InvalidSectionData,
     MetadataFixer,
@@ -65,6 +72,10 @@ from OTAnalytics.plugin_parser.otvision_parser import (
     Version,
     version_of_otdet,
     version_of_ottrk,
+)
+from tests.unit.OTAnalytics.plugin_parser.conftest import (
+    GEOREF_METADATA,
+    SAMPLE_GEOREFERENCE_METADATA_DICT,
 )
 from tests.utils.assertions import assert_track_datasets_equal
 from tests.utils.builders.track_builder import (
@@ -263,6 +274,51 @@ class TestOttrkParser:
             number_of_frames=60,
         )
         ottrk_file.unlink()
+
+    def test_parse_embeds_georeference_metadata_in_tracks(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = setup_default_ottrk_parser_with_georeference(test_data_tmp_dir)
+        target = create_target_ottrk_parser(given)
+
+        parse_result = target.parse(given.ottrk_file)
+
+        assert parse_result.tracks.georeference_metadata == given.expected_metadata
+
+
+@dataclass
+class GivenOttrkParserWithGeoreference:
+    ottrk_file: Path
+    detection_parser: Mock
+    expected_metadata: GeoreferenceMetadata
+
+
+def setup_default_ottrk_parser_with_georeference(
+    test_data_tmp_dir: Path,
+) -> GivenOttrkParserWithGeoreference:
+    ottrk_file = test_data_tmp_dir / "georeferenced.ottrk"
+    track_builder = track_builder_with_sample_data(input_file=str(ottrk_file))
+    ottrk_data = track_builder.build_ottrk()
+    ottrk_data[ottrk_dataformat.METADATA][ottrk_dataformat.GEOREFERENCE] = (
+        SAMPLE_GEOREFERENCE_METADATA_DICT[ottrk_dataformat.GEOREFERENCE]
+    )
+    write_json_bz2(ottrk_data, ottrk_file)
+
+    detection_parser = Mock(spec=DetectionParser)
+    detection_parser.parse_tracks.return_value = PolarsTrackDataset(
+        track_geometry_factory=PolarsTrackGeometryDataset.from_track_dataset,
+    )
+    return GivenOttrkParserWithGeoreference(
+        ottrk_file=ottrk_file,
+        detection_parser=detection_parser,
+        expected_metadata=GEOREF_METADATA,
+    )
+
+
+def create_target_ottrk_parser(
+    given: GivenOttrkParserWithGeoreference,
+) -> OttrkParser:
+    return OttrkParser(given.detection_parser)
 
 
 class TestPythonDetectionParser:

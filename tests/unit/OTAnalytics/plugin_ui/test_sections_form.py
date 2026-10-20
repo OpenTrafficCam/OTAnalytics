@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 from nicegui import ui
+from nicegui.elements.button import Button
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
@@ -255,3 +256,35 @@ class TestSectionsForm:
         viewmodel.set_selected_section_ids.assert_called()
         # Note: We can't easily verify the exact arguments because the selection event
         # is handled internally by the table component
+
+    @pytest.mark.asyncio
+    async def test_build_applies_button_states_from_viewmodel(
+        self,
+        user: User,
+        sections_form: SectionsForm,
+        viewmodel: Mock,
+    ) -> None:
+        """Test that button states of the viewmodel are applied after building."""
+
+        def disable_all_buttons(frame: SectionsForm) -> None:
+            frame.set_enabled_add_buttons(False)
+            frame.set_enabled_change_single_item_buttons(False)
+            frame.set_enabled_change_multiple_items_buttons(False)
+
+        viewmodel.set_sections_frame.side_effect = disable_all_buttons
+
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            sections_form.build()
+
+        await user.open(ENDPOINT_NAME)
+
+        for marker in [
+            MARKER_BUTTON_ADD_LINE,
+            MARKER_BUTTON_ADD_AREA,
+            MARKER_BUTTON_EDIT,
+            MARKER_BUTTON_PROPERTIES,
+            MARKER_BUTTON_REMOVE,
+        ]:
+            button = user.find(kind=Button, marker=marker).elements.pop()
+            assert not button.enabled

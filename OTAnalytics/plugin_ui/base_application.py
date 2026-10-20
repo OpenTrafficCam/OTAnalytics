@@ -24,15 +24,27 @@ from OTAnalytics.application.analysis.traffic_counting import (
 )
 from OTAnalytics.application.analysis.traffic_counting_specification import ExportCounts
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
-from OTAnalytics.application.datastore import (
-    Datastore,
-    EventListParser,
-    TrackParser,
-    VideoParser,
-)
+from OTAnalytics.application.datastore import Datastore, EventListParser, VideoParser
 from OTAnalytics.application.eventlist import SceneActionDetector
+from OTAnalytics.application.orthophoto import (
+    AddVideoFiles,
+    ChooseOrthophoto,
+    CurrentOrthophotoGeoreference,
+    CurrentOrthophotoImage,
+    LocalObtainOrthophoto,
+    NoOrthophotoToProvide,
+    ObtainOrthophoto,
+    ProvideOrthophoto,
+    ProvideOrthophotoGeoreference,
+    ResolveMissingOrthophoto,
+)
 from OTAnalytics.application.parser.flow_parser import FlowParser
+from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.plotting import LayeredPlotter, LayerGroup, PlottingLayer
+from OTAnalytics.application.project_location import (
+    RefuseAnyProjectLocation,
+    ValidateProjectLocation,
+)
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.run_configuration import (
     RunConfiguration,
@@ -40,6 +52,9 @@ from OTAnalytics.application.run_configuration import (
 )
 from OTAnalytics.application.state import (
     ActionState,
+    CurrentKeyPrefix,
+    CurrentOrthophoto,
+    CurrentStaticAnalysisConfigState,
     FileState,
     FlowState,
     SectionState,
@@ -57,13 +72,13 @@ from OTAnalytics.application.ui.frame_control import (
     SwitchToNext,
     SwitchToPrevious,
 )
+from OTAnalytics.application.upload_otconfig import NoOtconfigUpload, UploadOtconfig
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
 from OTAnalytics.application.use_cases.apply_cli_cuts import ApplyCliCuts
 from OTAnalytics.application.use_cases.assignment_repository import (
+    ClearAssignmentsOnChangedFlows,
     GetRoadUserAssignments,
-    RemoveAssignmentsOfChangedFlow,
     RemoveAssignmentsOfRemovedEvents,
-    RemoveAssignmentsOfRemovedFlows,
 )
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.config import SaveOtconfig
@@ -122,6 +137,9 @@ from OTAnalytics.application.use_cases.generate_flows import (
     FlowNameGenerator,
     GenerateFlows,
     RepositoryFlowIdGenerator,
+)
+from OTAnalytics.application.use_cases.get_current_analysis_config import (
+    GetCurrentAnalysisConfig,
 )
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
@@ -235,6 +253,10 @@ from OTAnalytics.plugin_number_of_tracks_to_be_validated.svz.number_of_tracks_to
 from OTAnalytics.plugin_number_of_tracks_to_be_validated.tracks_as_dataframe_provider import (  # noqa
     TracksAsDataFrameProvider,
 )
+from OTAnalytics.plugin_orthophoto.rasterio_orthophoto import (
+    read_orthophoto_georeference,
+    read_orthophoto_image,
+)
 from OTAnalytics.plugin_parser.export import (
     AddSectionInformationExporterFactory,
     CachedExporterFactory,
@@ -270,6 +292,9 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
 from OTAnalytics.plugin_progress.lazy_tqdm_progressbar import LazyTqdmBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     TrackImageFactory,
+)
+from OTAnalytics.plugin_track_export.csv.track_dataset_writer import (
+    create_default_track_dataset_csv_writer,
 )
 from OTAnalytics.plugin_ui.intersection_repository import PythonIntersectionRepository
 from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
@@ -344,16 +369,25 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     @cached_property
+    def get_current_analysis_config(self) -> GetCurrentAnalysisConfig:
+        return GetCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.get_all_track_files,
+        )
+
+    @cached_property
     def config_has_changed(self) -> ConfigHasChanged:
         return ConfigHasChanged(
             OtconfigHasChanged(
-                self.otconfig_parser,
-                self.get_all_sections,
-                self.get_all_flows,
-                self.get_current_project,
-                self.get_all_videos,
-                self.get_all_track_files,
-                self.get_current_remark,
+                config_parser=self.otconfig_parser,
+                get_sections=self.get_all_sections,
+                get_flows=self.get_all_flows,
+                get_current_project=self.get_current_project,
+                get_videos=self.get_all_videos,
+                get_remark=self.get_current_remark,
+                current_key_prefix=self.current_key_prefix,
+                get_current_analysis_config=self.get_current_analysis_config,
+                current_orthophoto=self.current_orthophoto,
             ),
             OtflowHasChanged(
                 self.flow_parser, self.get_all_sections, self.get_all_flows
@@ -377,11 +411,26 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.project_updater,
             AddAllVideos(self.video_repository),
             AddAllSections(self.add_section),
-            AddAllFlows(self.add_flow),
+            self.add_all_flows,
             self.load_track_files,
             self.add_new_remark,
             parse_json,
+            self.validate_project_location,
+            self.current_key_prefix,
+            self.current_static_analysis_config_state,
+            self.current_orthophoto,
+            self.obtain_orthophoto,
         )
+
+    @cached_property
+    def validate_project_location(self) -> ValidateProjectLocation:
+        """Refuse a project stored in S3; this starter reads the filesystem.
+
+        Overridden where S3 can be configured. Choosing the implementation here
+        is how the application answers the transfer-mode question, so no code
+        downstream has to ask it.
+        """
+        return RefuseAnyProjectLocation()
 
     @cached_property
     def reset_application(self) -> ResetApplication:
@@ -398,6 +447,9 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.flow_state,
             self.action_state,
             self.file_state,
+            self.current_key_prefix,
+            self.current_static_analysis_config_state,
+            self.current_orthophoto,
         )
 
     @cached_property
@@ -417,7 +469,75 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.otconfig_parser,
             self.file_state,
             self.get_current_remark,
+            self.current_key_prefix,
+            self.get_current_analysis_config,
+            self.otconfig_upload,
+            self.current_orthophoto,
         )
+
+    @cached_property
+    def otconfig_upload(self) -> UploadOtconfig:
+        """Puts a saved otconfig where s3 mode can find it again.
+
+        Overridden where s3 can be configured. This starter never sees a
+        project naming a location, so saving never needs to upload anywhere.
+        """
+        return NoOtconfigUpload()
+
+    @cached_property
+    def current_key_prefix(self) -> CurrentKeyPrefix:
+        """One holder for the whole application.
+
+        Save, dirty-tracking and the S3 providers all have to read the same
+        prefix; a second instance would split that between owners and let a
+        save write a location the providers never read from.
+        """
+        return CurrentKeyPrefix()
+
+    @cached_property
+    def current_static_analysis_config_state(self) -> CurrentStaticAnalysisConfigState:
+        return CurrentStaticAnalysisConfigState()
+
+    @cached_property
+    def current_orthophoto(self) -> CurrentOrthophoto:
+        """One holder for the whole application, like `current_key_prefix`."""
+        return CurrentOrthophoto()
+
+    @cached_property
+    def current_orthophoto_image(self) -> CurrentOrthophotoImage:
+        return CurrentOrthophotoImage(self.current_orthophoto, read_orthophoto_image)
+
+    @cached_property
+    def obtain_orthophoto(self) -> ObtainOrthophoto:
+        """Overridden in S3 mode."""
+        return LocalObtainOrthophoto()
+
+    @cached_property
+    def orthophoto_georeference(self) -> ProvideOrthophotoGeoreference:
+        return CurrentOrthophotoGeoreference(
+            self.current_orthophoto, read_orthophoto_georeference
+        )
+
+    @cached_property
+    def provide_orthophoto(self) -> ProvideOrthophoto:
+        """Overridden by front-ends that can ask the user for a file."""
+        return NoOrthophotoToProvide()
+
+    @cached_property
+    def resolve_missing_orthophoto(self) -> ResolveMissingOrthophoto:
+        return ResolveMissingOrthophoto(
+            self.provide_orthophoto,
+            ChooseOrthophoto(
+                self.current_orthophoto,
+                self.section_repository,
+                self.track_repository,
+                self.video_repository,
+            ),
+        )
+
+    @cached_property
+    def add_video_files(self) -> AddVideoFiles:
+        return AddVideoFiles(self.datastore.load_video_files, self.current_orthophoto)
 
     @cached_property
     def get_current_remark(self) -> GetCurrentRemark:
@@ -491,6 +611,10 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def add_flow(self) -> AddFlow:
         return AddFlow(self.flow_repository)
+
+    @cached_property
+    def add_all_flows(self) -> AddAllFlows:
+        return AddAllFlows(self.flow_repository)
 
     @cached_property
     def clear_all_sections(self) -> ClearAllSections:
@@ -592,8 +716,12 @@ class BaseOtAnalyticsApplicationStarter(ABC):
 
     @cached_property
     def csv_track_export(self) -> CsvTrackExport:
+        csv_writer = create_default_track_dataset_csv_writer()
         return CsvTrackExport(
-            self.track_repository, self.tracks_metadata, self.videos_metadata
+            self.track_repository,
+            self.tracks_metadata,
+            self.videos_metadata,
+            csv_writer=csv_writer,
         )
 
     @cached_property
@@ -637,7 +765,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     def _create_track_parser(self) -> TrackParser:
-        return FeathersParser(self.track_geometry_factory)
+        return FeathersParser(self.track_geometry_factory, self.orthophoto_georeference)
 
     def _create_stream_track_parser(self) -> StreamTrackParser:
         return StreamOttrkParser(
@@ -690,6 +818,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.progressbar_builder,
             self.track_image_factory,
             self.track_id_set_factory,
+            self.current_orthophoto_image.get,
         )
 
     @cached_property
@@ -799,7 +928,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.clear_all_events,
             self.flow_parser,
             self.add_section,
-            self.add_flow,
+            self.add_all_flows,
             parse_json,
         )
 
@@ -858,6 +987,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.progressbar_builder,
             self.tracks_metadata,
             self.videos_metadata,
+            current_orthophoto=self.current_orthophoto,
+            resolve_missing_orthophoto=self.resolve_missing_orthophoto,
         )
 
     @cached_property
@@ -923,14 +1054,8 @@ class BaseOtAnalyticsApplicationStarter(ABC):
         )
 
     @cached_property
-    def remove_assignments_of_removed_flows(self) -> RemoveAssignmentsOfRemovedFlows:
-        return RemoveAssignmentsOfRemovedFlows(
-            self.assignment_repository, self.get_all_flows
-        )
-
-    @cached_property
-    def remove_assignments_of_changed_flows(self) -> RemoveAssignmentsOfChangedFlow:
-        return RemoveAssignmentsOfChangedFlow(self.assignment_repository)
+    def clear_assignments_on_changed_flows(self) -> ClearAssignmentsOnChangedFlows:
+        return ClearAssignmentsOnChangedFlows(self.assignment_repository)
 
     @cached_property
     def get_all_assignments(self) -> GetRoadUserAssignments:

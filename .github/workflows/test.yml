@@ -25,7 +25,7 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.py }}
-      - name: Run Python Tests
+      - name: Run Python Unit Tests
         uses: platomo/test-python-app-action@v4
         timeout-minutes: 60
         with:

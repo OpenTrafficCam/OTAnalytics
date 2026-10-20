@@ -1,16 +1,16 @@
-from typing import Literal
-
-from pandas import DataFrame
-
+from OTAnalytics.application.config import CONTEXT_FILE_TYPE_TRACKS
+from OTAnalytics.application.export_path_builder import build_export_path
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.use_cases.track_export import (
     ExportTracks,
     TrackExportSpecification,
 )
-from OTAnalytics.domain import track
 from OTAnalytics.domain.track_repository import TrackRepository
-from OTAnalytics.plugin_datastore.track_store import PandasDataFrameProvider
 from OTAnalytics.plugin_parser.json_parser import write_json
+from OTAnalytics.plugin_track_export.csv.track_dataset_writer import (
+    ResolvingTrackDatasetCsvWriter,
+    create_default_track_dataset_csv_writer,
+)
 
 
 class CsvTrackExport(ExportTracks):
@@ -26,15 +26,23 @@ class CsvTrackExport(ExportTracks):
     this exporter should not be reused afterwards!)
     """
 
+    PRIMARY_SUFFIX = f".{CONTEXT_FILE_TYPE_TRACKS}.csv"
+    TRACKS_METADATA_SUFFIX = ".tracks_metadata.json"
+    VIDEOS_METADATA_SUFFIX = ".videos_metadata.json"
+
     def __init__(
         self,
         track_repository: TrackRepository,
         tracks_metadata: TracksMetadata,
         videos_metadata: VideosMetadata,
+        csv_writer: ResolvingTrackDatasetCsvWriter = (
+            create_default_track_dataset_csv_writer()
+        ),
     ) -> None:
         self._track_repository = track_repository
         self._tracks_metadata = tracks_metadata
         self._videos_metadata = videos_metadata
+        self._csv_writer = csv_writer
 
         self._iterative_tracks_metadata: dict = self._tracks_metadata.to_dict()
         self._iterative_videos_metadata: dict = self._videos_metadata.to_dict()
@@ -47,56 +55,28 @@ class CsvTrackExport(ExportTracks):
         self._update_iterative_metadata()
 
         append = specification.export_mode.is_subsequent_write()
-        dataframe = self._get_data()
-        dataframe = set_column_order(dataframe)
-        path = specification.save_path
-        output_path = path.with_suffix(".tracks.csv")
-        write_mode: Literal["w", "a"] = "a" if append else "w"
-        dataframe.to_csv(output_path, index=False, header=not append, mode=write_mode)
+        output_path = build_export_path(
+            specification.export_directory,
+            specification.export_filename_stem,
+            self.PRIMARY_SUFFIX,
+        )
+        dataset = self._track_repository.get_all()
+        self._csv_writer.write(dataset, output_path, append)
 
         if specification.export_mode.is_final_write():
-            tracks_metadata_path = path.with_suffix(".tracks_metadata.json")
+            tracks_metadata_path = build_export_path(
+                specification.export_directory,
+                specification.export_filename_stem,
+                self.TRACKS_METADATA_SUFFIX,
+            )
             write_json(self._iterative_tracks_metadata, tracks_metadata_path)
 
-            videos_metadata_path = path.with_suffix(".videos_metadata.json")
+            videos_metadata_path = build_export_path(
+                specification.export_directory,
+                specification.export_filename_stem,
+                self.VIDEOS_METADATA_SUFFIX,
+            )
             write_json(self._iterative_videos_metadata, videos_metadata_path)
 
             self._iterative_tracks_metadata.clear()
             self._iterative_videos_metadata.clear()
-
-    def _get_data(self) -> DataFrame:
-        dataset = self._track_repository.get_all()
-        if isinstance(dataset, PandasDataFrameProvider):
-            return dataset.get_data().reset_index()
-        detections = []
-        for _track in dataset.as_list():
-            track_classification = _track.classification
-            for detection in _track.detections:
-                current = detection.to_dict()
-                # Add missing track classification to detection dict
-                current[track.TRACK_CLASSIFICATION] = track_classification
-                detections.append(current)
-        return DataFrame(detections)
-
-
-def set_column_order(dataframe: DataFrame) -> DataFrame:
-    desired_columns_order = [
-        track.TRACK_ID,
-        track.CLASSIFICATION,
-        track.CONFIDENCE,
-        track.X,
-        track.Y,
-        track.W,
-        track.H,
-        track.FRAME,
-        track.OCCURRENCE,
-        track.INTERPOLATED_DETECTION,
-        track.VIDEO_NAME,
-        track.INPUT_FILE,
-    ]
-    dataframe = dataframe[
-        desired_columns_order
-        + [col for col in dataframe.columns if col not in desired_columns_order]
-    ]
-
-    return dataframe
