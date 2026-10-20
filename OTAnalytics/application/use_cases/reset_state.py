@@ -2,6 +2,7 @@ from OTAnalytics.application.state import (
     ActionState,
     CurrentKeyPrefix,
     CurrentOrthophoto,
+    CurrentStaticAnalysisConfigState,
     FileState,
     FlowState,
     SectionState,
@@ -25,6 +26,7 @@ class ResetState:
         action_state: ActionState,
         file_state: FileState,
         current_key_prefix: CurrentKeyPrefix,
+        current_static_analysis_config_state: CurrentStaticAnalysisConfigState,
         current_orthophoto: CurrentOrthophoto,
         filter_element_setting_restorer: FilterElementSettingRestorer,
     ) -> None:
@@ -37,6 +39,9 @@ class ResetState:
         self._action_state = action_state
         self._file_state = file_state
         self._current_key_prefix = current_key_prefix
+        self._current_static_analysis_config_state = (
+            current_static_analysis_config_state
+        )
         self._current_orthophoto = current_orthophoto
         self._filter_element_setting_restorer = filter_element_setting_restorer
 
@@ -50,5 +55,6 @@ class ResetState:
         self._action_state.reset()
         self._file_state.reset()
         self._current_key_prefix.reset()
+        self._current_static_analysis_config_state.reset()
         self._current_orthophoto.reset()
         self._filter_element_setting_restorer.reset()

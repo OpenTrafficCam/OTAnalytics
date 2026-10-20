@@ -23,6 +23,7 @@ class CanvasKeys(ResourceKey):
     LABEL_ADD_SECTION = "label-add-section"
     LABEL_EDIT_SECTION = "label-edit-section"
     IMAGE_DEFAULT = "image-default"
+    MESSAGE_NOT_ENOUGH_POINTS = "message-not-enough-points"
 
 
 class ConfigurationBarKeys(ResourceKey):
@@ -145,6 +146,11 @@ class RemarkKeys(ResourceKey):
 class HotKeys(ResourceKey):
     SAVE_SECTION_HOTKEY = "save-section-hotkey"
     CANCEL_SECTION_GEOMETRY_HOTKEY = "cancel-section-geometry-hotkey"
+    ADD_KNOB_HOTKEY = "add-knob-hotkey"
+    DELETE_KNOB_HOTKEY = "delete-knob-hotkey"
+    DELETE_KNOB_ALTERNATIVE_HOTKEY = "delete-knob-alternative-hotkey"
+    SHIFT_KNOB_BACKWARD_HOTKEY = "shift-knob-backward-hotkey"
+    SHIFT_KNOB_FORWARD_HOTKEY = "shift-knob-forward-hotkey"
 
 
 class VisualizationFiltersKeys(ResourceKey):
@@ -213,6 +219,9 @@ DEFAULT_RESOURCE_MAP = {
     AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS: "Export track statistics",
     CanvasKeys.LABEL_ADD_SECTION: "Add section",
     CanvasKeys.LABEL_EDIT_SECTION: "Edit section",
+    CanvasKeys.MESSAGE_NOT_ENOUGH_POINTS: (
+        "Please add at least {count} points to finish the section."
+    ),
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
     FlowAndSectionKeys.TAB_SECTION: "Section",
     FlowAndSectionKeys.TAB_FLOW: "Flow",
@@ -326,10 +335,20 @@ DEFAULT_IMAGE_RESOURCE_MAP: dict[ResourceKey, str] = {
 # Hotkey values as constants for reuse
 SAVE_SECTION_HOTKEY_VALUE = "Enter"
 CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE = "Escape"
+ADD_KNOB_HOTKEY_VALUE = "+"
+DELETE_KNOB_HOTKEY_VALUE = "Delete"
+DELETE_KNOB_ALTERNATIVE_HOTKEY_VALUE = "Backspace"
+SHIFT_KNOB_BACKWARD_HOTKEY_VALUE = "ArrowLeft"
+SHIFT_KNOB_FORWARD_HOTKEY_VALUE = "ArrowRight"
 
 DEFAULT_HOTKEYS: dict[HotKeys, str] = {
     HotKeys.SAVE_SECTION_HOTKEY: SAVE_SECTION_HOTKEY_VALUE,
     HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY: CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE,
+    HotKeys.ADD_KNOB_HOTKEY: ADD_KNOB_HOTKEY_VALUE,
+    HotKeys.DELETE_KNOB_HOTKEY: DELETE_KNOB_HOTKEY_VALUE,
+    HotKeys.DELETE_KNOB_ALTERNATIVE_HOTKEY: DELETE_KNOB_ALTERNATIVE_HOTKEY_VALUE,
+    HotKeys.SHIFT_KNOB_BACKWARD_HOTKEY: SHIFT_KNOB_BACKWARD_HOTKEY_VALUE,
+    HotKeys.SHIFT_KNOB_FORWARD_HOTKEY: SHIFT_KNOB_FORWARD_HOTKEY_VALUE,
 }
 
 
