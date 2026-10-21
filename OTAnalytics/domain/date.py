@@ -13,6 +13,15 @@ class DateRange:
             return self.end_date - self.start_date
         return None
 
+    def is_ordered(self) -> bool:
+        """Whether the start is before the end.
+
+        A range with an open bound is always ordered.
+        """
+        if self.start_date is None or self.end_date is None:
+            return True
+        return self.start_date < self.end_date
+
 
 def validate_date(date: str, date_format: str) -> bool:
     """Validates a date string against a date format.
