@@ -16,7 +16,7 @@ EMPTY_STARTS = numpy.empty(0, dtype=numpy.int64)
 class Symbol(StrEnum):
     """Marker symbols supported by all array based backends.
 
-    The values match the matplotlib marker names used by the existing plotters.
+    The values match existing plotting library marker names, e.g. matplotlib.
     """
 
     CIRCLE = "o"
@@ -27,7 +27,7 @@ class Symbol(StrEnum):
 
 
 def points_to_pixels(points: float, dpi: float) -> float:
-    """Convert a length in typographic points (as used by matplotlib) to pixels.
+    """Convert a length in typographic points to pixels.
 
     Args:
         points (float): length in points.
