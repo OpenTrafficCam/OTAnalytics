@@ -98,7 +98,7 @@ class FilterDateRangeForm:
                 current_date_range.start_date or first_occurrence
             )
             self._end_date.set_value(current_date_range.end_date or last_occurrence)
-            # Mark only what the user types, as in the customtkinter GUI.
+            # Mark only what the user types.
             self._start_date.clear_validation()
             self._end_date.clear_validation()
             ui.label(
