@@ -77,7 +77,7 @@ class FilterDateRangeForm:
         """Open the dialog, preset with the current date filter.
 
         Without a current filter, the start and end are preset with the first
-        and last detection occurrence, as in the customtkinter GUI.
+        and last detection occurrence.
         """
         first_occurrence = self._viewmodel.get_first_detection_occurrence()
         last_occurrence = self._viewmodel.get_last_detection_occurrence()
