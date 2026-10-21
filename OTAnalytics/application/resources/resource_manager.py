@@ -174,6 +174,7 @@ class VisualizationFiltersKeys(ResourceKey):
     MESSAGE_INVALID_HOUR = "message-invalid-hour"
     MESSAGE_INVALID_MINUTE = "message-invalid-minute"
     MESSAGE_INVALID_SECOND = "message-invalid-second"
+    MESSAGE_START_NOT_BEFORE_END = "message-start-not-before-end"
 
 
 class TrackStatisticKeys(ResourceKey):
@@ -332,6 +333,9 @@ DEFAULT_RESOURCE_MAP = {
     ),
     VisualizationFiltersKeys.MESSAGE_INVALID_SECOND: (
         "Second must be a digit in range [0,59]"
+    ),
+    VisualizationFiltersKeys.MESSAGE_START_NOT_BEFORE_END: (
+        "Start must be before end."
     ),
     VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING: "Update flow highlighting",
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa

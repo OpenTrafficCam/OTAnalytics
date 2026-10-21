@@ -48,6 +48,7 @@ INVALID_DATE = "Date must be of format: 'yyyy-mm-dd'"
 INVALID_HOUR = "Hour must be a digit in range [0,23]"
 INVALID_MINUTE = "Minute must be a digit in range [0,59]"
 INVALID_SECOND = "Second must be a digit in range [0,59]"
+START_NOT_BEFORE_END = "Start must be before end."
 LABELS = {
     GeneralKeys.LABEL_APPLY: APPLY,
     GeneralKeys.LABEL_RESET: RESET,
@@ -62,6 +63,7 @@ LABELS = {
     VisualizationFiltersKeys.MESSAGE_INVALID_HOUR: INVALID_HOUR,
     VisualizationFiltersKeys.MESSAGE_INVALID_MINUTE: INVALID_MINUTE,
     VisualizationFiltersKeys.MESSAGE_INVALID_SECOND: INVALID_SECOND,
+    VisualizationFiltersKeys.MESSAGE_START_NOT_BEFORE_END: START_NOT_BEFORE_END,
 }
 
 A_RANGE: DateRangeDto = {"start_date": "2023-05-24", "end_date": "2023-05-25"}
@@ -393,6 +395,28 @@ class TestDateRangeDialog:
 
         await user.should_see(f"{TO} {INVALID}")
         given.view_model.apply_filter_tracks_by_date.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "end_date, end_time",
+        [
+            ("2023-05-24", "08:00:00"),
+            ("2023-05-24", "07:59:59"),
+            ("2023-05-23", "09:00:00"),
+        ],
+    )
+    async def test_start_not_before_end_is_rejected(
+        self, user: User, end_date: str, end_time: str
+    ) -> None:
+        given = create_given()
+        await open_date_dialog(user, given)
+
+        set_input(user, MARKER_FILTER_END_DATE_INPUT, end_date)
+        set_input(user, MARKER_FILTER_END_TIME_INPUT, end_time)
+        user.find(APPLY).click()
+
+        await user.should_see(START_NOT_BEFORE_END)
+        given.view_model.apply_filter_tracks_by_date.assert_not_called()
+        assert date_dialog_is_open(user)
 
     async def test_reset_resets_the_date_filter_and_closes(self, user: User) -> None:
         given = create_given()
