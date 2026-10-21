@@ -46,8 +46,7 @@ class SceneBuilder(ABC):
 class CategoryColors:
     """Assigns a category index and an RGBA color to each classification.
 
-    Categories are numbered in order of first appearance, like the legend of the
-    matplotlib plotters.
+    Categories are numbered in order of first appearance.
     """
 
     def __init__(self, color_palette: Mapping[str, str], alpha: float) -> None:
