@@ -204,9 +204,7 @@ class FilterDateRangeForm:
             InvalidDatetimeFormatError: if both bounds are given and the start is
                 not before the end.
         """
-        start = date_range.start_date
-        end = date_range.end_date
-        if start is not None and end is not None and start >= end:
+        if not date_range.is_ordered():
             raise InvalidDatetimeFormatError(
                 self._label(VisualizationFiltersKeys.MESSAGE_START_NOT_BEFORE_END)
             )
