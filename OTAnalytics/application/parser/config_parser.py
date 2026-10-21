@@ -9,6 +9,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
 
@@ -70,6 +71,9 @@ class OtConfig:
     # keyword (plugin_video_validate/ui.py:165) and its keyword list cannot name
     # this field until it bumps its OTAnalytics pin.
     s3_key_prefix: S3KeyPrefix | None = None
+    # Defaulted for the same reason as `s3_key_prefix`. The path as the otconfig
+    # declares it, relative to the otconfig.
+    orthophoto: Path | None = None
 
 
 class ConfigParser(ABC):
@@ -116,6 +120,7 @@ class ConfigParser(ABC):
         file: Path,
         remark: str | None,
         s3_key_prefix: S3KeyPrefix | None,
+        orthophoto: Orthophoto | None,
     ) -> None:
         """Serializes the project with the given videos, sections and flows into the
         file.
@@ -131,6 +136,8 @@ class ConfigParser(ABC):
             remark(str | None): comment on this file
             s3_key_prefix(S3KeyPrefix | None): where this project's data lives,
                 or None when it lives on the local filesystem
+            orthophoto (Orthophoto | None): the project's Orthophoto, written
+                relative to the file, or None
 
         Raises:
             StartDateMissing: if start date is not configured
@@ -159,6 +166,7 @@ class ConfigParser(ABC):
         file: Path,
         remark: str | None,
         s3_key_prefix: S3KeyPrefix | None,
+        orthophoto: Orthophoto | None,
     ) -> dict:
         """Converts the given information into a dictionary."""
         raise NotImplementedError

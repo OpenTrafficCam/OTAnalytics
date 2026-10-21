@@ -18,6 +18,7 @@ class TestResetState:
         file_state: Mock,
         current_key_prefix: Mock,
         current_static_analysis_config_state: Mock,
+        current_orthophoto: Mock,
     ) -> None:
         target = ResetState(
             videos_metadata,
@@ -30,6 +31,7 @@ class TestResetState:
             file_state,
             current_key_prefix,
             current_static_analysis_config_state,
+            current_orthophoto,
         )
 
         target.reset()
@@ -44,6 +46,7 @@ class TestResetState:
         file_state.reset.assert_called_once()
         current_key_prefix.reset.assert_called_once()
         current_static_analysis_config_state.reset.assert_called_once()
+        current_orthophoto.reset.assert_called_once()
 
 
 @pytest.fixture
@@ -98,4 +101,9 @@ def current_key_prefix() -> Mock:
 
 @pytest.fixture
 def current_static_analysis_config_state() -> Mock:
+    return Mock()
+
+
+@pytest.fixture
+def current_orthophoto() -> Mock:
     return Mock()

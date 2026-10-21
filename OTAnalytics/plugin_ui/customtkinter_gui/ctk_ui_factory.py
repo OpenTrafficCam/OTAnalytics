@@ -44,12 +44,16 @@ SELECTED_EXTENSION = "selected_extension"
 
 
 class CtkUiFactory(UiFactory):
-    def info_box(
-        self, message: str, initial_position: tuple[int, int], show_cancel: bool = False
-    ) -> InfoBox:
-        return CtkInfoBox(
-            message=message, initial_position=initial_position, show_cancel=show_cancel
+    def info_box(self, message: str, initial_position: tuple[int, int]) -> InfoBox:
+        return CtkInfoBox(message=message, initial_position=initial_position)
+
+    async def ask_for_confirmation(
+        self, message: str, initial_position: tuple[int, int]
+    ) -> bool:
+        info_box = CtkInfoBox(
+            message=message, initial_position=initial_position, show_cancel=True
         )
+        return not info_box.canceled
 
     def minimal_info_box(
         self, message: str, initial_position: tuple[int, int]
@@ -70,6 +74,7 @@ class CtkUiFactory(UiFactory):
         title: str,
         filetypes: list[tuple[str, str]],
         defaultextension: str,
+        extension_options: dict[str, list[str] | None] | None = None,
     ) -> str:
         return askopenfilename(
             title=title, filetypes=filetypes, defaultextension=defaultextension

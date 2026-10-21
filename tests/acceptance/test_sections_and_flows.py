@@ -1,24 +1,41 @@
+import json
 import time
 from pathlib import Path
+from typing import Any
 
 import pytest
-from playwright.sync_api import Page  # type: ignore  # noqa: E402
+from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import (
     FlowAndSectionKeys,
     ResourceManager,
+    SectionKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_NAME as MARKER_FLOW_NAME,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
+    MARKER_NAME as MARKER_SECTION_NAME,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+    EDIT_COLOR,
+    EDIT_KNOB_ID_PREFIX,
+    MARKER_INTERACTIVE_IMAGE,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+    MARKER_TAB_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     MARKER_BUTTON_GENERATE,
     MARKER_BUTTON_PROPERTIES,
     MARKER_BUTTON_REMOVE,
     MARKER_FLOW_TABLE,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
+    MARKER_SECTION_TABLE,
 )
 from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_FINAL_TIMEOUT_MS,
@@ -92,9 +109,8 @@ class TestAddLineSectionWithDialog:
         setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
 
         # Switch to Sections tab
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_SECTION), exact=True
-        ).click()
+
+        search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
 
         # Create two additional sections
         names = ["First-Line", "Second-Line"]
@@ -217,3 +233,178 @@ class TestAddLineSectionWithDialog:
         assert saved_path.exists(), f"Expected saved configuration at {saved_path}"
         reference_path = Path(__file__).parents[1] / "data" / "test_name.otconfig"
         compare_json_files(saved_path, reference_path)
+
+
+SECTION_EDITOR_SETTLE_MS = 300
+NORTH_SECTION = "North-Section"
+
+
+def _canvas_image(page: Page) -> Any:
+    return (
+        search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).locator("img").first
+    )
+
+
+def _to_page_position(page: Page, x: float, y: float) -> tuple[float, float]:
+    """Convert image coordinates into page coordinates of the mouse."""
+    image = _canvas_image(page)
+    image.scroll_into_view_if_needed()
+    box = image.bounding_box()
+    assert box is not None, "Canvas image is not visible"
+    scale = image.evaluate("element => element.clientWidth / element.naturalWidth")
+    return box["x"] + x * scale, box["y"] + y * scale
+
+
+def _edit_knobs(page: Page) -> Any:
+    return search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).locator(
+        f"svg circle[id^='{EDIT_KNOB_ID_PREFIX}']"
+    )
+
+
+def _move_mouse(page: Page, x: float, y: float) -> None:
+    page.mouse.move(*_to_page_position(page, x, y), steps=3)
+    page.wait_for_timeout(SECTION_EDITOR_SETTLE_MS)
+
+
+def _click(page: Page, x: float, y: float, button: str = "left") -> None:
+    page.mouse.click(*_to_page_position(page, x, y), button=button)  # type: ignore
+    page.wait_for_timeout(SECTION_EDITOR_SETTLE_MS)
+
+
+def _press(page: Page, key: str) -> None:
+    page.keyboard.press(key)
+    page.wait_for_timeout(SECTION_EDITOR_SETTLE_MS)
+
+
+def _open_sections_of_preconfigured_project(
+    page: Page, external_app: NiceGUITestServer, resource_manager: ResourceManager
+) -> None:
+    load_main_page(page, external_app)
+    otconfig_path = (
+        Path(__file__).parents[1] / "data" / "sections_created_test_file.otconfig"
+    )
+    setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
+    search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
+    _dismiss_notifications(page)
+
+
+def _dismiss_notifications(page: Page) -> None:
+    """Close notifications of loading the project, they may cover the canvas."""
+    notifications = page.locator(".q-notification")
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    while notifications.count() and time.time() < deadline:
+        close_buttons = notifications.locator("button")
+        if close_buttons.count():
+            # Notifications keep moving while others disappear, so no regular click
+            close_buttons.first.dispatch_event("click")
+        page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
+    expect(notifications).to_have_count(0)
+
+
+def _edit_geometry_of(
+    page: Page, resource_manager: ResourceManager, section_name: str
+) -> None:
+    table = search_for_marker_element(page, MARKER_SECTION_TABLE).first
+    table.locator("tbody tr").filter(has_text=section_name).first.click()
+    page.get_by_text(resource_manager.get(SectionKeys.BUTTON_EDIT), exact=True).click()
+    expect(_edit_knobs(page)).not_to_have_count(0)
+
+
+def _saved_section_coordinates(
+    page: Page, resource_manager: ResourceManager, path: Path, section_name: str
+) -> list[tuple[int, int]]:
+    save_project_as(page, resource_manager, path)
+    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    while not path.exists() and time.time() < deadline:
+        time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS / 1000)
+    assert path.exists(), f"Expected saved configuration at {path}"
+    sections = json.loads(path.read_text())["sections"]
+    section = next(s for s in sections if s["name"] == section_name)
+    return [(c["x"], c["y"]) for c in section["coordinates"]]
+
+
+class TestSectionEditorOnCanvas:
+
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_draw_line_section_with_preview_and_right_click(
+        self,
+        page: Page,
+        external_app: NiceGUITestServer,
+        resource_manager: ResourceManager,
+    ) -> None:
+        """Draw a line section: preview follows the mouse, right click finishes."""
+        _open_sections_of_preconfigured_project(page, external_app, resource_manager)
+        page.get_by_text(
+            resource_manager.get(SectionKeys.BUTTON_ADD_LINE), exact=True
+        ).click()
+
+        _click(page, 40, 200)
+        _move_mouse(page, 200, 260)
+
+        preview = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).locator(
+            f"svg polyline[stroke='{EDIT_COLOR}']"
+        )
+        expect(preview).to_have_count(1)
+
+        _click(page, 200, 260)
+        _click(page, 200, 260, button="right")
+
+        name_input = search_for_marker_element(page, MARKER_SECTION_NAME).first
+        name_input.wait_for(state="visible")
+        name_input.fill("Drawn-Section")
+        search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
+
+        table = search_for_marker_element(page, MARKER_SECTION_TABLE).first
+        expect(table).to_contain_text("Drawn-Section")
+
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_insert_and_delete_knob_of_section(
+        self,
+        page: Page,
+        external_app: NiceGUITestServer,
+        resource_manager: ResourceManager,
+        test_data_tmp_dir: Path,
+    ) -> None:
+        """Insert a knob with '+' and delete it again with 'Delete'."""
+        _open_sections_of_preconfigured_project(page, external_app, resource_manager)
+
+        knobs = _edit_knobs(page)
+
+        _edit_geometry_of(page, resource_manager, NORTH_SECTION)
+        expect(knobs).to_have_count(2)
+        _move_mouse(page, 88, 60)
+        _press(page, "+")
+        expect(knobs).to_have_count(3)
+        _click(page, 88, 60)
+        _press(page, "Enter")
+        expect(knobs).to_have_count(0)
+
+        coordinates = _saved_section_coordinates(
+            page,
+            resource_manager,
+            test_data_tmp_dir / "inserted.otconfig",
+            NORTH_SECTION,
+        )
+        assert len(coordinates) == 3
+        assert coordinates[0] == (22, 22)
+        assert coordinates[2] == (154, 66)
+
+        _edit_geometry_of(page, resource_manager, NORTH_SECTION)
+        expect(knobs).to_have_count(3)
+        _click(page, *coordinates[1])
+        _press(page, "Delete")
+        expect(knobs).to_have_count(2)
+        _press(page, "Enter")
+        expect(knobs).to_have_count(0)
+
+        coordinates = _saved_section_coordinates(
+            page,
+            resource_manager,
+            test_data_tmp_dir / "deleted.otconfig",
+            NORTH_SECTION,
+        )
+        assert coordinates == [(22, 22), (154, 66)]

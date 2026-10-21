@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, Mock
 
 from OTAnalytics.adapter_ui.dummy_viewmodel import DummyViewModel
 from OTAnalytics.application.key_prefix import S3KeyPrefix
+from OTAnalytics.application.state import CurrentOrthophoto
 from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggestion
 
 A_PREFIX = S3KeyPrefix("project-1/site-2/otcamera19")
@@ -96,4 +97,5 @@ def create_target(given: Given) -> DummyViewModel:
         update_section_coordinates=Mock(),
         provide_track_files=Mock(),
         provide_video_files=Mock(),
+        current_orthophoto=CurrentOrthophoto(),
     )

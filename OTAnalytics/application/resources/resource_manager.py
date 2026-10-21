@@ -10,6 +10,7 @@ class ResourceKey(StrEnum):
 
 class GeneralKeys(ResourceKey):
     LABEL_APPLY = "label-apply"
+    LABEL_OK = "label-ok"
     LABEL_CANCEL = "label-cancel"
     LABEL_RESET = "label-reset"
     LABEL_MODES = "label-modes"
@@ -22,6 +23,7 @@ class CanvasKeys(ResourceKey):
     LABEL_ADD_SECTION = "label-add-section"
     LABEL_EDIT_SECTION = "label-edit-section"
     IMAGE_DEFAULT = "image-default"
+    MESSAGE_NOT_ENOUGH_POINTS = "message-not-enough-points"
 
 
 class ConfigurationBarKeys(ResourceKey):
@@ -83,6 +85,7 @@ class SvzMetadataKeys(ResourceKey):
 
 class FlowKeys(ResourceKey):
     TABLE_COLUMN_NAME = "table-flow-column-name"
+    TABLE_COLUMN_TRACKS_ASSIGNED = "table-flow-column-tracks-assigned"
     BUTTON_ADD = "button-add"
     BUTTON_GENERATE = "button-generate"
     BUTTON_PROPERTIES = "button-properties"
@@ -155,6 +158,11 @@ class RemarkKeys(ResourceKey):
 class HotKeys(ResourceKey):
     SAVE_SECTION_HOTKEY = "save-section-hotkey"
     CANCEL_SECTION_GEOMETRY_HOTKEY = "cancel-section-geometry-hotkey"
+    ADD_KNOB_HOTKEY = "add-knob-hotkey"
+    DELETE_KNOB_HOTKEY = "delete-knob-hotkey"
+    DELETE_KNOB_ALTERNATIVE_HOTKEY = "delete-knob-alternative-hotkey"
+    SHIFT_KNOB_BACKWARD_HOTKEY = "shift-knob-backward-hotkey"
+    SHIFT_KNOB_FORWARD_HOTKEY = "shift-knob-forward-hotkey"
 
 
 class VisualizationFiltersKeys(ResourceKey):
@@ -223,10 +231,14 @@ DEFAULT_RESOURCE_MAP = {
     AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS: "Export track statistics",
     CanvasKeys.LABEL_ADD_SECTION: "Add section",
     CanvasKeys.LABEL_EDIT_SECTION: "Edit section",
+    CanvasKeys.MESSAGE_NOT_ENOUGH_POINTS: (
+        "Please add at least {count} points to finish the section."
+    ),
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
     FlowAndSectionKeys.TAB_SECTION: "Section",
     FlowAndSectionKeys.TAB_FLOW: "Flow",
-    FlowKeys.TABLE_COLUMN_NAME: "Flows",
+    FlowKeys.TABLE_COLUMN_NAME: "Flow",
+    FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED: "Tracks",
     FlowKeys.BUTTON_ADD: "Add",
     FlowKeys.BUTTON_GENERATE: "Generate",
     FlowKeys.BUTTON_REMOVE: "Remove",
@@ -236,6 +248,7 @@ DEFAULT_RESOURCE_MAP = {
     EditFlowDialogKeys.LABEL_END_SECTION: "End section",
     EditFlowDialogKeys.LABEL_DISTANCE: "Distance",
     GeneralKeys.LABEL_APPLY: "Apply",
+    GeneralKeys.LABEL_OK: "OK",
     GeneralKeys.LABEL_RESET: "Reset",
     GeneralKeys.LABEL_CANCEL: "Cancel",
     GeneralKeys.LABEL_MODES: "Modes",
@@ -261,9 +274,6 @@ DEFAULT_RESOURCE_MAP = {
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
     ProjectKeys.LABEL_QUICK_SAVE: "Save",
     ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
-    ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
-    ProjectKeys.LABEL_QUICK_SAVE: "Save",
-    ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
     RemarkKeys.LABEL_REMARK_HEADER: "Remark",
     RemarkKeys.REMARK_NO_COMMENT: "No Comment",
     SectionKeys.BUTTON_ADD_AREA: "Add area...",
@@ -271,7 +281,7 @@ DEFAULT_RESOURCE_MAP = {
     SectionKeys.BUTTON_EDIT: "Edit...",
     SectionKeys.BUTTON_PROPERTIES: "Properties...",
     SectionKeys.BUTTON_REMOVE: "Remove...",
-    SectionKeys.TABLE_COLUMN_NAME: "Sections",
+    SectionKeys.TABLE_COLUMN_NAME: "Section",
     StaticAnalysisConfigKeys.LABEL_STATIC_ANALYSIS_CONFIG_FORM_HEADER: "Analysis Configuration",  # noqa
     StaticAnalysisConfigKeys.LABEL_DO_EVENTS: "Create events",
     StaticAnalysisConfigKeys.LABEL_DO_COUNTING: "Create counts",
@@ -303,7 +313,7 @@ DEFAULT_RESOURCE_MAP = {
     TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER: "Track Statistics",
     TrackStatisticKeys.LABEL_ALL_TRACKS: "All tracks:",
     TrackStatisticKeys.LABEL_TRACKS_INTERSECTING_NOT_ASSIGNED: "Tracks intersecting not assigned:",  # noqa
-    TrackStatisticKeys.LABEL_TRACKS_ASSIGNED_TO_FLOWS: "Tracks assigend to flows:",
+    TrackStatisticKeys.LABEL_TRACKS_ASSIGNED_TO_FLOWS: "Tracks assigned to flows:",
     TrackStatisticKeys.LABEL_NUMBER_OF_TRACKS_WITH_SIMULTANEOUS_SECTION_EVENTS: "Number of tracks with simultaneous section events",  # noqa
     TrackStatisticKeys.LABEL_INSIDE_CUTTING_SECTIONS: "Inside cutting section:",
     TrackStatisticKeys.LABEL_TRACKS_NOT_INTERSECTING_SECTIONS: "Tracks not intersecting section:",  # noqa
@@ -343,10 +353,20 @@ DEFAULT_IMAGE_RESOURCE_MAP: dict[ResourceKey, str] = {
 # Hotkey values as constants for reuse
 SAVE_SECTION_HOTKEY_VALUE = "Enter"
 CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE = "Escape"
+ADD_KNOB_HOTKEY_VALUE = "+"
+DELETE_KNOB_HOTKEY_VALUE = "Delete"
+DELETE_KNOB_ALTERNATIVE_HOTKEY_VALUE = "Backspace"
+SHIFT_KNOB_BACKWARD_HOTKEY_VALUE = "ArrowLeft"
+SHIFT_KNOB_FORWARD_HOTKEY_VALUE = "ArrowRight"
 
 DEFAULT_HOTKEYS: dict[HotKeys, str] = {
     HotKeys.SAVE_SECTION_HOTKEY: SAVE_SECTION_HOTKEY_VALUE,
     HotKeys.CANCEL_SECTION_GEOMETRY_HOTKEY: CANCEL_SECTION_GEOMETRY_HOTKEY_VALUE,
+    HotKeys.ADD_KNOB_HOTKEY: ADD_KNOB_HOTKEY_VALUE,
+    HotKeys.DELETE_KNOB_HOTKEY: DELETE_KNOB_HOTKEY_VALUE,
+    HotKeys.DELETE_KNOB_ALTERNATIVE_HOTKEY: DELETE_KNOB_ALTERNATIVE_HOTKEY_VALUE,
+    HotKeys.SHIFT_KNOB_BACKWARD_HOTKEY: SHIFT_KNOB_BACKWARD_HOTKEY_VALUE,
+    HotKeys.SHIFT_KNOB_FORWARD_HOTKEY: SHIFT_KNOB_FORWARD_HOTKEY_VALUE,
 }
 
 

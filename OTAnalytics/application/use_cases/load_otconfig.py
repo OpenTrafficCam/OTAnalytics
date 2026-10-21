@@ -1,12 +1,15 @@
+import asyncio
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
+from OTAnalytics.application.orthophoto import ObtainOrthophoto
 from OTAnalytics.application.parser.config_parser import ConfigParser, OtConfig
 from OTAnalytics.application.parser.deserializer import Deserializer
 from OTAnalytics.application.project_location import ValidateProjectLocation
 from OTAnalytics.application.state import (
     ConfigurationFile,
     CurrentKeyPrefix,
+    CurrentOrthophoto,
     CurrentStaticAnalysisConfigState,
 )
 from OTAnalytics.application.use_cases.add_new_remark import AddNewRemark
@@ -23,6 +26,7 @@ from OTAnalytics.application.use_cases.section_repository import (
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.application.use_cases.video_repository import AddAllVideos
 from OTAnalytics.domain.observer import OBSERVER, Subject
+from OTAnalytics.domain.orthophoto import Orthophoto, OrthophotoError
 
 
 class LoadOtconfig:
@@ -40,6 +44,8 @@ class LoadOtconfig:
         validate_project_location: ValidateProjectLocation,
         current_key_prefix: CurrentKeyPrefix,
         current_static_analysis_config_state: CurrentStaticAnalysisConfigState,
+        current_orthophoto: CurrentOrthophoto,
+        obtain_orthophoto: ObtainOrthophoto,
     ) -> None:
         self._add_new_remark = add_new_remark
         self._reset_application = reset_application
@@ -55,6 +61,8 @@ class LoadOtconfig:
         self._current_static_analysis_config_state = (
             current_static_analysis_config_state
         )
+        self._current_orthophoto = current_orthophoto
+        self._obtain_orthophoto = obtain_orthophoto
         self._subject = Subject[ConfigurationFile]()
 
     def load(self, file: Path) -> None:
@@ -80,9 +88,10 @@ class LoadOtconfig:
         config = self._begin(file)
         try:
             self._publish_before_tracks(config)
+            asyncio.run(self._publish_orthophoto(file, config))
             load_track_files(list(config.analysis.track_files))
             self._publish_after_tracks(file, config)
-        except (SectionAlreadyExists, FlowAlreadyExists) as cause:
+        except (SectionAlreadyExists, FlowAlreadyExists, OrthophotoError) as cause:
             self._abort(cause)
 
     async def _apply_async(
@@ -91,9 +100,10 @@ class LoadOtconfig:
         config = self._begin(file)
         try:
             self._publish_before_tracks(config)
+            await self._publish_orthophoto(file, config)
             await load_track_files(list(config.analysis.track_files))
             self._publish_after_tracks(file, config)
-        except (SectionAlreadyExists, FlowAlreadyExists) as cause:
+        except (SectionAlreadyExists, FlowAlreadyExists, OrthophotoError) as cause:
             self._abort(cause)
 
     def _begin(self, file: Path) -> OtConfig:
@@ -121,6 +131,17 @@ class LoadOtconfig:
         self._add_videos.add(config.videos)
         self._add_sections.add(config.sections)
         self._add_flows.add(config.flows)
+
+    async def _publish_orthophoto(self, file: Path, config: OtConfig) -> None:
+        """Show the declared Orthophoto before any track needs it for placement."""
+        if config.orthophoto is None:
+            return
+        local_file = await self._obtain_orthophoto.obtain(
+            config.orthophoto, file.parent
+        )
+        self._current_orthophoto.set(
+            Orthophoto(file=local_file, reference=config.orthophoto)
+        )
 
     def _publish_after_tracks(self, file: Path, config: OtConfig) -> None:
         if config.remark:

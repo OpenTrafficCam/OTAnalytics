@@ -294,7 +294,7 @@ class ViewModel(
         pass
 
     @abstractmethod
-    def apply_filter_tracks_by_class(self, classes: list[str]) -> None:
+    def apply_filter_tracks_by_class(self, classes: set[str]) -> None:
         pass
 
     @abstractmethod
@@ -354,7 +354,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def start_new_project(self) -> None:
+    async def start_new_project(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

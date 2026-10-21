@@ -1,6 +1,7 @@
 from OTAnalytics.application.state import (
     ActionState,
     CurrentKeyPrefix,
+    CurrentOrthophoto,
     CurrentStaticAnalysisConfigState,
     FileState,
     FlowState,
@@ -25,6 +26,7 @@ class ResetState:
         file_state: FileState,
         current_key_prefix: CurrentKeyPrefix,
         current_static_analysis_config_state: CurrentStaticAnalysisConfigState,
+        current_orthophoto: CurrentOrthophoto,
     ) -> None:
         self._videos_metadata = videos_metadata
         self._tracks_metadata = tracks_metadata
@@ -38,6 +40,7 @@ class ResetState:
         self._current_static_analysis_config_state = (
             current_static_analysis_config_state
         )
+        self._current_orthophoto = current_orthophoto
 
     def reset(self) -> None:
         self._videos_metadata.reset()
@@ -50,3 +53,4 @@ class ResetState:
         self._file_state.reset()
         self._current_key_prefix.reset()
         self._current_static_analysis_config_state.reset()
+        self._current_orthophoto.reset()
