@@ -189,12 +189,27 @@ class FilterDateRangeForm:
                 self._read(self._start_date, keys.LABEL_DATE_RANGE_FROM),
                 self._read(self._end_date, keys.LABEL_DATE_RANGE_TO),
             )
+            self._ensure_start_before_end(date_range)
             self._viewmodel.apply_filter_tracks_by_date(date_range)
             logger().info("Filter tracks by date applied")
             self._dialog.close()
         except InvalidDatetimeFormatError as e:
             logger().info(e)
             ui.notify(str(e), type="negative")
+
+    def _ensure_start_before_end(self, date_range: DateRange) -> None:
+        """Reject a range whose start is not before its end.
+
+        Raises:
+            InvalidDatetimeFormatError: if both bounds are given and the start is
+                not before the end.
+        """
+        start = date_range.start_date
+        end = date_range.end_date
+        if start is not None and end is not None and start >= end:
+            raise InvalidDatetimeFormatError(
+                self._label(VisualizationFiltersKeys.MESSAGE_START_NOT_BEFORE_END)
+            )
 
     def _read(
         self, date_time: DateTimeForm, name_key: VisualizationFiltersKeys
