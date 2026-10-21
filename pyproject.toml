@@ -88,7 +88,6 @@ exclude-newer = "3 days"
 
 # Temporary: certifi 2026.10.19 is < 3 days old; remove after 2026-10-22
 [tool.uv.exclude-newer-package]
-certifi = false
 
 [tool.hatch.version]
 path = "OTAnalytics/version.py"

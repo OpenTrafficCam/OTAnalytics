@@ -12,7 +12,7 @@ exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for 
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
-certifi = false
+certifi = "2026-10-21T23:59:59Z"
 
 [[package]]
 name = "affine"
