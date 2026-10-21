@@ -112,10 +112,8 @@ class FormField(LazyInitializedElement[S], Generic[S, V]):
     def _validate_and_mark(
         self, validation: Callable[[Any], str | None], value: Any
     ) -> str | None:
-        """Validate the value and mark the field as valid or invalid.
-
-        An invalid field shows the error in red. A valid, non-empty field is
-        marked green. An empty field stays unmarked.
+        """Validate the value and mark the field as valid or invalid using the valid
+        CSS class. An empty field stays unmarked.
         """
         error = validation(value)
         if error is None and value:
