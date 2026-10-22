@@ -25,7 +25,7 @@ from OTAnalytics.application.use_cases.provide_input_files import (
 )
 from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
-from OTAnalytics.plugin_filter.pandas_track_id import PandasTrackIdProvider
+from OTAnalytics.plugin_filter.polars_track_id import PolarsTrackIdProvider
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
 )
@@ -108,7 +108,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         # TODO: Refactor observers - move registering to subjects happening in
         #   constructor dummy_viewmodel
         # cut_tracks_intersecting_section.register(
-        #    cached_pandas_track_provider.on_tracks_cut
+        #    cached_polars_track_provider.on_tracks_cut
         # )
         self.cut_tracks_intersecting_section.register(self.view_model.on_tracks_cut)
         self.view_model.register_observers()
@@ -231,7 +231,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
 
     @cached_property
     def all_filtered_track_ids(self) -> TrackIdProvider:
-        return PandasTrackIdProvider(
+        return PolarsTrackIdProvider(
             self.visualization_builder._get_data_provider_all_filters_with_offset()
         )
 
