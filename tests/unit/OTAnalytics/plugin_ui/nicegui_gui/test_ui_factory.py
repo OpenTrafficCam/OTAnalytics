@@ -1,7 +1,7 @@
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from nicegui import ui
@@ -84,6 +84,16 @@ CONFIRMATION_MESSAGE = "All configured sections will be removed."
 POSITION = (0, 0)
 
 
+def create_ui_factory(resource_manager: ResourceManager) -> NiceGuiUiFactory:
+    return NiceGuiUiFactory(
+        resource_manager,
+        get_count_intervals=Mock(),
+        get_counting_event=Mock(),
+        get_save_name=Mock(),
+        get_save_suffix=Mock(),
+    )
+
+
 async def _wait_for(answers: list[bool]) -> None:
     """Wait until the awaiting page handler has stored the dialog result."""
     for _ in range(100):
@@ -96,7 +106,7 @@ class TestAskForConfirmation:
     async def test_ok_confirms(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
-        target = NiceGuiUiFactory(resource_manager)
+        target = create_ui_factory(resource_manager)
         answers: list[bool] = []
 
         @ui.page("/test")
@@ -115,7 +125,7 @@ class TestAskForConfirmation:
     async def test_cancel_rejects(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
-        target = NiceGuiUiFactory(resource_manager)
+        target = create_ui_factory(resource_manager)
         answers: list[bool] = []
 
         @ui.page("/test")
@@ -134,7 +144,7 @@ class TestAskForConfirmation:
 
 class TestShowMessage:
     def test_info_box_shows_an_error(self, resource_manager: ResourceManager) -> None:
-        target = NiceGuiUiFactory(resource_manager)
+        target = create_ui_factory(resource_manager)
 
         with patch.object(ui, "notify") as notify:
             target.info_box(message=CONFIRMATION_MESSAGE, initial_position=POSITION)
@@ -156,7 +166,7 @@ class TestShowMessage:
         message_type: MessageType,
         notification_type: str,
     ) -> None:
-        target = NiceGuiUiFactory(resource_manager)
+        target = create_ui_factory(resource_manager)
 
         with patch.object(ui, "notify") as notify:
             target.show_message(
@@ -174,7 +184,7 @@ class TestMinimalInfoBox:
     def test_shows_persistent_notification(
         self, resource_manager: ResourceManager
     ) -> None:
-        target = NiceGuiUiFactory(resource_manager)
+        target = create_ui_factory(resource_manager)
 
         with patch.object(ui, "notification") as notification:
             target.minimal_info_box(
@@ -188,7 +198,7 @@ class TestMinimalInfoBox:
     def test_update_message_changes_text(
         self, resource_manager: ResourceManager
     ) -> None:
-        target = NiceGuiUiFactory(resource_manager)
+        target = create_ui_factory(resource_manager)
 
         with patch.object(ui, "notification") as notification:
             box = target.minimal_info_box(
@@ -201,7 +211,7 @@ class TestMinimalInfoBox:
     def test_close_dismisses_notification(
         self, resource_manager: ResourceManager
     ) -> None:
-        target = NiceGuiUiFactory(resource_manager)
+        target = create_ui_factory(resource_manager)
 
         with patch.object(ui, "notification") as notification:
             box = target.minimal_info_box(
@@ -214,7 +224,7 @@ class TestMinimalInfoBox:
     def test_without_client_does_not_raise(
         self, resource_manager: ResourceManager
     ) -> None:
-        target = NiceGuiUiFactory(resource_manager)
+        target = create_ui_factory(resource_manager)
 
         with patch.object(
             ui, "notification", side_effect=RuntimeError("no slot")
@@ -230,7 +240,7 @@ class TestMinimalInfoBox:
     async def test_is_visible_in_browser(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
-        target = NiceGuiUiFactory(resource_manager)
+        target = create_ui_factory(resource_manager)
 
         @ui.page("/test")
         def page() -> None:

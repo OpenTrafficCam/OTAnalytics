@@ -7,17 +7,25 @@ from nicegui import ui
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_COUNTS,
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE, ExportMode
 from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.application.state import CurrentExportConfigState
+from OTAnalytics.application.use_cases.static_analysis_config import (
+    GetCountingEventOfCurrentAnalysisConfig,
+    GetCountIntervalsOfCurrentAnalysisConfig,
+    GetSaveNameOfCurrentAnalysisConfig,
+    GetSaveSuffixOfCurrentAnalysisConfig,
+)
 from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggestion
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.export_counts_dialog import (
     MARKER_DIRECTORY,
-    MARKER_FILENAME_STEM,
-    MARKER_FILENAME_SUFFIX,
     MARKER_INTERVAL,
     ExportCountsDialog,
 )
@@ -33,8 +41,11 @@ TEST_DEFAULT_FORMAT = "CSV"
 TEST_MODES = ExportMode.values()
 TEST_EXPORT_FORMATS = {"CSV": "csv", "Excel": "xlsx"}
 TEST_INTERVAL = 15
+TEST_SECOND_INTERVAL = 60
 TEST_FILE_DIR = "test/directory"
 TEST_FILE_STEM = "test_file"
+TEST_SAVE_NAME = "my_counts"
+TEST_SAVE_SUFFIX = "my_suffix"
 TEST_OUTPUT_FILE = f"/{TEST_FILE_DIR}/{TEST_FILE_STEM}.csv"
 TEST_EXCEL_OUTPUT_FILE = f"/{TEST_FILE_DIR}/{TEST_FILE_STEM}.xlsx"
 TEST_CONTEXT_FILE_TYPE = (
@@ -57,16 +68,53 @@ def viewmodel() -> Mock:
 
 
 @pytest.fixture
-def export_counts_dialog(resource_manager: Mock, viewmodel: Mock) -> ExportCountsDialog:
+def export_config_state() -> CurrentExportConfigState:
+    state = CurrentExportConfigState()
+    state.count_intervals = {TEST_INTERVAL}
+    state.counting_event = CountingEvent.START
+    state.save_name = ""
+    state.save_suffix = ""
+    return state
+
+
+def build_dialog(
+    resource_manager: ResourceManager,
+    viewmodel: Mock,
+    export_config_state: CurrentExportConfigState,
+    start: datetime | None = TEST_START,
+    end: datetime | None = TEST_END,
+    default_format: str = TEST_DEFAULT_FORMAT,
+) -> ExportCountsDialog:
     return ExportCountsDialog(
         resource_manager=resource_manager,
         viewmodel=viewmodel,
-        start=TEST_START,
-        end=TEST_END,
-        default_format=TEST_DEFAULT_FORMAT,
+        start=start,
+        end=end,
+        default_format=default_format,
         modes=TEST_MODES,
         export_formats=TEST_EXPORT_FORMATS,
+        get_count_intervals=GetCountIntervalsOfCurrentAnalysisConfig(
+            export_config_state
+        ),
+        get_counting_event=GetCountingEventOfCurrentAnalysisConfig(export_config_state),
+        get_save_name=GetSaveNameOfCurrentAnalysisConfig(export_config_state),
+        get_save_suffix=GetSaveSuffixOfCurrentAnalysisConfig(export_config_state),
     )
+
+
+@pytest.fixture
+def export_counts_dialog(
+    resource_manager: ResourceManager,
+    viewmodel: Mock,
+    export_config_state: CurrentExportConfigState,
+) -> ExportCountsDialog:
+    return build_dialog(resource_manager, viewmodel, export_config_state)
+
+
+def open_dialog(dialog: ExportCountsDialog) -> None:
+    @ui.page(ENDPOINT_NAME)
+    def page() -> None:
+        dialog.build().open()
 
 
 class TestExportCountsDialog:
@@ -75,40 +123,76 @@ class TestExportCountsDialog:
         self,
         user: User,
         export_counts_dialog: ExportCountsDialog,
-        resource_manager: ResourceManager,
-        viewmodel: Mock,
     ) -> None:
         """Test that the dialog builds up correctly and all elements are visible."""
-
-        @ui.page(ENDPOINT_NAME)
-        def page() -> None:
-            export_counts_dialog.build().open()
+        open_dialog(export_counts_dialog)
 
         await user.open(ENDPOINT_NAME)
 
-        # Check that all elements are visible
-        await user.should_see(marker=MARKER_FILENAME_STEM)
-        await user.should_see(marker=MARKER_FILENAME_SUFFIX)
         await user.should_see(marker=MARKER_DIRECTORY)
-        await user.should_see(marker=MARKER_INTERVAL)
         await user.should_see(marker=MARKER_APPLY)
         await user.should_see(marker=MARKER_CANCEL)
+
+    @pytest.mark.asyncio
+    async def test_single_interval_is_not_offered(
+        self,
+        user: User,
+        export_counts_dialog: ExportCountsDialog,
+    ) -> None:
+        open_dialog(export_counts_dialog)
+
+        await user.open(ENDPOINT_NAME)
+
+        await user.should_not_see(marker=MARKER_INTERVAL)
+
+    @pytest.mark.asyncio
+    async def test_several_intervals_are_offered(
+        self,
+        user: User,
+        resource_manager: ResourceManager,
+        viewmodel: Mock,
+        export_config_state: CurrentExportConfigState,
+    ) -> None:
+        export_config_state.count_intervals = {TEST_INTERVAL, TEST_SECOND_INTERVAL}
+        dialog = build_dialog(resource_manager, viewmodel, export_config_state)
+        open_dialog(dialog)
+
+        await user.open(ENDPOINT_NAME)
+
+        await user.should_see(marker=MARKER_INTERVAL)
+        assert dialog.get_specification().interval_in_minutes == TEST_INTERVAL
+
+    @pytest.mark.asyncio
+    async def test_selected_interval_is_used(
+        self,
+        user: User,
+        resource_manager: ResourceManager,
+        viewmodel: Mock,
+        export_config_state: CurrentExportConfigState,
+    ) -> None:
+        export_config_state.count_intervals = {TEST_INTERVAL, TEST_SECOND_INTERVAL}
+        dialog = build_dialog(resource_manager, viewmodel, export_config_state)
+        open_dialog(dialog)
+
+        await user.open(ENDPOINT_NAME)
+        dialog._interval_field.set_value(str(TEST_SECOND_INTERVAL))  # type: ignore
+
+        assert dialog.get_specification().interval_in_minutes == TEST_SECOND_INTERVAL
 
     @pytest.mark.asyncio
     async def test_get_specification(
         self,
         user: User,
         export_counts_dialog: ExportCountsDialog,
-        resource_manager: ResourceManager,
+        export_config_state: CurrentExportConfigState,
     ) -> None:
-        @ui.page(ENDPOINT_NAME)
-        def page() -> None:
-            export_counts_dialog.build().open()
+        export_config_state.save_name = TEST_SAVE_NAME
+        export_config_state.counting_event = CountingEvent.END
+        open_dialog(export_counts_dialog)
 
         await user.open(ENDPOINT_NAME)
 
         user.find(MARKER_DIRECTORY).clear().type(str(Path(TEST_OUTPUT_FILE).parent))
-        user.find(MARKER_FILENAME_STEM).clear().type(TEST_FILE_STEM)
         user.find(marker=MARKER_APPLY).click()
 
         specification = export_counts_dialog.get_specification()
@@ -117,9 +201,43 @@ class TestExportCountsDialog:
         assert specification.end == TEST_END
         assert specification.output_format == TEST_DEFAULT_FORMAT
         assert specification.export_directory == Path(TEST_OUTPUT_FILE).parent
-        assert specification.export_filename_stem == TEST_FILE_STEM
+        assert specification.export_filename_stem == TEST_SAVE_NAME
         assert specification.export_mode == OVERWRITE
         assert specification.interval_in_minutes == TEST_INTERVAL
+        assert specification.counting_event == CountingEvent.END
+
+    @pytest.mark.asyncio
+    async def test_save_suffix_is_appended_to_save_name(
+        self,
+        user: User,
+        export_counts_dialog: ExportCountsDialog,
+        export_config_state: CurrentExportConfigState,
+    ) -> None:
+        export_config_state.save_name = TEST_SAVE_NAME
+        export_config_state.save_suffix = TEST_SAVE_SUFFIX
+        open_dialog(export_counts_dialog)
+
+        await user.open(ENDPOINT_NAME)
+
+        specification = export_counts_dialog.get_specification()
+
+        assert (
+            specification.export_filename_stem == f"{TEST_SAVE_NAME}_{TEST_SAVE_SUFFIX}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_unnamed_export_falls_back_to_suggested_stem(
+        self,
+        user: User,
+        export_counts_dialog: ExportCountsDialog,
+    ) -> None:
+        open_dialog(export_counts_dialog)
+
+        await user.open(ENDPOINT_NAME)
+
+        specification = export_counts_dialog.get_specification()
+
+        assert specification.export_filename_stem == TEST_FILE_STEM
 
     @pytest.mark.asyncio
     async def test_different_export_format(
@@ -127,56 +245,47 @@ class TestExportCountsDialog:
         user: User,
         resource_manager: ResourceManager,
         viewmodel: Mock,
+        export_config_state: CurrentExportConfigState,
     ) -> None:
-        export_counts_dialog = ExportCountsDialog(
-            resource_manager=resource_manager,
-            viewmodel=viewmodel,
-            start=TEST_START,
-            end=TEST_END,
-            default_format="Excel",
-            modes=TEST_MODES,
-            export_formats=TEST_EXPORT_FORMATS,
+        dialog = build_dialog(
+            resource_manager, viewmodel, export_config_state, default_format="Excel"
         )
-
-        @ui.page(ENDPOINT_NAME)
-        def page() -> None:
-            export_counts_dialog.build().open()
+        open_dialog(dialog)
 
         await user.open(ENDPOINT_NAME)
 
         user.find(MARKER_DIRECTORY).clear().type(
             str(Path(TEST_EXCEL_OUTPUT_FILE).parent)
         )
-        user.find(MARKER_FILENAME_STEM).clear().type(TEST_FILE_STEM)
         user.find(marker=MARKER_APPLY).click()
 
-        specification = export_counts_dialog.get_specification()
+        specification = dialog.get_specification()
 
         assert specification.output_format == "Excel"
         assert specification.export_directory == Path(TEST_EXCEL_OUTPUT_FILE).parent
-        assert specification.export_filename_stem == TEST_FILE_STEM
 
     @pytest.mark.asyncio
     async def test_validation_error_empty_filename(
         self,
         user: User,
-        export_counts_dialog: ExportCountsDialog,
+        resource_manager: ResourceManager,
+        viewmodel: Mock,
+        export_config_state: CurrentExportConfigState,
     ) -> None:
         """Test that validation errors are handled correctly for empty filename."""
-
-        @ui.page(ENDPOINT_NAME)
-        def page() -> None:
-            export_counts_dialog.build().open()
+        viewmodel.get_save_path_suggestion.return_value = SavePathSuggestion(
+            save_directory=Path(TEST_FILE_DIR),
+            file_stem="",
+            context_file_type=TEST_CONTEXT_FILE_TYPE,
+            file_type=".csv",
+        )
+        dialog = build_dialog(resource_manager, viewmodel, export_config_state)
+        open_dialog(dialog)
 
         await user.open(ENDPOINT_NAME)
 
-        user.find(MARKER_DIRECTORY).clear().type(str(Path(TEST_OUTPUT_FILE).parent))
-        user.find(MARKER_FILENAME_STEM).clear()
-        user.find(marker=MARKER_APPLY).click()
-
-        # Verify that get_specification raises a ValueError
         with pytest.raises(ValueError, match="No output file selected"):
-            export_counts_dialog.get_specification()
+            dialog.get_specification()
 
     @pytest.mark.asyncio
     async def test_validation_error_missing_dates(
@@ -184,73 +293,18 @@ class TestExportCountsDialog:
         user: User,
         resource_manager: ResourceManager,
         viewmodel: Mock,
+        export_config_state: CurrentExportConfigState,
     ) -> None:
         """Test that validation errors are handled correctly for missing dates."""
-        # Create a dialog with no start and end dates
-        export_counts_dialog = ExportCountsDialog(
-            resource_manager=resource_manager,
-            viewmodel=viewmodel,
-            start=None,
-            end=None,
-            default_format=TEST_DEFAULT_FORMAT,
-            modes=TEST_MODES,
-            export_formats=TEST_EXPORT_FORMATS,
+        dialog = build_dialog(
+            resource_manager, viewmodel, export_config_state, start=None, end=None
         )
-
-        @ui.page(ENDPOINT_NAME)
-        def page() -> None:
-            export_counts_dialog.build().open()
+        open_dialog(dialog)
 
         await user.open(ENDPOINT_NAME)
 
         user.find(MARKER_DIRECTORY).clear().type(str(Path(TEST_OUTPUT_FILE).parent))
-        user.find(MARKER_FILENAME_STEM).clear().type(TEST_FILE_STEM)
         user.find(marker=MARKER_APPLY).click()
 
-        # Verify that get_specification raises a ValueError
         with pytest.raises(ValueError, match="Start and end times must be specified"):
-            export_counts_dialog.get_specification()
-
-    @pytest.mark.asyncio
-    async def test_suffix_reflects_interval_and_format(
-        self,
-        user: User,
-        export_counts_dialog: ExportCountsDialog,
-    ) -> None:
-        @ui.page(ENDPOINT_NAME)
-        def page() -> None:
-            export_counts_dialog.build().open()
-
-        await user.open(ENDPOINT_NAME)
-
-        assert export_counts_dialog._filename_suffix_field.value == ".counts_15min.csv"
-
-        export_counts_dialog._interval.set_value(30)
-        export_counts_dialog._on_interval_or_format_change(None)
-
-        assert export_counts_dialog._filename_suffix_field.value == ".counts_30min.csv"
-
-    @pytest.mark.asyncio
-    async def test_initial_stem_strips_context_from_suggestion(
-        self,
-        user: User,
-        resource_manager: ResourceManager,
-        viewmodel: Mock,
-    ) -> None:
-        dialog = ExportCountsDialog(
-            resource_manager=resource_manager,
-            viewmodel=viewmodel,
-            start=TEST_START,
-            end=TEST_END,
-            default_format=TEST_DEFAULT_FORMAT,
-            modes=TEST_MODES,
-            export_formats=TEST_EXPORT_FORMATS,
-        )
-
-        @ui.page(ENDPOINT_NAME)
-        def page() -> None:
-            dialog.build().open()
-
-        await user.open(ENDPOINT_NAME)
-
-        assert dialog._filename_stem_field.value == TEST_FILE_STEM
+            dialog.get_specification()
