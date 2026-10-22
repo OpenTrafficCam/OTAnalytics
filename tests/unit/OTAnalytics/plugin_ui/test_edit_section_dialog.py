@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -18,7 +19,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY,
     MARKER_CANCEL,
+    DialogResult,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.validation import ERROR_MSG_REQUIRED
 
 # Constants for testing
 TEST_SECTION_NAME = "Test Section"
@@ -195,3 +198,51 @@ class TestEditSectionDialog:
         # Verify that get_section raises a NoUniqueNameException
         with pytest.raises(NoUniqueNameException):
             edit_section_dialog.get_section()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("name", ["", "   "])
+    async def test_apply_without_name_keeps_dialog_open(
+        self,
+        user: User,
+        edit_section_dialog: EditSectionDialog,
+        name: str,
+    ) -> None:
+        """Test that a section without a name cannot be applied."""
+        results: list = []
+
+        @ui.page(ENDPOINT_NAME)
+        async def page() -> None:
+            results.append(await edit_section_dialog.result)
+
+        await user.open(ENDPOINT_NAME)
+
+        user.find(MARKER_NAME).type(name)
+        user.find(marker=MARKER_APPLY).click()
+
+        await asyncio.sleep(0)
+        await user.should_see(ERROR_MSG_REQUIRED)
+        assert results == []
+        assert not edit_section_dialog.validate()
+        with pytest.raises(NoUniqueNameException):
+            edit_section_dialog.get_section()
+
+    @pytest.mark.asyncio
+    async def test_apply_with_name_submits_dialog(
+        self,
+        user: User,
+        edit_section_dialog: EditSectionDialog,
+    ) -> None:
+        """Test that a section with a valid name can be applied."""
+        results: list = []
+
+        @ui.page(ENDPOINT_NAME)
+        async def page() -> None:
+            results.append(await edit_section_dialog.result)
+
+        await user.open(ENDPOINT_NAME)
+
+        user.find(MARKER_NAME).type(TEST_SECTION_NAME)
+        user.find(marker=MARKER_APPLY).click()
+
+        await asyncio.sleep(0)
+        assert results == [DialogResult.APPLY]
