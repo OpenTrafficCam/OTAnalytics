@@ -61,17 +61,16 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     FilterByVideo,
     FlowLayerPlotter,
     MatplotlibPlotterImplementation,
-    MatplotlibTrackPlotter,
+    MatplotlibTrackPlotterFactory,
     NonLegendTrackGeometryPlotter,
     PlotterPrototype,
     PolarsDataFrameProvider,
     PolarsTrackProvider,
     PolarsTracksOffsetProvider,
     SectionLayerPlotter,
-    TrackBoundingBoxPlotter,
     TrackGeometryPlotter,
     TrackImageFactory,
-    TrackPointPlotter,
+    TrackPlotterFactory,
     TrackStartEndPointPlotter,
 )
 
@@ -91,6 +90,7 @@ MARKERSIZE_EVENT_FRAME = 12
 MARKERSIZE_EVENT_FILTER = 6
 MARKER_EVENT_FILTER = "x"
 MARKER_EVENT_FRAME = "o"
+MARKER_TRACK_POINT = "o"
 
 
 ALPHA_ALL_TRACKS_PLOTTER = 0.5
@@ -204,6 +204,7 @@ class VisualizationBuilder:
         orthophoto_image: OrthophotoImageProvider,
         enable_single_legend: bool = True,
         enable_multi_legend: bool = False,
+        track_plotter_factory: Optional[TrackPlotterFactory] = None,
     ) -> None:
         self._datastore = datastore
         self._track_view_state = track_view_state
@@ -213,6 +214,10 @@ class VisualizationBuilder:
         self._track_image_factory = track_image_factory
         self._track_id_set_factory = track_id_set_factory
         self._orthophoto_image = orthophoto_image
+        self._track_plotter_factory: TrackPlotterFactory = (
+            track_plotter_factory
+            or MatplotlibTrackPlotterFactory(track_image_factory, track_view_state)
+        )
         self._enable_single_legend = enable_single_legend
         self._enable_multi_legend = enable_multi_legend
         self._track_repository = datastore._track_repository
@@ -746,11 +751,8 @@ class VisualizationBuilder:
         alpha: float,
         enable_legend: bool,
     ) -> Plotter:
-        track_plotter = MatplotlibTrackPlotter(
-            create_track_geometry_plotter(
-                polars_data_provider, color_palette_provider, alpha, enable_legend
-            ),
-            track_image_factory=self._track_image_factory,
+        track_plotter = self._track_plotter_factory.create_track_geometry_plotter(
+            polars_data_provider, color_palette_provider, alpha, enable_legend
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
 
@@ -776,14 +778,13 @@ class VisualizationBuilder:
         alpha: float,
         enable_legend: bool,
     ) -> Plotter:
-        track_plotter = MatplotlibTrackPlotter(
-            TrackStartEndPointPlotter(
+        track_plotter = (
+            self._track_plotter_factory.create_track_start_end_point_plotter(
                 data_provider,
                 color_palette_provider,
-                enable_legend=enable_legend,
                 alpha=alpha,
-            ),
-            track_image_factory=self._track_image_factory,
+                enable_legend=enable_legend,
+            )
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
 
@@ -982,70 +983,58 @@ class VisualizationBuilder:
     def _create_track_bounding_box_plotter(
         self,
     ) -> Plotter:
-        track_plotter = MatplotlibTrackPlotter(
-            TrackBoundingBoxPlotter(
-                FilterByFrame(
-                    FilterByVideo(
-                        self._get_data_provider_class_filter(),
-                        self._get_current_video,
-                    ),
-                    ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
+        track_plotter = self._track_plotter_factory.create_track_bounding_box_plotter(
+            FilterByFrame(
+                FilterByVideo(
+                    self._get_data_provider_class_filter(),
+                    self._get_current_video,
                 ),
-                self._color_palette_provider,
-                self._track_view_state,
-                alpha=ALPHA_BOUNDING_BOX,
-                linewidth=LINEWIDTH_BOUNDING_BOX,
+                ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
             ),
-            track_image_factory=self._track_image_factory,
+            self._color_palette_provider,
+            alpha=ALPHA_BOUNDING_BOX,
+            linewidth=LINEWIDTH_BOUNDING_BOX,
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
 
     def _create_track_point_plotter(self) -> Plotter:
-        track_plotter = MatplotlibTrackPlotter(
-            TrackPointPlotter(
-                FilterByFrame(
-                    FilterByVideo(
-                        self._get_data_provider_class_filter_with_offset(),
-                        self._get_current_video,
-                    ),
-                    ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
+        track_plotter = self._track_plotter_factory.create_track_point_plotter(
+            FilterByFrame(
+                FilterByVideo(
+                    self._get_data_provider_class_filter_with_offset(),
+                    self._get_current_video,
                 ),
-                self._color_palette_provider,
-                alpha=ALPHA_BOUNDING_BOX,
-                markersize=MARKERSIZE_TRACK_POINT,
+                ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
             ),
-            track_image_factory=self._track_image_factory,
+            self._color_palette_provider,
+            alpha=ALPHA_BOUNDING_BOX,
+            markersize=MARKERSIZE_TRACK_POINT,
+            marker=MARKER_TRACK_POINT,
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
 
     def _create_event_point_plotter_frame(self) -> Plotter:
-        track_plotter = MatplotlibTrackPlotter(
-            TrackPointPlotter(
-                FilterByFrame(
-                    FilterByVideo(
-                        self._get_event_data_provider_class_filter(),
-                        self._get_current_video,
-                    ),
-                    ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
+        track_plotter = self._track_plotter_factory.create_track_point_plotter(
+            FilterByFrame(
+                FilterByVideo(
+                    self._get_event_data_provider_class_filter(),
+                    self._get_current_video,
                 ),
-                self._color_palette_provider,
-                alpha=ALPHA_BOUNDING_BOX,
-                marker=MARKER_EVENT_FRAME,
-                markersize=MARKERSIZE_EVENT_FRAME,
+                ConstantOffsetFrameNumber(self._get_current_frame, FRAME_OFFSET),
             ),
-            track_image_factory=self._track_image_factory,
+            self._color_palette_provider,
+            alpha=ALPHA_BOUNDING_BOX,
+            markersize=MARKERSIZE_EVENT_FRAME,
+            marker=MARKER_EVENT_FRAME,
         )
         return PlotterPrototype(self._track_view_state, track_plotter)
 
     def _create_event_point_plotter_filter(self) -> Plotter:
-        track_plotter = MatplotlibTrackPlotter(
-            TrackPointPlotter(
-                self._get_event_data_provider_all_filters(),
-                self._color_palette_provider,
-                alpha=ALPHA_BOUNDING_BOX,
-                marker=MARKER_EVENT_FILTER,
-                markersize=MARKERSIZE_EVENT_FILTER,
-            ),
-            track_image_factory=self._track_image_factory,
+        track_plotter = self._track_plotter_factory.create_track_point_plotter(
+            self._get_event_data_provider_all_filters(),
+            self._color_palette_provider,
+            alpha=ALPHA_BOUNDING_BOX,
+            markersize=MARKERSIZE_EVENT_FILTER,
+            marker=MARKER_EVENT_FILTER,
         )
         return PlotterPrototype(self._track_view_state, track_plotter)

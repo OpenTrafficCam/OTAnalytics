@@ -47,12 +47,15 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     FilterByVideo,
     MatplotlibPlotterImplementation,
     MatplotlibTrackPlotter,
+    MatplotlibTrackPlotterFactory,
     PilImageFactory,
     PlotterPrototype,
     PolarsDataFrameProvider,
     PolarsTrackProvider,
     PolarsTracksOffsetProvider,
+    TrackBoundingBoxPlotter,
     TrackGeometryPlotter,
+    TrackImageFactory,
     TrackPlotter,
     TrackPointPlotter,
     TrackStartEndPointPlotter,
@@ -689,3 +692,32 @@ class TestFilterByVideoAndFrame:
         result = FilterByFrame(data_provider, current_frame).get_data()
 
         assert result.get_column(track.TRACK_ID).to_list() == ["1", "2"]
+
+
+class TestMatplotlibTrackPlotterFactory:
+    """The matplotlib factory must build the plotters the builder built before."""
+
+    def test_create_plotters(self) -> None:
+        image_factory = Mock(spec=TrackImageFactory)
+        factory = MatplotlibTrackPlotterFactory(image_factory, TrackViewState())
+        data_provider = Mock(spec=PolarsDataFrameProvider)
+        palette = Mock(spec=ColorPaletteProvider)
+
+        geometry = factory.create_track_geometry_plotter(
+            data_provider, palette, alpha=0.5, enable_legend=True
+        )
+        boxes = factory.create_track_bounding_box_plotter(
+            data_provider, palette, alpha=0.7, linewidth=1.5
+        )
+        points = factory.create_track_point_plotter(
+            data_provider, palette, alpha=0.7, markersize=6, marker="x"
+        )
+
+        for plotter, implementation in [
+            (geometry, TrackGeometryPlotter),
+            (boxes, TrackBoundingBoxPlotter),
+            (points, TrackPointPlotter),
+        ]:
+            assert isinstance(plotter, MatplotlibTrackPlotter)
+            assert isinstance(plotter._plotter, implementation)
+            assert plotter._track_image_factory is image_factory
