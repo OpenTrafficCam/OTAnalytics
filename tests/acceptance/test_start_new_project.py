@@ -1,0 +1,132 @@
+import shutil
+from pathlib import Path
+
+import pytest
+from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
+
+from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
+    MARKER_DIRECTORY,
+    MARKER_FILENAME,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
+    MARKER_APPLY,
+    MARKER_CANCEL,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
+    MARKER_INTERACTIVE_IMAGE,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
+    MARKER_PROJECT_NEW,
+    MARKER_PROJECT_OPEN,
+)
+from tests.acceptance.conftest import (
+    ACCEPTANCE_TEST_FINAL_TIMEOUT_MS,
+    ACCEPTANCE_TEST_PYTEST_TIMEOUT,
+    NiceGUITestServer,
+)
+from tests.utils.playwright_helpers import (
+    answer_confirmation,
+    import_project_and_assert_values,
+    load_main_page,
+    read_project_info_values,
+    search_for_marker_element,
+)
+
+playwright = pytest.importorskip(
+    "playwright.sync_api", reason="pytest-playwright is required for this test"
+)
+
+PROJECT = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00"
+LOADED_PROJECT = ("My Test Project", "2020-01-01", "11:11:17")
+NEW_PROJECT = ("", "", "")
+A_SECTION = "Süd"
+CANVAS_OVERLAY = "circle, line, polyline"
+
+
+@pytest.fixture
+def otconfig(test_data_dir: Path, test_data_tmp_dir: Path) -> Path:
+    for suffix in [".otconfig", ".ottrk", ".mp4"]:
+        shutil.copy(test_data_dir / f"{PROJECT}{suffix}", test_data_tmp_dir)
+    return test_data_tmp_dir / f"{PROJECT}.otconfig"
+
+
+class TestStartNewProject:
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_new_project_clears_the_loaded_project(
+        self,
+        page: Page,
+        external_app: NiceGUITestServer,
+        resource_manager: ResourceManager,
+        otconfig: Path,
+    ) -> None:
+        load_main_page(page, external_app)
+        import_project_and_assert_values(
+            page, resource_manager, otconfig, LOADED_PROJECT
+        )
+        expect(page.get_by_text(A_SECTION).first).to_be_visible()
+        overlay = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).locator(
+            CANVAS_OVERLAY
+        )
+        expect(overlay.first).to_be_attached()
+
+        search_for_marker_element(page, MARKER_PROJECT_NEW).first.click()
+        answer_confirmation(page, MARKER_APPLY)
+
+        expect(page.get_by_text(A_SECTION)).to_have_count(
+            0, timeout=ACCEPTANCE_TEST_FINAL_TIMEOUT_MS
+        )
+        expect(overlay).to_have_count(0, timeout=ACCEPTANCE_TEST_FINAL_TIMEOUT_MS)
+        assert read_project_info_values(page) == NEW_PROJECT
+
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_cancelling_keeps_the_loaded_project(
+        self,
+        page: Page,
+        external_app: NiceGUITestServer,
+        resource_manager: ResourceManager,
+        otconfig: Path,
+    ) -> None:
+        load_main_page(page, external_app)
+        import_project_and_assert_values(
+            page, resource_manager, otconfig, LOADED_PROJECT
+        )
+
+        search_for_marker_element(page, MARKER_PROJECT_NEW).first.click()
+        answer_confirmation(page, MARKER_CANCEL)
+
+        expect(page.get_by_text(A_SECTION).first).to_be_visible()
+        assert read_project_info_values(page) == LOADED_PROJECT
+
+
+class TestOpenProject:
+    @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
+    @pytest.mark.playwright
+    @pytest.mark.usefixtures("external_app")
+    def test_cancelling_keeps_the_loaded_project(
+        self,
+        page: Page,
+        external_app: NiceGUITestServer,
+        resource_manager: ResourceManager,
+        otconfig: Path,
+    ) -> None:
+        load_main_page(page, external_app)
+        import_project_and_assert_values(
+            page, resource_manager, otconfig, LOADED_PROJECT
+        )
+
+        search_for_marker_element(page, MARKER_PROJECT_OPEN).first.click()
+        search_for_marker_element(page, MARKER_APPLY).first.wait_for(state="visible")
+        search_for_marker_element(page, MARKER_DIRECTORY).first.fill(
+            str(otconfig.parent)
+        )
+        search_for_marker_element(page, MARKER_FILENAME).first.fill(otconfig.name)
+        search_for_marker_element(page, MARKER_APPLY).first.click()
+        answer_confirmation(page, MARKER_CANCEL)
+
+        expect(page.get_by_text(A_SECTION).first).to_be_visible()
+        assert read_project_info_values(page) == LOADED_PROJECT

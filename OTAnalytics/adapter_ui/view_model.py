@@ -366,7 +366,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def on_start_new_project(self, _: None) -> None:
+    def on_application_reset(self, _: None) -> None:
         raise NotImplementedError
 
     @abstractmethod

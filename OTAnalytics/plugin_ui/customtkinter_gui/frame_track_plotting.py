@@ -66,10 +66,6 @@ class FrameTrackPlotting(AbstractFrameTrackPlotting, EmbeddedCTkFrame):
     def introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_frame_track_plotting(self)
 
-    def reset_layers(self) -> None:
-        for view in self._views:
-            view.reset_layers()
-
 
 class TabviewLayerGroup(CustomCTkTabview):
     def __init__(
@@ -95,9 +91,6 @@ class TabviewLayerGroup(CustomCTkTabview):
         self._frame.pack(fill=tkinter.BOTH, expand=True)
         self.set(self._title)
 
-    def reset_layers(self) -> None:
-        self._frame.reset_layers()
-
 
 class FrameTrackPlottingLayerGroup(EmbeddedCTkFrame):
 
@@ -117,10 +110,6 @@ class FrameTrackPlottingLayerGroup(EmbeddedCTkFrame):
             checkbox_layer.grid(
                 row=row, column=0, padx=PADX, pady=(0, PADY), sticky=STICKY
             )
-
-    def reset_layers(self) -> None:
-        for layer in self._layers:
-            layer.reset()
 
 
 class CheckBoxLayer(EmbeddedCTkFrame):
