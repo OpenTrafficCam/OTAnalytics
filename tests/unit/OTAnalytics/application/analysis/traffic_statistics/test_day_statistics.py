@@ -1,4 +1,5 @@
 import logging
+from dataclasses import replace
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -12,6 +13,7 @@ from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
     ClassGroupResolver,
     DayTrafficStatistics,
     FlowInfo,
+    assignment_to_entry,
     day_start,
     minutes_in_day,
 )
@@ -21,6 +23,7 @@ from OTAnalytics.application.analysis.traffic_statistics.speed_histogram import 
 from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
 )
+from tests.utils.builders.road_user_assignment import create_assignment
 
 TZ = ZoneInfo("Europe/Berlin")
 DAY = date(2026, 10, 27)
@@ -238,3 +241,59 @@ class TestDayTrafficStatistics:
 
     def test_counting_event_defaults_to_start(self) -> None:
         assert create_statistics().counting_event == CountingEvent.START
+
+
+class TestAssignmentToEntry:
+    def test_start_event_entry_in_local_time(self) -> None:
+        assignment = create_assignment(distance=100, start_s=0, end_s=10)
+        resolver = ClassGroupResolver(TrafficStatisticsConfig())
+        entry = assignment_to_entry(assignment, CountingEvent.START, resolver, TZ)
+        assert entry is not None
+        road_user, flow_id, group, occurrence, speed = entry
+        assert (road_user, flow_id, group) == ("1", "flow", "car")
+        assert occurrence == datetime(2020, 1, 1, tzinfo=timezone.utc)
+        assert occurrence.utcoffset() == TZ.utcoffset(occurrence)
+        assert occurrence.hour == 1
+        assert speed == pytest.approx(36.0)
+
+    def test_end_counting_event_uses_end_occurrence(self) -> None:
+        assignment = create_assignment(distance=100, start_s=0, end_s=10)
+        resolver = ClassGroupResolver(TrafficStatisticsConfig())
+        entry = assignment_to_entry(assignment, CountingEvent.END, resolver, TZ)
+        assert entry is not None
+        assert entry[3] == datetime(2020, 1, 1, 0, 0, 10, tzinfo=timezone.utc)
+
+    def test_missing_distance_gives_no_speed(self) -> None:
+        assignment = create_assignment(distance=None, start_s=0, end_s=10)
+        resolver = ClassGroupResolver(TrafficStatisticsConfig())
+        entry = assignment_to_entry(assignment, CountingEvent.START, resolver, TZ)
+        assert entry is not None
+        assert entry[4] is None
+
+    def test_unknown_group_gives_none(self) -> None:
+        assignment = create_assignment(distance=100, start_s=0, end_s=10)
+        config = TrafficStatisticsConfig(class_groups={"SV": frozenset({"truck"})})
+        entry = assignment_to_entry(
+            assignment, CountingEvent.START, ClassGroupResolver(config), TZ
+        )
+        assert entry is None
+
+    def test_naive_occurrence_is_treated_as_utc(self) -> None:
+        assignment = create_assignment(distance=100, start_s=0, end_s=10)
+        naive_start = replace(
+            assignment.events.start,
+            interpolated_occurrence=datetime(2020, 1, 1, 12, 0),
+        )
+        naive_end = replace(
+            assignment.events.end,
+            interpolated_occurrence=datetime(2020, 1, 1, 12, 0, 10),
+        )
+        naive = replace(
+            assignment,
+            events=replace(assignment.events, start=naive_start, end=naive_end),
+        )
+        resolver = ClassGroupResolver(TrafficStatisticsConfig())
+        entry = assignment_to_entry(naive, CountingEvent.START, resolver, TZ)
+        assert entry is not None
+        assert entry[3].hour == 13
+        assert entry[3] == datetime(2020, 1, 1, 12, tzinfo=timezone.utc)
