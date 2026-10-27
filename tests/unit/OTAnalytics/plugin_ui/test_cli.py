@@ -21,6 +21,9 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
     CountingSpecificationDto,
 )
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
+)
 from OTAnalytics.application.config import (
     DEFAULT_COUNT_INTERVAL_TIME_UNIT,
     DEFAULT_COUNTS_FILE_TYPE,
@@ -103,6 +106,10 @@ from OTAnalytics.application.use_cases.track_statistics import CalculateTrackSta
 from OTAnalytics.application.use_cases.track_statistics_export import (
     ExportTrackStatistics,
     TrackStatisticsExportSpecification,
+)
+from OTAnalytics.application.use_cases.traffic_statistics_export import (
+    ExportTrafficStatistics,
+    TrafficStatisticsExportSpecification,
 )
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.orthophoto import OrthophotoRequired
@@ -358,6 +365,7 @@ class TestOTAnalyticsCli:
     VIDEOS_METADATA: str = "videos_metadata"
     PROGRESSBAR: str = "progressbar"
     EXPORT_ROAD_USER_ASSIGNMENT: str = "export_road_user_assignments"
+    EXPORT_TRAFFIC_STATISTICS: str = "export_traffic_statistics"
 
     def init_cli_with(
         self,
@@ -1161,6 +1169,125 @@ class TestOTAnalyticsCli:
         dependencies[self.EXPORT_TRACK_STATISTICS].export.assert_called_with(
             expected_specification
         )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("mode", [CliMode.STREAM, CliMode.BULK])
+    async def test_traffic_statistics_export_runs_after_events_and_calls_hook(
+        self,
+        mode: CliMode,
+        test_data_tmp_dir: Path,
+        mock_cli_stream_dependencies: dict[str, Mock],
+        mock_cli_bulk_dependencies: dict[str, Mock],
+    ) -> None:
+        start_date = datetime(2023, 5, 24, 8, 0)
+        end_date = datetime(2023, 5, 24, 8, 15)
+        config = TrafficStatisticsConfig()
+        dependencies = (
+            mock_cli_stream_dependencies
+            if mode == CliMode.STREAM
+            else mock_cli_bulk_dependencies
+        )
+        dependencies[self.VIDEOS_METADATA].first_video_start = start_date
+        dependencies[self.VIDEOS_METADATA].last_video_end = end_date
+        exporter = Mock(spec=ExportTrafficStatistics)
+        exporter.export.return_value = [Path("a.json")]
+        dependencies[self.EXPORT_TRAFFIC_STATISTICS] = exporter
+        calls = Mock()
+        run_config = Mock()
+        run_config.traffic_statistics = config
+        run_config.counting_event = CountingEvent.END
+        run_config.do_events = True
+        run_config.do_counting = False
+        run_config.do_export_tracks = False
+        run_config.do_export_track_statistics = False
+        run_config.save_dir = test_data_tmp_dir
+        run_config.save_stem = "stem"
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode, dependencies, dependencies, run_config
+        )
+        cli._export_events = AsyncMock(  # type: ignore[method-assign]
+            side_effect=lambda **kwargs: calls.events()
+        )
+        exporter.export.side_effect = lambda spec: (
+            calls.statistics(),
+            [Path("a.json")],
+        )[1]
+        cli._after_traffic_statistics_export = AsyncMock(  # type: ignore[method-assign] # noqa
+            side_effect=lambda files: calls.hook(files)
+        )
+
+        # the stream CLI overrides this hook; chunks call the base implementation
+        await OTAnalyticsCli._export_analysis(cli, [], OVERWRITE)
+
+        assert [c[0] for c in calls.mock_calls] == ["events", "statistics", "hook"]
+        exporter.export.assert_called_once_with(
+            TrafficStatisticsExportSpecification(
+                export_directory=test_data_tmp_dir,
+                export_filename_stem="stem",
+                config=config,
+                counting_event=CountingEvent.END,
+                covered_start=start_date,
+                covered_end=end_date,
+                export_mode=OVERWRITE,
+            )
+        )
+        cli._after_traffic_statistics_export.assert_awaited_once_with(  # type: ignore
+            [Path("a.json")]
+        )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("mode", [CliMode.STREAM, CliMode.BULK])
+    async def test_traffic_statistics_not_configured_skips_export(
+        self,
+        mode: CliMode,
+        test_data_tmp_dir: Path,
+        mock_cli_stream_dependencies: dict[str, Mock],
+        mock_cli_bulk_dependencies: dict[str, Mock],
+    ) -> None:
+        dependencies = (
+            mock_cli_stream_dependencies
+            if mode == CliMode.STREAM
+            else mock_cli_bulk_dependencies
+        )
+        exporter = Mock(spec=ExportTrafficStatistics)
+        dependencies[self.EXPORT_TRAFFIC_STATISTICS] = exporter
+        run_config = Mock()
+        run_config.traffic_statistics = None
+        run_config.do_events = False
+        run_config.do_counting = False
+        run_config.do_export_tracks = False
+        run_config.do_export_track_statistics = False
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode, dependencies, dependencies, run_config
+        )
+
+        # the stream CLI overrides this hook; chunks call the base implementation
+        await OTAnalyticsCli._export_analysis(cli, [], OVERWRITE)
+
+        exporter.export.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_traffic_statistics_without_video_times_raises(
+        self,
+        test_data_tmp_dir: Path,
+        mock_cli_bulk_dependencies: dict[str, Mock],
+    ) -> None:
+        dependencies = mock_cli_bulk_dependencies
+        dependencies[self.VIDEOS_METADATA].first_video_start = None
+        dependencies[self.VIDEOS_METADATA].last_video_end = None
+        dependencies[self.EXPORT_TRAFFIC_STATISTICS] = Mock(
+            spec=ExportTrafficStatistics
+        )
+        run_config = Mock()
+        run_config.traffic_statistics = TrafficStatisticsConfig()
+        cli: OTAnalyticsCli = self.init_cli_with(
+            CliMode.BULK, dependencies, dependencies, run_config
+        )
+
+        with pytest.raises(ValueError):
+            await cli._do_export_traffic_statistics(
+                test_data_tmp_dir, "stem", OVERWRITE
+            )
 
     @pytest.mark.parametrize(
         "mode",

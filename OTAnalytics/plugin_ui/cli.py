@@ -49,6 +49,10 @@ from OTAnalytics.application.use_cases.track_statistics_export import (
     ExportTrackStatistics,
     TrackStatisticsExportSpecification,
 )
+from OTAnalytics.application.use_cases.traffic_statistics_export import (
+    ExportTrafficStatistics,
+    TrafficStatisticsExportSpecification,
+)
 from OTAnalytics.domain.event import EventRepository
 from OTAnalytics.domain.flow import Flow
 from OTAnalytics.domain.orthophoto import OrthophotoError
@@ -95,6 +99,7 @@ class OTAnalyticsCli(ABC):
         export_tracks: ExportTracks,
         export_road_user_assignments: ExportRoadUserAssignments,
         export_track_statistics: ExportTrackStatistics,
+        export_traffic_statistics: ExportTrafficStatistics | None = None,
     ) -> None:
         self._validate_cli_args(run_config)
         self._run_config = run_config
@@ -118,6 +123,7 @@ class OTAnalyticsCli(ABC):
         self._export_tracks = export_tracks
         self._export_road_user_assignments = export_road_user_assignments
         self._export_track_statistics = export_track_statistics
+        self._export_traffic_statistics = export_traffic_statistics
 
     async def start(self) -> None:
         """Start analysis."""
@@ -183,6 +189,16 @@ class OTAnalyticsCli(ABC):
 
         if self._run_config.do_counting:
             await self._do_export_counts(
+                export_directory=export_directory,
+                export_filename_stem=export_filename_stem,
+                export_mode=export_mode,
+            )
+
+        if (
+            self._run_config.traffic_statistics is not None
+            and self._export_traffic_statistics is not None
+        ):
+            await self._do_export_traffic_statistics(
                 export_directory=export_directory,
                 export_filename_stem=export_filename_stem,
                 export_mode=export_mode,
@@ -362,6 +378,41 @@ class OTAnalyticsCli(ABC):
         """Hook to execute after counts export."""
         pass
 
+    async def _do_export_traffic_statistics(
+        self, export_directory: Path, export_filename_stem: str, export_mode: ExportMode
+    ) -> None:
+        config = self._run_config.traffic_statistics
+        if config is None or self._export_traffic_statistics is None:
+            return
+        logger().info("Create traffic statistics ...")
+        start = self._videos_metadata.first_video_start
+        end = self._videos_metadata.last_video_end
+        if start is None:
+            raise ValueError(
+                "start is None but has to be defined for exporting traffic statistics"
+            )
+        if end is None:
+            raise ValueError(
+                "end is None but has to be defined for exporting traffic statistics"
+            )
+        specification = TrafficStatisticsExportSpecification(
+            export_directory=export_directory,
+            export_filename_stem=export_filename_stem,
+            config=config,
+            counting_event=self._run_config.counting_event,
+            covered_start=start,
+            covered_end=end,
+            export_mode=export_mode,
+        )
+        files = await asyncio.to_thread(
+            self._export_traffic_statistics.export, specification
+        )
+        await self._after_traffic_statistics_export(files)
+
+    async def _after_traffic_statistics_export(self, files: list[Path]) -> None:
+        """Hook to execute after traffic statistics export."""
+        pass
+
     async def _do_export_tracks(
         self,
         export_directory: Path,
@@ -441,6 +492,7 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
         export_track_statistics: ExportTrackStatistics,
         track_parser: TrackParser,
         progressbar: ProgressbarBuilder,
+        export_traffic_statistics: ExportTrafficStatistics | None = None,
     ) -> None:
         super().__init__(
             run_config,
@@ -461,6 +513,7 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
             export_tracks,
             export_road_user_assignments,
             export_track_statistics,
+            export_traffic_statistics,
         )
         self._track_parser = track_parser
         self._progressbar = progressbar
@@ -519,6 +572,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
         export_tracks: ExportTracks,
         export_road_user_assignments: ExportRoadUserAssignments,
         track_parser: StreamTrackParser,
+        export_traffic_statistics: ExportTrafficStatistics | None = None,
     ) -> None:
         super().__init__(
             run_config,
@@ -539,6 +593,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
             export_tracks,
             export_road_user_assignments,
             export_track_statistics,
+            export_traffic_statistics,
         )
         self._track_parser = track_parser
 
