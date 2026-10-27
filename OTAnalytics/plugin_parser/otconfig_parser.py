@@ -160,6 +160,32 @@ def serialize_traffic_statistics_and_geo_tracks(
     return result
 
 
+def _parse_int(data: dict, key: str, default: int) -> int:
+    """Read an integer value, accepting integral floats like 15.0.
+
+    Raises:
+        ValueError: naming the key if the value is not an integral number.
+    """
+    value = data.get(key, default)
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{key} must be an integer, got {value!r}.")
+    return value
+
+
+def _parse_float(data: dict, key: str, default: float) -> float:
+    """Read a numeric value as float.
+
+    Raises:
+        ValueError: naming the key if the value is not a number.
+    """
+    value = data.get(key, default)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{key} must be a number, got {value!r}.")
+    return float(value)
+
+
 class OtConfigParser(ConfigParser):
 
     def __init__(
@@ -374,20 +400,25 @@ class OtConfigParser(ConfigParser):
         return TrafficStatisticsConfig(
             enabled=bool(data.get(ENABLED, defaults.enabled)),
             timezone=data.get(TIMEZONE, defaults.timezone),
-            interval_minutes=data.get(INTERVAL_MINUTES, defaults.interval_minutes),
-            speed_profile_interval_minutes=data.get(
+            interval_minutes=_parse_int(
+                data, INTERVAL_MINUTES, defaults.interval_minutes
+            ),
+            speed_profile_interval_minutes=_parse_int(
+                data,
                 SPEED_PROFILE_INTERVAL_MINUTES,
                 defaults.speed_profile_interval_minutes,
             ),
-            max_speed_kmh=float(data.get(MAX_SPEED_KMH, defaults.max_speed_kmh)),
+            max_speed_kmh=_parse_float(data, MAX_SPEED_KMH, defaults.max_speed_kmh),
             class_groups={
                 name: frozenset(classes)
                 for name, classes in (data.get(CLASS_GROUPS) or {}).items()
             },
-            peak_window_minutes=data.get(
-                PEAK_WINDOW_MINUTES, defaults.peak_window_minutes
+            peak_window_minutes=_parse_int(
+                data, PEAK_WINDOW_MINUTES, defaults.peak_window_minutes
             ),
-            peak_step_minutes=data.get(PEAK_STEP_MINUTES, defaults.peak_step_minutes),
+            peak_step_minutes=_parse_int(
+                data, PEAK_STEP_MINUTES, defaults.peak_step_minutes
+            ),
         )
 
     def _parse_track_files(

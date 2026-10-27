@@ -725,6 +725,44 @@ class TestOtConfigParserTrafficStatisticsAndGeoTracks:
         with pytest.raises(ValueError, match="interval_minutes"):
             given.config_parser.parse_from_dict(data, given.output.parent)
 
+    def test_integral_float_minutes_are_coerced_to_int(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {
+            "interval_minutes": 5.0,
+            "peak_step_minutes": 15.0,
+        }
+
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        traffic_statistics = actual.analysis.export_config.traffic_statistics
+        assert traffic_statistics is not None
+        assert traffic_statistics.interval_minutes == 5
+        assert isinstance(traffic_statistics.interval_minutes, int)
+
+    @pytest.mark.parametrize(
+        "key, value",
+        [
+            ("interval_minutes", "abc"),
+            ("interval_minutes", 5.5),
+            ("interval_minutes", True),
+            ("peak_window_minutes", None),
+            ("max_speed_kmh", "fast"),
+            ("max_speed_kmh", True),
+        ],
+    )
+    def test_invalid_value_raises_with_field_name(
+        self, test_data_tmp_dir: Path, key: str, value: object
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {key: value}
+
+        with pytest.raises(ValueError, match=key):
+            given.config_parser.parse_from_dict(data, given.output.parent)
+
 
 class TestFixMissingAnalysisNewExports:
     def test_fix_keeps_traffic_statistics_and_geo_tracks_of_the_run(self) -> None:
