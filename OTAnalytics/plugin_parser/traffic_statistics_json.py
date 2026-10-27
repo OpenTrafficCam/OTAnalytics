@@ -161,6 +161,12 @@ def from_dict(
 ) -> DayTrafficStatistics:
     """Restore a statistics from the file format (v1).
 
+    timezone, interval_minutes, speed_profile_interval_minutes and class_groups
+    of the file must match the config, because the stored counts and speed
+    histograms depend on them. peak_window_minutes and peak_step_minutes only
+    affect derived values: the restored statistics uses the values of the given
+    config, so changing them on resume is allowed.
+
     Raises:
         TrafficStatisticsFormatError: if the data is not a valid v1 file or
             does not match the given config.
@@ -197,6 +203,7 @@ def _from_dict(
                 f"{key} of the file ({data[key]!r}) differs from the config "
                 f"({getattr(config, key)!r})."
             )
+    _check_class_groups(data["class_groups"], config)
     day = date.fromisoformat(data["day"])
     flows = [_flow_from_dict(entry) for entry in data["flows"]]
     flow_ids = {flow.id for flow in flows}
@@ -225,6 +232,22 @@ def _from_dict(
         as_of=as_of,
         counting_event=CountingEvent.parse(data["counting_event"]),
     )
+
+
+def _check_class_groups(file_groups: Any, config: TrafficStatisticsConfig) -> None:
+    file_mapping = {
+        group: frozenset(classifications)
+        for group, classifications in file_groups.items()
+    }
+    config_mapping = {
+        group: frozenset(classifications)
+        for group, classifications in config.class_groups.items()
+    }
+    if file_mapping != config_mapping:
+        raise TrafficStatisticsFormatError(
+            f"class_groups of the file ({file_groups!r}) differ from the config "
+            f"({config_mapping!r})."
+        )
 
 
 def _ceil_div(numerator: int, denominator: int) -> int:
