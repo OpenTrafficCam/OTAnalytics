@@ -1349,7 +1349,7 @@ class TestOTAnalyticsCli:
             if mode == CliMode.STREAM
             else mock_cli_bulk_dependencies
         )
-        geo_file = test_data_tmp_dir / "stem.geotracks.csv"
+        geo_file = test_data_tmp_dir / "stem_2023-05-24_08-00-00.geo_tracks.json.bz2"
         exporter = Mock(spec=ExportGeoTracks)
         dependencies[self.EXPORT_GEO_TRACKS] = exporter
         calls = Mock()
