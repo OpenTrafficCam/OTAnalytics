@@ -27,7 +27,6 @@ from OTAnalytics.application.use_cases.road_user_assignment_export import (
     RoadUserAssignmentBuildError,
     RoadUserAssignmentExporter,
     RoadUserAssignmentExporterFactory,
-    compute_road_user_assignment_flow_metrics,
 )
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.section import Section
@@ -199,37 +198,6 @@ class TestRoadUserAssignmentBuilder:
         assert result[ras.FLOW_DISTANCE_M] == 0.0
         assert result[ras.TRAVEL_TIME_S] == 4.0
         assert result[ras.AVG_SPEED_MPS] == 0.0
-
-
-class TestComputeRoadUserAssignmentFlowMetrics:
-    def test_no_distance_leaves_speed_none(self) -> None:
-        t0 = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        time_in_seconds = 2
-        t1 = t0 + timedelta(seconds=time_in_seconds)
-        d, dt, v = compute_road_user_assignment_flow_metrics(None, t0, t1)
-        assert d is None
-        assert dt == time_in_seconds
-        assert v is None
-
-    def test_distance_and_positive_time_gives_speed(self) -> None:
-        t0 = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        time_in_seconds = 4
-        t1 = t0 + timedelta(seconds=time_in_seconds)
-        distance_in_meter = 8.0
-        d, dt, v = compute_road_user_assignment_flow_metrics(distance_in_meter, t0, t1)
-        assert d == distance_in_meter
-        assert dt == time_in_seconds
-        assert v == 2.0
-
-    def test_zero_distance_with_positive_time_gives_zero_speed(self) -> None:
-        t0 = datetime(2020, 1, 1, tzinfo=timezone.utc)
-        time_in_seconds = 2
-        t1 = t0 + timedelta(seconds=time_in_seconds)
-        distance_in_meter = 0.0
-        d, dt, v = compute_road_user_assignment_flow_metrics(distance_in_meter, t0, t1)
-        assert d == distance_in_meter
-        assert dt == time_in_seconds
-        assert v == 0.0
 
 
 class TestExportRoadUserAssignments:

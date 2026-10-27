@@ -1,9 +1,39 @@
-from OTAnalytics.application.analysis.road_user_assignment import RoadUserAssignment
-from OTAnalytics.application.export_formats import road_user_assignments as ras
-from OTAnalytics.application.use_cases.road_user_assignment_export import (
-    compute_road_user_assignment_flow_metrics,
+from datetime import datetime, timedelta, timezone
+
+from OTAnalytics.application.analysis.road_user_assignment import (
+    EventPair,
+    RoadUserAssignment,
 )
-from OTAnalytics.domain.section import Section
+from OTAnalytics.application.export_formats import road_user_assignments as ras
+from OTAnalytics.domain.flow import Flow, FlowId
+from OTAnalytics.domain.section import Section, SectionId
+from tests.utils.builders.event_builder import EventBuilder
+
+_BASE_TIME = datetime(2020, 1, 1, tzinfo=timezone.utc)
+
+
+def create_assignment(
+    distance: float | None,
+    start_s: float,
+    end_s: float,
+    road_user: str = "1",
+    road_user_type: str = "car",
+) -> RoadUserAssignment:
+    """Create an assignment whose events are interpolated at start_s and end_s."""
+    start_event = EventBuilder(
+        road_user_id=road_user,
+        section_id="start",
+        interpolated_occurrence=_BASE_TIME + timedelta(seconds=start_s),
+    ).build_section_event()
+    end_event = EventBuilder(
+        road_user_id=road_user,
+        section_id="end",
+        interpolated_occurrence=_BASE_TIME + timedelta(seconds=end_s),
+    ).build_section_event()
+    flow = Flow(FlowId("flow"), "flow", SectionId("start"), SectionId("end"), distance)
+    return RoadUserAssignment(
+        road_user, road_user_type, flow, EventPair(start_event, end_event)
+    )
 
 
 def create_road_user_assignment(
@@ -14,13 +44,7 @@ def create_road_user_assignment(
 ) -> dict:
     start_event = assignment.events.start
     end_event = assignment.events.end
-    flow_distance_m, travel_time_s, avg_speed_mps = (
-        compute_road_user_assignment_flow_metrics(
-            assignment.assignment.distance,
-            start_event.interpolated_occurrence,
-            end_event.interpolated_occurrence,
-        )
-    )
+    metrics = assignment.flow_metrics()
 
     return {
         ras.FLOW_ID: assignment.assignment.id.id,
@@ -61,9 +85,9 @@ def create_road_user_assignment(
         ras.START_INTERPOLATED_EVENT_COORD_Y: start_event.interpolated_event_coordinate.y,  # noqa
         ras.END_INTERPOLATED_EVENT_COORD_X: end_event.interpolated_event_coordinate.x,
         ras.END_INTERPOLATED_EVENT_COORD_Y: end_event.interpolated_event_coordinate.y,
-        ras.FLOW_DISTANCE_M: flow_distance_m,
-        ras.TRAVEL_TIME_S: travel_time_s,
-        ras.AVG_SPEED_MPS: avg_speed_mps,
+        ras.FLOW_DISTANCE_M: metrics.distance_m,
+        ras.TRAVEL_TIME_S: metrics.travel_time_s,
+        ras.AVG_SPEED_MPS: metrics.avg_speed_mps,
         ras.START_GEO_X: start_event.geo_x,
         ras.START_GEO_Y: start_event.geo_y,
         ras.END_GEO_X: end_event.geo_x,
