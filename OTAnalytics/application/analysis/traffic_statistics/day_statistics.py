@@ -173,6 +173,18 @@ class DayTrafficStatistics:
             slots[minutes // self._config.speed_profile_interval_minutes].add(speed_kmh)
         return True
 
+    def update_flows(self, flows: Sequence[FlowInfo]) -> None:
+        """Reconcile the flows with the current ones, keeping all per-flow state.
+
+        The result is the given flows (in the given order, with their current
+        name and index) followed by previously known flows that are not part of
+        them. Those keep their data so that totals stay intact.
+        """
+        current_ids = {flow.id for flow in flows}
+        retired = [flow for flow in self.flows if flow.id not in current_ids]
+        self.flows = [*flows, *retired]
+        self._flow_ids = {flow.id for flow in self.flows}
+
     def mark_covered(self, start: datetime, end: datetime) -> None:
         """Mark the half-open range [start, end) as covered, clipped to the day."""
         clipped_start = max(_as_utc(start), self._start)
