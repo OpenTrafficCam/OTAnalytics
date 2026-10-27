@@ -44,8 +44,8 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
     days that were already evicted are dropped with a warning.
 
     Flows are rebuilt from the repositories on every call. A resumed day file
-    is read with its stored flows; a stored flow id unknown to the file itself
-    is rejected by the codec with a TrafficStatisticsFormatError.
+    is read with its stored flows and then reconciled: current flows first
+    (name and index refreshed), followed by stored flows that no longer exist.
     """
 
     def __init__(
@@ -69,7 +69,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         if self._resolver is None:
             self._resolver = ClassGroupResolver(config)
         flows = self._build_flows()
-        touched: dict[date, int] = {}
+        touched: set[date] = set()
         counted: dict[date, datetime] = {}
         dropped = 0
 
@@ -85,7 +85,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
                 dropped += 1
                 continue
             stats = self._get_day(day, specification, flows)
-            touched[day] = 0
+            touched.add(day)
             if stats.add(road_user, flow_id, group, occurrence, speed):
                 if day not in counted or occurrence > counted[day]:
                     counted[day] = occurrence
@@ -103,13 +103,13 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             if day in self._evicted:
                 continue
             self._get_day(day, specification, flows)
-            touched[day] = 0
+            touched.add(day)
 
         paths = []
         for day in sorted(touched):
             stats = self._days[day]
             stats.mark_covered(covered_start, covered_end)
-            self._update_as_of(stats, counted.get(day), covered_end, tz)
+            self._update_as_of(stats, counted.get(day), covered_start, covered_end, tz)
             path = self._path(specification, day)
             write(stats, path)
             paths.append(path)
@@ -130,21 +130,27 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         self,
         stats: DayTrafficStatistics,
         counted: datetime | None,
+        covered_start: datetime,
         covered_end: datetime,
         tz: ZoneInfo,
     ) -> None:
         """Set as_of to the latest processed timestamp of the day.
 
         It is the maximum of the previous as_of, the latest occurrence counted
-        in this call and the end of the coverage clipped to the day.
+        in this call and the end of the coverage clipped to the day (only if
+        the coverage overlaps the day).
         """
+        day_begin = _as_utc(day_start(stats.day, tz))
         day_end = _as_utc(day_start(stats.day + timedelta(days=1), tz))
-        candidates = [min(covered_end, day_end)]
+        candidates = []
+        if covered_start < day_end and covered_end > day_begin:
+            candidates.append(min(covered_end, day_end))
         if stats.as_of is not None:
             candidates.append(_as_utc(stats.as_of))
         if counted is not None:
             candidates.append(_as_utc(counted))
-        stats.as_of = max(candidates).astimezone(tz)
+        if candidates:
+            stats.as_of = max(candidates).astimezone(tz)
 
     def _get_day(
         self,
@@ -154,6 +160,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
     ) -> DayTrafficStatistics:
         stats = self._days.get(day)
         if stats is not None:
+            stats.update_flows(flows)
             return stats
         path = self._path(specification, day)
         if path.exists():
@@ -167,6 +174,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             stats = DayTrafficStatistics(
                 day, specification.config, flows, specification.counting_event
             )
+        stats.update_flows(flows)
         self._days[day] = stats
         return stats
 
