@@ -488,6 +488,8 @@ class TestFixMissingAnalysis:
         type(value_provider).num_processes = PropertyMock(return_value=num_processes)
         type(value_provider).log_file = PropertyMock(return_value=logfile)
         type(value_provider).debug = PropertyMock(return_value=debug)
+        type(value_provider).traffic_statistics = PropertyMock(return_value=None)
+        type(value_provider).do_export_geo_tracks = PropertyMock(return_value=False)
         fixer = FixMissingAnalysis(run_config=value_provider)
 
         original_content: dict = {}
@@ -722,3 +724,31 @@ class TestOtConfigParserTrafficStatisticsAndGeoTracks:
 
         with pytest.raises(ValueError, match="interval_minutes"):
             given.config_parser.parse_from_dict(data, given.output.parent)
+
+
+class TestFixMissingAnalysisNewExports:
+    def test_fix_keeps_traffic_statistics_and_geo_tracks_of_the_run(self) -> None:
+        value_provider = Mock(spec=OtConfigDefaultValueProvider)
+        type(value_provider).do_events = PropertyMock(return_value=True)
+        type(value_provider).do_counting = PropertyMock(return_value=True)
+        type(value_provider).track_files = PropertyMock(return_value=set())
+        type(value_provider).event_formats = PropertyMock(return_value=["csv"])
+        type(value_provider).save_stem = PropertyMock(return_value="n")
+        type(value_provider).save_suffix = PropertyMock(return_value="")
+        type(value_provider).count_intervals = PropertyMock(return_value=[1])
+        type(value_provider).counting_event = PropertyMock(
+            return_value=CountingEvent.START
+        )
+        type(value_provider).num_processes = PropertyMock(return_value=1)
+        type(value_provider).log_file = PropertyMock(return_value="a.log")
+        type(value_provider).debug = PropertyMock(return_value=False)
+        type(value_provider).traffic_statistics = PropertyMock(
+            return_value=TrafficStatisticsConfig(timezone="Europe/Berlin")
+        )
+        type(value_provider).do_export_geo_tracks = PropertyMock(return_value=True)
+
+        fixed = FixMissingAnalysis(run_config=value_provider).fix({})
+
+        export = fixed[ANALYSIS][EXPORT]
+        assert export[TRAFFIC_STATISTICS]["timezone"] == "Europe/Berlin"
+        assert export[GEO_TRACKS] is True

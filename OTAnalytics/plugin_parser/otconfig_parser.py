@@ -120,6 +120,10 @@ class FixMissingAnalysis(OtConfigFormatFixer):
                 SAVE_SUFFIX: self._run_config.save_suffix,
                 COUNT_INTERVALS: self._run_config.count_intervals,
                 COUNTING_EVENT: self._run_config.counting_event.value,
+                **serialize_traffic_statistics_and_geo_tracks(
+                    self._run_config.traffic_statistics,
+                    self._run_config.do_export_geo_tracks,
+                ),
             },
             NUM_PROCESSES: self._run_config.num_processes,
             LOGFILE: self._run_config.log_file,

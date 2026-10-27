@@ -1,9 +1,13 @@
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Sequence
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
+)
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
 )
 from OTAnalytics.application.config import (
     DEFAULT_COUNTING_EVENT,
@@ -217,6 +221,28 @@ class RunConfiguration(OtConfigDefaultValueProvider):
     @property
     def do_export_track_statistics(self) -> bool:
         return self._cli_args.track_statistics_export
+
+    @property
+    def traffic_statistics(self) -> TrafficStatisticsConfig | None:
+        """The traffic statistics settings, None if the export is off."""
+        configured = None
+        if self._otconfig:
+            configured = self._otconfig.analysis.export_config.traffic_statistics
+        if self._cli_args.traffic_statistics:
+            if configured is None:
+                return TrafficStatisticsConfig()
+            return replace(configured, enabled=True)
+        if configured is not None and configured.enabled:
+            return configured
+        return None
+
+    @property
+    def do_export_geo_tracks(self) -> bool:
+        if self._cli_args.geo_track_export:
+            return True
+        if self._otconfig:
+            return self._otconfig.analysis.export_config.geo_tracks
+        return False
 
     @property
     def project(self) -> Project | None:
