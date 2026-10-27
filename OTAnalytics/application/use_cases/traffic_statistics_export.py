@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Sequence
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
@@ -21,8 +22,9 @@ class TrafficStatisticsExportSpecification:
         export_filename_stem: stem of the day file names.
         config: traffic statistics configuration.
         counting_event: event determining the time of a road user.
-        covered_start: start of the time range covered by this call.
-        covered_end: end of the time range covered by this call.
+        covered_ranges: half-open [start, end) time ranges covered by the
+            input of this call (typically one per video). Time between the
+            ranges is not covered and stays null in the counts.
         export_mode: bulk or stream mode; does not change the file content.
     """
 
@@ -30,8 +32,7 @@ class TrafficStatisticsExportSpecification:
     export_filename_stem: str
     config: TrafficStatisticsConfig
     counting_event: CountingEvent
-    covered_start: datetime
-    covered_end: datetime
+    covered_ranges: Sequence[tuple[datetime, datetime]]
     export_mode: ExportMode
 
 

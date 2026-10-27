@@ -97,19 +97,23 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
                 dropped,
             )
 
-        covered_start = _as_utc(specification.covered_start)
-        covered_end = _as_utc(specification.covered_end)
-        for day in self._coverage_days(covered_start, covered_end, tz):
-            if day in self._evicted:
-                continue
-            self._get_day(day, specification, flows)
-            touched.add(day)
+        covered_ranges = [
+            (_as_utc(start), _as_utc(end))
+            for start, end in specification.covered_ranges
+        ]
+        for covered_start, covered_end in covered_ranges:
+            for day in self._coverage_days(covered_start, covered_end, tz):
+                if day in self._evicted:
+                    continue
+                self._get_day(day, specification, flows)
+                touched.add(day)
 
         paths = []
         for day in sorted(touched):
             stats = self._days[day]
-            stats.mark_covered(covered_start, covered_end)
-            self._update_as_of(stats, counted.get(day), covered_start, covered_end, tz)
+            for covered_start, covered_end in covered_ranges:
+                stats.mark_covered(covered_start, covered_end)
+            self._update_as_of(stats, counted.get(day), covered_ranges, tz)
             path = self._path(specification, day)
             write(stats, path)
             paths.append(path)
@@ -130,21 +134,21 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         self,
         stats: DayTrafficStatistics,
         counted: datetime | None,
-        covered_start: datetime,
-        covered_end: datetime,
+        covered_ranges: list[tuple[datetime, datetime]],
         tz: ZoneInfo,
     ) -> None:
         """Set as_of to the latest processed timestamp of the day.
 
         It is the maximum of the previous as_of, the latest occurrence counted
-        in this call and the end of the coverage clipped to the day (only if
-        the coverage overlaps the day).
+        in this call and the ends of the covered ranges clipped to the day
+        (only of ranges overlapping the day).
         """
         day_begin = _as_utc(day_start(stats.day, tz))
         day_end = _as_utc(day_start(stats.day + timedelta(days=1), tz))
         candidates = []
-        if covered_start < day_end and covered_end > day_begin:
-            candidates.append(min(covered_end, day_end))
+        for covered_start, covered_end in covered_ranges:
+            if covered_start < day_end and covered_end > day_begin:
+                candidates.append(min(covered_end, day_end))
         if stats.as_of is not None:
             candidates.append(_as_utc(stats.as_of))
         if counted is not None:
