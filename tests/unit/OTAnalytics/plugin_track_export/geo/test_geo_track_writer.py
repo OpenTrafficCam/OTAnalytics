@@ -200,6 +200,27 @@ def test_polars_and_domain_writer_produce_same_content(
     assert polars_content == domain_content
 
 
+def test_failed_write_keeps_old_file_and_leaves_no_temp_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = GeoTrackExportSpecification(tmp_path, "chunk")
+    tracks = [build_track("1", [(1.0, 2.0)])]
+    path = PolarsGeoTrackWriter().write(polars_dataset(tracks), spec)
+    assert path is not None
+    old_content = path.read_bytes()
+
+    def fail(*args: object, **kwargs: object) -> None:
+        raise OSError("boom")
+
+    monkeypatch.setattr("os.replace", fail)
+
+    with pytest.raises(OSError):
+        DomainGeoTrackWriter().write(python_dataset(tracks), spec)
+
+    assert path.read_bytes() == old_content
+    assert list(tmp_path.iterdir()) == [path]
+
+
 class TestGeoTrackExport:
     def test_uses_first_supporting_writer(
         self, spec: GeoTrackExportSpecification

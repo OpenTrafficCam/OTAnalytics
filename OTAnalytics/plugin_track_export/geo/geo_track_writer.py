@@ -1,6 +1,8 @@
 import bz2
 import json
 import math
+import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol, Sequence, cast
@@ -53,7 +55,11 @@ def _is_valid_geo(value: float | None) -> bool:
 def _write_detections(
     detections: list[dict[str, Any]], specification: GeoTrackExportSpecification
 ) -> Path | None:
-    """Write detections to the file named after the earliest detection (UTC)."""
+    """Write detections to the file named after the earliest detection (UTC).
+
+    The file is written atomically: to a temp file in the same directory that
+    is then moved over the target with os.replace.
+    """
     if not detections:
         return None
     earliest = min(detection[OCCURRENCE_KEY] for detection in detections)
@@ -68,8 +74,19 @@ def _write_detections(
         "data": {"detections": detections},
     }
     specification.export_directory.mkdir(parents=True, exist_ok=True)
-    with bz2.open(path, "wt", encoding="UTF-8") as file:
-        json.dump(content, file, allow_nan=False)
+    handle, temp_name = tempfile.mkstemp(
+        dir=specification.export_directory, prefix=f".{path.name}.", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(handle, "wb") as raw:
+            with bz2.open(raw, "wt", encoding="UTF-8") as file:
+                json.dump(content, file, allow_nan=False)
+            raw.flush()
+            os.fsync(raw.fileno())
+        os.replace(temp_name, path)
+    except BaseException:
+        Path(temp_name).unlink(missing_ok=True)
+        raise
     return path
 
 
