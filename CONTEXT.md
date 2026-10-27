@@ -69,3 +69,24 @@ have no Video. Its own georeference is what relates a point on the image to a
 point in the world.
 _Avoid_: map, GeoTIFF (a file format, not the concept), bird's-eye view (the image
 OTFusion used to render, which no longer exists).
+
+### Exports
+
+**Traffic Statistics**:
+A per-day JSON file of counts, peak hours and speeds per flow and class group,
+written to `{save_stem}.traffic_statistics_{YYYY-MM-DD}.json` and updated chunk by
+chunk. Days are cut in the configured timezone, and a road user is counted at
+most once per day. Speed is flow distance divided by the time between the road
+user's start and end event; implausible speeds are counted but left out of the
+speed figures.
+_Avoid_: counts (the CSV counting export, which has no speeds and no peak hours),
+track statistics (per-track metrics such as length and duration), report, summary
+(too vague to tell the exports apart).
+
+**Geo Track Export**:
+A bz2-compressed JSON file with one reduced trajectory point per Detection (track
+id, class, geo coordinate, time), written to
+`{save_stem}_{timestamp}.geo_tracks.json.bz2` for each chunk. Detections without a
+geo coordinate are dropped; if none remain, no file is written.
+_Avoid_: track export (the full `.ottrk`/CSV Track export), GeoJSON, shapefile
+(it is neither), geo file (does not say it holds Tracks).
