@@ -1,0 +1,212 @@
+import json
+import logging
+import os
+from datetime import datetime, timedelta
+from pathlib import Path
+from unittest.mock import MagicMock
+from zoneinfo import ZoneInfo
+
+import pytest
+
+from OTAnalytics.application.analysis.road_user_assignment import (
+    EventPair,
+    RoadUserAssignment,
+)
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
+from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
+    DayTrafficStatistics,
+    FlowInfo,
+)
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
+)
+from OTAnalytics.application.export_formats.export_mode import MERGE
+from OTAnalytics.application.use_cases.traffic_statistics_export import (
+    TrafficStatisticsExportSpecification,
+)
+from OTAnalytics.domain.flow import Flow, FlowId
+from OTAnalytics.domain.section import SectionId
+from OTAnalytics.plugin_parser.traffic_statistics_export import (
+    JsonTrafficStatisticsExporter,
+)
+from OTAnalytics.plugin_parser.traffic_statistics_json import (
+    TrafficStatisticsFormatError,
+    read,
+    write,
+)
+from tests.utils.builders.event_builder import EventBuilder
+
+TZ = ZoneInfo("Europe/Berlin")
+CONFIG = TrafficStatisticsConfig(
+    timezone="Europe/Berlin", class_groups={"LV": frozenset({"car"})}
+)
+
+
+def local(day: int, hour: int, minute: int) -> datetime:
+    return datetime(2026, 10, day, hour, minute, tzinfo=TZ)
+
+
+def assignment(road_user: str, when: datetime) -> RoadUserAssignment:
+    start = EventBuilder(
+        road_user_id=road_user, section_id="s1", interpolated_occurrence=when
+    ).build_section_event()
+    end = EventBuilder(
+        road_user_id=road_user,
+        section_id="s2",
+        interpolated_occurrence=when + timedelta(seconds=10),
+    ).build_section_event()
+    flow = Flow(FlowId("f1"), "flow", SectionId("s1"), SectionId("s2"), 100.0)
+    return RoadUserAssignment(road_user, "car", flow, EventPair(start, end))
+
+
+def create_exporter(
+    assignments: list[RoadUserAssignment], max_open_days: int = 2
+) -> JsonTrafficStatisticsExporter:
+    get_assignments = MagicMock()
+    get_assignments.get_as_list.side_effect = lambda: list(assignments)
+    flow = Flow(FlowId("f1"), "flow", SectionId("s1"), SectionId("s2"), 100.0)
+    get_flows = MagicMock()
+    get_flows.get.return_value = [flow]
+    sections = []
+    for section_id, name in (("s1", "Nord"), ("s2", "Süd")):
+        section = MagicMock()
+        section.id = SectionId(section_id)
+        section.name = name
+        sections.append(section)
+    return JsonTrafficStatisticsExporter(
+        get_assignments, get_flows, MagicMock(return_value=sections), max_open_days
+    )
+
+
+def spec(
+    tmp_path: Path, start: datetime, end: datetime
+) -> TrafficStatisticsExportSpecification:
+    return TrafficStatisticsExportSpecification(
+        export_directory=tmp_path,
+        export_filename_stem="out",
+        config=CONFIG,
+        counting_event=CountingEvent.START,
+        covered_start=start,
+        covered_end=end,
+        export_mode=MERGE,
+    )
+
+
+def day_file(tmp_path: Path, day: int) -> Path:
+    return tmp_path / f"out.traffic_statistics_2026-10-{day:02d}.json"
+
+
+def lv_total(path: Path) -> int:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data["statistics"]["total"]["totals"]["LV"]
+
+
+def test_export_writes_one_file_per_touched_day(tmp_path: Path) -> None:
+    exporter = create_exporter(
+        [assignment("r1", local(26, 23, 58)), assignment("r2", local(27, 0, 1))]
+    )
+
+    paths = exporter.export(spec(tmp_path, local(26, 23, 58), local(27, 0, 2)))
+
+    assert paths == [day_file(tmp_path, 26), day_file(tmp_path, 27)]
+    assert lv_total(paths[0]) == 1
+    assert lv_total(paths[1]) == 1
+    flows = json.loads(paths[0].read_text(encoding="utf-8"))["flows"]
+    assert flows[0]["index"] == 1
+    assert flows[0]["start_section"] == {"id": "s1", "name": "Nord"}
+
+
+def test_second_chunk_accumulates_into_same_day_file(tmp_path: Path) -> None:
+    assignments = [assignment("r1", local(27, 10, 0))]
+    exporter = create_exporter(assignments)
+    exporter.export(spec(tmp_path, local(27, 10, 0), local(27, 10, 5)))
+    assignments.append(assignment("r2", local(27, 10, 6)))
+
+    paths = exporter.export(spec(tmp_path, local(27, 10, 5), local(27, 10, 10)))
+
+    assert paths == [day_file(tmp_path, 27)]
+    assert lv_total(paths[0]) == 2
+    stats = read(paths[0], CONFIG)
+    assert stats.as_of == local(27, 10, 10)
+    assert stats.coverage == [(local(27, 10, 0), local(27, 10, 10))]
+
+
+def test_existing_day_file_is_resumed_without_double_counting(
+    tmp_path: Path,
+) -> None:
+    flow = FlowInfo("f1", "flow", 1, "s1", "Nord", "s2", "Süd")
+    existing = DayTrafficStatistics(
+        local(27, 0, 0).date(), CONFIG, [flow], CountingEvent.START
+    )
+    existing.add("r1", "f1", "LV", local(27, 10, 0), None)
+    write(existing, day_file(tmp_path, 27))
+    exporter = create_exporter(
+        [assignment("r1", local(27, 10, 0)), assignment("r2", local(27, 10, 1))]
+    )
+
+    paths = exporter.export(spec(tmp_path, local(27, 10, 0), local(27, 10, 5)))
+
+    assert lv_total(paths[0]) == 2
+
+
+def test_corrupt_existing_file_raises_and_is_not_overwritten(tmp_path: Path) -> None:
+    path = day_file(tmp_path, 27)
+    path.write_text("{not json", encoding="utf-8")
+    os.utime(path, (1_000_000, 1_000_000))
+    exporter = create_exporter([assignment("r1", local(27, 10, 0))])
+
+    with pytest.raises(TrafficStatisticsFormatError):
+        exporter.export(spec(tmp_path, local(27, 10, 0), local(27, 10, 5)))
+
+    assert path.read_text(encoding="utf-8") == "{not json"
+    assert path.stat().st_mtime == 1_000_000
+
+
+def test_resumed_file_with_other_counting_event_raises(tmp_path: Path) -> None:
+    flow = FlowInfo("f1", "flow", 1, "s1", "Nord", "s2", "Süd")
+    existing = DayTrafficStatistics(
+        local(27, 0, 0).date(), CONFIG, [flow], CountingEvent.END
+    )
+    write(existing, day_file(tmp_path, 27))
+    before = day_file(tmp_path, 27).read_text(encoding="utf-8")
+    exporter = create_exporter([assignment("r1", local(27, 10, 0))])
+
+    with pytest.raises(TrafficStatisticsFormatError):
+        exporter.export(spec(tmp_path, local(27, 10, 0), local(27, 10, 5)))
+
+    assert day_file(tmp_path, 27).read_text(encoding="utf-8") == before
+
+
+def test_only_two_days_are_kept_open(tmp_path: Path) -> None:
+    exporter = create_exporter([])
+    for day in (25, 26, 27):
+        exporter.export(spec(tmp_path, local(day, 10, 0), local(day, 10, 5)))
+
+    assert sorted(d.day for d in exporter._days) == [26, 27]
+
+
+def test_assignments_of_evicted_days_are_dropped_with_one_warning(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    assignments: list[RoadUserAssignment] = []
+    exporter = create_exporter(assignments)
+    for day in (25, 26, 27):
+        exporter.export(spec(tmp_path, local(day, 10, 0), local(day, 10, 5)))
+    assignments.extend(
+        [
+            assignment("r1", local(25, 11, 0)),
+            assignment("r2", local(25, 12, 0)),
+            assignment("r3", local(27, 11, 0)),
+        ]
+    )
+
+    with caplog.at_level(logging.WARNING):
+        paths = exporter.export(spec(tmp_path, local(27, 11, 0), local(27, 11, 5)))
+
+    assert paths == [day_file(tmp_path, 27)]
+    assert lv_total(paths[0]) == 1
+    warnings = [r for r in caplog.records if "Dropped" in r.getMessage()]
+    assert len(warnings) == 1
+    assert "2" in warnings[0].getMessage()
