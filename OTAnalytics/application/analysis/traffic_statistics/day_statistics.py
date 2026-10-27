@@ -3,8 +3,15 @@
 import logging
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
+from typing import Iterable, Sequence
 from zoneinfo import ZoneInfo
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
+from OTAnalytics.application.analysis.traffic_statistics.speed_histogram import (
+    SpeedHistogram,
+)
 from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
 )
@@ -68,3 +75,208 @@ class ClassGroupResolver:
                 classification,
             )
         return group
+
+
+def _as_utc(value: datetime) -> datetime:
+    """Return the datetime in UTC, treating naive values as UTC."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _ceil_div(numerator: int, denominator: int) -> int:
+    return -(-numerator // denominator)
+
+
+class DayTrafficStatistics:
+    """Counts and speeds of one local day per flow and class group.
+
+    Counts are kept per interval of `config.interval_minutes`. An interval is
+    reported as covered if it overlaps any range marked with `mark_covered`.
+    Uncovered intervals without counts are reported as None. A road user is
+    counted at most once per day, regardless of flow and class group.
+    """
+
+    def __init__(
+        self,
+        day: date,
+        config: TrafficStatisticsConfig,
+        flows: Sequence[FlowInfo],
+        counting_event: CountingEvent = CountingEvent.START,
+    ) -> None:
+        self.day = day
+        self.flows = list(flows)
+        self.counting_event = counting_event
+        self.as_of: datetime | None = None
+        self.road_user_ids: set[str] = set()
+        self._config = config
+        self._tz = ZoneInfo(config.timezone)
+        self._start = _as_utc(day_start(day, self._tz))
+        self._end = _as_utc(day_start(day + timedelta(days=1), self._tz))
+        minutes = minutes_in_day(day, self._tz)
+        self._interval_count = _ceil_div(minutes, config.interval_minutes)
+        self._slot_count = _ceil_div(minutes, config.speed_profile_interval_minutes)
+        self._flow_ids = {flow.id for flow in self.flows}
+        self._counts: dict[str, dict[str, list[int]]] = {}
+        self._histograms: dict[str, dict[str, list[SpeedHistogram]]] = {}
+        self._coverage: list[tuple[datetime, datetime]] = []
+
+    @property
+    def config(self) -> TrafficStatisticsConfig:
+        """The configuration this statistics was created with."""
+        return self._config
+
+    @property
+    def coverage(self) -> list[tuple[datetime, datetime]]:
+        """Merged, sorted half-open coverage ranges in the local timezone."""
+        return [(start, end) for start, end in self._coverage]
+
+    def add(
+        self,
+        road_user: str,
+        flow_id: str,
+        group: str,
+        occurrence: datetime,
+        speed_kmh: float | None,
+    ) -> bool:
+        """Count a road user; return False for duplicate, other day or unknown flow.
+
+        Speeds are stored only if plausible (0 < speed <= max_speed_kmh).
+        """
+        when = _as_utc(occurrence)
+        if flow_id not in self._flow_ids or not self._start <= when < self._end:
+            return False
+        if road_user in self.road_user_ids:
+            return False
+        self.road_user_ids.add(road_user)
+        minutes = int((when - self._start).total_seconds() // 60)
+        counts = self._counts.setdefault(flow_id, {})
+        counts.setdefault(group, [0] * self._interval_count)[
+            minutes // self._config.interval_minutes
+        ] += 1
+        if speed_kmh is not None and 0 < speed_kmh <= self._config.max_speed_kmh:
+            slots = self._histograms.setdefault(flow_id, {}).setdefault(
+                group, [SpeedHistogram() for _ in range(self._slot_count)]
+            )
+            slots[minutes // self._config.speed_profile_interval_minutes].add(speed_kmh)
+        return True
+
+    def mark_covered(self, start: datetime, end: datetime) -> None:
+        """Mark the half-open range [start, end) as covered, clipped to the day."""
+        clipped_start = max(_as_utc(start), self._start)
+        clipped_end = min(_as_utc(end), self._end)
+        if clipped_start >= clipped_end:
+            return
+        ranges = sorted(
+            [*self._coverage_utc(), (clipped_start, clipped_end)], key=lambda r: r[0]
+        )
+        merged: list[tuple[datetime, datetime]] = []
+        for range_start, range_end in ranges:
+            if merged and range_start <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], range_end))
+            else:
+                merged.append((range_start, range_end))
+        self._coverage = [
+            (s.astimezone(self._tz), e.astimezone(self._tz)) for s, e in merged
+        ]
+
+    def _coverage_utc(self) -> list[tuple[datetime, datetime]]:
+        return [(_as_utc(s), _as_utc(e)) for s, e in self._coverage]
+
+    def _covered_flags(self) -> list[bool]:
+        """Flag per interval whether it overlaps any coverage range."""
+        step = timedelta(minutes=self._config.interval_minutes)
+        flags = []
+        for index in range(self._interval_count):
+            interval_start = self._start + index * step
+            interval_end = interval_start + step
+            flags.append(
+                any(
+                    s < interval_end and interval_start < e
+                    for s, e in self._coverage_utc()
+                )
+            )
+        return flags
+
+    def _flow_counts(self, flow_id: str) -> dict[str, list[int]]:
+        if flow_id == TOTAL:
+            totals: dict[str, list[int]] = {}
+            for flow_counts in self._counts.values():
+                for group, values in flow_counts.items():
+                    current = totals.setdefault(group, [0] * self._interval_count)
+                    for index, value in enumerate(values):
+                        current[index] += value
+            return totals
+        return self._counts.get(flow_id, {})
+
+    def counts(self, flow_id: str) -> dict[str, list[int | None]]:
+        """Counts per group and interval; TOTAL sums all flows.
+
+        An interval is None if it is not covered and has no count.
+        """
+        covered = self._covered_flags()
+        result: dict[str, list[int | None]] = {
+            group: [0 if flag else None for flag in covered]
+            for group in self._config.class_groups
+        }
+        for group, values in self._flow_counts(flow_id).items():
+            result[group] = [
+                value if value > 0 or covered[index] else None
+                for index, value in enumerate(values)
+            ]
+        return result
+
+    def totals(self, flow_id: str) -> dict[str, int]:
+        """Number of counted road users per group; TOTAL sums all flows."""
+        return {
+            group: sum(values) for group, values in self._flow_counts(flow_id).items()
+        }
+
+    def raw_counts(self) -> dict[str, dict[str, list[int]]]:
+        """Copy of the stored counts per flow, group and interval."""
+        return {
+            flow: {group: list(values) for group, values in groups.items()}
+            for flow, groups in self._counts.items()
+        }
+
+    def histograms(self) -> dict[str, dict[str, list[SpeedHistogram]]]:
+        """Copy of the speed histograms per flow, group and speed profile slot."""
+        return {
+            flow: {
+                group: [SpeedHistogram(h.bins, h.total_speed) for h in slots]
+                for group, slots in groups.items()
+            }
+            for flow, groups in self._histograms.items()
+        }
+
+    @classmethod
+    def restore(
+        cls,
+        day: date,
+        config: TrafficStatisticsConfig,
+        flows: Sequence[FlowInfo],
+        raw_counts: dict[str, dict[str, list[int]]],
+        histograms: dict[str, dict[str, list[SpeedHistogram]]],
+        coverage: Iterable[tuple[datetime, datetime]],
+        road_user_ids: Iterable[str],
+        as_of: datetime | None,
+        counting_event: CountingEvent = CountingEvent.START,
+    ) -> "DayTrafficStatistics":
+        """Recreate a statistics from its stored state."""
+        stats = cls(day, config, flows, counting_event)
+        stats._counts = {
+            flow: {group: list(values) for group, values in groups.items()}
+            for flow, groups in raw_counts.items()
+        }
+        stats._histograms = {
+            flow: {
+                group: [SpeedHistogram(h.bins, h.total_speed) for h in slots]
+                for group, slots in groups.items()
+            }
+            for flow, groups in histograms.items()
+        }
+        for start, end in coverage:
+            stats.mark_covered(start, end)
+        stats.road_user_ids = set(road_user_ids)
+        stats.as_of = as_of
+        return stats
