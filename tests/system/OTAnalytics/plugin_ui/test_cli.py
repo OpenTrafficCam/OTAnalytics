@@ -1,3 +1,4 @@
+import bz2
 import csv
 import shutil
 import subprocess
@@ -209,6 +210,74 @@ class TestTrafficStatisticsExport:
                 counts[row["classification"]] += int(row["count"])
         assert sum(counts.values()) > 0
         assert totals == +counts
+
+
+class TestGeoTrackExport:
+    @pytest.mark.parametrize("cli_mode", [CliMode.BULK, CliMode.STREAM])
+    def test_geo_track_export_writes_file_only_when_enabled(
+        self,
+        cli_mode: CliMode,
+        test_data_tmp_dir: Path,
+        ottrk_path: Path,
+        otsection_file: Path,
+    ) -> None:
+        results: dict[bool, list[Path]] = {}
+        for enabled in (False, True):
+            save_dir = test_data_tmp_dir / f"geo_tracks_{cli_mode.value}_{enabled}"
+            shutil.rmtree(save_dir, ignore_errors=True)
+            save_dir.mkdir(parents=True)
+            track_file = save_dir / ottrk_path.name
+            _write_ottrk_with_geo_coordinates(ottrk_path, track_file)
+            run_config = create_run_config(
+                track_files=[str(track_file)],
+                otflow_file=str(otsection_file),
+                save_dir=str(save_dir),
+                save_name="run",
+                event_formats=["csv"],
+                count_intervals=[15],
+                cli_mode=cli_mode,
+                geo_track_export=enabled,
+            )
+
+            OtAnalyticsCliApplicationStarter(run_config).start()
+
+            results[enabled] = list(save_dir.glob("run_*.geo_tracks.json.bz2"))
+
+        assert results[False] == []
+        assert len(results[True]) == 1
+        with bz2.open(results[True][0], "rt", encoding="utf-8") as file:
+            content = json.load(file)
+        assert content["metadata"] == {"format": "otanalytics.geo_tracks", "version": 1}
+        detections = content["data"]["detections"]
+        assert len(detections) > 0
+        assert set(detections[0]) == {
+            "track-id",
+            "class",
+            "geo_x",
+            "geo_y",
+            "occurrence",
+        }
+
+
+def _write_ottrk_with_geo_coordinates(source: Path, target: Path) -> None:
+    with bz2.open(source, "rt", encoding="utf-8") as file:
+        content = json.load(file)
+    content["metadata"]["georeference"] = {
+        "geo_bounds": {
+            "min_x": 455000.0,
+            "min_y": 5701000.0,
+            "max_x": 455400.0,
+            "max_y": 5701200.0,
+        },
+        "birds_eye_view_size": {"width": 800, "height": 400},
+        "padding": 0.0,
+        "crs": "EPSG:25833",
+    }
+    for detection in content["data"]["detections"]:
+        detection["geo_x"] = 455000.0 + detection["x"]
+        detection["geo_y"] = 5701000.0 + detection["y"]
+    with bz2.open(target, "wt", encoding="utf-8") as file:
+        json.dump(content, file)
 
 
 @pytest.fixture
