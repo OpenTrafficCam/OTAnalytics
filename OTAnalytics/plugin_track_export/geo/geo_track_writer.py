@@ -1,5 +1,6 @@
 import bz2
 import json
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol, Sequence, cast
@@ -45,6 +46,10 @@ def _to_unix_seconds(occurrence: datetime) -> float:
     return occurrence.timestamp()
 
 
+def _is_valid_geo(value: float | None) -> bool:
+    return value is not None and not math.isnan(value)
+
+
 def _write_detections(
     detections: list[dict[str, Any]], specification: GeoTrackExportSpecification
 ) -> Path | None:
@@ -64,7 +69,7 @@ def _write_detections(
     }
     specification.export_directory.mkdir(parents=True, exist_ok=True)
     with bz2.open(path, "wt", encoding="UTF-8") as file:
-        json.dump(content, file)
+        json.dump(content, file, allow_nan=False)
     return path
 
 
@@ -90,6 +95,7 @@ class PolarsGeoTrackWriter:
             occurrence = occurrence.dt.replace_time_zone("UTC")
         selected = (
             df.drop_nulls([track.GEO_X, track.GEO_Y])
+            .filter(pl.col(track.GEO_X).is_not_nan() & pl.col(track.GEO_Y).is_not_nan())
             .select(
                 pl.col(track.TRACK_ID).cast(pl.Utf8).alias(TRACK_ID_KEY),
                 pl.col(class_column).alias(CLASS_KEY),
@@ -123,7 +129,7 @@ class DomainGeoTrackWriter:
             }
             for _track in cast(TrackDataset, dataset).as_list()
             for detection in _track.detections
-            if detection.geo_x is not None and detection.geo_y is not None
+            if _is_valid_geo(detection.geo_x) and _is_valid_geo(detection.geo_y)
         ]
         detections.sort(key=lambda detection: detection[OCCURRENCE_KEY])
         return _write_detections(detections, specification)

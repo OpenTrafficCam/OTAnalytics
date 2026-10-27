@@ -132,6 +132,24 @@ class TestGeoTrackWriters:
         detections = read(path)["data"]["detections"]
         assert [d["geo_x"] for d in detections] == [1.0, 3.0]
 
+    def test_detection_with_nan_geo_is_dropped(
+        self,
+        writer: GeoTrackWriter,
+        provide: Callable[[list[Track]], TrackDataset],
+        spec: GeoTrackExportSpecification,
+    ) -> None:
+        nan = float("nan")
+        given = build_track("1", [(1.0, 2.0), (nan, 2.5), (2.5, nan), (3.0, 4.0)])
+
+        path = writer.write(provide([given]), spec)
+
+        assert path is not None
+        with bz2.open(path, "rt", encoding="UTF-8") as file:
+            raw = file.read()
+        assert "NaN" not in raw
+        detections = json.loads(raw)["data"]["detections"]
+        assert [d["geo_x"] for d in detections] == [1.0, 3.0]
+
     def test_no_geo_detections_returns_none_and_writes_nothing(
         self,
         writer: GeoTrackWriter,
