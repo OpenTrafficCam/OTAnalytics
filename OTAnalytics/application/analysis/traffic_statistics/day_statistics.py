@@ -198,15 +198,13 @@ class DayTrafficStatistics:
     def _covered_flags(self) -> list[bool]:
         """Flag per interval whether it overlaps any coverage range."""
         step = timedelta(minutes=self._config.interval_minutes)
+        coverage = self._coverage_utc()
         flags = []
         for index in range(self._interval_count):
             interval_start = self._start + index * step
             interval_end = interval_start + step
             flags.append(
-                any(
-                    s < interval_end and interval_start < e
-                    for s, e in self._coverage_utc()
-                )
+                any(s < interval_end and interval_start < e for s, e in coverage)
             )
         return flags
 
