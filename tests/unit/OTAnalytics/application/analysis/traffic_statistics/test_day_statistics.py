@@ -293,7 +293,7 @@ class TestPeakHour:
         stats.mark_covered(day_start(day, TZ), day_start(date(2026, 10, 26), TZ))
         stats.add("ru1", "f1", "LV", datetime(2026, 10, 25, 4, 0, tzinfo=TZ), None)
         peak = stats.peak_hour("f1")["LV"]
-        # window starts at elapsed minute 180 (03:00 CET)
+        # window starts at elapsed minute 255 (03:15 CET)
         assert peak.start.isoformat() == "2026-10-25T03:15:00+01:00"
         assert peak.end.isoformat() == "2026-10-25T04:15:00+01:00"
 
