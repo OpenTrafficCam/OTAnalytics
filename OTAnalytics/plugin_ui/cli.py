@@ -28,6 +28,10 @@ from OTAnalytics.application.use_cases.export_events import (
     EventListExporterProvider,
 )
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
+from OTAnalytics.application.use_cases.geo_track_export import (
+    ExportGeoTracks,
+    GeoTrackExportSpecification,
+)
 from OTAnalytics.application.use_cases.road_user_assignment_export import (
     ExportRoadUserAssignments,
     ExportSpecification,
@@ -101,6 +105,7 @@ class OTAnalyticsCli(ABC):
         export_road_user_assignments: ExportRoadUserAssignments,
         export_track_statistics: ExportTrackStatistics,
         export_traffic_statistics: ExportTrafficStatistics | None = None,
+        export_geo_tracks: ExportGeoTracks | None = None,
     ) -> None:
         self._validate_cli_args(run_config)
         self._run_config = run_config
@@ -129,6 +134,7 @@ class OTAnalyticsCli(ABC):
         # the traffic statistics export. Only newly added videos are covered by
         # later exports, so gaps between videos stay uncovered.
         self._traffic_statistics_reported_videos: set[datetime] = set()
+        self._export_geo_tracks = export_geo_tracks
 
     async def start(self) -> None:
         """Start analysis."""
@@ -207,6 +213,12 @@ class OTAnalyticsCli(ABC):
                 export_directory=export_directory,
                 export_filename_stem=export_filename_stem,
                 export_mode=export_mode,
+            )
+
+        if self._run_config.do_export_geo_tracks and self._export_geo_tracks:
+            await self._do_export_geo_tracks(
+                export_directory=export_directory,
+                export_filename_stem=export_filename_stem,
             )
 
         if self._run_config.do_export_tracks:
@@ -421,6 +433,25 @@ class OTAnalyticsCli(ABC):
         """Hook to execute after traffic statistics export."""
         pass
 
+    async def _do_export_geo_tracks(
+        self, export_directory: Path, export_filename_stem: str
+    ) -> None:
+        if self._export_geo_tracks is None:
+            return
+        logger().info("Create geo tracks ...")
+        specification = GeoTrackExportSpecification(
+            export_directory=export_directory,
+            export_filename_stem=export_filename_stem,
+        )
+        geo_track_file = await asyncio.to_thread(
+            self._export_geo_tracks.export, specification
+        )
+        await self._after_geo_track_export(geo_track_file)
+
+    async def _after_geo_track_export(self, geo_track_file: Path | None) -> None:
+        """Hook to execute after geo track export."""
+        pass
+
     async def _do_export_tracks(
         self,
         export_directory: Path,
@@ -501,6 +532,7 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
         track_parser: TrackParser,
         progressbar: ProgressbarBuilder,
         export_traffic_statistics: ExportTrafficStatistics | None = None,
+        export_geo_tracks: ExportGeoTracks | None = None,
     ) -> None:
         super().__init__(
             run_config,
@@ -522,6 +554,7 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
             export_road_user_assignments,
             export_track_statistics,
             export_traffic_statistics,
+            export_geo_tracks,
         )
         self._track_parser = track_parser
         self._progressbar = progressbar
@@ -581,6 +614,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
         export_road_user_assignments: ExportRoadUserAssignments,
         track_parser: StreamTrackParser,
         export_traffic_statistics: ExportTrafficStatistics | None = None,
+        export_geo_tracks: ExportGeoTracks | None = None,
     ) -> None:
         super().__init__(
             run_config,
@@ -602,6 +636,7 @@ class OTAnalyticsStreamCli(OTAnalyticsCli):
             export_road_user_assignments,
             export_track_statistics,
             export_traffic_statistics,
+            export_geo_tracks,
         )
         self._track_parser = track_parser
 
