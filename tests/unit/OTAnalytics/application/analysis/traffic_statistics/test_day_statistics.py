@@ -13,12 +13,14 @@ from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
     ClassGroupResolver,
     DayTrafficStatistics,
     FlowInfo,
+    PeakHour,
     assignment_to_entry,
     day_start,
     minutes_in_day,
 )
 from OTAnalytics.application.analysis.traffic_statistics.speed_histogram import (
     SpeedHistogram,
+    SpeedValues,
 )
 from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
@@ -241,6 +243,94 @@ class TestDayTrafficStatistics:
 
     def test_counting_event_defaults_to_start(self) -> None:
         assert create_statistics().counting_event == CountingEvent.START
+
+
+class TestPeakHour:
+    def test_peak_hour_finds_strongest_quarter_aligned_window(self) -> None:
+        stats = create_statistics()
+        for index, (hour, minute) in enumerate([(6, 0), (7, 20), (7, 50), (8, 10)]):
+            stats.add(f"ru{index}", "f1", "LV", local(hour, minute), None)
+        assert stats.peak_hour("f1") == {
+            "LV": PeakHour(start=local(7, 15), end=local(8, 15), count=3)
+        }
+
+    def test_peak_hour_tie_returns_earliest(self) -> None:
+        stats = create_statistics()
+        stats.add("ru1", "f1", "LV", local(6, 30), None)
+        stats.add("ru2", "f1", "LV", local(9, 30), None)
+        assert stats.peak_hour("f1") == {
+            "LV": PeakHour(start=local(5, 45), end=local(6, 45), count=1)
+        }
+
+    def test_peak_hour_total_sums_flows(self) -> None:
+        stats = create_statistics()
+        stats.add("ru1", "f1", "LV", local(7, 0), None)
+        stats.add("ru2", "f2", "LV", local(7, 10), None)
+        assert stats.peak_hour(TOTAL)["LV"].count == 2
+
+    def test_peak_hour_ignores_uncovered_windows(self) -> None:
+        stats = create_statistics(covered=False)
+        stats.mark_covered(local(7, 0), local(9, 0))
+        stats.add("ru1", "f1", "LV", local(7, 30), None)
+        assert stats.peak_hour("f1")["LV"].start == local(6, 45)
+
+    def test_peak_hour_without_data_is_absent(self) -> None:
+        stats = create_statistics()
+        assert stats.peak_hour("f1") == {}
+
+    def test_peak_hour_windows_lie_completely_in_the_day(self) -> None:
+        stats = create_statistics()
+        stats.add("ru1", "f1", "LV", local(23, 50), None)
+        assert stats.peak_hour("f1")["LV"] == PeakHour(
+            start=local(23, 0), end=datetime(2026, 10, 28, 0, 0, tzinfo=TZ), count=1
+        )
+
+    def test_peak_hour_on_dst_day_uses_elapsed_time(self) -> None:
+        day = date(2026, 10, 25)
+        stats = DayTrafficStatistics(
+            day, TrafficStatisticsConfig(timezone="Europe/Berlin"), [FLOW_1]
+        )
+        stats.mark_covered(day_start(day, TZ), day_start(date(2026, 10, 26), TZ))
+        stats.add("ru1", "f1", "LV", datetime(2026, 10, 25, 4, 0, tzinfo=TZ), None)
+        peak = stats.peak_hour("f1")["LV"]
+        # window starts at elapsed minute 180 (03:00 CET)
+        assert peak.start.isoformat() == "2026-10-25T03:15:00+01:00"
+        assert peak.end.isoformat() == "2026-10-25T04:15:00+01:00"
+
+
+class TestSpeed:
+    def test_total_speed_merges_histograms(self) -> None:
+        stats = create_statistics()
+        stats.add("ru1", "f1", "LV", local(7, 0), 30.0)
+        stats.add("ru2", "f2", "LV", local(7, 5), 50.0)
+        assert stats.speed(TOTAL) == {"LV": SpeedValues(40.0, 50.5, 2)}
+        assert stats.speed("f1") == {"LV": SpeedValues(30.0, 30.5, 1)}
+
+    def test_implausible_speed_is_counted_but_not_in_speed(self) -> None:
+        stats = create_statistics()
+        stats.add("ru1", "f1", "LV", local(7, 0), 250.0)
+        assert stats.totals("f1") == {"LV": 1}
+        assert stats.speed("f1") == {}
+
+    def test_speed_merges_all_slots(self) -> None:
+        stats = create_statistics()
+        stats.add("ru1", "f1", "LV", local(7, 0), 30.0)
+        stats.add("ru2", "f1", "LV", local(18, 0), 50.0)
+        assert stats.speed("f1")["LV"].count == 2
+
+    def test_speed_profile_has_value_only_in_occupied_slot(self) -> None:
+        stats = create_statistics()
+        stats.add("ru1", "f1", "LV", local(7, 20), 36.0)
+        profile = stats.speed_profile("f1")["LV"]
+        assert len(profile) == 96
+        assert profile[29] == SpeedValues(36.0, 36.5, 1)
+        assert [v for i, v in enumerate(profile) if i != 29 and v is not None] == []
+
+    def test_total_speed_profile_merges_per_slot(self) -> None:
+        stats = create_statistics()
+        stats.add("ru1", "f1", "LV", local(7, 20), 30.0)
+        stats.add("ru2", "f2", "LV", local(7, 25), 50.0)
+        assert stats.speed_profile(TOTAL)["LV"][29] == SpeedValues(40.0, 50.5, 2)
 
 
 class TestAssignmentToEntry:
