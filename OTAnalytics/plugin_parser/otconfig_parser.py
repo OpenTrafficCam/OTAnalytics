@@ -8,6 +8,9 @@ from OTAnalytics.application import project
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
+)
 from OTAnalytics.application.config import DEFAULT_COUNTING_EVENT
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
@@ -61,6 +64,16 @@ SAVE_NAME = "save_name"
 SAVE_SUFFIX = "save_suffix"
 COUNT_INTERVALS = "count_intervals"
 COUNTING_EVENT = "counting_event"
+TRAFFIC_STATISTICS = "traffic_statistics"
+GEO_TRACKS = "geo_tracks"
+ENABLED = "enabled"
+TIMEZONE = "timezone"
+INTERVAL_MINUTES = "interval_minutes"
+SPEED_PROFILE_INTERVAL_MINUTES = "speed_profile_interval_minutes"
+MAX_SPEED_KMH = "max_speed_kmh"
+CLASS_GROUPS = "class_groups"
+PEAK_WINDOW_MINUTES = "peak_window_minutes"
+PEAK_STEP_MINUTES = "peak_step_minutes"
 NUM_PROCESSES = "num_processes"
 LOGFILE = "logfile"
 DEBUG = "debug"
@@ -112,6 +125,35 @@ class FixMissingAnalysis(OtConfigFormatFixer):
             LOGFILE: self._run_config.log_file,
             DEBUG: self._run_config.debug,
         }
+
+
+def serialize_traffic_statistics_and_geo_tracks(
+    traffic_statistics: TrafficStatisticsConfig | None, geo_tracks: bool
+) -> dict:
+    """Serialize the optional export keys.
+
+    Keys are only emitted when set, so otconfigs without them serialize as before.
+    """
+    result: dict = {}
+    if traffic_statistics is not None:
+        result[TRAFFIC_STATISTICS] = {
+            ENABLED: traffic_statistics.enabled,
+            TIMEZONE: traffic_statistics.timezone,
+            INTERVAL_MINUTES: traffic_statistics.interval_minutes,
+            SPEED_PROFILE_INTERVAL_MINUTES: (
+                traffic_statistics.speed_profile_interval_minutes
+            ),
+            MAX_SPEED_KMH: traffic_statistics.max_speed_kmh,
+            CLASS_GROUPS: {
+                name: sorted(classes)
+                for name, classes in traffic_statistics.class_groups.items()
+            },
+            PEAK_WINDOW_MINUTES: traffic_statistics.peak_window_minutes,
+            PEAK_STEP_MINUTES: traffic_statistics.peak_step_minutes,
+        }
+    if geo_tracks:
+        result[GEO_TRACKS] = True
+    return result
 
 
 class OtConfigParser(ConfigParser):
@@ -311,8 +353,38 @@ class OtConfigParser(ConfigParser):
             event_formats=set(data[EVENT_FORMATS]),
             count_intervals=set(data[COUNT_INTERVALS]),
             counting_event=CountingEvent.parse(counting_event),
+            traffic_statistics=self._parse_traffic_statistics(
+                data.get(TRAFFIC_STATISTICS)
+            ),
+            geo_tracks=bool(data.get(GEO_TRACKS, False)),
         )
         return export_config
+
+    @staticmethod
+    def _parse_traffic_statistics(
+        data: dict | None,
+    ) -> TrafficStatisticsConfig | None:
+        if data is None:
+            return None
+        defaults = TrafficStatisticsConfig()
+        return TrafficStatisticsConfig(
+            enabled=bool(data.get(ENABLED, defaults.enabled)),
+            timezone=data.get(TIMEZONE, defaults.timezone),
+            interval_minutes=data.get(INTERVAL_MINUTES, defaults.interval_minutes),
+            speed_profile_interval_minutes=data.get(
+                SPEED_PROFILE_INTERVAL_MINUTES,
+                defaults.speed_profile_interval_minutes,
+            ),
+            max_speed_kmh=float(data.get(MAX_SPEED_KMH, defaults.max_speed_kmh)),
+            class_groups={
+                name: frozenset(classes)
+                for name, classes in (data.get(CLASS_GROUPS) or {}).items()
+            },
+            peak_window_minutes=data.get(
+                PEAK_WINDOW_MINUTES, defaults.peak_window_minutes
+            ),
+            peak_step_minutes=data.get(PEAK_STEP_MINUTES, defaults.peak_step_minutes),
+        )
 
     def _parse_track_files(
         self,
@@ -454,6 +526,10 @@ class OtConfigParser(ConfigParser):
                 EVENT_FORMATS: list(analysis_config.export_config.event_formats),
                 COUNT_INTERVALS: list(analysis_config.export_config.count_intervals),
                 COUNTING_EVENT: analysis_config.export_config.counting_event.value,
+                **serialize_traffic_statistics_and_geo_tracks(
+                    analysis_config.export_config.traffic_statistics,
+                    analysis_config.export_config.geo_tracks,
+                ),
             },
             NUM_PROCESSES: analysis_config.num_processes,
             LOGFILE: str(analysis_config.logfile),
