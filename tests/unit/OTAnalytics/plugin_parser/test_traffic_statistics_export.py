@@ -62,13 +62,15 @@ def assignment(road_user: str, when: datetime) -> RoadUserAssignment:
 
 
 def create_exporter(
-    assignments: list[RoadUserAssignment], max_open_days: int = 2
+    assignments: list[RoadUserAssignment],
+    max_open_days: int = 2,
+    flows: list[Flow] | None = None,
 ) -> JsonTrafficStatisticsExporter:
     get_assignments = MagicMock()
     get_assignments.get_as_list.side_effect = lambda: list(assignments)
     flow = Flow(FlowId("f1"), "flow", SectionId("s1"), SectionId("s2"), 100.0)
     get_flows = MagicMock()
-    get_flows.get.return_value = [flow]
+    get_flows.get.return_value = flows if flows is not None else [flow]
     sections = []
     for section_id, name in (("s1", "Nord"), ("s2", "Süd")):
         section = MagicMock()
@@ -210,3 +212,60 @@ def test_assignments_of_evicted_days_are_dropped_with_one_warning(
     warnings = [r for r in caplog.records if "Dropped" in r.getMessage()]
     assert len(warnings) == 1
     assert "2" in warnings[0].getMessage()
+
+
+def other_flow_assignment(road_user: str, when: datetime) -> RoadUserAssignment:
+    base = assignment(road_user, when)
+    flow = Flow(FlowId("f2"), "flow2", SectionId("s2"), SectionId("s1"), 100.0)
+    return RoadUserAssignment(road_user, "car", flow, base.events)
+
+
+def flow_ids(path: Path) -> list[str]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return [flow["id"] for flow in data["flows"]]
+
+
+def test_flow_added_between_chunks_is_counted(tmp_path: Path) -> None:
+    assignments = [assignment("r1", local(27, 10, 0))]
+    flows = [Flow(FlowId("f1"), "flow", SectionId("s1"), SectionId("s2"), 100.0)]
+    exporter = create_exporter(assignments, flows=flows)
+    exporter.export(spec(tmp_path, local(27, 10, 0), local(27, 10, 5)))
+    flows.append(Flow(FlowId("f2"), "flow2", SectionId("s2"), SectionId("s1"), 1.0))
+    assignments.append(other_flow_assignment("r2", local(27, 10, 6)))
+
+    paths = exporter.export(spec(tmp_path, local(27, 10, 5), local(27, 10, 10)))
+
+    assert flow_ids(paths[0]) == ["f1", "f2"]
+    assert lv_total(paths[0]) == 2
+
+
+def test_resumed_file_is_reconciled_with_current_flows(tmp_path: Path) -> None:
+    old = FlowInfo("f1", "old", 1, "s1", "Nord", "s2", "Süd")
+    gone = FlowInfo("f0", "gone", 2, "s1", "Nord", "s2", "Süd")
+    existing = DayTrafficStatistics(
+        local(27, 0, 0).date(), CONFIG, [old, gone], CountingEvent.START
+    )
+    existing.add("r0", "f0", "LV", local(27, 9, 0), None)
+    write(existing, day_file(tmp_path, 27))
+    flows = [
+        Flow(FlowId("f2"), "flow2", SectionId("s2"), SectionId("s1"), 1.0),
+        Flow(FlowId("f1"), "flow", SectionId("s1"), SectionId("s2"), 100.0),
+    ]
+    exporter = create_exporter(
+        [other_flow_assignment("r2", local(27, 10, 0))], flows=flows
+    )
+
+    paths = exporter.export(spec(tmp_path, local(27, 10, 0), local(27, 10, 5)))
+
+    assert flow_ids(paths[0]) == ["f2", "f1", "f0"]
+    assert lv_total(paths[0]) == 2
+    assert read(paths[0], CONFIG).flows[1].name == "flow"
+
+
+def test_as_of_is_not_pushed_beyond_the_day(tmp_path: Path) -> None:
+    exporter = create_exporter([assignment("r1", local(26, 23, 58))])
+
+    paths = exporter.export(spec(tmp_path, local(26, 23, 58), local(27, 0, 2)))
+
+    assert read(paths[0], CONFIG).as_of == local(27, 0, 0)
+    assert read(paths[1], CONFIG).as_of == local(27, 0, 2)
