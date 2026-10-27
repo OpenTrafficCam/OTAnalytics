@@ -318,7 +318,11 @@ def _histogram_from_dict(slot: dict[str, Any] | None) -> SpeedHistogram:
 
 
 def write(stats: DayTrafficStatistics, path: Path) -> None:
-    """Write the statistics atomically to the path (temp file and os.replace)."""
+    """Write the statistics atomically to the path.
+
+    The content is written to a temp file in the same directory, flushed to
+    disk and then moved over the path with os.replace.
+    """
     content = json.dumps(to_dict(stats), ensure_ascii=False)
     path.parent.mkdir(parents=True, exist_ok=True)
     handle, temp_name = tempfile.mkstemp(
@@ -327,6 +331,8 @@ def write(stats: DayTrafficStatistics, path: Path) -> None:
     try:
         with os.fdopen(handle, "w", encoding="utf-8") as file:
             file.write(content)
+            file.flush()
+            os.fsync(file.fileno())
         os.replace(temp_name, path)
     except BaseException:
         Path(temp_name).unlink(missing_ok=True)

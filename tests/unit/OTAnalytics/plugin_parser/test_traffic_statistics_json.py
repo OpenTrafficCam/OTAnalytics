@@ -1,4 +1,5 @@
 import json
+import os
 from copy import deepcopy
 from datetime import date, datetime
 from pathlib import Path
@@ -289,6 +290,29 @@ class TestWrite:
 
         assert [p.name for p in tmp_path.iterdir()] == ["day.json"]
         assert json.loads(path.read_text(encoding="utf-8"))["format"] == FORMAT
+
+    def test_write_syncs_temp_file_before_replace(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        path = tmp_path / "day.json"
+        calls: list[str] = []
+        original_fsync = os.fsync
+        original_replace = os.replace
+
+        def fsync(fd: int) -> None:
+            calls.append("fsync")
+            original_fsync(fd)
+
+        def replace(src: Any, dst: Any) -> None:
+            calls.append("replace")
+            original_replace(src, dst)
+
+        monkeypatch.setattr("os.fsync", fsync)
+        monkeypatch.setattr("os.replace", replace)
+
+        write(create_statistics(), path)
+
+        assert calls == ["fsync", "replace"]
 
     def test_failed_write_keeps_old_file(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
