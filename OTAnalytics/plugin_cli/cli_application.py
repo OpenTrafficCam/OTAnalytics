@@ -6,6 +6,7 @@ from OTAnalytics.application.use_cases.create_events import (
     FilterOutCuttingSections,
     SectionProvider,
 )
+from OTAnalytics.application.use_cases.geo_track_export import ExportGeoTracks
 from OTAnalytics.application.use_cases.track_repository import AllTrackIdsProvider
 from OTAnalytics.application.use_cases.traffic_statistics_export import (
     ExportTrafficStatistics,
@@ -23,6 +24,11 @@ from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import 
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     PilImageFactory,
     TrackImageFactory,
+)
+from OTAnalytics.plugin_track_export.geo.geo_track_writer import (
+    DomainGeoTrackWriter,
+    GeoTrackExport,
+    PolarsGeoTrackWriter,
 )
 from OTAnalytics.plugin_ui.base_application import BaseOtAnalyticsApplicationStarter
 from OTAnalytics.plugin_ui.cli import (
@@ -71,6 +77,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
             track_parser,
             progressbar=TqdmBuilder(),
             export_traffic_statistics=self.export_traffic_statistics,
+            export_geo_tracks=self.export_geo_tracks,
         )
         return cli
 
@@ -97,6 +104,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.export_road_user_assignments,
             stream_track_parser,
             export_traffic_statistics=self.export_traffic_statistics,
+            export_geo_tracks=self.export_geo_tracks,
         )
         return cli
 
@@ -105,6 +113,13 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
         # Stateful across chunks: must be a single instance per run.
         return JsonTrafficStatisticsExporter(
             self.get_all_assignments, self.get_all_flows, self.get_all_sections
+        )
+
+    @cached_property
+    def export_geo_tracks(self) -> ExportGeoTracks:
+        # The polars writer comes first, the domain writer is slow.
+        return GeoTrackExport(
+            self.track_repository, [PolarsGeoTrackWriter(), DomainGeoTrackWriter()]
         )
 
     @cached_property
