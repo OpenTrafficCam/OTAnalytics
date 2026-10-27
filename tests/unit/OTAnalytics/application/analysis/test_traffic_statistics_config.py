@@ -48,3 +48,44 @@ class TestTrafficStatisticsConfig:
     def test_unknown_timezone_raises_with_field_name(self) -> None:
         with pytest.raises(ValueError, match="timezone"):
             TrafficStatisticsConfig(timezone="Mars/Olympus")
+
+    def test_classification_in_two_class_groups_raises(self) -> None:
+        with pytest.raises(ValueError, match="class_groups.*car"):
+            TrafficStatisticsConfig(
+                class_groups={
+                    "light": frozenset({"car", "bicycle"}),
+                    "motor": frozenset({"car", "truck"}),
+                }
+            )
+
+    @pytest.mark.parametrize("window", [0, -60, 50])
+    def test_invalid_peak_window_raises_with_field_name(self, window: int) -> None:
+        with pytest.raises(ValueError, match="peak_window_minutes"):
+            TrafficStatisticsConfig(
+                interval_minutes=15,
+                speed_profile_interval_minutes=15,
+                peak_window_minutes=window,
+            )
+
+    @pytest.mark.parametrize("max_speed", [0.0, -10.0])
+    def test_non_positive_max_speed_raises_with_field_name(
+        self, max_speed: float
+    ) -> None:
+        with pytest.raises(ValueError, match="max_speed_kmh"):
+            TrafficStatisticsConfig(max_speed_kmh=max_speed)
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "interval_minutes",
+            "speed_profile_interval_minutes",
+            "peak_window_minutes",
+            "peak_step_minutes",
+        ],
+    )
+    @pytest.mark.parametrize("value", [True, 15.0, "15"])
+    def test_non_int_minutes_raise_with_field_name(
+        self, name: str, value: object
+    ) -> None:
+        with pytest.raises(ValueError, match=name):
+            TrafficStatisticsConfig(**{name: value})  # type: ignore[arg-type]

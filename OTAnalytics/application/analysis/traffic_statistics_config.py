@@ -14,10 +14,13 @@ class TrafficStatisticsConfig:
         interval_minutes: length of one statistics interval, divides 60.
         speed_profile_interval_minutes: interval of the speed profile, a
             multiple of interval_minutes.
-        max_speed_kmh: speeds above this value are treated as implausible.
+        max_speed_kmh: speeds above this value are treated as implausible,
+            must be > 0.
         class_groups: group name to the classifications it contains. Empty
-            means every classification is its own group.
-        peak_window_minutes: length of the sliding peak window.
+            means every classification is its own group. A classification may
+            belong to at most one group.
+        peak_window_minutes: length of the sliding peak window, a multiple of
+            interval_minutes.
         peak_step_minutes: step of the sliding peak window, a multiple of
             interval_minutes.
     """
@@ -32,12 +35,49 @@ class TrafficStatisticsConfig:
     peak_step_minutes: int = 15
 
     def __post_init__(self) -> None:
+        self._validate_int_fields()
         self._validate_timezone()
         self._validate_interval()
         self._validate_multiple_of_interval(
             "speed_profile_interval_minutes", self.speed_profile_interval_minutes
         )
+        self._validate_multiple_of_interval(
+            "peak_window_minutes", self.peak_window_minutes
+        )
         self._validate_multiple_of_interval("peak_step_minutes", self.peak_step_minutes)
+        self._validate_max_speed()
+        self._validate_class_groups()
+
+    def _validate_int_fields(self) -> None:
+        for name in (
+            "interval_minutes",
+            "speed_profile_interval_minutes",
+            "peak_window_minutes",
+            "peak_step_minutes",
+        ):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ValueError(f"{name} must be an integer, got {value!r}.")
+
+    def _validate_max_speed(self) -> None:
+        value = self.max_speed_kmh
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not value > 0
+        ):
+            raise ValueError(f"max_speed_kmh must be a number > 0, got {value!r}.")
+
+    def _validate_class_groups(self) -> None:
+        group_by_classification: dict[str, str] = {}
+        for group, classifications in self.class_groups.items():
+            for classification in classifications:
+                other = group_by_classification.setdefault(classification, group)
+                if other != group:
+                    raise ValueError(
+                        f"class_groups assigns classification '{classification}' "
+                        f"to more than one group ('{other}', '{group}')."
+                    )
 
     def _validate_timezone(self) -> None:
         try:
