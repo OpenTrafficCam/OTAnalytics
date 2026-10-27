@@ -122,25 +122,36 @@ Example configuration options:
 ### Traffic Statistics and Geo Track Export
 
 Two optional exports for the CLI, both off by default. Enable them in the
-otconfig (under `analysis.export`) or with a CLI flag:
+otconfig (under `analysis.export`, which is JSON) or with a CLI flag:
 
-```yaml
-# under analysis.export, both keys optional
-traffic_statistics:
-  enabled: true
-  timezone: Europe/Berlin          # Default "UTC"
-  interval_minutes: 1              # Default 1
-  speed_profile_interval_minutes: 15
-  max_speed_kmh: 200
-  peak_window_minutes: 60
-  peak_step_minutes: 15
-  class_groups:                    # Default: every classification is its own group
-    LV: [car, car_with_trailer, private_van, delivery_van, delivery_van_with_trailer, motorcyclist]
-    SV: [truck, truck_with_trailer, truck_with_semitrailer, bus]
-    BIKE: [bicyclist, bicyclist_with_trailer, cargo_bike_driver, scooter_driver]
-    PED: [pedestrian]
-geo_tracks: true                   # Default false
+```json
+{
+  "analysis": {
+    "export": {
+      "traffic_statistics": {
+        "enabled": true,
+        "timezone": "Europe/Berlin",
+        "interval_minutes": 1,
+        "speed_profile_interval_minutes": 15,
+        "max_speed_kmh": 200,
+        "peak_window_minutes": 60,
+        "peak_step_minutes": 15,
+        "class_groups": {
+          "LV": ["car", "car_with_trailer", "private_van", "delivery_van", "delivery_van_with_trailer", "motorcyclist"],
+          "SV": ["truck", "truck_with_trailer", "truck_with_semitrailer", "bus"],
+          "BIKE": ["bicyclist", "bicyclist_with_trailer", "cargo_bike_driver", "scooter_driver"],
+          "PED": ["pedestrian"]
+        }
+      },
+      "geo_tracks": true
+    }
+  }
+}
 ```
+
+Both keys are optional and only the relevant part of the otconfig is shown. Defaults:
+`enabled` true, `timezone` "UTC", `interval_minutes` 1; `class_groups` defaults to
+every classification being its own group; `geo_tracks` defaults to false.
 
 | Export             | otconfig key         | CLI flag               |
 | ------------------ | -------------------- | ---------------------- |
