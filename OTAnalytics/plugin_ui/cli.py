@@ -215,7 +215,9 @@ class OTAnalyticsCli(ABC):
                 export_mode=export_mode,
             )
 
-        if self._run_config.do_export_geo_tracks and self._export_geo_tracks:
+        if self._run_config.do_export_geo_tracks and (
+            self._export_geo_tracks is not None
+        ):
             await self._do_export_geo_tracks(
                 export_directory=export_directory,
                 export_filename_stem=export_filename_stem,
