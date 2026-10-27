@@ -6,6 +6,8 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Iterable, Sequence
 from zoneinfo import ZoneInfo
 
+from OTAnalytics.application.analysis.road_user_assignment import RoadUserAssignment
+from OTAnalytics.application.analysis.traffic_counting import aggregation_time
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
@@ -280,3 +282,30 @@ class DayTrafficStatistics:
         stats.road_user_ids = set(road_user_ids)
         stats.as_of = as_of
         return stats
+
+
+def assignment_to_entry(
+    assignment: RoadUserAssignment,
+    counting_event: CountingEvent,
+    resolver: ClassGroupResolver,
+    tz: ZoneInfo,
+) -> tuple[str, str, str, datetime, float | None] | None:
+    """Convert an assignment to the arguments of `DayTrafficStatistics.add`.
+
+    Returns (road_user, flow_id, group, local occurrence, speed in km/h) or None
+    if the road user's classification belongs to no class group. Naive
+    occurrences are treated as UTC.
+    """
+    group = resolver.group_of(assignment.road_user_type)
+    if group is None:
+        return None
+    occurrence = _as_utc(aggregation_time(assignment, counting_event)).astimezone(tz)
+    speed_mps = assignment.flow_metrics().avg_speed_mps
+    speed_kmh = None if speed_mps is None else speed_mps * 3.6
+    return (
+        assignment.road_user,
+        assignment.assignment.id.id,
+        group,
+        occurrence,
+        speed_kmh,
+    )
