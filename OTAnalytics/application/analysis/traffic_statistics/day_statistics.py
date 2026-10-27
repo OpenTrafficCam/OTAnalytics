@@ -13,6 +13,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.analysis.traffic_statistics.speed_histogram import (
     SpeedHistogram,
+    SpeedValues,
 )
 from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
@@ -34,6 +35,15 @@ class FlowInfo:
     start_section_name: str
     end_section_id: str
     end_section_name: str
+
+
+@dataclass(frozen=True)
+class PeakHour:
+    """Strongest sliding window of a group: local start, end and count."""
+
+    start: datetime
+    end: datetime
+    count: int
 
 
 def day_start(day: date, tz: ZoneInfo) -> datetime:
@@ -232,6 +242,76 @@ class DayTrafficStatistics:
         """Number of counted road users per group; TOTAL sums all flows."""
         return {
             group: sum(values) for group, values in self._flow_counts(flow_id).items()
+        }
+
+    def peak_hour(self, flow_id: str) -> dict[str, PeakHour]:
+        """Strongest window per group; TOTAL sums all flows.
+
+        Windows start every `peak_step_minutes` from the start of the day, are
+        `peak_window_minutes` long and lie completely within the day. None
+        counts are ignored, windows with only None are skipped and ties go to
+        the earliest window. Groups without data are absent.
+        """
+        interval = self._config.interval_minutes
+        window = max(1, self._config.peak_window_minutes // interval)
+        step = max(1, self._config.peak_step_minutes // interval)
+        day_minutes = minutes_in_day(self.day, self._tz)
+        recorded = self._flow_counts(flow_id)
+        result: dict[str, PeakHour] = {}
+        for group, values in self.counts(flow_id).items():
+            if group not in recorded:
+                continue
+            best: tuple[int, int] | None = None
+            for first in range(0, len(values), step):
+                if first * interval + window * interval > day_minutes:
+                    break
+                found = [v for v in values[first : first + window] if v is not None]
+                if found and (best is None or sum(found) > best[0]):
+                    best = (sum(found), first)
+            if best is not None:
+                count, first = best
+                start = self._start + timedelta(minutes=first * interval)
+                end = start + timedelta(minutes=window * interval)
+                result[group] = PeakHour(
+                    start=start.astimezone(self._tz),
+                    end=end.astimezone(self._tz),
+                    count=count,
+                )
+        return result
+
+    def _flow_histograms(self, flow_id: str) -> dict[str, list[SpeedHistogram]]:
+        if flow_id != TOTAL:
+            return self._histograms.get(flow_id, {})
+        merged: dict[str, list[SpeedHistogram]] = {}
+        for groups in self._histograms.values():
+            for group, slots in groups.items():
+                current = merged.setdefault(
+                    group, [SpeedHistogram() for _ in range(self._slot_count)]
+                )
+                for index, histogram in enumerate(slots):
+                    current[index] = current[index].merge(histogram)
+        return merged
+
+    def speed(self, flow_id: str) -> dict[str, SpeedValues]:
+        """Speed values per group over the whole day; TOTAL merges all flows.
+
+        Groups without plausible speeds are absent.
+        """
+        result: dict[str, SpeedValues] = {}
+        for group, slots in self._flow_histograms(flow_id).items():
+            merged = SpeedHistogram()
+            for histogram in slots:
+                merged = merged.merge(histogram)
+            values = merged.values()
+            if values is not None:
+                result[group] = values
+        return result
+
+    def speed_profile(self, flow_id: str) -> dict[str, list[SpeedValues | None]]:
+        """Speed values per group and speed profile slot; TOTAL merges flows."""
+        return {
+            group: [histogram.values() for histogram in slots]
+            for group, slots in self._flow_histograms(flow_id).items()
         }
 
     def raw_counts(self) -> dict[str, dict[str, list[int]]]:
