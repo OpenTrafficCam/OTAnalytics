@@ -193,6 +193,45 @@ class TestErrors:
         with pytest.raises(TrafficStatisticsFormatError):
             from_dict(data, CONFIG)
 
+    @pytest.mark.parametrize(
+        "class_groups",
+        [
+            {"LV": frozenset({"car"}), "SV": frozenset({"truck"})},
+            {"LV": frozenset({"car", "van"}), "HV": frozenset({"truck"})},
+            {"LV": frozenset({"car", "van"})},
+            {},
+        ],
+    )
+    def test_changed_class_groups_raise_format_error(
+        self, class_groups: dict[str, frozenset[str]]
+    ) -> None:
+        other = TrafficStatisticsConfig(
+            timezone="Europe/Berlin", class_groups=class_groups
+        )
+
+        with pytest.raises(TrafficStatisticsFormatError, match="class_groups"):
+            from_dict(self.valid(), other)
+
+    def test_class_groups_are_compared_ignoring_order(self) -> None:
+        data = self.valid()
+        data["class_groups"] = {"SV": ["truck"], "LV": ["van", "car"]}
+
+        restored = from_dict(data, CONFIG)
+
+        assert restored.config.class_groups == CONFIG.class_groups
+
+    def test_changed_peak_settings_are_accepted(self) -> None:
+        other = TrafficStatisticsConfig(
+            timezone="Europe/Berlin",
+            class_groups=CONFIG.class_groups,
+            peak_window_minutes=30,
+            peak_step_minutes=5,
+        )
+
+        restored = from_dict(self.valid(), other)
+
+        assert restored.config == other
+
     @pytest.mark.parametrize("key", ["day", "flows", "statistics", "state", "coverage"])
     def test_missing_key_raises(self, key: str) -> None:
         data = self.valid()
