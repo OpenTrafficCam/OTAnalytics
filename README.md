@@ -119,6 +119,63 @@ Example configuration options:
 - Control parallelization with multiple processes
 - Include or exclude specific road user classes
 
+### Traffic Statistics and Geo Track Export
+
+Two optional exports for the CLI, both off by default. Enable them in the
+otconfig (under `analysis.export`) or with a CLI flag:
+
+```yaml
+# under analysis.export, both keys optional
+traffic_statistics:
+  enabled: true
+  timezone: Europe/Berlin          # Default "UTC"
+  interval_minutes: 1              # Default 1
+  speed_profile_interval_minutes: 15
+  max_speed_kmh: 200
+  peak_window_minutes: 60
+  peak_step_minutes: 15
+  class_groups:                    # Default: every classification is its own group
+    LV: [car, car_with_trailer, private_van, delivery_van, delivery_van_with_trailer, motorcyclist]
+    SV: [truck, truck_with_trailer, truck_with_semitrailer, bus]
+    BIKE: [bicyclist, bicyclist_with_trailer, cargo_bike_driver, scooter_driver]
+    PED: [pedestrian]
+geo_tracks: true                   # Default false
+```
+
+| Export             | otconfig key         | CLI flag               |
+| ------------------ | -------------------- | ---------------------- |
+| Traffic statistics | `traffic_statistics` | `--traffic-statistics` |
+| Geo tracks         | `geo_tracks`         | `--geo-track-export`   |
+
+`--traffic-statistics` uses the `traffic_statistics` block of the otconfig if there
+is one, otherwise the defaults.
+
+**Traffic statistics** are written to
+`{save_dir}/{save_stem}.traffic_statistics_{YYYY-MM-DD}.json`, one file per local
+day (day boundaries in the configured timezone). Each file holds, per flow and
+for the total of all flows and per class group: counts per interval, totals, peak
+hour, average speed and v85, and a speed profile. A road user is counted at most
+once per day. Speed is the flow distance divided by the time between the road
+user's start and end event, in km/h. Only speeds above 0 and up to
+`max_speed_kmh` enter the speed figures. The file also carries the state needed
+to continue the day when the CLI runs again on further chunks.
+
+**Geo tracks** are written to
+`{save_dir}/{save_stem}_{YYYY-MM-DD_HH-MM-SS}.geo_tracks.json.bz2` (timestamp of
+the earliest detection of the chunk, UTC). The bz2-compressed JSON file looks like
+this:
+
+```json
+{"metadata": {"format": "otanalytics.geo_tracks", "version": 1},
+ "data": {"detections": [
+   {"track-id": "...", "class": "car", "geo_x": 455123.12, "geo_y": 5701234.56,
+    "occurrence": 1761572520.04}
+ ]}}
+```
+
+`occurrence` is the Unix timestamp in seconds. Detections without a geo coordinate
+are left out, and if none remain no file is written.
+
 ## Features
 
 - **Track Analysis**: Process and analyze trajectory data from various sources
