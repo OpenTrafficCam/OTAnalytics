@@ -85,13 +85,18 @@ def create_exporter(
 def spec(
     tmp_path: Path, start: datetime, end: datetime
 ) -> TrafficStatisticsExportSpecification:
+    return spec_with_ranges(tmp_path, [(start, end)])
+
+
+def spec_with_ranges(
+    tmp_path: Path, covered_ranges: list[tuple[datetime, datetime]]
+) -> TrafficStatisticsExportSpecification:
     return TrafficStatisticsExportSpecification(
         export_directory=tmp_path,
         export_filename_stem="out",
         config=CONFIG,
         counting_event=CountingEvent.START,
-        covered_start=start,
-        covered_end=end,
+        covered_ranges=covered_ranges,
         export_mode=MERGE,
     )
 
@@ -269,3 +274,68 @@ def test_as_of_is_not_pushed_beyond_the_day(tmp_path: Path) -> None:
 
     assert read(paths[0], CONFIG).as_of == local(27, 0, 0)
     assert read(paths[1], CONFIG).as_of == local(27, 0, 2)
+
+
+def lv_counts(path: Path) -> list[int | None]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data["statistics"]["total"]["counts"]["LV"]
+
+
+def test_gap_between_covered_ranges_stays_uncovered(tmp_path: Path) -> None:
+    exporter = create_exporter([assignment("r1", local(27, 10, 2))])
+
+    paths = exporter.export(
+        spec_with_ranges(
+            tmp_path,
+            [
+                (local(27, 10, 0), local(27, 10, 5)),
+                (local(27, 10, 10), local(27, 10, 15)),
+            ],
+        )
+    )
+
+    counts = lv_counts(paths[0])
+    minute = 10 * 60
+    assert counts[minute + 2] == 1
+    assert counts[minute + 4] == 0
+    assert counts[minute + 5 : minute + 10] == [None] * 5
+    assert counts[minute + 10] == 0
+    assert read(paths[0], CONFIG).coverage == [
+        (local(27, 10, 0), local(27, 10, 5)),
+        (local(27, 10, 10), local(27, 10, 15)),
+    ]
+    assert read(paths[0], CONFIG).as_of == local(27, 10, 15)
+
+
+def test_gap_between_chunks_stays_uncovered(tmp_path: Path) -> None:
+    exporter = create_exporter([])
+    exporter.export(spec(tmp_path, local(27, 10, 0), local(27, 10, 5)))
+
+    paths = exporter.export(spec(tmp_path, local(27, 10, 10), local(27, 10, 15)))
+
+    counts = lv_counts(paths[0])
+    assert counts[10 * 60 + 4] == 0
+    assert counts[10 * 60 + 7] is None
+    assert counts[10 * 60 + 12] == 0
+    assert read(paths[0], CONFIG).coverage == [
+        (local(27, 10, 0), local(27, 10, 5)),
+        (local(27, 10, 10), local(27, 10, 15)),
+    ]
+
+
+def test_range_on_other_day_does_not_cover_untouched_day(tmp_path: Path) -> None:
+    exporter = create_exporter([])
+
+    paths = exporter.export(
+        spec_with_ranges(
+            tmp_path,
+            [
+                (local(26, 23, 0), local(26, 23, 30)),
+                (local(27, 1, 0), local(27, 1, 30)),
+            ],
+        )
+    )
+
+    assert paths == [day_file(tmp_path, 26), day_file(tmp_path, 27)]
+    assert read(paths[0], CONFIG).coverage == [(local(26, 23, 0), local(26, 23, 30))]
+    assert read(paths[1], CONFIG).coverage == [(local(27, 1, 0), local(27, 1, 30))]
