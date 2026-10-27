@@ -1,5 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
 from typing import AsyncIterator, Iterable
 
@@ -124,6 +125,10 @@ class OTAnalyticsCli(ABC):
         self._export_road_user_assignments = export_road_user_assignments
         self._export_track_statistics = export_track_statistics
         self._export_traffic_statistics = export_traffic_statistics
+        # Starts of the videos whose time range was already passed as covered to
+        # the traffic statistics export. Only newly added videos are covered by
+        # later exports, so gaps between videos stay uncovered.
+        self._traffic_statistics_reported_videos: set[datetime] = set()
 
     async def start(self) -> None:
         """Start analysis."""
@@ -385,27 +390,30 @@ class OTAnalyticsCli(ABC):
         if config is None or self._export_traffic_statistics is None:
             return
         logger().info("Create traffic statistics ...")
-        start = self._videos_metadata.first_video_start
-        end = self._videos_metadata.last_video_end
-        if start is None:
+        videos = self._videos_metadata.get_all()
+        if not videos:
             raise ValueError(
-                "start is None but has to be defined for exporting traffic statistics"
+                "No video metadata available but it has to be defined for "
+                "exporting traffic statistics"
             )
-        if end is None:
-            raise ValueError(
-                "end is None but has to be defined for exporting traffic statistics"
-            )
+        new_videos = [
+            video
+            for video in videos
+            if video.start not in self._traffic_statistics_reported_videos
+        ]
         specification = TrafficStatisticsExportSpecification(
             export_directory=export_directory,
             export_filename_stem=export_filename_stem,
             config=config,
             counting_event=self._run_config.counting_event,
-            covered_start=start,
-            covered_end=end,
+            covered_ranges=[(video.start, video.end) for video in new_videos],
             export_mode=export_mode,
         )
         files = await asyncio.to_thread(
             self._export_traffic_statistics.export, specification
+        )
+        self._traffic_statistics_reported_videos.update(
+            video.start for video in new_videos
         )
         await self._after_traffic_statistics_export(files)
 
