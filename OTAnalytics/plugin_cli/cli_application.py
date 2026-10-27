@@ -7,9 +7,15 @@ from OTAnalytics.application.use_cases.create_events import (
     SectionProvider,
 )
 from OTAnalytics.application.use_cases.track_repository import AllTrackIdsProvider
+from OTAnalytics.application.use_cases.traffic_statistics_export import (
+    ExportTrafficStatistics,
+)
 from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.track_id_provider import TrackIdProvider
+from OTAnalytics.plugin_parser.traffic_statistics_export import (
+    JsonTrafficStatisticsExporter,
+)
 from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     provide_available_eventlist_exporter,
@@ -64,6 +70,7 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.export_track_statistics,
             track_parser,
             progressbar=TqdmBuilder(),
+            export_traffic_statistics=self.export_traffic_statistics,
         )
         return cli
 
@@ -89,8 +96,16 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
             self.csv_track_export,
             self.export_road_user_assignments,
             stream_track_parser,
+            export_traffic_statistics=self.export_traffic_statistics,
         )
         return cli
+
+    @cached_property
+    def export_traffic_statistics(self) -> ExportTrafficStatistics:
+        # Stateful across chunks: must be a single instance per run.
+        return JsonTrafficStatisticsExporter(
+            self.get_all_assignments, self.get_all_flows, self.get_all_sections
+        )
 
     @cached_property
     def all_filtered_track_ids(self) -> TrackIdProvider:

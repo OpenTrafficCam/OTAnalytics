@@ -1,6 +1,9 @@
+import csv
+import json
 import shutil
 import subprocess
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,8 +17,10 @@ from OTAnalytics.application.config import (
     CONTEXT_FILE_TYPE_TRACKS,
 )
 from OTAnalytics.application.parser.cli_parser import CliMode
+from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
 from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
 from tests.conftest import YieldFixture
+from tests.utils.builders.run_configuration import create_run_config
 
 
 @dataclass
@@ -159,6 +164,47 @@ class TestMultipleDotsInFilenameResultsInIncompleteExportFilenames:
             "--cli-mode",
             mode.value,
         ]
+
+
+class TestTrafficStatisticsExport:
+    @pytest.mark.parametrize("cli_mode", [CliMode.BULK, CliMode.STREAM])
+    def test_traffic_statistics_totals_match_exported_counts(
+        self,
+        cli_mode: CliMode,
+        test_data_tmp_dir: Path,
+        ottrk_path: Path,
+        otsection_file: Path,
+    ) -> None:
+        save_dir = test_data_tmp_dir / f"traffic_statistics_{cli_mode.value}"
+        shutil.rmtree(save_dir, ignore_errors=True)
+        save_dir.mkdir(parents=True)
+        # the parser writes derived files next to the ottrk file
+        track_file = Path(shutil.copy(ottrk_path, save_dir))
+        run_config = create_run_config(
+            track_files=[str(track_file)],
+            otflow_file=str(otsection_file),
+            save_dir=str(save_dir),
+            save_name="run",
+            event_formats=["csv"],
+            count_intervals=[15],
+            cli_mode=cli_mode,
+            traffic_statistics=True,
+        )
+
+        OtAnalyticsCliApplicationStarter(run_config).start()
+
+        statistics_files = list(save_dir.glob("run.traffic_statistics_*.json"))
+        assert len(statistics_files) == 1
+        totals: Counter[str] = Counter()
+        for statistics_file in statistics_files:
+            statistics = json.loads(statistics_file.read_text(encoding="utf-8"))
+            totals.update(statistics["statistics"]["total"]["totals"])
+        counts: Counter[str] = Counter()
+        with (save_dir / "run.counts_15min.csv").open(encoding="utf-8") as file:
+            for row in csv.DictReader(file):
+                counts[row["classification"]] += int(row["count"])
+        assert sum(counts.values()) > 0
+        assert totals == +counts
 
 
 @pytest.fixture
