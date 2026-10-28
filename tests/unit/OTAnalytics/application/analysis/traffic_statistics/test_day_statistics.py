@@ -77,6 +77,11 @@ def local(hour: int, minute: int, second: int = 0, day: date = DAY) -> datetime:
     return datetime(day.year, day.month, day.day, hour, minute, second, tzinfo=TZ)
 
 
+def interval_index(hour: int, minute: int, interval_minutes: int = 1) -> int:
+    """Index of the interval containing the local time on DAY (no DST change)."""
+    return (hour * 60 + minute) // interval_minutes
+
+
 def create_statistics(
     config: TrafficStatisticsConfig | None = None, covered: bool = True
 ) -> DayTrafficStatistics:
@@ -119,8 +124,9 @@ class TestDayTrafficStatistics:
         stats.add("ru0", "f1", "LV", local(0, 0), None)
         stats.mark_covered(local(7, 3), local(7, 4))
         counts = stats.counts("f1")["LV"]
-        assert counts[7 * 12] == 0
-        assert counts[7 * 12 + 1] is None
+        covered = interval_index(7, 3, interval_minutes=5)
+        assert counts[covered] == 0
+        assert counts[covered + 1] is None
 
     def test_duplicate_road_user_is_counted_once(self) -> None:
         stats = create_statistics()
