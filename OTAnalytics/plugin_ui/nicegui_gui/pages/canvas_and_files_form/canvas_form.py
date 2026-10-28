@@ -1,7 +1,7 @@
 from typing import Any, Final, Iterable, Optional, Self
 
 from nicegui import events, ui
-from nicegui.elements.interactive_image import InteractiveImage
+from nicegui.elements.interactive_image import InteractiveImage, InteractiveImageLayer
 from nicegui.events import KeyEventArguments
 from PIL import Image
 
@@ -59,6 +59,7 @@ CONTEXT_MENU = "contextmenu.prevent"
 PASSIVE_MOUSE_EVENTS = [CLICK]
 EDITOR_MOUSE_EVENTS = [CLICK, MOUSE_MOVE, MOUSE_UP]
 EVENTS_PROP = "events"
+UPDATE_VIEWBOX = "updateViewbox"
 RELEASE_FOCUS = "document.activeElement?.blur()"
 NOTIFICATION_TYPE_WARNING: Final = "warning"
 POINTER_EVENT_ALL = "all"
@@ -157,6 +158,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._viewmodel = viewmodel
         self._resource_manager = resource_manager
         self._background_image: Optional[InteractiveImage] = None
+        self._overlay: Optional[InteractiveImageLayer] = None
         self._current_image: Optional[Image.Image] = None
         self._current_sections = self._viewmodel.get_all_sections()
         self._new_sections = self._current_sections
@@ -194,15 +196,13 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             "", on_mouse=self.on_mouse, events=list(PASSIVE_MOUSE_EVENTS)
         )
         self._background_image.props(f"{TEST_ID}={MARKER_INTERACTIVE_IMAGE}")
-        self._background_image.on(
-            "svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args)
-        )
-        self._background_image.on(
-            "svg:pointermove", lambda e: self.on_svg_pointer_move(e.args)
-        )
-        self._background_image.on(
-            "svg:pointerup", lambda e: self.on_svg_pointer_up(e.args)
-        )
+        # Sections are drawn on a layer, because every change of the image's own
+        # content resends its whole background. Created before the background is
+        # set, as the layer copies the image's source.
+        self._overlay = self._background_image.add_layer()
+        self._overlay.on("svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args))
+        self._overlay.on("svg:pointermove", lambda e: self.on_svg_pointer_move(e.args))
+        self._overlay.on("svg:pointerup", lambda e: self.on_svg_pointer_up(e.args))
         self._background_image.on(CONTEXT_MENU, self.on_right_click)
 
         self._change_image()
@@ -400,15 +400,15 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         )
 
     def draw_all(self) -> None:
-        if self._background_image:
-            self._background_image.content = self._sections.to_svg()
-            self._background_image.content += self._flows.to_svg()
-            self._background_image.content += self._circles.to_svg()
-            self._background_image.content += self._edit_geometry()
+        if self._overlay:
+            self._overlay.content = self._sections.to_svg()
+            self._overlay.content += self._flows.to_svg()
+            self._overlay.content += self._circles.to_svg()
+            self._overlay.content += self._edit_geometry()
             self.draw_new_section()
 
     def draw_new_section(self) -> None:
-        if not self._background_image:
+        if not self._overlay:
             return
         coordinates = circle_to_coordinates(self._new_section_points)
         if coordinates and self._preview_point:
@@ -417,9 +417,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             shape = create_section_shape(
                 NEW_SECTION_ID, coordinates, EDIT_COLOR, self._new_area_section
             )
-            self._background_image.content += shape.to_svg()
+            self._overlay.content += shape.to_svg()
         for point in self._new_section_points:
-            self._background_image.content += point.to_svg()
+            self._overlay.content += point.to_svg()
 
     def _edit_geometry(self) -> str:
         if self._current_section is None:
@@ -554,8 +554,21 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def _change_image(self) -> None:
         if self._current_image and self._background_image:
             self._background_image.set_source(self._current_image)
+            self._fit_overlay_to(self._current_image)
         else:
             self.clear_image()
+
+    def _fit_overlay_to(self, image: Image.Image) -> None:
+        """Size the overlay like the background, so the sections line up with it.
+
+        The layer would take its size from the image's "loaded" event, which is
+        lost if the image loads before the page is connected. Without a size the
+        layer stays invisible.
+        """
+        if self._overlay is None:
+            return
+        width, height = image.size
+        self._overlay.run_method(UPDATE_VIEWBOX, width, height)
 
     def clear_image(self) -> None:
         if self._background_image:
