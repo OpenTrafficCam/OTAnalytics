@@ -16,6 +16,7 @@ import pytest
 from pytest import approx
 
 import OTAnalytics.plugin_parser.ottrk_dataformat as ottrk_format
+from OTAnalytics.application.eventlist import SceneActionDetector
 from OTAnalytics.application.orthophoto import ProvideOrthophotoGeoreference
 from OTAnalytics.application.parser.track_parser import (
     DetectionMetadata,
@@ -617,6 +618,26 @@ def setup_empty_geo_only(given: GivenGeoOnlyFeather) -> GivenGeoOnlyFeather:
     return given
 
 
+def setup_track_west_of_orthophoto(given: GivenGeoOnlyFeather) -> GivenGeoOnlyFeather:
+    """A road user tracked past the Orthophoto's edge, long enough to count."""
+    setup_default_geo_only(given)
+    first = SINGLE_ROW | {
+        track.X: 0.0,
+        track.Y: 0.0,
+        track.GEO_X: WEST_OF_ORTHOPHOTO_GEO_X,
+        track.GEO_Y: KNOWN_GEO[1],
+        track.VIDEO_NAME: "OTCamera19_FR20_2023-05-24_08-00-00.mp4",
+    }
+    second = first | {
+        track.FRAME: 2,
+        track.GEO_X: WEST_OF_ORTHOPHOTO_GEO_X + 1.0,
+        track.OCCURRENCE: datetime(2023, 1, 1, 10, 0, 1),
+        ottrk.FIRST: False,
+    }
+    polars.DataFrame([first, second]).write_ipc(given.feather_file)
+    return given
+
+
 def setup_track_file_with_geo_columns(
     given: GivenGeoOnlyFeather,
 ) -> GivenGeoOnlyFeather:
@@ -720,6 +741,21 @@ class TestFeathersParserGeoOnly:
         result = target.parse(given.feather_file)
 
         assert placed_pixel(result)[0] == approx(WEST_OF_ORTHOPHOTO_PIXEL_X, rel=1e-9)
+
+    def test_counts_detections_outside_the_orthophoto(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Bug: the web UI crashed creating scene events for off-image detections.
+
+        #Requirement https://openproject.platomo.de/wp/10404
+        """
+        given = setup_track_west_of_orthophoto(create_given_geo_only(test_data_tmp_dir))
+        target = create_target_geo_only(given)
+
+        result = target.parse(given.feather_file)
+        events = SceneActionDetector().detect(result.tracks)
+
+        assert len(events) == 2
 
     def test_refuses_without_an_orthophoto(self, test_data_tmp_dir: Path) -> None:
         """#Requirement https://openproject.platomo.de/wp/10404"""
