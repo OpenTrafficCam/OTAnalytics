@@ -1,5 +1,8 @@
+import os
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable
+from typing import BinaryIO, Iterable, Iterator
+from uuid import uuid4
 
 from OTAnalytics.application.logger import logger
 
@@ -29,3 +32,28 @@ def get_all_files_with_correct_file_ending_in_directory(
 
             files_to_save.add(file_to_save)
     return list(files_to_save)
+
+
+@contextmanager
+def atomic_write(path: Path) -> Iterator[BinaryIO]:
+    """Write a file atomically.
+
+    Yields a binary temp file in the same directory as path. If the block
+    succeeds, the temp file is flushed to disk and moved over path with
+    os.replace; otherwise it is removed and path stays untouched. Unlike
+    tempfile.mkstemp, the temp file gets the default permissions (0o666 minus
+    the umask), so the result is as readable as any other export.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+    handle = os.open(temp, flags, 0o666)
+    try:
+        with os.fdopen(handle, "wb") as file:
+            yield file
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temp, path)
+    except BaseException:
+        temp.unlink(missing_ok=True)
+        raise
