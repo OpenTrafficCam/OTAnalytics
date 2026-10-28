@@ -291,6 +291,16 @@ class TestWrite:
         assert [p.name for p in tmp_path.iterdir()] == ["day.json"]
         assert json.loads(path.read_text(encoding="utf-8"))["format"] == FORMAT
 
+    def test_written_file_gets_default_permissions(self, tmp_path: Path) -> None:
+        path = tmp_path / "day.json"
+        old_umask = os.umask(0o022)
+        try:
+            write(create_statistics(), path)
+        finally:
+            os.umask(old_umask)
+
+        assert path.stat().st_mode & 0o777 == 0o644
+
     def test_write_syncs_temp_file_before_replace(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

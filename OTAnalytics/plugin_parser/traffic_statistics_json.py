@@ -1,8 +1,6 @@
 """JSON codec for the daily traffic statistics files."""
 
 import json
-import os
-import tempfile
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -25,6 +23,7 @@ from OTAnalytics.application.analysis.traffic_statistics.speed_histogram import 
 from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
 )
+from OTAnalytics.helpers.file_helpers import atomic_write
 
 FORMAT = "otanalytics.traffic_statistics"
 VERSION = 1
@@ -318,25 +317,10 @@ def _histogram_from_dict(slot: dict[str, Any] | None) -> SpeedHistogram:
 
 
 def write(stats: DayTrafficStatistics, path: Path) -> None:
-    """Write the statistics atomically to the path.
-
-    The content is written to a temp file in the same directory, flushed to
-    disk and then moved over the path with os.replace.
-    """
+    """Write the statistics atomically to the path, see atomic_write."""
     content = json.dumps(to_dict(stats), ensure_ascii=False)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    handle, temp_name = tempfile.mkstemp(
-        dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
-    )
-    try:
-        with os.fdopen(handle, "w", encoding="utf-8") as file:
-            file.write(content)
-            file.flush()
-            os.fsync(file.fileno())
-        os.replace(temp_name, path)
-    except BaseException:
-        Path(temp_name).unlink(missing_ok=True)
-        raise
+    with atomic_write(path) as file:
+        file.write(content.encode("utf-8"))
 
 
 def read(path: Path, config: TrafficStatisticsConfig) -> DayTrafficStatistics:
