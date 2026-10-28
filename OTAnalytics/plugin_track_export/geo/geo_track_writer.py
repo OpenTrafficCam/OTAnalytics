@@ -1,8 +1,6 @@
 import bz2
 import json
 import math
-import os
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol, Sequence, cast
@@ -16,6 +14,7 @@ from OTAnalytics.application.use_cases.geo_track_export import (
 from OTAnalytics.domain import track
 from OTAnalytics.domain.track_dataset.track_dataset import TrackDataset
 from OTAnalytics.domain.track_repository import TrackRepository
+from OTAnalytics.helpers.file_helpers import atomic_write
 from OTAnalytics.plugin_datastore.polars_track_store import (
     PolarsDataFrameProvider,
     drop_row_id,
@@ -57,8 +56,7 @@ def _write_detections(
 ) -> Path | None:
     """Write detections to the file named after the earliest detection (UTC).
 
-    The file is written atomically: to a temp file in the same directory that
-    is then moved over the target with os.replace.
+    The file is written atomically, see atomic_write.
     """
     if not detections:
         return None
@@ -73,20 +71,8 @@ def _write_detections(
         "metadata": {"format": FORMAT_NAME, "version": FORMAT_VERSION},
         "data": {"detections": detections},
     }
-    specification.export_directory.mkdir(parents=True, exist_ok=True)
-    handle, temp_name = tempfile.mkstemp(
-        dir=specification.export_directory, prefix=f".{path.name}.", suffix=".tmp"
-    )
-    try:
-        with os.fdopen(handle, "wb") as raw:
-            with bz2.open(raw, "wt", encoding="UTF-8") as file:
-                json.dump(content, file, allow_nan=False)
-            raw.flush()
-            os.fsync(raw.fileno())
-        os.replace(temp_name, path)
-    except BaseException:
-        Path(temp_name).unlink(missing_ok=True)
-        raise
+    with atomic_write(path) as raw, bz2.open(raw, "wt", encoding="UTF-8") as file:
+        json.dump(content, file, allow_nan=False)
     return path
 
 

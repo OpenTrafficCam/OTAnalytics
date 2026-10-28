@@ -1,5 +1,6 @@
 import bz2
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
@@ -198,6 +199,19 @@ def test_polars_and_domain_writer_produce_same_content(
     polars_content["data"]["detections"].sort(key=key)
     domain_content["data"]["detections"].sort(key=key)
     assert polars_content == domain_content
+
+
+def test_written_file_gets_default_permissions(tmp_path: Path) -> None:
+    spec = GeoTrackExportSpecification(tmp_path, "chunk")
+    tracks = [build_track("1", [(1.0, 2.0)])]
+    old_umask = os.umask(0o022)
+    try:
+        path = PolarsGeoTrackWriter().write(polars_dataset(tracks), spec)
+    finally:
+        os.umask(old_umask)
+
+    assert path is not None
+    assert path.stat().st_mode & 0o777 == 0o644
 
 
 def test_failed_write_keeps_old_file_and_leaves_no_temp_file(
