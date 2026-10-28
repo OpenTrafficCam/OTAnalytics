@@ -326,6 +326,23 @@ class TestSpeed:
         assert profile[29] == SpeedValues(36.0, 36.5, 1)
         assert [v for i, v in enumerate(profile) if i != 29 and v is not None] == []
 
+    def test_speed_profile_contains_counted_group_without_speed(self) -> None:
+        stats = create_statistics()
+        stats.add("ru1", "f1", "LV", local(7, 20), None)
+        assert stats.speed_profile("f1") == {"LV": [None] * 96}
+
+    def test_speed_profile_contains_configured_groups_without_data(self) -> None:
+        config = TrafficStatisticsConfig(
+            timezone="Europe/Berlin",
+            class_groups={"LV": frozenset({"car"}), "HV": frozenset({"truck"})},
+        )
+        stats = create_statistics(config)
+        stats.add("ru1", "f1", "LV", local(7, 20), 36.0)
+        profile = stats.speed_profile("f1")
+        assert set(profile) == {"LV", "HV"}
+        assert profile["HV"] == [None] * 96
+        assert profile["LV"][29] == SpeedValues(36.0, 36.5, 1)
+
     def test_total_speed_profile_merges_per_slot(self) -> None:
         stats = create_statistics()
         stats.add("ru1", "f1", "LV", local(7, 20), 30.0)

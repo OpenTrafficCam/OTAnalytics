@@ -306,11 +306,18 @@ class DayTrafficStatistics:
         return result
 
     def speed_profile(self, flow_id: str) -> dict[str, list[SpeedValues | None]]:
-        """Speed values per group and speed profile slot; TOTAL merges flows."""
-        return {
-            group: [histogram.values() for histogram in slots]
-            for group, slots in self._flow_histograms(flow_id).items()
+        """Speed values per group and speed profile slot; TOTAL merges flows.
+
+        Contains every configured and counted group. Slots without plausible
+        speeds are None.
+        """
+        result: dict[str, list[SpeedValues | None]] = {
+            group: [None] * self._slot_count
+            for group in [*self._config.class_groups, *self._flow_counts(flow_id)]
         }
+        for group, slots in self._flow_histograms(flow_id).items():
+            result[group] = [histogram.values() for histogram in slots]
+        return result
 
     def raw_counts(self) -> dict[str, dict[str, list[int]]]:
         """Copy of the stored counts per flow, group and interval."""
