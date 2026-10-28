@@ -29,6 +29,8 @@ from tests.utils.builders.road_user_assignment import create_assignment
 
 TZ = ZoneInfo("Europe/Berlin")
 DAY = date(2026, 10, 27)
+MINUTES_PER_DAY = 24 * 60
+SPEED_PROFILE_SLOTS = MINUTES_PER_DAY // 15
 
 
 class TestDayHelpers:
@@ -36,7 +38,7 @@ class TestDayHelpers:
         assert day_start(DAY, TZ).isoformat() == "2026-10-27T00:00:00+01:00"
 
     def test_regular_day_has_1440_minutes(self) -> None:
-        assert minutes_in_day(DAY, TZ) == 1440
+        assert minutes_in_day(DAY, TZ) == MINUTES_PER_DAY
 
     def test_dst_spring_forward_day_has_1380_minutes(self) -> None:
         assert minutes_in_day(date(2026, 3, 29), TZ) == 1380
@@ -97,24 +99,24 @@ class TestDayTrafficStatistics:
         stats = create_statistics()
         assert stats.add("ru1", "f1", "LV", local(7, 15, 30), None)
         counts = stats.counts("f1")["LV"]
-        assert len(counts) == 1440
-        assert counts[435] == 1
-        assert counts[434] == 0
+        assert len(counts) == MINUTES_PER_DAY
+        assert counts[interval_index(7, 15)] == 1
+        assert counts[interval_index(7, 14)] == 0
 
     def test_uncovered_minute_without_counts_is_none(self) -> None:
         stats = create_statistics(covered=False)
         stats.mark_covered(local(7, 0), local(8, 0))
         stats.add("ru1", "f1", "LV", local(7, 15), None)
         counts = stats.counts("f1")["LV"]
-        assert counts[434] == 0
-        assert counts[435] == 1
-        assert counts[0] is None
-        assert counts[480] is None
+        assert counts[interval_index(7, 14)] == 0
+        assert counts[interval_index(7, 15)] == 1
+        assert counts[interval_index(0, 0)] is None
+        assert counts[interval_index(8, 0)] is None
 
     def test_uncovered_minute_with_count_is_int(self) -> None:
         stats = create_statistics(covered=False)
         stats.add("ru1", "f1", "LV", local(7, 15), None)
-        assert stats.counts("f1")["LV"][435] == 1
+        assert stats.counts("f1")["LV"][interval_index(7, 15)] == 1
 
     def test_interval_overlapping_coverage_is_covered(self) -> None:
         stats = create_statistics(
@@ -139,13 +141,13 @@ class TestDayTrafficStatistics:
         stats = create_statistics()
         stats.add("ru1", "f1", "LV", local(7, 15), None)
         stats.add("ru2", "f2", "LV", local(7, 15), None)
-        assert stats.counts(TOTAL)["LV"][435] == 2
+        assert stats.counts(TOTAL)["LV"][interval_index(7, 15)] == 2
         assert stats.totals("f1") == {"LV": 1}
 
     def test_total_is_none_where_no_flow_has_coverage(self) -> None:
         stats = create_statistics(covered=False)
         stats.add("ru1", "f1", "LV", local(7, 15), None)
-        assert stats.counts(TOTAL)["LV"][0] is None
+        assert stats.counts(TOTAL)["LV"][interval_index(0, 0)] is None
 
     def test_record_of_other_day_is_rejected(self) -> None:
         stats = create_statistics()
@@ -160,8 +162,9 @@ class TestDayTrafficStatistics:
 
     def test_naive_occurrence_is_treated_as_utc(self) -> None:
         stats = create_statistics()
+        # 06:15 UTC is 07:15 local time
         assert stats.add("ru1", "f1", "LV", datetime(2026, 10, 27, 6, 15), None)
-        assert stats.counts("f1")["LV"][435] == 1
+        assert stats.counts("f1")["LV"][interval_index(7, 15)] == 1
 
     def test_dst_spring_forward_day_has_1380_bins(self) -> None:
         day = date(2026, 3, 29)
@@ -193,8 +196,8 @@ class TestDayTrafficStatistics:
         )
         stats.add("ru1", "f1", "LV", local(7, 17), None)
         counts = stats.counts("f1")["LV"]
-        assert len(counts) == 288
-        assert counts[87] == 1
+        assert len(counts) == MINUTES_PER_DAY // 5
+        assert counts[interval_index(7, 17, interval_minutes=5)] == 1
 
     def test_mark_covered_merges_and_clips(self) -> None:
         stats = create_statistics(covered=False)
@@ -219,8 +222,8 @@ class TestDayTrafficStatistics:
         stats.add("ru3", "f1", "LV", local(7, 22), None)
         stats.add("ru4", "f1", "LV", local(7, 23), 0.0)
         histograms = stats.histograms()["f1"]["LV"]
-        assert len(histograms) == 96
-        assert histograms[29].bins == {50: 1}
+        assert len(histograms) == SPEED_PROFILE_SLOTS
+        assert histograms[interval_index(7, 20, interval_minutes=15)].bins == {50: 1}
         assert sum(h.count for h in histograms) == 1
 
     def test_restore_reproduces_state(self) -> None:
@@ -244,8 +247,9 @@ class TestDayTrafficStatistics:
         assert restored.as_of == as_of
         assert restored.counting_event == CountingEvent.END
         assert not restored.add("ru1", "f1", "LV", local(7, 16), None)
-        assert restored.histograms()["f1"]["LV"][29].bins == {40: 1}
-        assert isinstance(restored.histograms()["f1"]["LV"][29], SpeedHistogram)
+        slot = interval_index(7, 15, interval_minutes=15)
+        assert restored.histograms()["f1"]["LV"][slot].bins == {40: 1}
+        assert isinstance(restored.histograms()["f1"]["LV"][slot], SpeedHistogram)
 
     def test_counting_event_defaults_to_start(self) -> None:
         assert create_statistics().counting_event == CountingEvent.START
@@ -328,14 +332,15 @@ class TestSpeed:
         stats = create_statistics()
         stats.add("ru1", "f1", "LV", local(7, 20), 36.0)
         profile = stats.speed_profile("f1")["LV"]
-        assert len(profile) == 96
-        assert profile[29] == SpeedValues(36.0, 36.5, 1)
-        assert [v for i, v in enumerate(profile) if i != 29 and v is not None] == []
+        slot = interval_index(7, 20, interval_minutes=15)
+        assert len(profile) == SPEED_PROFILE_SLOTS
+        assert profile[slot] == SpeedValues(36.0, 36.5, 1)
+        assert [v for i, v in enumerate(profile) if i != slot and v is not None] == []
 
     def test_speed_profile_contains_counted_group_without_speed(self) -> None:
         stats = create_statistics()
         stats.add("ru1", "f1", "LV", local(7, 20), None)
-        assert stats.speed_profile("f1") == {"LV": [None] * 96}
+        assert stats.speed_profile("f1") == {"LV": [None] * SPEED_PROFILE_SLOTS}
 
     def test_speed_profile_contains_configured_groups_without_data(self) -> None:
         config = TrafficStatisticsConfig(
@@ -346,14 +351,16 @@ class TestSpeed:
         stats.add("ru1", "f1", "LV", local(7, 20), 36.0)
         profile = stats.speed_profile("f1")
         assert set(profile) == {"LV", "HV"}
-        assert profile["HV"] == [None] * 96
-        assert profile["LV"][29] == SpeedValues(36.0, 36.5, 1)
+        assert profile["HV"] == [None] * SPEED_PROFILE_SLOTS
+        slot = interval_index(7, 20, interval_minutes=15)
+        assert profile["LV"][slot] == SpeedValues(36.0, 36.5, 1)
 
     def test_total_speed_profile_merges_per_slot(self) -> None:
         stats = create_statistics()
         stats.add("ru1", "f1", "LV", local(7, 20), 30.0)
         stats.add("ru2", "f2", "LV", local(7, 25), 50.0)
-        assert stats.speed_profile(TOTAL)["LV"][29] == SpeedValues(40.0, 50.5, 2)
+        slot = interval_index(7, 20, interval_minutes=15)
+        assert stats.speed_profile(TOTAL)["LV"][slot] == SpeedValues(40.0, 50.5, 2)
 
 
 class TestAssignmentToEntry:
