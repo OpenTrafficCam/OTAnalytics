@@ -33,20 +33,24 @@ def read_assignment_records(path: Path) -> list[AssignmentRecord]:
         AssignmentFileError: if a required column is missing or a value cannot
             be parsed.
     """
-    with path.open(encoding="utf-8", newline="") as file:
-        reader = csv.DictReader(file)
-        missing = [c for c in REQUIRED_COLUMNS if c not in (reader.fieldnames or [])]
-        if missing:
-            raise AssignmentFileError(f"{path} lacks the column(s) {missing}.")
-        records = []
-        for row_number, row in enumerate(reader, start=2):
-            try:
-                records.append(_to_record(row))
-            except ValueError as cause:
-                raise AssignmentFileError(
-                    f"{path} row {row_number}: {cause}"
-                ) from cause
-        return records
+    try:
+        with path.open(encoding="utf-8", newline="") as file:
+            return _read_rows(path, csv.DictReader(file))
+    except UnicodeDecodeError as cause:
+        raise AssignmentFileError(f"{path} is not UTF-8: {cause}") from cause
+
+
+def _read_rows(path: Path, reader: csv.DictReader) -> list[AssignmentRecord]:
+    missing = [c for c in REQUIRED_COLUMNS if c not in (reader.fieldnames or [])]
+    if missing:
+        raise AssignmentFileError(f"{path} lacks the column(s) {missing}.")
+    records = []
+    for row_number, row in enumerate(reader, start=2):
+        try:
+            records.append(_to_record(row))
+        except (ValueError, TypeError) as cause:
+            raise AssignmentFileError(f"{path} row {row_number}: {cause}") from cause
+    return records
 
 
 def _to_record(row: dict[str, str]) -> AssignmentRecord:
