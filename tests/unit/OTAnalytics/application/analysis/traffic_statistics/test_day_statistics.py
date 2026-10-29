@@ -18,10 +18,7 @@ from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
     day_start,
     minutes_in_day,
 )
-from OTAnalytics.application.analysis.traffic_statistics.speed_histogram import (
-    SpeedHistogram,
-    SpeedValues,
-)
+from OTAnalytics.application.analysis.traffic_statistics.speed_values import SpeedValues
 from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
 )
@@ -210,7 +207,7 @@ class TestDayTrafficStatistics:
             (local(7, 0), local(9, 30)),
         ]
 
-    def test_speeds_are_stored_in_speed_profile_histograms(self) -> None:
+    def test_only_plausible_speeds_enter_speed_profile(self) -> None:
         config = TrafficStatisticsConfig(
             timezone="Europe/Berlin",
             speed_profile_interval_minutes=15,
@@ -221,35 +218,9 @@ class TestDayTrafficStatistics:
         stats.add("ru2", "f1", "LV", local(7, 21), 150.0)
         stats.add("ru3", "f1", "LV", local(7, 22), None)
         stats.add("ru4", "f1", "LV", local(7, 23), 0.0)
-        histograms = stats.histograms()["f1"]["LV"]
-        assert len(histograms) == SPEED_PROFILE_SLOTS
-        assert histograms[interval_index(7, 20, interval_minutes=15)].bins == {50: 1}
-        assert sum(h.count for h in histograms) == 1
-
-    def test_restore_reproduces_state(self) -> None:
-        stats = create_statistics()
-        stats.add("ru1", "f1", "LV", local(7, 15), 40.0)
-        as_of = datetime(2026, 10, 27, 12, tzinfo=timezone.utc)
-        restored = DayTrafficStatistics.restore(
-            DAY,
-            stats.config,
-            [FLOW_1, FLOW_2],
-            stats.raw_counts(),
-            stats.histograms(),
-            stats.coverage,
-            stats.road_user_ids,
-            as_of,
-            counting_event=CountingEvent.END,
-        )
-        assert restored.counts("f1") == stats.counts("f1")
-        assert restored.coverage == stats.coverage
-        assert restored.road_user_ids == {"ru1"}
-        assert restored.as_of == as_of
-        assert restored.counting_event == CountingEvent.END
-        assert not restored.add("ru1", "f1", "LV", local(7, 16), None)
-        slot = interval_index(7, 15, interval_minutes=15)
-        assert restored.histograms()["f1"]["LV"][slot].bins == {40: 1}
-        assert isinstance(restored.histograms()["f1"]["LV"][slot], SpeedHistogram)
+        slot = interval_index(7, 20, interval_minutes=15)
+        assert stats.speed_profile("f1")["LV"][slot] == SpeedValues(50.5, 50.5, 1)
+        assert stats.totals("f1") == {"LV": 4}
 
     def test_counting_event_defaults_to_start(self) -> None:
         assert create_statistics().counting_event == CountingEvent.START
@@ -309,12 +280,12 @@ class TestPeakHour:
 
 
 class TestSpeed:
-    def test_total_speed_merges_histograms(self) -> None:
+    def test_total_speed_merges_flows(self) -> None:
         stats = create_statistics()
         stats.add("ru1", "f1", "LV", local(7, 0), 30.0)
         stats.add("ru2", "f2", "LV", local(7, 5), 50.0)
-        assert stats.speed(TOTAL) == {"LV": SpeedValues(40.0, 50.5, 2)}
-        assert stats.speed("f1") == {"LV": SpeedValues(30.0, 30.5, 1)}
+        assert stats.speed(TOTAL) == {"LV": SpeedValues(40.0, 50.0, 2)}
+        assert stats.speed("f1") == {"LV": SpeedValues(30.0, 30.0, 1)}
 
     def test_implausible_speed_is_counted_but_not_in_speed(self) -> None:
         stats = create_statistics()
@@ -334,7 +305,7 @@ class TestSpeed:
         profile = stats.speed_profile("f1")["LV"]
         slot = interval_index(7, 20, interval_minutes=15)
         assert len(profile) == SPEED_PROFILE_SLOTS
-        assert profile[slot] == SpeedValues(36.0, 36.5, 1)
+        assert profile[slot] == SpeedValues(36.0, 36.0, 1)
         assert [v for i, v in enumerate(profile) if i != slot and v is not None] == []
 
     def test_speed_profile_contains_counted_group_without_speed(self) -> None:
@@ -353,14 +324,14 @@ class TestSpeed:
         assert set(profile) == {"LV", "HV"}
         assert profile["HV"] == [None] * SPEED_PROFILE_SLOTS
         slot = interval_index(7, 20, interval_minutes=15)
-        assert profile["LV"][slot] == SpeedValues(36.0, 36.5, 1)
+        assert profile["LV"][slot] == SpeedValues(36.0, 36.0, 1)
 
     def test_total_speed_profile_merges_per_slot(self) -> None:
         stats = create_statistics()
         stats.add("ru1", "f1", "LV", local(7, 20), 30.0)
         stats.add("ru2", "f2", "LV", local(7, 25), 50.0)
         slot = interval_index(7, 20, interval_minutes=15)
-        assert stats.speed_profile(TOTAL)["LV"][slot] == SpeedValues(40.0, 50.5, 2)
+        assert stats.speed_profile(TOTAL)["LV"][slot] == SpeedValues(40.0, 50.0, 2)
 
 
 class TestAssignmentToEntry:
