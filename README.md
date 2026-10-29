@@ -168,10 +168,13 @@ for the total of all flows and per class group: counts per interval, totals, pea
 hour, average speed and v85, and a speed profile. A road user is counted at most
 once per day. Speed is the flow distance divided by the time between the road
 user's start and end event, in km/h. Only speeds above 0 and up to
-`max_speed_kmh` enter the speed figures. The file also carries the state needed
-to continue the day when the CLI runs again on further chunks; continuing requires
-the same `timezone`, `interval_minutes`, `speed_profile_interval_minutes` and
-`class_groups`. A classification may belong to at most one class group. Only the
+`max_speed_kmh` enter the speed figures. v85 is the 85th percentile of the
+measured speeds (nearest rank). The file contains results plus `coverage` and
+`as_of`. To continue a day after a restart, pass the road user assignment CSV
+files of the day with `--traffic-statistics-restore`. Counts and speeds are
+rebuilt from them with the current settings, and coverage and `as_of` are taken
+from an existing day file. A classification may belong to at most one class
+group. Only the
 time ranges of the processed videos count as covered: intervals between videos
 (e.g. a camera outage) have `null` counts instead of 0.
 

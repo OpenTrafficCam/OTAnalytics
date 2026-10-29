@@ -78,7 +78,8 @@ written to `{save_stem}.traffic_statistics_{YYYY-MM-DD}.json` and updated chunk 
 chunk. Days are cut in the configured timezone, and a road user is counted at
 most once per day. Speed is flow distance divided by the time between the road
 user's start and end event; implausible speeds are counted but left out of the
-speed figures.
+speed figures. After a restart, a day is rebuilt from road user assignment files;
+only coverage and as_of are read from the day file.
 _Avoid_: counts (the CSV counting export, which has no speeds and no peak hours),
 track statistics (per-track metrics such as length and duration), report, summary
 (too vague to tell the exports apart).
