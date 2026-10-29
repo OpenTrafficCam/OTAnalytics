@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from datetime import datetime, timedelta
@@ -28,6 +27,7 @@ from OTAnalytics.application.use_cases.traffic_statistics_export import (
 )
 from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.section import SectionId
+from OTAnalytics.plugin_parser.json_parser import parse_json
 from OTAnalytics.plugin_parser.traffic_statistics_export import (
     JsonTrafficStatisticsExporter,
 )
@@ -115,7 +115,7 @@ def day_file(tmp_path: Path, day: int) -> Path:
 
 
 def lv_total(path: Path) -> int:
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = parse_json(path)
     return data[STATISTICS_KEY][TOTAL_KEY][TOTALS_KEY]["LV"]
 
 
@@ -129,7 +129,7 @@ def test_export_writes_one_file_per_touched_day(tmp_path: Path) -> None:
     assert paths == [day_file(tmp_path, 26), day_file(tmp_path, 27)]
     assert lv_total(paths[0]) == 1
     assert lv_total(paths[1]) == 1
-    flows = json.loads(paths[0].read_text(encoding="utf-8"))[FLOWS_KEY]
+    flows = parse_json(paths[0])[FLOWS_KEY]
     assert flows[0][INDEX_KEY] == 1
     assert flows[0][START_SECTION_KEY] == {ID_KEY: "s1", NAME_KEY: "Nord"}
 
@@ -235,7 +235,7 @@ def other_flow_assignment(road_user: str, when: datetime) -> RoadUserAssignment:
 
 
 def flow_ids(path: Path) -> list[str]:
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = parse_json(path)
     return [flow[ID_KEY] for flow in data[FLOWS_KEY]]
 
 
@@ -286,7 +286,7 @@ def test_as_of_is_not_pushed_beyond_the_day(tmp_path: Path) -> None:
 
 
 def lv_counts(path: Path) -> list[int | None]:
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = parse_json(path)
     return data[STATISTICS_KEY][TOTAL_KEY][COUNTS_KEY]["LV"]
 
 
