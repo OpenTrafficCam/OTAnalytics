@@ -76,3 +76,21 @@ class TestDateRange:
         actual = range.duration()
 
         assert actual == duration
+
+    @pytest.mark.parametrize(
+        "start,end,expected",
+        [
+            (START_DATE, END_DATE, True),
+            (START_DATE, START_DATE, False),
+            (END_DATE, START_DATE, False),
+            (None, END_DATE, True),
+            (START_DATE, None, True),
+            (None, None, True),
+        ],
+    )
+    def test_is_ordered(
+        self, start: datetime | None, end: datetime | None, expected: bool
+    ) -> None:
+        range = DateRange(start_date=start, end_date=end)
+
+        assert range.is_ordered() is expected
