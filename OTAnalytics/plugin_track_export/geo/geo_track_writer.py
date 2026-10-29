@@ -1,5 +1,3 @@
-import bz2
-import json
 import math
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +17,7 @@ from OTAnalytics.plugin_datastore.polars_track_store import (
     PolarsDataFrameProvider,
     drop_row_id,
 )
+from OTAnalytics.plugin_parser.json_parser import write_json_bz2
 
 FORMAT_NAME = "otanalytics.geo_tracks"
 FORMAT_VERSION = 1
@@ -71,8 +70,8 @@ def _write_detections(
         "metadata": {"format": FORMAT_NAME, "version": FORMAT_VERSION},
         "data": {"detections": detections},
     }
-    with atomic_write(path) as raw, bz2.open(raw, "wt", encoding="UTF-8") as file:
-        json.dump(content, file, allow_nan=False)
+    with atomic_write(path) as temp:
+        write_json_bz2(content, temp)
     return path
 
 

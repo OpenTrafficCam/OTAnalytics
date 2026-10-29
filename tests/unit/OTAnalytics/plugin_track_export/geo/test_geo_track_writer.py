@@ -1,5 +1,4 @@
 import bz2
-import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +22,7 @@ from OTAnalytics.plugin_datastore.track_geometry_store.polars_geometry_store imp
 from OTAnalytics.plugin_datastore.track_geometry_store.shapely_store import (
     ShapelyTrackGeometryDataset,
 )
+from OTAnalytics.plugin_parser.json_parser import parse_json_bz2
 from OTAnalytics.plugin_track_export.geo.geo_track_writer import (
     DomainGeoTrackWriter,
     GeoTrackExport,
@@ -73,8 +73,7 @@ def python_dataset(tracks: list[Track]) -> TrackDataset:
 
 
 def read(path: Path) -> dict:
-    with bz2.open(path, "rt", encoding="UTF-8") as file:
-        return json.load(file)
+    return parse_json_bz2(path)
 
 
 @pytest.fixture
@@ -148,7 +147,7 @@ class TestGeoTrackWriters:
         with bz2.open(path, "rt", encoding="UTF-8") as file:
             raw = file.read()
         assert "NaN" not in raw
-        detections = json.loads(raw)["data"]["detections"]
+        detections = read(path)["data"]["detections"]
         assert [d["geo_x"] for d in detections] == [1.0, 3.0]
 
     def test_no_geo_detections_returns_none_and_writes_nothing(

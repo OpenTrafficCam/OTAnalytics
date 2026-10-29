@@ -1,4 +1,3 @@
-import bz2
 import csv
 import shutil
 import subprocess
@@ -18,7 +17,12 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.parser.cli_parser import CliMode
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
-from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
+from OTAnalytics.plugin_parser.json_parser import (
+    parse_json,
+    parse_json_bz2,
+    write_json,
+    write_json_bz2,
+)
 from OTAnalytics.plugin_parser.traffic_statistics_json import (
     STATISTICS_KEY,
     TOTAL_KEY,
@@ -245,8 +249,7 @@ class TestGeoTrackExport:
 
         assert results[False] == []
         assert len(results[True]) == 1
-        with bz2.open(results[True][0], "rt", encoding="utf-8") as file:
-            content = json.load(file)
+        content = parse_json_bz2(results[True][0])
         assert content["metadata"] == {"format": "otanalytics.geo_tracks", "version": 1}
         detections = content["data"]["detections"]
         assert len(detections) > 0
@@ -260,8 +263,7 @@ class TestGeoTrackExport:
 
 
 def _write_ottrk_with_geo_coordinates(source: Path, target: Path) -> None:
-    with bz2.open(source, "rt", encoding="utf-8") as file:
-        content = json.load(file)
+    content = parse_json_bz2(source)
     content["metadata"]["georeference"] = {
         "geo_bounds": {
             "min_x": 455000.0,
@@ -276,8 +278,7 @@ def _write_ottrk_with_geo_coordinates(source: Path, target: Path) -> None:
     for detection in content["data"]["detections"]:
         detection["geo_x"] = 455000.0 + detection["x"]
         detection["geo_y"] = 5701000.0 + detection["y"]
-    with bz2.open(target, "wt", encoding="utf-8") as file:
-        json.dump(content, file)
+    write_json_bz2(content, target)
 
 
 @pytest.fixture
