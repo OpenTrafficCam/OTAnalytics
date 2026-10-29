@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -13,6 +13,24 @@ class TestResetApplication:
 
         clear_repositories.assert_called_once()
         reset_state.reset.assert_called_once()
+
+    def test_notifies_observers_after_the_reset(
+        self, clear_repositories: Mock, reset_state: Mock
+    ) -> None:
+        order = Mock()
+        order.attach_mock(clear_repositories, "clear_repositories")
+        order.attach_mock(reset_state.reset, "reset_state")
+        order.attach_mock(observer := Mock(), "observer")
+        target = ResetApplication(clear_repositories, reset_state)
+        target.register(observer)
+
+        target.reset()
+
+        assert order.mock_calls == [
+            call.clear_repositories(),
+            call.reset_state(),
+            call.observer(None),
+        ]
 
 
 @pytest.fixture

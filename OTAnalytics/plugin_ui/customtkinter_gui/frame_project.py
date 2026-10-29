@@ -110,12 +110,12 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
             place_validation_below=True,
         )
         self._button_frame = EmbeddedCTkFrame(master=self)
-        # self._button_new = CTkButton(
-        #     master=self._button_frame,
-        #     text="New",
-        #     width=10,
-        #     command=self._viewmodel.start_new_project,
-        # )
+        self._button_new = CTkButton(
+            master=self._button_frame,
+            text="New",
+            width=10,
+            command=self._do_new,
+        )
         self.button_open = CTkButton(
             master=self._button_frame,
             text="Open...",
@@ -138,6 +138,9 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
     def _do_quick_save(self) -> None:
         asyncio.run(self._viewmodel.quick_save_configuration())
 
+    def _do_new(self) -> None:
+        asyncio.run(self._viewmodel.start_new_project())
+
     def _do_save_as(self) -> None:
         asyncio.run(self._viewmodel.save_configuration())
 
@@ -153,7 +156,7 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
         )
         for column, button in enumerate(
             [
-                # self._button_new,
+                self._button_new,
                 self.button_open,
                 self.button_save_as,
                 self.button_quick_save,
@@ -185,7 +188,7 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
     def set_enabled_general_buttons(self, enabled: bool) -> None:
         new_state = STATE_NORMAL if enabled else STATE_DISABLED
         for button in [
-            # self._button_new,
+            self._button_new,
             self.button_save_as,
             self.button_open,
             self.button_quick_save,
