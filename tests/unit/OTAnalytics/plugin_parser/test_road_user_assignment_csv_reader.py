@@ -77,3 +77,23 @@ def test_unparsable_time_raises(tmp_path: Path) -> None:
 
     with pytest.raises(AssignmentFileError, match=path.name):
         read_assignment_records(path)
+
+
+def test_truncated_row_raises_with_file_name(tmp_path: Path) -> None:
+    path = tmp_path / "cut.road_user_assignments.csv"
+    write_assignment_csv(path, [ROW])
+    with path.open("a", encoding="utf-8") as file:
+        file.write("f1,ru2,car,2026-10-27 06:16:00.000000\n")
+
+    with pytest.raises(AssignmentFileError, match=path.name):
+        read_assignment_records(path)
+
+
+def test_invalid_encoding_raises_with_file_name(tmp_path: Path) -> None:
+    path = tmp_path / "binary.road_user_assignments.csv"
+    write_assignment_csv(path, [ROW])
+    with path.open("ab") as file:
+        file.write(b"\xff\xfe\xfa\n")
+
+    with pytest.raises(AssignmentFileError, match=path.name):
+        read_assignment_records(path)
