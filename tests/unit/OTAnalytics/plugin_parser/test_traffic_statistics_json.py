@@ -20,8 +20,30 @@ from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
 )
 from OTAnalytics.plugin_parser.traffic_statistics_json import (
+    AS_OF_KEY,
+    BINS_KEY,
+    CLASS_GROUPS_KEY,
+    COUNT_KEY,
+    COUNTS_KEY,
+    COVERAGE_KEY,
+    DAY_KEY,
+    FLOWS_KEY,
     FORMAT,
+    FORMAT_KEY,
+    INTERVAL_MINUTES_KEY,
+    PEAK_HOUR_KEY,
+    ROAD_USER_IDS_KEY,
+    SPEED_HISTOGRAMS_KEY,
+    SPEED_KEY,
+    SPEED_PROFILE_INTERVAL_MINUTES_KEY,
+    STATE_KEY,
+    STATISTICS_KEY,
+    TIMEZONE_KEY,
+    TOTAL_KEY,
+    TOTAL_SPEED_KEY,
+    TOTALS_KEY,
     VERSION,
+    VERSION_KEY,
     TrafficStatisticsFormatError,
     from_dict,
     read,
@@ -88,8 +110,8 @@ class TestRoundTrip:
         stats = DayTrafficStatistics(DAY, CONFIG, [FLOW_1])
         data = to_dict(stats)
 
-        assert data["as_of"] is None
-        assert data["coverage"] == []
+        assert data[AS_OF_KEY] is None
+        assert data[COVERAGE_KEY] == []
         restored = from_dict(json.loads(json.dumps(data)), CONFIG)
         assert restored.as_of is None
         assert restored.coverage == []
@@ -97,6 +119,8 @@ class TestRoundTrip:
 
 class TestFormat:
     def test_written_file_matches_documented_keys(self, tmp_path: Path) -> None:
+        # Literal keys on purpose: this test pins the file format for consumers,
+        # so changing the value of a key constant must fail here.
         path = tmp_path / "day.json"
         write(create_statistics(), path)
 
@@ -140,23 +164,23 @@ class TestFormat:
     def test_statistics_and_state_blocks(self) -> None:
         data = to_dict(create_statistics())
 
-        total = data["statistics"]["total"]
-        assert total["totals"] == {"LV": 3, "SV": 1}
-        assert total["counts"]["LV"][440] == 1
-        assert total["peak_hour"]["LV"]["count"] == 3
-        assert total["speed"]["LV"]["count"] == 2
-        assert set(data["statistics"]["flows"]) == {"f1", "f2"}
-        assert data["state"]["road_user_ids"] == ["ru1", "ru2", "ru3", "ru4"]
-        histograms = data["state"]["speed_histograms"]
+        total = data[STATISTICS_KEY][TOTAL_KEY]
+        assert total[TOTALS_KEY] == {"LV": 3, "SV": 1}
+        assert total[COUNTS_KEY]["LV"][440] == 1
+        assert total[PEAK_HOUR_KEY]["LV"][COUNT_KEY] == 3
+        assert total[SPEED_KEY]["LV"][COUNT_KEY] == 2
+        assert set(data[STATISTICS_KEY][FLOWS_KEY]) == {"f1", "f2"}
+        assert data[STATE_KEY][ROAD_USER_IDS_KEY] == ["ru1", "ru2", "ru3", "ru4"]
+        histograms = data[STATE_KEY][SPEED_HISTOGRAMS_KEY]
         slots = histograms["f1"]["LV"]
-        assert slots[29] == {"bins": {"41": 1, "50": 1}, "total_speed": 91.5}
+        assert slots[29] == {BINS_KEY: {"41": 1, "50": 1}, TOTAL_SPEED_KEY: 91.5}
         assert slots[0] is None
         assert "LV" not in histograms["f2"]
 
     def test_uncovered_counts_are_null(self) -> None:
         data = to_dict(create_statistics())
 
-        counts = data["statistics"]["total"]["counts"]["LV"]
+        counts = data[STATISTICS_KEY][TOTAL_KEY][COUNTS_KEY]["LV"]
         assert len(counts) == 1440
         assert counts[0] == 0
         assert counts[-1] is None
@@ -180,11 +204,11 @@ class TestErrors:
     @pytest.mark.parametrize(
         "key,value",
         [
-            ("format", "other"),
-            ("version", 2),
-            ("timezone", "UTC"),
-            ("speed_profile_interval_minutes", 30),
-            ("interval_minutes", 5),
+            (FORMAT_KEY, "other"),
+            (VERSION_KEY, 2),
+            (TIMEZONE_KEY, "UTC"),
+            (SPEED_PROFILE_INTERVAL_MINUTES_KEY, 30),
+            (INTERVAL_MINUTES_KEY, 5),
         ],
     )
     def test_mismatching_header_raises(self, key: str, value: Any) -> None:
@@ -210,12 +234,12 @@ class TestErrors:
             timezone="Europe/Berlin", class_groups=class_groups
         )
 
-        with pytest.raises(TrafficStatisticsFormatError, match="class_groups"):
+        with pytest.raises(TrafficStatisticsFormatError, match=CLASS_GROUPS_KEY):
             from_dict(self.valid(), other)
 
     def test_class_groups_are_compared_ignoring_order(self) -> None:
         data = self.valid()
-        data["class_groups"] = {"SV": ["truck"], "LV": ["van", "car"]}
+        data[CLASS_GROUPS_KEY] = {"SV": ["truck"], "LV": ["van", "car"]}
 
         restored = from_dict(data, CONFIG)
 
@@ -233,7 +257,9 @@ class TestErrors:
 
         assert restored.config == other
 
-    @pytest.mark.parametrize("key", ["day", "flows", "statistics", "state", "coverage"])
+    @pytest.mark.parametrize(
+        "key", [DAY_KEY, FLOWS_KEY, STATISTICS_KEY, STATE_KEY, COVERAGE_KEY]
+    )
     def test_missing_key_raises(self, key: str) -> None:
         data = self.valid()
         del data[key]
@@ -243,22 +269,22 @@ class TestErrors:
 
     def test_wrong_counts_length_raises(self) -> None:
         data = self.valid()
-        data["statistics"]["flows"]["f1"]["counts"]["LV"].pop()
+        data[STATISTICS_KEY][FLOWS_KEY]["f1"][COUNTS_KEY]["LV"].pop()
 
         with pytest.raises(TrafficStatisticsFormatError):
             from_dict(data, CONFIG)
 
     def test_wrong_histogram_length_raises(self) -> None:
         data = self.valid()
-        data["state"]["speed_histograms"]["f1"]["LV"].pop()
+        data[STATE_KEY][SPEED_HISTOGRAMS_KEY]["f1"]["LV"].pop()
 
         with pytest.raises(TrafficStatisticsFormatError):
             from_dict(data, CONFIG)
 
     def test_restore_accepts_full_empty_histogram_slots(self) -> None:
         data = self.valid()
-        slots = data["state"]["speed_histograms"]["f1"]["LV"]
-        slots[0] = {"bins": {}, "total_speed": 0.0}
+        slots = data[STATE_KEY][SPEED_HISTOGRAMS_KEY]["f1"]["LV"]
+        slots[0] = {BINS_KEY: {}, TOTAL_SPEED_KEY: 0.0}
         expected = from_dict(deepcopy(self.valid()), CONFIG)
 
         restored = from_dict(data, CONFIG)
@@ -289,7 +315,7 @@ class TestWrite:
         write(create_statistics(), path)
 
         assert [p.name for p in tmp_path.iterdir()] == ["day.json"]
-        assert json.loads(path.read_text(encoding="utf-8"))["format"] == FORMAT
+        assert json.loads(path.read_text(encoding="utf-8"))[FORMAT_KEY] == FORMAT
 
     def test_written_file_gets_default_permissions(self, tmp_path: Path) -> None:
         path = tmp_path / "day.json"
