@@ -147,19 +147,19 @@ class TestDayTrafficStatistics:
         stats.add("ru1", "f1", "LV", local(7, 15), None)
         assert stats.counts(TOTAL)["LV"][interval_index(0, 0)] is None
 
-    def test_update_flows_adds_new_flow_and_keeps_retired_flow_data(self) -> None:
+    def test_update_flows_replaces_flows_and_drops_removed_flow_data(self) -> None:
         stats = create_statistics()
-        stats.add("ru1", "f2", "LV", local(7, 15), None)
+        stats.add("ru1", "f2", "LV", local(7, 15), 40.0)
         new_flow = FlowInfo("f3", "new", 1, "s1", "A", "s3", "C")
         renamed = replace(FLOW_1, name="renamed", index=2)
 
         stats.update_flows([new_flow, renamed])
 
-        assert [f.id for f in stats.flows] == ["f3", "f1", "f2"]
-        assert stats.flows[1].name == "renamed"
+        assert stats.flows == [new_flow, renamed]
         assert stats.add("ru2", "f3", "LV", local(7, 16), None)
-        assert stats.totals(TOTAL) == {"LV": 2}
-        assert stats.totals("f2") == {"LV": 1}
+        assert stats.totals(TOTAL) == {"LV": 1}
+        assert stats.speed(TOTAL) == {}
+        assert not stats.add("ru3", "f2", "LV", local(7, 17), None)
 
     def test_record_of_other_day_is_rejected(self) -> None:
         stats = create_statistics()

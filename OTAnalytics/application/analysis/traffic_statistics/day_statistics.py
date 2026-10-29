@@ -177,16 +177,17 @@ class DayTrafficStatistics:
         return True
 
     def update_flows(self, flows: Sequence[FlowInfo]) -> None:
-        """Reconcile the flows with the current ones, keeping all per-flow state.
+        """Replace the flows with the current ones.
 
-        The result is the given flows (in the given order, with their current
-        name and index) followed by previously known flows that are not part of
-        them. Those keep their data so that totals stay intact.
+        Counts and speeds of flows that are no longer part of them are dropped,
+        as a restore with the current flows would do.
         """
-        current_ids = {flow.id for flow in flows}
-        retired = [flow for flow in self.flows if flow.id not in current_ids]
-        self.flows = [*flows, *retired]
+        self.flows = list(flows)
         self._flow_ids = {flow.id for flow in self.flows}
+        for data in (self._counts, self._speeds):
+            for flow_id in list(data):
+                if flow_id not in self._flow_ids:
+                    del data[flow_id]
 
     def mark_covered(self, start: datetime, end: datetime) -> None:
         """Mark the half-open range [start, end) as covered, clipped to the day."""
