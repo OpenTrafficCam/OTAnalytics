@@ -3,7 +3,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-from typing import Iterable, Sequence
+from typing import Sequence
 from zoneinfo import ZoneInfo
 
 from OTAnalytics.application.analysis.road_user_assignment import RoadUserAssignment
@@ -11,9 +11,9 @@ from OTAnalytics.application.analysis.traffic_counting import aggregation_time
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
-from OTAnalytics.application.analysis.traffic_statistics.speed_histogram import (
-    SpeedHistogram,
+from OTAnalytics.application.analysis.traffic_statistics.speed_values import (
     SpeedValues,
+    compute_speed_values,
 )
 from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
@@ -130,7 +130,8 @@ class DayTrafficStatistics:
         self._slot_count = _ceil_div(minutes, config.speed_profile_interval_minutes)
         self._flow_ids = {flow.id for flow in self.flows}
         self._counts: dict[str, dict[str, list[int]]] = {}
-        self._histograms: dict[str, dict[str, list[SpeedHistogram]]] = {}
+        # flow -> group -> speed profile slot -> plausible speeds in km/h
+        self._speeds: dict[str, dict[str, list[list[float]]]] = {}
         self._coverage: list[tuple[datetime, datetime]] = []
 
     @property
@@ -167,10 +168,12 @@ class DayTrafficStatistics:
             minutes // self._config.interval_minutes
         ] += 1
         if speed_kmh is not None and 0 < speed_kmh <= self._config.max_speed_kmh:
-            slots = self._histograms.setdefault(flow_id, {}).setdefault(
-                group, [SpeedHistogram() for _ in range(self._slot_count)]
+            slots = self._speeds.setdefault(flow_id, {}).setdefault(
+                group, [[] for _ in range(self._slot_count)]
             )
-            slots[minutes // self._config.speed_profile_interval_minutes].add(speed_kmh)
+            slots[minutes // self._config.speed_profile_interval_minutes].append(
+                speed_kmh
+            )
         return True
 
     def mark_covered(self, start: datetime, end: datetime) -> None:
@@ -277,17 +280,17 @@ class DayTrafficStatistics:
                 )
         return result
 
-    def _flow_histograms(self, flow_id: str) -> dict[str, list[SpeedHistogram]]:
+    def _flow_speeds(self, flow_id: str) -> dict[str, list[list[float]]]:
         if flow_id != TOTAL:
-            return self._histograms.get(flow_id, {})
-        merged: dict[str, list[SpeedHistogram]] = {}
-        for groups in self._histograms.values():
+            return self._speeds.get(flow_id, {})
+        merged: dict[str, list[list[float]]] = {}
+        for groups in self._speeds.values():
             for group, slots in groups.items():
                 current = merged.setdefault(
-                    group, [SpeedHistogram() for _ in range(self._slot_count)]
+                    group, [[] for _ in range(self._slot_count)]
                 )
-                for index, histogram in enumerate(slots):
-                    current[index] = current[index].merge(histogram)
+                for index, speeds in enumerate(slots):
+                    current[index].extend(speeds)
         return merged
 
     def speed(self, flow_id: str) -> dict[str, SpeedValues]:
@@ -296,11 +299,8 @@ class DayTrafficStatistics:
         Groups without plausible speeds are absent.
         """
         result: dict[str, SpeedValues] = {}
-        for group, slots in self._flow_histograms(flow_id).items():
-            merged = SpeedHistogram()
-            for histogram in slots:
-                merged = merged.merge(histogram)
-            values = merged.values()
+        for group, slots in self._flow_speeds(flow_id).items():
+            values = compute_speed_values([s for speeds in slots for s in speeds])
             if values is not None:
                 result[group] = values
         return result
@@ -315,58 +315,9 @@ class DayTrafficStatistics:
             group: [None] * self._slot_count
             for group in [*self._config.class_groups, *self._flow_counts(flow_id)]
         }
-        for group, slots in self._flow_histograms(flow_id).items():
-            result[group] = [histogram.values() for histogram in slots]
+        for group, slots in self._flow_speeds(flow_id).items():
+            result[group] = [compute_speed_values(speeds) for speeds in slots]
         return result
-
-    def raw_counts(self) -> dict[str, dict[str, list[int]]]:
-        """Copy of the stored counts per flow, group and interval."""
-        return {
-            flow: {group: list(values) for group, values in groups.items()}
-            for flow, groups in self._counts.items()
-        }
-
-    def histograms(self) -> dict[str, dict[str, list[SpeedHistogram]]]:
-        """Copy of the speed histograms per flow, group and speed profile slot."""
-        return {
-            flow: {
-                group: [SpeedHistogram(h.bins, h.total_speed) for h in slots]
-                for group, slots in groups.items()
-            }
-            for flow, groups in self._histograms.items()
-        }
-
-    @classmethod
-    def restore(
-        cls,
-        day: date,
-        config: TrafficStatisticsConfig,
-        flows: Sequence[FlowInfo],
-        raw_counts: dict[str, dict[str, list[int]]],
-        histograms: dict[str, dict[str, list[SpeedHistogram]]],
-        coverage: Iterable[tuple[datetime, datetime]],
-        road_user_ids: Iterable[str],
-        as_of: datetime | None,
-        counting_event: CountingEvent = CountingEvent.START,
-    ) -> "DayTrafficStatistics":
-        """Recreate a statistics from its stored state."""
-        stats = cls(day, config, flows, counting_event)
-        stats._counts = {
-            flow: {group: list(values) for group, values in groups.items()}
-            for flow, groups in raw_counts.items()
-        }
-        stats._histograms = {
-            flow: {
-                group: [SpeedHistogram(h.bins, h.total_speed) for h in slots]
-                for group, slots in groups.items()
-            }
-            for flow, groups in histograms.items()
-        }
-        for start, end in coverage:
-            stats.mark_covered(start, end)
-        stats.road_user_ids = set(road_user_ids)
-        stats.as_of = as_of
-        return stats
 
 
 def assignment_to_entry(
