@@ -112,7 +112,10 @@ class OtAnalyticsCliApplicationStarter(BaseOtAnalyticsApplicationStarter):
     def export_traffic_statistics(self) -> ExportTrafficStatistics:
         # Stateful across chunks: must be a single instance per run.
         return JsonTrafficStatisticsExporter(
-            self.get_all_assignments, self.get_all_flows, self.get_all_sections
+            self.get_all_assignments,
+            self.get_all_flows,
+            self.get_all_sections,
+            restore_files=self.run_config.traffic_statistics_restore_files,
         )
 
     @cached_property

@@ -61,6 +61,7 @@ class CliArguments:
     exclude_classes: list[str] | None = None
     geo_track_export: bool = False
     traffic_statistics: bool = False
+    traffic_statistics_restore_files: list[str] | None = None
 
 
 class CliValueProvider(OtConfigDefaultValueProvider):

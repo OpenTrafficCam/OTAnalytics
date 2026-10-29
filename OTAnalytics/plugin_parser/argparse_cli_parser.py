@@ -156,6 +156,16 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--traffic-statistics-restore",
+            nargs="+",
+            type=str,
+            help=(
+                "Road user assignment CSV files to restore the traffic statistics "
+                "state from."
+            ),
+            required=False,
+        )
+        self._parser.add_argument(
             "--logfile",
             type=str,
             help="Specify log file directory.",
@@ -217,4 +227,5 @@ class ArgparseCliParser(CliParser):
             exclude_classes=args.exclude_classes,
             geo_track_export=args.geo_track_export,
             traffic_statistics=args.traffic_statistics,
+            traffic_statistics_restore_files=args.traffic_statistics_restore,
         )

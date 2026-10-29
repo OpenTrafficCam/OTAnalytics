@@ -21,7 +21,6 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
     CountingSpecificationDto,
 )
-from OTAnalytics.application.analysis.traffic_statistics.day_statistics import TOTAL
 from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
 )
@@ -164,6 +163,7 @@ from OTAnalytics.plugin_parser.export import (
     SimpleExporterFactory,
 )
 from OTAnalytics.plugin_parser.feathers_parser import FeathersParser
+from OTAnalytics.plugin_parser.json_parser import parse_json
 from OTAnalytics.plugin_parser.otconfig_parser import (
     OtConfigFormatFixer,
     OtConfigParser,
@@ -190,7 +190,11 @@ from OTAnalytics.plugin_parser.track_statistics_export import (
 from OTAnalytics.plugin_parser.traffic_statistics_export import (
     JsonTrafficStatisticsExporter,
 )
-from OTAnalytics.plugin_parser.traffic_statistics_json import read
+from OTAnalytics.plugin_parser.traffic_statistics_json import (
+    COUNTS_KEY,
+    STATISTICS_KEY,
+    TOTAL_KEY,
+)
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
     AVAILABLE_EVENTLIST_EXPORTERS,
     OTC_OTEVENTS_FORMAT_NAME,
@@ -1327,10 +1331,8 @@ class TestOTAnalyticsCli:
 
         ranges = [c.args[0].covered_ranges for c in exporter.export.call_args_list]
         assert ranges == [[(first.start, first.end)], [(second.start, second.end)]]
-        stats = read(
-            test_data_tmp_dir / "stem.traffic_statistics_2023-05-24.json", config
-        )
-        counts = stats.counts(TOTAL)["LV"]
+        data = parse_json(test_data_tmp_dir / "stem.traffic_statistics_2023-05-24.json")
+        counts = data[STATISTICS_KEY][TOTAL_KEY][COUNTS_KEY]["LV"]
         assert counts[8 * 60 + 5] == 0
         assert counts[8 * 60 + 30] is None
         assert counts[9 * 60 + 5] == 0
