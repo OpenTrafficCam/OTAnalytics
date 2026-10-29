@@ -1,14 +1,20 @@
 import logging
+from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from typing import Sequence
 from zoneinfo import ZoneInfo
 
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
+    AssignmentRecord,
     ClassGroupResolver,
     DayTrafficStatistics,
     FlowInfo,
-    assignment_to_entry,
     day_start,
+    record_to_entry,
 )
 from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
@@ -19,9 +25,12 @@ from OTAnalytics.application.use_cases.traffic_statistics_export import (
     ExportTrafficStatistics,
     TrafficStatisticsExportSpecification,
 )
+from OTAnalytics.plugin_parser.road_user_assignment_csv_reader import (
+    read_assignment_records,
+)
 from OTAnalytics.plugin_parser.traffic_statistics_json import (
     TrafficStatisticsFormatError,
-    read,
+    read_progress,
     write,
 )
 
@@ -39,13 +48,13 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
     """Writes traffic statistics as JSON, one file per local day.
 
     The exporter is stateful across calls: days are kept in memory (the
-    `max_open_days` most recent ones), resumed from an existing day file at
-    first contact and rewritten completely after every call. Assignments of
-    days that were already evicted are dropped with a warning.
+    `max_open_days` most recent ones) and rewritten completely after every call.
+    Assignments of days that were already evicted are dropped with a warning.
 
-    Flows are rebuilt from the repositories on every call. A resumed day file
-    is read with its stored flows and then reconciled: current flows first
-    (name and index refreshed), followed by stored flows that no longer exist.
+    When a day is opened, it is rebuilt from the road user assignment files in
+    `restore_files` with the current settings; coverage and as_of are taken
+    from an existing day file. Flows are rebuilt from the repositories on every
+    call; data of flows that no longer exist is dropped.
     """
 
     def __init__(
@@ -53,6 +62,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         get_assignments: GetRoadUserAssignments,
         get_all_flows: GetAllFlows,
         get_all_sections: GetAllSections,
+        restore_files: Sequence[Path] = (),
         max_open_days: int = 2,
     ) -> None:
         self._get_assignments = get_assignments
@@ -62,20 +72,31 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         self._days: dict[date, DayTrafficStatistics] = {}
         self._evicted: set[date] = set()
         self._resolver: ClassGroupResolver | None = None
+        self._restore_files = list(restore_files)
+        self._restore_entries: (
+            dict[date, list[tuple[str, str, str, datetime, float | None]]] | None
+        ) = None
 
     def export(self, specification: TrafficStatisticsExportSpecification) -> list[Path]:
         config = specification.config
         tz = ZoneInfo(config.timezone)
         if self._resolver is None:
             self._resolver = ClassGroupResolver(config)
+        if self._restore_entries is None:
+            self._restore_entries = self._read_restore_entries(
+                specification.counting_event, self._resolver, tz
+            )
         flows = self._build_flows()
         touched: set[date] = set()
         counted: dict[date, datetime] = {}
         dropped = 0
 
         for assignment in self._get_assignments.get_as_list():
-            entry = assignment_to_entry(
-                assignment, specification.counting_event, self._resolver, tz
+            entry = record_to_entry(
+                AssignmentRecord.from_assignment(assignment),
+                specification.counting_event,
+                self._resolver,
+                tz,
             )
             if entry is None:
                 continue
@@ -166,21 +187,42 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         if stats is not None:
             stats.update_flows(flows)
             return stats
+        stats = DayTrafficStatistics(
+            day, specification.config, flows, specification.counting_event
+        )
         path = self._path(specification, day)
         if path.exists():
-            stats = read(path, specification.config)
-            if stats.counting_event != specification.counting_event:
-                raise TrafficStatisticsFormatError(
-                    f"counting_event of {path} ({stats.counting_event}) differs "
-                    f"from the export ({specification.counting_event})."
+            try:
+                progress = read_progress(path)
+            except TrafficStatisticsFormatError as cause:
+                LOGGER.warning(
+                    "Ignoring coverage of unreadable day file %s: %s", path, cause
                 )
-        else:
-            stats = DayTrafficStatistics(
-                day, specification.config, flows, specification.counting_event
-            )
-        stats.update_flows(flows)
+            else:
+                for covered_start, covered_end in progress.coverage:
+                    stats.mark_covered(covered_start, covered_end)
+                stats.as_of = progress.as_of
+        for entry in (self._restore_entries or {}).get(day, []):
+            stats.add(*entry)
         self._days[day] = stats
         return stats
+
+    def _read_restore_entries(
+        self,
+        counting_event: CountingEvent,
+        resolver: ClassGroupResolver,
+        tz: ZoneInfo,
+    ) -> dict[date, list[tuple[str, str, str, datetime, float | None]]]:
+        """Read the restore files and group their entries by local day."""
+        entries: dict[date, list[tuple[str, str, str, datetime, float | None]]] = (
+            defaultdict(list)
+        )
+        for path in self._restore_files:
+            for record in read_assignment_records(path):
+                entry = record_to_entry(record, counting_event, resolver, tz)
+                if entry is not None:
+                    entries[entry[3].date()].append(entry)
+        return entries
 
     def _evict(self) -> None:
         for day in sorted(self._days, reverse=True)[self._max_open_days :]:
