@@ -47,6 +47,18 @@ def test_parse_compressed_and_uncompressed_section(test_data_tmp_dir: Path) -> N
     assert bzip2_content == content
 
 
+@pytest.mark.parametrize(
+    "indent, expected",
+    [(0, '{"some":[1,null]}'), (2, '{\n  "some": [\n    1,\n    null\n  ]\n}')],
+)
+def test_write_json_indent(test_data_tmp_dir: Path, indent: int, expected: str) -> None:
+    json_file = test_data_tmp_dir / "indent.json"
+
+    write_json({"some": [1, None]}, json_file, indent=indent)
+
+    assert json_file.read_text(encoding="UTF-8") == expected
+
+
 def test_parse_bz2(example_json_bz2: tuple[Path, dict]) -> None:
     example_json_bz2_path, expected_content = example_json_bz2
     result_content = parse_json_bz2(example_json_bz2_path)
