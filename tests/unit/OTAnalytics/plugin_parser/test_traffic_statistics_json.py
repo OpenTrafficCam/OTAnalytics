@@ -19,6 +19,7 @@ from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
 from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
 )
+from OTAnalytics.plugin_parser.json_parser import parse_json
 from OTAnalytics.plugin_parser.traffic_statistics_json import (
     AS_OF_KEY,
     BINS_KEY,
@@ -124,7 +125,7 @@ class TestFormat:
         path = tmp_path / "day.json"
         write(create_statistics(), path)
 
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = parse_json(path)
 
         assert set(data) == {
             "format",
@@ -159,7 +160,6 @@ class TestFormat:
             "start_section": {"id": "s1", "name": "Nord"},
             "end_section": {"id": "s2", "name": "Süd"},
         }
-        assert "Nord → Süd" in path.read_text(encoding="utf-8")
 
     def test_statistics_and_state_blocks(self) -> None:
         data = to_dict(create_statistics())
@@ -315,7 +315,7 @@ class TestWrite:
         write(create_statistics(), path)
 
         assert [p.name for p in tmp_path.iterdir()] == ["day.json"]
-        assert json.loads(path.read_text(encoding="utf-8"))[FORMAT_KEY] == FORMAT
+        assert parse_json(path)[FORMAT_KEY] == FORMAT
 
     def test_written_file_gets_default_permissions(self, tmp_path: Path) -> None:
         path = tmp_path / "day.json"

@@ -10,8 +10,8 @@ class TestAtomicWrite:
     def test_writes_content_and_leaves_no_temp_file(self, tmp_path: Path) -> None:
         path = tmp_path / "sub" / "out.bin"
 
-        with atomic_write(path) as file:
-            file.write(b"new")
+        with atomic_write(path) as temp:
+            temp.write_bytes(b"new")
 
         assert path.read_bytes() == b"new"
         assert list(path.parent.iterdir()) == [path]
@@ -23,8 +23,8 @@ class TestAtomicWrite:
         path = tmp_path / "out.bin"
         old_umask = os.umask(umask)
         try:
-            with atomic_write(path) as file:
-                file.write(b"new")
+            with atomic_write(path) as temp:
+                temp.write_bytes(b"new")
         finally:
             os.umask(old_umask)
 
@@ -35,8 +35,8 @@ class TestAtomicWrite:
         path.write_bytes(b"old")
 
         with pytest.raises(RuntimeError):
-            with atomic_write(path) as file:
-                file.write(b"new")
+            with atomic_write(path) as temp:
+                temp.write_bytes(b"new")
                 raise RuntimeError("boom")
 
         assert path.read_bytes() == b"old"

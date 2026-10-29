@@ -1,6 +1,5 @@
 """JSON codec for the daily traffic statistics files."""
 
-import json
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -24,6 +23,7 @@ from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
 )
 from OTAnalytics.helpers.file_helpers import atomic_write
+from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
 
 FORMAT = "otanalytics.traffic_statistics"
 VERSION = 1
@@ -358,10 +358,9 @@ def _histogram_from_dict(slot: dict[str, Any] | None) -> SpeedHistogram:
 
 
 def write(stats: DayTrafficStatistics, path: Path) -> None:
-    """Write the statistics atomically to the path, see atomic_write."""
-    content = json.dumps(to_dict(stats), ensure_ascii=False)
-    with atomic_write(path) as file:
-        file.write(content.encode("utf-8"))
+    """Write the statistics as compact JSON atomically to the path."""
+    with atomic_write(path) as temp:
+        write_json(to_dict(stats), temp, indent=0)
 
 
 def read(path: Path, config: TrafficStatisticsConfig) -> DayTrafficStatistics:
@@ -372,7 +371,7 @@ def read(path: Path, config: TrafficStatisticsConfig) -> DayTrafficStatistics:
             fit the format or config.
     """
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as cause:
+        data = parse_json(path)
+    except (ValueError, OSError, EOFError) as cause:
         raise TrafficStatisticsFormatError(f"Corrupt file {path}: {cause}") from cause
     return from_dict(data, config)
