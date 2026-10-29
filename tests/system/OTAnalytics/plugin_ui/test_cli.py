@@ -19,6 +19,11 @@ from OTAnalytics.application.config import (
 from OTAnalytics.application.parser.cli_parser import CliMode
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
 from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
+from OTAnalytics.plugin_parser.traffic_statistics_json import (
+    STATISTICS_KEY,
+    TOTAL_KEY,
+    TOTALS_KEY,
+)
 from tests.conftest import YieldFixture
 from tests.utils.builders.run_configuration import create_run_config
 
@@ -198,7 +203,7 @@ class TestTrafficStatisticsExport:
         totals: Counter[str] = Counter()
         for statistics_file in statistics_files:
             statistics = json.loads(statistics_file.read_text(encoding="utf-8"))
-            totals.update(statistics["statistics"]["total"]["totals"])
+            totals.update(statistics[STATISTICS_KEY][TOTAL_KEY][TOTALS_KEY])
         counts: Counter[str] = Counter()
         with (save_dir / "run.counts_15min.csv").open(encoding="utf-8") as file:
             for row in csv.DictReader(file):
