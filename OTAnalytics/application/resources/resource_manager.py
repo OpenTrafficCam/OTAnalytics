@@ -38,6 +38,20 @@ class AnalysisKeys(ResourceKey):
     BUTTON_TEXT_EXPORT_TRACK_STATISTICS = "button-export-track-statistics"
 
 
+class StaticAnalysisConfigKeys(ResourceKey):
+    LABEL_STATIC_ANALYSIS_CONFIG_FORM_HEADER = "label-static-analysis-config-header"
+    LABEL_DO_EVENTS = "label-do-events"
+    LABEL_DO_COUNTING = "label-do-counting"
+    LABEL_SAVE_NAME = "label-save-name"
+    LABEL_SAVE_SUFFIX = "label-save-suffix"
+    LABEL_EVENT_FORMATS = "label-event-formats"
+    LABEL_COUNT_INTERVALS = "label-count-intervals"
+    LABEL_COUNTING_EVENT = "label-counting-event"
+    LABEL_NUM_PROCESSES = "label-num-processes"
+    LABEL_LOGFILE = "label-logfile"
+    VALIDATION_COUNT_INTERVALS = "validation-count-intervals"
+
+
 class ProjectKeys(ResourceKey):
     LABEL_OPEN_PROJECT = "label-open-project"
     LABEL_PROJECT_FORM_HEADER = "label-project-form-header"
@@ -98,7 +112,6 @@ class ExportCountsDialogKeys(ResourceKey):
     LABEL_END_DATE = "label-end-date"
     LABEL_END_TIME = "label-end-time"
     LABEL_INTERVAL_MINUTES = "label-interval-minutes"
-    LABEL_COUNTING_EVENT = "label-counting-event"
     LABEL_OUTPUT_FILE = "label-output-file"
 
 
@@ -255,7 +268,6 @@ DEFAULT_RESOURCE_MAP = {
     FileChooserDialogKeys.LABEL_DIRECTORY: "Directory",
     FileChooserDialogKeys.LABEL_BROWSE: "Browse",
     ExportCountsDialogKeys.LABEL_INTERVAL_MINUTES: "Interval (minutes)",
-    ExportCountsDialogKeys.LABEL_COUNTING_EVENT: "Counting Event",
     ExportCountsDialogKeys.LABEL_OUTPUT_FILE: "Output File",
     ExportCountsDialogKeys.LABEL_EXPORT_COUNTS: "Export Counts",
     ExportCountsDialogKeys.LABEL_TIME_RANGE: "Time Range",
@@ -270,9 +282,6 @@ DEFAULT_RESOURCE_MAP = {
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
     ProjectKeys.LABEL_QUICK_SAVE: "Save",
     ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
-    ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
-    ProjectKeys.LABEL_QUICK_SAVE: "Save",
-    ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
     RemarkKeys.LABEL_REMARK_HEADER: "Remark",
     RemarkKeys.REMARK_NO_COMMENT: "No Comment",
     SectionKeys.BUTTON_ADD_AREA: "Add area...",
@@ -281,6 +290,17 @@ DEFAULT_RESOURCE_MAP = {
     SectionKeys.BUTTON_PROPERTIES: "Properties...",
     SectionKeys.BUTTON_REMOVE: "Remove...",
     SectionKeys.TABLE_COLUMN_NAME: "Section",
+    StaticAnalysisConfigKeys.LABEL_STATIC_ANALYSIS_CONFIG_FORM_HEADER: "Analysis Configuration",  # noqa
+    StaticAnalysisConfigKeys.LABEL_DO_EVENTS: "Create events",
+    StaticAnalysisConfigKeys.LABEL_DO_COUNTING: "Create counts",
+    StaticAnalysisConfigKeys.LABEL_SAVE_NAME: "Save name",
+    StaticAnalysisConfigKeys.LABEL_SAVE_SUFFIX: "Save suffix",
+    StaticAnalysisConfigKeys.LABEL_EVENT_FORMATS: "Event formats",
+    StaticAnalysisConfigKeys.LABEL_COUNT_INTERVALS: "Count intervals [min]",
+    StaticAnalysisConfigKeys.LABEL_COUNTING_EVENT: "Counting event",
+    StaticAnalysisConfigKeys.LABEL_NUM_PROCESSES: "Number of processes",
+    StaticAnalysisConfigKeys.LABEL_LOGFILE: "Logfile",
+    StaticAnalysisConfigKeys.VALIDATION_COUNT_INTERVALS: "Enter positive whole numbers separated by commas",  # noqa
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
     SvzMetadataKeys.LABEL_TK_NUMBER: "TK-Nummer",
     SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER: "Zählstellennummer",
