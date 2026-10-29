@@ -1,6 +1,4 @@
-import json
 import os
-from copy import deepcopy
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -12,42 +10,30 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
 from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
-    TOTAL,
     DayTrafficStatistics,
     FlowInfo,
 )
 from OTAnalytics.application.analysis.traffic_statistics_config import (
     TrafficStatisticsConfig,
 )
-from OTAnalytics.plugin_parser.json_parser import parse_json
+from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
 from OTAnalytics.plugin_parser.traffic_statistics_json import (
-    AS_OF_KEY,
-    BINS_KEY,
-    CLASS_GROUPS_KEY,
     COUNT_KEY,
     COUNTS_KEY,
     COVERAGE_KEY,
-    DAY_KEY,
     FLOWS_KEY,
     FORMAT,
     FORMAT_KEY,
-    INTERVAL_MINUTES_KEY,
     PEAK_HOUR_KEY,
-    ROAD_USER_IDS_KEY,
-    SPEED_HISTOGRAMS_KEY,
     SPEED_KEY,
-    SPEED_PROFILE_INTERVAL_MINUTES_KEY,
-    STATE_KEY,
     STATISTICS_KEY,
-    TIMEZONE_KEY,
     TOTAL_KEY,
-    TOTAL_SPEED_KEY,
     TOTALS_KEY,
     VERSION,
     VERSION_KEY,
+    DayProgress,
     TrafficStatisticsFormatError,
-    from_dict,
-    read,
+    read_progress,
     to_dict,
     write,
 )
@@ -77,45 +63,48 @@ def create_statistics() -> DayTrafficStatistics:
     return stats
 
 
-class TestRoundTrip:
-    def test_round_trip_preserves_derived_and_state(self, tmp_path: Path) -> None:
+class TestReadProgress:
+    def test_returns_coverage_and_as_of(self, tmp_path: Path) -> None:
         stats = create_statistics()
         path = tmp_path / "day.json"
-
         write(stats, path)
-        restored = read(path, CONFIG)
 
-        assert restored.day == stats.day
-        assert restored.counting_event == CountingEvent.END
-        assert restored.as_of == stats.as_of
-        assert restored.flows == stats.flows
-        assert restored.coverage == stats.coverage
-        assert restored.road_user_ids == stats.road_user_ids
-        for flow_id in ("f1", "f2", TOTAL):
-            assert restored.counts(flow_id) == stats.counts(flow_id)
-            assert restored.totals(flow_id) == stats.totals(flow_id)
-            assert restored.peak_hour(flow_id) == stats.peak_hour(flow_id)
-            assert restored.speed(flow_id) == stats.speed(flow_id)
-            assert restored.speed_profile(flow_id) == stats.speed_profile(flow_id)
-        assert restored.raw_counts() == stats.raw_counts()
+        assert read_progress(path) == DayProgress(stats.coverage, stats.as_of)
 
-    def test_restored_statistics_keeps_counting(self, tmp_path: Path) -> None:
+    def test_no_as_of_and_no_coverage(self, tmp_path: Path) -> None:
+        path = tmp_path / "day.json"
+        write(DayTrafficStatistics(DAY, CONFIG, [FLOW_1]), path)
+
+        assert read_progress(path) == DayProgress([], None)
+
+    @pytest.mark.parametrize("content", ["{not json", "[1, 2]"])
+    def test_corrupt_file_raises_format_error(
+        self, tmp_path: Path, content: str
+    ) -> None:
+        path = tmp_path / "day.json"
+        path.write_text(content, encoding="utf-8")
+
+        with pytest.raises(TrafficStatisticsFormatError):
+            read_progress(path)
+
+    @pytest.mark.parametrize(
+        "key, value",
+        [(FORMAT_KEY, "other"), (VERSION_KEY, VERSION + 1), (COVERAGE_KEY, None)],
+    )
+    def test_invalid_header_raises_format_error(
+        self, tmp_path: Path, key: str, value: Any
+    ) -> None:
         path = tmp_path / "day.json"
         write(create_statistics(), path)
-        restored = read(path, CONFIG)
+        data = parse_json(path)
+        if value is None:
+            del data[key]
+        else:
+            data[key] = value
+        write_json(data, path)
 
-        assert not restored.add("ru1", "f1", "LV", local(10, 0), 40.0)
-        assert restored.add("ru9", "f1", "LV", local(10, 0), 40.0)
-
-    def test_none_as_of_and_no_coverage(self) -> None:
-        stats = DayTrafficStatistics(DAY, CONFIG, [FLOW_1])
-        data = to_dict(stats)
-
-        assert data[AS_OF_KEY] is None
-        assert data[COVERAGE_KEY] == []
-        restored = from_dict(json.loads(json.dumps(data)), CONFIG)
-        assert restored.as_of is None
-        assert restored.coverage == []
+        with pytest.raises(TrafficStatisticsFormatError):
+            read_progress(path)
 
 
 class TestFormat:
@@ -142,7 +131,6 @@ class TestFormat:
             "coverage",
             "flows",
             "statistics",
-            "state",
         }
         assert data["format"] == FORMAT
         assert data["version"] == VERSION
@@ -161,7 +149,7 @@ class TestFormat:
             "end_section": {"id": "s2", "name": "Süd"},
         }
 
-    def test_statistics_and_state_blocks(self) -> None:
+    def test_statistics_block(self) -> None:
         data = to_dict(create_statistics())
 
         total = data[STATISTICS_KEY][TOTAL_KEY]
@@ -170,12 +158,6 @@ class TestFormat:
         assert total[PEAK_HOUR_KEY]["LV"][COUNT_KEY] == 3
         assert total[SPEED_KEY]["LV"][COUNT_KEY] == 2
         assert set(data[STATISTICS_KEY][FLOWS_KEY]) == {"f1", "f2"}
-        assert data[STATE_KEY][ROAD_USER_IDS_KEY] == ["ru1", "ru2", "ru3", "ru4"]
-        histograms = data[STATE_KEY][SPEED_HISTOGRAMS_KEY]
-        slots = histograms["f1"]["LV"]
-        assert slots[29] == {BINS_KEY: {"41": 1, "50": 1}, TOTAL_SPEED_KEY: 91.5}
-        assert slots[0] is None
-        assert "LV" not in histograms["f2"]
 
     def test_uncovered_counts_are_null(self) -> None:
         data = to_dict(create_statistics())
@@ -184,127 +166,6 @@ class TestFormat:
         assert len(counts) == 1440
         assert counts[0] == 0
         assert counts[-1] is None
-
-
-class TestErrors:
-    @staticmethod
-    def valid() -> dict[str, Any]:
-        return json.loads(json.dumps(to_dict(create_statistics())))
-
-    def test_interval_mismatch_raises_format_error(self) -> None:
-        other = TrafficStatisticsConfig(
-            timezone="Europe/Berlin",
-            interval_minutes=5,
-            class_groups=CONFIG.class_groups,
-        )
-
-        with pytest.raises(TrafficStatisticsFormatError):
-            from_dict(self.valid(), other)
-
-    @pytest.mark.parametrize(
-        "key,value",
-        [
-            (FORMAT_KEY, "other"),
-            (VERSION_KEY, 2),
-            (TIMEZONE_KEY, "UTC"),
-            (SPEED_PROFILE_INTERVAL_MINUTES_KEY, 30),
-            (INTERVAL_MINUTES_KEY, 5),
-        ],
-    )
-    def test_mismatching_header_raises(self, key: str, value: Any) -> None:
-        data = self.valid()
-        data[key] = value
-
-        with pytest.raises(TrafficStatisticsFormatError):
-            from_dict(data, CONFIG)
-
-    @pytest.mark.parametrize(
-        "class_groups",
-        [
-            {"LV": frozenset({"car"}), "SV": frozenset({"truck"})},
-            {"LV": frozenset({"car", "van"}), "HV": frozenset({"truck"})},
-            {"LV": frozenset({"car", "van"})},
-            {},
-        ],
-    )
-    def test_changed_class_groups_raise_format_error(
-        self, class_groups: dict[str, frozenset[str]]
-    ) -> None:
-        other = TrafficStatisticsConfig(
-            timezone="Europe/Berlin", class_groups=class_groups
-        )
-
-        with pytest.raises(TrafficStatisticsFormatError, match=CLASS_GROUPS_KEY):
-            from_dict(self.valid(), other)
-
-    def test_class_groups_are_compared_ignoring_order(self) -> None:
-        data = self.valid()
-        data[CLASS_GROUPS_KEY] = {"SV": ["truck"], "LV": ["van", "car"]}
-
-        restored = from_dict(data, CONFIG)
-
-        assert restored.config.class_groups == CONFIG.class_groups
-
-    def test_changed_peak_settings_are_accepted(self) -> None:
-        other = TrafficStatisticsConfig(
-            timezone="Europe/Berlin",
-            class_groups=CONFIG.class_groups,
-            peak_window_minutes=30,
-            peak_step_minutes=5,
-        )
-
-        restored = from_dict(self.valid(), other)
-
-        assert restored.config == other
-
-    @pytest.mark.parametrize(
-        "key", [DAY_KEY, FLOWS_KEY, STATISTICS_KEY, STATE_KEY, COVERAGE_KEY]
-    )
-    def test_missing_key_raises(self, key: str) -> None:
-        data = self.valid()
-        del data[key]
-
-        with pytest.raises(TrafficStatisticsFormatError):
-            from_dict(data, CONFIG)
-
-    def test_wrong_counts_length_raises(self) -> None:
-        data = self.valid()
-        data[STATISTICS_KEY][FLOWS_KEY]["f1"][COUNTS_KEY]["LV"].pop()
-
-        with pytest.raises(TrafficStatisticsFormatError):
-            from_dict(data, CONFIG)
-
-    def test_wrong_histogram_length_raises(self) -> None:
-        data = self.valid()
-        data[STATE_KEY][SPEED_HISTOGRAMS_KEY]["f1"]["LV"].pop()
-
-        with pytest.raises(TrafficStatisticsFormatError):
-            from_dict(data, CONFIG)
-
-    def test_restore_accepts_full_empty_histogram_slots(self) -> None:
-        data = self.valid()
-        slots = data[STATE_KEY][SPEED_HISTOGRAMS_KEY]["f1"]["LV"]
-        slots[0] = {BINS_KEY: {}, TOTAL_SPEED_KEY: 0.0}
-        expected = from_dict(deepcopy(self.valid()), CONFIG)
-
-        restored = from_dict(data, CONFIG)
-
-        assert restored.histograms()["f1"]["LV"][0].count == 0
-        assert restored.speed("f1") == expected.speed("f1")
-
-    def test_corrupt_json_raises_format_error(self, tmp_path: Path) -> None:
-        path = tmp_path / "day.json"
-        path.write_text("{not json", encoding="utf-8")
-
-        with pytest.raises(TrafficStatisticsFormatError):
-            read(path, CONFIG)
-
-    def test_non_object_json_raises_format_error(self, tmp_path: Path) -> None:
-        path = tmp_path / "day.json"
-        path.write_text("[1, 2]", encoding="utf-8")
-
-        with pytest.raises(TrafficStatisticsFormatError):
-            read(path, CONFIG)
 
 
 class TestWrite:
