@@ -320,28 +320,59 @@ class DayTrafficStatistics:
         return result
 
 
-def assignment_to_entry(
-    assignment: RoadUserAssignment,
+@dataclass(frozen=True)
+class AssignmentRecord:
+    """The data of a road user assignment the traffic statistics need.
+
+    Live assignments and restored road user assignment files are both converted
+    to this record. The occurrences are the interpolated ones, as in counting.
+    """
+
+    road_user: str
+    flow_id: str
+    road_user_type: str
+    start_occurrence: datetime
+    end_occurrence: datetime
+    avg_speed_mps: float | None
+
+    @staticmethod
+    def from_assignment(assignment: RoadUserAssignment) -> "AssignmentRecord":
+        return AssignmentRecord(
+            road_user=assignment.road_user,
+            flow_id=assignment.assignment.id.id,
+            road_user_type=assignment.road_user_type,
+            start_occurrence=aggregation_time(assignment, CountingEvent.START),
+            end_occurrence=aggregation_time(assignment, CountingEvent.END),
+            avg_speed_mps=assignment.flow_metrics().avg_speed_mps,
+        )
+
+
+def record_to_entry(
+    record: AssignmentRecord,
     counting_event: CountingEvent,
     resolver: ClassGroupResolver,
     tz: ZoneInfo,
 ) -> tuple[str, str, str, datetime, float | None] | None:
-    """Convert an assignment to the arguments of `DayTrafficStatistics.add`.
+    """Convert a record to the arguments of `DayTrafficStatistics.add`.
 
     Returns (road_user, flow_id, group, local occurrence, speed in km/h) or None
     if the road user's classification belongs to no class group. Naive
     occurrences are treated as UTC.
     """
-    group = resolver.group_of(assignment.road_user_type)
+    group = resolver.group_of(record.road_user_type)
     if group is None:
         return None
-    occurrence = _as_utc(aggregation_time(assignment, counting_event)).astimezone(tz)
-    speed_mps = assignment.flow_metrics().avg_speed_mps
+    occurrence = (
+        record.end_occurrence
+        if counting_event == CountingEvent.END
+        else record.start_occurrence
+    )
+    speed_mps = record.avg_speed_mps
     speed_kmh = None if speed_mps is None else speed_mps * 3.6
     return (
-        assignment.road_user,
-        assignment.assignment.id.id,
+        record.road_user,
+        record.flow_id,
         group,
-        occurrence,
+        _as_utc(occurrence).astimezone(tz),
         speed_kmh,
     )
