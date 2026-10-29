@@ -1,5 +1,4 @@
 import csv
-import json
 import shutil
 import subprocess
 import sys
@@ -202,7 +201,7 @@ class TestTrafficStatisticsExport:
         assert len(statistics_files) == 1
         totals: Counter[str] = Counter()
         for statistics_file in statistics_files:
-            statistics = json.loads(statistics_file.read_text(encoding="utf-8"))
+            statistics = parse_json(statistics_file)
             totals.update(statistics[STATISTICS_KEY][TOTAL_KEY][TOTALS_KEY])
         counts: Counter[str] = Counter()
         with (save_dir / "run.counts_15min.csv").open(encoding="utf-8") as file:
