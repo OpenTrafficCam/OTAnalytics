@@ -10,13 +10,14 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
 )
 from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
     TOTAL,
+    AssignmentRecord,
     ClassGroupResolver,
     DayTrafficStatistics,
     FlowInfo,
     PeakHour,
-    assignment_to_entry,
     day_start,
     minutes_in_day,
+    record_to_entry,
 )
 from OTAnalytics.application.analysis.traffic_statistics.speed_values import SpeedValues
 from OTAnalytics.application.analysis.traffic_statistics_config import (
@@ -348,11 +349,28 @@ class TestSpeed:
         assert stats.speed_profile(TOTAL)["LV"][slot] == SpeedValues(40.0, 50.0, 2)
 
 
-class TestAssignmentToEntry:
+class TestRecordToEntry:
+    def test_from_assignment_takes_interpolated_times_and_speed(self) -> None:
+        assignment = create_assignment(distance=100, start_s=0, end_s=10)
+        record = AssignmentRecord.from_assignment(assignment)
+        assert record == AssignmentRecord(
+            road_user="1",
+            flow_id="flow",
+            road_user_type="car",
+            start_occurrence=datetime(2020, 1, 1, tzinfo=timezone.utc),
+            end_occurrence=datetime(2020, 1, 1, 0, 0, 10, tzinfo=timezone.utc),
+            avg_speed_mps=10.0,
+        )
+
     def test_start_event_entry_in_local_time(self) -> None:
         assignment = create_assignment(distance=100, start_s=0, end_s=10)
         resolver = ClassGroupResolver(TrafficStatisticsConfig())
-        entry = assignment_to_entry(assignment, CountingEvent.START, resolver, TZ)
+        entry = record_to_entry(
+            AssignmentRecord.from_assignment(assignment),
+            CountingEvent.START,
+            resolver,
+            TZ,
+        )
         assert entry is not None
         road_user, flow_id, group, occurrence, speed = entry
         assert (road_user, flow_id, group) == ("1", "flow", "car")
@@ -364,22 +382,35 @@ class TestAssignmentToEntry:
     def test_end_counting_event_uses_end_occurrence(self) -> None:
         assignment = create_assignment(distance=100, start_s=0, end_s=10)
         resolver = ClassGroupResolver(TrafficStatisticsConfig())
-        entry = assignment_to_entry(assignment, CountingEvent.END, resolver, TZ)
+        entry = record_to_entry(
+            AssignmentRecord.from_assignment(assignment),
+            CountingEvent.END,
+            resolver,
+            TZ,
+        )
         assert entry is not None
         assert entry[3] == datetime(2020, 1, 1, 0, 0, 10, tzinfo=timezone.utc)
 
     def test_missing_distance_gives_no_speed(self) -> None:
         assignment = create_assignment(distance=None, start_s=0, end_s=10)
         resolver = ClassGroupResolver(TrafficStatisticsConfig())
-        entry = assignment_to_entry(assignment, CountingEvent.START, resolver, TZ)
+        entry = record_to_entry(
+            AssignmentRecord.from_assignment(assignment),
+            CountingEvent.START,
+            resolver,
+            TZ,
+        )
         assert entry is not None
         assert entry[4] is None
 
     def test_unknown_group_gives_none(self) -> None:
         assignment = create_assignment(distance=100, start_s=0, end_s=10)
         config = TrafficStatisticsConfig(class_groups={"SV": frozenset({"truck"})})
-        entry = assignment_to_entry(
-            assignment, CountingEvent.START, ClassGroupResolver(config), TZ
+        entry = record_to_entry(
+            AssignmentRecord.from_assignment(assignment),
+            CountingEvent.START,
+            ClassGroupResolver(config),
+            TZ,
         )
         assert entry is None
 
@@ -398,7 +429,9 @@ class TestAssignmentToEntry:
             events=replace(assignment.events, start=naive_start, end=naive_end),
         )
         resolver = ClassGroupResolver(TrafficStatisticsConfig())
-        entry = assignment_to_entry(naive, CountingEvent.START, resolver, TZ)
+        entry = record_to_entry(
+            AssignmentRecord.from_assignment(naive), CountingEvent.START, resolver, TZ
+        )
         assert entry is not None
         assert entry[3].hour == 13
         assert entry[3] == datetime(2020, 1, 1, 12, tzinfo=timezone.utc)
