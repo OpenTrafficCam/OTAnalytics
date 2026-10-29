@@ -89,3 +89,16 @@ class TestNewExportFlags:
 
         assert args.geo_track_export is True
         assert args.traffic_statistics is True
+
+    def test_restore_files_default_to_none(self) -> None:
+        with patch.object(sys, "argv", ["path", "--cli"]):
+            args = ArgparseCliParser().parse()
+
+        assert args.traffic_statistics_restore_files is None
+
+    def test_restore_files_are_parsed(self) -> None:
+        argv = ["path", "--cli", "--traffic-statistics-restore", "a.csv", "b.csv"]
+        with patch.object(sys, "argv", argv):
+            args = ArgparseCliParser().parse()
+
+        assert args.traffic_statistics_restore_files == ["a.csv", "b.csv"]

@@ -537,7 +537,9 @@ class TestRunConfiguration:
 
 
 def cli_arguments(
-    geo_track_export: bool = False, traffic_statistics: bool = False
+    geo_track_export: bool = False,
+    traffic_statistics: bool = False,
+    traffic_statistics_restore_files: list[str] | None = None,
 ) -> CliArguments:
     return CliArguments(
         start_cli=True,
@@ -548,6 +550,7 @@ def cli_arguments(
         track_statistics_export=False,
         geo_track_export=geo_track_export,
         traffic_statistics=traffic_statistics,
+        traffic_statistics_restore_files=traffic_statistics_restore_files,
     )
 
 
@@ -575,6 +578,21 @@ def otconfig_with_export(
 
 
 class TestRunConfigurationNewExports:
+    def test_restore_files_default_to_empty(self) -> None:
+        assert (
+            build_config(cli_arguments(), None).traffic_statistics_restore_files == []
+        )
+
+    def test_restore_files_come_from_cli(self) -> None:
+        cli_args = cli_arguments(traffic_statistics_restore_files=["a.csv", "b.csv"])
+
+        run_config = build_config(cli_args, None)
+
+        assert run_config.traffic_statistics_restore_files == [
+            Path("a.csv"),
+            Path("b.csv"),
+        ]
+
     def test_exports_are_off_by_default(self) -> None:
         run_config = build_config(cli_arguments(), None)
 

@@ -210,6 +210,39 @@ class TestTrafficStatisticsExport:
         assert sum(counts.values()) > 0
         assert totals == +counts
 
+    def test_restore_from_assignments_does_not_double_count(
+        self, test_data_tmp_dir: Path, ottrk_path: Path, otsection_file: Path
+    ) -> None:
+        save_dir = test_data_tmp_dir / "traffic_statistics_restore"
+        shutil.rmtree(save_dir, ignore_errors=True)
+        save_dir.mkdir(parents=True)
+        track_file = Path(shutil.copy(ottrk_path, save_dir))
+        restore_file = save_dir / "restore.road_user_assignments.csv"
+
+        def run(restore_files: list[str] | None) -> Counter[str]:
+            run_config = create_run_config(
+                track_files=[str(track_file)],
+                otflow_file=str(otsection_file),
+                save_dir=str(save_dir),
+                save_name="run",
+                event_formats=["csv"],
+                count_intervals=[15],
+                traffic_statistics=True,
+                traffic_statistics_restore_files=restore_files,
+            )
+            OtAnalyticsCliApplicationStarter(run_config).start()
+            (statistics_file,) = save_dir.glob("run.traffic_statistics_*.json")
+            data = parse_json(statistics_file)
+            return Counter(data[STATISTICS_KEY][TOTAL_KEY][TOTALS_KEY])
+
+        first = run(None)
+        shutil.copy(save_dir / "run.road_user_assignments.csv", restore_file)
+
+        second = run([str(restore_file)])
+
+        assert sum(first.values()) > 0
+        assert second == first
+
 
 @pytest.fixture
 def multiple_dots_test_data_dir(test_data_tmp_dir: Path) -> YieldFixture[Path]:

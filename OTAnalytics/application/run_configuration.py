@@ -237,6 +237,11 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         return None
 
     @property
+    def traffic_statistics_restore_files(self) -> list[Path]:
+        """Road user assignment files to restore the traffic statistics from."""
+        return [Path(f) for f in self._cli_args.traffic_statistics_restore_files or []]
+
+    @property
     def do_export_geo_tracks(self) -> bool:
         if self._cli_args.geo_track_export:
             return True
