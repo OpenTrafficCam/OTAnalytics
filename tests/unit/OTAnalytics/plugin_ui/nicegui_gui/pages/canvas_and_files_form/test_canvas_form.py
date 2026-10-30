@@ -40,9 +40,23 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     NORMAL_COLOR,
     RELEASE_FOCUS,
     SELECTED_COLOR,
+    UPDATE_VIEWBOX,
     CanvasForm,
     circle_to_coordinates,
 )
+
+DEFAULT_IMAGE_SIZE = (640, 480)
+TRACK_IMAGE_SIZE = (2048, 2048)
+
+
+def overlay_content(mock_ui: Any) -> str:
+    return mock_ui.interactive_image.return_value.add_layer.return_value.content
+
+
+def create_mock_image(size: tuple[int, int]) -> MagicMock:
+    image = MagicMock(spec=Image.Image)
+    image.size = size
+    return image
 
 
 @pytest.fixture
@@ -72,7 +86,7 @@ def mock_viewmodel() -> Mock:
 @pytest.fixture
 def mock_resource_manager() -> Mock:
     resource_manager = Mock(spec=ResourceManager)
-    resource_manager.get_image.return_value = MagicMock(spec=Image.Image)
+    resource_manager.get_image.return_value = create_mock_image(DEFAULT_IMAGE_SIZE)
     resource_manager.get_hotkey.return_value = SAVE_SECTION_HOTKEY_VALUE
     resource_manager.get.return_value = "Test Label"
     return resource_manager
@@ -203,24 +217,37 @@ class TestCanvasFormInitialization:
 
         # Verify interactive image setup
         mock_ui.interactive_image.assert_called_once()
-        mock_ui.interactive_image.return_value.on.assert_any_call(
+        overlay = mock_ui.interactive_image.return_value.add_layer.return_value
+        assert canvas_form._overlay == overlay
+        registered_events = [call.args[0] for call in overlay.on.call_args_list]
+        assert registered_events == [
             "svg:pointerdown",
-            mock_ui.interactive_image.return_value.on.call_args_list[0][0][1],
-        )
-        mock_ui.interactive_image.return_value.on.assert_any_call(
             "svg:pointermove",
-            mock_ui.interactive_image.return_value.on.call_args_list[1][0][1],
-        )
-        mock_ui.interactive_image.return_value.on.assert_any_call(
             "svg:pointerup",
-            mock_ui.interactive_image.return_value.on.call_args_list[2][0][1],
-        )
+        ]
 
         # Verify keyboard setup
         mock_ui.keyboard.assert_called_once()
 
         # Verify viewmodel calls
         mock_viewmodel.refresh_items_on_canvas.assert_called_once()
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_overlay_is_created_before_the_background_is_set(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        """The layer copies the image's source: created after, every section
+        update would resend the whole background (MBs per mouse move)."""
+        setup_canvas_form_with_mocks(mock_ui, mock_viewmodel, mock_resource_manager)
+
+        calls = [
+            name
+            for name, *_ in mock_ui.interactive_image.return_value.mock_calls
+            if name in ("add_layer", "set_source")
+        ]
+        assert calls[:2] == ["add_layer", "set_source"]
 
 
 class TestCanvasFormPointerEvents:
@@ -918,7 +945,7 @@ class TestCanvasFormImageHandling:
         # Test updating background by directly calling the canvas form method
         # This is more realistic than creating artificial buttons
         mock_track_image = Mock(spec=TrackImage)
-        mock_pil_image = Mock(spec=Image.Image)
+        mock_pil_image = create_mock_image(TRACK_IMAGE_SIZE)
         mock_track_image.as_image.return_value = mock_pil_image
         canvas_form.update_background(mock_track_image)
 
@@ -944,7 +971,7 @@ class TestCanvasFormImageHandling:
         )
 
         mock_track_image = Mock(spec=TrackImage)
-        mock_pil_image = Mock(spec=Image.Image)
+        mock_pil_image = create_mock_image(TRACK_IMAGE_SIZE)
         mock_track_image.as_image.return_value = mock_pil_image
 
         # Act
@@ -955,6 +982,25 @@ class TestCanvasFormImageHandling:
         mock_ui.interactive_image.return_value.set_source.assert_called_with(
             mock_pil_image
         )
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_update_background_fits_overlay_to_the_image(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        """Without a size the overlay stays invisible: its own sizing relies on an
+        image event that is lost if the image loads before the page connects."""
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        mock_track_image = Mock(spec=TrackImage)
+        mock_track_image.as_image.return_value = create_mock_image(TRACK_IMAGE_SIZE)
+
+        canvas_form.update_background(mock_track_image)
+
+        overlay = mock_ui.interactive_image.return_value.add_layer.return_value
+        overlay.run_method.assert_called_with(UPDATE_VIEWBOX, *TRACK_IMAGE_SIZE)
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
@@ -1078,7 +1124,7 @@ class TestCanvasFormSectionBuilder:
 
         assert canvas_form._preview_point == (50, 61)
         assert len(canvas_form._new_section_points) == 1
-        content = mock_ui.interactive_image.return_value.content
+        content = overlay_content(mock_ui)
         assert 'points="10,20 50,61"' in content
 
     @patch(
@@ -1362,7 +1408,7 @@ class TestCanvasFormSectionGeometryEditor:
         canvas_form.on_svg_pointer_move(svg_event(112, 22))
 
         assert canvas_form._hovered_knob_index == 1
-        content = canvas_form.mock_ui.interactive_image.return_value.content
+        content = overlay_content(canvas_form.mock_ui)
         assert HOVERED_KNOB_COLOR in content
 
     def test_hover_far_from_knob_highlights_nothing(self, canvas_form: Any) -> None:
@@ -1574,7 +1620,7 @@ class TestCanvasFormSectionGeometryEditor:
         )
 
     def test_edit_knobs_are_drawn(self, canvas_form: Any) -> None:
-        content = canvas_form.mock_ui.interactive_image.return_value.content
+        content = overlay_content(canvas_form.mock_ui)
 
         for index in range(len(ORIGINAL_COORDINATES)):
             assert f'id="{knob_id(index)}"' in content
@@ -1599,7 +1645,7 @@ class TestCanvasFormPresentation:
             yield canvas_form
 
     def content(self, canvas_form: Any) -> str:
-        return canvas_form.mock_ui.interactive_image.return_value.content
+        return overlay_content(canvas_form.mock_ui)
 
     def test_area_section_is_drawn_as_filled_polygon(self, canvas_form: Any) -> None:
         canvas_form.draw_section(
