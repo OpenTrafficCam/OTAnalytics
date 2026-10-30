@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,9 @@ class TestAtomicWrite:
         assert path.read_bytes() == b"new"
         assert list(path.parent.iterdir()) == [path]
 
+    @pytest.mark.skipif(
+        sys.platform == "win32", reason="Windows has no POSIX file permissions"
+    )
     @pytest.mark.parametrize("umask, expected", [(0o022, 0o644), (0o077, 0o600)])
     def test_file_gets_default_permissions(
         self, tmp_path: Path, umask: int, expected: int
@@ -41,3 +45,21 @@ class TestAtomicWrite:
 
         assert path.read_bytes() == b"old"
         assert list(tmp_path.iterdir()) == [path]
+
+    def test_syncs_temp_file_opened_for_writing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # On Windows os.fsync fails with EBADF for files opened read-only.
+        real_fsync = os.fsync
+
+        def fsync_requiring_write_access(fd: int) -> None:
+            os.write(fd, b"")
+            real_fsync(fd)
+
+        monkeypatch.setattr(os, "fsync", fsync_requiring_write_access)
+        path = tmp_path / "out.bin"
+
+        with atomic_write(path) as temp:
+            temp.write_bytes(b"new")
+
+        assert path.read_bytes() == b"new"

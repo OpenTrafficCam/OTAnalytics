@@ -50,7 +50,7 @@ def atomic_write(path: Path) -> Iterator[Path]:
     os.close(os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666))
     try:
         yield temp
-        with open(temp, "rb") as file:
+        with open(temp, "r+b") as file:
             os.fsync(file.fileno())
         os.replace(temp, path)
     except BaseException:
