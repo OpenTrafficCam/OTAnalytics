@@ -86,7 +86,7 @@ track statistics (per-track metrics such as length and duration), report, summar
 
 **Geo Track Export**:
 A bz2-compressed JSON file with one reduced trajectory point per Detection (track
-id, class, geo coordinate, time), written to
+ID, class, geo coordinate, time), written to
 `{save_stem}_{timestamp}.geo_tracks.json.bz2` for each chunk. Detections without a
 geo coordinate are dropped; if none remain, no file is written.
 _Avoid_: track export (the full `.ottrk`/CSV Track export), GeoJSON, shapefile
