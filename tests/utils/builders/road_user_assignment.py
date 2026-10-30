@@ -1,4 +1,6 @@
+import csv
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from OTAnalytics.application.analysis.road_user_assignment import (
     EventPair,
@@ -93,3 +95,31 @@ def create_road_user_assignment(
         ras.END_GEO_X: end_event.geo_x,
         ras.END_GEO_Y: end_event.geo_y,
     }
+
+
+ASSIGNMENT_CSV_COLUMNS = [
+    ras.FLOW_ID,
+    ras.ROAD_USER_ID,
+    ras.ROAD_USER_TYPE,
+    ras.START_INTERPOLATED_OCCURRENCE,
+    ras.END_INTERPOLATED_OCCURRENCE,
+    ras.AVG_SPEED_MPS,
+    ras.HOSTNAME,
+]
+
+
+def write_assignment_csv(
+    path: Path,
+    rows: list[dict[str, str]],
+    columns: list[str] | None = None,
+) -> None:
+    """Write a road user assignment CSV with the columns the statistics need.
+
+    Missing values become empty cells; `columns` replaces the default header.
+    """
+    with path.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.DictWriter(
+            file, fieldnames=columns or ASSIGNMENT_CSV_COLUMNS, extrasaction="ignore"
+        )
+        writer.writeheader()
+        writer.writerows(rows)

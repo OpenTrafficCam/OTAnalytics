@@ -222,6 +222,19 @@ class DayTrafficStatistics:
             )
         return True
 
+    def update_flows(self, flows: Sequence[FlowInfo]) -> None:
+        """Replace the flows with the current ones.
+
+        Counts and speeds of flows that are no longer part of them are dropped,
+        as a restore with the current flows would do.
+        """
+        self.flows = list(flows)
+        self._flow_ids = {flow.id for flow in self.flows}
+        for data in (self._counts, self._speeds):
+            for flow_id in list(data):
+                if flow_id not in self._flow_ids:
+                    del data[flow_id]
+
     def mark_covered(self, start: datetime, end: datetime) -> None:
         """Mark the half-open range [start, end) as covered, clipped to the day."""
         clipped_start = max(_as_utc(start), self._start)
