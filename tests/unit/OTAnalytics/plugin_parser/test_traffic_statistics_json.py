@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -191,6 +192,9 @@ class TestWrite:
         assert [p.name for p in tmp_path.iterdir()] == ["day.json"]
         assert parse_json(path)[FORMAT_KEY] == FORMAT
 
+    @pytest.mark.skipif(
+        sys.platform == "win32", reason="Windows has no POSIX file permissions"
+    )
     def test_written_file_gets_default_permissions(self, tmp_path: Path) -> None:
         path = tmp_path / "day.json"
         old_umask = os.umask(0o022)
