@@ -1,5 +1,6 @@
 import bz2
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
@@ -200,6 +201,9 @@ def test_polars_and_domain_writer_produce_same_content(
     assert polars_content == domain_content
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="Windows has no POSIX file permissions"
+)
 def test_written_file_gets_default_permissions(tmp_path: Path) -> None:
     spec = GeoTrackExportSpecification(tmp_path, "chunk")
     tracks = [build_track("1", [(1.0, 2.0)])]
