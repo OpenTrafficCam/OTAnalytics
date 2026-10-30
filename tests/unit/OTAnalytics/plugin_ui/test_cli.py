@@ -70,6 +70,10 @@ from OTAnalytics.application.use_cases.flow_repository import (
     FlowRepository,
     GetAllFlows,
 )
+from OTAnalytics.application.use_cases.geo_track_export import (
+    ExportGeoTracks,
+    GeoTrackExportSpecification,
+)
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToAllFlows,
@@ -366,6 +370,10 @@ def create_video_metadata(path: str, start: datetime) -> VideoMetadata:
     )
 
 
+async def _single_chunk() -> AsyncIterator[Mock]:
+    yield Mock()
+
+
 class TestOTAnalyticsCli:
     TRACK_PARSER: str = "track_parser"
     EVENT_REPOSITORY: str = "event_repository"
@@ -387,6 +395,7 @@ class TestOTAnalyticsCli:
     PROGRESSBAR: str = "progressbar"
     EXPORT_ROAD_USER_ASSIGNMENT: str = "export_road_user_assignments"
     EXPORT_TRAFFIC_STATISTICS: str = "export_traffic_statistics"
+    EXPORT_GEO_TRACKS: str = "export_geo_tracks"
 
     def init_cli_with(
         self,
@@ -1327,6 +1336,94 @@ class TestOTAnalyticsCli:
         assert counts[8 * 60 + 5] == 0
         assert counts[8 * 60 + 30] is None
         assert counts[9 * 60 + 5] == 0
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("mode", [CliMode.STREAM, CliMode.BULK])
+    async def test_geo_track_export_runs_before_tracks_are_cleared_and_calls_hook(
+        self,
+        mode: CliMode,
+        test_data_tmp_dir: Path,
+        mock_cli_stream_dependencies: dict[str, Mock],
+        mock_cli_bulk_dependencies: dict[str, Mock],
+    ) -> None:
+        dependencies = (
+            mock_cli_stream_dependencies
+            if mode == CliMode.STREAM
+            else mock_cli_bulk_dependencies
+        )
+        geo_file = test_data_tmp_dir / "stem_2023-05-24_08-00-00.geo_tracks.json.bz2"
+        exporter = Mock(spec=ExportGeoTracks)
+        dependencies[self.EXPORT_GEO_TRACKS] = exporter
+        calls = Mock()
+        exporter.export.side_effect = lambda spec: (calls.geo_export(), geo_file)[1]
+        dependencies[self.CLEAR_ALL_TRACKS].side_effect = lambda: calls.clear()
+        run_config = Mock()
+        run_config.traffic_statistics = None
+        run_config.do_export_geo_tracks = True
+        run_config.do_events = False
+        run_config.do_counting = False
+        run_config.do_export_tracks = False
+        run_config.do_export_track_statistics = False
+        run_config.do_export_road_user_assignments = False
+        run_config.save_dir = test_data_tmp_dir
+        run_config.save_stem = "stem"
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode, dependencies, dependencies, run_config
+        )
+        cli._after_geo_track_export = AsyncMock(  # type: ignore[method-assign]
+            side_effect=lambda f: calls.hook(f)
+        )
+
+        if mode == CliMode.STREAM:
+            assert isinstance(cli, OTAnalyticsStreamCli)
+            cli._parse_track_stream = AsyncMock(  # type: ignore[method-assign]
+                return_value=_single_chunk()
+            )
+            cli._get_all_sections = Mock(return_value=[])  # type: ignore
+            await cli._run_analysis(Mock())
+            expected = ["geo_export", "hook", "clear"]
+        else:
+            await OTAnalyticsCli._export_analysis(cli, [], OVERWRITE)
+            expected = ["geo_export", "hook"]
+
+        assert [c[0] for c in calls.mock_calls] == expected
+        exporter.export.assert_called_once_with(
+            GeoTrackExportSpecification(
+                export_directory=test_data_tmp_dir, export_filename_stem="stem"
+            )
+        )
+        cli._after_geo_track_export.assert_awaited_once_with(geo_file)  # type: ignore
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("mode", [CliMode.STREAM, CliMode.BULK])
+    async def test_geo_track_export_disabled_by_default(
+        self,
+        mode: CliMode,
+        mock_cli_stream_dependencies: dict[str, Mock],
+        mock_cli_bulk_dependencies: dict[str, Mock],
+    ) -> None:
+        dependencies = (
+            mock_cli_stream_dependencies
+            if mode == CliMode.STREAM
+            else mock_cli_bulk_dependencies
+        )
+        exporter = Mock(spec=ExportGeoTracks)
+        dependencies[self.EXPORT_GEO_TRACKS] = exporter
+        run_config = Mock()
+        run_config.traffic_statistics = None
+        run_config.do_export_geo_tracks = False
+        run_config.do_events = False
+        run_config.do_counting = False
+        run_config.do_export_tracks = False
+        run_config.do_export_track_statistics = False
+        run_config.do_export_road_user_assignments = False
+        cli: OTAnalyticsCli = self.init_cli_with(
+            mode, dependencies, dependencies, run_config
+        )
+
+        await OTAnalyticsCli._export_analysis(cli, [], OVERWRITE)
+
+        exporter.export.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_traffic_statistics_without_video_times_raises(
