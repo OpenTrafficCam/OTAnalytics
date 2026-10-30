@@ -10,6 +10,7 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
 from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
+    AssignmentRecord,
     DayTrafficStatistics,
     FlowInfo,
 )
@@ -52,13 +53,25 @@ def local(hour: int, minute: int) -> datetime:
     return datetime(2026, 10, 27, hour, minute, tzinfo=TZ)
 
 
+def record(
+    road_user: str,
+    flow_id: str,
+    road_user_type: str,
+    occurrence: datetime,
+    speed_mps: float | None,
+) -> AssignmentRecord:
+    return AssignmentRecord(
+        road_user, flow_id, road_user_type, occurrence, occurrence, speed_mps
+    )
+
+
 def create_statistics() -> DayTrafficStatistics:
     stats = DayTrafficStatistics(DAY, CONFIG, [FLOW_1, FLOW_2], CountingEvent.END)
     stats.mark_covered(local(0, 0), local(14, 32))
-    stats.add("ru1", "f1", "LV", local(7, 20), 41.5)
-    stats.add("ru2", "f1", "LV", local(7, 21), 50.0)
-    stats.add("ru3", "f2", "LV", local(8, 0), None)
-    stats.add("ru4", "f2", "SV", local(9, 5), 30.2)
+    stats.add(record("ru1", "f1", "car", local(7, 20), 11.5))
+    stats.add(record("ru2", "f1", "van", local(7, 21), 14.0))
+    stats.add(record("ru3", "f2", "car", local(8, 0), None))
+    stats.add(record("ru4", "f2", "truck", local(9, 5), 8.4))
     stats.as_of = local(14, 32)
     return stats
 
