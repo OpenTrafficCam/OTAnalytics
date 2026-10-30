@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Iterable, Optional
 
-from pandas import DataFrame, Series
+import polars as pl
+from polars import DataFrame
 
 from OTAnalytics.application.plotting import GetCurrentFrame
 from OTAnalytics.application.use_cases.video_repository import GetVideos
@@ -70,6 +71,13 @@ class NoOpDataFrameFilter(Filter[DataFrame, DataFrame]):
         return iterable
 
 
+def _check_has_occurrence_column(to_test: DataFrame) -> None:
+    if track.OCCURRENCE not in to_test.columns:
+        raise ValueError(
+            f"{track.OCCURRENCE} must be a column of DataFrame for filtering to work."
+        )
+
+
 class DataFrameStartsAtOrAfterDate(DataFramePredicate):
     """Checks if the DataFrame rows start at or after date.
 
@@ -87,14 +95,8 @@ class DataFrameStartsAtOrAfterDate(DataFramePredicate):
         self._start_date = start_date
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        if track.OCCURRENCE not in to_test.index.names:
-            raise ValueError(
-                f"{track.OCCURRENCE} "
-                "must be index of DataFrame for filtering to work."
-            )
-        return to_test[
-            to_test.index.get_level_values(track.OCCURRENCE) >= self._start_date
-        ]
+        _check_has_occurrence_column(to_test)
+        return to_test.filter(pl.col(track.OCCURRENCE) >= self._start_date)
 
 
 class DataFrameFramePredicate(DataFramePredicate):
@@ -117,19 +119,19 @@ class DataFrameFramePredicate(DataFramePredicate):
         self._other_videos = other_videos
 
     @abstractmethod
-    def create_frame_filter(self, to_test: DataFrame, frame: int) -> Series:
+    def create_frame_filter(self, frame: int) -> pl.Expr:
         pass
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        video_frame_filter = self.create_frame_filter(to_test, self._frame)
+        video_frame_filter = self.create_frame_filter(self._frame)
         video_with_frame_filter = (
-            to_test[track.VIDEO_NAME] == self._video_with_frame
+            pl.col(track.VIDEO_NAME) == self._video_with_frame
             if self._video_with_frame
-            else to_test[track.VIDEO_NAME].isnull()
+            else pl.col(track.VIDEO_NAME).is_null()
         )
-        other_videos_filter = to_test[track.VIDEO_NAME].isin(self._other_videos)
+        other_videos_filter = pl.col(track.VIDEO_NAME).is_in(self._other_videos)
         date_filter = video_frame_filter & video_with_frame_filter | other_videos_filter
-        return to_test[date_filter]
+        return to_test.filter(date_filter)
 
 
 class DataFrameStartsAtOrAfterFrame(DataFrameFramePredicate):
@@ -154,8 +156,8 @@ class DataFrameStartsAtOrAfterFrame(DataFrameFramePredicate):
             other_videos=videos_after,
         )
 
-    def create_frame_filter(self, to_test: DataFrame, frame: int) -> Series:
-        return to_test[track.FRAME] >= self._frame
+    def create_frame_filter(self, frame: int) -> pl.Expr:
+        return pl.col(track.FRAME) >= frame
 
 
 class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
@@ -175,14 +177,8 @@ class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
         self._end_date = end_date
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        if track.OCCURRENCE not in to_test.index.names:
-            raise ValueError(
-                f"{track.OCCURRENCE} "
-                "must be index of DataFrame for filtering to work."
-            )
-        return to_test[
-            to_test.index.get_level_values(track.OCCURRENCE) <= self._end_date
-        ]
+        _check_has_occurrence_column(to_test)
+        return to_test.filter(pl.col(track.OCCURRENCE) <= self._end_date)
 
 
 class DataFrameEndsBeforeOrAtFrame(DataFrameFramePredicate):
@@ -207,8 +203,8 @@ class DataFrameEndsBeforeOrAtFrame(DataFrameFramePredicate):
             other_videos=videos_before,
         )
 
-    def create_frame_filter(self, to_test: DataFrame, frame: int) -> Series:
-        return to_test[track.FRAME] <= self._frame
+    def create_frame_filter(self, frame: int) -> pl.Expr:
+        return pl.col(track.FRAME) <= frame
 
 
 class DataFrameHasClassifications(DataFramePredicate):
@@ -228,7 +224,9 @@ class DataFrameHasClassifications(DataFramePredicate):
         self._classifications = classifications
 
     def test(self, to_test: DataFrame) -> DataFrame:
-        return to_test.loc[to_test[self._column_name].isin(self._classifications)]
+        return to_test.filter(
+            pl.col(self._column_name).is_in(list(self._classifications))
+        )
 
 
 class DataFrameFilterBuilder(FilterBuilder[DataFrame, DataFrame]):

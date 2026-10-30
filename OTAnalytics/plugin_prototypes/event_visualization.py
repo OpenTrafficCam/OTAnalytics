@@ -1,6 +1,7 @@
 from typing import Iterable
 
-from pandas import DataFrame
+import polars as pl
+from polars import DataFrame
 
 from OTAnalytics.domain import event, track
 from OTAnalytics.domain.event import Event, EventRepository
@@ -8,12 +9,23 @@ from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.plugin_filter.dataframe_filter import DataFrameFilterBuilder
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
-    PandasDataFrameProvider,
+    PolarsDataFrameProvider,
 )
 
+EVENT_COLUMNS = {
+    event.ROAD_USER_ID: track.TRACK_ID,
+    event.ROAD_USER_TYPE: track.TRACK_CLASSIFICATION,
+    event.OCCURRENCE: track.OCCURRENCE,
+    event.FRAME_NUMBER: track.FRAME,
+    event.VIDEO_NAME: track.VIDEO_NAME,
+    event.EVENT_TYPE: event.EVENT_TYPE,
+    track.X: track.X,
+    track.Y: track.Y,
+}
 
-class PandasEventProvider(PandasDataFrameProvider):
-    """Provides events as pandas DataFrame."""
+
+class PolarsEventProvider(PolarsDataFrameProvider):
+    """Provides events as polars DataFrame."""
 
     def __init__(
         self,
@@ -49,21 +61,19 @@ class PandasEventProvider(PandasDataFrameProvider):
         for current in prepared:
             current[track.X] = current[event.EVENT_COORDINATE][0]
             current[track.Y] = current[event.EVENT_COORDINATE][1]
-        data = DataFrame(prepared)
-        data = data.rename(
-            columns={
-                event.ROAD_USER_ID: track.TRACK_ID,
-                event.ROAD_USER_TYPE: track.TRACK_CLASSIFICATION,
-                event.OCCURRENCE: track.OCCURRENCE,
-                event.FRAME_NUMBER: track.FRAME,
-                event.VIDEO_NAME: track.VIDEO_NAME,
-            }
+        data = (
+            DataFrame(
+                [
+                    {column: current[column] for column in EVENT_COLUMNS}
+                    for current in prepared
+                ],
+                infer_schema_length=None,
+            )
+            .rename(EVENT_COLUMNS)
+            .filter(pl.col(event.EVENT_TYPE) == EventType.SECTION_ENTER.value)
         )
-        data = data.loc[data[event.EVENT_TYPE] == EventType.SECTION_ENTER.value, :]
-        df = data.set_index([track.TRACK_ID, track.OCCURRENCE])
-        df.index.names = [track.TRACK_ID, track.OCCURRENCE]
 
-        return self._sort_tracks(df)
+        return self._sort_tracks(data)
 
     def _sort_tracks(self, data: DataFrame) -> DataFrame:
         """Sort the given dataframe by track id and occurrence,
@@ -74,6 +84,6 @@ class PandasEventProvider(PandasDataFrameProvider):
         Returns:
             DataFrame: sorted dataframe by track id and frame
         """
-        if data.empty:
+        if data.is_empty():
             return data
-        return data.sort_index()
+        return data.sort([track.TRACK_ID, track.OCCURRENCE])
