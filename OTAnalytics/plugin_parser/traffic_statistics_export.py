@@ -14,7 +14,6 @@ from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
     DayTrafficStatistics,
     FlowInfo,
     day_start,
-    record_to_entry,
 )
 from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
@@ -73,18 +72,16 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         self._evicted: set[date] = set()
         self._resolver: ClassGroupResolver | None = None
         self._restore_files = list(restore_files)
-        self._restore_entries: (
-            dict[date, list[tuple[str, str, str, datetime, float | None]]] | None
-        ) = None
+        self._restore_records: dict[date, list[AssignmentRecord]] | None = None
 
     def export(self, specification: TrafficStatisticsExportSpecification) -> list[Path]:
         config = specification.config
         tz = ZoneInfo(config.timezone)
         if self._resolver is None:
             self._resolver = ClassGroupResolver(config)
-        if self._restore_entries is None:
-            self._restore_entries = self._read_restore_entries(
-                specification.counting_event, self._resolver, tz
+        if self._restore_records is None:
+            self._restore_records = self._read_restore_records(
+                specification.counting_event, tz
             )
         flows = self._build_flows()
         touched: set[date] = set()
@@ -92,22 +89,15 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         dropped = 0
 
         for assignment in self._get_assignments.get_as_list():
-            entry = record_to_entry(
-                AssignmentRecord.from_assignment(assignment),
-                specification.counting_event,
-                self._resolver,
-                tz,
-            )
-            if entry is None:
-                continue
-            road_user, flow_id, group, occurrence, speed = entry
-            day = occurrence.date()
+            record = AssignmentRecord.from_assignment(assignment)
+            occurrence = record.occurrence(specification.counting_event)
+            day = occurrence.astimezone(tz).date()
             if day in self._evicted:
                 dropped += 1
                 continue
             stats = self._get_day(day, specification, flows)
             touched.add(day)
-            if stats.add(road_user, flow_id, group, occurrence, speed):
+            if stats.add(record):
                 if day not in counted or occurrence > counted[day]:
                     counted[day] = occurrence
 
@@ -188,7 +178,11 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             stats.update_flows(flows)
             return stats
         stats = DayTrafficStatistics(
-            day, specification.config, flows, specification.counting_event
+            day,
+            specification.config,
+            flows,
+            specification.counting_event,
+            self._resolver,
         )
         path = self._path(specification, day)
         if path.exists():
@@ -202,27 +196,21 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
                 for covered_start, covered_end in progress.coverage:
                     stats.mark_covered(covered_start, covered_end)
                 stats.as_of = progress.as_of
-        for entry in (self._restore_entries or {}).get(day, []):
-            stats.add(*entry)
+        for record in (self._restore_records or {}).get(day, []):
+            stats.add(record)
         self._days[day] = stats
         return stats
 
-    def _read_restore_entries(
-        self,
-        counting_event: CountingEvent,
-        resolver: ClassGroupResolver,
-        tz: ZoneInfo,
-    ) -> dict[date, list[tuple[str, str, str, datetime, float | None]]]:
-        """Read the restore files and group their entries by local day."""
-        entries: dict[date, list[tuple[str, str, str, datetime, float | None]]] = (
-            defaultdict(list)
-        )
+    def _read_restore_records(
+        self, counting_event: CountingEvent, tz: ZoneInfo
+    ) -> dict[date, list[AssignmentRecord]]:
+        """Read the restore files and group their records by local day."""
+        records: dict[date, list[AssignmentRecord]] = defaultdict(list)
         for path in self._restore_files:
             for record in read_assignment_records(path):
-                entry = record_to_entry(record, counting_event, resolver, tz)
-                if entry is not None:
-                    entries[entry[3].date()].append(entry)
-        return entries
+                day = record.occurrence(counting_event).astimezone(tz).date()
+                records[day].append(record)
+        return records
 
     def _evict(self) -> None:
         for day in sorted(self._days, reverse=True)[self._max_open_days :]:
