@@ -10,6 +10,9 @@ import pytest
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
+)
 from OTAnalytics.application.config import (
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     DEFAULT_DO_COUNTING,
@@ -45,6 +48,7 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     DO_EVENTS,
     EVENT_FORMATS,
     EXPORT,
+    GEO_TRACKS,
     LOGFILE,
     NUM_PROCESSES,
     ORTHOPHOTO,
@@ -54,6 +58,7 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     SAVE_NAME,
     SAVE_SUFFIX,
     TRACKS,
+    TRAFFIC_STATISTICS,
     FixMissingAnalysis,
     MultiFixer,
     OtConfigFormatFixer,
@@ -483,6 +488,8 @@ class TestFixMissingAnalysis:
         type(value_provider).num_processes = PropertyMock(return_value=num_processes)
         type(value_provider).log_file = PropertyMock(return_value=logfile)
         type(value_provider).debug = PropertyMock(return_value=debug)
+        type(value_provider).traffic_statistics = PropertyMock(return_value=None)
+        type(value_provider).do_export_geo_tracks = PropertyMock(return_value=False)
         fixer = FixMissingAnalysis(run_config=value_provider)
 
         original_content: dict = {}
@@ -580,3 +587,206 @@ class TestOtConfigParserOrthophoto:
         actual = given.config_parser.parse_from_dict(data, given.output.parent)
 
         assert actual.orthophoto == Path("map2.tiff")
+
+
+def analysis_config_with_export(export_config: ExportConfig) -> AnalysisConfig:
+    base = default_analysis_config(set())
+    return AnalysisConfig(
+        do_events=base.do_events,
+        do_counting=base.do_counting,
+        track_files=base.track_files,
+        export_config=export_config,
+        num_processes=base.num_processes,
+        logfile=base.logfile,
+    )
+
+
+def convert_analysis(given: GivenOrthophotoConfig, analysis: AnalysisConfig) -> dict:
+    return given.config_parser.convert(
+        Project(name="p", start_date=datetime(2026, 4, 22)),
+        analysis,
+        [],
+        [],
+        [],
+        given.output,
+        None,
+        None,
+        None,
+    )
+
+
+class TestOtConfigParserTrafficStatisticsAndGeoTracks:
+    def test_parse_export_without_new_keys_disables_both_exports(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        assert actual.analysis.export_config.traffic_statistics is None
+        assert actual.analysis.export_config.geo_tracks is False
+
+    def test_serialize_without_new_settings_omits_the_keys(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+
+        actual = convert_with(given, None)
+
+        export = actual[ANALYSIS][EXPORT]
+        assert TRAFFIC_STATISTICS not in export
+        assert GEO_TRACKS not in export
+
+    def test_parse_traffic_statistics_block(self, test_data_tmp_dir: Path) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {
+            "enabled": True,
+            "timezone": "Europe/Berlin",
+            "interval_minutes": 5,
+            "speed_profile_interval_minutes": 15,
+            "max_speed_kmh": 150,
+            "class_groups": {"LV": ["car"], "SV": ["truck", "bus"]},
+        }
+        data[ANALYSIS][EXPORT][GEO_TRACKS] = True
+
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        export_config = actual.analysis.export_config
+        assert export_config.traffic_statistics == TrafficStatisticsConfig(
+            enabled=True,
+            timezone="Europe/Berlin",
+            interval_minutes=5,
+            speed_profile_interval_minutes=15,
+            max_speed_kmh=150.0,
+            class_groups={"LV": frozenset({"car"}), "SV": frozenset({"truck", "bus"})},
+        )
+        assert export_config.traffic_statistics.class_groups["SV"] == frozenset(
+            {"truck", "bus"}
+        )
+        assert export_config.geo_tracks is True
+
+    def test_parse_empty_traffic_statistics_block_uses_defaults(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {}
+
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        assert actual.analysis.export_config.traffic_statistics == (
+            TrafficStatisticsConfig()
+        )
+
+    @pytest.mark.parametrize("enabled", [True, False])
+    def test_serialize_round_trip_keeps_traffic_statistics_and_geo_tracks(
+        self, test_data_tmp_dir: Path, enabled: bool
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        traffic_statistics = TrafficStatisticsConfig(
+            enabled=enabled,
+            timezone="Europe/Berlin",
+            interval_minutes=5,
+            speed_profile_interval_minutes=30,
+            max_speed_kmh=120.5,
+            class_groups={"SV": frozenset({"truck", "bus"}), "LV": frozenset({"car"})},
+            peak_window_minutes=30,
+            peak_step_minutes=10,
+        )
+        export_config = ExportConfig(
+            save_name="n",
+            save_suffix="s",
+            event_formats={"csv"},
+            count_intervals={1},
+            counting_event=CountingEvent.START,
+            traffic_statistics=traffic_statistics,
+            geo_tracks=True,
+        )
+
+        data = convert_analysis(given, analysis_config_with_export(export_config))
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        assert actual.analysis.export_config == export_config
+        serialized = data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS]
+        assert serialized["class_groups"] == {
+            "LV": ["car"],
+            "SV": ["bus", "truck"],
+        }
+
+    def test_invalid_interval_raises_with_field_name(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {"interval_minutes": 7}
+
+        with pytest.raises(ValueError, match="interval_minutes"):
+            given.config_parser.parse_from_dict(data, given.output.parent)
+
+    def test_integral_float_minutes_are_coerced_to_int(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {
+            "interval_minutes": 5.0,
+            "peak_step_minutes": 15.0,
+        }
+
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        traffic_statistics = actual.analysis.export_config.traffic_statistics
+        assert traffic_statistics is not None
+        assert traffic_statistics.interval_minutes == 5
+        assert isinstance(traffic_statistics.interval_minutes, int)
+
+    @pytest.mark.parametrize(
+        "key, value",
+        [
+            ("interval_minutes", "abc"),
+            ("interval_minutes", 5.5),
+            ("interval_minutes", True),
+            ("peak_window_minutes", None),
+            ("max_speed_kmh", "fast"),
+            ("max_speed_kmh", True),
+        ],
+    )
+    def test_invalid_value_raises_with_field_name(
+        self, test_data_tmp_dir: Path, key: str, value: object
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {key: value}
+
+        with pytest.raises(ValueError, match=key):
+            given.config_parser.parse_from_dict(data, given.output.parent)
+
+
+class TestFixMissingAnalysisNewExports:
+    def test_fix_keeps_traffic_statistics_and_geo_tracks_of_the_run(self) -> None:
+        value_provider = Mock(spec=OtConfigDefaultValueProvider)
+        type(value_provider).do_events = PropertyMock(return_value=True)
+        type(value_provider).do_counting = PropertyMock(return_value=True)
+        type(value_provider).track_files = PropertyMock(return_value=set())
+        type(value_provider).event_formats = PropertyMock(return_value=["csv"])
+        type(value_provider).save_stem = PropertyMock(return_value="n")
+        type(value_provider).save_suffix = PropertyMock(return_value="")
+        type(value_provider).count_intervals = PropertyMock(return_value=[1])
+        type(value_provider).counting_event = PropertyMock(
+            return_value=CountingEvent.START
+        )
+        type(value_provider).num_processes = PropertyMock(return_value=1)
+        type(value_provider).log_file = PropertyMock(return_value="a.log")
+        type(value_provider).debug = PropertyMock(return_value=False)
+        type(value_provider).traffic_statistics = PropertyMock(
+            return_value=TrafficStatisticsConfig(timezone="Europe/Berlin")
+        )
+        type(value_provider).do_export_geo_tracks = PropertyMock(return_value=True)
+
+        fixed = FixMissingAnalysis(run_config=value_provider).fix({})
+
+        export = fixed[ANALYSIS][EXPORT]
+        assert export[TRAFFIC_STATISTICS]["timezone"] == "Europe/Berlin"
+        assert export[GEO_TRACKS] is True

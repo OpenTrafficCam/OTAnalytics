@@ -141,6 +141,18 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--geo-track-export",
+            action="store_true",
+            help="Export tracks as GeoJSON.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--traffic-statistics",
+            action="store_true",
+            help="Export traffic statistics. Uses the otconfig settings or defaults.",
+            required=False,
+        )
+        self._parser.add_argument(
             "--logfile",
             type=str,
             help="Specify log file directory.",
@@ -200,4 +212,6 @@ class ArgparseCliParser(CliParser):
             log_file=args.logfile,
             include_classes=args.include_classes,
             exclude_classes=args.exclude_classes,
+            geo_track_export=args.geo_track_export,
+            traffic_statistics=args.traffic_statistics,
         )
