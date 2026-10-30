@@ -70,12 +70,11 @@ class TestPolygon:
 
 
 class TestImageCoordinate:
-    @pytest.mark.parametrize("x,y", [(-1, 0), (0, -1)])
-    def test_instantiate_with_invalid_xy_values_raises_value_error(
-        self, x: float, y: float
-    ) -> None:
-        with pytest.raises(ValueError):
-            ImageCoordinate(x, y)
+    @pytest.mark.parametrize("x,y", [(-296.9, 0), (0, -50.8)])
+    def test_instantiate_off_image_coordinate(self, x: float, y: float) -> None:
+        coord = ImageCoordinate(x, y)
+        assert coord.x == x
+        assert coord.y == y
 
     def test_instantiate_with_valid_xy_values(self) -> None:
         coord = ImageCoordinate(0, 0)
