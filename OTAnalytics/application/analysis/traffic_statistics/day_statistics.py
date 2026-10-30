@@ -100,6 +100,49 @@ def _ceil_div(numerator: int, denominator: int) -> int:
     return -(-numerator // denominator)
 
 
+@dataclass(frozen=True)
+class AssignmentRecord:
+    """The data of a road user assignment the traffic statistics need.
+
+    Live assignments and restored road user assignment files are both converted
+    to this record. The occurrences are the interpolated ones, as in counting.
+    """
+
+    road_user: str
+    flow_id: str
+    road_user_type: str
+    start_occurrence: datetime
+    end_occurrence: datetime
+    avg_speed_mps: float | None
+
+    @staticmethod
+    def from_assignment(assignment: RoadUserAssignment) -> "AssignmentRecord":
+        return AssignmentRecord(
+            road_user=assignment.road_user,
+            flow_id=assignment.assignment.id.id,
+            road_user_type=assignment.road_user_type,
+            start_occurrence=aggregation_time(assignment, CountingEvent.START),
+            end_occurrence=aggregation_time(assignment, CountingEvent.END),
+            avg_speed_mps=assignment.flow_metrics().avg_speed_mps,
+        )
+
+    def occurrence(self, counting_event: CountingEvent) -> datetime:
+        """Return the occurrence of the counting event in UTC.
+
+        Naive occurrences are treated as UTC.
+        """
+        if counting_event == CountingEvent.END:
+            return _as_utc(self.end_occurrence)
+        return _as_utc(self.start_occurrence)
+
+    @property
+    def speed_kmh(self) -> float | None:
+        """Average speed in km/h or None if unknown."""
+        if self.avg_speed_mps is None:
+            return None
+        return self.avg_speed_mps * 3.6
+
+
 class DayTrafficStatistics:
     """Counts and speeds of one local day per flow and class group.
 
@@ -115,6 +158,7 @@ class DayTrafficStatistics:
         config: TrafficStatisticsConfig,
         flows: Sequence[FlowInfo],
         counting_event: CountingEvent = CountingEvent.START,
+        resolver: ClassGroupResolver | None = None,
     ) -> None:
         self.day = day
         self.flows = list(flows)
@@ -122,6 +166,7 @@ class DayTrafficStatistics:
         self.as_of: datetime | None = None
         self.road_user_ids: set[str] = set()
         self._config = config
+        self._resolver = resolver or ClassGroupResolver(config)
         self._tz = ZoneInfo(config.timezone)
         self._start = _as_utc(day_start(day, self._tz))
         self._end = _as_utc(day_start(day + timedelta(days=1), self._tz))
@@ -144,31 +189,32 @@ class DayTrafficStatistics:
         """Merged, sorted half-open coverage ranges in the local timezone."""
         return [(start, end) for start, end in self._coverage]
 
-    def add(
-        self,
-        road_user: str,
-        flow_id: str,
-        group: str,
-        occurrence: datetime,
-        speed_kmh: float | None,
-    ) -> bool:
-        """Count a road user; return False for duplicate, other day or unknown flow.
+    def add(self, record: AssignmentRecord) -> bool:
+        """Count a road user.
 
-        Speeds are stored only if plausible (0 < speed <= max_speed_kmh).
+        Return False for a duplicate, another day, an unknown flow or a
+        classification in no class group. Speeds are stored only if plausible
+        (0 < speed <= max_speed_kmh).
         """
-        when = _as_utc(occurrence)
-        if flow_id not in self._flow_ids or not self._start <= when < self._end:
+        group = self._resolver.group_of(record.road_user_type)
+        when = record.occurrence(self.counting_event)
+        if (
+            group is None
+            or record.flow_id not in self._flow_ids
+            or not self._start <= when < self._end
+        ):
             return False
-        if road_user in self.road_user_ids:
+        if record.road_user in self.road_user_ids:
             return False
-        self.road_user_ids.add(road_user)
+        self.road_user_ids.add(record.road_user)
         minutes = int((when - self._start).total_seconds() // 60)
-        counts = self._counts.setdefault(flow_id, {})
+        counts = self._counts.setdefault(record.flow_id, {})
         counts.setdefault(group, [0] * self._interval_count)[
             minutes // self._config.interval_minutes
         ] += 1
+        speed_kmh = record.speed_kmh
         if speed_kmh is not None and 0 < speed_kmh <= self._config.max_speed_kmh:
-            slots = self._speeds.setdefault(flow_id, {}).setdefault(
+            slots = self._speeds.setdefault(record.flow_id, {}).setdefault(
                 group, [[] for _ in range(self._slot_count)]
             )
             slots[minutes // self._config.speed_profile_interval_minutes].append(
@@ -331,61 +377,3 @@ class DayTrafficStatistics:
         for group, slots in self._flow_speeds(flow_id).items():
             result[group] = [compute_speed_values(speeds) for speeds in slots]
         return result
-
-
-@dataclass(frozen=True)
-class AssignmentRecord:
-    """The data of a road user assignment the traffic statistics need.
-
-    Live assignments and restored road user assignment files are both converted
-    to this record. The occurrences are the interpolated ones, as in counting.
-    """
-
-    road_user: str
-    flow_id: str
-    road_user_type: str
-    start_occurrence: datetime
-    end_occurrence: datetime
-    avg_speed_mps: float | None
-
-    @staticmethod
-    def from_assignment(assignment: RoadUserAssignment) -> "AssignmentRecord":
-        return AssignmentRecord(
-            road_user=assignment.road_user,
-            flow_id=assignment.assignment.id.id,
-            road_user_type=assignment.road_user_type,
-            start_occurrence=aggregation_time(assignment, CountingEvent.START),
-            end_occurrence=aggregation_time(assignment, CountingEvent.END),
-            avg_speed_mps=assignment.flow_metrics().avg_speed_mps,
-        )
-
-
-def record_to_entry(
-    record: AssignmentRecord,
-    counting_event: CountingEvent,
-    resolver: ClassGroupResolver,
-    tz: ZoneInfo,
-) -> tuple[str, str, str, datetime, float | None] | None:
-    """Convert a record to the arguments of `DayTrafficStatistics.add`.
-
-    Returns (road_user, flow_id, group, local occurrence, speed in km/h) or None
-    if the road user's classification belongs to no class group. Naive
-    occurrences are treated as UTC.
-    """
-    group = resolver.group_of(record.road_user_type)
-    if group is None:
-        return None
-    occurrence = (
-        record.end_occurrence
-        if counting_event == CountingEvent.END
-        else record.start_occurrence
-    )
-    speed_mps = record.avg_speed_mps
-    speed_kmh = None if speed_mps is None else speed_mps * 3.6
-    return (
-        record.road_user,
-        record.flow_id,
-        group,
-        _as_utc(occurrence).astimezone(tz),
-        speed_kmh,
-    )
