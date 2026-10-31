@@ -28,7 +28,7 @@ The application offers multiple user interfaces:
 ### Requirements
 
 - Python 3.12
-- Dependencies listed in [requirements.txt](requirements.txt)
+- Dependencies listed in [pyproject.toml](pyproject.toml)
 
 ### Installation from GitHub Releases (Recommended)
 
@@ -143,6 +143,8 @@ the [official documentation](https://opentrafficcam.org/OTAnalytics).
 We appreciate your support in the form of both code and comments. Please have a look at
 the [contribute](https://opentrafficcam.org/contribute) section of the OpenTrafficCam documentation for guidelines on
 how to contribute to this project.
+
+To set up a development environment, see [docs/dev.md](docs/dev.md).
 
 ## License
 
