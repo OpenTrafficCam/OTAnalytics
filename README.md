@@ -28,7 +28,7 @@ The application offers multiple user interfaces:
 ### Requirements
 
 - Python 3.12
-- Dependencies listed in [requirements.txt](requirements.txt)
+- Dependencies listed in [pyproject.toml](pyproject.toml)
 
 ### Installation from GitHub Releases (Recommended)
 
@@ -123,7 +123,7 @@ Example configuration options:
 
 - **Track Analysis**: Process and analyze trajectory data from various sources
 - **Flow Definition**: Define and analyze traffic flows between sections
-- **Counting**: Count road users assgined to flows with configurable time intervals
+- **Counting**: Count road users assigned to flows with configurable time intervals
 - **Event Detection**: Generate event lists when road users cross defined sections
 - **Visualization**: Visualize tracks, flows, and sections
 - **Export**: Export analysis results in various formats
@@ -143,6 +143,8 @@ the [official documentation](https://opentrafficcam.org/OTAnalytics).
 We appreciate your support in the form of both code and comments. Please have a look at
 the [contribute](https://opentrafficcam.org/contribute) section of the OpenTrafficCam documentation for guidelines on
 how to contribute to this project.
+
+To set up a development environment, see [docs/dev.md](docs/dev.md).
 
 ## License
 

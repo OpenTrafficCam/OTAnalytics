@@ -146,7 +146,6 @@ def remark_repository() -> Mock:
 
 
 class TestDatastore:
-
     def test_save_event_list_file(
         self,
         track_repository: Mock,

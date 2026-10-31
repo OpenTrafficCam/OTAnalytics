@@ -1031,7 +1031,6 @@ class TestTimeTagger:
 
 
 class TestSimpleTaggerFactory:
-
     def test_create_tagger_respects_counting_event(self) -> None:
         track_id = TrackId("end-event-track")
         start_event = create_event(track_id, SectionId("south"), 10)

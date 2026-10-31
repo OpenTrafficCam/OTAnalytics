@@ -204,8 +204,7 @@ class ExportCountsDialog(BaseDialog):
 
     def _context_for_current_interval(self, interval: int) -> str:
         return (
-            f"{CONTEXT_FILE_TYPE_COUNTS}_{interval}"
-            f"{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"
+            f"{CONTEXT_FILE_TYPE_COUNTS}_{interval}{DEFAULT_COUNT_INTERVAL_TIME_UNIT}"
         )
 
     def _build_locked_suffix(self, interval: int) -> str:

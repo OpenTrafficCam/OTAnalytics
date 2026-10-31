@@ -20,7 +20,6 @@ class ClearAllVideos:
 
 
 class AddAllVideos:
-
     def __init__(self, video_repository: VideoRepository) -> None:
         self._video_repository = video_repository
 

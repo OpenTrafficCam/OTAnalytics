@@ -101,7 +101,6 @@ class NiceguiWorker(Process):
 
 
 class NiceguiOtanalyticsBuilder(OtAnalyticsNiceGuiApplicationStarter):
-
     def build(self) -> MultiprocessingWorker:
         self.register_observers()
         return MultiprocessingWorker(self.webserver)

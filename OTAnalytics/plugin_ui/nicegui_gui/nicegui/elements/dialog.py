@@ -19,7 +19,6 @@ class DialogResult(StrEnum):
 
 
 class BaseDialog:
-
     @property
     async def result(self) -> DialogResult:
         """Build, open, and await the dialog, returning the submitted result.

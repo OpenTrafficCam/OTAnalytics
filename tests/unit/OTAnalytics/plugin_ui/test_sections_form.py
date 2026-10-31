@@ -69,7 +69,6 @@ def sections_form(
 
 
 class TestSectionsForm:
-
     @pytest.mark.asyncio
     async def test_form_build_up(
         self,

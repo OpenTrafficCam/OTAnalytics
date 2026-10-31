@@ -213,7 +213,6 @@ class DummyViewModel(
     SectionListObserver,
     FlowListObserver,
 ):
-
     @property
     def frame_project(self) -> AbstractFrameProject:
         if self._frame_project is None:
@@ -1267,7 +1266,7 @@ class DummyViewModel(
         elif self._is_area_section(section):
             return GeometricCenterCalculator()
         else:
-            raise ValueError("section has to be a LineSection or an Area, but isnt")
+            raise ValueError("section has to be a LineSection or an Area, but isn't")
 
     def _get_selected_flows(self) -> list[Flow]:
         flows: list[Flow] = []
@@ -1713,7 +1712,7 @@ class DummyViewModel(
             self._ui_factory.show_message(
                 message=(
                     "Counting needs at least one flow.\n"
-                    "There is no flow configurated.\n"
+                    "There is no flow configured.\n"
                     "Please create a flow."
                 ),
                 initial_position=self.get_position(),
@@ -1818,7 +1817,7 @@ class DummyViewModel(
     async def export_road_user_assignments(self) -> None:
         if len(self._application.get_all_flows()) == 0:
             self._ui_factory.show_message(
-                message=("There is no flow configured.\n" "Please create a flow."),
+                message=("There is no flow configured.\nPlease create a flow."),
                 initial_position=self.get_position(),
                 message_type=MessageType.WARNING,
             )

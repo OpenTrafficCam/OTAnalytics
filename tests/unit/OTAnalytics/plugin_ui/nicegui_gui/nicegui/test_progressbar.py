@@ -44,7 +44,6 @@ def create_builder(given: Given) -> NiceguiProgressbarBuilder:
 
 
 class TestNiceguiProgressbar:
-
     @pytest.mark.asyncio
     async def test_shows_counts_and_the_current_item(
         self, user: User, resource_manager: ResourceManager
@@ -110,7 +109,6 @@ class TestNiceguiProgressbar:
 
 
 class TestNiceguiProgressbarBuilder:
-
     @pytest.mark.asyncio
     async def test_yields_every_element_and_counts_up(
         self, user: User, resource_manager: ResourceManager
@@ -225,7 +223,6 @@ class TestCompletionProgressContract:
 
 
 class TestProgressbarWithoutABrowser:
-
     @pytest.mark.asyncio
     async def test_shows_nothing_when_no_browser_is_connected(
         self, user: User, resource_manager: ResourceManager

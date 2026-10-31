@@ -39,20 +39,20 @@ class IntersectImplementation(ABC):
     def split_line_with_line(self, line: Line, splitter: Line) -> list[Line]:
         """Splits a line with the help of another line and returns a list of lines.
 
-        If `line` intersects `splitter` then line_1 will be splitted at the
+        If `line` intersects `splitter` then line_1 will be split at the
         intersection points.
         I.e. Let line_1 = [p_1, p_2, ..., p_n], n a natural number and p_x
         the intersection point.
 
-        Then `line` will be splitted as follows:
+        Then `line` will be split as follows:
         [[p_1, p_2, ..., p_x], [p_x, p_(x+1), ..., p_n].
 
         Args:
-            line (Line): the line to be splitted.
+            line (Line): the line to be split.
             splitter (Line): the line used for the splitting.
 
         Returns:
-            Optional[list[Line]]: The splitted lines.
+            Optional[list[Line]]: The split lines.
         """
         pass
 

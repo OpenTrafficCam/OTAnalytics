@@ -162,7 +162,6 @@ def create_video_target(given: Given) -> S3VideoFileProvider:
 
 
 class TestLoadFromRustFs:
-
     async def test_an_over_long_selection_loads_only_up_to_the_cap(
         self, rustfs: dict, tmp_path: Path
     ) -> None:
