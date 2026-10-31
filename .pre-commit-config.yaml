@@ -14,21 +14,19 @@ repos:
       - id: requirements-txt-fixer
       - id: check-executables-have-shebangs
       - id: detect-private-key
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.3.0
+  - repo: local
     hooks:
-      - id: flake8
-  - repo: https://github.com/psf/black
-    rev: 26.3.1
-    hooks:
-      - id: black
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args:
-          - --profile
-          - black
+      - id: ruff-check
+        name: Run the ruff linter
+        entry: uv run --group dev ruff check
+        args: [--fix]
+        types: [python]
+        language: system
+      - id: ruff-format
+        name: Run the ruff formatter
+        entry: uv run --group dev ruff format
+        types: [python]
+        language: system
   - repo: local
     hooks:
       - id: mypy
