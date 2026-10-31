@@ -307,7 +307,6 @@ class FilterClassificationForm:
 
 
 class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
-
     def __init__(
         self,
         resource_manager: ResourceManager,

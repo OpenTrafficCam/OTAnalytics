@@ -81,6 +81,5 @@ class PolarsTrackIdSet(TrackIdSet):
 
 
 class PolarsTrackIdSetFactory(TrackIdSetFactory):
-
     def create(self, track_ids: Iterable[TrackId] | Iterable[str]) -> TrackIdSet:
         return PolarsTrackIdSet(track_ids)

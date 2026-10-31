@@ -27,7 +27,6 @@ from OTAnalytics.plugin_datastore.track_store import MINIMUM_DETECTIONS, RANK
 class FilteredPolarsTrackDataset(
     FilteredTrackDataset, PolarsTrackDataset, PolarsDataFrameProvider
 ):
-
     @property
     def track_geometry_factory(self) -> POLARS_TRACK_GEOMETRY_FACTORY:
         return self._other.track_geometry_factory
@@ -225,8 +224,7 @@ class FilterByIdPolarsTrackDataset(FilteredPolarsTrackDataset):
 
         if self._included_track_ids:
             logger().info(
-                "Apply 'track-ids' filter to filter tracks: "
-                f"{self._included_track_ids}"
+                f"Apply 'track-ids' filter to filter tracks: {self._included_track_ids}"
             )
             filtered_dataset = self._get_dataset_with(
                 track_ids=self._included_track_ids

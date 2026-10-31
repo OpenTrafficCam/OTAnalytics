@@ -12,7 +12,6 @@ TEN_HOURS = timedelta(hours=10)
 
 
 class TestLoadWindow:
-
     def test_knows_its_duration(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(hours=2)

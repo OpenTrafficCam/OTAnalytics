@@ -15,7 +15,6 @@ from OTAnalytics.plugin_s3.s3_file_providers import UnreadableTrackFile, read_vi
 
 
 class TestReadVideoName:
-
     def test_reads_the_name_from_a_real_track_file(self, ottrk_path: Path) -> None:
         """The crafted files below cannot catch drift in the real ottrk format.
 

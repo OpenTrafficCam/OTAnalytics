@@ -213,7 +213,6 @@ class DummyViewModel(
     SectionListObserver,
     FlowListObserver,
 ):
-
     @property
     def frame_project(self) -> AbstractFrameProject:
         if self._frame_project is None:
@@ -1818,7 +1817,7 @@ class DummyViewModel(
     async def export_road_user_assignments(self) -> None:
         if len(self._application.get_all_flows()) == 0:
             self._ui_factory.show_message(
-                message=("There is no flow configured.\n" "Please create a flow."),
+                message=("There is no flow configured.\nPlease create a flow."),
                 initial_position=self.get_position(),
                 message_type=MessageType.WARNING,
             )

@@ -724,7 +724,7 @@ class OtFlowParser(FlowParser):
         Returns:
             Section: section of parsed type
         """
-        match (entry.get(section.TYPE)):
+        match entry.get(section.TYPE):
             case section.LINE:
                 return self._parse_line_section(entry)
             case section.AREA:
@@ -970,7 +970,6 @@ class SimpleVideoParser(VideoParser):
 
 @dataclass
 class CachedVideo(Video):
-
     other: Video
     cache: dict[int, TrackImage] = field(default_factory=dict)
 
@@ -1007,7 +1006,6 @@ class CachedVideo(Video):
 
 
 class CachedVideoParser(VideoParser):
-
     def __init__(self, other: VideoParser) -> None:
         self._other = other
 

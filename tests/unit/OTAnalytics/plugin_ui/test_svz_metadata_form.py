@@ -108,7 +108,6 @@ def svz_metadata_form(
 
 
 class TestSvzMetadataForm:
-
     @pytest.mark.asyncio
     async def test_form_build_up(
         self,

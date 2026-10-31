@@ -41,7 +41,6 @@ class RoadUserAssignmentCsvExporter(RoadUserAssignmentExporter):
 
 
 class SimpleRoadUserAssignmentExporterFactory:
-
     def __init__(
         self,
         section_repository: SectionRepository,

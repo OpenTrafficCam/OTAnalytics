@@ -43,7 +43,6 @@ MARKER_COORDINATE_Y = "marker-coordinate-y"
 
 
 class SvzMetadataForm(AbstractFrameSvzMetadata, ABC):
-
     def __init__(self, viewmodel: ViewModel, resource_manager: ResourceManager) -> None:
         self._viewmodel = viewmodel
         self._resource_manager = resource_manager

@@ -52,7 +52,6 @@ def otflow_parser() -> FlowParser:
 
 
 class TestRegressionCompleteApplication:
-
     @pytest.mark.skip
     def test_15_min_recreate_test_data(
         self,

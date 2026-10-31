@@ -40,7 +40,7 @@ class AddFlow:
 def check_flow_already_exists(given: Flow, existing_flows: Iterable[Flow]) -> None:
     if not is_flow_name_valid(given.name, existing_flows):
         raise FlowAlreadyExists(
-            f"A flow with the name {given.name} already exists. " "Choose another name."
+            f"A flow with the name {given.name} already exists. Choose another name."
         )
     existing_flow_ids = {flow.id for flow in existing_flows}
     if not is_flow_id_valid(given.id, existing_flow_ids):
