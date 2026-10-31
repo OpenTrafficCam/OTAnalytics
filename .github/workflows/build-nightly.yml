@@ -8,14 +8,19 @@ on:
     branches:
       - main
 
-permissions: read-all
+permissions: {}
 
 jobs:
   test:
+    permissions:
+      contents: read
     uses: "./.github/workflows/test.yml"
   regression-test:
+    permissions:
+      contents: read
     uses: "./.github/workflows/regression-test.yml"
-    secrets: inherit
+    secrets:
+      PLATOMO_OTC_TESTDATA_ACCESS: ${{ secrets.PLATOMO_OTC_TESTDATA_ACCESS }}
   create_nightly:
     permissions:
       contents: write
