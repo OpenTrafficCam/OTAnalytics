@@ -40,5 +40,6 @@ uv lock --upgrade-package <mypackage>
 
 mypy runs from the project environment, so third-party type stubs are declared in the
 `dev` group, e.g. `types-requests`. Only add a stub if the library does not ship its
-own types (no `py.typed` marker in the installed package). Pin it, as with any other
-dependency.
+own types (no `py.typed` marker or `*-stubs` directory in the installed package), and
+only from a source you trust: typeshed's stubs are published as `types-<library>`, and
+anyone can register a `types-*` name on PyPI. Pin it, as with any other dependency.
