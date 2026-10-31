@@ -744,7 +744,7 @@ class TestOTAnalyticsCli:
     ) -> None:
         run_config = create_run_config(mock_flow_parser, cli_mode=mode)
 
-        # cant use self.init_cli_with since setting  _track_parser
+        # can't use self.init_cli_with since setting  _track_parser
         # requires knowing more specific type of cli object
         cli: OTAnalyticsCli
         if mode == CliMode.STREAM:

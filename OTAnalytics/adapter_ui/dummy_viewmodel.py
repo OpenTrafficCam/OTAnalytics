@@ -1266,7 +1266,7 @@ class DummyViewModel(
         elif self._is_area_section(section):
             return GeometricCenterCalculator()
         else:
-            raise ValueError("section has to be a LineSection or an Area, but isnt")
+            raise ValueError("section has to be a LineSection or an Area, but isn't")
 
     def _get_selected_flows(self) -> list[Flow]:
         flows: list[Flow] = []
@@ -1712,7 +1712,7 @@ class DummyViewModel(
             self._ui_factory.show_message(
                 message=(
                     "Counting needs at least one flow.\n"
-                    "There is no flow configurated.\n"
+                    "There is no flow configured.\n"
                     "Please create a flow."
                 ),
                 initial_position=self.get_position(),

@@ -1,0 +1,3 @@
+[codespell]
+# Koordinate: German UI label. nwe: tkinter sticky value.
+ignore-words-list = koordinate,nwe

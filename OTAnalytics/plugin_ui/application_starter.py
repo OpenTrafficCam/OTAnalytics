@@ -56,8 +56,8 @@ class ApplicationStarter:
                 OtAnalyticsCliApplicationStarter(self.run_config).start()
                 # add command line tag for activating -> add to PipelineBenchmark,
                 # add github actions for benchmark
-                # regression test lokal runner neben benchmark ->
-                # OTC -> test data -> 6-1145, flow in 00 -> in test resource ordner
+                # regression test local runner neben benchmark ->
+                # OTC -> test data -> 6-1145, flow in 00 -> in test resource folder
 
             except CliParseError as e:
                 logger().exception(e, exc_info=True)

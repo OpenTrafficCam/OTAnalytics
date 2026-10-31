@@ -95,15 +95,15 @@ class Version:
 
     @staticmethod
     def from_str(version_string: str) -> "Version":
-        splitted = version_string.split(".")
-        if len(splitted) < 2:
+        version_parts = version_string.split(".")
+        if len(version_parts) < 2:
             message = (
                 "Version must contain major and minor separated by '.' "
                 + f"but was {version_string}"
             )
             raise IncorrectVersionFormat(message)
-        minor = int(splitted[1])
-        major = int(splitted[0])
+        minor = int(version_parts[1])
+        major = int(version_parts[0])
         return Version(major=major, minor=minor)
 
 
@@ -308,7 +308,7 @@ class OttrkFormatFixer:
         self._metadata_fixes = metadata_fixes
 
     def fix(self, content: dict) -> dict:
-        """Fix formate changes from older ottrk and otdet format versions to the
+        """Fix format changes from older ottrk and otdet format versions to the
         current version.
 
         Args:
@@ -341,7 +341,7 @@ class OttrkFormatFixer:
 
     def fix_metadata(self, metadata: dict) -> dict:
         """
-        Fix formate changes from older ottrk metadata
+        Fix format changes from older ottrk metadata
         format versions to the current version.
         """
         current_ottrk_version = Version.from_str(metadata[ottrk_format.OTTRK_VERSION])
