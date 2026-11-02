@@ -105,24 +105,13 @@ class DirectionVector2D:
 class ImageCoordinate(Coordinate):
     """An image coordinate.
 
-    Raises:
-        ValueError: x < 0
-        ValueError: y < 0
+    May lie outside the image: Geo-only Track Files place detections beyond the
+    Orthophoto's extent at negative pixels, and those must still be counted.
 
     Args:
-        x (float): the x coordinate must be greater equal zero
-        y (float): the y coordinate must be greater equal zero
+        x (float): the x coordinate
+        y (float): the y coordinate
     """
-
-    def _validate(self) -> None:
-        if self.x < 0:
-            raise ValueError(
-                f"x image coordinate must be greater equal zero, but is {self.x}"
-            )
-        if self.y < 0:
-            raise ValueError(
-                f"y image coordinate must be greater equal zero, but is {self.x}"
-            )
 
 
 @dataclass(frozen=True)
