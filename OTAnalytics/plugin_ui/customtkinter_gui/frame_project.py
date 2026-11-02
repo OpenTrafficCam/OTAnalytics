@@ -194,7 +194,6 @@ class FrameProject(AbstractFrameProject, EmbeddedCTkFrame):
 
 
 class FrameSvzMetadata(AbstractFrameSvzMetadata, EmbeddedCTkFrame):
-
     def __init__(self, viewmodel: ViewModel, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._viewmodel = viewmodel

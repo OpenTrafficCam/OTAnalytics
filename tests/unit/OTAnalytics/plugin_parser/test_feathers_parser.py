@@ -146,7 +146,6 @@ def sample_metadata() -> dict[str, Any]:
 
 
 class TestFeathersParser:
-
     def test_init_default_geometry_factory(self) -> None:
         """Test initialization with default geometry factory."""
         parser = FeathersParser()

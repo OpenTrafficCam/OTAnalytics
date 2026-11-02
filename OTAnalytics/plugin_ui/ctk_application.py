@@ -11,7 +11,6 @@ from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStart
 
 
 class OtAnalyticsCtkApplicationStarter(OtAnalyticsGuiApplicationStarter):
-
     def __init__(self, run_config: RunConfiguration) -> None:
         super().__init__(run_config)
         from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_progress import (

@@ -28,7 +28,7 @@ def validate_date(date: str, date_format: str) -> bool:
 
     Args:
         date (str): the date string
-        date_format (str): the date formate
+        date_format (str): the date format
 
     Returns:
         bool: `True` if date string matches date format. Otherwise `False`.
