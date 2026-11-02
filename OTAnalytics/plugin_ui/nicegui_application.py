@@ -123,7 +123,6 @@ class Webserver(Protocol):
 
 
 class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
-
     def start_ui(self) -> None:
         self.webserver.run()
 

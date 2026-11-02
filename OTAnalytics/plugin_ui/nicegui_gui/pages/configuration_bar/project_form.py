@@ -31,7 +31,6 @@ MARKER_START_TIME = "marker-start-time"
 
 
 class NiceGuiButtonQuickSaveConfig(AbstractButtonQuickSaveConfig):
-
     def __init__(
         self, text: str, on_click: Optional[Callable[[ClickEventArguments], Any]] = None
     ):

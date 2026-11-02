@@ -149,7 +149,6 @@ def create_knob(
 
 
 class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface):
-
     def __init__(
         self,
         viewmodel: ViewModel,

@@ -19,12 +19,10 @@ from OTAnalytics.application.resources.resource_manager import (
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_END_SECTION,
+    MARKER_START_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_NAME as MARKER_FLOW_NAME,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
-    MARKER_START_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
     MARKER_NAME as MARKER_SECTION_NAME,
@@ -184,9 +182,9 @@ def set_input_value(page: Page, selector: str, value: str) -> None:
         page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
         ok, last = verify(value)
 
-    assert (
-        ok and last == value
-    ), f"Failed to set input value: expected '{value}', got '{last}' for selector {selector}"  # noqa
+    assert ok and last == value, (
+        f"Failed to set input value: expected '{value}', got '{last}' for selector {selector}"  # noqa: E501
+    )
 
 
 def navigate_and_prepare(
@@ -1347,9 +1345,9 @@ def verify_filter_range_label_cleared(page: Page) -> None:
     """Verify that the filter range label is cleared."""
     range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
     label_text_after_reset = range_label.inner_text()
-    assert (
-        label_text_after_reset.strip() == ""
-    ), "Date range label not cleared after reset"
+    assert label_text_after_reset.strip() == "", (
+        "Date range label not cleared after reset"
+    )
 
 
 def assert_screenshot_equal(
