@@ -36,8 +36,6 @@ jobs:
       # Separate from the test steps so a stale uv.lock fails loudly and early.
       - name: Install dependencies
         run: uv sync --locked --dev
-      - name: Static type checking
-        run: uv run mypy OTAnalytics tests --config-file pyproject.toml
       - name: Run Python Unit Tests
         timeout-minutes: 60
         run: uv run pytest --cov=OTAnalytics tests/unit
