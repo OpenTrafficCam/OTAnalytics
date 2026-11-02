@@ -30,7 +30,6 @@ from OTAnalytics.plugin_datastore.track_store import (
 class FilteredPandasTrackDataset(
     FilteredTrackDataset, PandasTrackDataset, PandasDataFrameProvider
 ):
-
     @property
     def track_geometry_factory(self) -> TRACK_GEOMETRY_FACTORY:
         return self._other.track_geometry_factory
@@ -217,8 +216,7 @@ class FilterByIdPandasTrackDataset(FilteredPandasTrackDataset):
 
         if self._included_track_ids:
             logger().info(
-                "Apply 'track-ids' filter to filter tracks: "
-                f"{self._included_track_ids}"
+                f"Apply 'track-ids' filter to filter tracks: {self._included_track_ids}"
             )
             filtered_dataset = self._get_dataset_with(
                 track_ids=self._included_track_ids

@@ -744,7 +744,7 @@ class TestOTAnalyticsCli:
     ) -> None:
         run_config = create_run_config(mock_flow_parser, cli_mode=mode)
 
-        # cant use self.init_cli_with since setting  _track_parser
+        # can't use self.init_cli_with since setting  _track_parser
         # requires knowing more specific type of cli object
         cli: OTAnalyticsCli
         if mode == CliMode.STREAM:
@@ -994,9 +994,9 @@ class TestOTAnalyticsCli:
         dependencies[self.GET_ALL_TRACK_IDS].return_value = [TrackId("1")]
         dependencies[self.VIDEOS_METADATA].first_video_start = start_date
         dependencies[self.VIDEOS_METADATA].last_video_end = end_date
-        dependencies[self.TRACKS_METADATA].filtered_detection_classifications = (
-            classifications
-        )
+        dependencies[
+            self.TRACKS_METADATA
+        ].filtered_detection_classifications = classifications
 
         run_config = Mock()
         run_config.count_intervals = {interval}
@@ -1056,9 +1056,9 @@ class TestOTAnalyticsCli:
         dependencies[self.GET_ALL_TRACK_IDS].return_value = [TrackId("1")]
         dependencies[self.VIDEOS_METADATA].first_video_start = start_date
         dependencies[self.VIDEOS_METADATA].last_video_end = end_date
-        dependencies[self.TRACKS_METADATA].filtered_detection_classifications = (
-            classifications
-        )
+        dependencies[
+            self.TRACKS_METADATA
+        ].filtered_detection_classifications = classifications
 
         run_config = Mock()
         run_config.count_intervals = {interval}

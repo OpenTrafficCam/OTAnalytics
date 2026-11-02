@@ -113,7 +113,6 @@ class NiceGuiInfoBox(InfoBox):
 
 
 class NiceGuiUiFactory(UiFactory):
-
     def __init__(
         self,
         resource_manager: ResourceManager,

@@ -115,7 +115,6 @@ class FixMissingAnalysis(OtConfigFormatFixer):
 
 
 class OtConfigParser(ConfigParser):
-
     def __init__(
         self,
         format_fixer: OtConfigFormatFixer,
