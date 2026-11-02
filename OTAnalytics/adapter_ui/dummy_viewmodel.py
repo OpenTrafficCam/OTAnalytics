@@ -393,7 +393,7 @@ class DummyViewModel(
         """Re-enable the buttons that wait for a background to draw on."""
         self._update_enabled_buttons()
 
-    def notify_files(self) -> None:
+    def notify_files(self, _: Any = None) -> None:
         self.treeview_files.update_items()
         self._update_enabled_buttons()
 

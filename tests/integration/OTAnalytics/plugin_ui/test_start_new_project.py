@@ -151,6 +151,20 @@ class TestStartNewProject:
         target.view_model.on_application_reset.assert_called_once()
         target.view_model.update_remark_view.assert_called_once()
 
+    def test_refreshes_files_view_after_track_files_are_cleared(
+        self, otconfig: Path
+    ) -> None:
+        target = create_target()
+        target.load_otconfig.load(otconfig)
+        files_seen_on_refresh: list[set[Path]] = []
+        target.view_model.notify_files.side_effect = lambda _: (
+            files_seen_on_refresh.append(target.track_file_repository.get_all())
+        )
+
+        target.start_new_project()
+
+        assert files_seen_on_refresh[-1] == set()
+
 
 class TestOpenProject:
     def test_leaves_nothing_of_the_previous_project(
