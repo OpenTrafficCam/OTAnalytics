@@ -286,9 +286,9 @@ def track_geometry_factory() -> TRACK_GEOMETRY_FACTORY:
 
 
 @pytest.fixture
-def cutting_section_test_case() -> (
-    tuple[LineSection, list[Track], list[Track], TrackIdSet]
-):
+def cutting_section_test_case() -> tuple[
+    LineSection, list[Track], list[Track], TrackIdSet
+]:
     track_id_1 = "1"
     track_id_2 = "2"
     track_id_3 = "3"
@@ -464,17 +464,17 @@ def assert_shown_files(
 
     # Assert included files
     for file_name in expected_included:
-        assert (
-            file_name in shown_names
-        ), f"Expected file '{file_name}' not found in shown files: {shown_names}"
+        assert file_name in shown_names, (
+            f"Expected file '{file_name}' not found in shown files: {shown_names}"
+        )
 
     # Assert excluded files
     for file_name in expected_excluded:
-        assert (
-            file_name not in shown_names
-        ), f"Unexpected file '{file_name}' found in shown files: {shown_names}"
+        assert file_name not in shown_names, (
+            f"Unexpected file '{file_name}' found in shown files: {shown_names}"
+        )
 
     # Assert total count
-    assert (
-        len(row_data) == expected_count
-    ), f"Expected {expected_count} items, but got {len(row_data)}"
+    assert len(row_data) == expected_count, (
+        f"Expected {expected_count} items, but got {len(row_data)}"
+    )

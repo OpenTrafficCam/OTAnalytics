@@ -44,7 +44,6 @@ def create_section_state() -> MagicMock:
 
 
 class TestSectionsFormDoubleClick:
-
     @pytest.mark.asyncio
     async def test_double_click_selects_section_and_opens_properties(
         self, user: User, resource_manager: ResourceManager

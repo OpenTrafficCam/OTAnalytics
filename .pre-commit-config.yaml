@@ -14,93 +14,47 @@ repos:
       - id: requirements-txt-fixer
       - id: check-executables-have-shebangs
       - id: detect-private-key
-  - repo: https://github.com/OpenTrafficCam/dependency-update-pre-commit
-    rev: v0.2.0
+  - repo: local
     hooks:
-      - id: update-mypy-dependencies
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.3.0
-    hooks:
-      - id: flake8
-  - repo: https://github.com/psf/black
-    rev: 26.3.1
-    hooks:
-      - id: black
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args:
-          - --profile
-          - black
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.16.1
+      - id: ruff-check
+        name: Run the ruff linter
+        entry: uv run --group dev ruff check
+        args: [--fix]
+        types: [python]
+        language: system
+      - id: ruff-format
+        name: Run the ruff formatter
+        entry: uv run --group dev ruff format
+        types: [python]
+        language: system
+  - repo: local
     hooks:
       - id: mypy
-        entry: mypy OTAnalytics tests --config-file=pyproject.toml
-        additional_dependencies:
-          - av==13.0.0
-          - black==26.3.1
-          - customtkinter==5.2.2
-          - fastapi==0.128.0
-          - ijson==3.3.0
-          - interrogate==1.7.0
-          - isort==6.0.1
-          - minio==7.2.20
-          - more-itertools==10.7.0
-          - mypy==1.16.1
-          - nicegui==2.24.1
-          - opencv-python-headless==4.10.0.84
-          - pandas-stubs==2.3.2.250926
-          - playwright==1.55.0
-          - polars==1.32.3
-          - pre-commit==4.1.0
-          - pyarrow==21.0.0
-          - pytest-asyncio==0.24.0
-          - pytest-benchmark==5.1.0
-          - pytest-cov==7.0.0
-          - pytest-lazy-fixtures==1.4.0
-          - pytest-playwright==0.7.1
-          - pytest-timeout==2.4.0
-          - pytest==8.3.4
-          - starlette==0.49.1
-          - testcontainers==4.13.1
-          - twine==6.2.0
-          - types-PyYAML
-          - types-aioboto3
-          - types-aiobotocore-s3==2.26.0
-          - types-flake8
-          - types-matplotlib
-          - types-numpy
-          - types-openpyxl
-          - types-pandas
-          - types-pillow
-          - types-pywin32; sys_platform == "win32"
-          - types-rasterio
-          - types-requests
-          - types-seaborn
-          - types-selenium
-          - types-shapely
-          - types-tqdm
-          - types-ujson
-          - uvicorn==0.32.1
-          - yamllint==1.35.1
+        name: Run mypy
+        entry: uv run --group dev mypy OTAnalytics tests --config-file=pyproject.toml
+        language: system
+        types: [python]
         always_run: true
         pass_filenames: false
-  - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.35.1
+  - repo: local
     hooks:
-      - id: yamllint
-        args:
-          - -c=./.yamllint.yaml
-  - repo: https://github.com/koalaman/shellcheck-precommit
-    rev: v0.10.0
-    hooks:
-      - id: shellcheck
-  - repo: https://github.com/pecigonzalo/pre-commit-shfmt
-    rev: v2.2.0
-    hooks:
-      - id: shell-fmt-docker
-        args:
-          - -i
-          - "2"
+      - id: super-linter
+        name: Super-linter
+        # Docker hook mounts the workspace at /src, so we point super-linter there.
+        # Note: when the super-linter version is bumped here, upgrade it in CI too.
+        # pre-commit runs the container as the host user, who cannot write to
+        # $HOME (/github/home), so Trivy needs a writable cache dir.
+        entry: >
+          --rm --platform linux/amd64
+          --env-file .github/super-linter.env
+          --env-file .github/super-linter-fix.env
+          -e DEFAULT_WORKSPACE=/src
+          -e TRIVY_CACHE_DIR=/tmp/trivy
+          -e RUN_LOCAL=true
+          -e SAVE_SUPER_LINTER_SUMMARY=true
+          -e SUPER_LINTER_OUTPUT_DIRECTORY_NAME=.super-linter
+          -e SUPER_LINTER_SUMMARY_FILE_NAME=SUMMARY.md
+          ghcr.io/super-linter/super-linter@sha256:c95c714f746edc70e54926a69e229c834ffcdec2450bd3475f7865164d749a56
+        language: docker_image
+        pass_filenames: false
+        stages: [pre-push]

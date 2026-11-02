@@ -1091,8 +1091,8 @@ class TrafficCounting:
             return lambda rua: lower <= end_of(rua) < upper
 
         else:
-            return (
-                lambda rua: lower <= start_of(rua) < upper
+            return lambda rua: (
+                lower <= start_of(rua) < upper
                 or lower <= end_of(rua) < upper
                 or (start_of(rua) <= lower and upper <= end_of(rua))
             )

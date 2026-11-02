@@ -84,7 +84,6 @@ def video_without_start_date() -> Video:
 
 
 class TestGetVideos:
-
     def test_get(self, first_video: Mock) -> None:
         current = first_video_date()
         repository = Mock(spec=VideoRepository)

@@ -63,7 +63,6 @@ playwright = pytest.importorskip(
 
 
 class TestAddLineSectionWithDialog:
-
     @pytest.mark.skip(reason="only works in headed right now")
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
@@ -221,9 +220,9 @@ class TestAddLineSectionWithDialog:
             except Exception:
                 pass
             time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
-        assert (
-            len(matched_texts) >= 2
-        ), f"Expected >=2 generated flows with {names}, got {len(matched_texts)}: {last_texts}"  # noqa
+        assert len(matched_texts) >= 2, (
+            f"Expected >=2 generated flows with {names}, got {len(matched_texts)}: {last_texts}"  # noqa: E501
+        )
 
         # Save project using shared helper and compare with reference
         save_project_as(
@@ -324,7 +323,6 @@ def _saved_section_coordinates(
 
 
 class TestSectionEditorOnCanvas:
-
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
     @pytest.mark.usefixtures("external_app")
