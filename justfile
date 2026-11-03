@@ -6,6 +6,14 @@ default:
 install-hooks:
     uv run --group dev pre-commit install --hook-type pre-commit --hook-type pre-push
 
+# Start OTAnalytics with the tkinter GUI
+run-tk:
+    uv run python -m OTAnalytics
+
+# Start OTAnalytics with the web UI
+run-web:
+    uv run python -m OTAnalytics --webui
+
 test:
     uv run --group dev pytest
 

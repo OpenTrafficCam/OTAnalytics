@@ -154,7 +154,11 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IncompatibleGeoreferenceMetadataError,
 )
-from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
+from OTAnalytics.domain.track_repository import (
+    TrackFileRepositoryEvent,
+    TrackListObserver,
+    TrackRepositoryEvent,
+)
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
@@ -393,7 +397,10 @@ class DummyViewModel(
         """Re-enable the buttons that wait for a background to draw on."""
         self._update_enabled_buttons()
 
-    def notify_files(self) -> None:
+    def notify_files(self, _: TrackFileRepositoryEvent) -> None:
+        self._refresh_files()
+
+    def _refresh_files(self) -> None:
         self.treeview_files.update_items()
         self._update_enabled_buttons()
 
@@ -520,8 +527,8 @@ class DummyViewModel(
         except NoExistingConfigFound:
             self.button_quick_save_config.set_default_color()
 
-    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
-        self.notify_files()
+    def notify_tracks(self, _: TrackRepositoryEvent) -> None:
+        self._refresh_files()
 
     def _intersect_tracks_with_sections(self) -> None:
         start_msg_popup = self._ui_factory.minimal_info_box(
@@ -1764,9 +1771,14 @@ class DummyViewModel(
     def update_project_start_date(self, start_date: Optional[datetime]) -> None:
         self._application.update_project_start_date(start_date)
 
-    def on_start_new_project(self, _: None) -> None:
+    def on_application_reset(self, _: None) -> None:
+        """Show the views of a freshly started application.
+
+        Called on every reset of the application, i.e. when starting a new project
+        and when loading an otconfig.
+        """
+        self.frame_project.reset()
         self.frame_filter.reset()
-        self.frame_track_plotting.reset_layers()
         self.canvas.add_preview_image()
 
     def set_frame_track_plotting(
