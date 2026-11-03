@@ -25,6 +25,13 @@ configured with `stages: [pre-push]`, e.g. `super-linter`.
 See [dependency_management.md](./dependency_management.md) for how to add or update
 dependencies.
 
+## Running the app
+
+```bash
+just run-tk   # tkinter GUI
+just run-web  # web UI
+```
+
 ## Tests
 
 ```bash
