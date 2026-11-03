@@ -12,6 +12,10 @@ from OTAnalytics.application.config import (
     DEFAULT_NUM_PROCESSES,
 )
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
+from OTAnalytics.application.export_path_builder import (
+    compose_export_filename_stem,
+    format_save_suffix,
+)
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode
 from OTAnalytics.application.parser.config_parser import OtConfig
@@ -119,14 +123,13 @@ class RunConfiguration(OtConfigDefaultValueProvider):
 
     @property
     def save_stem(self) -> str:
-        save_stem = self._get_save_stem()
-        save_suffix = self.save_suffix
-        return f"{save_stem}{save_suffix}"
+        return compose_export_filename_stem(
+            save_name=self._get_save_name(),
+            save_suffix=self._get_save_suffix_without_separator(),
+            fallback_stem=self._get_fallback_save_stem(),
+        )
 
-    def _get_save_stem(self) -> str:
-        save_name = self._get_save_name()
-        if save_name:
-            return Path(save_name).stem
+    def _get_fallback_save_stem(self) -> str:
         if self.config_file:
             return self.config_file.stem
         if self.otflow:
@@ -142,11 +145,13 @@ class RunConfiguration(OtConfigDefaultValueProvider):
 
     @property
     def save_suffix(self) -> str:
-        if self._cli_args.save_suffix:
-            return f"_{self._cli_args.save_suffix}"
+        return format_save_suffix(self._get_save_suffix_without_separator())
+
+    def _get_save_suffix_without_separator(self) -> str:
+        if cli_save_suffix := self._cli_args.save_suffix:
+            return cli_save_suffix
         if self._otconfig:
-            if suffix := self._otconfig.analysis.export_config.save_suffix:
-                return f"_{suffix}"
+            return self._otconfig.analysis.export_config.save_suffix
         return ""
 
     @property

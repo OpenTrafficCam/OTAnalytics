@@ -14,6 +14,7 @@ from OTAnalytics.application.config import (
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
 )
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.export_path_builder import compose_export_filename_stem
 from OTAnalytics.application.files import ensure_dot_in_extension
 from OTAnalytics.application.resources.resource_manager import (
     ExportCountsDialogKeys,
@@ -41,8 +42,6 @@ MARKER_END_TIME = "marker-end-time"
 MARKER_DIRECTORY = "marker-directory"
 MARKER_FORMAT = "marker-format"
 MARKER_INTERVAL = "marker-interval"
-
-SAVE_SUFFIX_SEPARATOR = "_"
 
 
 class ExportCountsDialog(BaseDialog):
@@ -204,18 +203,14 @@ class ExportCountsDialog(BaseDialog):
     def _export_filename_stem(self) -> str:
         """Build the file stem from the configured save name and suffix.
 
-        Mirrors how a cli run composes its save stem. A project that does not
-        name its exports keeps the suggested stem, so exporting stays possible
-        without configuring a name first.
-
         Returns:
             str: the file stem to export under.
         """
-        save_name = self._get_save_name.get()
-        stem = Path(save_name).stem if save_name else self._suggested_file_stem
-        if save_suffix := self._get_save_suffix.get():
-            return f"{stem}{SAVE_SUFFIX_SEPARATOR}{save_suffix}"
-        return stem
+        return compose_export_filename_stem(
+            save_name=self._get_save_name.get(),
+            save_suffix=self._get_save_suffix.get(),
+            fallback_stem=self._suggested_file_stem,
+        )
 
     def _extension_for_default_format(self) -> str:
         return ensure_dot_in_extension(self._export_formats[self._default_format])
