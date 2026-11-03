@@ -401,7 +401,6 @@ DEFAULT_HOTKEYS: dict[HotKeys, str] = {
 
 
 class ResourceManager:
-
     def __init__(
         self,
         resources: dict[ResourceKey, str] = DEFAULT_RESOURCE_MAP,

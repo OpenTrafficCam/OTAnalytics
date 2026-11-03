@@ -85,14 +85,14 @@ def create_given() -> Given:
     view_model.validate_date.side_effect = lambda value: any(
         validate_date(value, date_format) for date_format in SUPPORTED_FORMATS
     )
-    view_model.validate_hour.side_effect = lambda value: value.isdigit() and (
-        validate_hour(int(value))
+    view_model.validate_hour.side_effect = lambda value: (
+        value.isdigit() and (validate_hour(int(value)))
     )
-    view_model.validate_minute.side_effect = lambda value: value.isdigit() and (
-        validate_minute(int(value))
+    view_model.validate_minute.side_effect = lambda value: (
+        value.isdigit() and (validate_minute(int(value)))
     )
-    view_model.validate_second.side_effect = lambda value: value.isdigit() and (
-        validate_second(int(value))
+    view_model.validate_second.side_effect = lambda value: (
+        value.isdigit() and (validate_second(int(value)))
     )
     return Given(resource_manager=resource_manager, view_model=view_model)
 

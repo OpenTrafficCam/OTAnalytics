@@ -100,7 +100,6 @@ class TabviewLayerGroup(CustomCTkTabview):
 
 
 class FrameTrackPlottingLayerGroup(EmbeddedCTkFrame):
-
     def __init__(
         self, viewmodel: ViewModel, layers: Sequence[Layer], **kwargs: Any
     ) -> None:

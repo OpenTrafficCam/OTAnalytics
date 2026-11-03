@@ -33,7 +33,6 @@ BUTTON_COLOR_PROP = "color"
 
 
 class NiceGuiButtonQuickSaveConfig(AbstractButtonQuickSaveConfig):
-
     def __init__(
         self, text: str, on_click: Optional[Callable[[ClickEventArguments], Any]] = None
     ):

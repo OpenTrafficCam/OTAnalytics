@@ -490,7 +490,6 @@ class FormFieldInteger(FormField[Number, int]):
 
 
 class FormFieldDate(FormField[Input, Optional[date]]):
-
     @property
     def initial_value_text(self) -> str:
         return self.__format(self._initial_value)
@@ -582,7 +581,6 @@ def parse_datetime(value: str, formats: list[str]) -> datetime:
 
 
 class FormFieldTime(FormField[Input, Optional[time]]):
-
     @property
     def initial_value_text(self) -> str:
         return self.__format(self._initial_value)
