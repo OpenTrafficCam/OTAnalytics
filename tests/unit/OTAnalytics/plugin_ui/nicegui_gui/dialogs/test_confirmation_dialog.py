@@ -1,5 +1,7 @@
 """Tests for asking the user to confirm an action in the browser."""
 
+from unittest.mock import Mock
+
 import pytest
 from nicegui import ui
 from nicegui.testing import User
@@ -19,7 +21,13 @@ class TestAskForConfirmation:
         button: str,
         expected: bool,
     ) -> None:
-        target = NiceGuiUiFactory(resource_manager)
+        target = NiceGuiUiFactory(
+            resource_manager,
+            get_count_intervals=Mock(),
+            get_counting_event=Mock(),
+            get_save_name=Mock(),
+            get_save_suffix=Mock(),
+        )
         answers: list[bool] = []
 
         @ui.page("/test")

@@ -139,6 +139,9 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.project_updater.register(self.view_model.update_quick_save_button)
         self.track_file_repository.register(self.view_model.update_quick_save_button)
         self.track_file_repository.register(self.view_model.notify_files)
+        self.static_analysis_config_changed.register(
+            self.view_model.update_quick_save_button
+        )
         self.project_updater.register(self.view_model.show_current_project)
         self.project_updater.register(self.view_model.update_svz_metadata_view)
         layer_groups, layers = self.layers
