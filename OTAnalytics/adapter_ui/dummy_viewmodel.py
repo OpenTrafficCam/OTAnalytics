@@ -154,7 +154,11 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IncompatibleGeoreferenceMetadataError,
 )
-from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
+from OTAnalytics.domain.track_repository import (
+    TrackFileRepositoryEvent,
+    TrackListObserver,
+    TrackRepositoryEvent,
+)
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
@@ -393,7 +397,10 @@ class DummyViewModel(
         """Re-enable the buttons that wait for a background to draw on."""
         self._update_enabled_buttons()
 
-    def notify_files(self, _: Any = None) -> None:
+    def notify_files(self, _: TrackFileRepositoryEvent) -> None:
+        self._refresh_files()
+
+    def _refresh_files(self) -> None:
         self.treeview_files.update_items()
         self._update_enabled_buttons()
 
@@ -520,8 +527,8 @@ class DummyViewModel(
         except NoExistingConfigFound:
             self.button_quick_save_config.set_default_color()
 
-    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
-        self.notify_files()
+    def notify_tracks(self, _: TrackRepositoryEvent) -> None:
+        self._refresh_files()
 
     def _intersect_tracks_with_sections(self) -> None:
         start_msg_popup = self._ui_factory.minimal_info_box(
