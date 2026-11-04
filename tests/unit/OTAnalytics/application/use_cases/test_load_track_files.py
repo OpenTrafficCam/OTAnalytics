@@ -324,7 +324,6 @@ class TestLoadTrackFile:
 
 
 class TestLoadTrackFilesInsideAnEventLoop:
-
     async def test_blocking_call_refuses_to_run_on_the_event_loop(self) -> None:
         """Parsing on the event loop freezes the webui for every connected client.
 
@@ -346,7 +345,6 @@ class TestLoadTrackFilesInsideAnEventLoop:
 
 
 class TestLoadTrackFilesOffTheEventLoop:
-
     async def test_parses_only_the_files_not_already_loaded(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10282"""
         given = setup(
@@ -397,8 +395,8 @@ class TestLoadTrackFilesOffTheEventLoop:
             classes={"class1"},
         )
         threads: dict[str, threading.Thread] = {}
-        given.track_parser.parse_files.side_effect = (
-            lambda files: threads.setdefault("parse", threading.current_thread())
+        given.track_parser.parse_files.side_effect = lambda files: (
+            threads.setdefault("parse", threading.current_thread())
             and given.parse_result
         )
         given.track_repository.add_all.side_effect = lambda tracks: threads.setdefault(
@@ -439,7 +437,6 @@ class TestLoadTrackFilesOffTheEventLoop:
 
 
 class TestLoadTrackFilesShowsProgress:
-
     def test_blocking_call_shows_a_progressbar_until_the_files_are_loaded(
         self,
     ) -> None:
@@ -715,8 +712,8 @@ def setup_needing_an_orthophoto(
         classes={"car"},
         geo_only_per_file=geo_only_per_file or [True],
     )
-    given.resolve_missing_orthophoto.resolve.side_effect = (
-        lambda: given.current_orthophoto.set(PROJECT_ORTHOPHOTO)
+    given.resolve_missing_orthophoto.resolve.side_effect = lambda: (
+        given.current_orthophoto.set(PROJECT_ORTHOPHOTO)
     )
     given.track_parser.parse_files.side_effect = [
         OrthophotoRequired("needs one"),

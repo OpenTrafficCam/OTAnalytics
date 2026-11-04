@@ -287,7 +287,6 @@ class LocalObtainOrthophoto(ObtainOrthophoto):
         file = base_folder / reference
         if not file.exists():
             raise OrthophotoNotFound(
-                f"The project's orthophoto '{file}' does not exist. Nothing was"
-                " loaded."
+                f"The project's orthophoto '{file}' does not exist. Nothing was loaded."
             )
         return file

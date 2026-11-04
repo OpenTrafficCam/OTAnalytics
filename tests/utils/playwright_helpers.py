@@ -13,18 +13,18 @@ from OTAnalytics.application.resources.resource_manager import (
     AddTracksKeys,
     AddVideoKeys,
     FlowKeys,
-    GeneralKeys,
     ResourceManager,
     SectionKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.confirmation_dialog import (
+    MARKER_CONFIRMATION_MESSAGE,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_END_SECTION,
+    MARKER_START_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_NAME as MARKER_FLOW_NAME,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
-    MARKER_START_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
     MARKER_NAME as MARKER_SECTION_NAME,
@@ -184,9 +184,9 @@ def set_input_value(page: Page, selector: str, value: str) -> None:
         page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
         ok, last = verify(value)
 
-    assert (
-        ok and last == value
-    ), f"Failed to set input value: expected '{value}', got '{last}' for selector {selector}"  # noqa
+    assert ok and last == value, (
+        f"Failed to set input value: expected '{value}', got '{last}' for selector {selector}"  # noqa: E501
+    )
 
 
 def navigate_and_prepare(
@@ -458,19 +458,22 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
     search_for_marker_element(page, MARKER_FILENAME).first.fill(path.name)
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
-    confirm_dialog(page, rm)
+    answer_confirmation(page, MARKER_DIALOG_APPLY)
 
     wait_for_track_loading_to_finish(page)
 
 
-def confirm_dialog(page: Page, rm: ResourceManager) -> None:
-    """Confirm the dialog asking whether the current project may be replaced."""
-    ok_button = page.get_by_role(
-        "button", name=rm.get(GeneralKeys.LABEL_OK), exact=True
-    )
-    ok_button.wait_for(state="visible")
-    ok_button.click()
-    ok_button.wait_for(state="hidden")
+def answer_confirmation(page: Page, button_marker: str) -> None:
+    """Click a button of the confirmation dialog, e.g. its Apply or Cancel.
+
+    Other dialogs use the same button markers, so the button is looked up within
+    the dialog that shows the confirmation message.
+    """
+    message = search_for_marker_element(page, MARKER_CONFIRMATION_MESSAGE).first
+    message.wait_for(state="visible")
+    dialog = page.locator(".q-dialog", has=message)
+    dialog.locator(f'[{TEST_ID}="{button_marker}"]').first.click()
+    message.wait_for(state="detached")
 
 
 # ----------------------
@@ -1347,9 +1350,9 @@ def verify_filter_range_label_cleared(page: Page) -> None:
     """Verify that the filter range label is cleared."""
     range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
     label_text_after_reset = range_label.inner_text()
-    assert (
-        label_text_after_reset.strip() == ""
-    ), "Date range label not cleared after reset"
+    assert label_text_after_reset.strip() == "", (
+        "Date range label not cleared after reset"
+    )
 
 
 def assert_screenshot_equal(

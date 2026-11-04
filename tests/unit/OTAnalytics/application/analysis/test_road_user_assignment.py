@@ -13,7 +13,6 @@ from tests.utils.builders.road_user_assignment import create_assignment
 
 
 class TestRoadUserAssignmentRepository:
-
     def test_remove_assignment_of_event(self) -> None:
         """
         Fix bug OP#8926 - dictionary changed size during iteration

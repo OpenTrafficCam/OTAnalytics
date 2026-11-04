@@ -33,7 +33,6 @@ def create_target(
 
 
 class TestCustomTableRowDoubleClick:
-
     @pytest.mark.asyncio
     async def test_double_click_passes_the_clicked_row_to_the_handler(
         self, user: User
