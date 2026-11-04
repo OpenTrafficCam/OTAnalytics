@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Sequence
 
@@ -12,6 +12,7 @@ from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
     ClassGroupResolver,
     DayTrafficStatistics,
     FlowInfo,
+    as_utc,
     day_start,
 )
 from OTAnalytics.application.use_cases.assignment_repository import (
@@ -26,7 +27,7 @@ from OTAnalytics.application.use_cases.traffic_statistics_export import (
 from OTAnalytics.plugin_parser.road_user_assignment_csv_reader import (
     read_assignment_records,
 )
-from OTAnalytics.plugin_parser.traffic_statistics_counts import write_counts
+from OTAnalytics.plugin_parser.traffic_statistics_csv import write_counts, write_speeds
 from OTAnalytics.plugin_parser.traffic_statistics_json import (
     TrafficStatisticsFormatError,
     read_progress,
@@ -36,15 +37,10 @@ from OTAnalytics.plugin_parser.traffic_statistics_json import (
 LOGGER = logging.getLogger(__name__)
 
 
-def _as_utc(value: datetime) -> datetime:
-    """Return the datetime in UTC, treating naive values as UTC."""
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
-
-
 class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
-    """Writes traffic statistics, one JSON and one counts CSV file per UTC day.
+    """Writes traffic statistics per UTC day: a JSON file and CSV files.
+
+    The CSV files hold the counts and speed values per interval.
 
     The exporter is stateful across calls: days are kept in memory (the
     `max_open_days` most recent ones) and rewritten completely after every call.
@@ -107,8 +103,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             )
 
         covered_ranges = [
-            (_as_utc(start), _as_utc(end))
-            for start, end in specification.covered_ranges
+            (as_utc(start), as_utc(end)) for start, end in specification.covered_ranges
         ]
         for covered_start, covered_end in covered_ranges:
             for day in self._coverage_days(covered_start, covered_end):
@@ -133,6 +128,13 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             )
             if counts_path.exists():
                 paths.append(counts_path)
+            paths.extend(
+                write_speeds(
+                    stats,
+                    specification.export_directory,
+                    specification.export_filename_stem,
+                )
+            )
         self._evict()
         return paths
 
@@ -163,9 +165,9 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             if covered_start < day_end and covered_end > day_begin:
                 candidates.append(min(covered_end, day_end))
         if stats.as_of is not None:
-            candidates.append(_as_utc(stats.as_of))
+            candidates.append(as_utc(stats.as_of))
         if counted is not None:
-            candidates.append(_as_utc(counted))
+            candidates.append(as_utc(counted))
         if candidates:
             stats.as_of = max(candidates)
 
@@ -197,9 +199,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             else:
                 for covered_start, covered_end in progress.coverage:
                     stats.mark_covered(covered_start, covered_end)
-                stats.as_of = (
-                    None if progress.as_of is None else _as_utc(progress.as_of)
-                )
+                stats.as_of = progress.as_of
         for record in (self._restore_records or {}).get(day, []):
             stats.add(record)
         self._days[day] = stats
