@@ -4,7 +4,6 @@ from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 
 
 class ButtonForm(AbstractFrame):
-
     def set_enabled_general_buttons(self, enabled: bool) -> None:
         self._set_enabled_buttons(self.get_general_buttons(), enabled)
 

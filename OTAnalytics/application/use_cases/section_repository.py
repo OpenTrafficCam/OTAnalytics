@@ -116,7 +116,7 @@ class AddSection:
         )
 
     def is_section_id_valid(self, section_id: SectionId) -> bool:
-        return not (section_id in self._section_repository.get_section_ids())
+        return section_id not in self._section_repository.get_section_ids()
 
 
 class AddAllSections:

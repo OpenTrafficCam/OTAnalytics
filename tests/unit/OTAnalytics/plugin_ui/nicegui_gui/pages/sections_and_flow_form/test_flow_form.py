@@ -45,7 +45,6 @@ def create_flow_state() -> MagicMock:
 
 
 class TestFlowFormDoubleClick:
-
     @pytest.mark.asyncio
     async def test_double_click_selects_flow_and_opens_properties(
         self, user: User, resource_manager: ResourceManager
