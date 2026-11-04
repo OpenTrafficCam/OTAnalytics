@@ -13,8 +13,6 @@ class TrafficStatisticsConfig:
         enabled: whether the export runs. A disabled block is kept so that it
             survives a round trip through the otconfig.
         interval_minutes: length of one statistics interval, divides 60.
-        speed_profile_interval_minutes: interval of the speed profile, a
-            multiple of interval_minutes.
         max_speed_kmh: speeds above this value are treated as implausible,
             must be > 0.
         class_groups: group name to the classifications it contains. Empty
@@ -28,7 +26,6 @@ class TrafficStatisticsConfig:
 
     enabled: bool = True
     interval_minutes: int = 1
-    speed_profile_interval_minutes: int = 15
     max_speed_kmh: float = 200.0
     class_groups: Mapping[str, frozenset[str]] = field(default_factory=dict)
     peak_window_minutes: int = 60
@@ -37,9 +34,6 @@ class TrafficStatisticsConfig:
     def __post_init__(self) -> None:
         self._validate_int_fields()
         self._validate_interval()
-        self._validate_multiple_of_interval(
-            "speed_profile_interval_minutes", self.speed_profile_interval_minutes
-        )
         self._validate_multiple_of_interval(
             "peak_window_minutes", self.peak_window_minutes
         )
@@ -50,7 +44,6 @@ class TrafficStatisticsConfig:
     def _validate_int_fields(self) -> None:
         for name in (
             "interval_minutes",
-            "speed_profile_interval_minutes",
             "peak_window_minutes",
             "peak_step_minutes",
         ):

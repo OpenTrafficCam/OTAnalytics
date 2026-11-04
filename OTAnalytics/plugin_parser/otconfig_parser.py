@@ -68,7 +68,6 @@ TRAFFIC_STATISTICS = "traffic_statistics"
 GEO_TRACKS = "geo_tracks"
 ENABLED = "enabled"
 INTERVAL_MINUTES = "interval_minutes"
-SPEED_PROFILE_INTERVAL_MINUTES = "speed_profile_interval_minutes"
 MAX_SPEED_KMH = "max_speed_kmh"
 CLASS_GROUPS = "class_groups"
 PEAK_WINDOW_MINUTES = "peak_window_minutes"
@@ -142,9 +141,6 @@ def serialize_traffic_statistics_and_geo_tracks(
         result[TRAFFIC_STATISTICS] = {
             ENABLED: traffic_statistics.enabled,
             INTERVAL_MINUTES: traffic_statistics.interval_minutes,
-            SPEED_PROFILE_INTERVAL_MINUTES: (
-                traffic_statistics.speed_profile_interval_minutes
-            ),
             MAX_SPEED_KMH: traffic_statistics.max_speed_kmh,
             CLASS_GROUPS: {
                 name: sorted(classes)
@@ -399,11 +395,6 @@ class OtConfigParser(ConfigParser):
             enabled=bool(data.get(ENABLED, defaults.enabled)),
             interval_minutes=_parse_int(
                 data, INTERVAL_MINUTES, defaults.interval_minutes
-            ),
-            speed_profile_interval_minutes=_parse_int(
-                data,
-                SPEED_PROFILE_INTERVAL_MINUTES,
-                defaults.speed_profile_interval_minutes,
             ),
             max_speed_kmh=_parse_float(data, MAX_SPEED_KMH, defaults.max_speed_kmh),
             class_groups={

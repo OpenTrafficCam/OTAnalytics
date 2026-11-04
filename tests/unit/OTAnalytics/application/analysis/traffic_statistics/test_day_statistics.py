@@ -14,6 +14,7 @@ from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
     DayTrafficStatistics,
     FlowInfo,
     PeakHour,
+    as_utc,
     day_start,
 )
 from OTAnalytics.application.analysis.traffic_statistics.speed_values import SpeedValues
@@ -24,12 +25,27 @@ from tests.utils.builders.road_user_assignment import create_assignment
 
 DAY = date(2026, 10, 27)
 MINUTES_PER_DAY = 24 * 60
-SPEED_PROFILE_SLOTS = MINUTES_PER_DAY // 15
+QUARTER_HOURS = MINUTES_PER_DAY // 15
+QUARTER_HOUR_CONFIG = TrafficStatisticsConfig(interval_minutes=15)
 
 
 class TestDayHelpers:
     def test_day_start_is_utc_midnight(self) -> None:
         assert day_start(DAY).isoformat() == "2026-10-27T00:00:00+00:00"
+
+    def test_as_utc_takes_naive_time_as_utc_without_shifting(self) -> None:
+        assert as_utc(datetime(2026, 10, 27, 7, 15)) == datetime(
+            2026, 10, 27, 7, 15, tzinfo=timezone.utc
+        )
+
+    def test_as_utc_keeps_utc_time(self) -> None:
+        value = datetime(2026, 10, 27, 7, 15, tzinfo=timezone.utc)
+        assert as_utc(value) == value
+
+    def test_as_utc_rejects_other_offset_instead_of_converting(self) -> None:
+        plus_one = timezone(timedelta(hours=1))
+        with pytest.raises(ValueError, match="UTC"):
+            as_utc(datetime(2026, 10, 27, 8, 15, tzinfo=plus_one))
 
 
 class TestClassGroupResolver:
@@ -171,15 +187,18 @@ class TestDayTrafficStatistics:
 
     def test_day_is_cut_at_utc_midnight(self) -> None:
         stats = create_statistics()
-        plus_two = timezone(timedelta(hours=2))
-        # 00:30+02:00 is 22:30 UTC of the previous day
         assert not stats.add(
-            record("ru1", "f1", "LV", datetime(2026, 10, 27, 0, 30, tzinfo=plus_two))
+            record("ru1", "f1", "LV", utc(23, 59, 59, day=date(2026, 10, 26)))
         )
-        assert stats.add(
-            record("ru2", "f1", "LV", datetime(2026, 10, 27, 2, 30, tzinfo=plus_two))
-        )
-        assert stats.counts("f1")["LV"][interval_index(0, 30)] == 1
+        assert stats.add(record("ru2", "f1", "LV", utc(0, 0)))
+        assert stats.counts("f1")["LV"][interval_index(0, 0)] == 1
+
+    def test_occurrence_with_other_offset_is_rejected(self) -> None:
+        stats = create_statistics()
+        plus_two = timezone(timedelta(hours=2))
+        occurrence = datetime(2026, 10, 27, 9, 0, tzinfo=plus_two)
+        with pytest.raises(ValueError, match="UTC"):
+            stats.add(record("ru1", "f1", "LV", occurrence))
 
     def test_five_minute_interval_has_288_bins(self) -> None:
         stats = create_statistics(TrafficStatisticsConfig(interval_minutes=5))
@@ -200,10 +219,7 @@ class TestDayTrafficStatistics:
         ]
 
     def test_only_plausible_speeds_enter_speed_profile(self) -> None:
-        config = TrafficStatisticsConfig(
-            speed_profile_interval_minutes=15,
-            max_speed_kmh=100,
-        )
+        config = TrafficStatisticsConfig(interval_minutes=15, max_speed_kmh=100)
         stats = create_statistics(config)
         stats.add(record("ru1", "f1", "LV", utc(7, 20), 10.0))
         stats.add(record("ru2", "f1", "LV", utc(7, 21), 50.0))
@@ -300,38 +316,59 @@ class TestSpeed:
         stats.add(record("ru2", "f1", "LV", utc(18, 0), 15.0))
         assert stats.speed("f1")["LV"].count == 2
 
+    def test_speed_profile_uses_count_intervals(self) -> None:
+        stats = create_statistics(TrafficStatisticsConfig(interval_minutes=5))
+        stats.add(record("ru1", "f1", "LV", utc(7, 22), 10.0))
+        profile = stats.speed_profile("f1")["LV"]
+        assert len(profile) == MINUTES_PER_DAY // 5
+        assert profile[interval_index(7, 22, interval_minutes=5)] == SpeedValues(
+            36.0, 36.0, 1
+        )
+
     def test_speed_profile_has_value_only_in_occupied_slot(self) -> None:
-        stats = create_statistics()
+        stats = create_statistics(QUARTER_HOUR_CONFIG)
         stats.add(record("ru1", "f1", "LV", utc(7, 20), 10.0))
         profile = stats.speed_profile("f1")["LV"]
         slot = interval_index(7, 20, interval_minutes=15)
-        assert len(profile) == SPEED_PROFILE_SLOTS
+        assert len(profile) == QUARTER_HOURS
         assert profile[slot] == SpeedValues(36.0, 36.0, 1)
         assert [v for i, v in enumerate(profile) if i != slot and v is not None] == []
 
     def test_speed_profile_contains_counted_group_without_speed(self) -> None:
-        stats = create_statistics()
+        stats = create_statistics(QUARTER_HOUR_CONFIG)
         stats.add(record("ru1", "f1", "LV", utc(7, 20)))
-        assert stats.speed_profile("f1") == {"LV": [None] * SPEED_PROFILE_SLOTS}
+        assert stats.speed_profile("f1") == {"LV": [None] * QUARTER_HOURS}
 
     def test_speed_profile_contains_configured_groups_without_data(self) -> None:
         config = TrafficStatisticsConfig(
+            interval_minutes=15,
             class_groups={"LV": frozenset({"car"}), "HV": frozenset({"truck"})},
         )
         stats = create_statistics(config)
         stats.add(record("ru1", "f1", "car", utc(7, 20), 10.0))
         profile = stats.speed_profile("f1")
         assert set(profile) == {"LV", "HV"}
-        assert profile["HV"] == [None] * SPEED_PROFILE_SLOTS
+        assert profile["HV"] == [None] * QUARTER_HOURS
         slot = interval_index(7, 20, interval_minutes=15)
         assert profile["LV"][slot] == SpeedValues(36.0, 36.0, 1)
 
-    def test_total_speed_profile_merges_per_slot(self) -> None:
-        stats = create_statistics()
+    def test_speed_profile_of_total_merges_flows_per_slot(self) -> None:
+        stats = create_statistics(QUARTER_HOUR_CONFIG)
         stats.add(record("ru1", "f1", "LV", utc(7, 20), 10.0))
         stats.add(record("ru2", "f2", "LV", utc(7, 25), 15.0))
         slot = interval_index(7, 20, interval_minutes=15)
         assert stats.speed_profile(TOTAL)["LV"][slot] == SpeedValues(45.0, 54.0, 2)
+
+    def test_total_speed_profile_merges_flows_and_groups_per_slot(self) -> None:
+        stats = create_statistics(QUARTER_HOUR_CONFIG)
+        stats.add(record("ru1", "f1", "LV", utc(7, 20), 10.0))
+        stats.add(record("ru2", "f2", "SV", utc(7, 25), 15.0))
+        stats.add(record("ru3", "f2", "SV", utc(9, 0)))
+        profile = stats.total_speed_profile()
+        slot = interval_index(7, 20, interval_minutes=15)
+        assert len(profile) == QUARTER_HOURS
+        assert profile[slot] == SpeedValues(45.0, 54.0, 2)
+        assert [v for i, v in enumerate(profile) if i != slot and v is not None] == []
 
 
 class TestAssignmentRecord:
