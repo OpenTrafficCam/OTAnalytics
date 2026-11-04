@@ -19,6 +19,7 @@ from OTAnalytics.application.analysis.traffic_statistics_config import (
 )
 from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
 from OTAnalytics.plugin_parser.traffic_statistics_json import (
+    AS_OF_KEY,
     COUNT_KEY,
     COVERAGE_KEY,
     FLOWS_KEY,
@@ -87,6 +88,27 @@ class TestReadProgress:
 
         assert read_progress(path) == DayProgress([], None)
 
+    def test_fractions_of_a_second_survive_the_round_trip(self, tmp_path: Path) -> None:
+        stats = DayTrafficStatistics(DAY, CONFIG, [FLOW_1])
+        end = datetime(2026, 10, 27, 0, 15, 0, 550000, tzinfo=timezone.utc)
+        stats.mark_covered(utc(0, 0), end)
+        stats.as_of = end
+        path = tmp_path / "day.json"
+        write(stats, path)
+
+        assert parse_json(path)[AS_OF_KEY] == "2026-10-27 00:15:00.550000"
+        assert read_progress(path) == DayProgress([(utc(0, 0), end)], end)
+
+    def test_time_with_other_offset_raises_format_error(self, tmp_path: Path) -> None:
+        path = tmp_path / "day.json"
+        write(create_statistics(), path)
+        data = parse_json(path)
+        data[AS_OF_KEY] = "2026-10-27T16:32:00+02:00"
+        write_json(data, path)
+
+        with pytest.raises(TrafficStatisticsFormatError, match="UTC"):
+            read_progress(path)
+
     @pytest.mark.parametrize("content", ["{not json", "[1, 2]"])
     def test_corrupt_file_raises_format_error(
         self, tmp_path: Path, content: str
@@ -132,7 +154,6 @@ class TestFormat:
             "day",
             "counting_event",
             "interval_minutes",
-            "speed_profile_interval_minutes",
             "peak_window_minutes",
             "peak_step_minutes",
             "class_groups",
@@ -146,10 +167,8 @@ class TestFormat:
         assert data["day"] == "2026-10-27"
         assert data["counting_event"] == "end"
         assert data["class_groups"] == {"LV": ["car", "van"], "SV": ["truck"]}
-        assert data["as_of"] == "2026-10-27T14:32:00+00:00"
-        assert data["coverage"] == [
-            ["2026-10-27T00:00:00+00:00", "2026-10-27T14:32:00+00:00"]
-        ]
+        assert data["as_of"] == "2026-10-27 14:32:00"
+        assert data["coverage"] == [["2026-10-27 00:00:00", "2026-10-27 14:32:00"]]
         assert data["flows"][0] == {
             "id": "f1",
             "name": "Nord → Süd",
@@ -174,12 +193,19 @@ class TestFormat:
         assert "counts" not in data[STATISTICS_KEY][TOTAL_KEY]
         assert "counts" not in data[STATISTICS_KEY][FLOWS_KEY]["f1"]
 
+    def test_statistics_block_has_no_speed_profile(self) -> None:
+        # Speed values per interval are written to the speeds CSV files instead.
+        data = to_dict(create_statistics())
+
+        assert "speed_profile" not in data[STATISTICS_KEY][TOTAL_KEY]
+        assert "speed_profile" not in data[STATISTICS_KEY][FLOWS_KEY]["f1"]
+
     def test_peak_hour_is_utc(self) -> None:
         data = to_dict(create_statistics())
 
         peak = data[STATISTICS_KEY][TOTAL_KEY][PEAK_HOUR_KEY]["LV"]
-        assert peak["start"] == "2026-10-27T07:15:00+00:00"
-        assert peak["end"] == "2026-10-27T08:15:00+00:00"
+        assert peak["start"] == "2026-10-27 07:15:00"
+        assert peak["end"] == "2026-10-27 08:15:00"
 
 
 class TestWrite:
