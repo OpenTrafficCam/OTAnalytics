@@ -309,7 +309,7 @@ class TrackFileRepository:
         """
         return self._files.copy()
 
-    def register(self, observer: OBSERVER[Iterable[Path]]) -> None:
+    def register(self, observer: OBSERVER[TrackFileRepositoryEvent]) -> None:
         self._subject.register(observer)
 
     def clear(self) -> None:

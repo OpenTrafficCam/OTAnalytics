@@ -53,6 +53,6 @@ class WipeUserSourceOnReset(ResetApplication):
         super().__init__(clear_repositories, reset_state)
         self._wipe = wipe
 
-    def reset(self) -> None:
-        super().reset()
+    def _reset(self) -> None:
+        super()._reset()
         self._wipe.wipe()

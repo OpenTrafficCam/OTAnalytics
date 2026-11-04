@@ -9,7 +9,7 @@ The default values are as follows:
 
 LINE_WIDTH: str = "width"
 """Specifies the width of the line or outline.
-Only applied in combination wit LINE_COLOR.
+Only applied in combination with LINE_COLOR.
 The default value is 1."""
 
 LINE_DASH: str = "dash"
