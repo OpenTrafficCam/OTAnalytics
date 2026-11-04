@@ -8,21 +8,26 @@ on:
     branches:
       - main
 
-permissions: read-all
+permissions: {}
 
 jobs:
   test:
+    permissions:
+      contents: read
     uses: "./.github/workflows/test.yml"
   regression-test:
+    permissions:
+      contents: read
     uses: "./.github/workflows/regression-test.yml"
-    secrets: inherit
+    secrets:
+      PLATOMO_OTC_TESTDATA_ACCESS: ${{ secrets.PLATOMO_OTC_TESTDATA_ACCESS }}
   create_nightly:
     permissions:
       contents: write
     needs:
       - test
       - regression-test
-    uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml@main"
+    uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml@a4deb65bd5188ee1115e902bbe19d949bf69fe62" # main
     secrets:
       PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
     with:

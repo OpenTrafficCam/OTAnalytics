@@ -181,7 +181,6 @@ def _parse_float(data: dict, key: str, default: float) -> float:
 
 
 class OtConfigParser(ConfigParser):
-
     def __init__(
         self,
         format_fixer: OtConfigFormatFixer,
