@@ -127,6 +127,13 @@ def counts_file(tmp_path: Path, day: int) -> Path:
     return tmp_path / f"out.traffic_statistics_2026-10-{day:02d}.counts_1min.csv"
 
 
+def speed_files(tmp_path: Path, day: int) -> list[Path]:
+    return [
+        tmp_path / f"out.traffic_statistics_2026-10-{day:02d}.{name}_1min.csv"
+        for name in ("speeds", "speeds_all_flows", "speeds_total")
+    ]
+
+
 def export_json(
     exporter: JsonTrafficStatisticsExporter,
     specification: TrafficStatisticsExportSpecification,
@@ -155,7 +162,7 @@ def test_export_writes_one_file_per_touched_day(tmp_path: Path) -> None:
     assert flows[0][START_SECTION_KEY] == {ID_KEY: "s1", NAME_KEY: "Nord"}
 
 
-def test_export_writes_a_counts_csv_next_to_each_day_file(tmp_path: Path) -> None:
+def test_export_writes_csv_files_next_to_each_day_file(tmp_path: Path) -> None:
     exporter = create_exporter(
         [assignment("r1", utc(26, 23, 58)), assignment("r2", utc(27, 0, 1))]
     )
@@ -165,8 +172,10 @@ def test_export_writes_a_counts_csv_next_to_each_day_file(tmp_path: Path) -> Non
     assert paths == [
         day_file(tmp_path, 26),
         counts_file(tmp_path, 26),
+        *speed_files(tmp_path, 26),
         day_file(tmp_path, 27),
         counts_file(tmp_path, 27),
+        *speed_files(tmp_path, 27),
     ]
 
 

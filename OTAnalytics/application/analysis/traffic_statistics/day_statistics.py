@@ -82,11 +82,18 @@ class ClassGroupResolver:
         return group
 
 
-def _as_utc(value: datetime) -> datetime:
-    """Return the datetime in UTC, treating naive values as UTC."""
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+def as_utc(value: datetime) -> datetime:
+    """Return the datetime as UTC without converting it.
+
+    Times of the input files are the camera's UTC times and the truth, so they
+    are never converted. Naive values are taken as UTC.
+
+    Raises:
+        ValueError: if the value has an offset other than UTC.
+    """
+    if value.tzinfo is not None and value.utcoffset() != timedelta(0):
+        raise ValueError(f"Expected a UTC time, got {value.isoformat()}.")
+    return value.replace(tzinfo=timezone.utc)
 
 
 def _ceil_div(numerator: int, denominator: int) -> int:
@@ -125,8 +132,8 @@ class AssignmentRecord:
         Naive occurrences are treated as UTC.
         """
         if counting_event == CountingEvent.END:
-            return _as_utc(self.end_occurrence)
-        return _as_utc(self.start_occurrence)
+            return as_utc(self.end_occurrence)
+        return as_utc(self.start_occurrence)
 
     @property
     def speed_kmh(self) -> float | None:
@@ -139,10 +146,11 @@ class AssignmentRecord:
 class DayTrafficStatistics:
     """Counts and speeds of one UTC day per flow and class group.
 
-    Counts are kept per interval of `config.interval_minutes`. An interval is
-    reported as covered if it overlaps any range marked with `mark_covered`.
-    Uncovered intervals without counts are reported as None. A road user is
-    counted at most once per day, regardless of flow and class group.
+    Counts and speeds are kept per interval of `config.interval_minutes`. An
+    interval is reported as covered if it overlaps any range marked with
+    `mark_covered`. Uncovered intervals without counts are reported as None. A
+    road user is counted at most once per day, regardless of flow and class
+    group.
     """
 
     def __init__(
@@ -163,12 +171,9 @@ class DayTrafficStatistics:
         self._start = day_start(day)
         self._end = day_start(day + timedelta(days=1))
         self._interval_count = _ceil_div(MINUTES_PER_DAY, config.interval_minutes)
-        self._slot_count = _ceil_div(
-            MINUTES_PER_DAY, config.speed_profile_interval_minutes
-        )
         self._flow_ids = {flow.id for flow in self.flows}
         self._counts: dict[str, dict[str, list[int]]] = {}
-        # flow -> group -> speed profile slot -> plausible speeds in km/h
+        # flow -> group -> interval -> plausible speeds in km/h
         self._speeds: dict[str, dict[str, list[list[float]]]] = {}
         self._coverage: list[tuple[datetime, datetime]] = []
 
@@ -201,18 +206,15 @@ class DayTrafficStatistics:
             return False
         self.road_user_ids.add(record.road_user)
         minutes = int((when - self._start).total_seconds() // 60)
+        index = minutes // self._config.interval_minutes
         counts = self._counts.setdefault(record.flow_id, {})
-        counts.setdefault(group, [0] * self._interval_count)[
-            minutes // self._config.interval_minutes
-        ] += 1
+        counts.setdefault(group, [0] * self._interval_count)[index] += 1
         speed_kmh = record.speed_kmh
         if speed_kmh is not None and 0 < speed_kmh <= self._config.max_speed_kmh:
-            slots = self._speeds.setdefault(record.flow_id, {}).setdefault(
-                group, [[] for _ in range(self._slot_count)]
+            intervals = self._speeds.setdefault(record.flow_id, {}).setdefault(
+                group, [[] for _ in range(self._interval_count)]
             )
-            slots[minutes // self._config.speed_profile_interval_minutes].append(
-                speed_kmh
-            )
+            intervals[index].append(speed_kmh)
         return True
 
     def update_flows(self, flows: Sequence[FlowInfo]) -> None:
@@ -230,8 +232,8 @@ class DayTrafficStatistics:
 
     def mark_covered(self, start: datetime, end: datetime) -> None:
         """Mark the half-open range [start, end) as covered, clipped to the day."""
-        clipped_start = max(_as_utc(start), self._start)
-        clipped_end = min(_as_utc(end), self._end)
+        clipped_start = max(as_utc(start), self._start)
+        clipped_end = min(as_utc(end), self._end)
         if clipped_start >= clipped_end:
             return
         ranges = sorted(
@@ -245,7 +247,7 @@ class DayTrafficStatistics:
                 merged.append((range_start, range_end))
         self._coverage = merged
 
-    def _covered_flags(self) -> list[bool]:
+    def covered_intervals(self) -> list[bool]:
         """Flag per interval whether it overlaps any coverage range."""
         step = timedelta(minutes=self._config.interval_minutes)
         coverage = self._coverage
@@ -270,7 +272,7 @@ class DayTrafficStatistics:
         return self._counts.get(flow_id, {})
 
     def interval_start(self, index: int) -> datetime:
-        """Return the UTC start of the count interval with the given index."""
+        """Return the UTC start of the interval with the given index."""
         return self._start + timedelta(minutes=index * self._config.interval_minutes)
 
     def counts(self, flow_id: str) -> dict[str, list[int | None]]:
@@ -278,7 +280,7 @@ class DayTrafficStatistics:
 
         An interval is None if it is not covered and has no count.
         """
-        covered = self._covered_flags()
+        covered = self.covered_intervals()
         result: dict[str, list[int | None]] = {
             group: [0 if flag else None for flag in covered]
             for group in self._config.class_groups
@@ -331,11 +333,11 @@ class DayTrafficStatistics:
             return self._speeds.get(flow_id, {})
         merged: dict[str, list[list[float]]] = {}
         for groups in self._speeds.values():
-            for group, slots in groups.items():
+            for group, intervals in groups.items():
                 current = merged.setdefault(
-                    group, [[] for _ in range(self._slot_count)]
+                    group, [[] for _ in range(self._interval_count)]
                 )
-                for index, speeds in enumerate(slots):
+                for index, speeds in enumerate(intervals):
                     current[index].extend(speeds)
         return merged
 
@@ -345,22 +347,33 @@ class DayTrafficStatistics:
         Groups without plausible speeds are absent.
         """
         result: dict[str, SpeedValues] = {}
-        for group, slots in self._flow_speeds(flow_id).items():
-            values = compute_speed_values([s for speeds in slots for s in speeds])
+        for group, intervals in self._flow_speeds(flow_id).items():
+            values = compute_speed_values([s for speeds in intervals for s in speeds])
             if values is not None:
                 result[group] = values
         return result
 
     def speed_profile(self, flow_id: str) -> dict[str, list[SpeedValues | None]]:
-        """Speed values per group and speed profile slot; TOTAL merges flows.
+        """Speed values per group and interval; TOTAL merges flows.
 
-        Contains every configured and counted group. Slots without plausible
-        speeds are None.
+        Contains every configured and counted group. Intervals without
+        plausible speeds are None.
         """
         result: dict[str, list[SpeedValues | None]] = {
-            group: [None] * self._slot_count
+            group: [None] * self._interval_count
             for group in [*self._config.class_groups, *self._flow_counts(flow_id)]
         }
-        for group, slots in self._flow_speeds(flow_id).items():
-            result[group] = [compute_speed_values(speeds) for speeds in slots]
+        for group, intervals in self._flow_speeds(flow_id).items():
+            result[group] = [compute_speed_values(speeds) for speeds in intervals]
         return result
+
+    def total_speed_profile(self) -> list[SpeedValues | None]:
+        """Speed values per interval over all flows and groups.
+
+        Intervals without plausible speeds are None.
+        """
+        merged: list[list[float]] = [[] for _ in range(self._interval_count)]
+        for intervals in self._flow_speeds(TOTAL).values():
+            for index, speeds in enumerate(intervals):
+                merged[index].extend(speeds)
+        return [compute_speed_values(speeds) for speeds in merged]
