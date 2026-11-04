@@ -412,7 +412,6 @@ class OTAnalyticsCli(ABC):
 
 
 class OTAnalyticsBulkCli(OTAnalyticsCli):
-
     @property
     def ottrk_file_input_source(self) -> OttrkFileInputSource:
         return SingleBatchOttrkFileInputSource(
@@ -490,7 +489,6 @@ class OTAnalyticsBulkCli(OTAnalyticsCli):
 
 
 class OTAnalyticsStreamCli(OTAnalyticsCli):
-
     @property
     def ottrk_file_input_source(self) -> OttrkFileInputSource:
         return SingleBatchOttrkFileInputSource(

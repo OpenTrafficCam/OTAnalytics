@@ -98,7 +98,7 @@ class SectionPainter:
             coordinates (list[tuple[int, int]]): Knob coordinates that define a section.
             section_style (dict): Dict of style options for tkinter canvas items.
             is_area_section (bool): True, if the section is an area section.
-                False if the seciton is a line section.
+                False if the section is a line section.
                 Defaults to False.
             highlighted_knob_index (int | None, optional): Index of a knob coordinate
                 that should be highlighted with a unique style.
@@ -248,7 +248,7 @@ def add_last_coordinate(
 ) -> list[tuple[int, int]]:
     """
     For area sections, the first and last coordinate are equal. Therefore, this
-    method addds the first coordinate as the last one, if the section is an area.
+    method adds the first coordinate as the last one, if the section is an area.
 
     Args:
         is_area_section (bool): should coordinates form an area

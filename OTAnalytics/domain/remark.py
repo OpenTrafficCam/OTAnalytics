@@ -7,3 +7,6 @@ class RemarkRepository:
 
     def get(self) -> str:
         return self._remark
+
+    def clear(self) -> None:
+        self._remark = ""

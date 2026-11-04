@@ -253,3 +253,38 @@ class TestReportingCannotBreakALoad:
         target = create_target(given)
 
         await target.load_otconfig()
+
+
+class TestConfirmLoading:
+    async def test_loads_nothing_when_the_user_cancels(self) -> None:
+        given = create_given()
+        given.ui_factory.ask_for_confirmation.return_value = False
+        target = create_target(given)
+
+        await target.load_configuration()
+
+        given.ui_factory.ask_for_confirmation.assert_awaited_once()
+        given.application.load_otconfig_async.assert_not_awaited()
+
+    async def test_loads_when_the_user_confirms(self) -> None:
+        given = create_given()
+        target = create_target(given)
+
+        await target.load_configuration()
+
+        given.ui_factory.ask_for_confirmation.assert_awaited_once()
+        given.application.load_otconfig_async.assert_awaited_once_with(
+            file=OTCONFIG_FILE
+        )
+
+    async def test_loads_no_otflow_when_the_user_cancels(self) -> None:
+        given = create_given()
+        given.ui_factory.askopenfilename.return_value = "folder/sections.otflow"
+        given.application.get_all_sections.return_value = [Mock()]
+        given.ui_factory.ask_for_confirmation.return_value = False
+        target = create_target(given)
+
+        await target.load_configuration()
+
+        given.ui_factory.ask_for_confirmation.assert_awaited_once()
+        given.application.load_otflow.assert_not_called()
