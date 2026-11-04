@@ -24,6 +24,30 @@ class EventPair:
 
 
 @dataclass(frozen=True)
+class FlowMetrics:
+    """
+    Distance, travel time and average speed of a road user within a flow.
+
+    Args:
+        distance_m: distance of the flow in meters, if known.
+        travel_time_s: travel time between start and end event in seconds.
+        avg_speed_mps: average speed in m/s. None if the distance is unknown or the
+            travel time is not positive.
+    """
+
+    distance_m: float | None
+    travel_time_s: float
+    avg_speed_mps: float | None
+
+    @property
+    def avg_speed_kmh(self) -> float | None:
+        """Average speed in km/h."""
+        if self.avg_speed_mps is None:
+            return None
+        return self.avg_speed_mps * 3.6
+
+
+@dataclass(frozen=True)
 class RoadUserAssignment:
     """
     Assignment of a road user to a flow.
@@ -33,6 +57,21 @@ class RoadUserAssignment:
     road_user_type: str
     assignment: Flow
     events: EventPair
+
+    def flow_metrics(self) -> FlowMetrics:
+        """
+        Compute distance, travel time and average speed of this assignment based on
+        the interpolated occurrences of the start and end event.
+        """
+        distance_m = self.assignment.distance
+        travel_time_s = (
+            self.events.end.interpolated_occurrence
+            - self.events.start.interpolated_occurrence
+        ).total_seconds()
+        avg_speed_mps: float | None = None
+        if distance_m is not None and travel_time_s > 0:
+            avg_speed_mps = distance_m / travel_time_s
+        return FlowMetrics(distance_m, travel_time_s, avg_speed_mps)
 
 
 @dataclass(frozen=True)
