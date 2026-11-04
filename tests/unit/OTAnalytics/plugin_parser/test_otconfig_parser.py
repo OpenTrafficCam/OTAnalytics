@@ -643,6 +643,7 @@ class TestOtConfigParserTrafficStatisticsAndGeoTracks:
         data = convert_with(given, None)
         data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {
             "enabled": True,
+            # Days are cut in UTC, a timezone of older otconfigs is ignored.
             "timezone": "Europe/Berlin",
             "interval_minutes": 5,
             "speed_profile_interval_minutes": 15,
@@ -656,7 +657,6 @@ class TestOtConfigParserTrafficStatisticsAndGeoTracks:
         export_config = actual.analysis.export_config
         assert export_config.traffic_statistics == TrafficStatisticsConfig(
             enabled=True,
-            timezone="Europe/Berlin",
             interval_minutes=5,
             speed_profile_interval_minutes=15,
             max_speed_kmh=150.0,
@@ -687,7 +687,6 @@ class TestOtConfigParserTrafficStatisticsAndGeoTracks:
         given = create_given_orthophoto_config(test_data_tmp_dir)
         traffic_statistics = TrafficStatisticsConfig(
             enabled=enabled,
-            timezone="Europe/Berlin",
             interval_minutes=5,
             speed_profile_interval_minutes=30,
             max_speed_kmh=120.5,
@@ -781,12 +780,13 @@ class TestFixMissingAnalysisNewExports:
         type(value_provider).log_file = PropertyMock(return_value="a.log")
         type(value_provider).debug = PropertyMock(return_value=False)
         type(value_provider).traffic_statistics = PropertyMock(
-            return_value=TrafficStatisticsConfig(timezone="Europe/Berlin")
+            return_value=TrafficStatisticsConfig(interval_minutes=5)
         )
         type(value_provider).do_export_geo_tracks = PropertyMock(return_value=True)
 
         fixed = FixMissingAnalysis(run_config=value_provider).fix({})
 
         export = fixed[ANALYSIS][EXPORT]
-        assert export[TRAFFIC_STATISTICS]["timezone"] == "Europe/Berlin"
+        assert export[TRAFFIC_STATISTICS]["interval_minutes"] == 5
+        assert "timezone" not in export[TRAFFIC_STATISTICS]
         assert export[GEO_TRACKS] is True

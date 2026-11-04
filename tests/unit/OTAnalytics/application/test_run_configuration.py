@@ -606,7 +606,7 @@ class TestRunConfigurationNewExports:
         assert run_config.do_export_geo_tracks is False
 
     def test_otconfig_enables_traffic_statistics(self) -> None:
-        config = TrafficStatisticsConfig(timezone="Europe/Berlin")
+        config = TrafficStatisticsConfig(interval_minutes=5)
         run_config = build_config(
             cli_arguments(), otconfig_with_export(traffic_statistics=config)
         )
@@ -627,14 +627,14 @@ class TestRunConfigurationNewExports:
         assert run_config.traffic_statistics == TrafficStatisticsConfig()
 
     def test_cli_flag_forces_disabled_otconfig_block_enabled(self) -> None:
-        config = TrafficStatisticsConfig(enabled=False, timezone="Europe/Berlin")
+        config = TrafficStatisticsConfig(enabled=False, interval_minutes=5)
         run_config = build_config(
             cli_arguments(traffic_statistics=True),
             otconfig_with_export(traffic_statistics=config),
         )
 
         assert run_config.traffic_statistics == TrafficStatisticsConfig(
-            enabled=True, timezone="Europe/Berlin"
+            enabled=True, interval_minutes=5
         )
 
     def test_otconfig_enables_geo_tracks(self) -> None:

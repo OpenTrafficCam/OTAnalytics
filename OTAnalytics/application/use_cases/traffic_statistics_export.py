@@ -37,7 +37,7 @@ class TrafficStatisticsExportSpecification:
 
 
 class ExportTrafficStatistics(ABC):
-    """Exports traffic statistics as one file per local day."""
+    """Exports traffic statistics as files per UTC day."""
 
     @abstractmethod
     def export(self, specification: TrafficStatisticsExportSpecification) -> list[Path]:

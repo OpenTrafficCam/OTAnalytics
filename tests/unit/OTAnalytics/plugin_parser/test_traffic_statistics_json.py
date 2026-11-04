@@ -1,9 +1,8 @@
 import os
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -21,7 +20,6 @@ from OTAnalytics.application.analysis.traffic_statistics_config import (
 from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
 from OTAnalytics.plugin_parser.traffic_statistics_json import (
     COUNT_KEY,
-    COUNTS_KEY,
     COVERAGE_KEY,
     FLOWS_KEY,
     FORMAT,
@@ -40,18 +38,16 @@ from OTAnalytics.plugin_parser.traffic_statistics_json import (
     write,
 )
 
-TZ = ZoneInfo("Europe/Berlin")
 DAY = date(2026, 10, 27)
 CONFIG = TrafficStatisticsConfig(
-    timezone="Europe/Berlin",
     class_groups={"LV": frozenset({"car", "van"}), "SV": frozenset({"truck"})},
 )
 FLOW_1 = FlowInfo("f1", "Nord → Süd", 1, "s1", "Nord", "s2", "Süd")
 FLOW_2 = FlowInfo("f2", "Süd → Nord", 2, "s2", "Süd", "s1", "Nord")
 
 
-def local(hour: int, minute: int) -> datetime:
-    return datetime(2026, 10, 27, hour, minute, tzinfo=TZ)
+def utc(hour: int, minute: int) -> datetime:
+    return datetime(2026, 10, 27, hour, minute, tzinfo=timezone.utc)
 
 
 def record(
@@ -68,12 +64,12 @@ def record(
 
 def create_statistics() -> DayTrafficStatistics:
     stats = DayTrafficStatistics(DAY, CONFIG, [FLOW_1, FLOW_2], CountingEvent.END)
-    stats.mark_covered(local(0, 0), local(14, 32))
-    stats.add(record("ru1", "f1", "car", local(7, 20), 11.5))
-    stats.add(record("ru2", "f1", "van", local(7, 21), 14.0))
-    stats.add(record("ru3", "f2", "car", local(8, 0), None))
-    stats.add(record("ru4", "f2", "truck", local(9, 5), 8.4))
-    stats.as_of = local(14, 32)
+    stats.mark_covered(utc(0, 0), utc(14, 32))
+    stats.add(record("ru1", "f1", "car", utc(7, 20), 11.5))
+    stats.add(record("ru2", "f1", "van", utc(7, 21), 14.0))
+    stats.add(record("ru3", "f2", "car", utc(8, 0), None))
+    stats.add(record("ru4", "f2", "truck", utc(9, 5), 8.4))
+    stats.as_of = utc(14, 32)
     return stats
 
 
@@ -134,7 +130,6 @@ class TestFormat:
             "format",
             "version",
             "day",
-            "timezone",
             "counting_event",
             "interval_minutes",
             "speed_profile_interval_minutes",
@@ -151,9 +146,9 @@ class TestFormat:
         assert data["day"] == "2026-10-27"
         assert data["counting_event"] == "end"
         assert data["class_groups"] == {"LV": ["car", "van"], "SV": ["truck"]}
-        assert data["as_of"] == "2026-10-27T14:32:00+01:00"
+        assert data["as_of"] == "2026-10-27T14:32:00+00:00"
         assert data["coverage"] == [
-            ["2026-10-27T00:00:00+01:00", "2026-10-27T14:32:00+01:00"]
+            ["2026-10-27T00:00:00+00:00", "2026-10-27T14:32:00+00:00"]
         ]
         assert data["flows"][0] == {
             "id": "f1",
@@ -168,18 +163,23 @@ class TestFormat:
 
         total = data[STATISTICS_KEY][TOTAL_KEY]
         assert total[TOTALS_KEY] == {"LV": 3, "SV": 1}
-        assert total[COUNTS_KEY]["LV"][440] == 1
         assert total[PEAK_HOUR_KEY]["LV"][COUNT_KEY] == 3
         assert total[SPEED_KEY]["LV"][COUNT_KEY] == 2
         assert set(data[STATISTICS_KEY][FLOWS_KEY]) == {"f1", "f2"}
 
-    def test_uncovered_counts_are_null(self) -> None:
+    def test_statistics_block_has_no_counts_per_interval(self) -> None:
+        # Counts per interval are written to the counts CSV instead.
         data = to_dict(create_statistics())
 
-        counts = data[STATISTICS_KEY][TOTAL_KEY][COUNTS_KEY]["LV"]
-        assert len(counts) == 1440
-        assert counts[0] == 0
-        assert counts[-1] is None
+        assert "counts" not in data[STATISTICS_KEY][TOTAL_KEY]
+        assert "counts" not in data[STATISTICS_KEY][FLOWS_KEY]["f1"]
+
+    def test_peak_hour_is_utc(self) -> None:
+        data = to_dict(create_statistics())
+
+        peak = data[STATISTICS_KEY][TOTAL_KEY][PEAK_HOUR_KEY]["LV"]
+        assert peak["start"] == "2026-10-27T07:15:00+00:00"
+        assert peak["end"] == "2026-10-27T08:15:00+00:00"
 
 
 class TestWrite:
