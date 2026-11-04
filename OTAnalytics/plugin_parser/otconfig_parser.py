@@ -67,7 +67,6 @@ COUNTING_EVENT = "counting_event"
 TRAFFIC_STATISTICS = "traffic_statistics"
 GEO_TRACKS = "geo_tracks"
 ENABLED = "enabled"
-TIMEZONE = "timezone"
 INTERVAL_MINUTES = "interval_minutes"
 SPEED_PROFILE_INTERVAL_MINUTES = "speed_profile_interval_minutes"
 MAX_SPEED_KMH = "max_speed_kmh"
@@ -142,7 +141,6 @@ def serialize_traffic_statistics_and_geo_tracks(
     if traffic_statistics is not None:
         result[TRAFFIC_STATISTICS] = {
             ENABLED: traffic_statistics.enabled,
-            TIMEZONE: traffic_statistics.timezone,
             INTERVAL_MINUTES: traffic_statistics.interval_minutes,
             SPEED_PROFILE_INTERVAL_MINUTES: (
                 traffic_statistics.speed_profile_interval_minutes
@@ -399,7 +397,6 @@ class OtConfigParser(ConfigParser):
         defaults = TrafficStatisticsConfig()
         return TrafficStatisticsConfig(
             enabled=bool(data.get(ENABLED, defaults.enabled)),
-            timezone=data.get(TIMEZONE, defaults.timezone),
             interval_minutes=_parse_int(
                 data, INTERVAL_MINUTES, defaults.interval_minutes
             ),

@@ -10,7 +10,6 @@ class TestTrafficStatisticsConfig:
         config = TrafficStatisticsConfig()
 
         assert config.enabled is True
-        assert config.timezone == "UTC"
         assert config.interval_minutes == 1
         assert config.speed_profile_interval_minutes == 15
         assert config.max_speed_kmh == 200.0
@@ -44,10 +43,6 @@ class TestTrafficStatisticsConfig:
                 speed_profile_interval_minutes=20,
                 peak_step_minutes=15,
             )
-
-    def test_unknown_timezone_raises_with_field_name(self) -> None:
-        with pytest.raises(ValueError, match="timezone"):
-            TrafficStatisticsConfig(timezone="Mars/Olympus")
 
     def test_classification_in_two_class_groups_raises(self) -> None:
         with pytest.raises(ValueError, match="class_groups.*car"):

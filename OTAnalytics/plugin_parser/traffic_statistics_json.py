@@ -21,7 +21,6 @@ VERSION = 1
 FORMAT_KEY = "format"
 VERSION_KEY = "version"
 DAY_KEY = "day"
-TIMEZONE_KEY = "timezone"
 COUNTING_EVENT_KEY = "counting_event"
 INTERVAL_MINUTES_KEY = "interval_minutes"
 SPEED_PROFILE_INTERVAL_MINUTES_KEY = "speed_profile_interval_minutes"
@@ -33,7 +32,6 @@ COVERAGE_KEY = "coverage"
 FLOWS_KEY = "flows"
 STATISTICS_KEY = "statistics"
 TOTAL_KEY = "total"
-COUNTS_KEY = "counts"
 TOTALS_KEY = "totals"
 PEAK_HOUR_KEY = "peak_hour"
 SPEED_KEY = "speed"
@@ -64,7 +62,6 @@ def to_dict(stats: DayTrafficStatistics) -> dict[str, Any]:
         FORMAT_KEY: FORMAT,
         VERSION_KEY: VERSION,
         DAY_KEY: stats.day.isoformat(),
-        TIMEZONE_KEY: config.timezone,
         COUNTING_EVENT_KEY: stats.counting_event.value,
         INTERVAL_MINUTES_KEY: config.interval_minutes,
         SPEED_PROFILE_INTERVAL_MINUTES_KEY: config.speed_profile_interval_minutes,
@@ -106,7 +103,6 @@ def _flow_to_dict(flow: FlowInfo) -> dict[str, Any]:
 
 def _statistics_block(stats: DayTrafficStatistics, flow_id: str) -> dict[str, Any]:
     return {
-        COUNTS_KEY: stats.counts(flow_id),
         TOTALS_KEY: stats.totals(flow_id),
         PEAK_HOUR_KEY: {
             group: _peak_to_dict(peak)

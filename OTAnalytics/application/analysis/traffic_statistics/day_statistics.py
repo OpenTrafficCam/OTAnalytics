@@ -1,10 +1,9 @@
-"""Per local day statistics of road users per flow and class group."""
+"""Per UTC day statistics of road users per flow and class group."""
 
 import logging
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Sequence
-from zoneinfo import ZoneInfo
 
 from OTAnalytics.application.analysis.road_user_assignment import RoadUserAssignment
 from OTAnalytics.application.analysis.traffic_counting import aggregation_time
@@ -22,6 +21,7 @@ from OTAnalytics.application.analysis.traffic_statistics_config import (
 LOGGER = logging.getLogger(__name__)
 
 TOTAL = "total"
+MINUTES_PER_DAY = 24 * 60
 
 
 @dataclass(frozen=True)
@@ -39,23 +39,16 @@ class FlowInfo:
 
 @dataclass(frozen=True)
 class PeakHour:
-    """Strongest sliding window of a group: local start, end and count."""
+    """Strongest sliding window of a group: UTC start, end and count."""
 
     start: datetime
     end: datetime
     count: int
 
 
-def day_start(day: date, tz: ZoneInfo) -> datetime:
-    """Return the timezone aware start of the given local day."""
-    return datetime(day.year, day.month, day.day, tzinfo=tz)
-
-
-def minutes_in_day(day: date, tz: ZoneInfo) -> int:
-    """Return the real number of minutes of the local day (DST aware)."""
-    start = day_start(day, tz).astimezone(timezone.utc)
-    end = day_start(day + timedelta(days=1), tz).astimezone(timezone.utc)
-    return int((end - start).total_seconds() // 60)
+def day_start(day: date) -> datetime:
+    """Return the start of the given UTC day."""
+    return datetime(day.year, day.month, day.day, tzinfo=timezone.utc)
 
 
 class ClassGroupResolver:
@@ -144,7 +137,7 @@ class AssignmentRecord:
 
 
 class DayTrafficStatistics:
-    """Counts and speeds of one local day per flow and class group.
+    """Counts and speeds of one UTC day per flow and class group.
 
     Counts are kept per interval of `config.interval_minutes`. An interval is
     reported as covered if it overlaps any range marked with `mark_covered`.
@@ -167,12 +160,12 @@ class DayTrafficStatistics:
         self.road_user_ids: set[str] = set()
         self._config = config
         self._resolver = resolver or ClassGroupResolver(config)
-        self._tz = ZoneInfo(config.timezone)
-        self._start = _as_utc(day_start(day, self._tz))
-        self._end = _as_utc(day_start(day + timedelta(days=1), self._tz))
-        minutes = minutes_in_day(day, self._tz)
-        self._interval_count = _ceil_div(minutes, config.interval_minutes)
-        self._slot_count = _ceil_div(minutes, config.speed_profile_interval_minutes)
+        self._start = day_start(day)
+        self._end = day_start(day + timedelta(days=1))
+        self._interval_count = _ceil_div(MINUTES_PER_DAY, config.interval_minutes)
+        self._slot_count = _ceil_div(
+            MINUTES_PER_DAY, config.speed_profile_interval_minutes
+        )
         self._flow_ids = {flow.id for flow in self.flows}
         self._counts: dict[str, dict[str, list[int]]] = {}
         # flow -> group -> speed profile slot -> plausible speeds in km/h
@@ -186,7 +179,7 @@ class DayTrafficStatistics:
 
     @property
     def coverage(self) -> list[tuple[datetime, datetime]]:
-        """Merged, sorted half-open coverage ranges in the local timezone."""
+        """Merged, sorted half-open coverage ranges in UTC."""
         return [(start, end) for start, end in self._coverage]
 
     def add(self, record: AssignmentRecord) -> bool:
@@ -242,7 +235,7 @@ class DayTrafficStatistics:
         if clipped_start >= clipped_end:
             return
         ranges = sorted(
-            [*self._coverage_utc(), (clipped_start, clipped_end)], key=lambda r: r[0]
+            [*self._coverage, (clipped_start, clipped_end)], key=lambda r: r[0]
         )
         merged: list[tuple[datetime, datetime]] = []
         for range_start, range_end in ranges:
@@ -250,17 +243,12 @@ class DayTrafficStatistics:
                 merged[-1] = (merged[-1][0], max(merged[-1][1], range_end))
             else:
                 merged.append((range_start, range_end))
-        self._coverage = [
-            (s.astimezone(self._tz), e.astimezone(self._tz)) for s, e in merged
-        ]
-
-    def _coverage_utc(self) -> list[tuple[datetime, datetime]]:
-        return [(_as_utc(s), _as_utc(e)) for s, e in self._coverage]
+        self._coverage = merged
 
     def _covered_flags(self) -> list[bool]:
         """Flag per interval whether it overlaps any coverage range."""
         step = timedelta(minutes=self._config.interval_minutes)
-        coverage = self._coverage_utc()
+        coverage = self._coverage
         flags = []
         for index in range(self._interval_count):
             interval_start = self._start + index * step
@@ -280,6 +268,10 @@ class DayTrafficStatistics:
                         current[index] += value
             return totals
         return self._counts.get(flow_id, {})
+
+    def interval_start(self, index: int) -> datetime:
+        """Return the UTC start of the count interval with the given index."""
+        return self._start + timedelta(minutes=index * self._config.interval_minutes)
 
     def counts(self, flow_id: str) -> dict[str, list[int | None]]:
         """Counts per group and interval; TOTAL sums all flows.
@@ -315,7 +307,6 @@ class DayTrafficStatistics:
         interval = self._config.interval_minutes
         window = max(1, self._config.peak_window_minutes // interval)
         step = max(1, self._config.peak_step_minutes // interval)
-        day_minutes = minutes_in_day(self.day, self._tz)
         recorded = self._flow_counts(flow_id)
         result: dict[str, PeakHour] = {}
         for group, values in self.counts(flow_id).items():
@@ -323,20 +314,16 @@ class DayTrafficStatistics:
                 continue
             best: tuple[int, int] | None = None
             for first in range(0, len(values), step):
-                if first * interval + window * interval > day_minutes:
+                if first * interval + window * interval > MINUTES_PER_DAY:
                     break
                 found = [v for v in values[first : first + window] if v is not None]
                 if found and (best is None or sum(found) > best[0]):
                     best = (sum(found), first)
             if best is not None:
                 count, first = best
-                start = self._start + timedelta(minutes=first * interval)
+                start = self.interval_start(first)
                 end = start + timedelta(minutes=window * interval)
-                result[group] = PeakHour(
-                    start=start.astimezone(self._tz),
-                    end=end.astimezone(self._tz),
-                    count=count,
-                )
+                result[group] = PeakHour(start=start, end=end, count=count)
         return result
 
     def _flow_speeds(self, flow_id: str) -> dict[str, list[list[float]]]:
