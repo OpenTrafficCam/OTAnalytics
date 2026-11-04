@@ -73,10 +73,12 @@ OTFusion used to render, which no longer exists).
 ### Exports
 
 **Traffic Statistics**:
-A per-day JSON file of counts, peak hours and speeds per flow and class group,
-written to `{save_stem}.traffic_statistics_{YYYY-MM-DD}.json` and updated chunk by
-chunk. Days are cut in the configured timezone, and a road user is counted at
-most once per day. Speed is flow distance divided by the time between the road
+Per-day peak hours and speeds per flow and class group, written to
+`{save_stem}.traffic_statistics_{YYYY-MM-DD}.json`, plus the counts per interval
+in the counts CSV format, written to
+`{save_stem}.traffic_statistics_{YYYY-MM-DD}.counts_{interval}min.csv`. Both are
+updated chunk by chunk. Days are cut in UTC, because the camera's timezone is
+not known while processing, and a road user is counted at most once per day. Speed is flow distance divided by the time between the road
 user's start and end event; implausible speeds are counted but left out of the
 speed figures. After a restart, a day is rebuilt from road user assignment files;
 only coverage and as_of are read from the day file.

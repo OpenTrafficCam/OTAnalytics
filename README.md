@@ -130,14 +130,13 @@ otconfig (under `analysis.export`, which is JSON) or with a CLI flag:
     "export": {
       "traffic_statistics": {
         "enabled": true,
-        "timezone": "Europe/Berlin",
         "interval_minutes": 1,
         "speed_profile_interval_minutes": 15,
         "max_speed_kmh": 200,
         "peak_window_minutes": 60,
         "peak_step_minutes": 15,
         "class_groups": {
-          "LV": ["car", "car_with_trailer", "private_van", "delivery_van", "delivery_van_with_trailer", "motorcyclist"],
+          "LV": ["car", "car_with_trailer", "private_van", "private_van_with_trailer", "delivery_van", "delivery_van_with_trailer", "motorcyclist"],
           "SV": ["truck", "truck_with_trailer", "truck_with_semitrailer", "bus"],
           "BIKE": ["bicyclist", "bicyclist_with_trailer", "cargo_bike_driver", "scooter_driver"],
           "PED": ["pedestrian"]
@@ -150,7 +149,7 @@ otconfig (under `analysis.export`, which is JSON) or with a CLI flag:
 ```
 
 Both keys are optional and only the relevant part of the otconfig is shown. Defaults:
-`enabled` true, `timezone` "UTC", `interval_minutes` 1; `class_groups` defaults to
+`enabled` true, `interval_minutes` 1; `class_groups` defaults to
 every classification being its own group; `geo_tracks` defaults to false.
 
 | Export             | otconfig key         | CLI flag               |
@@ -161,11 +160,17 @@ every classification being its own group; `geo_tracks` defaults to false.
 `--traffic-statistics` uses the `traffic_statistics` block of the otconfig if there
 is one, otherwise the defaults.
 
-**Traffic statistics** are written to
-`{save_dir}/{save_stem}.traffic_statistics_{YYYY-MM-DD}.json`, one file per local
-day (day boundaries in the configured timezone). Each file holds, per flow and
-for the total of all flows and per class group: counts per interval, totals, peak
-hour, average speed and v85, and a speed profile. A road user is counted at most
+**Traffic statistics** are written per UTC day, because the timezone of the
+camera is not known while processing. All times in the files are UTC. Each day
+has two files:
+
+- `{save_dir}/{save_stem}.traffic_statistics_{YYYY-MM-DD}.json` holds, per flow
+  and for the total of all flows and per class group: totals, peak hour, average
+  speed and v85, and a speed profile.
+- `{save_dir}/{save_stem}.traffic_statistics_{YYYY-MM-DD}.counts_{interval_minutes}min.csv`
+  holds the counts per flow, class group and interval. It has the format of the
+  counts CSV export, with the class group in the `classification` column.
+ A road user is counted at most
 once per day. Speed is the flow distance divided by the time between the road
 user's start and end event, in km/h. Only speeds above 0 and up to
 `max_speed_kmh` enter the speed figures. v85 is the 85th percentile of the
@@ -176,7 +181,7 @@ rebuilt from them with the current settings, and coverage and `as_of` are taken
 from an existing day file. A classification may belong to at most one class
 group. Only the
 time ranges of the processed videos count as covered: intervals between videos
-(e.g. a camera outage) have `null` counts instead of 0.
+(e.g. a camera outage) have no rows in the counts CSV instead of 0.
 
 **Geo tracks** are written to
 `{save_dir}/{save_stem}_{YYYY-MM-DD_HH-MM-SS}.geo_tracks.json.bz2` (timestamp of
