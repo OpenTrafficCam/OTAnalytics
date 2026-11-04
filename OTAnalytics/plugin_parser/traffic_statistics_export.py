@@ -3,7 +3,6 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Sequence
-from zoneinfo import ZoneInfo
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
@@ -27,6 +26,7 @@ from OTAnalytics.application.use_cases.traffic_statistics_export import (
 from OTAnalytics.plugin_parser.road_user_assignment_csv_reader import (
     read_assignment_records,
 )
+from OTAnalytics.plugin_parser.traffic_statistics_counts import write_counts
 from OTAnalytics.plugin_parser.traffic_statistics_json import (
     TrafficStatisticsFormatError,
     read_progress,
@@ -44,7 +44,7 @@ def _as_utc(value: datetime) -> datetime:
 
 
 class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
-    """Writes traffic statistics as JSON, one file per local day.
+    """Writes traffic statistics, one JSON and one counts CSV file per UTC day.
 
     The exporter is stateful across calls: days are kept in memory (the
     `max_open_days` most recent ones) and rewritten completely after every call.
@@ -75,13 +75,11 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         self._restore_records: dict[date, list[AssignmentRecord]] | None = None
 
     def export(self, specification: TrafficStatisticsExportSpecification) -> list[Path]:
-        config = specification.config
-        tz = ZoneInfo(config.timezone)
         if self._resolver is None:
-            self._resolver = ClassGroupResolver(config)
+            self._resolver = ClassGroupResolver(specification.config)
         if self._restore_records is None:
             self._restore_records = self._read_restore_records(
-                specification.counting_event, tz
+                specification.counting_event
             )
         flows = self._build_flows()
         touched: set[date] = set()
@@ -91,7 +89,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         for assignment in self._get_assignments.get_as_list():
             record = AssignmentRecord.from_assignment(assignment)
             occurrence = record.occurrence(specification.counting_event)
-            day = occurrence.astimezone(tz).date()
+            day = occurrence.date()
             if day in self._evicted:
                 dropped += 1
                 continue
@@ -113,7 +111,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             for start, end in specification.covered_ranges
         ]
         for covered_start, covered_end in covered_ranges:
-            for day in self._coverage_days(covered_start, covered_end, tz):
+            for day in self._coverage_days(covered_start, covered_end):
                 if day in self._evicted:
                     continue
                 self._get_day(day, specification, flows)
@@ -124,21 +122,26 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             stats = self._days[day]
             for covered_start, covered_end in covered_ranges:
                 stats.mark_covered(covered_start, covered_end)
-            self._update_as_of(stats, counted.get(day), covered_ranges, tz)
+            self._update_as_of(stats, counted.get(day), covered_ranges)
             path = self._path(specification, day)
             write(stats, path)
             paths.append(path)
+            counts_path = write_counts(
+                stats,
+                specification.export_directory,
+                specification.export_filename_stem,
+            )
+            if counts_path.exists():
+                paths.append(counts_path)
         self._evict()
         return paths
 
-    def _coverage_days(
-        self, start: datetime, end: datetime, tz: ZoneInfo
-    ) -> list[date]:
-        """Local days overlapped by the half-open range [start, end)."""
+    def _coverage_days(self, start: datetime, end: datetime) -> list[date]:
+        """UTC days overlapped by the half-open range [start, end)."""
         if start >= end:
             return []
-        first = start.astimezone(tz).date()
-        last = (end - timedelta(microseconds=1)).astimezone(tz).date()
+        first = start.date()
+        last = (end - timedelta(microseconds=1)).date()
         return [first + timedelta(days=i) for i in range((last - first).days + 1)]
 
     def _update_as_of(
@@ -146,7 +149,6 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         stats: DayTrafficStatistics,
         counted: datetime | None,
         covered_ranges: list[tuple[datetime, datetime]],
-        tz: ZoneInfo,
     ) -> None:
         """Set as_of to the latest processed timestamp of the day.
 
@@ -154,8 +156,8 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         in this call and the ends of the covered ranges clipped to the day
         (only of ranges overlapping the day).
         """
-        day_begin = _as_utc(day_start(stats.day, tz))
-        day_end = _as_utc(day_start(stats.day + timedelta(days=1), tz))
+        day_begin = day_start(stats.day)
+        day_end = day_start(stats.day + timedelta(days=1))
         candidates = []
         for covered_start, covered_end in covered_ranges:
             if covered_start < day_end and covered_end > day_begin:
@@ -165,7 +167,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         if counted is not None:
             candidates.append(_as_utc(counted))
         if candidates:
-            stats.as_of = max(candidates).astimezone(tz)
+            stats.as_of = max(candidates)
 
     def _get_day(
         self,
@@ -195,20 +197,22 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             else:
                 for covered_start, covered_end in progress.coverage:
                     stats.mark_covered(covered_start, covered_end)
-                stats.as_of = progress.as_of
+                stats.as_of = (
+                    None if progress.as_of is None else _as_utc(progress.as_of)
+                )
         for record in (self._restore_records or {}).get(day, []):
             stats.add(record)
         self._days[day] = stats
         return stats
 
     def _read_restore_records(
-        self, counting_event: CountingEvent, tz: ZoneInfo
+        self, counting_event: CountingEvent
     ) -> dict[date, list[AssignmentRecord]]:
-        """Read the restore files and group their records by local day."""
+        """Read the restore files and group their records by UTC day."""
         records: dict[date, list[AssignmentRecord]] = defaultdict(list)
         for path in self._restore_files:
             for record in read_assignment_records(path):
-                day = record.occurrence(counting_event).astimezone(tz).date()
+                day = record.occurrence(counting_event).date()
                 records[day].append(record)
         return records
 
