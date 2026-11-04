@@ -10,6 +10,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import Anal
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     ProjectForm,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.static_analysis_config_form import (  # noqa
+    StaticAnalysisConfigForm,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
     SectionsAndFlowForm,
 )
@@ -23,6 +26,7 @@ class ConfigurationBar:
         self,
         resource_manager: ResourceManager,
         project_form: ProjectForm,
+        static_analysis_config_form: StaticAnalysisConfigForm,
         svz_metadata_form: SvzMetadataForm,
         track_form: TrackForm,
         sections_and_flow_form: SectionsAndFlowForm,
@@ -30,6 +34,7 @@ class ConfigurationBar:
     ) -> None:
         self._resource_manager = resource_manager
         self.project_form = project_form
+        self.static_analysis_config_form = static_analysis_config_form
         self.svz_metadata_form = svz_metadata_form
         self.track_form = track_form
         self.sections_and_flow_form = sections_and_flow_form
@@ -48,6 +53,7 @@ class ConfigurationBar:
         with ui.tab_panels(tabs, value=one).classes("w-full"):
             with ui.tab_panel(one):
                 self.project_form.build()
+                self.static_analysis_config_form.build()
             with ui.tab_panel(two):
                 self.svz_metadata_form.build()
 

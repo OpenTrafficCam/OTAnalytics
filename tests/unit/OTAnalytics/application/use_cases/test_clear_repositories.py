@@ -3,6 +3,7 @@ from unittest.mock import Mock
 from OTAnalytics.application.use_cases.clear_repositories import ClearRepositories
 from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
 from OTAnalytics.application.use_cases.flow_repository import ClearAllFlows
+from OTAnalytics.application.use_cases.get_current_remark import ClearRemark
 from OTAnalytics.application.use_cases.intersection_repository import (
     ClearAllIntersections,
 )
@@ -23,6 +24,7 @@ class TestClearRepositories:
         clear_all_tracks = Mock(spec=ClearAllTracks)
         clear_all_track_files = Mock(spec=ClearAllTrackFiles)
         clear_all_videos = Mock(spec=ClearAllVideos)
+        clear_remark = Mock(spec=ClearRemark)
 
         clear_repositories = ClearRepositories(
             clear_all_events,
@@ -32,6 +34,7 @@ class TestClearRepositories:
             clear_all_tracks,
             clear_all_track_files,
             clear_all_videos,
+            clear_remark,
         )
         clear_repositories()
         clear_all_events.assert_called_once()
@@ -41,3 +44,4 @@ class TestClearRepositories:
         clear_all_tracks.assert_called_once()
         clear_all_track_files.assert_called_once()
         clear_all_videos.assert_called_once()
+        clear_remark.clear.assert_called_once()

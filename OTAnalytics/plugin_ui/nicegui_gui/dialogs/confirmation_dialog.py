@@ -5,6 +5,9 @@ from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
+
+MARKER_CONFIRMATION_MESSAGE = "marker-confirmation-message"
 
 
 class ConfirmationDialog(BaseDialog):
@@ -18,4 +21,6 @@ class ConfirmationDialog(BaseDialog):
         return self.resource_manager.get(GeneralKeys.LABEL_OK)
 
     def build_content(self) -> None:
-        ui.label(self._message).classes("whitespace-pre-line")
+        message = ui.label(self._message).classes("whitespace-pre-line")
+        message.mark(MARKER_CONFIRMATION_MESSAGE)
+        message.props(f"{TEST_ID}={MARKER_CONFIRMATION_MESSAGE}")

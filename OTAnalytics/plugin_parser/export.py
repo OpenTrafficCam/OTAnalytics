@@ -301,7 +301,6 @@ class AddSectionInformationExporterFactory(ExporterFactory):
 
 
 class CacheException(Exception):
-
     def __init__(
         self,
         message: str,
@@ -317,7 +316,6 @@ class CacheException(Exception):
 
 
 class CachedExporterFactory(ExporterFactory):
-
     def __init__(self, other: ExporterFactory) -> None:
         self.other = other
         self._cache: dict[tuple[str, str], Exporter] = dict()

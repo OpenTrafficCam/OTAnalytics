@@ -27,7 +27,6 @@ START = datetime(2023, 5, 24, 6, 0, tzinfo=timezone.utc)
 
 
 class TestLoadWindowDialog:
-
     def test_is_the_seam_the_providers_ask_through(
         self, resource_manager: ResourceManager
     ) -> None:

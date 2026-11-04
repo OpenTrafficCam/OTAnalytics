@@ -385,6 +385,8 @@ class FilterTracksByDatePopup(CTkToplevel, WidgetPositionProvider):
     def _on_apply_button_clicked(self) -> None:
         try:
             date_range = DateRange(self.get_start_date(), self.get_end_date())
+            if not date_range.is_ordered():
+                raise InvalidDatetimeFormatError("Start must be before end.")
 
             self._viewmodel.apply_filter_tracks_by_date(date_range)
             logger().info("Filter tracks by date applied")
