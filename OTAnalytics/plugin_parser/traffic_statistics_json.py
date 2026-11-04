@@ -10,6 +10,7 @@ from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
     DayTrafficStatistics,
     FlowInfo,
     PeakHour,
+    as_utc,
 )
 from OTAnalytics.application.analysis.traffic_statistics.speed_values import SpeedValues
 from OTAnalytics.helpers.file_helpers import atomic_write
@@ -23,7 +24,6 @@ VERSION_KEY = "version"
 DAY_KEY = "day"
 COUNTING_EVENT_KEY = "counting_event"
 INTERVAL_MINUTES_KEY = "interval_minutes"
-SPEED_PROFILE_INTERVAL_MINUTES_KEY = "speed_profile_interval_minutes"
 PEAK_WINDOW_MINUTES_KEY = "peak_window_minutes"
 PEAK_STEP_MINUTES_KEY = "peak_step_minutes"
 CLASS_GROUPS_KEY = "class_groups"
@@ -35,7 +35,6 @@ TOTAL_KEY = "total"
 TOTALS_KEY = "totals"
 PEAK_HOUR_KEY = "peak_hour"
 SPEED_KEY = "speed"
-SPEED_PROFILE_KEY = "speed_profile"
 AVG_KEY = "avg"
 V85_KEY = "v85"
 COUNT_KEY = "count"
@@ -64,7 +63,6 @@ def to_dict(stats: DayTrafficStatistics) -> dict[str, Any]:
         DAY_KEY: stats.day.isoformat(),
         COUNTING_EVENT_KEY: stats.counting_event.value,
         INTERVAL_MINUTES_KEY: config.interval_minutes,
-        SPEED_PROFILE_INTERVAL_MINUTES_KEY: config.speed_profile_interval_minutes,
         PEAK_WINDOW_MINUTES_KEY: config.peak_window_minutes,
         PEAK_STEP_MINUTES_KEY: config.peak_step_minutes,
         CLASS_GROUPS_KEY: {
@@ -85,7 +83,15 @@ def to_dict(stats: DayTrafficStatistics) -> dict[str, Any]:
 
 
 def _format_datetime(value: datetime | None) -> str | None:
-    return None if value is None else value.isoformat()
+    return None if value is None else _format_utc(value)
+
+
+def _format_utc(value: datetime) -> str:
+    """Format a UTC time in the notation of the counts CSV, without an offset.
+
+    Fractions of a second are kept if there are any, e.g. at the end of a video.
+    """
+    return as_utc(value).replace(tzinfo=None).isoformat(sep=" ")
 
 
 def _flow_to_dict(flow: FlowInfo) -> dict[str, Any]:
@@ -112,17 +118,13 @@ def _statistics_block(stats: DayTrafficStatistics, flow_id: str) -> dict[str, An
             group: _speed_to_dict(values)
             for group, values in stats.speed(flow_id).items()
         },
-        SPEED_PROFILE_KEY: {
-            group: [None if v is None else _speed_to_dict(v) for v in slots]
-            for group, slots in stats.speed_profile(flow_id).items()
-        },
     }
 
 
 def _peak_to_dict(peak: PeakHour) -> dict[str, Any]:
     return {
-        START_KEY: peak.start.isoformat(),
-        END_KEY: peak.end.isoformat(),
+        START_KEY: _format_utc(peak.start),
+        END_KEY: _format_utc(peak.end),
         COUNT_KEY: peak.count,
     }
 
@@ -149,7 +151,8 @@ def read_progress(path: Path) -> DayProgress:
     """Read coverage and as_of of a day file.
 
     Raises:
-        TrafficStatisticsFormatError: if the file is not a valid day file.
+        TrafficStatisticsFormatError: if the file is not a valid day file or
+            holds times that are not UTC.
     """
     try:
         data = parse_json(path)
@@ -161,13 +164,10 @@ def read_progress(path: Path) -> DayProgress:
                 f"version {data.get(VERSION_KEY)!r}."
             )
         coverage = [
-            (datetime.fromisoformat(start), datetime.fromisoformat(end))
-            for start, end in data[COVERAGE_KEY]
+            (_parse_utc(start), _parse_utc(end)) for start, end in data[COVERAGE_KEY]
         ]
         as_of = data[AS_OF_KEY]
-        return DayProgress(
-            coverage, None if as_of is None else datetime.fromisoformat(as_of)
-        )
+        return DayProgress(coverage, None if as_of is None else _parse_utc(as_of))
     except TrafficStatisticsFormatError as cause:
         raise TrafficStatisticsFormatError(
             f"Invalid day file {path}: {cause}"
@@ -176,3 +176,7 @@ def read_progress(path: Path) -> DayProgress:
         raise TrafficStatisticsFormatError(
             f"Invalid day file {path}: {cause!r}"
         ) from cause
+
+
+def _parse_utc(value: str) -> datetime:
+    return as_utc(datetime.fromisoformat(value))
