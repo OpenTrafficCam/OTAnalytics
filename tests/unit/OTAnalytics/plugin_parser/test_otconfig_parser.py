@@ -646,6 +646,7 @@ class TestOtConfigParserTrafficStatisticsAndGeoTracks:
             # Days are cut in UTC, a timezone of older otconfigs is ignored.
             "timezone": "Europe/Berlin",
             "interval_minutes": 5,
+            # Speeds use interval_minutes, an own speed interval is ignored.
             "speed_profile_interval_minutes": 15,
             "max_speed_kmh": 150,
             "class_groups": {"LV": ["car"], "SV": ["truck", "bus"]},
@@ -658,7 +659,6 @@ class TestOtConfigParserTrafficStatisticsAndGeoTracks:
         assert export_config.traffic_statistics == TrafficStatisticsConfig(
             enabled=True,
             interval_minutes=5,
-            speed_profile_interval_minutes=15,
             max_speed_kmh=150.0,
             class_groups={"LV": frozenset({"car"}), "SV": frozenset({"truck", "bus"})},
         )
@@ -688,7 +688,6 @@ class TestOtConfigParserTrafficStatisticsAndGeoTracks:
         traffic_statistics = TrafficStatisticsConfig(
             enabled=enabled,
             interval_minutes=5,
-            speed_profile_interval_minutes=30,
             max_speed_kmh=120.5,
             class_groups={"SV": frozenset({"truck", "bus"}), "LV": frozenset({"car"})},
             peak_window_minutes=30,
