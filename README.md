@@ -131,7 +131,6 @@ otconfig (under `analysis.export`, which is JSON) or with a CLI flag:
       "traffic_statistics": {
         "enabled": true,
         "interval_minutes": 1,
-        "speed_profile_interval_minutes": 15,
         "max_speed_kmh": 200,
         "peak_window_minutes": 60,
         "peak_step_minutes": 15,
@@ -161,27 +160,38 @@ every classification being its own group; `geo_tracks` defaults to false.
 is one, otherwise the defaults.
 
 **Traffic statistics** are written per UTC day, because the timezone of the
-camera is not known while processing. All times in the files are UTC. Each day
-has two files:
+camera is not known while processing. All times in the files are the UTC times
+of the input files, written as in the counts CSV (`YYYY-MM-DD HH:MM:SS`, with
+fractions of a second only where a time has them). Each day
+has a JSON file and four CSV files in
+`{save_dir}/{save_stem}.traffic_statistics_{YYYY-MM-DD}`, where `{i}` is
+`interval_minutes`:
 
-- `{save_dir}/{save_stem}.traffic_statistics_{YYYY-MM-DD}.json` holds, per flow
-  and for the total of all flows and per class group: totals, peak hour, average
-  speed and v85, and a speed profile.
-- `{save_dir}/{save_stem}.traffic_statistics_{YYYY-MM-DD}.counts_{interval_minutes}min.csv`
-  holds the counts per flow, class group and interval. It has the format of the
-  counts CSV export, with the class group in the `classification` column.
- A road user is counted at most
-once per day. Speed is the flow distance divided by the time between the road
-user's start and end event, in km/h. Only speeds above 0 and up to
-`max_speed_kmh` enter the speed figures. v85 is the 85th percentile of the
-measured speeds (nearest rank). The file contains results plus `coverage` and
-`as_of`. To continue a day after a restart, pass the road user assignment CSV
-files of the day with `--traffic-statistics-restore`. Counts and speeds are
-rebuilt from them with the current settings, and coverage and `as_of` are taken
-from an existing day file. A classification may belong to at most one class
-group. Only the
-time ranges of the processed videos count as covered: intervals between videos
-(e.g. a camera outage) have no rows in the counts CSV instead of 0.
+| File                     | Content                                                         |
+| ------------------------ | --------------------------------------------------------------- |
+| `.json`                  | per flow and for all flows, per class group: totals, peak hour, average speed and v85 of the day |
+| `.counts_{i}min.csv`     | counts per flow, class group and interval                       |
+| `.speeds_{i}min.csv`     | speed values per flow, class group and interval                 |
+| `.speeds_all_flows_{i}min.csv` | speed values per class group and interval over all flows  |
+| `.speeds_total_{i}min.csv` | speed values per interval over all flows and class groups, classification `total` |
+
+The CSV files have the format of the counts CSV export, with the class group in
+the `classification` column. The speed files have the columns `speed count`
+(number of plausible speeds), `avg speed` and `v85` (km/h) instead of `count`,
+and the files over all flows have no flow and section columns.
+
+A road user is counted at most once per day. Speed is the flow distance divided
+by the time between the road user's start and end event, in km/h. Only speeds
+above 0 and up to `max_speed_kmh` enter the speed figures. v85 is the 85th
+percentile of the measured speeds (nearest rank). The JSON file contains results
+plus `coverage` and `as_of`. To continue a day after a restart, pass the road
+user assignment CSV files of the day with `--traffic-statistics-restore`. Counts
+and speeds are rebuilt from them with the current settings, and coverage and
+`as_of` are taken from an existing day file. A classification may belong to at
+most one class group. Only the time ranges of the processed videos count as
+covered: intervals between videos (e.g. a camera outage) have no rows in the CSV
+files. A covered interval without plausible speeds has a `speed count` of 0 and
+empty speed values.
 
 **Geo tracks** are written to
 `{save_dir}/{save_stem}_{YYYY-MM-DD_HH-MM-SS}.geo_tracks.json.bz2` (timestamp of
