@@ -12,6 +12,10 @@ class AbstractFrameProject(ABC):
     def update(self, name: str, start_date: Optional[datetime]) -> None:
         pass
 
+    def reset(self) -> None:
+        """Show an empty project, as after starting a new one."""
+        self.update(name="", start_date=None)
+
     @abstractmethod
     def set_enabled_general_buttons(self, enabled: bool) -> None:
         raise NotImplementedError
