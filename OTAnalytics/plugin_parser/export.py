@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import timedelta
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 from pandas import DataFrame, to_datetime
 
@@ -61,11 +61,22 @@ def count_to_dataframe(count: Count) -> DataFrame:
 
 
 def count_dict_to_dataframe(count_dict: dict[Tag, int]) -> DataFrame:
+    return tag_values_to_dataframe(
+        {tag: {"count": value} for tag, value in count_dict.items()}
+    )
+
+
+def tag_values_to_dataframe(values: dict[Tag, dict[str, Any]]) -> DataFrame:
+    """Convert values per tag into the columns of the counts CSV format.
+
+    The levels of the tags become the leading columns, the given values the
+    trailing ones.
+    """
     # setup dataframe
     indexed: list[dict] = []
-    for tag, value in count_dict.items():
+    for tag, columns in values.items():
         result_dict: dict = tag.as_dict()
-        result_dict["count"] = value
+        result_dict.update(columns)
         indexed.append(result_dict)
     dataframe = DataFrame(indexed)
 
