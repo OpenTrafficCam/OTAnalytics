@@ -34,6 +34,7 @@ def create_run_config(
     exclude_classes: list[str] | None = None,
     geo_track_export: bool = False,
     traffic_statistics: bool = False,
+    traffic_statistics_restore_files: list[str] | None = None,
 ) -> RunConfiguration:
     cli_args = CliArguments(
         start_cli=start_cli,
@@ -58,5 +59,6 @@ def create_run_config(
         exclude_classes=exclude_classes,
         geo_track_export=geo_track_export,
         traffic_statistics=traffic_statistics,
+        traffic_statistics_restore_files=traffic_statistics_restore_files,
     )
     return RunConfiguration(flow_parser, cli_args)
