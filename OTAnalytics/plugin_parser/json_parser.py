@@ -59,12 +59,13 @@ def parse_json(path: Path) -> dict:
         return parse_json_bz2(path)
 
 
-def write_json(data: dict, path: Path) -> None:
+def write_json(data: dict, path: Path, indent: int = 4) -> None:
     """Serialize JSON.
 
     Args:
         data (dict): The content of the JSON file.
         path (Path): Path to JSON.
+        indent (int): Number of spaces to indent with, 0 writes compact JSON.
     """
     with open(path, "wt", encoding=ENCODING) as file:
-        ujson.dump(data, file, indent=4)
+        ujson.dump(data, file, indent=indent)
