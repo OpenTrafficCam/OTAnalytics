@@ -143,7 +143,10 @@ class ArgparseCliParser(CliParser):
         self._parser.add_argument(
             "--geo-track-export",
             action="store_true",
-            help="Export tracks as GeoJSON.",
+            help=(
+                "Export reduced tracks (id, class, geo coordinate, time) "
+                "as .geo_tracks.json.bz2 file."
+            ),
             required=False,
         )
         self._parser.add_argument(
