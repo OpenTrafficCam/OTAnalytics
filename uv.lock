@@ -776,6 +776,15 @@ wheels = [
 ]
 
 [[package]]
+name = "isort"
+version = "8.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/bf/e3/e72b0b3a85f24cf5fc2cd8e92b996592798f896024c5cdf3709232e6e377/isort-8.0.0.tar.gz", hash = "sha256:fddea59202f231e170e52e71e3510b99c373b6e571b55d9c7b31b679c0fed47c", size = 769482, upload-time = "2026-02-19T16:31:59.716Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/74/ea/cf3aad99dd12c026e2d6835d559efb6fc50ccfd5b46d42d5fec2608b116a/isort-8.0.0-py3-none-any.whl", hash = "sha256:184916a933041c7cf718787f7e52064f3c06272aff69a5cb4dc46497bd8911d9", size = 89715, upload-time = "2026-02-19T16:31:57.745Z" },
+]
+
+[[package]]
 name = "itsdangerous"
 version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1216,6 +1225,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "interrogate" },
+    { name = "isort" },
     { name = "minio" },
     { name = "mypy" },
     { name = "pandas-stubs" },
@@ -1276,6 +1286,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "interrogate", specifier = "==1.7.0" },
+    { name = "isort", specifier = "==8.0.0" },
     { name = "minio", specifier = "==7.2.20" },
     { name = "mypy", specifier = "==1.16.1" },
     { name = "pandas-stubs", specifier = "==2.3.2.250926" },
