@@ -1,9 +1,13 @@
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Sequence
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
+)
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
 )
 from OTAnalytics.application.config import (
     DEFAULT_COUNTING_EVENT,
@@ -12,6 +16,10 @@ from OTAnalytics.application.config import (
     DEFAULT_NUM_PROCESSES,
 )
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
+from OTAnalytics.application.export_path_builder import (
+    compose_export_filename_stem,
+    format_save_suffix,
+)
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode
 from OTAnalytics.application.parser.config_parser import OtConfig
@@ -85,6 +93,15 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         return None
 
     @property
+    def orthophoto(self) -> Path | None:
+        """The Orthophoto the otconfig declares, as a local file."""
+        if self._otconfig is None or self._otconfig.orthophoto is None:
+            return None
+        if self.config_file is None:
+            return None
+        return self.config_file.parent / self._otconfig.orthophoto
+
+    @property
     def track_files(self) -> set[Path]:
         if self._cli_args.track_files:
             return {Path(track) for track in self._cli_args.track_files}
@@ -109,15 +126,14 @@ class RunConfiguration(OtConfigDefaultValueProvider):
         raise RunConfigurationError("No OTConfig nor OTFlow file passed.")
 
     @property
-    def save_name(self) -> str:
-        save_stem = self._get_save_stem()
-        save_suffix = self.save_suffix
-        return f"{save_stem}{save_suffix}"
+    def save_stem(self) -> str:
+        return compose_export_filename_stem(
+            save_name=self._get_save_name(),
+            save_suffix=self._get_save_suffix_without_separator(),
+            fallback_stem=self._get_fallback_save_stem(),
+        )
 
-    def _get_save_stem(self) -> str:
-        save_name = self._get_save_name()
-        if save_name:
-            return Path(save_name).stem
+    def _get_fallback_save_stem(self) -> str:
         if self.config_file:
             return self.config_file.stem
         if self.otflow:
@@ -133,11 +149,13 @@ class RunConfiguration(OtConfigDefaultValueProvider):
 
     @property
     def save_suffix(self) -> str:
-        if self._cli_args.save_suffix:
-            return f"_{self._cli_args.save_suffix}"
+        return format_save_suffix(self._get_save_suffix_without_separator())
+
+    def _get_save_suffix_without_separator(self) -> str:
+        if cli_save_suffix := self._cli_args.save_suffix:
+            return cli_save_suffix
         if self._otconfig:
-            if suffix := self._otconfig.analysis.export_config.save_suffix:
-                return f"_{suffix}"
+            return self._otconfig.analysis.export_config.save_suffix
         return ""
 
     @property
@@ -208,6 +226,28 @@ class RunConfiguration(OtConfigDefaultValueProvider):
     @property
     def do_export_track_statistics(self) -> bool:
         return self._cli_args.track_statistics_export
+
+    @property
+    def traffic_statistics(self) -> TrafficStatisticsConfig | None:
+        """The traffic statistics settings, None if the export is off."""
+        configured = None
+        if self._otconfig:
+            configured = self._otconfig.analysis.export_config.traffic_statistics
+        if self._cli_args.traffic_statistics:
+            if configured is None:
+                return TrafficStatisticsConfig()
+            return replace(configured, enabled=True)
+        if configured is not None and configured.enabled:
+            return configured
+        return None
+
+    @property
+    def do_export_geo_tracks(self) -> bool:
+        if self._cli_args.geo_track_export:
+            return True
+        if self._otconfig:
+            return self._otconfig.analysis.export_config.geo_tracks
+        return False
 
     @property
     def project(self) -> Project | None:

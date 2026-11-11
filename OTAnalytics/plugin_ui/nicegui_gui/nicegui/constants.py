@@ -23,3 +23,12 @@ class Alignment:
     center: Literal["center"] = "center"
     baseline: Literal["baseline"] = "baseline"
     stretch: Literal["stretch"] = "stretch"
+
+
+class TestIdAttributes:
+    """
+    Helper class providing constants for test ID attribute names.
+    """
+
+    TEST_ID: str = "test-id"
+    DATA_TESTID: str = "data-testid"

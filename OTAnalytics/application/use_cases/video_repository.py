@@ -20,7 +20,6 @@ class ClearAllVideos:
 
 
 class AddAllVideos:
-
     def __init__(self, video_repository: VideoRepository) -> None:
         self._video_repository = video_repository
 
@@ -43,6 +42,15 @@ class GetVideos:
 
     def __init__(self, video_repository: VideoRepository) -> None:
         self._video_repository = video_repository
+
+    def has_videos(self) -> bool:
+        """Whether the repository holds any video at all.
+
+        Returns:
+            bool: False for a project without videos, e.g. one of Geo-only Track
+                Files on an Orthophoto.
+        """
+        return not self._video_repository.is_empty()
 
     def get(self, date: datetime) -> Optional[Video]:
         """

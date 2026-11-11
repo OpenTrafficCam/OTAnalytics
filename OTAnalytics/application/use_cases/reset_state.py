@@ -1,5 +1,8 @@
 from OTAnalytics.application.state import (
     ActionState,
+    CurrentKeyPrefix,
+    CurrentOrthophoto,
+    CurrentStaticAnalysisConfigState,
     FileState,
     FlowState,
     SectionState,
@@ -8,6 +11,7 @@ from OTAnalytics.application.state import (
     TrackViewState,
     VideosMetadata,
 )
+from OTAnalytics.domain.filter import FilterElementSettingRestorer
 
 
 class ResetState:
@@ -21,6 +25,10 @@ class ResetState:
         flow_state: FlowState,
         action_state: ActionState,
         file_state: FileState,
+        current_key_prefix: CurrentKeyPrefix,
+        current_static_analysis_config_state: CurrentStaticAnalysisConfigState,
+        current_orthophoto: CurrentOrthophoto,
+        filter_element_setting_restorer: FilterElementSettingRestorer,
     ) -> None:
         self._videos_metadata = videos_metadata
         self._tracks_metadata = tracks_metadata
@@ -30,6 +38,12 @@ class ResetState:
         self._flow_state = flow_state
         self._action_state = action_state
         self._file_state = file_state
+        self._current_key_prefix = current_key_prefix
+        self._current_static_analysis_config_state = (
+            current_static_analysis_config_state
+        )
+        self._current_orthophoto = current_orthophoto
+        self._filter_element_setting_restorer = filter_element_setting_restorer
 
     def reset(self) -> None:
         self._videos_metadata.reset()
@@ -40,3 +54,7 @@ class ResetState:
         self._flow_state.reset()
         self._action_state.reset()
         self._file_state.reset()
+        self._current_key_prefix.reset()
+        self._current_static_analysis_config_state.reset()
+        self._current_orthophoto.reset()
+        self._filter_element_setting_restorer.reset()
