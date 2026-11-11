@@ -212,9 +212,11 @@ class TestEditSectionDialog:
 
         @ui.page(ENDPOINT_NAME)
         async def page() -> None:
+            await ui.context.client.connected()
             results.append(await edit_section_dialog.result)
 
         await user.open(ENDPOINT_NAME)
+        await user.should_see(marker=MARKER_NAME)
 
         user.find(MARKER_NAME).type(name)
         user.find(marker=MARKER_APPLY).click()
@@ -237,9 +239,11 @@ class TestEditSectionDialog:
 
         @ui.page(ENDPOINT_NAME)
         async def page() -> None:
+            await ui.context.client.connected()
             results.append(await edit_section_dialog.result)
 
         await user.open(ENDPOINT_NAME)
+        await user.should_see(marker=MARKER_NAME)
 
         user.find(MARKER_NAME).type(TEST_SECTION_NAME)
         user.find(marker=MARKER_APPLY).click()

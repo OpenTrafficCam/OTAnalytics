@@ -111,6 +111,7 @@ class TestAskForConfirmation:
 
         @ui.page("/test")
         async def page() -> None:
+            await ui.context.client.connected()
             answers.append(
                 await target.ask_for_confirmation(CONFIRMATION_MESSAGE, POSITION)
             )
@@ -130,6 +131,7 @@ class TestAskForConfirmation:
 
         @ui.page("/test")
         async def page() -> None:
+            await ui.context.client.connected()
             answers.append(
                 await target.ask_for_confirmation(CONFIRMATION_MESSAGE, POSITION)
             )

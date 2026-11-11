@@ -120,6 +120,8 @@ disallow_untyped_defs = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+# Tests register their own pages instead of running a NiceGUI main file.
+main_file = ""
 testpaths = [
     "tests/unit",
     "tests/integration",
