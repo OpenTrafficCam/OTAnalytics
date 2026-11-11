@@ -44,8 +44,10 @@ jobs:
       # Separate from the test steps so a stale uv.lock fails loudly and early.
       - name: Install dependencies
         run: uv sync --locked --dev
+      # pytest-playwright runs headless Chromium by default, so the other browsers
+      # (and their ~180 apt packages) aren't needed.
       - name: Install Playwright browsers
-        run: uv run playwright install --with-deps
+        run: uv run playwright install --with-deps --only-shell chromium
       - name: Run acceptance tests
         timeout-minutes: 20
         run: uv run pytest --cov=OTAnalytics tests/acceptance
