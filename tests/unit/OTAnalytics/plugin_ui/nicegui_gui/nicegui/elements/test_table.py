@@ -80,3 +80,41 @@ class TestCustomTableRowDoubleClick:
         await user.open(ENDPOINT_NAME)
 
         double_click_row(user, MARKER_TABLE, FIRST_ROW)
+
+
+class TestCustomTableUpdate:
+    @pytest.mark.asyncio
+    async def test_update_shows_the_new_rows(self, user: User) -> None:
+        third_row = {"id": "third", "name": "Third"}
+        target = create_target()
+
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            target.build()
+
+        await user.open(ENDPOINT_NAME)
+
+        target.update([dict(FIRST_ROW), dict(SECOND_ROW), third_row])
+
+        table = user.find(marker=MARKER_TABLE).elements.pop()
+        assert isinstance(table, ui.table)
+        assert table.rows == [FIRST_ROW, SECOND_ROW, third_row]
+        assert target.size == 3
+
+    @pytest.mark.asyncio
+    async def test_select_finds_rows_added_by_update(self, user: User) -> None:
+        third_row = {"id": "third", "name": "Third"}
+        target = create_target()
+
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            target.build()
+
+        await user.open(ENDPOINT_NAME)
+
+        target.update([dict(FIRST_ROW), third_row])
+        target.select(["third"])
+
+        table = user.find(marker=MARKER_TABLE).elements.pop()
+        assert isinstance(table, ui.table)
+        assert table.selected == [third_row]
