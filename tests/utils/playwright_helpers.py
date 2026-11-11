@@ -372,11 +372,7 @@ def open_part(page: Page, part: str) -> None:
         try:
             # Look for the row in the ag-grid that contains the text
             # The file picker shows folders as "📁 <strong>foldername</strong>"
-            row = (
-                page.locator(".ag-center-cols-container .ag-row")
-                .filter(has_text=part)
-                .first
-            )
+            row = page.locator(".ag-row").filter(has_text=part).first
             row.wait_for(
                 state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS * 2
             )
@@ -387,7 +383,7 @@ def open_part(page: Page, part: str) -> None:
         except Exception as e:
             # Try to scroll if possible
             try:
-                last_row = page.locator(".ag-center-cols-container .ag-row").last
+                last_row = page.locator(".ag-row").last
                 last_row.scroll_into_view_if_needed()
             except Exception:
                 pass
