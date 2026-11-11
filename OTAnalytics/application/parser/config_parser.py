@@ -6,6 +6,9 @@ from typing import Iterable, Sequence
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
+)
 from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain.flow import Flow
@@ -21,6 +24,8 @@ class ExportConfig:
     event_formats: set[str]
     count_intervals: set[int]
     counting_event: CountingEvent = CountingEvent.START
+    traffic_statistics: TrafficStatisticsConfig | None = None
+    geo_tracks: bool = False
 
 
 @dataclass(frozen=True)

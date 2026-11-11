@@ -6,6 +6,9 @@ from pathlib import Path
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
+)
 from OTAnalytics.application.config import (
     DEFAULT_COUNTING_EVENT,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
@@ -56,6 +59,8 @@ class CliArguments:
     log_file: str | None = None
     include_classes: list[str] | None = None
     exclude_classes: list[str] | None = None
+    geo_track_export: bool = False
+    traffic_statistics: bool = False
 
 
 class CliValueProvider(OtConfigDefaultValueProvider):
@@ -127,6 +132,16 @@ class CliValueProvider(OtConfigDefaultValueProvider):
     @property
     def debug(self) -> bool:
         return self._cli_args.debug
+
+    @property
+    def traffic_statistics(self) -> TrafficStatisticsConfig | None:
+        if self._cli_args.traffic_statistics:
+            return TrafficStatisticsConfig()
+        return None
+
+    @property
+    def do_export_geo_tracks(self) -> bool:
+        return self._cli_args.geo_track_export
 
 
 class CliParser(ABC):
