@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime
 from unittest.mock import Mock
 
@@ -21,11 +22,15 @@ from OTAnalytics.domain.track import (
 )
 from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
+    END_GEO_X,
+    END_GEO_Y,
     END_OCCURRENCE,
     END_VIDEO_NAME,
     END_X,
     END_Y,
     START_FRAME,
+    START_GEO_X,
+    START_GEO_Y,
     START_OCCURRENCE,
     START_VIDEO_NAME,
     START_X,
@@ -297,3 +302,93 @@ class TestSceneEventListBuilder:
         assert events == expected_events
 
         segments.apply.assert_called_once()
+
+
+GEO_X_ENTER = 449250.0
+GEO_Y_ENTER = 5855000.0
+GEO_X_LEAVE = 449270.0
+GEO_Y_LEAVE = 5855020.0
+
+
+def first_segment_with_geo(t: Track) -> dict:
+    """Return a first-segment dict enriched with start geo coordinates."""
+    seg = first_segment_of(t)
+    seg[START_GEO_X] = GEO_X_ENTER
+    seg[START_GEO_Y] = GEO_Y_ENTER
+    return seg
+
+
+def last_segment_with_geo(t: Track) -> dict:
+    """Return a last-segment dict enriched with end geo coordinates."""
+    seg = last_segment_of(t)
+    seg[END_GEO_X] = GEO_X_LEAVE
+    seg[END_GEO_Y] = GEO_Y_LEAVE
+    return seg
+
+
+@dataclass
+class GivenSceneGeo:
+    """Holds the Track used in scene geo coordinate tests."""
+
+    track: Track
+
+
+def create_given_scene_geo(t: Track) -> GivenSceneGeo:
+    """Create GivenSceneGeo from a track fixture."""
+    return GivenSceneGeo(track=t)
+
+
+def setup_default_scene_geo(given: GivenSceneGeo) -> GivenSceneGeo:
+    """Return the given instance unchanged (no default configuration needed)."""
+    return given
+
+
+def create_target_scene_geo(given: GivenSceneGeo) -> SceneEventListBuilder:
+    """Return a fresh SceneEventListBuilder as the system under test."""
+    return SceneEventListBuilder()
+
+
+class TestSceneEventListBuilderWithGeoCoordinates:
+    def test_enter_scene_event_carries_geo_coordinates(self, track: Track) -> None:
+        given = setup_default_scene_geo(create_given_scene_geo(track))
+        segments = Mock(spec=TrackSegmentDataset)
+        segments.apply.side_effect = lambda consumer: consumer(
+            first_segment_with_geo(given.track)
+        )
+        builder = create_target_scene_geo(given)
+
+        builder.add_enter_scene_events(segments)
+        events = list(builder.build())
+
+        assert events[0].geo_x == GEO_X_ENTER
+        assert events[0].geo_y == GEO_Y_ENTER
+
+    def test_leave_scene_event_carries_geo_coordinates(self, track: Track) -> None:
+        given = setup_default_scene_geo(create_given_scene_geo(track))
+        segments = Mock(spec=TrackSegmentDataset)
+        segments.apply.side_effect = lambda consumer: consumer(
+            last_segment_with_geo(given.track)
+        )
+        builder = create_target_scene_geo(given)
+
+        builder.add_leave_scene_events(segments)
+        events = list(builder.build())
+
+        assert events[0].geo_x == GEO_X_LEAVE
+        assert events[0].geo_y == GEO_Y_LEAVE
+
+    def test_enter_scene_event_has_none_geo_when_segment_lacks_geo(
+        self, track: Track
+    ) -> None:
+        given = setup_default_scene_geo(create_given_scene_geo(track))
+        segments = Mock(spec=TrackSegmentDataset)
+        segments.apply.side_effect = lambda consumer: consumer(
+            first_segment_of(given.track)
+        )
+        builder = create_target_scene_geo(given)
+
+        builder.add_enter_scene_events(segments)
+        events = list(builder.build())
+
+        assert events[0].geo_x is None
+        assert events[0].geo_y is None

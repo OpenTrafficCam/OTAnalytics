@@ -127,6 +127,28 @@ class VisualizationTimeProvider(ABC):
 VideoProvider = Callable[[], list[Video]]
 
 
+OrthophotoImageProvider = Callable[[], Optional[TrackImage]]
+
+
+class OrthophotoBackgroundPlotter(Plotter):
+    """Plot the Orthophoto as background, or the video frame without one.
+
+    A project shows one or the other (ADR 0005); the Orthophoto wins because a
+    Geo-only project has no Video to show.
+    """
+
+    def __init__(
+        self, orthophoto_image: OrthophotoImageProvider, video_background: Plotter
+    ) -> None:
+        self._orthophoto_image = orthophoto_image
+        self._video_background = video_background
+
+    def plot(self) -> Optional[TrackImage]:
+        if (image := self._orthophoto_image()) is not None:
+            return image
+        return self._video_background.plot()
+
+
 class TrackBackgroundPlotter(Plotter):
     """Plot video frame as background."""
 

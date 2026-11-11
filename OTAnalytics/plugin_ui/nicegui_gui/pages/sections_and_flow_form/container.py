@@ -10,6 +10,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form im
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
     SectionsForm,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 # Test markers for tabs
 MARKER_TAB_SECTION = "marker-tab-section"
@@ -33,8 +34,10 @@ class SectionsAndFlowForm:
                 self._resource_manager.get(FlowAndSectionKeys.TAB_SECTION)
             )
             section_tab.mark(MARKER_TAB_SECTION)
+            section_tab.props(f"{TEST_ID}={MARKER_TAB_SECTION}")
             flow_tab = ui.tab(self._resource_manager.get(FlowAndSectionKeys.TAB_FLOW))
             flow_tab.mark(MARKER_TAB_FLOW)
+            flow_tab.props(f"{TEST_ID}={MARKER_TAB_FLOW}")
         # original behavior: force initial selection to section_tab
         with ui.tab_panels(tabs, value=section_tab).classes("w-full"):
             with ui.tab_panel(section_tab):

@@ -20,6 +20,8 @@ TRACK_ID: str = "track_id"
 ORIGINAL_TRACK_ID: str = "original_track_id"
 VIDEO_NAME: str = "video_name"
 INPUT_FILE: str = "input_file"
+GEO_X: str = "geo_x"
+GEO_Y: str = "geo_y"
 
 
 @dataclass(frozen=True, order=True)
@@ -112,6 +114,16 @@ class Detection(ABC):
     @property
     @abstractmethod
     def input_file(self) -> str:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def geo_x(self) -> float | None:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def geo_y(self) -> float | None:
         raise NotImplementedError
 
     def to_dict(self) -> dict:

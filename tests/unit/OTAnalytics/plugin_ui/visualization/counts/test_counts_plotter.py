@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Iterator
 from unittest.mock import Mock, patch
 
@@ -38,6 +39,8 @@ from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import (
 
 IMAGE_WIDTH = 800
 IMAGE_HEIGHT = 600
+EXPORT_DIRECTORY = Path("path/to/export/directory")
+EXPORT_FILENAME_STEM = "output-file"
 
 
 @pytest.fixture
@@ -136,7 +139,8 @@ def counting_specs() -> CountingSpecificationDto:
         count_all_events=True,
         interval_in_minutes=5,
         modes=["car", "bicycle"],
-        output_file="none",
+        export_directory=EXPORT_DIRECTORY,
+        export_filename_stem=EXPORT_FILENAME_STEM,
         output_format="png",
         export_mode=OVERWRITE,
     )
@@ -455,7 +459,8 @@ class TestFlowAndClassOverTimeCountPlotter:
         assert spec.count_all_events is True
         assert spec.interval_in_minutes == given_interval_in_minutes
         assert spec.modes == list(tracks_metadata.detection_classifications)
-        assert spec.output_file == "none"
+        assert spec.export_directory == Path.cwd()
+        assert spec.export_filename_stem == "none"
         assert spec.export_mode == OVERWRITE
 
     @patch(

@@ -511,3 +511,11 @@ class TestSectionRepository:
         repository.add(section)
         result = repository.get_section_ids()
         assert list(result) == [section_id]
+
+    def test_is_empty(self, first_line_section: Section) -> None:
+        target = SectionRepository()
+
+        assert target.is_empty()
+
+        target.add(first_line_section)
+        assert not target.is_empty()

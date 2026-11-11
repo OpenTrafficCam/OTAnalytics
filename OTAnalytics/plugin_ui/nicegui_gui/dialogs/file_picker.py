@@ -16,7 +16,6 @@ FOLDER_ICON = "📁"
 
 
 class LocalFilePicker(ui.dialog):
-
     def __init__(
         self,
         directory: Path,

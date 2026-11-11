@@ -163,4 +163,4 @@ class TestSavePathSuggester:
             project_name, last_saved_config, track_files, video_files
         )
         suggestion = suggestor.suggest(file_type, context_file_type)
-        assert suggestion == expected
+        assert suggestion.file_path == expected
