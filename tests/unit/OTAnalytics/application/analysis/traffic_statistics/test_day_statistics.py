@@ -51,6 +51,7 @@ ROAD_USER_4 = "ru4"
 
 FLOW_ID_1 = "f1"
 FLOW_ID_2 = "f2"
+FLOW_ID_3 = "f3"
 UNKNOWN_FLOW_ID = "unknown"
 SECTION_ID_1 = "s1"
 SECTION_ID_2 = "s2"
@@ -216,17 +217,19 @@ class TestDayTrafficStatistics:
 
     def test_update_flows_replaces_flows_and_drops_removed_flow_data(self) -> None:
         stats = create_statistics()
-        stats.add(record("ru1", "f2", "LV", utc(7, 15), 10.0))
-        new_flow = FlowInfo("f3", "new", 1, "s1", "A", "s3", "C")
+        stats.add(record(ROAD_USER_1, FLOW_ID_2, LIGHT_VEHICLES, utc(7, 15), SLOW_MPS))
+        new_flow = FlowInfo(
+            FLOW_ID_3, "new", 1, SECTION_ID_1, "Section 1", SECTION_ID_3, "Section 3"
+        )
         renamed = replace(FLOW_1, name="renamed", index=2)
 
         stats.update_flows([new_flow, renamed])
 
         assert stats.flows == [new_flow, renamed]
-        assert stats.add(record("ru2", "f3", "LV", utc(7, 16)))
-        assert stats.totals(TOTAL) == {"LV": 1}
+        assert stats.add(record(ROAD_USER_2, FLOW_ID_3, LIGHT_VEHICLES, utc(7, 16)))
+        assert stats.totals(TOTAL) == {LIGHT_VEHICLES: 1}
         assert stats.speed(TOTAL) == {}
-        assert not stats.add(record("ru3", "f2", "LV", utc(7, 17)))
+        assert not stats.add(record(ROAD_USER_3, FLOW_ID_2, LIGHT_VEHICLES, utc(7, 17)))
 
     def test_record_of_other_day_is_rejected(self) -> None:
         stats = create_statistics()

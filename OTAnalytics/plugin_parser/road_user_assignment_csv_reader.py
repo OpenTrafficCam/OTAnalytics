@@ -17,6 +17,8 @@ REQUIRED_COLUMNS = (
     ras.END_INTERPOLATED_OCCURRENCE,
     ras.AVG_SPEED_MPS,
 )
+# Row numbers in messages count the header line as row 1.
+FIRST_DATA_ROW_NUMBER = 2
 
 
 class AssignmentFileError(ValueError):
@@ -45,7 +47,7 @@ def _read_rows(path: Path, reader: csv.DictReader) -> list[AssignmentRecord]:
     if missing:
         raise AssignmentFileError(f"{path} lacks the column(s) {missing}.")
     records = []
-    for row_number, row in enumerate(reader, start=2):
+    for row_number, row in enumerate(reader, start=FIRST_DATA_ROW_NUMBER):
         try:
             records.append(_to_record(row))
         except (ValueError, TypeError) as cause:

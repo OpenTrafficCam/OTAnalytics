@@ -89,7 +89,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             if day in self._evicted:
                 dropped += 1
                 continue
-            stats = self._get_day(day, specification, flows)
+            stats = self._get_or_load_day(day, specification, flows)
             touched.add(day)
             if stats.add(record):
                 if day not in counted or occurrence > counted[day]:
@@ -109,7 +109,7 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
             for day in self._coverage_days(covered_start, covered_end):
                 if day in self._evicted:
                     continue
-                self._get_day(day, specification, flows)
+                self._get_or_load_day(day, specification, flows)
                 touched.add(day)
 
         paths = []
@@ -171,16 +171,27 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
         if candidates:
             stats.as_of = max(candidates)
 
-    def _get_day(
+    def _get_or_load_day(
         self,
         day: date,
         specification: TrafficStatisticsExportSpecification,
         flows: list[FlowInfo],
     ) -> DayTrafficStatistics:
+        """Return the cached day with updated flows or load and cache it."""
         stats = self._days.get(day)
-        if stats is not None:
+        if stats is None:
+            stats = self._days[day] = self._load_day(day, specification, flows)
+        else:
             stats.update_flows(flows)
-            return stats
+        return stats
+
+    def _load_day(
+        self,
+        day: date,
+        specification: TrafficStatisticsExportSpecification,
+        flows: list[FlowInfo],
+    ) -> DayTrafficStatistics:
+        """Create the day from its day file's coverage and the restore records."""
         stats = DayTrafficStatistics(
             day,
             specification.config,
@@ -202,7 +213,6 @@ class JsonTrafficStatisticsExporter(ExportTrafficStatistics):
                 stats.as_of = progress.as_of
         for record in (self._restore_records or {}).get(day, []):
             stats.add(record)
-        self._days[day] = stats
         return stats
 
     def _read_restore_records(

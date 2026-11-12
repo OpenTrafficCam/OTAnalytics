@@ -421,13 +421,15 @@ def test_flow_removed_between_chunks_is_dropped(tmp_path: Path) -> None:
     assert lv_total(paths[0]) == 1
 
 
-def test_as_of_is_not_pushed_beyond_the_day(tmp_path: Path) -> None:
+def test_as_of_of_day_is_capped_at_end_of_day(tmp_path: Path) -> None:
+    end_of_day_26 = utc(27, 0, 0)  # exclusive end of day 26 is midnight of day 27
     exporter = create_exporter([assignment("r1", utc(26, 23, 58))])
 
     paths = export_json(exporter, spec(tmp_path, utc(26, 23, 58), utc(27, 0, 2)))
 
-    assert read_progress(paths[0]).as_of == utc(27, 0, 0)
-    assert read_progress(paths[1]).as_of == utc(27, 0, 2)
+    day_26_progress, day_27_progress = (read_progress(path) for path in paths)
+    assert day_26_progress.as_of == end_of_day_26
+    assert day_27_progress.as_of == utc(27, 0, 2)
 
 
 def lv_counts(tmp_path: Path, day: int) -> dict[str, int]:
