@@ -3,7 +3,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-from typing import Sequence
+from typing import Iterable, NamedTuple, Sequence
 
 from OTAnalytics.application.analysis.road_user_assignment import RoadUserAssignment
 from OTAnalytics.application.analysis.traffic_counting import aggregation_time
@@ -21,7 +21,11 @@ from OTAnalytics.application.analysis.traffic_statistics_config import (
 LOGGER = logging.getLogger(__name__)
 
 TOTAL = "total"
-MINUTES_PER_DAY = 24 * 60
+HOURS_PER_DAY = 24
+MINUTES_PER_HOUR = 60
+MINUTES_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR
+SECONDS_PER_MINUTE = 60
+KMH_PER_MPS = 3.6
 
 
 @dataclass(frozen=True)
@@ -44,6 +48,29 @@ class PeakHour:
     start: datetime
     end: datetime
     count: int
+
+
+class CoverageRange(NamedTuple):
+    """Half-open UTC range [start, end) covered by input data."""
+
+    start: datetime
+    end: datetime
+
+
+def merge_ranges(ranges: Iterable[CoverageRange]) -> list[CoverageRange]:
+    """Merge overlapping or touching ranges into sorted, disjoint ranges."""
+    merged: list[CoverageRange] = []
+    current: CoverageRange | None = None
+    for candidate in sorted(ranges):
+        if current is not None and candidate.start <= current.end:
+            current = CoverageRange(current.start, max(current.end, candidate.end))
+            continue
+        if current is not None:
+            merged.append(current)
+        current = candidate
+    if current is not None:
+        merged.append(current)
+    return merged
 
 
 def day_start(day: date) -> datetime:
@@ -140,7 +167,7 @@ class AssignmentRecord:
         """Average speed in km/h or None if unknown."""
         if self.avg_speed_mps is None:
             return None
-        return self.avg_speed_mps * 3.6
+        return self.avg_speed_mps * KMH_PER_MPS
 
 
 class DayTrafficStatistics:
@@ -175,7 +202,7 @@ class DayTrafficStatistics:
         self._counts: dict[str, dict[str, list[int]]] = {}
         # flow -> group -> interval -> plausible speeds in km/h
         self._speeds: dict[str, dict[str, list[list[float]]]] = {}
-        self._coverage: list[tuple[datetime, datetime]] = []
+        self._coverage: list[CoverageRange] = []
 
     @property
     def config(self) -> TrafficStatisticsConfig:
@@ -205,16 +232,18 @@ class DayTrafficStatistics:
         if record.road_user in self.road_user_ids:
             return False
         self.road_user_ids.add(record.road_user)
-        minutes = int((when - self._start).total_seconds() // 60)
+        minutes = int((when - self._start).total_seconds() // SECONDS_PER_MINUTE)
         index = minutes // self._config.interval_minutes
-        counts = self._counts.setdefault(record.flow_id, {})
-        counts.setdefault(group, [0] * self._interval_count)[index] += 1
+        flow_counts = self._counts.setdefault(record.flow_id, {})
+        interval_counts = flow_counts.setdefault(group, [0] * self._interval_count)
+        interval_counts[index] += 1
         speed_kmh = record.speed_kmh
         if speed_kmh is not None and 0 < speed_kmh <= self._config.max_speed_kmh:
-            intervals = self._speeds.setdefault(record.flow_id, {}).setdefault(
+            flow_speeds = self._speeds.setdefault(record.flow_id, {})
+            interval_speeds = flow_speeds.setdefault(
                 group, [[] for _ in range(self._interval_count)]
             )
-            intervals[index].append(speed_kmh)
+            interval_speeds[index].append(speed_kmh)
         return True
 
     def update_flows(self, flows: Sequence[FlowInfo]) -> None:
@@ -236,16 +265,9 @@ class DayTrafficStatistics:
         clipped_end = min(as_utc(end), self._end)
         if clipped_start >= clipped_end:
             return
-        ranges = sorted(
-            [*self._coverage, (clipped_start, clipped_end)], key=lambda r: r[0]
+        self._coverage = merge_ranges(
+            [*self._coverage, CoverageRange(clipped_start, clipped_end)]
         )
-        merged: list[tuple[datetime, datetime]] = []
-        for range_start, range_end in ranges:
-            if merged and range_start <= merged[-1][1]:
-                merged[-1] = (merged[-1][0], max(merged[-1][1], range_end))
-            else:
-                merged.append((range_start, range_end))
-        self._coverage = merged
 
     def covered_intervals(self) -> list[bool]:
         """Flag per interval whether it overlaps any coverage range."""
