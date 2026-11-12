@@ -382,6 +382,10 @@ class VideosMetadata:
             return self._metadata_by_name[video_name]
         return None
 
+    def get_all(self) -> list[VideoMetadata]:
+        """Return the metadata of all videos sorted by their start."""
+        return list(self._metadata_by_date.values())
+
     @property
     def first_video_start(self) -> Optional[datetime]:
         return self._first_video_start
