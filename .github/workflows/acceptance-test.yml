@@ -16,11 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set up Python 3.12
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.12
       - name: Set up uv
@@ -44,8 +44,10 @@ jobs:
       # Separate from the test steps so a stale uv.lock fails loudly and early.
       - name: Install dependencies
         run: uv sync --locked --dev
+      # pytest-playwright runs headless Chromium by default, so the other browsers
+      # (and their ~180 apt packages) aren't needed.
       - name: Install Playwright browsers
-        run: uv run playwright install --with-deps
+        run: uv run playwright install --with-deps --only-shell chromium
       - name: Run acceptance tests
         timeout-minutes: 20
         run: uv run pytest --cov=OTAnalytics tests/acceptance
