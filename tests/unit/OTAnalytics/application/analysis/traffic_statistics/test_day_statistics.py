@@ -8,6 +8,9 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
 from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
+    KMH_PER_MPS,
+    MINUTES_PER_DAY,
+    MINUTES_PER_HOUR,
     TOTAL,
     AssignmentRecord,
     ClassGroupResolver,
@@ -24,9 +27,20 @@ from OTAnalytics.application.analysis.traffic_statistics_config import (
 from tests.utils.builders.road_user_assignment import create_assignment
 
 DAY = date(2026, 10, 27)
-MINUTES_PER_DAY = 24 * 60
-QUARTER_HOURS = MINUTES_PER_DAY // 15
-QUARTER_HOUR_CONFIG = TrafficStatisticsConfig(interval_minutes=15)
+PREVIOUS_DAY = DAY - timedelta(days=1)
+NEXT_DAY = DAY + timedelta(days=1)
+FIVE_MINUTES = 5
+QUARTER_HOUR_MINUTES = 15
+QUARTER_HOURS = MINUTES_PER_DAY // QUARTER_HOUR_MINUTES
+QUARTER_HOUR_CONFIG = TrafficStatisticsConfig(interval_minutes=QUARTER_HOUR_MINUTES)
+
+SLOW_MPS = 10.0
+FAST_MPS = 15.0
+SLOW_KMH = SLOW_MPS * KMH_PER_MPS
+FAST_KMH = FAST_MPS * KMH_PER_MPS
+AVG_SLOW_FAST_KMH = (SLOW_KMH + FAST_KMH) / 2
+STANDING_MPS = 0.0
+IMPLAUSIBLE_MPS = 100.0
 
 
 class TestDayHelpers:
@@ -84,7 +98,7 @@ def utc(hour: int, minute: int, second: int = 0, day: date = DAY) -> datetime:
 
 def interval_index(hour: int, minute: int, interval_minutes: int = 1) -> int:
     """Index of the interval containing the UTC time on DAY."""
-    return (hour * 60 + minute) // interval_minutes
+    return (hour * MINUTES_PER_HOUR + minute) // interval_minutes
 
 
 def record(
@@ -110,7 +124,7 @@ def create_statistics(
     config = config or TrafficStatisticsConfig()
     stats = DayTrafficStatistics(DAY, config, [FLOW_1, FLOW_2])
     if covered:
-        stats.mark_covered(day_start(DAY), day_start(date(2026, 10, 28)))
+        stats.mark_covered(day_start(DAY), day_start(NEXT_DAY))
     return stats
 
 
@@ -140,13 +154,13 @@ class TestDayTrafficStatistics:
 
     def test_interval_overlapping_coverage_is_covered(self) -> None:
         stats = create_statistics(
-            TrafficStatisticsConfig(interval_minutes=5),
+            TrafficStatisticsConfig(interval_minutes=FIVE_MINUTES),
             covered=False,
         )
         stats.add(record("ru0", "f1", "LV", utc(0, 0)))
         stats.mark_covered(utc(7, 3), utc(7, 4))
         counts = stats.counts("f1")["LV"]
-        covered = interval_index(7, 3, interval_minutes=5)
+        covered = interval_index(7, 3, interval_minutes=FIVE_MINUTES)
         assert counts[covered] == 0
         assert counts[covered + 1] is None
 
@@ -171,9 +185,7 @@ class TestDayTrafficStatistics:
 
     def test_record_of_other_day_is_rejected(self) -> None:
         stats = create_statistics()
-        assert not stats.add(
-            record("ru1", "f1", "LV", utc(7, 15, day=date(2026, 10, 28)))
-        )
+        assert not stats.add(record("ru1", "f1", "LV", utc(7, 15, day=NEXT_DAY)))
         assert stats.road_user_ids == set()
 
     def test_unknown_flow_is_rejected(self) -> None:
@@ -188,7 +200,7 @@ class TestDayTrafficStatistics:
     def test_day_is_cut_at_utc_midnight(self) -> None:
         stats = create_statistics()
         assert not stats.add(
-            record("ru1", "f1", "LV", utc(23, 59, 59, day=date(2026, 10, 26)))
+            record("ru1", "f1", "LV", utc(23, 59, 59, day=PREVIOUS_DAY))
         )
         assert stats.add(record("ru2", "f1", "LV", utc(0, 0)))
         assert stats.counts("f1")["LV"][interval_index(0, 0)] == 1
@@ -201,32 +213,38 @@ class TestDayTrafficStatistics:
             stats.add(record("ru1", "f1", "LV", occurrence))
 
     def test_five_minute_interval_has_288_bins(self) -> None:
-        stats = create_statistics(TrafficStatisticsConfig(interval_minutes=5))
+        stats = create_statistics(
+            TrafficStatisticsConfig(interval_minutes=FIVE_MINUTES)
+        )
         stats.add(record("ru1", "f1", "LV", utc(7, 17)))
         counts = stats.counts("f1")["LV"]
-        assert len(counts) == MINUTES_PER_DAY // 5
-        assert counts[interval_index(7, 17, interval_minutes=5)] == 1
+        assert len(counts) == MINUTES_PER_DAY // FIVE_MINUTES
+        assert counts[interval_index(7, 17, interval_minutes=FIVE_MINUTES)] == 1
 
     def test_mark_covered_merges_and_clips(self) -> None:
         stats = create_statistics(covered=False)
         stats.mark_covered(utc(7, 0), utc(8, 0))
         stats.mark_covered(utc(7, 30), utc(9, 0))
         stats.mark_covered(utc(9, 0), utc(9, 30))
-        stats.mark_covered(utc(23, 0, day=date(2026, 10, 26)), utc(0, 30))
+        stats.mark_covered(utc(23, 0, day=PREVIOUS_DAY), utc(0, 30))
         assert stats.coverage == [
             (utc(0, 0), utc(0, 30)),
             (utc(7, 0), utc(9, 30)),
         ]
 
     def test_only_plausible_speeds_enter_speed_profile(self) -> None:
-        config = TrafficStatisticsConfig(interval_minutes=15, max_speed_kmh=100)
+        max_speed_kmh = 100
+        too_fast_mps = max_speed_kmh / KMH_PER_MPS + 1
+        config = replace(QUARTER_HOUR_CONFIG, max_speed_kmh=max_speed_kmh)
         stats = create_statistics(config)
-        stats.add(record("ru1", "f1", "LV", utc(7, 20), 10.0))
-        stats.add(record("ru2", "f1", "LV", utc(7, 21), 50.0))
+        stats.add(record("ru1", "f1", "LV", utc(7, 20), SLOW_MPS))
+        stats.add(record("ru2", "f1", "LV", utc(7, 21), too_fast_mps))
         stats.add(record("ru3", "f1", "LV", utc(7, 22)))
-        stats.add(record("ru4", "f1", "LV", utc(7, 23), 0.0))
-        slot = interval_index(7, 20, interval_minutes=15)
-        assert stats.speed_profile("f1")["LV"][slot] == SpeedValues(36.0, 36.0, 1)
+        stats.add(record("ru4", "f1", "LV", utc(7, 23), STANDING_MPS))
+        slot = interval_index(7, 20, interval_minutes=QUARTER_HOUR_MINUTES)
+        assert stats.speed_profile("f1")["LV"][slot] == SpeedValues(
+            SLOW_KMH, SLOW_KMH, 1
+        )
         assert stats.totals("f1") == {"LV": 4}
 
     def test_counting_event_defaults_to_start(self) -> None:
@@ -292,46 +310,48 @@ class TestPeakHour:
         stats = create_statistics()
         stats.add(record("ru1", "f1", "LV", utc(23, 50)))
         assert stats.peak_hour("f1")["LV"] == PeakHour(
-            start=utc(23, 0), end=utc(0, 0, day=date(2026, 10, 28)), count=1
+            start=utc(23, 0), end=utc(0, 0, day=NEXT_DAY), count=1
         )
 
 
 class TestSpeed:
     def test_total_speed_merges_flows(self) -> None:
         stats = create_statistics()
-        stats.add(record("ru1", "f1", "LV", utc(7, 0), 10.0))
-        stats.add(record("ru2", "f2", "LV", utc(7, 5), 15.0))
-        assert stats.speed(TOTAL) == {"LV": SpeedValues(45.0, 54.0, 2)}
-        assert stats.speed("f1") == {"LV": SpeedValues(36.0, 36.0, 1)}
+        stats.add(record("ru1", "f1", "LV", utc(7, 0), SLOW_MPS))
+        stats.add(record("ru2", "f2", "LV", utc(7, 5), FAST_MPS))
+        assert stats.speed(TOTAL) == {"LV": SpeedValues(AVG_SLOW_FAST_KMH, FAST_KMH, 2)}
+        assert stats.speed("f1") == {"LV": SpeedValues(SLOW_KMH, SLOW_KMH, 1)}
 
     def test_implausible_speed_is_counted_but_not_in_speed(self) -> None:
         stats = create_statistics()
-        stats.add(record("ru1", "f1", "LV", utc(7, 0), 100.0))
+        stats.add(record("ru1", "f1", "LV", utc(7, 0), IMPLAUSIBLE_MPS))
         assert stats.totals("f1") == {"LV": 1}
         assert stats.speed("f1") == {}
 
     def test_speed_merges_all_slots(self) -> None:
         stats = create_statistics()
-        stats.add(record("ru1", "f1", "LV", utc(7, 0), 10.0))
-        stats.add(record("ru2", "f1", "LV", utc(18, 0), 15.0))
+        stats.add(record("ru1", "f1", "LV", utc(7, 0), SLOW_MPS))
+        stats.add(record("ru2", "f1", "LV", utc(18, 0), FAST_MPS))
         assert stats.speed("f1")["LV"].count == 2
 
     def test_speed_profile_uses_count_intervals(self) -> None:
-        stats = create_statistics(TrafficStatisticsConfig(interval_minutes=5))
-        stats.add(record("ru1", "f1", "LV", utc(7, 22), 10.0))
-        profile = stats.speed_profile("f1")["LV"]
-        assert len(profile) == MINUTES_PER_DAY // 5
-        assert profile[interval_index(7, 22, interval_minutes=5)] == SpeedValues(
-            36.0, 36.0, 1
+        stats = create_statistics(
+            TrafficStatisticsConfig(interval_minutes=FIVE_MINUTES)
         )
+        stats.add(record("ru1", "f1", "LV", utc(7, 22), SLOW_MPS))
+        profile = stats.speed_profile("f1")["LV"]
+        assert len(profile) == MINUTES_PER_DAY // FIVE_MINUTES
+        assert profile[
+            interval_index(7, 22, interval_minutes=FIVE_MINUTES)
+        ] == SpeedValues(SLOW_KMH, SLOW_KMH, 1)
 
     def test_speed_profile_has_value_only_in_occupied_slot(self) -> None:
         stats = create_statistics(QUARTER_HOUR_CONFIG)
-        stats.add(record("ru1", "f1", "LV", utc(7, 20), 10.0))
+        stats.add(record("ru1", "f1", "LV", utc(7, 20), SLOW_MPS))
         profile = stats.speed_profile("f1")["LV"]
-        slot = interval_index(7, 20, interval_minutes=15)
+        slot = interval_index(7, 20, interval_minutes=QUARTER_HOUR_MINUTES)
         assert len(profile) == QUARTER_HOURS
-        assert profile[slot] == SpeedValues(36.0, 36.0, 1)
+        assert profile[slot] == SpeedValues(SLOW_KMH, SLOW_KMH, 1)
         assert [v for i, v in enumerate(profile) if i != slot and v is not None] == []
 
     def test_speed_profile_contains_counted_group_without_speed(self) -> None:
@@ -341,33 +361,35 @@ class TestSpeed:
 
     def test_speed_profile_contains_configured_groups_without_data(self) -> None:
         config = TrafficStatisticsConfig(
-            interval_minutes=15,
+            interval_minutes=QUARTER_HOUR_MINUTES,
             class_groups={"LV": frozenset({"car"}), "HV": frozenset({"truck"})},
         )
         stats = create_statistics(config)
-        stats.add(record("ru1", "f1", "car", utc(7, 20), 10.0))
+        stats.add(record("ru1", "f1", "car", utc(7, 20), SLOW_MPS))
         profile = stats.speed_profile("f1")
         assert set(profile) == {"LV", "HV"}
         assert profile["HV"] == [None] * QUARTER_HOURS
-        slot = interval_index(7, 20, interval_minutes=15)
-        assert profile["LV"][slot] == SpeedValues(36.0, 36.0, 1)
+        slot = interval_index(7, 20, interval_minutes=QUARTER_HOUR_MINUTES)
+        assert profile["LV"][slot] == SpeedValues(SLOW_KMH, SLOW_KMH, 1)
 
     def test_speed_profile_of_total_merges_flows_per_slot(self) -> None:
         stats = create_statistics(QUARTER_HOUR_CONFIG)
-        stats.add(record("ru1", "f1", "LV", utc(7, 20), 10.0))
-        stats.add(record("ru2", "f2", "LV", utc(7, 25), 15.0))
-        slot = interval_index(7, 20, interval_minutes=15)
-        assert stats.speed_profile(TOTAL)["LV"][slot] == SpeedValues(45.0, 54.0, 2)
+        stats.add(record("ru1", "f1", "LV", utc(7, 20), SLOW_MPS))
+        stats.add(record("ru2", "f2", "LV", utc(7, 25), FAST_MPS))
+        slot = interval_index(7, 20, interval_minutes=QUARTER_HOUR_MINUTES)
+        assert stats.speed_profile(TOTAL)["LV"][slot] == SpeedValues(
+            AVG_SLOW_FAST_KMH, FAST_KMH, 2
+        )
 
     def test_total_speed_profile_merges_flows_and_groups_per_slot(self) -> None:
         stats = create_statistics(QUARTER_HOUR_CONFIG)
-        stats.add(record("ru1", "f1", "LV", utc(7, 20), 10.0))
-        stats.add(record("ru2", "f2", "SV", utc(7, 25), 15.0))
+        stats.add(record("ru1", "f1", "LV", utc(7, 20), SLOW_MPS))
+        stats.add(record("ru2", "f2", "SV", utc(7, 25), FAST_MPS))
         stats.add(record("ru3", "f2", "SV", utc(9, 0)))
         profile = stats.total_speed_profile()
-        slot = interval_index(7, 20, interval_minutes=15)
+        slot = interval_index(7, 20, interval_minutes=QUARTER_HOUR_MINUTES)
         assert len(profile) == QUARTER_HOURS
-        assert profile[slot] == SpeedValues(45.0, 54.0, 2)
+        assert profile[slot] == SpeedValues(AVG_SLOW_FAST_KMH, FAST_KMH, 2)
         assert [v for i, v in enumerate(profile) if i != slot and v is not None] == []
 
 
@@ -388,7 +410,7 @@ class TestAssignmentRecord:
         assert AssignmentRecord.from_assignment(assignment).speed_kmh is None
 
     def test_speed_is_converted_to_kmh(self) -> None:
-        assert record("ru1", "f1", "LV", utc(7, 0), 10.0).speed_kmh == 36.0
+        assert record("ru1", "f1", "LV", utc(7, 0), SLOW_MPS).speed_kmh == SLOW_KMH
 
     def test_occurrence_of_counting_event(self) -> None:
         start_and_end = replace(

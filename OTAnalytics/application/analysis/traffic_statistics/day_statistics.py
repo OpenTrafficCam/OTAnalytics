@@ -21,7 +21,11 @@ from OTAnalytics.application.analysis.traffic_statistics_config import (
 LOGGER = logging.getLogger(__name__)
 
 TOTAL = "total"
-MINUTES_PER_DAY = 24 * 60
+HOURS_PER_DAY = 24
+MINUTES_PER_HOUR = 60
+MINUTES_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR
+SECONDS_PER_MINUTE = 60
+KMH_PER_MPS = 3.6
 
 
 @dataclass(frozen=True)
@@ -140,7 +144,7 @@ class AssignmentRecord:
         """Average speed in km/h or None if unknown."""
         if self.avg_speed_mps is None:
             return None
-        return self.avg_speed_mps * 3.6
+        return self.avg_speed_mps * KMH_PER_MPS
 
 
 class DayTrafficStatistics:
@@ -205,7 +209,7 @@ class DayTrafficStatistics:
         if record.road_user in self.road_user_ids:
             return False
         self.road_user_ids.add(record.road_user)
-        minutes = int((when - self._start).total_seconds() // 60)
+        minutes = int((when - self._start).total_seconds() // SECONDS_PER_MINUTE)
         index = minutes // self._config.interval_minutes
         counts = self._counts.setdefault(record.flow_id, {})
         counts.setdefault(group, [0] * self._interval_count)[index] += 1
