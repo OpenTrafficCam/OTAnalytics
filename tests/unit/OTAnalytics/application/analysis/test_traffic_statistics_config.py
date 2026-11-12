@@ -16,12 +16,15 @@ class TestTrafficStatisticsConfig:
         assert config.peak_window_minutes == 60
         assert config.peak_step_minutes == 15
 
-    @pytest.mark.parametrize("interval", [1, 5, 15, 60])
+    @pytest.mark.parametrize("interval", [1, 5, 15, 20, 30, 60])
     def test_valid_intervals(self, interval: int) -> None:
-        TrafficStatisticsConfig(
+        config = TrafficStatisticsConfig(
             interval_minutes=interval,
             peak_step_minutes=60,
         )
+
+        assert config.interval_minutes == interval
+        assert config.peak_step_minutes == 60
 
     @pytest.mark.parametrize("interval", [0, -5, 7, 45, 120])
     def test_invalid_interval_raises_with_field_name(self, interval: int) -> None:
