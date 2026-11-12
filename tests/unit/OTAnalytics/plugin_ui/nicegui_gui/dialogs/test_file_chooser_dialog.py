@@ -65,7 +65,7 @@ class TestFileChooserDialog:
         user.find("Text Files").click()
 
         extension = dialog._get_extension_for_current_format()
-        assert extension == "txt"
+        assert extension == ".txt"
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog.LocalFilePicker"
@@ -228,6 +228,7 @@ class TestFileChooserDialog:
                 file_extensions={"Text": "txt"},
                 initial_file_stem="test_file",
                 initial_dir=Path("/tmp"),
+                enforce_suffix=False,
             )
 
             # Mock the directory and filename fields

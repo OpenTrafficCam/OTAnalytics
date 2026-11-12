@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from types import MethodType
 from typing import Any
 from unittest.mock import MagicMock, Mock, call, patch
@@ -73,6 +74,9 @@ from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSet
 from OTAnalytics.domain.types import EventType
 from tests.utils.builders.track_builder import TrackBuilder
+
+EXPORT_DIRECTORY = Path("path/to/export/dir")
+EXPORT_FILENAME_STEM = "my_filename_stem"
 
 
 @pytest.fixture
@@ -1043,7 +1047,8 @@ class TestSimpleTaggerFactory:
             interval_in_minutes=1,
             modes=[],
             output_format="csv",
-            output_file="counts.csv",
+            export_directory=EXPORT_DIRECTORY,
+            export_filename_stem=EXPORT_FILENAME_STEM,
             export_mode=OVERWRITE,
             count_all_events=True,
             counting_event=CountingEvent.END,
@@ -1242,7 +1247,8 @@ class TestTrafficCounting:
             interval_in_minutes=15,
             modes=modes,
             output_format="csv",
-            output_file="counts.csv",
+            export_directory=EXPORT_DIRECTORY,
+            export_filename_stem=EXPORT_FILENAME_STEM,
             export_mode=OVERWRITE,
             count_all_events=count_all_events,
         )
@@ -1344,7 +1350,8 @@ class TestTrafficCountingFilterOptions:
             interval_in_minutes=15,
             modes=modes,
             output_format="csv",
-            output_file="counts.csv",
+            export_directory=EXPORT_DIRECTORY,
+            export_filename_stem=EXPORT_FILENAME_STEM,
             export_mode=OVERWRITE,
             count_all_events=count_all_events,
         )
@@ -1400,7 +1407,8 @@ class TestExportTrafficCounting:
             interval_in_minutes=15,
             modes=modes,
             output_format="csv",
-            output_file="counts.csv",
+            export_directory=EXPORT_DIRECTORY,
+            export_filename_stem=EXPORT_FILENAME_STEM,
             export_mode=OVERWRITE,
             count_all_events=True,
         )

@@ -12,14 +12,16 @@ class ArgparseCliParser(CliParser):
     Acts as a wrapper to `argparse.ArgumentParser`.
 
     Args:
-        arg_parser (ArgumentParser, optional): the argument parser.
-            Defaults to ArgumentParser("OTAnalytics CLI").
+        arg_parser (ArgumentParser | None, optional): the argument parser. A new
+            one is created when omitted. It must not default to a shared
+            instance: `_setup()` would then re-add every argument to the same
+            parser on a second instantiation and raise `ArgumentError`.
     """
 
-    def __init__(
-        self, arg_parser: ArgumentParser = ArgumentParser("OTAnalytics CLI")
-    ) -> None:
-        self._parser = arg_parser
+    def __init__(self, arg_parser: ArgumentParser | None = None) -> None:
+        self._parser = (
+            arg_parser if arg_parser is not None else ArgumentParser("OTAnalytics CLI")
+        )
         self._setup()
 
     def _setup(self) -> None:
@@ -139,6 +141,18 @@ class ArgparseCliParser(CliParser):
             required=False,
         )
         self._parser.add_argument(
+            "--geo-track-export",
+            action="store_true",
+            help="Export tracks as GeoJSON.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--traffic-statistics",
+            action="store_true",
+            help="Export traffic statistics. Uses the otconfig settings or defaults.",
+            required=False,
+        )
+        self._parser.add_argument(
             "--logfile",
             type=str,
             help="Specify log file directory.",
@@ -198,4 +212,6 @@ class ArgparseCliParser(CliParser):
             log_file=args.logfile,
             include_classes=args.include_classes,
             exclude_classes=args.exclude_classes,
+            geo_track_export=args.geo_track_export,
+            traffic_statistics=args.traffic_statistics,
         )

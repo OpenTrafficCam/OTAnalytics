@@ -4,13 +4,20 @@ from unittest.mock import Mock
 
 import pytest
 
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
+)
 from OTAnalytics.application.config import (
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
     DEFAULT_EVENTLIST_FILE_TYPE,
 )
 from OTAnalytics.application.logger import DEFAULT_LOG_FILE
 from OTAnalytics.application.parser.cli_parser import CliArguments, CliMode
-from OTAnalytics.application.parser.config_parser import OtConfig
+from OTAnalytics.application.parser.config_parser import (
+    AnalysisConfig,
+    ExportConfig,
+    OtConfig,
+)
 from OTAnalytics.application.run_configuration import RunConfiguration
 
 
@@ -267,9 +274,9 @@ class TestRunConfiguration:
         otconfig = Mock()
         otconfig.analysis = analysis
         if has_otconfig:
-            assert build_config(cli_args, otconfig).save_name == expected
+            assert build_config(cli_args, otconfig).save_stem == expected
         else:
-            assert build_config(cli_args, None).save_name == expected
+            assert build_config(cli_args, None).save_stem == expected
 
     def test_save_suffix(self, cli_args: Mock, otconfig: Mock) -> None:
         cli_args.save_suffix = "cli_suffix"
@@ -505,3 +512,123 @@ class TestRunConfiguration:
         assert build_config(cli_args, otconfig).exclude_classes == exclude_classes
         cli_args.exclude_classes = None
         assert build_config(cli_args, otconfig).exclude_classes == frozenset()
+
+    def test_orthophoto_is_resolved_next_to_the_otconfig(
+        self, cli_args: Mock, otconfig: Mock
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        cli_args.config_file = "/site/project.otconfig"
+        otconfig.orthophoto = Path("map2.tiff")
+
+        assert build_config(cli_args, otconfig).orthophoto == Path("/site/map2.tiff")
+
+    def test_no_otconfig_means_no_orthophoto(self, cli_args: Mock) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        assert build_config(cli_args, None).orthophoto is None
+
+    def test_otconfig_without_orthophoto_means_no_orthophoto(
+        self, cli_args: Mock, otconfig: Mock
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        cli_args.config_file = "/site/project.otconfig"
+        otconfig.orthophoto = None
+
+        assert build_config(cli_args, otconfig).orthophoto is None
+
+
+def cli_arguments(
+    geo_track_export: bool = False, traffic_statistics: bool = False
+) -> CliArguments:
+    return CliArguments(
+        start_cli=True,
+        cli_mode=CliMode.BULK,
+        debug=False,
+        logfile_overwrite=False,
+        track_export=False,
+        track_statistics_export=False,
+        geo_track_export=geo_track_export,
+        traffic_statistics=traffic_statistics,
+    )
+
+
+def otconfig_with_export(
+    traffic_statistics: TrafficStatisticsConfig | None = None,
+    geo_tracks: bool = False,
+) -> OtConfig:
+    export_config = ExportConfig(
+        save_name="name",
+        save_suffix="",
+        event_formats={"csv"},
+        count_intervals={1},
+        traffic_statistics=traffic_statistics,
+        geo_tracks=geo_tracks,
+    )
+    analysis = AnalysisConfig(
+        do_events=True,
+        do_counting=True,
+        track_files=set(),
+        export_config=export_config,
+        num_processes=1,
+        logfile=Path("log.log"),
+    )
+    return OtConfig(Mock(), analysis, [], [], [], None)
+
+
+class TestRunConfigurationNewExports:
+    def test_exports_are_off_by_default(self) -> None:
+        run_config = build_config(cli_arguments(), None)
+
+        assert run_config.traffic_statistics is None
+        assert run_config.do_export_geo_tracks is False
+
+    def test_exports_are_off_for_otconfig_without_new_keys(self) -> None:
+        run_config = build_config(cli_arguments(), otconfig_with_export())
+
+        assert run_config.traffic_statistics is None
+        assert run_config.do_export_geo_tracks is False
+
+    def test_otconfig_enables_traffic_statistics(self) -> None:
+        config = TrafficStatisticsConfig(interval_minutes=5)
+        run_config = build_config(
+            cli_arguments(), otconfig_with_export(traffic_statistics=config)
+        )
+
+        assert run_config.traffic_statistics == config
+
+    def test_disabled_otconfig_block_yields_no_traffic_statistics(self) -> None:
+        config = TrafficStatisticsConfig(enabled=False)
+        run_config = build_config(
+            cli_arguments(), otconfig_with_export(traffic_statistics=config)
+        )
+
+        assert run_config.traffic_statistics is None
+
+    def test_cli_flag_enables_traffic_statistics_with_defaults(self) -> None:
+        run_config = build_config(cli_arguments(traffic_statistics=True), None)
+
+        assert run_config.traffic_statistics == TrafficStatisticsConfig()
+
+    def test_cli_flag_forces_disabled_otconfig_block_enabled(self) -> None:
+        config = TrafficStatisticsConfig(enabled=False, interval_minutes=5)
+        run_config = build_config(
+            cli_arguments(traffic_statistics=True),
+            otconfig_with_export(traffic_statistics=config),
+        )
+
+        assert run_config.traffic_statistics == TrafficStatisticsConfig(
+            enabled=True, interval_minutes=5
+        )
+
+    def test_otconfig_enables_geo_tracks(self) -> None:
+        run_config = build_config(
+            cli_arguments(), otconfig_with_export(geo_tracks=True)
+        )
+
+        assert run_config.do_export_geo_tracks is True
+
+    def test_cli_geo_track_flag_overrides_otconfig(self) -> None:
+        run_config = build_config(
+            cli_arguments(geo_track_export=True), otconfig_with_export(geo_tracks=False)
+        )
+
+        assert run_config.do_export_geo_tracks is True

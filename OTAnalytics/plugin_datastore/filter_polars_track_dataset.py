@@ -6,6 +6,7 @@ import polars as pl
 from OTAnalytics.application.logger import logger
 from OTAnalytics.domain import track
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.georeference import GeoreferenceMetadata
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import Track, TrackId
 from OTAnalytics.domain.track_dataset.filtered_track_dataset import (
@@ -26,7 +27,6 @@ from OTAnalytics.plugin_datastore.track_store import MINIMUM_DETECTIONS, RANK
 class FilteredPolarsTrackDataset(
     FilteredTrackDataset, PolarsTrackDataset, PolarsDataFrameProvider
 ):
-
     @property
     def track_geometry_factory(self) -> POLARS_TRACK_GEOMETRY_FACTORY:
         return self._other.track_geometry_factory
@@ -34,6 +34,10 @@ class FilteredPolarsTrackDataset(
     @property
     def calculator(self) -> PolarsTrackClassificationCalculator:
         return self._other.calculator
+
+    @property
+    def georeference_metadata(self) -> GeoreferenceMetadata | None:
+        return self._other.georeference_metadata
 
     def __init__(self, other: PolarsTrackDataset) -> None:
         self._other = other
@@ -63,6 +67,11 @@ class FilteredPolarsTrackDataset(
     ) -> tuple[PolarsTrackDataset, TrackIdSet]:
         dataset, original_track_ids = self._other.cut_with_section(section, offset)
         return self.wrap(dataset), original_track_ids
+
+    def with_georeference_metadata(
+        self, metadata: GeoreferenceMetadata | None
+    ) -> "PolarsTrackDataset":
+        return self.wrap(self._other.with_georeference_metadata(metadata))
 
     def ids_inside(self, sections: list[Section]) -> TrackIdSet:
         return self._filter().ids_inside(sections)
@@ -170,6 +179,7 @@ class FilterByClassPolarsTrackDataset(
             dataset=filtered_df,
             geometry_datasets=None,
             calculator=self._other.calculator,
+            georeference_metadata=self._other.georeference_metadata,
         )
 
     def wrap(self, other: PolarsTrackDataset) -> PolarsTrackDataset:
@@ -214,8 +224,7 @@ class FilterByIdPolarsTrackDataset(FilteredPolarsTrackDataset):
 
         if self._included_track_ids:
             logger().info(
-                "Apply 'track-ids' filter to filter tracks: "
-                f"{self._included_track_ids}"
+                f"Apply 'track-ids' filter to filter tracks: {self._included_track_ids}"
             )
             filtered_dataset = self._get_dataset_with(
                 track_ids=self._included_track_ids

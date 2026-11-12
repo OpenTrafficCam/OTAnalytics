@@ -11,7 +11,10 @@ from OTAnalytics.application.resources.resource_manager import (
 )
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.plugin_ui.nicegui_gui.forms.offset_slider_form import OffsetSliderForm
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
+
+MARKER_UPDATE_OFFSET = "marker-update-offset"
 
 
 class VisualizationOffSetSliderForm(AbstractFrameOffset, ButtonForm):
@@ -39,6 +42,12 @@ class VisualizationOffSetSliderForm(AbstractFrameOffset, ButtonForm):
             ),
             on_click=self._view_model.change_track_offset_to_section_offset,
         )
+        self.update_offset_button.mark(MARKER_UPDATE_OFFSET)
+        self.update_offset_button.props(
+            f"{TestIdAttributes.DATA_TESTID}={MARKER_UPDATE_OFFSET}"
+        )
+        # Button did not exist on first introduction, apply its state now
+        self.introduce_to_viewmodel()
         return self
 
     def on_offset_change(self) -> None:

@@ -26,6 +26,8 @@ DIRECTION_VECTOR = "direction_vector"
 VIDEO_NAME = "video_name"
 INTERPOLATED_OCCURRENCE = "interpolated_occurrence"
 INTERPOLATED_EVENT_COORDINATE = "interpolated_event_coordinate"
+GEO_X: str = "geo_x"
+GEO_Y: str = "geo_y"
 
 DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
 FILE_NAME_PATTERN = r"(?P<hostname>[A-Za-z0-9]+)_.*\..*"
@@ -80,6 +82,8 @@ class Event(DataclassValidation):
             event occurred.
         interpolated_event_coordinate (ImageCoordinate): interpolated event
             coordinate between two detections.
+        geo_x (float | None): optional geo x coordinate. Defaults to None.
+        geo_y (float | None): optional geo y coordinate. Defaults to None.
     """
 
     road_user_id: str
@@ -94,6 +98,8 @@ class Event(DataclassValidation):
     video_name: str
     interpolated_occurrence: datetime
     interpolated_event_coordinate: ImageCoordinate
+    geo_x: float | None = None
+    geo_y: float | None = None
 
     def _validate(self) -> None:
         self._validate_frame_number_greater_equal_one()
@@ -129,6 +135,8 @@ class Event(DataclassValidation):
             VIDEO_NAME: self.video_name,
             INTERPOLATED_OCCURRENCE: self.interpolated_occurrence.strftime(DATE_FORMAT),
             INTERPOLATED_EVENT_COORDINATE: self.interpolated_event_coordinate.to_list(),
+            GEO_X: self.geo_x,
+            GEO_Y: self.geo_y,
         }
 
     def to_typed_dict(self) -> dict:
@@ -151,6 +159,8 @@ class Event(DataclassValidation):
             VIDEO_NAME: self.video_name,
             INTERPOLATED_OCCURRENCE: self.interpolated_occurrence,
             INTERPOLATED_EVENT_COORDINATE: self.interpolated_event_coordinate.to_list(),
+            GEO_X: self.geo_x,
+            GEO_Y: self.geo_y,
         }
 
     def _serialized_section_id(self) -> Optional[str]:
@@ -172,6 +182,8 @@ class EventBuilder(ABC):
         self.section_id: Optional[SectionId] = None
         self.interpolated_occurrence: Optional[datetime] = None
         self.interpolated_event_coordinate: Optional[ImageCoordinate] = None
+        self.geo_x: float | None = None
+        self.geo_y: float | None = None
 
     @abstractmethod
     def create_event(self, detection: Detection) -> Event:
@@ -255,6 +267,16 @@ class EventBuilder(ABC):
     def add_interpolated_event_coordinate(self, x: float, y: float) -> None:
         self.interpolated_event_coordinate = ImageCoordinate(x, y)
 
+    def add_geo_coordinate(self, geo_x: float | None, geo_y: float | None) -> None:
+        """Add geo coordinates to the event to be built.
+
+        Args:
+            geo_x: the geo x coordinate, or None if unavailable.
+            geo_y: the geo y coordinate, or None if unavailable.
+        """
+        self.geo_x = geo_x
+        self.geo_y = geo_y
+
 
 class SectionEventBuilder(EventBuilder):
     """A builder to build section events."""
@@ -320,6 +342,8 @@ class SectionEventBuilder(EventBuilder):
             video_name=detection.video_name,
             interpolated_occurrence=self.interpolated_occurrence,
             interpolated_event_coordinate=self.interpolated_event_coordinate,
+            geo_x=self.geo_x,
+            geo_y=self.geo_y,
         )
 
 
@@ -369,6 +393,8 @@ class SceneEventBuilder(EventBuilder):
             video_name=detection.video_name,
             interpolated_occurrence=detection.occurrence,
             interpolated_event_coordinate=self.event_coordinate,
+            geo_x=self.geo_x,
+            geo_y=self.geo_y,
         )
 
 

@@ -16,6 +16,10 @@ class TestResetState:
         flow_state: Mock,
         action_state: Mock,
         file_state: Mock,
+        current_key_prefix: Mock,
+        current_static_analysis_config_state: Mock,
+        current_orthophoto: Mock,
+        filter_element_setting_restorer: Mock,
     ) -> None:
         target = ResetState(
             videos_metadata,
@@ -26,6 +30,10 @@ class TestResetState:
             flow_state,
             action_state,
             file_state,
+            current_key_prefix,
+            current_static_analysis_config_state,
+            current_orthophoto,
+            filter_element_setting_restorer,
         )
 
         target.reset()
@@ -38,6 +46,10 @@ class TestResetState:
         flow_state.reset.assert_called_once()
         action_state.reset.assert_called_once()
         file_state.reset.assert_called_once()
+        current_key_prefix.reset.assert_called_once()
+        current_static_analysis_config_state.reset.assert_called_once()
+        current_orthophoto.reset.assert_called_once()
+        filter_element_setting_restorer.reset.assert_called_once()
 
 
 @pytest.fixture
@@ -77,4 +89,32 @@ def action_state() -> Mock:
 
 @pytest.fixture
 def file_state() -> Mock:
+    return Mock()
+
+
+@pytest.fixture
+def current_key_prefix() -> Mock:
+    """Cleared with everything else: a project's prefix outliving its project
+    would let a save write the previous project's location.
+
+    #Requirement https://openproject.platomo.de/wp/10322
+    """
+    return Mock()
+
+
+@pytest.fixture
+def current_static_analysis_config_state() -> Mock:
+    return Mock()
+
+
+@pytest.fixture
+def current_orthophoto() -> Mock:
+    return Mock()
+
+
+@pytest.fixture
+def filter_element_setting_restorer() -> Mock:
+    """Cleared with everything else: a filter setting saved in the previous
+    project would otherwise be restored when re-enabling a filter.
+    """
     return Mock()
