@@ -20,16 +20,20 @@ from OTAnalytics.application.analysis.traffic_statistics_config import (
 from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
 from OTAnalytics.plugin_parser.traffic_statistics_json import (
     AS_OF_KEY,
+    AVG_KEY,
     COUNT_KEY,
     COVERAGE_KEY,
+    END_KEY,
     FLOWS_KEY,
     FORMAT,
     FORMAT_KEY,
     PEAK_HOUR_KEY,
     SPEED_KEY,
+    START_KEY,
     STATISTICS_KEY,
     TOTAL_KEY,
     TOTALS_KEY,
+    V85_KEY,
     VERSION,
     VERSION_KEY,
     DayProgress,
@@ -182,8 +186,23 @@ class TestFormat:
 
         total = data[STATISTICS_KEY][TOTAL_KEY]
         assert total[TOTALS_KEY] == {"LV": 3, "SV": 1}
-        assert total[PEAK_HOUR_KEY]["LV"][COUNT_KEY] == 3
-        assert total[SPEED_KEY]["LV"][COUNT_KEY] == 2
+        assert total[PEAK_HOUR_KEY] == {
+            "LV": {
+                START_KEY: "2026-10-27 07:15:00",
+                END_KEY: "2026-10-27 08:15:00",
+                COUNT_KEY: 3,
+            },
+            "SV": {
+                START_KEY: "2026-10-27 08:15:00",
+                END_KEY: "2026-10-27 09:15:00",
+                COUNT_KEY: 1,
+            },
+        }
+        # 11.5 m/s = 41.4 km/h, 14.0 m/s = 50.4 km/h, 8.4 m/s = 30.24 km/h
+        assert total[SPEED_KEY] == {
+            "LV": {AVG_KEY: 45.9, V85_KEY: 50.4, COUNT_KEY: 2},
+            "SV": {AVG_KEY: 30.2, V85_KEY: 30.2, COUNT_KEY: 1},
+        }
         assert set(data[STATISTICS_KEY][FLOWS_KEY]) == {"f1", "f2"}
 
     def test_statistics_block_has_no_counts_per_interval(self) -> None:
