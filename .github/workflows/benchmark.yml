@@ -45,7 +45,7 @@ jobs:
       - name: Run benchmark tests
         run: uv run pytest ./tests/benchmark --benchmark-json output.json
       - name: Store benchmark result
-        uses: benchmark-action/github-action-benchmark@7ee5534da414fc77bddfd3887ff0564480e088d8 # v1.22.2
+        uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2
         with:
           name: Python Benchmark with pytest-benchmark
           tool: "pytest"
