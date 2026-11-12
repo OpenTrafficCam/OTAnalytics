@@ -234,14 +234,16 @@ class DayTrafficStatistics:
         self.road_user_ids.add(record.road_user)
         minutes = int((when - self._start).total_seconds() // SECONDS_PER_MINUTE)
         index = minutes // self._config.interval_minutes
-        counts = self._counts.setdefault(record.flow_id, {})
-        counts.setdefault(group, [0] * self._interval_count)[index] += 1
+        flow_counts = self._counts.setdefault(record.flow_id, {})
+        interval_counts = flow_counts.setdefault(group, [0] * self._interval_count)
+        interval_counts[index] += 1
         speed_kmh = record.speed_kmh
         if speed_kmh is not None and 0 < speed_kmh <= self._config.max_speed_kmh:
-            intervals = self._speeds.setdefault(record.flow_id, {}).setdefault(
+            flow_speeds = self._speeds.setdefault(record.flow_id, {})
+            interval_speeds = flow_speeds.setdefault(
                 group, [[] for _ in range(self._interval_count)]
             )
-            intervals[index].append(speed_kmh)
+            interval_speeds[index].append(speed_kmh)
         return True
 
     def mark_covered(self, start: datetime, end: datetime) -> None:
