@@ -17,7 +17,12 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.parser.cli_parser import CliMode
 from OTAnalytics.plugin_cli.cli_application import OtAnalyticsCliApplicationStarter
-from OTAnalytics.plugin_parser.json_parser import parse_json, write_json
+from OTAnalytics.plugin_parser.json_parser import (
+    parse_json,
+    parse_json_bz2,
+    write_json,
+    write_json_bz2,
+)
 from OTAnalytics.plugin_parser.traffic_statistics_json import (
     STATISTICS_KEY,
     TOTAL_KEY,
@@ -242,6 +247,71 @@ class TestTrafficStatisticsExport:
 
         assert sum(first.values()) > 0
         assert second == first
+
+
+class TestGeoTrackExport:
+    @pytest.mark.parametrize("cli_mode", [CliMode.BULK, CliMode.STREAM])
+    def test_geo_track_export_writes_file_only_when_enabled(
+        self,
+        cli_mode: CliMode,
+        test_data_tmp_dir: Path,
+        ottrk_path: Path,
+        otsection_file: Path,
+    ) -> None:
+        results: dict[bool, list[Path]] = {}
+        for enabled in (False, True):
+            save_dir = test_data_tmp_dir / f"geo_tracks_{cli_mode.value}_{enabled}"
+            shutil.rmtree(save_dir, ignore_errors=True)
+            save_dir.mkdir(parents=True)
+            track_file = save_dir / ottrk_path.name
+            _write_ottrk_with_geo_coordinates(ottrk_path, track_file)
+            run_config = create_run_config(
+                track_files=[str(track_file)],
+                otflow_file=str(otsection_file),
+                save_dir=str(save_dir),
+                save_name="run",
+                event_formats=["csv"],
+                count_intervals=[15],
+                cli_mode=cli_mode,
+                geo_track_export=enabled,
+            )
+
+            OtAnalyticsCliApplicationStarter(run_config).start()
+
+            results[enabled] = list(save_dir.glob("run_*.geo_tracks.json.bz2"))
+
+        assert results[False] == []
+        assert len(results[True]) == 1
+        content = parse_json_bz2(results[True][0])
+        assert content["metadata"] == {"format": "otanalytics.geo_tracks", "version": 1}
+        detections = content["data"]["detections"]
+        assert len(detections) > 0
+        assert set(detections[0]) == {
+            "track-id",
+            "class",
+            "geo_x",
+            "geo_y",
+            "occurrence",
+        }
+
+
+def _write_ottrk_with_geo_coordinates(source: Path, target: Path) -> None:
+    content = parse_json_bz2(source)
+    content["metadata"]["georeference"] = {
+        "geo_bounds": {
+            "min_x": 455000.0,
+            "min_y": 5701000.0,
+            "max_x": 455400.0,
+            "max_y": 5701200.0,
+        },
+        "birds_eye_view_size": {"width": 800, "height": 400},
+        "padding": 0.0,
+        "crs": "EPSG:25833",
+    }
+    for detection in content["data"]["detections"]:
+        detection["geo_x"] = 455000.0 + detection["x"]
+        detection["geo_y"] = 5701000.0 + detection["y"]
+    write_json_bz2(content, target)
 
 
 @pytest.fixture
