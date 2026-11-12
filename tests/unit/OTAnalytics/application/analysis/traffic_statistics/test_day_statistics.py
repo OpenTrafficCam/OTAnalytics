@@ -14,11 +14,13 @@ from OTAnalytics.application.analysis.traffic_statistics.day_statistics import (
     TOTAL,
     AssignmentRecord,
     ClassGroupResolver,
+    CoverageRange,
     DayTrafficStatistics,
     FlowInfo,
     PeakHour,
     as_utc,
     day_start,
+    merge_ranges,
 )
 from OTAnalytics.application.analysis.traffic_statistics.speed_values import SpeedValues
 from OTAnalytics.application.analysis.traffic_statistics_config import (
@@ -271,6 +273,30 @@ class TestDayTrafficStatistics:
         stats.add(record("ru1", "f1", "car", utc(7, 15)))
         stats.add(record("ru2", "f1", "van", utc(7, 15)))
         assert stats.totals("f1") == {"LV": 2}
+
+
+class TestMergeRanges:
+    def test_merges_overlapping_and_touching_ranges_in_order(self) -> None:
+        ranges = [
+            CoverageRange(utc(9, 0), utc(9, 30)),
+            CoverageRange(utc(7, 30), utc(9, 0)),
+            CoverageRange(utc(0, 0), utc(0, 30)),
+            CoverageRange(utc(7, 0), utc(8, 0)),
+        ]
+        assert merge_ranges(ranges) == [
+            CoverageRange(utc(0, 0), utc(0, 30)),
+            CoverageRange(utc(7, 0), utc(9, 30)),
+        ]
+
+    def test_keeps_enclosing_range(self) -> None:
+        ranges = [
+            CoverageRange(utc(7, 0), utc(9, 0)),
+            CoverageRange(utc(7, 30), utc(8, 0)),
+        ]
+        assert merge_ranges(ranges) == [CoverageRange(utc(7, 0), utc(9, 0))]
+
+    def test_without_ranges_is_empty(self) -> None:
+        assert merge_ranges([]) == []
 
 
 class TestPeakHour:

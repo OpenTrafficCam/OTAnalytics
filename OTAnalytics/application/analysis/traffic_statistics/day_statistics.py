@@ -3,7 +3,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-from typing import Sequence
+from typing import Iterable, NamedTuple, Sequence
 
 from OTAnalytics.application.analysis.road_user_assignment import RoadUserAssignment
 from OTAnalytics.application.analysis.traffic_counting import aggregation_time
@@ -48,6 +48,29 @@ class PeakHour:
     start: datetime
     end: datetime
     count: int
+
+
+class CoverageRange(NamedTuple):
+    """Half-open UTC range [start, end) covered by input data."""
+
+    start: datetime
+    end: datetime
+
+
+def merge_ranges(ranges: Iterable[CoverageRange]) -> list[CoverageRange]:
+    """Merge overlapping or touching ranges into sorted, disjoint ranges."""
+    merged: list[CoverageRange] = []
+    current: CoverageRange | None = None
+    for candidate in sorted(ranges):
+        if current is not None and candidate.start <= current.end:
+            current = CoverageRange(current.start, max(current.end, candidate.end))
+            continue
+        if current is not None:
+            merged.append(current)
+        current = candidate
+    if current is not None:
+        merged.append(current)
+    return merged
 
 
 def day_start(day: date) -> datetime:
@@ -179,7 +202,7 @@ class DayTrafficStatistics:
         self._counts: dict[str, dict[str, list[int]]] = {}
         # flow -> group -> interval -> plausible speeds in km/h
         self._speeds: dict[str, dict[str, list[list[float]]]] = {}
-        self._coverage: list[tuple[datetime, datetime]] = []
+        self._coverage: list[CoverageRange] = []
 
     @property
     def config(self) -> TrafficStatisticsConfig:
@@ -227,16 +250,9 @@ class DayTrafficStatistics:
         clipped_end = min(as_utc(end), self._end)
         if clipped_start >= clipped_end:
             return
-        ranges = sorted(
-            [*self._coverage, (clipped_start, clipped_end)], key=lambda r: r[0]
+        self._coverage = merge_ranges(
+            [*self._coverage, CoverageRange(clipped_start, clipped_end)]
         )
-        merged: list[tuple[datetime, datetime]] = []
-        for range_start, range_end in ranges:
-            if merged and range_start <= merged[-1][1]:
-                merged[-1] = (merged[-1][0], max(merged[-1][1], range_end))
-            else:
-                merged.append((range_start, range_end))
-        self._coverage = merged
 
     def covered_intervals(self) -> list[bool]:
         """Flag per interval whether it overlaps any coverage range."""
