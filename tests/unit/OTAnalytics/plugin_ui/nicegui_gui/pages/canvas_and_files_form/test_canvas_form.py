@@ -40,6 +40,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     NORMAL_COLOR,
     RELEASE_FOCUS,
     SELECTED_COLOR,
+    SIZE_PROP,
     UPDATE_VIEWBOX,
     CanvasForm,
     circle_to_coordinates,
@@ -1001,6 +1002,27 @@ class TestCanvasFormImageHandling:
 
         overlay = mock_ui.interactive_image.return_value.add_layer.return_value
         overlay.run_method.assert_called_with(UPDATE_VIEWBOX, *TRACK_IMAGE_SIZE)
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_update_background_sets_overlay_size(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        """The overlay has no source of its own. Without a size, its pointer events
+        report coordinates scaled to an image of size 1 instead of the image size."""
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        overlay = mock_ui.interactive_image.return_value.add_layer.return_value
+        overlay._props = {}
+        mock_track_image = Mock(spec=TrackImage)
+        mock_track_image.as_image.return_value = create_mock_image(TRACK_IMAGE_SIZE)
+
+        canvas_form.update_background(mock_track_image)
+
+        assert overlay._props[SIZE_PROP] == TRACK_IMAGE_SIZE
+        overlay.update.assert_called()
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
