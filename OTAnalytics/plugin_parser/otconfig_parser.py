@@ -118,10 +118,8 @@ class FixMissingAnalysis(OtConfigFormatFixer):
                 SAVE_SUFFIX: self._run_config.save_suffix,
                 COUNT_INTERVALS: self._run_config.count_intervals,
                 COUNTING_EVENT: self._run_config.counting_event.value,
-                **serialize_traffic_statistics_and_geo_tracks(
-                    self._run_config.traffic_statistics,
-                    self._run_config.do_export_geo_tracks,
-                ),
+                **serialize_traffic_statistics(self._run_config.traffic_statistics),
+                **serialize_geo_tracks(self._run_config.do_export_geo_tracks),
             },
             NUM_PROCESSES: self._run_config.num_processes,
             LOGFILE: self._run_config.log_file,
@@ -129,16 +127,17 @@ class FixMissingAnalysis(OtConfigFormatFixer):
         }
 
 
-def serialize_traffic_statistics_and_geo_tracks(
-    traffic_statistics: TrafficStatisticsConfig | None, geo_tracks: bool
+def serialize_traffic_statistics(
+    traffic_statistics: TrafficStatisticsConfig | None,
 ) -> dict:
-    """Serialize the optional export keys.
+    """Serialize the optional traffic statistics export key.
 
-    Keys are only emitted when set, so otconfigs without them serialize as before.
+    The key is only emitted when set, so otconfigs without it serialize as before.
     """
-    result: dict = {}
-    if traffic_statistics is not None:
-        result[TRAFFIC_STATISTICS] = {
+    if traffic_statistics is None:
+        return {}
+    return {
+        TRAFFIC_STATISTICS: {
             ENABLED: traffic_statistics.enabled,
             INTERVAL_MINUTES: traffic_statistics.interval_minutes,
             MAX_SPEED_KMH: traffic_statistics.max_speed_kmh,
@@ -149,9 +148,15 @@ def serialize_traffic_statistics_and_geo_tracks(
             PEAK_WINDOW_MINUTES: traffic_statistics.peak_window_minutes,
             PEAK_STEP_MINUTES: traffic_statistics.peak_step_minutes,
         }
-    if geo_tracks:
-        result[GEO_TRACKS] = True
-    return result
+    }
+
+
+def serialize_geo_tracks(geo_tracks: bool) -> dict:
+    """Serialize the optional geo tracks export key.
+
+    The key is only emitted when set, so otconfigs without it serialize as before.
+    """
+    return {GEO_TRACKS: True} if geo_tracks else {}
 
 
 def _parse_int(data: dict, key: str, default: int) -> int:
@@ -548,10 +553,10 @@ class OtConfigParser(ConfigParser):
                 EVENT_FORMATS: list(analysis_config.export_config.event_formats),
                 COUNT_INTERVALS: list(analysis_config.export_config.count_intervals),
                 COUNTING_EVENT: analysis_config.export_config.counting_event.value,
-                **serialize_traffic_statistics_and_geo_tracks(
-                    analysis_config.export_config.traffic_statistics,
-                    analysis_config.export_config.geo_tracks,
+                **serialize_traffic_statistics(
+                    analysis_config.export_config.traffic_statistics
                 ),
+                **serialize_geo_tracks(analysis_config.export_config.geo_tracks),
             },
             NUM_PROCESSES: analysis_config.num_processes,
             LOGFILE: str(analysis_config.logfile),
