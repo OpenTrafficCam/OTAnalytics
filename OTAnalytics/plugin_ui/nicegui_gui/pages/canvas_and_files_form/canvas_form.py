@@ -72,6 +72,12 @@ ELEMENT_ID = "element_id"
 CURSOR = "pointer"
 CURSOR_MOVE = "move"
 NEW_SECTION_ID = "new-section-id"
+NEW_POINT_ID_PREFIX = "new_point-"
+DRAG_OVERLAY_ID = "drag-overlay"
+DRAG_OVERLAY_SVG = (
+    f'<rect id="{DRAG_OVERLAY_ID}" x="0" y="0" width="9999" height="9999" '
+    f'fill-opacity="0" pointer-events="all"/>'
+)
 EDIT_KNOB_ID_PREFIX = "edit-knob-"
 KNOB_RADIUS = 6
 HIGHLIGHTED_KNOB_RADIUS = 8
@@ -107,13 +113,32 @@ def svg_event_to_point(e: dict) -> Point:
     return to_point(e[IMAGE_X], e[IMAGE_Y])
 
 
-def knob_index_from_element_id(element_id: str | None) -> int | None:
-    if not element_id or not element_id.startswith(EDIT_KNOB_ID_PREFIX):
+def _index_from_element_id(element_id: str | None, prefix: str) -> int | None:
+    if not element_id or not element_id.startswith(prefix):
         return None
     try:
-        return int(element_id.removeprefix(EDIT_KNOB_ID_PREFIX))
+        return int(element_id.removeprefix(prefix))
     except ValueError:
         return None
+
+
+def knob_index_from_element_id(element_id: str | None) -> int | None:
+    return _index_from_element_id(element_id, EDIT_KNOB_ID_PREFIX)
+
+
+def new_point_index_from_element_id(element_id: str | None) -> int | None:
+    return _index_from_element_id(element_id, NEW_POINT_ID_PREFIX)
+
+
+def create_new_section_point(index: int, point: Point) -> Circle:
+    return Circle(
+        x=point[0],
+        y=point[1],
+        pointer_event=POINTER_EVENT_ALL,
+        cursor=CURSOR,
+        fill=EDIT_COLOR,
+        id=f"{NEW_POINT_ID_PREFIX}{index}",
+    )
 
 
 def create_knob(
@@ -179,6 +204,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._preview_point: Point | None = None
         self._new_section = False
         self._new_area_section = False
+        self._new_section_dragging_index: int | None = None
         self._sections: SectionResource = SectionResource({})
         self._flows: LineResources = LineResources({})
         self._circles: CircleResources = CircleResources({})
@@ -358,6 +384,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._current_section = None
         self._new_section_points = []
         self._preview_point = None
+        self._new_section_dragging_index = None
         self._reset_geometry_editor()
         self._update_mouse_events()
 
@@ -407,6 +434,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self._overlay.content += self._circles.to_svg()
             self._overlay.content += self._edit_geometry()
             self.draw_new_section()
+            if self._new_section_dragging_index is not None:
+                self._overlay.content += DRAG_OVERLAY_SVG
 
     def draw_new_section(self) -> None:
         if not self._overlay:
@@ -456,7 +485,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def _on_move(self, point: Point) -> None:
         if self._new_section:
-            self._preview_point = point
+            if self._new_section_dragging_index is not None:
+                self._move_new_section_point(self._new_section_dragging_index, point)
+            else:
+                self._preview_point = point
             self.draw_all()
         elif self._current_section is not None:
             self._mouse_position = point
@@ -464,6 +496,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
                 self._move_selected_knob(point)
             else:
                 self._hover_knob(point)
+
+    def _move_new_section_point(self, index: int, point: Point) -> None:
+        self._new_section_points[index] = create_new_section_point(index, point)
 
     def _move_selected_knob(self, point: Point) -> None:
         if self._selected_knob_index is None:
@@ -480,7 +515,12 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self.draw_all()
 
     def _on_release(self, point: Point) -> None:
-        """Place the selected knob if it was dragged or picked up before."""
+        """Drop a dragged new section point or place the selected knob."""
+        if self._new_section and self._new_section_dragging_index is not None:
+            self._move_new_section_point(self._new_section_dragging_index, point)
+            self._new_section_dragging_index = None
+            self.draw_all()
+            return
         if self._current_section is None or not self._dragging:
             return
         self._dragging = False
@@ -507,20 +547,23 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def _on_pointer_down(self, e: events.MouseEventArguments) -> None:
         if self._new_section:
             self._new_section_points.append(
-                Circle(
-                    x=round(e.image_x),
-                    y=round(e.image_y),
-                    pointer_event=POINTER_EVENT_NONE,
-                    cursor=CURSOR,
-                    fill=EDIT_COLOR,
-                    id=f"new_point-{len(self._new_section_points)}",
+                create_new_section_point(
+                    len(self._new_section_points), to_point(e.image_x, e.image_y)
                 )
             )
             self.draw_all()
 
     def on_svg_pointer_down(self, e: dict) -> None:
-        """Select a knob of the edited section or pick up the selected knob."""
-        if self._current_section is None or not self._enabled:
+        """Select a knob of the edited section or pick up the selected knob.
+
+        While adding a new section, start dragging the point under the pointer.
+        """
+        if not self._enabled:
+            return
+        if self._new_section:
+            self._start_dragging_new_section_point(e)
+            return
+        if self._current_section is None:
             return
         point = svg_event_to_point(e)
         self._mouse_position = point
@@ -538,6 +581,14 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self._drop_on_release = True
         self._dragging = True
         self._knob_moved = False
+        self.draw_all()
+
+    def _start_dragging_new_section_point(self, e: dict) -> None:
+        index = new_point_index_from_element_id(e.get(ELEMENT_ID))
+        if index is None or index >= len(self._new_section_points):
+            return
+        self._new_section_dragging_index = index
+        self._preview_point = None
         self.draw_all()
 
     def on_svg_pointer_move(self, e: dict) -> None:
@@ -642,6 +693,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_section = False
         self._new_section_points = []
         self._preview_point = None
+        self._new_section_dragging_index = None
         self._reset_geometry_editor()
         self._enabled = True
         self._current_section = section
@@ -704,6 +756,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_area_section = is_area_section
         self._new_section_points = []
         self._preview_point = None
+        self._new_section_dragging_index = None
         self._update_mouse_events()
         self._release_focus()
         self.draw_all()

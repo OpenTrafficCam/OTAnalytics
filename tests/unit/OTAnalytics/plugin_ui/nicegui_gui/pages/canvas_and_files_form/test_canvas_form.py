@@ -29,6 +29,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polygon import Polygon
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     CLICK,
+    DRAG_OVERLAY_ID,
     EDIT_COLOR,
     EDIT_KNOB_ID_PREFIX,
     ELEMENT_ID,
@@ -37,6 +38,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     IMAGE_Y,
     MOUSE_MOVE,
     MOUSE_UP,
+    NEW_POINT_ID_PREFIX,
     NORMAL_COLOR,
     RELEASE_FOCUS,
     SELECTED_COLOR,
@@ -465,6 +467,74 @@ class TestCanvasFormPointerEvents:
         assert canvas_form._new_section_points[0].x == 100
         assert canvas_form._new_section_points[1].x == 150
         assert canvas_form._new_section_points[2].x == 200
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_drag_new_section_point(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        # Arrange
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas_form.start_section_builder()
+        for x, y in [(100, 200), (150, 250)]:
+            mock_event = MagicMock(spec=events.MouseEventArguments)
+            mock_event.image_x = x
+            mock_event.image_y = y
+            canvas_form._on_pointer_down(mock_event)
+
+        # Act
+        canvas_form.on_svg_pointer_down(
+            {IMAGE_X: 100, IMAGE_Y: 200, ELEMENT_ID: f"{NEW_POINT_ID_PREFIX}0"}
+        )
+        canvas_form.on_svg_pointer_move(
+            {IMAGE_X: 120.4, IMAGE_Y: 220.6, ELEMENT_ID: DRAG_OVERLAY_ID}
+        )
+        content_while_dragging = overlay_content(mock_ui)
+        canvas_form.on_svg_pointer_up(
+            {IMAGE_X: 130, IMAGE_Y: 230, ELEMENT_ID: DRAG_OVERLAY_ID}
+        )
+
+        # Assert
+        assert DRAG_OVERLAY_ID in content_while_dragging
+        assert DRAG_OVERLAY_ID not in overlay_content(mock_ui)
+        assert canvas_form._new_section_dragging_index is None
+        assert circle_to_coordinates(canvas_form._new_section_points) == [
+            (130, 230),
+            (150, 250),
+        ]
+        assert canvas_form._new_section_points[0].id == f"{NEW_POINT_ID_PREFIX}0"
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_pointer_down_on_other_element_does_not_drag_new_section_point(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        # Arrange
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        canvas_form.start_section_builder()
+        mock_event = MagicMock(spec=events.MouseEventArguments)
+        mock_event.image_x = 100
+        mock_event.image_y = 200
+        canvas_form._on_pointer_down(mock_event)
+
+        # Act
+        canvas_form.on_svg_pointer_down(
+            {IMAGE_X: 100, IMAGE_Y: 200, ELEMENT_ID: "some-section-0"}
+        )
+        canvas_form.on_svg_pointer_move(
+            {IMAGE_X: 120, IMAGE_Y: 220, ELEMENT_ID: "some-section-0"}
+        )
+
+        # Assert
+        assert canvas_form._new_section_dragging_index is None
+        assert circle_to_coordinates(canvas_form._new_section_points) == [(100, 200)]
+        assert canvas_form._preview_point == (120, 220)
 
 
 class TestCanvasFormKeyboardEvents:
