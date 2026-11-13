@@ -15,6 +15,8 @@ class Circle:
     cursor: str = "pointer"
 
     def to_svg(self) -> str:
+        # NiceGUI sanitizes svg content and drops `pointer-events` and `cursor`
+        # attributes, but keeps them as style.
         return f"""<circle id="{self.id}"
         cx="{self.x}"
         cy="{self.y}"
@@ -23,8 +25,7 @@ class Circle:
         stroke-width="{self.stroke_width}"
         stroke-opacity="{self.stroke_opacity}"
         fill="{self.fill}"
-        pointer-events={self.pointer_event}
-        cursor="{self.cursor}" />"""
+        style="pointer-events: {self.pointer_event}; cursor: {self.cursor}" />"""
 
     def to_tuple(self) -> tuple[int, int]:
         return self.x, self.y

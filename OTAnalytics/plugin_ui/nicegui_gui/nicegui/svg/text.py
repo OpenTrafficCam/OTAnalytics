@@ -19,4 +19,4 @@ class Text:
         y="{self.y}"
         fill="{self.color}"
         font-size="{self.font_size}"
-        pointer-events="none">{escape(self.text)}</text>"""
+        style="pointer-events: none">{escape(self.text)}</text>"""

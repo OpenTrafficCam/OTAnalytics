@@ -1,6 +1,6 @@
 from typing import Iterable, Sequence
 
-from nicegui import context, ui
+from nicegui import ui
 
 from OTAnalytics.application.progress import (
     AutoIncrementingProgressbar,
@@ -18,6 +18,7 @@ from OTAnalytics.domain.progress import (
     Counter,
     ProgressbarBuilder,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.browser import has_browser_to_show_in
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_PROGRESSBAR_CANCEL = "progressbar-cancel"
@@ -87,7 +88,7 @@ class NiceguiProgressbar(CompletionProgress):
         Does nothing without a browser to show it in, and nothing when there is
         no progress left to show, because only progress closes the dialog again.
         """
-        if not _has_browser_to_show_in() or self._state.finished:
+        if not has_browser_to_show_in() or self._state.finished:
             return
         with ui.dialog().props("persistent") as dialog, ui.card().classes("w-96"):
             self._dialog = dialog
@@ -200,16 +201,3 @@ class NiceguiProgressbarBuilder(ProgressbarBuilder, CompletionProgressBuilder):
         return AutoIncrementingProgressbar(
             sequence, progressbar.counter, progressbar.notify, step_percentage=1
         )
-
-
-def _has_browser_to_show_in() -> bool:
-    """Whether the current task renders into a page a browser is looking at.
-
-    Two callers have none: preloading input files given on the command line at
-    startup, which runs in the auto-index client before any page is served, and
-    a load requested over HTTP rather than from a page, such as OTCloud handing
-    its UI Worker an otconfig, whose task has no NiceGUI slot at all.
-    """
-    if not context.slot_stack:
-        return False
-    return not context.client.is_auto_index_client

@@ -116,7 +116,11 @@ class LocalFilePicker(ui.dialog):
             self.grid: ui.aggrid = ui.aggrid(
                 {
                     "columnDefs": [{"field": NAME, "headerName": FILE}],
-                    "rowSelection": "multiple" if multiple else "single",
+                    "rowSelection": {
+                        "mode": "multiRow" if multiple else "singleRow",
+                        "checkboxes": False,
+                        "enableClickSelection": True,
+                    },
                 },
                 html_columns=[0],
             ).on("cellDoubleClicked", self.handle_double_click)
