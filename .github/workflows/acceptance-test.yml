@@ -6,17 +6,27 @@ on:
       - main
   workflow_call:
 
-permissions: read-all
+permissions: {}
 
 jobs:
   acceptance-test:
     name: Run pytest Acceptance test
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.12
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
       - name: Download test data
         run: |
           gh release download \
@@ -31,11 +41,13 @@ jobs:
           unzip ./\*.zip
           rm ./*.zip
           cd ..
+      # Separate from the test steps so a stale uv.lock fails loudly and early.
+      - name: Install dependencies
+        run: uv sync --locked --dev
+      # pytest-playwright runs headless Chromium by default, so the other browsers
+      # (and their ~180 apt packages) aren't needed.
+      - name: Install Playwright browsers
+        run: uv run playwright install --with-deps --only-shell chromium
       - name: Run acceptance tests
-        uses: platomo/test-python-app-action@v4
         timeout-minutes: 20
-        with:
-          py-version: 3.12
-          package-path: OTAnalytics
-          test-path: tests/acceptance
-          playwright-required: true
+        run: uv run pytest --cov=OTAnalytics tests/acceptance

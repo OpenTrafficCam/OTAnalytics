@@ -54,7 +54,6 @@ class SwitchTo(ABC):
 
 
 class SwitchToNext(SwitchTo):
-
     def __init__(
         self,
         state: TrackViewState,
@@ -100,7 +99,6 @@ DEFAULT_EVENT_TYPES = tuple([EventType.SECTION_ENTER, EventType.SECTION_LEAVE])
 
 
 class SwitchToEvent:
-
     def __init__(
         self,
         event_repository: EventRepository,

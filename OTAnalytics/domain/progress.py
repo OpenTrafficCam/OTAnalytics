@@ -41,6 +41,67 @@ class Progressbar(ABC, Iterable):
         raise NotImplementedError
 
 
+class CompletionProgress(ABC):
+    """Progress of work whose items complete in an order of their own.
+
+    This progressbar can express concurrent work, where completion order is not
+    sequence order. Here the caller reports each item as it finishes and polls whether
+    the user asked to stop.
+    """
+
+    @abstractmethod
+    def complete(self, item: str) -> None:
+        """Report one item as completed.
+
+        Args:
+            item (str): the name of the completed item.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def close(self) -> None:
+        """Stop showing the progress, whether the work finished or not."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def is_cancelled(self) -> bool:
+        """Whether the user asked to abandon the work."""
+        raise NotImplementedError
+
+
+class CompletionProgressBuilder(ABC):
+    """Builds progress for work whose items complete in an order of their own."""
+
+    @abstractmethod
+    def build(self, description: str, unit: str, total: int) -> CompletionProgress:
+        """Build and show progress over a known number of items.
+
+        Args:
+            description (str): what the operation is doing.
+            unit (str): the unit of the counted items.
+            total (int): how many items are expected to complete.
+
+        Returns:
+            CompletionProgress: the progress to report completions to.
+        """
+        raise NotImplementedError
+
+
+class NoCompletionProgress(CompletionProgress):
+    """Progress that shows nothing, for front-ends that cannot display it."""
+
+    def complete(self, item: str) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+    @property
+    def is_cancelled(self) -> bool:
+        return False
+
+
 class ProgressbarBuilder(ABC):
     """Interface defining a Progressbar builder.
 
@@ -61,6 +122,22 @@ class ProgressbarBuilder(ABC):
             Progressbar: a new Progressbar instance
         """
         raise NotImplementedError
+
+    def start(self, description: str, unit: str, total: int) -> CompletionProgress:
+        """Show progress of work that is not driven by iterating a sequence.
+
+        Builders that can only decorate a sequence show nothing, which is what a
+        command line run wants: its output is already a log.
+
+        Args:
+            description (str): what the operation being tracked is doing.
+            unit (str): the unit of the counted items.
+            total (int): the number of items expected to complete.
+
+        Returns:
+            CompletionProgress: the progress to close once the work is done.
+        """
+        return NoCompletionProgress()
 
 
 class NoProgressbarBuilder(ProgressbarBuilder):

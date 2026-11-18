@@ -248,6 +248,9 @@ class TrackRepository:
         self._dataset = updated_dataset
         self.observers.notify(TrackRepositoryEvent.create_removed(removed_ids))
 
+    def is_empty(self) -> bool:
+        return self._dataset.empty
+
 
 @dataclass(frozen=True)
 class TrackFileRepositoryEvent:
@@ -306,7 +309,7 @@ class TrackFileRepository:
         """
         return self._files.copy()
 
-    def register(self, observer: OBSERVER[Iterable[Path]]) -> None:
+    def register(self, observer: OBSERVER[TrackFileRepositoryEvent]) -> None:
         self._subject.register(observer)
 
     def clear(self) -> None:

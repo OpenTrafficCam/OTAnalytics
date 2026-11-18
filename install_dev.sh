@@ -9,4 +9,4 @@ bash "$WORKING_DIR"/install.sh
 uv lock --upgrade
 uv sync --dev
 uv run playwright install
-uv run pre-commit install --install-hooks
+uv run pre-commit install --install-hooks --hook-type pre-commit --hook-type pre-push

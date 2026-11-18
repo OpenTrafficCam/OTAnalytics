@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Iterable, Literal
 
 import pandas as pd
@@ -54,6 +55,8 @@ NUMBER_ROUNDED_COLUMNS = {
     event_list.INTERPOLATED_EVENT_COORDINATE_Y: 1,
     event_list.DIRECTION_VECTOR_X: 4,
     event_list.DIRECTION_VECTOR_Y: 4,
+    event_list.GEO_X: 3,
+    event_list.GEO_Y: 3,
 }
 
 DATETIME_ROUNDED_COLUMNS = {
@@ -101,11 +104,21 @@ class EventListDataFrameBuilder:
         self._add_section_names()
         self._add_detailed_date_time_columns()
         self._round()
-        return self._df.loc[:, EXPORT_COLUMNS]
+        geo_cols = (
+            [event_list.GEO_X, event_list.GEO_Y]
+            if event_list.GEO_X in self._df.columns
+            and event_list.GEO_Y in self._df.columns
+            and pd.api.types.is_numeric_dtype(self._df[event_list.GEO_X])
+            and pd.api.types.is_numeric_dtype(self._df[event_list.GEO_Y])
+            else []
+        )
+        return self._df.loc[:, EXPORT_COLUMNS + geo_cols]
 
     def _round(self) -> None:
         for column, decimals in NUMBER_ROUNDED_COLUMNS.items():
-            if column in self._df.columns:
+            if column in self._df.columns and pd.api.types.is_numeric_dtype(
+                self._df[column]
+            ):
                 self._df.loc[:, column] = self._df.loc[:, column].round(decimals)
         for column, freq in DATETIME_ROUNDED_COLUMNS.items():
             if column in self._df.columns:
@@ -191,31 +204,34 @@ class EventListExcelExporter(EventListExporter):
     Other export modes will only append data.
     """
 
-    def export(
+    def _export(
         self,
+        save_file_path: Path,
         events: Iterable[Event],
         sections: Iterable[Section],
         export_specification: EventExportSpecification,
     ) -> None:
         df_events = EventListDataFrameBuilder(events=events, sections=sections).build()
         df_sections = SectionsDataFrameBuilder(sections=sections).build()
-        self._write_to_excel(df_events, df_sections, export_specification)
+        self._write_to_excel(
+            save_file_path, df_events, df_sections, export_specification
+        )
 
     def _write_to_excel(
         self,
+        save_file_path: Path,
         df_events: pd.DataFrame,
         df_sections: pd.DataFrame,
         export_specification: EventExportSpecification,
     ) -> None:
-        file = export_specification.file
         append = export_specification.export_mode.is_subsequent_write()
 
         if append:
             writer = pd.ExcelWriter(
-                file, engine="openpyxl", mode="a", if_sheet_exists="overlay"
+                save_file_path, engine="openpyxl", mode="a", if_sheet_exists="overlay"
             )
         else:
-            writer = pd.ExcelWriter(file, engine="openpyxl")
+            writer = pd.ExcelWriter(save_file_path, engine="openpyxl")
 
         header = not append
 
@@ -253,23 +269,26 @@ class EventListCSVExporter(EventListExporter):
     Other export modes will only append data.
     """
 
-    def export(
+    def _export(
         self,
+        save_file_path: Path,
         events: Iterable[Event],
         sections: Iterable[Section],
         export_specification: EventExportSpecification,
     ) -> None:
         df_events = EventListDataFrameBuilder(events=events, sections=sections).build()
-        self._write_to_csv(df_events, export_specification)
+        self._write_to_csv(save_file_path, df_events, export_specification)
 
     def _write_to_csv(
-        self, df_events: pd.DataFrame, export_specification: EventExportSpecification
+        self,
+        save_file_path: Path,
+        df_events: pd.DataFrame,
+        export_specification: EventExportSpecification,
     ) -> None:
-        file = export_specification.file
         append = export_specification.export_mode.is_subsequent_write()
         header = not append
         write_mode: Literal["w", "a"] = "a" if append else "w"
-        df_events.to_csv(file, index=False, mode=write_mode, header=header)
+        df_events.to_csv(save_file_path, index=False, mode=write_mode, header=header)
 
     def get_extension(self) -> str:
         return f".{EXTENSION_CSV}"
@@ -296,13 +315,13 @@ class EventListOteventsExporter(EventListExporter):
         self._events_collect: list[Event] = list()
         self._sections_collect: list[Section] = list()
 
-    def export(
+    def _export(
         self,
+        save_file_path: Path,
         events: Iterable[Event],
         sections: Iterable[Section],
         export_specification: EventExportSpecification,
     ) -> None:
-        file = export_specification.file
         export_mode = export_specification.export_mode
 
         if export_mode == INITIAL_MERGE:
@@ -318,7 +337,7 @@ class EventListOteventsExporter(EventListExporter):
 
         if export_mode.is_final_write():
             self._event_list_parser.serialize(
-                self._events_collect, self._sections_collect, file
+                self._events_collect, self._sections_collect, save_file_path
             )
             self._events_collect.clear()
             self._sections_collect.clear()
@@ -341,8 +360,9 @@ class EventListDictPrinter(EventListExporter):
     def __init__(self) -> None:
         self._section_collect: set[Section] = set()
 
-    def export(
+    def _export(
         self,
+        save_file_path: Path,
         events: Iterable[Event],
         sections: Iterable[Section],
         export_specification: EventExportSpecification,
@@ -382,8 +402,9 @@ class EventListDataFramePrinter(EventListExporter):
     def __init__(self) -> None:
         self._section_collect: set[Section] = set()
 
-    def export(
+    def _export(
         self,
+        save_file_path: Path,
         events: Iterable[Event],
         sections: Iterable[Section],
         export_specification: EventExportSpecification,

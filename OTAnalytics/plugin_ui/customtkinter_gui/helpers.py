@@ -108,6 +108,8 @@ def ask_for_save_file_path(
     title: str,
     filetypes: list[tuple[str, str]],
     defaultextension: str,
+    initialfile: str,
+    initialdir: Path,
     **kwargs: Any,
 ) -> Path:
     """
@@ -118,12 +120,14 @@ def ask_for_save_file_path(
         title (str): title for the file chooser
         filetypes (list[tuple[str, str]]): supported file types to choose from
         defaultextension (str): default extension used if none is present
+        initialfile (str): initial file name
+        initialdir (Path): initial directory
 
     Returns:
         Path: path object representing an output path
     """
     filename_with_extension = ask_for_save_file_name(
-        title, filetypes, defaultextension, **kwargs
+        title, filetypes, defaultextension, initialfile, initialdir, **kwargs
     )
     return Path(filename_with_extension)
 
@@ -132,6 +136,8 @@ def ask_for_save_file_name(
     title: str,
     filetypes: list[tuple[str, str]],
     defaultextension: str,
+    initialfile: str,
+    initialdir: Path,
     **kwargs: Any,
 ) -> str:
     """
@@ -140,8 +146,10 @@ def ask_for_save_file_name(
 
     Args:
         title (str): title for the file chooser
-        file_types (list[tuple[str, str]]): supported file types to choose from
+        filetypes (list[tuple[str, str]]): supported file types to choose from
         defaultextension (str): default extension used if none is present
+        initialfile (str): initial file name
+        initialdir (Path): initial directory
 
     Returns:
         str: file name with extension
@@ -150,6 +158,8 @@ def ask_for_save_file_name(
         title=title,
         filetypes=filetypes,
         defaultextension=defaultextension,
+        initialfile=initialfile,
+        initialdir=initialdir,
         **kwargs,
     )
     if filename:

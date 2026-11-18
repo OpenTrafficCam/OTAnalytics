@@ -55,7 +55,6 @@ def rotate(array: ndarray, side_data: dict) -> ndarray:
 
 
 class PyAvVideoReader(VideoReader):
-
     def __init__(
         self, videos_metadata: VideosMetadata, track_image_factory: TrackImageFactory
     ) -> None:

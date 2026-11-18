@@ -1,14 +1,17 @@
+from datetime import datetime, timedelta, timezone
 from unittest import mock
 from unittest.mock import Mock, call
 
 import pytest
 
 from OTAnalytics.application.analysis.road_user_assignment import (
+    EventPair,
     RoadUserAssigner,
     RoadUserAssignment,
     RoadUserAssignmentRepository,
     RoadUserAssignments,
 )
+from OTAnalytics.application.export_formats import road_user_assignments as ras
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
 from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
@@ -25,9 +28,11 @@ from OTAnalytics.application.use_cases.road_user_assignment_export import (
     RoadUserAssignmentExporter,
     RoadUserAssignmentExporterFactory,
 )
+from OTAnalytics.domain.flow import Flow, FlowId
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track_dataset.track_dataset import TrackIdSetFactory
 from OTAnalytics.domain.types import EventType
+from tests.utils.builders.event_builder import EventBuilder
 from tests.utils.builders.road_user_assignment import create_road_user_assignment
 
 
@@ -93,6 +98,107 @@ class TestRoadUserAssignmentBuilder:
         ):
             _builder.build(Mock())
 
+    def test_build_avg_speed_when_flow_distance_and_positive_duration(
+        self,
+        _builder: RoadUserAssignmentBuilder,
+        first_line_section: Section,
+        second_line_section: Section,
+    ) -> None:
+        t0 = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        t1 = t0 + timedelta(seconds=10)
+        start_event = EventBuilder(
+            section_id=first_line_section.id.id,
+            interpolated_occurrence=t0,
+        ).build_section_event()
+        end_event = EventBuilder(
+            section_id=second_line_section.id.id,
+            interpolated_occurrence=t1,
+        ).build_section_event()
+        flow = Flow(
+            FlowId("f-speed"),
+            "f-speed",
+            first_line_section.id,
+            second_line_section.id,
+            distance=25.0,
+        )
+        assignment = RoadUserAssignment(
+            "1", "car", flow, EventPair(start_event, end_event)
+        )
+        _builder.add_start_section(first_line_section)
+        _builder.add_end_section(second_line_section)
+        _builder.add_max_confidence(0.9)
+        result = _builder.build(assignment)
+        assert result[ras.FLOW_DISTANCE_M] == 25.0
+        assert result[ras.TRAVEL_TIME_S] == 10.0
+        assert result[ras.AVG_SPEED_MPS] == 2.5
+
+    def test_build_no_avg_speed_when_zero_travel_time(
+        self,
+        _builder: RoadUserAssignmentBuilder,
+        first_line_section: Section,
+        second_line_section: Section,
+    ) -> None:
+        t0 = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        start_event = EventBuilder(
+            section_id=first_line_section.id.id,
+            interpolated_occurrence=t0,
+        ).build_section_event()
+        end_event = EventBuilder(
+            section_id=second_line_section.id.id,
+            interpolated_occurrence=t0,
+        ).build_section_event()
+        flow = Flow(
+            FlowId("f-zero"),
+            "f-zero",
+            first_line_section.id,
+            second_line_section.id,
+            distance=10.0,
+        )
+        assignment = RoadUserAssignment(
+            "1", "car", flow, EventPair(start_event, end_event)
+        )
+        _builder.add_start_section(first_line_section)
+        _builder.add_end_section(second_line_section)
+        _builder.add_max_confidence(0.9)
+        result = _builder.build(assignment)
+        assert result[ras.FLOW_DISTANCE_M] == 10.0
+        assert result[ras.TRAVEL_TIME_S] == 0.0
+        assert result[ras.AVG_SPEED_MPS] is None
+
+    def test_build_avg_speed_zero_when_flow_distance_is_zero(
+        self,
+        _builder: RoadUserAssignmentBuilder,
+        first_line_section: Section,
+        second_line_section: Section,
+    ) -> None:
+        t0 = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        t1 = t0 + timedelta(seconds=4)
+        start_event = EventBuilder(
+            section_id=first_line_section.id.id,
+            interpolated_occurrence=t0,
+        ).build_section_event()
+        end_event = EventBuilder(
+            section_id=second_line_section.id.id,
+            interpolated_occurrence=t1,
+        ).build_section_event()
+        flow = Flow(
+            FlowId("f-zero-dist"),
+            "f-zero-dist",
+            first_line_section.id,
+            second_line_section.id,
+            distance=0.0,
+        )
+        assignment = RoadUserAssignment(
+            "1", "car", flow, EventPair(start_event, end_event)
+        )
+        _builder.add_start_section(first_line_section)
+        _builder.add_end_section(second_line_section)
+        _builder.add_max_confidence(0.9)
+        result = _builder.build(assignment)
+        assert result[ras.FLOW_DISTANCE_M] == 0.0
+        assert result[ras.TRAVEL_TIME_S] == 4.0
+        assert result[ras.AVG_SPEED_MPS] == 0.0
+
 
 class TestExportRoadUserAssignments:
     def test_export(self) -> None:
@@ -136,9 +242,10 @@ class TestExportRoadUserAssignments:
                 exporter_factory,
             )
             specification = Mock()
-            specification.save_path = Mock()
+            specification.export_directory = Mock()
+            specification.export_filename_stem = "assignments"
             specification.format = "csv"
-            specification.mode = OVERWRITE
+            specification.export_mode = OVERWRITE
 
             export_road_user_assignments.export(specification)
 

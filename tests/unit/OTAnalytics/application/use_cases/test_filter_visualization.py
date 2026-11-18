@@ -25,7 +25,6 @@ def videos_metadata() -> VideosMetadata:
 
 
 class TestCreateDefaultFilterRange:
-
     @pytest.mark.parametrize(
         "start_date, end_date,expected_start_date,expected_end_date",
         [
