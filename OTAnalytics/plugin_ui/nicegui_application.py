@@ -1,14 +1,79 @@
 from functools import cached_property
+from pathlib import Path
 from typing import Protocol
 
+from nicegui import app as nicegui_app
+
+from OTAnalytics.adapter_ui.local_file_providers import (
+    LocalOrthophotoProvider,
+    LocalTrackFileProvider,
+    LocalVideoFileProvider,
+)
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
+from OTAnalytics.application.orthophoto import (
+    LocalObtainOrthophoto,
+    NoOrthophotoToProvide,
+    ObtainOrthophoto,
+    ProvideOrthophoto,
+)
+from OTAnalytics.application.project_location import (
+    RefuseAnyProjectLocation,
+    ValidateProjectLocation,
+)
+from OTAnalytics.application.state import CurrentExportConfigState
+from OTAnalytics.application.upload_otconfig import NoOtconfigUpload, UploadOtconfig
+from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
+from OTAnalytics.application.use_cases.provide_input_files import (
+    ProvideTrackFiles,
+    ProvideVideoFiles,
+)
+from OTAnalytics.application.use_cases.reset_application import ResetApplication
+from OTAnalytics.application.use_cases.static_analysis_config import (
+    GetCountingEventOfCurrentAnalysisConfig,
+    GetCountIntervalsOfCurrentAnalysisConfig,
+    GetDoCountingOfCurrentAnalysisConfig,
+    GetDoEventsOfCurrentAnalysisConfig,
+    GetEventFormatsOfCurrentAnalysisConfig,
+    GetLogfileOfCurrentAnalysisConfig,
+    GetNumProcessesOfCurrentAnalysisConfig,
+    GetSaveNameOfCurrentAnalysisConfig,
+    GetSaveSuffixOfCurrentAnalysisConfig,
+    SetCountingEventInCurrentAnalysisConfig,
+    SetCountIntervalsInCurrentAnalysisConfig,
+    SetDoCountingInCurrentAnalysisConfig,
+    SetDoEventsInCurrentAnalysisConfig,
+    SetEventFormatsInCurrentAnalysisConfig,
+    SetLogfileInCurrentAnalysisConfig,
+    SetNumProcessesInCurrentAnalysisConfig,
+    SetSaveNameInCurrentAnalysisConfig,
+    SetSaveSuffixInCurrentAnalysisConfig,
+)
 from OTAnalytics.domain.progress import ProgressbarBuilder
-from OTAnalytics.plugin_progress.tqdm_progressbar import TqdmBuilder
+from OTAnalytics.domain.transfer_mode import TransferMode
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     PilImageFactory,
     TrackImageFactory,
 )
+from OTAnalytics.plugin_s3.cleanup import WipeUserSource, WipeUserSourceOnReset
+from OTAnalytics.plugin_s3.config.env_vars import S3Env, transfer_mode_from_env
+from OTAnalytics.plugin_s3.config.parsing import parse_s3_config
+from OTAnalytics.plugin_s3.config.s3 import S3Config
+from OTAnalytics.plugin_s3.download import S3Download
+from OTAnalytics.plugin_s3.download_objects import DownloadObjects
+from OTAnalytics.plugin_s3.list_objects import S3ListObjects
+from OTAnalytics.plugin_s3.orthophoto import S3ObtainOrthophoto
+from OTAnalytics.plugin_s3.otconfig_upload import S3OtconfigUpload
+from OTAnalytics.plugin_s3.project_location import RequireWellFormedKeyPrefix
+from OTAnalytics.plugin_s3.s3_file_providers import (
+    S3TrackFileProvider,
+    S3VideoFileProvider,
+)
+from OTAnalytics.plugin_s3.store import S3Store
+from OTAnalytics.plugin_s3.upload import S3Upload
 from OTAnalytics.plugin_ui.gui_application import OtAnalyticsGuiApplicationStarter
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
+    NiceguiProgressbarBuilder,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
     AddTracksForm,
 )
@@ -34,6 +99,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import 
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     ProjectForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.static_analysis_config_form import (  # noqa
+    StaticAnalysisConfigForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import RemarkForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
@@ -79,9 +147,21 @@ class Webserver(Protocol):
 
 
 class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
-
     def start_ui(self) -> None:
         self.webserver.run()
+
+    def register_observers(self) -> None:
+        super().register_observers()
+        self.register_flow_track_count_observers()
+
+    def register_flow_track_count_observers(self) -> None:
+        """Keep the number of assigned tracks in the flow table up to date.
+
+        Registered after the base observers, so the assignments have already been
+        cleared when the flow table is refreshed.
+        """
+        self.flow_repository.register_flows_observer(self.flow_form)
+        self.event_repository.register_observer(self.flow_form.notify_events)
 
     @cached_property
     def webserver(self) -> Webserver:
@@ -103,13 +183,23 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
         )
-        self.preload_input_files.load(self.run_config)
+        self.preload_project()
         return NiceguiWebserver(
             page_builders=[main_page_builder],
             layout_components=NiceguiLayoutComponents(),
             hostname=DEFAULT_HOSTNAME,
             port=DEFAULT_PORT,
         )
+
+    def preload_project(self) -> None:
+        # Before anything is preloaded: reclaims whatever a crash, an OOM kill
+        # or a docker kill left staged from the previous run.
+        if wipe := self.wipe_user_source:
+            wipe.wipe()
+            # Best effort on SIGTERM/SIGINT. The startup wipe above is the
+            # guarantee; this only shortens how long orphans sit on disk.
+            nicegui_app.on_shutdown(wipe.wipe)
+        self.preload_input_files.load(self.run_config)
 
     @cached_property
     def analysis_form(self) -> AnalysisForm:
@@ -120,6 +210,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return ConfigurationBar(
             resource_manager=self.resource_manager,
             project_form=self.project_form,
+            static_analysis_config_form=self.static_analysis_config_form,
             svz_metadata_form=self.svz_metadata_form,
             track_form=self.track_form,
             sections_and_flow_form=self.sections_and_flow_form,
@@ -192,6 +283,174 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return ProjectForm(self.view_model, self.resource_manager)
 
     @cached_property
+    def get_do_events_of_current_analysis_config(
+        self,
+    ) -> GetDoEventsOfCurrentAnalysisConfig:
+        return GetDoEventsOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def get_do_counting_of_current_analysis_config(
+        self,
+    ) -> GetDoCountingOfCurrentAnalysisConfig:
+        return GetDoCountingOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def get_save_name_of_current_analysis_config(
+        self,
+    ) -> GetSaveNameOfCurrentAnalysisConfig:
+        return GetSaveNameOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_save_suffix_of_current_analysis_config(
+        self,
+    ) -> GetSaveSuffixOfCurrentAnalysisConfig:
+        return GetSaveSuffixOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_event_formats_of_current_analysis_config(
+        self,
+    ) -> GetEventFormatsOfCurrentAnalysisConfig:
+        return GetEventFormatsOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_count_intervals_of_current_analysis_config(
+        self,
+    ) -> GetCountIntervalsOfCurrentAnalysisConfig:
+        return GetCountIntervalsOfCurrentAnalysisConfig(
+            self.current_export_config_state
+        )
+
+    @cached_property
+    def get_counting_event_of_current_analysis_config(
+        self,
+    ) -> GetCountingEventOfCurrentAnalysisConfig:
+        return GetCountingEventOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_num_processes_of_current_analysis_config(
+        self,
+    ) -> GetNumProcessesOfCurrentAnalysisConfig:
+        return GetNumProcessesOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def get_logfile_of_current_analysis_config(
+        self,
+    ) -> GetLogfileOfCurrentAnalysisConfig:
+        return GetLogfileOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def set_do_events_in_current_analysis_config(
+        self,
+    ) -> SetDoEventsInCurrentAnalysisConfig:
+        return SetDoEventsInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def set_do_counting_in_current_analysis_config(
+        self,
+    ) -> SetDoCountingInCurrentAnalysisConfig:
+        return SetDoCountingInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def set_save_name_in_current_analysis_config(
+        self,
+    ) -> SetSaveNameInCurrentAnalysisConfig:
+        return SetSaveNameInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_save_suffix_in_current_analysis_config(
+        self,
+    ) -> SetSaveSuffixInCurrentAnalysisConfig:
+        return SetSaveSuffixInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_event_formats_in_current_analysis_config(
+        self,
+    ) -> SetEventFormatsInCurrentAnalysisConfig:
+        return SetEventFormatsInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_count_intervals_in_current_analysis_config(
+        self,
+    ) -> SetCountIntervalsInCurrentAnalysisConfig:
+        return SetCountIntervalsInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_counting_event_in_current_analysis_config(
+        self,
+    ) -> SetCountingEventInCurrentAnalysisConfig:
+        return SetCountingEventInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_num_processes_in_current_analysis_config(
+        self,
+    ) -> SetNumProcessesInCurrentAnalysisConfig:
+        return SetNumProcessesInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def set_logfile_in_current_analysis_config(
+        self,
+    ) -> SetLogfileInCurrentAnalysisConfig:
+        return SetLogfileInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def current_export_config_state(self) -> CurrentExportConfigState:
+        return self.current_static_analysis_config_state.export_config
+
+    @cached_property
+    def static_analysis_config_form(self) -> StaticAnalysisConfigForm:
+        return StaticAnalysisConfigForm(
+            resource_manager=self.resource_manager,
+            get_do_events=self.get_do_events_of_current_analysis_config,
+            set_do_events=self.set_do_events_in_current_analysis_config,
+            get_do_counting=self.get_do_counting_of_current_analysis_config,
+            set_do_counting=self.set_do_counting_in_current_analysis_config,
+            get_save_name=self.get_save_name_of_current_analysis_config,
+            set_save_name=self.set_save_name_in_current_analysis_config,
+            get_save_suffix=self.get_save_suffix_of_current_analysis_config,
+            set_save_suffix=self.set_save_suffix_in_current_analysis_config,
+            get_event_formats=self.get_event_formats_of_current_analysis_config,
+            set_event_formats=self.set_event_formats_in_current_analysis_config,
+            get_count_intervals=self.get_count_intervals_of_current_analysis_config,
+            set_count_intervals=self.set_count_intervals_in_current_analysis_config,
+            get_counting_event=self.get_counting_event_of_current_analysis_config,
+            set_counting_event=self.set_counting_event_in_current_analysis_config,
+            get_num_processes=self.get_num_processes_of_current_analysis_config,
+            set_num_processes=self.set_num_processes_in_current_analysis_config,
+            get_logfile=self.get_logfile_of_current_analysis_config,
+            set_logfile=self.set_logfile_in_current_analysis_config,
+        )
+
+    @cached_property
     def layers_form(self) -> LayersForm:
         layer_groups, layers = self.layers
         return LayersForm(self.view_model, self.resource_manager, layer_groups)
@@ -228,12 +487,135 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     @cached_property
     def ui_factory(self) -> UiFactory:
         return NiceGuiUiFactory(
-            self.resource_manager, self.run_config.file_picker_directory
+            self.resource_manager,
+            get_count_intervals=self.get_count_intervals_of_current_analysis_config,
+            get_counting_event=self.get_counting_event_of_current_analysis_config,
+            get_save_name=self.get_save_name_of_current_analysis_config,
+            get_save_suffix=self.get_save_suffix_of_current_analysis_config,
+            base_directory=self.run_config.file_picker_directory,
         )
 
     @cached_property
     def progressbar_builder(self) -> ProgressbarBuilder:
-        return TqdmBuilder()
+        return self.nicegui_progressbar_builder
+
+    @cached_property
+    def nicegui_progressbar_builder(self) -> NiceguiProgressbarBuilder:
+        """One builder for the whole application.
+
+        It keeps the most recently built progressbar reachable, so a second
+        instance would split that state between two owners.
+        """
+        return NiceguiProgressbarBuilder(self.resource_manager)
+
+    @cached_property
+    def transfer_mode(self) -> TransferMode:
+        return transfer_mode_from_env()
+
+    @cached_property
+    def s3_config(self) -> S3Config | None:
+        """The S3 settings, or None when not running in S3 mode."""
+        if self.transfer_mode != TransferMode.S3:
+            return None
+        return parse_s3_config(S3Env())
+
+    @cached_property
+    def provide_track_files(self) -> ProvideTrackFiles:
+        if config := self.s3_config:
+            return S3TrackFileProvider(
+                dialog=self.ask_for_load_window,
+                list_objects=self.s3_list_objects,
+                download_objects=self.download_objects,
+                config=config,
+                current_key_prefix=self.current_key_prefix,
+            )
+        return LocalTrackFileProvider(self.ui_factory)
+
+    @cached_property
+    def obtain_orthophoto(self) -> ObtainOrthophoto:
+        if self.s3_config:
+            return S3ObtainOrthophoto(self.download_objects, self.current_key_prefix)
+        return LocalObtainOrthophoto()
+
+    @cached_property
+    def provide_orthophoto(self) -> ProvideOrthophoto:
+        if self.s3_config:
+            return NoOrthophotoToProvide()
+        return LocalOrthophotoProvider(self.ui_factory)
+
+    @cached_property
+    def provide_video_files(self) -> ProvideVideoFiles:
+        if config := self.s3_config:
+            return S3VideoFileProvider(
+                dialog=self.ask_for_load_window,
+                list_objects=self.s3_list_objects,
+                download_objects=self.download_objects,
+                config=config,
+                current_key_prefix=self.current_key_prefix,
+            )
+        return LocalVideoFileProvider(self.ui_factory)
+
+    @cached_property
+    def validate_project_location(self) -> ValidateProjectLocation:
+        if self.s3_config:
+            return RequireWellFormedKeyPrefix()
+        return RefuseAnyProjectLocation()
+
+    @cached_property
+    def otconfig_upload(self) -> UploadOtconfig:
+        if self.s3_config:
+            return S3OtconfigUpload(S3Upload(self.s3_store))
+        return NoOtconfigUpload()
+
+    @cached_property
+    def reset_application(self) -> ResetApplication:
+        """Resetting a project also frees the staged downloads it used.
+
+        Safe only in this order: the repositories drop every `Video` reference
+        before the files behind them are removed.
+        """
+        if wipe := self.wipe_user_source:
+            return WipeUserSourceOnReset(
+                self.clear_all_repositories, self.reset_state, wipe
+            )
+        return ResetApplication(self.clear_all_repositories, self.reset_state)
+
+    @cached_property
+    def wipe_user_source(self) -> WipeUserSource | None:
+        if config := self.s3_config:
+            return WipeUserSource(Path(config.user_source))
+        return None
+
+    @cached_property
+    def ask_for_load_window(self) -> AskForLoadWindow:
+        from OTAnalytics.plugin_ui.nicegui_gui.dialogs.load_window_dialog import (
+            LoadWindowDialog,
+        )
+
+        return LoadWindowDialog(self.resource_manager)
+
+    @cached_property
+    def s3_store(self) -> S3Store:
+        return S3Store(self._required_s3_config())
+
+    @cached_property
+    def s3_list_objects(self) -> S3ListObjects:
+        return S3ListObjects(self.s3_store)
+
+    @cached_property
+    def download_objects(self) -> DownloadObjects:
+        config = self._required_s3_config()
+        return DownloadObjects(
+            download=S3Download(self.s3_store),
+            user_source=Path(config.user_source),
+            concurrency=config.download_concurrency,
+            progressbar_builder=self.nicegui_progressbar_builder,
+        )
+
+    def _required_s3_config(self) -> S3Config:
+        if config := self.s3_config:
+            return config
+        raise ValueError("S3 is not configured; this is only reachable in s3 mode.")
 
     @cached_property
     def track_image_factory(self) -> TrackImageFactory:

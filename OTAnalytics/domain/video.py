@@ -337,3 +337,6 @@ class VideoRepository:
 
     def get_by_date(self, date: datetime) -> list[Video]:
         return [video for video in self._videos.values() if video.contains(date)]
+
+    def is_empty(self) -> bool:
+        return not self._videos

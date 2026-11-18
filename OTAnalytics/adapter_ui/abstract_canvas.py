@@ -9,7 +9,6 @@ TAG_SELECTED_SECTION: str = "selected_section"
 
 
 class AbstractCanvas(WidgetPositionProvider):
-
     @abstractmethod
     def introduce_to_viewmodel(self) -> None:
         raise NotImplementedError

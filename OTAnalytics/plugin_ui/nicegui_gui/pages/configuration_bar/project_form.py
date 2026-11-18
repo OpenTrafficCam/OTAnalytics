@@ -23,34 +23,47 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_PROJECT_NAME = "marker-project-name"
+MARKER_PROJECT_NEW = "marker-project-new"
 MARKER_PROJECT_OPEN = "marker-project-open"
 MARKER_PROJECT_SAVE_AS = "marker-project-save-as"
 MARKER_PROJECT_SAVE = "marker-project-save"
 MARKER_START_DATE = "marker-start-date"
 MARKER_START_TIME = "marker-start-time"
 
+BUTTON_COLOR_PROP = "color"
+
 
 class NiceGuiButtonQuickSaveConfig(AbstractButtonQuickSaveConfig):
-
     def __init__(
         self, text: str, on_click: Optional[Callable[[ClickEventArguments], Any]] = None
     ):
         self._text = text
         self._on_click = on_click
         self._instance: ui.button | None = None
+        self._default_color: str | None = None
 
     def build(self) -> None:
         self._instance = ui.button(self._text, on_click=self._on_click)
+        self._default_color = self._instance.props.get(BUTTON_COLOR_PROP)
         self._instance.mark(MARKER_PROJECT_SAVE)
         # Expose test-id attribute for Playwright locators (align with FlowForm pattern)
         self._instance.props(f"{TEST_ID}={MARKER_PROJECT_SAVE}")
 
     def set_state_changed_color(self) -> None:
+        # Quasar colors the button through its props. Writing to the style dict
+        # instead would never reach the browser, because only calling props or
+        # style schedules the update.
         if self._instance:
-            self._instance.style.update({"color": COLOR_ORANGE})
+            self._instance.props(f"{BUTTON_COLOR_PROP}={COLOR_ORANGE}")
 
     def set_default_color(self) -> None:
-        pass
+        # Restore the color the button was built with. Merely removing the prop
+        # would render the button white instead.
+        if self._instance:
+            if self._default_color is None:
+                self._instance.props(remove=BUTTON_COLOR_PROP)
+            else:
+                self._instance.props(f"{BUTTON_COLOR_PROP}={self._default_color}")
 
     def enable(self) -> None:
         if self._instance:
@@ -69,6 +82,7 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
     ) -> None:
         self._view_model = view_model
         self._resource_manager = resource_manager
+        self.new_project_button: ui.button | None = None
         self.save_project_button: ui.button | None = None
         self.open_project_button: ui.button | None = None
         self._quick_save_button = NiceGuiButtonQuickSaveConfig(
@@ -99,6 +113,12 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
             self._resource_manager.get(ProjectKeys.LABEL_PROJECT_FORM_HEADER)
         ).classes("text-lg font-bold")
         with ui.row():
+            self.new_project_button = ui.button(
+                self._resource_manager.get(ProjectKeys.LABEL_NEW_PROJECT),
+                on_click=self._new_project,
+            )
+            self.new_project_button.mark(MARKER_PROJECT_NEW)
+            self.new_project_button.props(f"{TEST_ID}={MARKER_PROJECT_NEW}")
             self.open_project_button = ui.button(
                 self._resource_manager.get(ProjectKeys.LABEL_OPEN_PROJECT),
                 on_click=self._open_project,
@@ -131,6 +151,9 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
     async def _save_project(self, _: ClickEventArguments) -> None:
         await self._view_model.save_configuration()
 
+    async def _new_project(self, _: ClickEventArguments) -> None:
+        await self._view_model.start_new_project()
+
     async def _open_project(self, _: ClickEventArguments) -> None:
         await self._view_model.load_configuration()
 
@@ -144,10 +167,23 @@ class ProjectForm(ButtonForm, AbstractFrameProject):
         ):
             self._start_date.set_value(start_date)
 
+    def reset(self) -> None:
+        """Show an empty project.
+
+        Unlike `update`, this also clears the start date: `update` keeps it while
+        the model has none, so an incomplete date being typed is not wiped.
+        """
+        if self._project_name._instance:
+            self._project_name.set_value("")
+        if self._start_date._start_date._instance:
+            self._start_date.set_value(None)
+
     def get_general_buttons(self) -> list[Button]:
         buttons = []
         if self._quick_save_button._instance:
             buttons.append(self._quick_save_button._instance)
+        if self.new_project_button:
+            buttons.append(self.new_project_button)
         if self.open_project_button:
             buttons.append(self.open_project_button)
         if self.save_project_button:
