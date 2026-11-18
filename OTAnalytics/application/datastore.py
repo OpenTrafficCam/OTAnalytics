@@ -1,23 +1,16 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
-from OTAnalytics.application.export_formats.export_mode import OVERWRITE
+from OTAnalytics.application.parser.track_parser import TrackParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.application.use_cases.export_events import (
     EventExportSpecification,
     EventListExporter,
 )
 from OTAnalytics.domain.event import Event, EventRepository
-from OTAnalytics.domain.flow import (
-    Flow,
-    FlowChangedObserver,
-    FlowId,
-    FlowListObserver,
-    FlowRepository,
-)
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver, FlowRepository
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.remark import RemarkRepository
 from OTAnalytics.domain.section import (
@@ -39,49 +32,6 @@ from OTAnalytics.domain.video import (
     VideoMetadata,
     VideoRepository,
 )
-
-
-@dataclass(frozen=True)
-class DetectionMetadata:
-    detection_classes: frozenset[str]
-
-
-@dataclass(frozen=True)
-class TrackParseResult:
-    tracks: TrackDataset
-    detection_metadata: DetectionMetadata
-    video_metadata: VideoMetadata
-
-
-@dataclass(frozen=True)
-class TracksParseResult:
-    tracks: TrackDataset
-    detections_metadata: list[DetectionMetadata]
-    videos_metadata: list[VideoMetadata]
-
-
-def combine_track_datasets(results: list[TrackParseResult]) -> TrackDataset:
-    if not results:
-        raise ValueError("No results to combine")
-    tracks = results[0].tracks
-    for result in results[1:]:
-        tracks.add_all(result.tracks)
-    return tracks
-
-
-class TrackParser(ABC):
-    def parse_files(self, files: list[Path]) -> TracksParseResult:
-        if not files:
-            raise ValueError("No files to parse")
-        results = [self.parse(file) for file in files]
-        tracks = combine_track_datasets(results)
-        detections_metadata = [result.detection_metadata for result in results]
-        videos_metadata = [result.video_metadata for result in results]
-        return TracksParseResult(tracks, detections_metadata, videos_metadata)
-
-    @abstractmethod
-    def parse(self, file: Path) -> TrackParseResult:
-        raise NotImplementedError
 
 
 class EventListParser(ABC):
@@ -261,22 +211,21 @@ class Datastore:
         )
 
     def export_event_list_file(
-        self, file: Path, event_list_exporter: EventListExporter
+        self,
+        specification: EventExportSpecification,
+        event_list_exporter: EventListExporter,
     ) -> None:
         """
         Export events from the event list to other formats (like CSV or Excel).
 
         Args:
-            file (Path): File to export events to
+            specification (EventExportSpecification): The event export specification
             event_list_exporter (EventListExporter): Exporter building the format
         """
         event_list_exporter.export(
             events=self._event_repository.get_all(),
             sections=self._section_repository.get_all(),
-            export_specification=EventExportSpecification(
-                file=file,
-                export_mode=OVERWRITE,
-            ),
+            export_specification=specification,
         )
 
     def is_flow_using_section(self, section: SectionId) -> bool:
@@ -345,15 +294,6 @@ class Datastore:
             observer (SectionChangedObserver): observer to notify about changes
         """
         self._section_repository.register_section_changed_observer(observer)
-
-    def register_flow_changed_observer(self, observer: FlowChangedObserver) -> None:
-        """
-        Listen to changes of sections in the repository.
-
-        Args:
-            observer (FlowChangedObserver): observer to notify about changes
-        """
-        self._flow_repository.register_flow_changed_observer(observer)
 
     def update_section(self, section: Section) -> None:
         """

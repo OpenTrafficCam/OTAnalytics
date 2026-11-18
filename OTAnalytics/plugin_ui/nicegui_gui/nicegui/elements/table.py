@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from inspect import isawaitable
 from types import SimpleNamespace
 from typing import Any, Callable, List, Literal
 
@@ -11,6 +12,8 @@ HEADER_SLOT = "header"
 BODY_SLOT = "body"
 
 COLUMN_ID = "id"
+ROW_CLICK_EVENT = "rowClick"
+ROW_DOUBLE_CLICK_EVENT = "rowDblclick"
 
 
 class MissingInstanceError(Exception):
@@ -64,6 +67,7 @@ class CustomTable:
         selection: Literal["single", "multiple"] | None = None,
         on_row_click_method: Callable[[Any], None] | None = None,
         auto_select_on_row_click: bool = False,
+        on_row_double_click_method: Callable[[dict], Any] | None = None,
     ) -> None:
         self._columns = columns
         self._rows = rows
@@ -75,6 +79,7 @@ class CustomTable:
         self._marker = marker
         self._on_select_method = on_select_method
         self._on_row_click_method = on_row_click_method
+        self._on_row_double_click_method = on_row_double_click_method
         self._selection = selection
         self._observers = []
         self._auto_select_on_row_click = auto_select_on_row_click
@@ -95,9 +100,11 @@ class CustomTable:
             self.__table.style("width: 100%")
             # Register row click handling
             if self._auto_select_on_row_click:
-                table.on("rowClick", self._internal_on_row_click)
+                table.on(ROW_CLICK_EVENT, self._internal_on_row_click)
             if self._on_row_click_method is not None:
-                table.on("rowClick", self._on_row_click_method)
+                table.on(ROW_CLICK_EVENT, self._on_row_click_method)
+            if self._on_row_double_click_method is not None:
+                table.on(ROW_DOUBLE_CLICK_EVENT, self._internal_on_row_double_click)
             self._add_header_slot()
             self._add_body_slot()
             self._register_callback()
@@ -152,16 +159,8 @@ class CustomTable:
         ``selection`` attribute compatible with existing handlers.
         """
         try:
-            row: dict | None = None
-            if hasattr(e, "args"):
-                args = getattr(e, "args")
-                if isinstance(args, dict):
-                    row = args.get("row")  # type: ignore[assignment]
-                elif isinstance(args, (list, tuple)) and len(args) >= 2:
-                    row = args[1]  # (evt, row, ...)
-            elif isinstance(e, dict):
-                row = e.get("row")  # type: ignore[assignment]
-            if isinstance(row, dict):
+            row = _extract_row(e)
+            if row is not None:
                 row_id = row.get(COLUMN_ID)
                 if row_id:
                     self.select([row_id])
@@ -170,3 +169,37 @@ class CustomTable:
         except Exception:
             # Be resilient to varying event payloads
             pass
+
+    async def _internal_on_row_double_click(self, e: Any) -> None:
+        """Forward the double-clicked row to ``on_row_double_click_method``.
+
+        The handler receives the row as dict and may be synchronous or
+        asynchronous.
+        """
+        if self._on_row_double_click_method is None:
+            return
+        row = _extract_row(e)
+        if row is None:
+            return
+        result = self._on_row_double_click_method(row)
+        if isawaitable(result):
+            await result
+
+
+def _extract_row(e: Any) -> dict | None:
+    """Extract the row dict from the various shapes of table row events.
+
+    Quasar emits row events with the arguments ``(event, row, index)``.
+    """
+    row: Any = None
+    if hasattr(e, "args"):
+        args = getattr(e, "args")
+        if isinstance(args, dict):
+            row = args.get("row")
+        elif isinstance(args, (list, tuple)) and len(args) >= 2:
+            row = args[1]  # (evt, row, ...)
+    elif isinstance(e, dict):
+        row = e.get("row")
+    if isinstance(row, dict):
+        return row
+    return None

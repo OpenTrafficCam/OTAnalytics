@@ -14,14 +14,14 @@ class QuickSaveConfiguration:
         self._save_otflow = save_otflow
         self._save_otconfig = save_otconfig
 
-    def save(self) -> None:
+    async def save(self) -> None:
         if not (config := self._state.last_saved_config.get()):
             raise NoExistingFileToSave("No saved file to save configuration to")
 
         if config.is_otflow:
             self._save_otflow.save(config.file)
         elif config.is_otconfig:
-            self._save_otconfig(config.file)
+            await self._save_otconfig(config.file)
         else:
             raise UnsupportedConfiguration(
                 "Unable to save configuration. "

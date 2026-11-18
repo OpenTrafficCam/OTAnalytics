@@ -8,9 +8,14 @@ from OTAnalytics.application.analysis.traffic_counting_specification import (
     ExportFormat,
 )
 from OTAnalytics.application.datastore import Datastore
+from OTAnalytics.application.key_prefix import S3KeyPrefix
+from OTAnalytics.application.orthophoto import AddVideoFiles
+from OTAnalytics.application.parser.config_parser import StaticAnalysisConfig
 from OTAnalytics.application.project import SvzMetadata
 from OTAnalytics.application.state import (
     ActionState,
+    CurrentKeyPrefix,
+    CurrentStaticAnalysisConfigState,
     FileState,
     FlowState,
     SectionState,
@@ -31,11 +36,17 @@ from OTAnalytics.application.use_cases.create_events import (
     CreateIntersectionEvents,
 )
 from OTAnalytics.application.use_cases.event_repository import ClearAllEvents
-from OTAnalytics.application.use_cases.export_events import EventListExporter
+from OTAnalytics.application.use_cases.export_events import (
+    EventExportSpecification,
+    EventListExporter,
+)
 from OTAnalytics.application.use_cases.filter_visualization import (
     EnableFilterTrackByDate,
 )
 from OTAnalytics.application.use_cases.flow_repository import AddFlow
+from OTAnalytics.application.use_cases.flow_repository import (
+    is_flow_name_valid as check_flow_name_valid,
+)
 from OTAnalytics.application.use_cases.flow_statistics import (
     NumberOfTracksAssignedToEachFlow,
 )
@@ -58,7 +69,10 @@ from OTAnalytics.application.use_cases.section_repository import (
     GetSectionsById,
 )
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
-from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
+from OTAnalytics.application.use_cases.suggest_save_path import (
+    SavePathSuggester,
+    SavePathSuggestion,
+)
 from OTAnalytics.application.use_cases.track_repository import (
     GetAllTrackFiles,
     TrackRepositorySize,
@@ -75,7 +89,7 @@ from OTAnalytics.application.use_cases.update_count_plots import CountPlotsUpdat
 from OTAnalytics.application.use_cases.update_project import ProjectUpdater
 from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement, FilterElementSettingRestorer
-from OTAnalytics.domain.flow import Flow, FlowChangedObserver, FlowId, FlowListObserver
+from OTAnalytics.domain.flow import Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import (
     Section,
@@ -148,6 +162,9 @@ class OTAnalyticsApplication:
         export_track_statistics: ExportTrackStatistics,
         get_current_remark: GetCurrentRemark,
         update_count_plots: CountPlotsUpdater,
+        current_key_prefix: CurrentKeyPrefix,
+        current_static_analysis_config_state: CurrentStaticAnalysisConfigState,
+        add_video_files: AddVideoFiles,
     ) -> None:
         self._datastore: Datastore = datastore
         self.track_state: TrackState = track_state
@@ -195,6 +212,11 @@ class OTAnalyticsApplication:
         self._export_track_statistics = export_track_statistics
         self._get_current_remark = get_current_remark
         self._update_count_plots = update_count_plots
+        self._current_key_prefix = current_key_prefix
+        self._current_static_analysis_config_state = (
+            current_static_analysis_config_state
+        )
+        self._add_video_files = add_video_files
 
     def connect_observers(self) -> None:
         """
@@ -225,9 +247,6 @@ class OTAnalyticsApplication:
     def register_flows_observer(self, observer: FlowListObserver) -> None:
         self._datastore.register_flows_observer(observer)
 
-    def register_flow_changed_observer(self, observer: FlowChangedObserver) -> None:
-        self._datastore.register_flow_changed_observer(observer)
-
     def get_all_sections(self) -> list[Section]:
         return self._datastore.get_all_sections()
 
@@ -235,7 +254,15 @@ class OTAnalyticsApplication:
         return self._datastore.get_section_for(section_id)
 
     def add_videos(self, files: list[Path]) -> None:
-        self._datastore.load_video_files(files)
+        """Load video files into the project.
+
+        Args:
+            files (list[Path]): the video files.
+
+        Raises:
+            MixedTrackFiles: if the project shows an Orthophoto.
+        """
+        self._add_video_files.add(files)
 
     def remove_videos(self) -> None:
         """
@@ -282,7 +309,7 @@ class OTAnalyticsApplication:
         Returns:
             bool: True if a flow with the name already exists, False otherwise.
         """
-        return self._add_flow.is_flow_name_valid(flow_name)
+        return check_flow_name_valid(flow_name, self._datastore.get_all_flows())
 
     def add_flow(self, flow: Flow) -> None:
         self._add_flow(flow)
@@ -296,20 +323,55 @@ class OTAnalyticsApplication:
     def update_flow(self, flow: Flow) -> None:
         self._datastore.update_flow(flow)
 
-    def save_otconfig(self, file: Path) -> None:
-        self._save_otconfig(file)
+    async def save_otconfig(self, file: Path) -> None:
+        await self._save_otconfig(file)
+
+    def get_current_key_prefix(self) -> S3KeyPrefix | None:
+        """Where the current project's data lives, or None outside s3 mode.
+
+        A project naming a prefix is how the save path knows to skip the
+        file-picker dialog: see OP#10323.
+        """
+        return self._current_key_prefix.get()
+
+    def get_current_static_analysis_config(self) -> StaticAnalysisConfig:
+        """Get the current static analysis configuration.
+
+        Returns:
+            StaticAnalysisConfig: the current static analysis configuration.
+        """
+        return self._current_static_analysis_config_state.get()
 
     def load_otconfig(self, file: Path) -> None:
+        """Load an otconfig, blocking. Outside an event loop only."""
         self._load_otconfig.load(file)
+
+    async def load_otconfig_async(self, file: Path) -> None:
+        """Load an otconfig without blocking the event loop.
+
+        Args:
+            file (Path): the otconfig file.
+        """
+        await self._load_otconfig.load_async(file)
 
     def add_tracks_of_files(self, track_files: list[Path]) -> None:
         """
         Load a multiple track files.
 
+        Outside an event loop only. Inside one use `add_tracks_of_files_async`.
+
         Args:
             track_files (list[Path]): files in ottrk format
         """
         self._load_track_files(track_files)
+
+    async def add_tracks_of_files_async(self, track_files: list[Path]) -> None:
+        """Load multiple track files without blocking the event loop.
+
+        Args:
+            track_files (list[Path]): files in ottrk format
+        """
+        await self._load_track_files.load_async(track_files)
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks."""
@@ -433,17 +495,21 @@ class OTAnalyticsApplication:
         """
         self._datastore.save_event_list_file(file)
 
-    def export_events(self, file: Path, event_list_exporter: EventListExporter) -> None:
+    def export_events(
+        self,
+        specification: EventExportSpecification,
+        event_list_exporter: EventListExporter,
+    ) -> None:
         """
         Export the event repository into other formats (like CSV or Excel)
 
         Args:
-            file (Path): File to export the events to
+            specification (EventExportSpecification): The event export specification
             event_list_exporter (EventListExporter): Exporter building the format
         """
         if self._datastore._event_repository.is_empty():
             self.create_events()
-        self._datastore.export_event_list_file(file, event_list_exporter)
+        self._datastore.export_event_list_file(specification, event_list_exporter)
 
     def get_supported_export_formats(self) -> Iterable[ExportFormat]:
         """
@@ -643,8 +709,8 @@ class OTAnalyticsApplication:
     def get_track_repository_size(self) -> int:
         return self._track_repository_size.get()
 
-    def quick_save_configuration(self) -> None:
-        self._quick_save_configuration.save()
+    async def quick_save_configuration(self) -> None:
+        await self._quick_save_configuration.save()
 
     def config_has_changed(self) -> bool:
         return self._config_has_changed.has_changed()
@@ -657,7 +723,9 @@ class OTAnalyticsApplication:
     ) -> Iterable[ExportFormat]:
         return self._export_road_user_assignments.get_supported_formats()
 
-    def suggest_save_path(self, file_type: str, context_file_type: str = "") -> Path:
+    def suggest_save_path(
+        self, file_type: str, context_file_type: str = ""
+    ) -> SavePathSuggestion:
         """Suggests a save path based on the given file type and an optional
         related file type.
 
@@ -689,8 +757,24 @@ class OTAnalyticsApplication:
 
     def export_track_statistics(
         self, specification: TrackStatisticsExportSpecification
-    ) -> None:
-        self._export_track_statistics.export(specification)
+    ) -> Path:
+        """
+        Exports track statistics based on the provided specification.
+
+        This method facilitates the export of track statistics by utilizing the provided
+        export specification. It processes the specification and generates a file
+        containing the desired statistics. The resulting file's location is returned.
+
+        Args:
+            specification (TrackStatisticsExportSpecification): The specification
+                detailing the customization and requirements for exporting track
+                statistics.
+
+        Returns:
+            Path: The path to the generated file containing the exported track
+                statistics.
+        """
+        return self._export_track_statistics.export(specification)
 
     def get_track_statistics_export_formats(
         self,

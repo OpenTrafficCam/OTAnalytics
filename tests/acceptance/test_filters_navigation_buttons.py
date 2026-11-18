@@ -131,9 +131,9 @@ def _test_navigation_pair(
         skip_if_no_change=skip_if_no_change,
     )
 
-    assert (
-        label_forward != label_backward
-    ), f"{navigation_type} forward/backward navigation produced same range"
+    assert label_forward != label_backward, (
+        f"{navigation_type} forward/backward navigation produced same range"
+    )
 
     return canvas_forward, canvas_backward
 
@@ -327,9 +327,9 @@ def test_filter_navigation_buttons_with_screenshot(
         screenshots.append((button_name, new_screenshot))
 
         # Verify screenshot differs from baseline
-        assert (
-            new_screenshot != baseline_screenshot
-        ), f"{button_name} button did not change canvas visually"
+        assert new_screenshot != baseline_screenshot, (
+            f"{button_name} button did not change canvas visually"
+        )
 
     # Verify we have multiple unique visual states
     unique_screenshots = len(set(s[1] for s in screenshots))

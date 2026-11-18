@@ -12,11 +12,15 @@ from OTAnalytics.domain.event import (
 from OTAnalytics.domain.geometry import ImageCoordinate, calculate_direction_vector
 from OTAnalytics.domain.track_dataset.track_dataset import (
     END_FRAME,
+    END_GEO_X,
+    END_GEO_Y,
     END_OCCURRENCE,
     END_VIDEO_NAME,
     END_X,
     END_Y,
     START_FRAME,
+    START_GEO_X,
+    START_GEO_Y,
     START_OCCURRENCE,
     START_VIDEO_NAME,
     START_X,
@@ -95,6 +99,8 @@ class SceneEventListBuilder:
             key_occurrence=START_OCCURRENCE,
             key_frame=START_FRAME,
             key_video_name=START_VIDEO_NAME,
+            key_geo_x=START_GEO_X,
+            key_geo_y=START_GEO_Y,
         )
         self._events.append(event)
 
@@ -107,6 +113,8 @@ class SceneEventListBuilder:
             key_occurrence=END_OCCURRENCE,
             key_frame=END_FRAME,
             key_video_name=END_VIDEO_NAME,
+            key_geo_x=END_GEO_X,
+            key_geo_y=END_GEO_Y,
         )
         self._events.append(event)
 
@@ -119,6 +127,8 @@ class SceneEventListBuilder:
         key_occurrence: str,
         key_frame: str,
         key_video_name: str,
+        key_geo_x: str,
+        key_geo_y: str,
     ) -> Event:
         image_coordinate = ImageCoordinate(value[key_x], value[key_y])
         occurrence = value[key_occurrence]
@@ -140,6 +150,8 @@ class SceneEventListBuilder:
             video_name=value[key_video_name],
             interpolated_occurrence=occurrence,
             interpolated_event_coordinate=image_coordinate,
+            geo_x=value.get(key_geo_x),
+            geo_y=value.get(key_geo_y),
         )
 
 

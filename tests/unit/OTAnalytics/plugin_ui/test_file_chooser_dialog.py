@@ -36,6 +36,7 @@ def file_chooser_dialog(resource_manager: Mock) -> FileChooserDialog:
         title=TEST_TITLE,
         file_extensions=TEST_FILE_EXTENSIONS,
         initial_file_stem=TEST_INITIAL_FILE_STEM,
+        enforce_suffix=False,
     )
 
 
@@ -49,6 +50,7 @@ def file_chooser_dialog_with_dir(resource_manager: Mock) -> FileChooserDialog:
             file_extensions=TEST_FILE_EXTENSIONS,
             initial_file_stem=TEST_INITIAL_FILE_STEM,
             initial_dir=TEST_DIRECTORY,
+            enforce_suffix=False,
         )
 
 
@@ -106,8 +108,9 @@ class TestFileChooserDialog:
             file_chooser_dialog._format_field.value
             == list(TEST_FILE_EXTENSIONS.keys())[0]
         )
-        # The initial filename doesn't include a dot between stem and extension
-        expected_filename = f"{TEST_INITIAL_FILE_STEM}{TEST_FILE_EXTENSIONS['CSV']}"
+        # The initial filename includes a dot between stem and extension
+        expected_filename = f"{TEST_INITIAL_FILE_STEM}.{TEST_FILE_EXTENSIONS['CSV']}"
+        assert file_chooser_dialog._filename_field is not None
         assert file_chooser_dialog._filename_field.value == expected_filename
         assert file_chooser_dialog._directory_field.value == str(TEST_HOME_DIR)
 
@@ -172,15 +175,19 @@ class TestFileChooserDialog:
         user.find(marker=MARKER_FILENAME).clear().type(TEST_EXCEL_FILENAME)
 
         # Check that the filename has the Excel extension
+        assert file_chooser_dialog._filename_field is not None
         assert file_chooser_dialog._filename_field.value == TEST_EXCEL_FILENAME
 
     @pytest.mark.asyncio
-    async def test_update_directory_invalid_path(
+    async def test_update_directory_invalid_path_keeps_typed_value(
         self,
         user: User,
         file_chooser_dialog: FileChooserDialog,
     ) -> None:
-        """Test that updating the directory with an invalid path reverts to the previous path."""  # noqa
+        """
+        Typing a non-existent path keeps the typed value but does not update
+        _initial_dir.
+        """
 
         @ui.page(ENDPOINT_NAME)
         def page() -> None:
@@ -188,18 +195,14 @@ class TestFileChooserDialog:
 
         await user.open(ENDPOINT_NAME)
 
-        # Store the initial directory
         initial_dir = file_chooser_dialog._initial_dir
 
-        # Try to update with an invalid directory
         with patch.object(Path, "exists", return_value=False):
-            # Use the user fixture to set an invalid path
             user.find(marker=MARKER_DIRECTORY).clear().type("/invalid/path")
-            # Trigger the on_value_change event by clicking elsewhere
             user.find(marker=MARKER_FILENAME).click()
 
-        # Check that the directory was reverted to the initial directory
-        assert file_chooser_dialog._directory_field.value == str(initial_dir)
+        assert file_chooser_dialog._directory_field.value == "/invalid/path"
+        assert file_chooser_dialog._initial_dir == initial_dir
 
     @pytest.mark.asyncio
     async def test_browse_button_exists(
@@ -219,3 +222,134 @@ class TestFileChooserDialog:
         await user.should_see(
             file_chooser_dialog.resource_manager.get(FileChooserDialogKeys.LABEL_BROWSE)
         )
+
+
+TEST_CONTEXT_FILE_TYPE = "events"
+
+
+@pytest.fixture
+def file_chooser_dialog_export(resource_manager: Mock) -> FileChooserDialog:
+    return FileChooserDialog(
+        resource_manager=resource_manager,
+        title=TEST_TITLE,
+        file_extensions=TEST_FILE_EXTENSIONS,
+        initial_file_stem=TEST_INITIAL_FILE_STEM,
+        context_file_type=TEST_CONTEXT_FILE_TYPE,
+        enforce_suffix=True,
+    )
+
+
+@pytest.fixture
+def file_chooser_dialog_save(resource_manager: Mock) -> FileChooserDialog:
+    return FileChooserDialog(
+        resource_manager=resource_manager,
+        title=TEST_TITLE,
+        file_extensions={"otconfig": "otconfig", "otflow": "otflow"},
+        initial_file_stem=TEST_INITIAL_FILE_STEM,
+        context_file_type="",
+        enforce_suffix=True,
+    )
+
+
+@pytest.fixture
+def file_chooser_dialog_open(resource_manager: Mock) -> FileChooserDialog:
+    return FileChooserDialog(
+        resource_manager=resource_manager,
+        title=TEST_TITLE,
+        file_extensions=TEST_FILE_EXTENSIONS,
+        initial_file_stem="",
+        enforce_suffix=False,
+    )
+
+
+class TestFileChooserDialogModes:
+    @pytest.mark.asyncio
+    async def test_export_mode_locked_suffix(
+        self, user: User, file_chooser_dialog_export: FileChooserDialog
+    ) -> None:
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            file_chooser_dialog_export.build().open()
+
+        await user.open(ENDPOINT_NAME)
+
+        assert file_chooser_dialog_export._filename_stem_field is not None
+        assert file_chooser_dialog_export._filename_suffix_field is not None
+        assert (
+            file_chooser_dialog_export._filename_stem_field.value
+            == TEST_INITIAL_FILE_STEM
+        )
+        assert file_chooser_dialog_export._filename_suffix_field.value == ".events.csv"
+        assert file_chooser_dialog_export.get_file_stem() == TEST_INITIAL_FILE_STEM
+        assert file_chooser_dialog_export.get_export_format_extension() == ".csv"
+        assert (
+            file_chooser_dialog_export.get_file_path()
+            == Path.home() / f"{TEST_INITIAL_FILE_STEM}.events.csv"
+        )
+
+    @pytest.mark.asyncio
+    async def test_save_mode_locked_extension_follows_format(
+        self, user: User, file_chooser_dialog_save: FileChooserDialog
+    ) -> None:
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            file_chooser_dialog_save.build().open()
+
+        await user.open(ENDPOINT_NAME)
+
+        assert file_chooser_dialog_save._filename_stem_field is not None
+        assert file_chooser_dialog_save._filename_suffix_field is not None
+        assert file_chooser_dialog_save._filename_suffix_field.value == ".otconfig"
+        # Switch the format dropdown
+        user.find(marker=MARKER_FORMAT).click()
+        user.find("otflow").click()
+
+        assert file_chooser_dialog_save._filename_suffix_field.value == ".otflow"
+        assert (
+            file_chooser_dialog_save._filename_stem_field.value
+            == TEST_INITIAL_FILE_STEM
+        )
+
+    @pytest.mark.asyncio
+    async def test_open_mode_has_no_suffix_field(
+        self, user: User, file_chooser_dialog_open: FileChooserDialog
+    ) -> None:
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            file_chooser_dialog_open.build().open()
+
+        await user.open(ENDPOINT_NAME)
+
+        assert file_chooser_dialog_open._filename_suffix_field is None
+        # Legacy single field is still present
+        assert file_chooser_dialog_open._filename_field is not None
+
+    @pytest.mark.asyncio
+    async def test_browse_strips_matching_suffix_in_export_mode(
+        self, user: User, file_chooser_dialog_export: FileChooserDialog
+    ) -> None:
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            file_chooser_dialog_export.build().open()
+
+        await user.open(ENDPOINT_NAME)
+
+        file_chooser_dialog_export._set_filename_from_picked("trip_summary.events.csv")
+
+        assert file_chooser_dialog_export._filename_stem_field is not None
+        assert file_chooser_dialog_export._filename_stem_field.value == "trip_summary"
+
+    @pytest.mark.asyncio
+    async def test_browse_keeps_unrelated_name_as_stem(
+        self, user: User, file_chooser_dialog_export: FileChooserDialog
+    ) -> None:
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            file_chooser_dialog_export.build().open()
+
+        await user.open(ENDPOINT_NAME)
+
+        file_chooser_dialog_export._set_filename_from_picked("unrelated.xlsx")
+
+        assert file_chooser_dialog_export._filename_stem_field is not None
+        assert file_chooser_dialog_export._filename_stem_field.value == "unrelated"

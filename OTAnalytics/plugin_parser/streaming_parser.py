@@ -3,11 +3,8 @@ from typing import AsyncIterator
 
 from tqdm.asyncio import tqdm
 
-from OTAnalytics.application.datastore import (
-    DetectionMetadata,
-    TrackParser,
-    VideoMetadata,
-)
+from OTAnalytics.application.datastore import VideoMetadata
+from OTAnalytics.application.parser.track_parser import DetectionMetadata, TrackParser
 from OTAnalytics.application.state import TracksMetadata, VideosMetadata
 from OTAnalytics.application.track_input_source import OttrkFileInputSource
 from OTAnalytics.domain.progress import LazyProgressbarBuilder

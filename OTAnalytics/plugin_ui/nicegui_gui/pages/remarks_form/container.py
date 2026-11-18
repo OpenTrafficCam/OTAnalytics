@@ -30,7 +30,6 @@ class RemarkForm(AbstractFrameRemark):
     def load_remark(self) -> None:
         if not self._remark_label:
             return
-        self._remark_label.clear()
         if remark := self._viewmodel.get_remark():
             self._remark_label.set_text(remark)
         else:
