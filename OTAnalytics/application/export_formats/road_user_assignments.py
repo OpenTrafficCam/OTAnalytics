@@ -53,7 +53,14 @@ END_INTERPOLATED_EVENT_COORD_X = _prepend_end(
 END_INTERPOLATED_EVENT_COORD_Y = _prepend_end(
     event_list.INTERPOLATED_EVENT_COORDINATE_Y
 )
+START_GEO_X = _prepend_start(event_list.GEO_X)
+START_GEO_Y = _prepend_start(event_list.GEO_Y)
+END_GEO_X = _prepend_end(event_list.GEO_X)
+END_GEO_Y = _prepend_end(event_list.GEO_Y)
 HOSTNAME = event_list.HOSTNAME
+FLOW_DISTANCE_M = "flow_distance_m"
+TRAVEL_TIME_S = "travel_time_s"
+AVG_SPEED_MPS = "avg_speed_mps"
 
 DATE_FORMAT = event_list.DATE_FORMAT
 TIME_FORMAT = event_list.TIME_FORMAT

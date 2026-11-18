@@ -65,7 +65,6 @@ playwright = pytest.importorskip(
 
 
 class TestCreateImportantTestData:
-
     @pytest.mark.skip
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright

@@ -74,9 +74,7 @@ class ProgressbarPopupTemplate(AbstractPopupProgressbar, CTkToplevel):
             return
 
         percent = self._current_progress.get_value() / self._total
-        message = (
-            f"{self._current_progress.get_value()} of " f"{self._total} {self._unit}"
-        )
+        message = f"{self._current_progress.get_value()} of {self._total} {self._unit}"
         if percent >= 1:
             self._close = True
             self.destroy()

@@ -1,13 +1,51 @@
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+from OTAnalytics.application.files import ensure_dot_in_extension
 from OTAnalytics.application.state import FileState
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
 from OTAnalytics.application.use_cases.track_repository import GetAllTrackFiles
 from OTAnalytics.application.use_cases.video_repository import GetAllVideos
 
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
+
+
+@dataclass(frozen=True)
+class SavePathSuggestion:
+    save_directory: Path
+    file_stem: str
+    context_file_type: str | None
+    file_type: str
+
+    def __post_init__(self) -> None:
+        if not self.file_type.startswith("."):
+            raise ValueError(f"file_type must start with '.', got '{self.file_type}'")
+
+        if self.context_file_type is not None and self.context_file_type.startswith(
+            "."
+        ):
+            raise ValueError(
+                f"context_file_type must not start with '.', got "
+                f"'{self.context_file_type}'"
+            )
+
+    @property
+    def file_path(self) -> Path:
+        if self.context_file_type is not None:
+            return (
+                self.save_directory
+                / f"{self.file_stem}.{self.context_file_type}{self.file_type}"
+            )
+        return self.save_directory / f"{self.file_stem}{self.file_type}"
+
+    @property
+    def name_without_file_type(self) -> str:
+        """Filename suggestion without the trailing ``file_type`` extension."""
+        if self.context_file_type is not None:
+            return f"{self.file_stem}.{self.context_file_type}"
+        return self.file_stem
 
 
 class SavePathSuggester:
@@ -62,7 +100,9 @@ class SavePathSuggester:
         self._get_project = get_project
         self._provide_datetime = provide_datetime
 
-    def suggest(self, file_type: str, context_file_type: str = "") -> Path:
+    def suggest(
+        self, file_type: str, context_file_type: str = ""
+    ) -> SavePathSuggestion:
         """Suggests a save path based on the given file type and an optional
         related file type.
 
@@ -81,15 +121,23 @@ class SavePathSuggester:
             3. Default: <CURRENT DATE AND TIME>
 
         Args:
-            file_type (str): the file type.
+            file_type (str): Can start with or without a leading dot.
             context_file_type (str): the context file type.
+
+        Returns:
+            SavePathSuggestion (SavePathSuggestion): the suggested save path.
         """
 
         base_folder = self._retrieve_base_folder()
         file_stem = self._suggest_file_stem()
-        if context_file_type:
-            return base_folder / f"{file_stem}.{context_file_type}.{file_type}"
-        return base_folder / f"{file_stem}.{file_type}"
+        actual_context_file_type = self._parse_context_file_type(context_file_type)
+        sanitized_file_type = ensure_dot_in_extension(file_type)
+        return SavePathSuggestion(
+            save_directory=base_folder,
+            file_stem=file_stem,
+            context_file_type=actual_context_file_type,
+            file_type=sanitized_file_type,
+        )
 
     def _retrieve_base_folder(self) -> Path:
         """Returns the base folder for suggesting a new file name."""
@@ -111,3 +159,8 @@ class SavePathSuggester:
         if project_name := self._get_project.get().name:
             return f"{project_name}_{current_time}"
         return current_time
+
+    def _parse_context_file_type(self, context_file_type: str) -> str | None:
+        if context_file_type:
+            return context_file_type.lower()
+        return None

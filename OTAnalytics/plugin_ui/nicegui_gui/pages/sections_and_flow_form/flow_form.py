@@ -1,4 +1,4 @@
-from typing import Iterable, Self
+from typing import Any, Iterable, Mapping, Self
 
 from nicegui import ui
 from nicegui.elements.button import Button
@@ -9,7 +9,8 @@ from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewI
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import FlowKeys, ResourceManager
 from OTAnalytics.application.state import FlowState
-from OTAnalytics.domain.flow import FLOW_NAME, Flow
+from OTAnalytics.domain.event import EventRepositoryEvent
+from OTAnalytics.domain.flow import FLOW_NAME, Flow, FlowId, FlowListObserver
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
@@ -25,6 +26,7 @@ MARKER_BUTTON_ADD = "marker-button-add"
 MARKER_BUTTON_GENERATE = "marker-button-generate"
 MARKER_BUTTON_REMOVE = "marker-button-remove"
 MARKER_BUTTON_PROPERTIES = "marker-button-properties"
+COLUMN_TRACKS_ASSIGNED = "tracks_assigned"
 
 
 def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
@@ -34,17 +36,31 @@ def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
             "label": resource_manager.get(FlowKeys.TABLE_COLUMN_NAME),
             "field": "name",
         },
+        {
+            "name": COLUMN_TRACKS_ASSIGNED,
+            "label": resource_manager.get(FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED),
+            "field": COLUMN_TRACKS_ASSIGNED,
+        },
     ]
 
 
-def map_to_ui(flows: Iterable[Flow]) -> list:
+def map_to_ui(
+    flows: Iterable[Flow], tracks_assigned_to_each_flow: Mapping[FlowId, int]
+) -> list:
+    """Map flows to table rows including the number of assigned tracks.
+
+    Flows without an entry in `tracks_assigned_to_each_flow` are shown with 0
+    assigned tracks.
+    """
     list_of_flows = []
     for flow in flows:
-        list_of_flows.append(flow.to_dict())
+        row = flow.to_dict()
+        row[COLUMN_TRACKS_ASSIGNED] = tracks_assigned_to_each_flow.get(flow.id, 0)
+        list_of_flows.append(row)
     return list_of_flows
 
 
-class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
+class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObserver):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -62,7 +78,9 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             marker=MARKER_FLOW_TABLE,
             # Let the table auto-select the row on click and forward selection
             auto_select_on_row_click=True,
+            on_row_double_click_method=self._edit_flow,
         )
+        self._disabled = False
         self._button_remove: ui.button | None = None
         self._button_add: ui.button | None = None
         self._button_generate: ui.button | None = None
@@ -73,10 +91,16 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         self._viewmodel.set_flows_frame(self)
         self._viewmodel.set_treeview_flows(self)
 
-    def _select_flow(self, e: dict) -> None:
+    def _select_flow(self, e: list[dict[str, Any]]) -> None:
         flow_ids = [event[COLUMN_ID] for event in e]
         self._viewmodel.set_selected_flow_ids(flow_ids)
         self._viewmodel.refresh_items_on_canvas()
+
+    async def _edit_flow(self, row: dict[str, Any]) -> None:
+        if self._disabled:
+            return
+        self._select_flow([row])
+        await self._viewmodel.edit_selected_flow()
 
     def build(self) -> Self:
         self._flow_table.build()
@@ -107,6 +131,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             self._button_properties.mark(MARKER_BUTTON_PROPERTIES)
             self._button_properties.props(f"{TEST_ID}={MARKER_BUTTON_PROPERTIES}")
         self.update_items()
+        # Buttons did not exist on first introduction, apply their states now
+        self._viewmodel.set_flows_frame(self)
         return self
 
     async def add_flow(self, _: ClickEventArguments) -> None:
@@ -124,8 +150,25 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
     def _notify_viewmodel_about_selected_item_ids(self, ids: list[str]) -> None:
         pass
 
+    def notify_flows(self, flows: list[FlowId]) -> None:
+        """Refresh the table after flows changed.
+
+        Must be called after the road user assignments of the changed flows have
+        been cleared, so the number of assigned tracks is up to date.
+        """
+        self.update_items()
+
+    def notify_events(self, _: EventRepositoryEvent) -> None:
+        """Refresh the number of assigned tracks after events changed."""
+        self.update_items()
+
     def update_items(self) -> None:
-        self._flow_table.update(map_to_ui(self._viewmodel.get_all_flows()))
+        self._flow_table.update(
+            map_to_ui(
+                self._viewmodel.get_all_flows(),
+                self._viewmodel.get_tracks_assigned_to_each_flow(),
+            )
+        )
         selected_flows = [flow.id for flow in self._flow_state.selected_flows.get()]
         self.update_selected_items(selected_flows)
 
@@ -133,6 +176,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         self._flow_table.select(item_ids)
 
     def enable(self) -> None:
+        self._disabled = False
         if (
             self._button_remove
             and self._button_properties
@@ -145,6 +189,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
             self._button_properties.enable()
 
     def disable(self) -> None:
+        self._disabled = True
         if (
             self._button_remove
             and self._button_properties
@@ -160,8 +205,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         return 0, 0
 
     def get_add_buttons(self) -> list[Button]:
-        if self._button_add:
-            return [self._button_add]
+        if self._button_add and self._button_generate:
+            return [self._button_add, self._button_generate]
         return []
 
     def get_single_item_buttons(self) -> list[Button]:
@@ -173,3 +218,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface):
         if self._button_remove:
             return [self._button_remove]
         return []
+
+    def _set_enabled_buttons(self, buttons: list[Button], enabled: bool) -> None:
+        super()._set_enabled_buttons(buttons, enabled)
+        if self._button_generate and len(list(self._viewmodel.get_all_flows())) > 0:
+            self._button_generate.disable()
