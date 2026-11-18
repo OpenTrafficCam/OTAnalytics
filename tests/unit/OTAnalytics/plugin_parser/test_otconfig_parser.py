@@ -1,4 +1,5 @@
 import shutil
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
@@ -8,6 +9,9 @@ import pytest
 
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
+)
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
 )
 from OTAnalytics.application.config import (
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
@@ -20,6 +24,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.config_specification import OtConfigDefaultValueProvider
 from OTAnalytics.application.datastore import VideoParser
+from OTAnalytics.application.key_prefix import S3KeyPrefix
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ExportConfig,
@@ -30,6 +35,7 @@ from OTAnalytics.application.parser.flow_parser import FlowParser
 from OTAnalytics.application.project import Project
 from OTAnalytics.domain import flow, section, video
 from OTAnalytics.domain.flow import Flow
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.video import Video
 from OTAnalytics.plugin_parser.json_parser import parse_json
@@ -42,13 +48,17 @@ from OTAnalytics.plugin_parser.otconfig_parser import (
     DO_EVENTS,
     EVENT_FORMATS,
     EXPORT,
+    GEO_TRACKS,
     LOGFILE,
     NUM_PROCESSES,
+    ORTHOPHOTO,
     PATH,
     PROJECT,
+    S3_KEY_PREFIX,
     SAVE_NAME,
     SAVE_SUFFIX,
     TRACKS,
+    TRAFFIC_STATISTICS,
     FixMissingAnalysis,
     MultiFixer,
     OtConfigFormatFixer,
@@ -69,6 +79,24 @@ def mock_otconfig() -> OtConfig:
     flows = Mock()
     remark = Mock()
     return OtConfig(project, analysis, videos, sections, flows, remark)
+
+
+def default_analysis_config(track_files: set[Path]) -> AnalysisConfig:
+    """An AnalysisConfig carrying the application defaults and the given tracks."""
+    return AnalysisConfig(
+        do_events=DEFAULT_DO_EVENTS,
+        do_counting=DEFAULT_DO_COUNTING,
+        track_files=track_files,
+        export_config=ExportConfig(
+            save_name=DEFAULT_SAVE_NAME,
+            save_suffix=DEFAULT_SAVE_SUFFIX,
+            event_formats=DEFAULT_EVENT_FORMATS,
+            count_intervals={DEFAULT_COUNTING_INTERVAL_IN_MINUTES},
+            counting_event=CountingEvent.START,
+        ),
+        num_processes=1,
+        logfile=DEFAULT_LOG_FILE,
+    )
 
 
 @pytest.fixture
@@ -94,7 +122,7 @@ class TestOtConfigParser:
         )
         project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
         videos: list[Video] = []
-        track_files: list[Path] = []
+        analysis_config = default_analysis_config(set())
         sections: list[Section] = []
         flows: list[Flow] = []
         remark: str | None = "Comment"
@@ -124,12 +152,14 @@ class TestOtConfigParser:
 
         config_parser.serialize(
             project=project,
+            analysis_config=analysis_config,
             video_files=videos,
-            track_files=track_files,
             sections=sections,
             flows=flows,
             file=output,
             remark=remark,
+            s3_key_prefix=None,
+            orthophoto=None,
         )
 
         serialized_content = parse_json(output)
@@ -145,6 +175,108 @@ class TestOtConfigParser:
         ]
         assert flow_parser.convert.call_args_list == [call(sections, flows)]
 
+    def test_serialize_config_omits_file_references_in_s3_mode(
+        self, test_data_tmp_dir: Path, do_nothing_fixer: OtConfigFormatFixer
+    ) -> None:
+        """Data is picked per session by time range, so a project's own file
+        references have no reader in s3 mode. Recording paths into
+        `user_source` would only leave stale references after the startup
+        wipe. See OP#10323's decision log.
+
+        #Requirement https://openproject.platomo.de/wp/10323
+        """
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+            format_fixer=do_nothing_fixer,
+        )
+        project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
+        videos: list[Video] = [Mock(spec=Video)]
+        analysis_config = default_analysis_config({test_data_tmp_dir / "a.ottrk"})
+        sections: list[Section] = []
+        flows: list[Flow] = []
+        output = test_data_tmp_dir / "config.otconfig"
+        prefix = S3KeyPrefix("project-1/site-2/otcamera19")
+        serialized_videos: dict = {video.VIDEOS: []}
+        serialized_sections = {section.SECTIONS: {"serialized": "sections"}}
+
+        video_parser.convert.return_value = serialized_videos
+        flow_parser.convert.return_value = serialized_sections
+
+        config_parser.serialize(
+            project=project,
+            analysis_config=analysis_config,
+            video_files=videos,
+            sections=sections,
+            flows=flows,
+            file=output,
+            remark=None,
+            s3_key_prefix=prefix,
+            orthophoto=None,
+        )
+
+        serialized_content = parse_json(output)
+        assert serialized_content[S3_KEY_PREFIX] == prefix.value
+        assert serialized_content[ANALYSIS][TRACKS] == []
+        assert video_parser.convert.call_args_list == [
+            call([], relative_to=test_data_tmp_dir)
+        ]
+
+    def test_convert_agrees_across_calls_in_s3_mode_despite_live_repo_drift(
+        self, test_data_tmp_dir: Path, do_nothing_fixer: OtConfigFormatFixer
+    ) -> None:
+        """`SaveOtconfig` and `OtconfigHasChanged` both call `convert` with
+        whatever the live repositories hold right now, which can differ
+        between the save call and a later dirty-check call. If the omission
+        depended on that repository content, s3 projects could drift between
+        the two calls and report themselves as permanently unsaved. Putting
+        the omission inside `convert`, keyed only on `s3_key_prefix`, makes
+        both calls agree regardless. See decision 4 in OP#10323.
+
+        #Requirement https://openproject.platomo.de/wp/10323
+        """
+        video_parser = Mock(spec=VideoParser)
+        flow_parser = Mock(spec=FlowParser)
+        config_parser = OtConfigParser(
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+            format_fixer=do_nothing_fixer,
+        )
+        video_parser.convert.return_value = {video.VIDEOS: []}
+        flow_parser.convert.return_value = {section.SECTIONS: {}}
+        project = Project(name="My Test Project", start_date=datetime(2020, 1, 1))
+        output = test_data_tmp_dir / "config.otconfig"
+        prefix = S3KeyPrefix("project-1/site-2/otcamera19")
+
+        at_save_time = config_parser.convert(
+            project,
+            default_analysis_config({test_data_tmp_dir / "a.ottrk"}),
+            [Mock(spec=Video)],
+            [],
+            [],
+            output,
+            None,
+            prefix,
+            None,
+        )
+        at_dirty_check_time = config_parser.convert(
+            project,
+            default_analysis_config(
+                {test_data_tmp_dir / "a.ottrk", test_data_tmp_dir / "b.ottrk"}
+            ),
+            [Mock(spec=Video), Mock(spec=Video)],
+            [],
+            [],
+            output,
+            None,
+            prefix,
+            None,
+        )
+
+        assert at_save_time == at_dirty_check_time
+
     @patch("OTAnalytics.plugin_parser.otconfig_parser.OtConfigParser.serialize")
     def test_serialize_from_config(
         self, mock_serialize: Mock, mock_otconfig: OtConfig
@@ -155,13 +287,15 @@ class TestOtConfigParser:
         serializer.serialize_from_config(mock_otconfig, save_path)
 
         mock_serialize.assert_called_once_with(
-            mock_otconfig.project,
-            mock_otconfig.videos,
-            mock_otconfig.analysis.track_files,
-            mock_otconfig.sections,
-            mock_otconfig.flows,
-            save_path,
-            mock_otconfig.remark,
+            project=mock_otconfig.project,
+            analysis_config=mock_otconfig.analysis,
+            video_files=mock_otconfig.videos,
+            sections=mock_otconfig.sections,
+            flows=mock_otconfig.flows,
+            file=save_path,
+            remark=mock_otconfig.remark,
+            s3_key_prefix=mock_otconfig.s3_key_prefix,
+            orthophoto=None,
         )
 
     def test_parse_config(
@@ -313,12 +447,12 @@ class TestFixMissingAnalysis:
         logfile = "logfile.log"
         debug = True
         event_formats = ["csv", "xlsx"]
-        save_name = "my_name"
+        save_stem = "my_name"
         save_suffix = "my_suffix"
         count_intervals = [2, 3, 4]
         export = {
             EVENT_FORMATS: event_formats,
-            SAVE_NAME: save_name,
+            SAVE_NAME: save_stem,
             SAVE_SUFFIX: save_suffix,
             COUNT_INTERVALS: count_intervals,
             COUNTING_EVENT: CountingEvent.START.value,
@@ -343,7 +477,7 @@ class TestFixMissingAnalysis:
         type(value_provider).do_counting = PropertyMock(return_value=do_counting)
         type(value_provider).track_files = PropertyMock(return_value=track_files)
         type(value_provider).event_formats = PropertyMock(return_value=event_formats)
-        type(value_provider).save_name = PropertyMock(return_value=save_name)
+        type(value_provider).save_stem = PropertyMock(return_value=save_stem)
         type(value_provider).save_suffix = PropertyMock(return_value=save_suffix)
         type(value_provider).count_intervals = PropertyMock(
             return_value=count_intervals
@@ -354,6 +488,8 @@ class TestFixMissingAnalysis:
         type(value_provider).num_processes = PropertyMock(return_value=num_processes)
         type(value_provider).log_file = PropertyMock(return_value=logfile)
         type(value_provider).debug = PropertyMock(return_value=debug)
+        type(value_provider).traffic_statistics = PropertyMock(return_value=None)
+        type(value_provider).do_export_geo_tracks = PropertyMock(return_value=False)
         fixer = FixMissingAnalysis(run_config=value_provider)
 
         original_content: dict = {}
@@ -361,3 +497,295 @@ class TestFixMissingAnalysis:
         fixed_content = fixer.fix(original_content)
 
         assert fixed_content == expected_content
+
+
+def do_nothing_fixer_instance() -> Mock:
+    fixer = Mock(spec=OtConfigFormatFixer)
+    fixer.fix.side_effect = do_nothing
+    return fixer
+
+
+@dataclass
+class GivenOrthophotoConfig:
+    config_parser: OtConfigParser
+    output: Path
+
+
+def create_given_orthophoto_config(test_data_tmp_dir: Path) -> GivenOrthophotoConfig:
+    video_parser = Mock(spec=VideoParser)
+    video_parser.convert.return_value = {video.VIDEOS: []}
+    flow_parser = Mock(spec=FlowParser)
+    flow_parser.convert.return_value = {section.SECTIONS: [], flow.FLOWS: []}
+    flow_parser.parse_content.return_value = ([], [])
+    return GivenOrthophotoConfig(
+        config_parser=OtConfigParser(
+            format_fixer=do_nothing_fixer_instance(),
+            video_parser=video_parser,
+            flow_parser=flow_parser,
+        ),
+        output=test_data_tmp_dir / "site" / "project.otconfig",
+    )
+
+
+def convert_with(
+    given: GivenOrthophotoConfig,
+    orthophoto: Orthophoto | None,
+    s3_key_prefix: S3KeyPrefix | None = None,
+) -> dict:
+    return given.config_parser.convert(
+        Project(name="p", start_date=datetime(2026, 4, 22)),
+        default_analysis_config(set()),
+        [],
+        [],
+        [],
+        given.output,
+        None,
+        s3_key_prefix,
+        orthophoto,
+    )
+
+
+class TestOtConfigParserOrthophoto:
+    def test_writes_orthophoto_relative_to_the_otconfig(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        orthophoto = Orthophoto(file=given.output.parent / "map2.tiff")
+
+        actual = convert_with(given, orthophoto)
+
+        assert actual[ORTHOPHOTO] == "map2.tiff"
+
+    def test_keeps_the_declared_reference_in_s3_mode(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        orthophoto = Orthophoto(
+            file=Path("/staging/projects/demo/site-1/map2.tiff"),
+            reference=Path("map2.tiff"),
+        )
+
+        actual = convert_with(given, orthophoto, S3KeyPrefix("projects/demo/site-1"))
+
+        assert actual[ORTHOPHOTO] == "map2.tiff"
+
+    def test_omits_orthophoto_when_there_is_none(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+
+        actual = convert_with(given, None)
+
+        assert ORTHOPHOTO not in actual
+
+    def test_parses_the_declared_reference(self, test_data_tmp_dir: Path) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, Orthophoto(file=given.output.parent / "map2.tiff"))
+
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        assert actual.orthophoto == Path("map2.tiff")
+
+
+def analysis_config_with_export(export_config: ExportConfig) -> AnalysisConfig:
+    base = default_analysis_config(set())
+    return AnalysisConfig(
+        do_events=base.do_events,
+        do_counting=base.do_counting,
+        track_files=base.track_files,
+        export_config=export_config,
+        num_processes=base.num_processes,
+        logfile=base.logfile,
+    )
+
+
+def convert_analysis(given: GivenOrthophotoConfig, analysis: AnalysisConfig) -> dict:
+    return given.config_parser.convert(
+        Project(name="p", start_date=datetime(2026, 4, 22)),
+        analysis,
+        [],
+        [],
+        [],
+        given.output,
+        None,
+        None,
+        None,
+    )
+
+
+class TestOtConfigParserTrafficStatisticsAndGeoTracks:
+    def test_parse_export_without_new_keys_disables_both_exports(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        assert actual.analysis.export_config.traffic_statistics is None
+        assert actual.analysis.export_config.geo_tracks is False
+
+    def test_serialize_without_new_settings_omits_the_keys(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+
+        actual = convert_with(given, None)
+
+        export = actual[ANALYSIS][EXPORT]
+        assert TRAFFIC_STATISTICS not in export
+        assert GEO_TRACKS not in export
+
+    def test_parse_traffic_statistics_block(self, test_data_tmp_dir: Path) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {
+            "enabled": True,
+            # Days are cut in UTC, a timezone of older otconfigs is ignored.
+            "timezone": "Europe/Berlin",
+            "interval_minutes": 5,
+            # Speeds use interval_minutes, an own speed interval is ignored.
+            "speed_profile_interval_minutes": 15,
+            "max_speed_kmh": 150,
+            "class_groups": {"LV": ["car"], "SV": ["truck", "bus"]},
+        }
+        data[ANALYSIS][EXPORT][GEO_TRACKS] = True
+
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        export_config = actual.analysis.export_config
+        assert export_config.traffic_statistics == TrafficStatisticsConfig(
+            enabled=True,
+            interval_minutes=5,
+            max_speed_kmh=150.0,
+            class_groups={"LV": frozenset({"car"}), "SV": frozenset({"truck", "bus"})},
+        )
+        assert export_config.traffic_statistics.class_groups["SV"] == frozenset(
+            {"truck", "bus"}
+        )
+        assert export_config.geo_tracks is True
+
+    def test_parse_empty_traffic_statistics_block_uses_defaults(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {}
+
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        assert actual.analysis.export_config.traffic_statistics == (
+            TrafficStatisticsConfig()
+        )
+
+    @pytest.mark.parametrize("enabled", [True, False])
+    def test_serialize_round_trip_keeps_traffic_statistics_and_geo_tracks(
+        self, test_data_tmp_dir: Path, enabled: bool
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        traffic_statistics = TrafficStatisticsConfig(
+            enabled=enabled,
+            interval_minutes=5,
+            max_speed_kmh=120.5,
+            class_groups={"SV": frozenset({"truck", "bus"}), "LV": frozenset({"car"})},
+            peak_window_minutes=30,
+            peak_step_minutes=10,
+        )
+        export_config = ExportConfig(
+            save_name="n",
+            save_suffix="s",
+            event_formats={"csv"},
+            count_intervals={1},
+            counting_event=CountingEvent.START,
+            traffic_statistics=traffic_statistics,
+            geo_tracks=True,
+        )
+
+        data = convert_analysis(given, analysis_config_with_export(export_config))
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        assert actual.analysis.export_config == export_config
+        serialized = data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS]
+        assert serialized["class_groups"] == {
+            "LV": ["car"],
+            "SV": ["bus", "truck"],
+        }
+
+    def test_invalid_interval_raises_with_field_name(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {"interval_minutes": 7}
+
+        with pytest.raises(ValueError, match="interval_minutes"):
+            given.config_parser.parse_from_dict(data, given.output.parent)
+
+    def test_integral_float_minutes_are_coerced_to_int(
+        self, test_data_tmp_dir: Path
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {
+            "interval_minutes": 5.0,
+            "peak_step_minutes": 15.0,
+        }
+
+        actual = given.config_parser.parse_from_dict(data, given.output.parent)
+
+        traffic_statistics = actual.analysis.export_config.traffic_statistics
+        assert traffic_statistics is not None
+        assert traffic_statistics.interval_minutes == 5
+        assert isinstance(traffic_statistics.interval_minutes, int)
+
+    @pytest.mark.parametrize(
+        "key, value",
+        [
+            ("interval_minutes", "abc"),
+            ("interval_minutes", 5.5),
+            ("interval_minutes", True),
+            ("peak_window_minutes", None),
+            ("max_speed_kmh", "fast"),
+            ("max_speed_kmh", True),
+        ],
+    )
+    def test_invalid_value_raises_with_field_name(
+        self, test_data_tmp_dir: Path, key: str, value: object
+    ) -> None:
+        given = create_given_orthophoto_config(test_data_tmp_dir)
+        data = convert_with(given, None)
+        data[ANALYSIS][EXPORT][TRAFFIC_STATISTICS] = {key: value}
+
+        with pytest.raises(ValueError, match=key):
+            given.config_parser.parse_from_dict(data, given.output.parent)
+
+
+class TestFixMissingAnalysisNewExports:
+    def test_fix_keeps_traffic_statistics_and_geo_tracks_of_the_run(self) -> None:
+        value_provider = Mock(spec=OtConfigDefaultValueProvider)
+        type(value_provider).do_events = PropertyMock(return_value=True)
+        type(value_provider).do_counting = PropertyMock(return_value=True)
+        type(value_provider).track_files = PropertyMock(return_value=set())
+        type(value_provider).event_formats = PropertyMock(return_value=["csv"])
+        type(value_provider).save_stem = PropertyMock(return_value="n")
+        type(value_provider).save_suffix = PropertyMock(return_value="")
+        type(value_provider).count_intervals = PropertyMock(return_value=[1])
+        type(value_provider).counting_event = PropertyMock(
+            return_value=CountingEvent.START
+        )
+        type(value_provider).num_processes = PropertyMock(return_value=1)
+        type(value_provider).log_file = PropertyMock(return_value="a.log")
+        type(value_provider).debug = PropertyMock(return_value=False)
+        type(value_provider).traffic_statistics = PropertyMock(
+            return_value=TrafficStatisticsConfig(interval_minutes=5)
+        )
+        type(value_provider).do_export_geo_tracks = PropertyMock(return_value=True)
+
+        fixed = FixMissingAnalysis(run_config=value_provider).fix({})
+
+        export = fixed[ANALYSIS][EXPORT]
+        assert export[TRAFFIC_STATISTICS]["interval_minutes"] == 5
+        assert "timezone" not in export[TRAFFIC_STATISTICS]
+        assert export[GEO_TRACKS] is True

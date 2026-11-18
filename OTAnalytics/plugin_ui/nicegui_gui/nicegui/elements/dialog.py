@@ -19,7 +19,6 @@ class DialogResult(StrEnum):
 
 
 class BaseDialog:
-
     @property
     async def result(self) -> DialogResult:
         """Build, open, and await the dialog, returning the submitted result.
@@ -41,8 +40,8 @@ class BaseDialog:
             self.build_content()
             with ui.row():
                 apply = ui.button(
-                    self.resource_manager.get(GeneralKeys.LABEL_APPLY),
-                    on_click=lambda: dialog.submit(DialogResult.APPLY),
+                    self.apply_label(),
+                    on_click=lambda: self._submit_if_valid(dialog),
                 )
                 cancel = ui.button(
                     self.resource_manager.get(GeneralKeys.LABEL_CANCEL),
@@ -55,6 +54,22 @@ class BaseDialog:
                 apply.props(f"{TEST_ID}={MARKER_APPLY}")
                 cancel.props(f"{TEST_ID}={MARKER_CANCEL}")
             return dialog
+
+    def _submit_if_valid(self, dialog: ui.dialog) -> None:
+        if self.validate():
+            dialog.submit(DialogResult.APPLY)
+
+    def validate(self) -> bool:
+        """Check whether the dialog content is valid and may be applied.
+
+        Subclasses override this to keep the dialog open while their input is
+        invalid.
+        """
+        return True
+
+    def apply_label(self) -> str:
+        """Label of the button that submits DialogResult.APPLY."""
+        return self.resource_manager.get(GeneralKeys.LABEL_APPLY)
 
     @abstractmethod
     def build_content(self) -> None:

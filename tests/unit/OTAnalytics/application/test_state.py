@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Optional
@@ -14,6 +15,7 @@ from OTAnalytics.application.state import (
     FlowState,
     ObservableOptionalProperty,
     ObservableProperty,
+    OrthophotoImageSizeUpdater,
     Plotter,
     SectionState,
     TrackImageUpdater,
@@ -26,6 +28,7 @@ from OTAnalytics.domain.date import DateRange
 from OTAnalytics.domain.filter import FilterElement
 from OTAnalytics.domain.flow import FlowId
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.orthophoto import Orthophoto
 from OTAnalytics.domain.section import (
     Section,
     SectionId,
@@ -295,6 +298,21 @@ class TestVideosMetadata:
 
         assert videos_metadata.first_video_start is None
         assert videos_metadata.last_video_end is None
+        assert videos_metadata.get_all() == []
+
+    def test_get_all_is_sorted_by_start(
+        self,
+        first_full_metadata: VideoMetadata,
+        second_full_metadata: VideoMetadata,
+    ) -> None:
+        videos_metadata = VideosMetadata()
+        videos_metadata.update(second_full_metadata)
+        videos_metadata.update(first_full_metadata)
+
+        assert videos_metadata.get_all() == [
+            first_full_metadata,
+            second_full_metadata,
+        ]
 
     def test_update_single_full_item(self, first_full_metadata: VideoMetadata) -> None:
         videos_metadata = VideosMetadata()
@@ -620,3 +638,54 @@ class TestFlowState:
         target.reset()
 
         assert target.selected_flows.get() == []
+
+
+ORTHOPHOTO = Orthophoto(file=Path("site/map.tiff"))
+
+
+@dataclass
+class GivenOrthophotoSize:
+    orthophoto_image: Mock
+    updater: Mock
+
+
+def create_given_orthophoto_size() -> GivenOrthophotoSize:
+    return GivenOrthophotoSize(orthophoto_image=Mock(), updater=Mock())
+
+
+def setup_default_orthophoto_size(given: GivenOrthophotoSize) -> GivenOrthophotoSize:
+    given.orthophoto_image.return_value = Mock(spec=TrackImage)
+    return given
+
+
+def setup_without_orthophoto_image(
+    given: GivenOrthophotoSize,
+) -> GivenOrthophotoSize:
+    given.orthophoto_image.return_value = None
+    return given
+
+
+def create_target_orthophoto_size(
+    given: GivenOrthophotoSize,
+) -> OrthophotoImageSizeUpdater:
+    return OrthophotoImageSizeUpdater(given.orthophoto_image, given.updater)
+
+
+class TestOrthophotoImageSizeUpdater:
+    def test_sizes_the_canvas_to_the_orthophoto_image(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_default_orthophoto_size(create_given_orthophoto_size())
+
+        create_target_orthophoto_size(given).notify(ORTHOPHOTO)
+
+        given.updater.notify.assert_called_once_with(
+            given.orthophoto_image.return_value
+        )
+
+    def test_keeps_the_size_without_an_orthophoto_image(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10404"""
+        given = setup_without_orthophoto_image(create_given_orthophoto_size())
+
+        create_target_orthophoto_size(given).notify(None)
+
+        given.updater.notify.assert_not_called()
