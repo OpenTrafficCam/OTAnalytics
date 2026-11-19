@@ -8,6 +8,9 @@ from OTAnalytics.domain.track_dataset.track_dataset import EmptyTrackIdSet
 from OTAnalytics.plugin_datastore.polars_track_store import PolarsDataFrameProvider
 from OTAnalytics.plugin_filter.polars_track_id import PolarsTrackIdProvider
 
+FIRST_TRACK_ID = "1"
+SECOND_TRACK_ID = "2"
+
 
 def create_provider(data: DataFrame) -> Mock:
     provider = Mock(spec=PolarsDataFrameProvider)
@@ -17,11 +20,11 @@ def create_provider(data: DataFrame) -> Mock:
 
 class TestPolarsTrackIdProvider:
     def test_get_ids(self) -> None:
-        data = DataFrame({TRACK_ID: ["1", "1", "2"]})
+        data = DataFrame({TRACK_ID: [FIRST_TRACK_ID, FIRST_TRACK_ID, SECOND_TRACK_ID]})
 
         ids = PolarsTrackIdProvider(create_provider(data)).get_ids()
 
-        assert set(ids) == {TrackId("1"), TrackId("2")}
+        assert set(ids) == {TrackId(FIRST_TRACK_ID), TrackId(SECOND_TRACK_ID)}
 
     def test_get_ids_of_empty_dataframe(self) -> None:
         ids = PolarsTrackIdProvider(create_provider(DataFrame())).get_ids()
@@ -29,7 +32,9 @@ class TestPolarsTrackIdProvider:
         assert isinstance(ids, EmptyTrackIdSet)
 
     def test_get_ids_without_track_id_column(self) -> None:
-        provider = PolarsTrackIdProvider(create_provider(DataFrame({"other": [1]})))
+        provider = PolarsTrackIdProvider(
+            create_provider(DataFrame({"other": [FIRST_TRACK_ID]}))
+        )
 
         with pytest.raises(ValueError):
             provider.get_ids()

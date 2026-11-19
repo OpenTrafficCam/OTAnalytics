@@ -3,7 +3,6 @@ from typing import Mapping
 
 import numpy
 import polars as pl
-from matplotlib import colors as mcolors
 from numpy import ndarray
 from polars import DataFrame
 
@@ -15,7 +14,9 @@ from OTAnalytics.plugin_prototypes.track_visualization.backends.scene import (
     Symbol,
 )
 
-DEFAULT_COLOR = "black"
+RgbColor = tuple[int, int, int]
+
+DEFAULT_COLOR: RgbColor = (0, 0, 0)
 MAX_COLOR_VALUE = 255
 CATEGORY = "category"
 IS_START = "is_start"
@@ -30,12 +31,12 @@ class SceneBuilder(ABC):
     """
 
     @abstractmethod
-    def build(self, data: DataFrame, color_palette: Mapping[str, str]) -> Scene:
+    def build(self, data: DataFrame, color_palette: Mapping[str, RgbColor]) -> Scene:
         """Build the scene for the given detections.
 
         Args:
             data (DataFrame): detections sorted by track id and occurrence.
-            color_palette (Mapping[str, str]): color name per classification.
+            color_palette (Mapping[str, RgbColor]): RGB color per classification.
 
         Returns:
             Scene: what to draw.
@@ -49,7 +50,7 @@ class CategoryColors:
     Categories are numbered in order of first appearance.
     """
 
-    def __init__(self, color_palette: Mapping[str, str], alpha: float) -> None:
+    def __init__(self, color_palette: Mapping[str, RgbColor], alpha: float) -> None:
         self._color_palette = color_palette
         self._alpha = alpha
 
@@ -76,16 +77,11 @@ class CategoryColors:
         return encoded, labels, self._to_rgba(labels)
 
     def _to_rgba(self, labels: tuple[str, ...]) -> ndarray:
-        colors = numpy.array(
-            [
-                mcolors.to_rgba(
-                    self._color_palette.get(label, DEFAULT_COLOR), alpha=self._alpha
-                )
-                for label in labels
-            ],
-            dtype=numpy.float64,
-        ).reshape(-1, 4)
-        return numpy.round(colors * MAX_COLOR_VALUE).astype(numpy.uint8)
+        alpha = round(self._alpha * MAX_COLOR_VALUE)
+        colors = [
+            (*self._color_palette.get(label, DEFAULT_COLOR), alpha) for label in labels
+        ]
+        return numpy.array(colors, dtype=numpy.uint8).reshape(-1, 4)
 
 
 def to_coordinates(data: DataFrame, columns: list[str] = COORDINATE_COLUMNS) -> ndarray:
@@ -116,7 +112,7 @@ class TrackGeometrySceneBuilder(SceneBuilder):
         self._thickness = thickness
         self._enable_legend = enable_legend
 
-    def build(self, data: DataFrame, color_palette: Mapping[str, str]) -> Scene:
+    def build(self, data: DataFrame, color_palette: Mapping[str, RgbColor]) -> Scene:
         if data.is_empty():
             return Scene()
         data, labels, colors = CategoryColors(color_palette, self._alpha).encode(
@@ -153,7 +149,7 @@ class TrackStartEndPointSceneBuilder(SceneBuilder):
         self._start_symbol = start_symbol
         self._end_symbol = end_symbol
 
-    def build(self, data: DataFrame, color_palette: Mapping[str, str]) -> Scene:
+    def build(self, data: DataFrame, color_palette: Mapping[str, RgbColor]) -> Scene:
         if data.is_empty():
             return Scene()
         data, labels, colors = CategoryColors(color_palette, self._alpha).encode(
@@ -191,7 +187,7 @@ class PointSceneBuilder(SceneBuilder):
         self._size = size
         self._symbol = symbol
 
-    def build(self, data: DataFrame, color_palette: Mapping[str, str]) -> Scene:
+    def build(self, data: DataFrame, color_palette: Mapping[str, RgbColor]) -> Scene:
         if data.is_empty():
             return Scene()
         data, labels, colors = CategoryColors(color_palette, self._alpha).encode(
@@ -215,7 +211,7 @@ class BoundingBoxSceneBuilder(SceneBuilder):
         self._alpha = alpha
         self._thickness = thickness
 
-    def build(self, data: DataFrame, color_palette: Mapping[str, str]) -> Scene:
+    def build(self, data: DataFrame, color_palette: Mapping[str, RgbColor]) -> Scene:
         if data.is_empty():
             return Scene()
         data, labels, colors = CategoryColors(color_palette, self._alpha).encode(

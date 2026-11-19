@@ -6,19 +6,24 @@ from polars import DataFrame
 from OTAnalytics.domain import track
 
 CATEGORIES = ["car", "bicyclist", "pedestrian"]
-COLOR_PALETTE = {"car": "blue", "bicyclist": "lime", "pedestrian": "red"}
+COLOR_PALETTE = {
+    "car": (0, 0, 255),
+    "bicyclist": (0, 255, 0),
+    "pedestrian": (255, 0, 0),
+}
 IMAGE_WIDTH = 800
 IMAGE_HEIGHT = 600
 NUMBER_OF_TRACKS = 100
 DETECTIONS_PER_TRACK = 1_000
 STEP_SIZE = 2.0
 BOX_SIZE = 20.0
+RANDOM_SEED = 42
 
 
 def random_walk_tracks(
     number_of_tracks: int = NUMBER_OF_TRACKS,
     detections_per_track: int = DETECTIONS_PER_TRACK,
-    seed: int = 42,
+    seed: int = RANDOM_SEED,
 ) -> DataFrame:
     """Random walk tracks in image coordinates, sorted by track id and occurrence.
 
