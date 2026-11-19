@@ -253,9 +253,9 @@ def open_group(page: Page, marker: str) -> None:
 
 
 def open_tab(page: Page, marker: str) -> None:
-    """Open the Tracks or Videos tab, which live in the project group."""
+    """Show the Track files or Videos part of the project group."""
     open_group(page, MARKER_GROUP_PROJECT)
-    search_for_marker_element(page, marker).first.click()
+    search_for_marker_element(page, marker).first.scroll_into_view_if_needed()
 
 
 def fill_project_information(

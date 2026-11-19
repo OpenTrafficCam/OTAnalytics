@@ -78,6 +78,8 @@ class ProjectKeys(ResourceKey):
 class TrackFormKeys(ResourceKey):
     TAB_TRACK = "tab-one"
     TAB_VIDEO = "tab-two"
+    LABEL_TRACK_FILES = "label-track-files"
+    LABEL_VIDEOS = "label-videos"
 
 
 class SvzMetadataKeys(ResourceKey):
@@ -356,6 +358,8 @@ DEFAULT_RESOURCE_MAP = {
     SvzMetadataKeys.LABEL_Y_COORDINATE: "Y Koordinate",
     TrackFormKeys.TAB_TRACK: "Track",
     TrackFormKeys.TAB_VIDEO: "Videos",
+    TrackFormKeys.LABEL_TRACK_FILES: "Track files",
+    TrackFormKeys.LABEL_VIDEOS: "Videos",
     TrackStatisticKeys.COLUMN_NAME: "Name",
     TrackStatisticKeys.COLUMN_NUMBER: "Number",
     TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER: "Track statistics",

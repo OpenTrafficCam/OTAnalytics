@@ -173,14 +173,15 @@ class TestConfigurationBarObservers:
             )
         }
         configuration_bar = Mock()
+        track_form = Mock()
         target.__dict__.update(repositories)
         target.__dict__["configuration_bar"] = configuration_bar
+        target.__dict__["track_form"] = track_form
 
         target.register_configuration_bar_observers()
 
-        repositories[
-            "track_repository"
-        ].register_tracks_observer.assert_called_once_with(configuration_bar)
+        tracks = repositories["track_repository"].register_tracks_observer
+        assert tracks.call_args_list == [call(configuration_bar), call(track_form)]
         repositories["datastore"].register_video_observer.assert_called_once_with(
             configuration_bar
         )

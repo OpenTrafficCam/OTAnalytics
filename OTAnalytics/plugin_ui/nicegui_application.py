@@ -164,6 +164,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     def register_configuration_bar_observers(self) -> None:
         """Keep the group summaries of the configuration bar up to date."""
         self.track_repository.register_tracks_observer(self.configuration_bar)
+        self.track_repository.register_tracks_observer(self.track_form)
         self.datastore.register_video_observer(self.configuration_bar)
         self.section_repository.register_sections_observer(self.configuration_bar)
         self.flow_repository.register_flows_observer(self.configuration_bar)
@@ -289,6 +290,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     def track_form(self) -> TrackForm:
         return TrackForm(
             self.resource_manager,
+            self.view_model,
             self.add_track_form,
             self.add_video_form,
         )

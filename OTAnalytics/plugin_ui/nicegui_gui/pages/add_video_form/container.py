@@ -90,20 +90,25 @@ class AddVideoForm(ButtonForm, AbstractTreeviewInterface):
 
     def build(self) -> Self:
         self._video_table.build()
+        with ui.row().classes("ota-button-row"):
+            self._build_buttons()
+        self._update_video_table()
+        return self
+
+    def _build_buttons(self) -> None:
         self._add_video_button = ui.button(
             self._resource_manager.get(AddVideoKeys.BUTTON_ADD_VIDEOS),
+            icon="add",
             on_click=lambda _: self._viewmodel.add_video(),
-        )
+        ).props("outline")
         self._add_video_button.mark(MARKER_BUTTON_ADD)
         self._add_video_button.props(f"{TEST_ID}={MARKER_BUTTON_ADD}")
         self._remove_video_button = ui.button(
             self._resource_manager.get(AddVideoKeys.BUTTON_REMOVE_VIDEOS),
             on_click=lambda _: self._remove_video(),
-        )
+        ).props("outline")
         self._remove_video_button.mark(MARKER_BUTTON_REMOVE)
         self._remove_video_button.props(f"{TEST_ID}={MARKER_BUTTON_REMOVE}")
-        self._update_video_table()
-        return self
 
     def get_general_buttons(self) -> list[Button]:
         if self._add_video_button and self._remove_video_button:
