@@ -140,7 +140,9 @@ class TestTrackAssignmentObservers:
         flow_form = Mock()
         canvas_form = Mock()
         assignment_status = Mock()
+        track_repository = Mock()
         target.__dict__["datastore"] = datastore
+        target.__dict__["track_repository"] = track_repository
         target.__dict__["flow_form"] = flow_form
         target.__dict__["canvas_form"] = canvas_form
         target.__dict__["assignment_status"] = assignment_status
@@ -154,6 +156,7 @@ class TestTrackAssignmentObservers:
             call(canvas_form.set_flows_outdated),
             call(assignment_status.show_outdated),
         ]
+        track_repository.register_tracks_observer.assert_called_once_with(flow_form)
 
 
 @dataclass

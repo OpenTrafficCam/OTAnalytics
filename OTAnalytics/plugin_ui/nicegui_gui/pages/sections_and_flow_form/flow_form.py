@@ -12,6 +12,7 @@ from OTAnalytics.application.state import FlowState
 from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.flow import FLOW_NAME, Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
@@ -73,7 +74,13 @@ def map_to_ui(
     return list_of_flows
 
 
-class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObserver):
+class FlowForm(
+    ButtonForm,
+    AbstractFrame,
+    AbstractTreeviewInterface,
+    FlowListObserver,
+    TrackListObserver,
+):
     def __init__(
         self,
         viewmodel: ViewModel,
@@ -207,6 +214,10 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObs
         for observer in self._outdated_observers:
             observer(outdated)
 
+    def notify_tracks(self, _: TrackRepositoryEvent) -> None:
+        """Changed tracks clear every event, e.g. when a project is opened."""
+        self._on_assignment_input_changed()
+
     def _schedule_assignment(self) -> None:
         """Assign the tracks once the changes pause, if automatic assignment is on.
 
@@ -228,7 +239,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObs
     def _assign_tracks(self) -> None:
         self._assignment_timer = None
         if self._viewmodel.get_auto_assignment():
-            self.update_assignment()
+            self._viewmodel.assign_tracks()
+            self._set_outdated(False)
 
     async def add_flow(self, _: ClickEventArguments) -> None:
         await self._viewmodel.add_flow()

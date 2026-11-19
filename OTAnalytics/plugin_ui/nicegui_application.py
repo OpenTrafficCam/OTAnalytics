@@ -174,6 +174,8 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         )
         self.flow_form.register_outdated_observer(self.canvas_form.set_flows_outdated)
         self.flow_form.register_outdated_observer(self.assignment_status.show_outdated)
+        # After the events were cleared for the changed tracks.
+        self.track_repository.register_tracks_observer(self.flow_form)
 
     @cached_property
     def webserver(self) -> Webserver:

@@ -1495,6 +1495,10 @@ class DummyViewModel(
     def get_auto_assignment(self) -> bool:
         return self._auto_assignment
 
+    def assign_tracks(self) -> None:
+        self._application.create_events()
+        self.notify_flows(self.get_all_flow_ids())
+
     def create_events(self) -> None:
         logger().info("Creating events")
         start_msg_popup = self._ui_factory.minimal_info_box(
