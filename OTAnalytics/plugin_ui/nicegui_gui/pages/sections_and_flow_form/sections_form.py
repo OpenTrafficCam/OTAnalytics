@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Self
+from typing import Any, Callable, Iterable, Self
 
 from nicegui import ui
 from nicegui.elements.button import Button
@@ -10,7 +10,7 @@ from OTAnalytics.application.resources.resource_manager import (
     SectionKeys,
 )
 from OTAnalytics.application.state import SectionState
-from OTAnalytics.domain.section import NAME, Section
+from OTAnalytics.domain.section import NAME, Section, SectionType
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
@@ -25,6 +25,13 @@ MARKER_BUTTON_ADD_AREA = "marker-button-add-area"
 MARKER_BUTTON_EDIT = "marker-button-edit"
 MARKER_BUTTON_PROPERTIES = "marker-button-properties"
 MARKER_BUTTON_REMOVE = "marker-button-remove"
+COLUMN_TYPE = "type_label"
+TYPE_TAG = '<q-td :props="props"><span class="ota-tag">{{ props.value }}</span></q-td>'
+TYPE_LABELS = {
+    SectionType.LINE: SectionKeys.TYPE_LINE,
+    SectionType.AREA: SectionKeys.TYPE_AREA,
+    SectionType.CUTTING: SectionKeys.TYPE_CUTTING,
+}
 
 
 def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
@@ -35,13 +42,21 @@ def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
             "label": resource_manager.get(SectionKeys.TABLE_COLUMN_NAME),
             "field": "name",
         },
+        {
+            "name": COLUMN_TYPE,
+            "label": resource_manager.get(SectionKeys.TABLE_COLUMN_TYPE),
+            "field": COLUMN_TYPE,
+            "align": "right",
+        },
     ]
 
 
-def map_to_ui(sections: Iterable[Section]) -> list:
+def map_to_ui(sections: Iterable[Section], resource_manager: ResourceManager) -> list:
     list_of_sections = []
     for section in sections:
-        list_of_sections.append(section.to_dict())
+        row = section.to_dict()
+        row[COLUMN_TYPE] = resource_manager.get(TYPE_LABELS[section.get_type()])
+        list_of_sections.append(row)
     return list_of_sections
 
 
@@ -90,44 +105,45 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
         await self._viewmodel.edit_selected_section_metadata()
 
     def build(self) -> Self:
+        with ui.row().classes(BUTTON_ROW):
+            self._button_add_line = ui.button(
+                self._resource_manager.get(SectionKeys.BUTTON_ADD_LINE),
+                icon="add",
+                on_click=self._viewmodel.add_line_section,
+            )
+            self._button_add_line.mark(MARKER_BUTTON_ADD_LINE)
+            self._button_add_areas = self._secondary_button(
+                SectionKeys.BUTTON_ADD_AREA,
+                self._viewmodel.add_area_section,
+                MARKER_BUTTON_ADD_AREA,
+            ).props("icon=add")
+            self._button_edit = self._secondary_button(
+                SectionKeys.BUTTON_EDIT,
+                self._viewmodel.edit_section_geometry,
+                MARKER_BUTTON_EDIT,
+            )
+            self._button_properties = self._secondary_button(
+                SectionKeys.BUTTON_PROPERTIES,
+                self._viewmodel.edit_selected_section_metadata,
+                MARKER_BUTTON_PROPERTIES,
+            )
+            self._button_remove = self._secondary_button(
+                SectionKeys.BUTTON_REMOVE, self.remove_sections, MARKER_BUTTON_REMOVE
+            )
         self._section_table.build()
-        with ui.grid(rows=3).classes("w-full"):
-            with ui.row().classes(BUTTON_ROW):
-                self._button_add_line = ui.button(
-                    self._resource_manager.get(SectionKeys.BUTTON_ADD_LINE),
-                    on_click=self._viewmodel.add_line_section,
-                )
-                self._button_add_line.mark(MARKER_BUTTON_ADD_LINE)
-
-                self._button_add_areas = ui.button(
-                    self._resource_manager.get(SectionKeys.BUTTON_ADD_AREA),
-                    on_click=self._viewmodel.add_area_section,
-                )
-                self._button_add_areas.mark(MARKER_BUTTON_ADD_AREA)
-
-            with ui.row().classes(BUTTON_ROW):
-                self._button_edit = ui.button(
-                    self._resource_manager.get(SectionKeys.BUTTON_EDIT),
-                    on_click=self._viewmodel.edit_section_geometry,
-                )
-                self._button_edit.mark(MARKER_BUTTON_EDIT)
-
-                self._button_properties = ui.button(
-                    self._resource_manager.get(SectionKeys.BUTTON_PROPERTIES),
-                    on_click=self._viewmodel.edit_selected_section_metadata,
-                )
-                self._button_properties.mark(MARKER_BUTTON_PROPERTIES)
-
-            with ui.row().classes("w-full"):
-                self._button_remove = ui.button(
-                    self._resource_manager.get(SectionKeys.BUTTON_REMOVE),
-                    on_click=self.remove_sections,
-                ).classes("w-full")
-                self._button_remove.mark(MARKER_BUTTON_REMOVE)
+        self._section_table.add_cell_slot(COLUMN_TYPE, TYPE_TAG)
         self.update_items()
         # Buttons did not exist on first introduction, apply their states now
         self._viewmodel.set_sections_frame(self)
         return self
+
+    def _secondary_button(
+        self, key: SectionKeys, on_click: Callable[..., Any], marker: str
+    ) -> ui.button:
+        button = ui.button(self._resource_manager.get(key), on_click=on_click)
+        button.props("outline")
+        button.mark(marker)
+        return button
 
     def get_add_buttons(self) -> list[Button]:
         if self._button_add_line and self._button_add_areas:
@@ -154,7 +170,9 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
         run_async(self._viewmodel.remove_sections())
 
     def update_items(self) -> None:
-        self._section_table.update(map_to_ui(self._viewmodel.get_all_sections()))
+        self._section_table.update(
+            map_to_ui(self._viewmodel.get_all_sections(), self._resource_manager)
+        )
         selected_sections = [
             section.id for section in self._section_state.selected_sections.get()
         ]

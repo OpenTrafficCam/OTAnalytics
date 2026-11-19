@@ -142,6 +142,10 @@ class CustomTable:
         if self._instantiated:
             self._table.update()
 
+    def add_cell_slot(self, column: str, template: str) -> None:
+        """Render the cells of a column with a Vue template, e.g. as tags."""
+        self._table.add_slot(f"body-cell-{column}", template)
+
     def update_columns(self, columns: List[dict]) -> None:
         self._columns = columns
         if self._instantiated:

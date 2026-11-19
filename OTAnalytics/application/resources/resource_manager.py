@@ -162,6 +162,10 @@ class SectionKeys(ResourceKey):
     BUTTON_PROPERTIES = "button-properties"
     BUTTON_REMOVE = "button-remove"
     TABLE_COLUMN_NAME = "table-column-name"
+    TABLE_COLUMN_TYPE = "table-column-type"
+    TYPE_LINE = "type-line"
+    TYPE_AREA = "type-area"
+    TYPE_CUTTING = "type-cutting"
 
 
 class OffsetSliderKeys(ResourceKey):
@@ -342,6 +346,10 @@ DEFAULT_RESOURCE_MAP = {
     SectionKeys.BUTTON_PROPERTIES: "Properties...",
     SectionKeys.BUTTON_REMOVE: "Remove...",
     SectionKeys.TABLE_COLUMN_NAME: "Section",
+    SectionKeys.TABLE_COLUMN_TYPE: "Type",
+    SectionKeys.TYPE_LINE: "Line",
+    SectionKeys.TYPE_AREA: "Area",
+    SectionKeys.TYPE_CUTTING: "Cutting",
     StaticAnalysisConfigKeys.LABEL_STATIC_ANALYSIS_CONFIG_FORM_HEADER: "Analysis Configuration",  # noqa
     StaticAnalysisConfigKeys.LABEL_DO_EVENTS: "Create events",
     StaticAnalysisConfigKeys.LABEL_DO_COUNTING: "Create counts",
