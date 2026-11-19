@@ -8,8 +8,11 @@ from nicegui import ui
 from nicegui.testing import User
 
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
+    FONTS_DIR,
+    FONTS_ROUTE,
     STYLESHEET,
     VALID_FIELD_CLASS,
+    add_fonts,
     global_theme,
 )
 
@@ -109,3 +112,42 @@ class TestDensity:
             "--nicegui-default-gap: 8px",
         ):
             assert token in css, token
+
+
+FONT_URL = re.compile(r'url\("' + re.escape(FONTS_ROUTE) + r'/([^"]+)"\)')
+FONT_FAMILY = re.compile(r'font-family: "([^"]+)";')
+
+
+class TestFonts:
+    def test_every_font_of_the_stylesheet_is_bundled(self) -> None:
+        css = Path(STYLESHEET).read_text(encoding="utf-8")
+
+        files = FONT_URL.findall(css)
+
+        assert files
+        for file in files:
+            assert (FONTS_DIR / file).is_file(), file
+
+    def test_bundles_the_design_fonts(self) -> None:
+        css = Path(STYLESHEET).read_text(encoding="utf-8")
+        font_faces = css.split("@font-face")[1:]
+
+        families = {FONT_FAMILY.search(face).group(1) for face in font_faces}  # type: ignore[union-attr] # noqa: E501
+
+        assert families == {"Open Sans", "Roboto Mono", "Amatic SC"}
+
+    def test_bundles_the_font_licenses(self) -> None:
+        for license in (
+            "OFL-open-sans.txt",
+            "OFL-amatic-sc.txt",
+            "LICENSE-roboto-mono.txt",
+        ):
+            assert (FONTS_DIR / license).is_file(), license
+
+    def test_serves_the_fonts(self) -> None:
+        with patch(
+            "OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme.app"
+        ) as mock_app:
+            add_fonts()
+
+        mock_app.add_static_files.assert_called_once_with(FONTS_ROUTE, FONTS_DIR)

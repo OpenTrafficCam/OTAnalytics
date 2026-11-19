@@ -2,10 +2,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
-from nicegui import ui
+from nicegui import app, ui
 
 STYLESHEET = Path(__file__).with_name("otanalytics.css")
 """Styles of the web UI. Classes are prefixed with `ota-`."""
+
+FONTS_DIR = Path(__file__).with_name("fonts")
+FONTS_ROUTE = "/ota-fonts"
+"""Where the bundled fonts are served, as the stylesheet expects them."""
 
 VALID_FIELD_CLASS = "otanalytics-valid-field"
 """Marks a form field whose input passed its validation."""
@@ -15,6 +19,11 @@ DIALOG_CLASS = "ota-dialog"
 WIDE_DIALOG_CLASS = "ota-dialog-wide"
 STALE_CLASS = "ota-stale"
 """Dims what an out-of-date track assignment shows."""
+
+
+def add_fonts() -> None:
+    """Serve the bundled fonts, so the web UI needs no internet connection."""
+    app.add_static_files(FONTS_ROUTE, FONTS_DIR)
 
 
 @contextmanager

@@ -1,5 +1,46 @@
 /* Stylesheet of the OTAnalytics web UI, loaded once by global_theme(). */
 
+/* Bundled fonts, served by add_fonts(); see fonts/README.md */
+@font-face {
+  font-family: "Open Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/ota-fonts/open-sans-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Open Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/ota-fonts/open-sans-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Open Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/ota-fonts/open-sans-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Roboto Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/ota-fonts/roboto-mono-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Amatic SC";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/ota-fonts/amatic-sc-latin-700-normal.woff2") format("woff2");
+}
+
 :root {
   /* Compact desktop density instead of NiceGUI's 1rem padding and gaps */
   --nicegui-default-padding: 8px;
@@ -26,6 +67,7 @@
   /* Fonts */
   --ota-font: "Open Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --ota-font-mono: "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
+  --ota-font-brand: "Amatic SC", var(--ota-font);
   --ota-font-size: 13px;
   --ota-font-size-sm: 12px;
   --ota-font-size-xs: 11px;
@@ -127,8 +169,11 @@ body:has(.ota-app) {
   flex-wrap: nowrap;
   align-items: center;
   gap: 10px;
-  font-size: 18px;
+  font-family: var(--ota-font-brand);
+  font-size: 30px;
   font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
 }
 
 .ota-brand-icon {
