@@ -46,6 +46,11 @@ MARKER_PREV_FRAMES_BUTTON = "marker-prev-frames"
 MARKER_NEXT_FRAMES_BUTTON = "marker-next-frames"
 MARKER_PREV_EVENT_BUTTON = "marker-prev-event"
 MARKER_NEXT_EVENT_BUTTON = "marker-next-event"
+MARKER_TIME_BAR = "marker-time-bar"
+
+PREVIOUS_ICON = "chevron_left"
+NEXT_ICON = "chevron_right"
+STEP_INPUT_CLASSES = "w-20"
 
 
 class FilterDateRangeForm:
@@ -315,7 +320,6 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._resource_manager = resource_manager
         self._viewmodel = view_model
         self._filter_by_date: ui.checkbox
-        self._filter_by_class: ui.checkbox
         self._button_previous_second: ui.button | None = None
         self._button_previous_frame: ui.button | None = None
         self._button_previous_event: ui.button | None = None
@@ -367,107 +371,78 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._viewmodel.set_video_control_frame(self)
 
     def build(self) -> None:
-        with ui.grid(columns=3):
-            with ui.column():
-                with ui.row():
-                    self._filter_by_date_checkbox.build()
-                    self._filter_by_date_button = ui.button(
-                        self._resource_manager.get(
-                            VisualizationFiltersKeys.BUTTON_FILTER_BY_DATE
-                        ),
-                        on_click=self.open_range_dialog,
-                    )
-                    # Attach a stable test marker for Playwright selection
-                    self._filter_by_date_button.mark(MARKER_FILTER_BY_DATE_BUTTON)
-                    self._filter_by_date_button.props(
-                        f"{TestIdAttributes.DATA_TESTID}={MARKER_FILTER_BY_DATE_BUTTON}"
-                    )
-                    self._filter_by_date_button.disable()
+        """Build the time bar: date filter, date range and the step groups."""
+        with (
+            ui.row(wrap=False)
+            .classes("w-full items-center gap-2 no-wrap overflow-x-auto")
+            .mark(MARKER_TIME_BAR)
+        ):
+            self._filter_by_date_checkbox.build()
+            self._filter_by_date_button = ui.button(
+                self._resource_manager.get(
+                    VisualizationFiltersKeys.BUTTON_FILTER_BY_DATE
+                ),
+                on_click=self.open_range_dialog,
+            )
+            self._mark(self._filter_by_date_button, MARKER_FILTER_BY_DATE_BUTTON)
+            self._filter_by_date_button.disable()
 
-                self._button_previous_second = ui.button(
-                    "<", on_click=self._viewmodel.previous_second
-                )
-                self._button_previous_second.mark(MARKER_PREV_SECONDS_BUTTON)
-                self._button_previous_second.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_SECONDS_BUTTON}"
-                )
-                self._button_previous_frame = ui.button(
-                    "<", on_click=self._viewmodel.previous_frame
-                )
-                self._button_previous_frame.mark(MARKER_PREV_FRAMES_BUTTON)
-                self._button_previous_frame.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_FRAMES_BUTTON}"
-                )
-                self._button_previous_event = ui.button(
-                    "<", on_click=self._viewmodel.previous_event
-                )
-                self._button_previous_event.mark(MARKER_PREV_EVENT_BUTTON)
-                self._button_previous_event.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_EVENT_BUTTON}"
-                )
-            with ui.column():
-                with ui.row():
-                    self._filter_by_date_button_left = ui.button(
-                        "<", on_click=self._viewmodel.switch_to_prev_date_range
-                    )
-                    self._filter_by_date_button_left.mark(MARKER_PREV_DATE_BUTTON)
-                    self._filter_by_date_button_left.props(
-                        f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_DATE_BUTTON}"
-                    )
-                    self._label_filter_by_date = ui.label()
-                    # Expose the current applied date range for Playwright assertions
-                    self._label_filter_by_date.mark(MARKER_FILTER_RANGE_LABEL)
-                    self._label_filter_by_date.props(
-                        f"{TestIdAttributes.DATA_TESTID}={MARKER_FILTER_RANGE_LABEL}"
-                    )
-                    self._filter_by_date_button_right = ui.button(
-                        ">", on_click=self._viewmodel.switch_to_next_date_range
-                    )
-                    self._filter_by_date_button_right.mark(MARKER_NEXT_DATE_BUTTON)
-                    self._filter_by_date_button_right.props(
-                        f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_DATE_BUTTON}"
-                    )
-                    self._filter_by_date_button_left.disable()
-                    self._filter_by_date_button_right.disable()
+            self._filter_by_date_button_left = self._step_button(
+                PREVIOUS_ICON,
+                self._viewmodel.switch_to_prev_date_range,
+                MARKER_PREV_DATE_BUTTON,
+            )
+            self._label_filter_by_date = ui.label().classes("whitespace-nowrap")
+            # Expose the current applied date range for Playwright assertions
+            self._mark(self._label_filter_by_date, MARKER_FILTER_RANGE_LABEL)
+            self._filter_by_date_button_right = self._step_button(
+                NEXT_ICON,
+                self._viewmodel.switch_to_next_date_range,
+                MARKER_NEXT_DATE_BUTTON,
+            )
+            self._filter_by_date_button_left.disable()
+            self._filter_by_date_button_right.disable()
+
+            ui.space()
+            self._button_previous_event = self._step_button(
+                PREVIOUS_ICON, self._viewmodel.previous_event, MARKER_PREV_EVENT_BUTTON
+            )
+            ui.label(self._resource_manager.get(VisualizationFiltersKeys.LABEL_EVENT))
+            self._button_next_event = self._step_button(
+                NEXT_ICON, self._viewmodel.next_event, MARKER_NEXT_EVENT_BUTTON
+            )
+            self._button_previous_second = self._step_button(
+                PREVIOUS_ICON,
+                self._viewmodel.previous_second,
+                MARKER_PREV_SECONDS_BUTTON,
+            )
+            with ui.element("div").classes(STEP_INPUT_CLASSES):
                 self._input_seconds.build()
+            self._button_next_second = self._step_button(
+                NEXT_ICON, self._viewmodel.next_second, MARKER_NEXT_SECONDS_BUTTON
+            )
+            self._button_previous_frame = self._step_button(
+                PREVIOUS_ICON, self._viewmodel.previous_frame, MARKER_PREV_FRAMES_BUTTON
+            )
+            with ui.element("div").classes(STEP_INPUT_CLASSES):
                 self._input_frames.build()
-                ui.label(
-                    self._resource_manager.get(VisualizationFiltersKeys.LABEL_EVENT)
-                )
-            with ui.column():
-                with ui.row():
-                    self._filter_by_class_checkbox = ui.checkbox(
-                        on_change=lambda e: self.change_button_class(e.value)
-                    )
-                    self._filter_by_class_button = ui.button(
-                        self._resource_manager.get(
-                            VisualizationFiltersKeys.BUTTON_FILTER_BY_CLASSIFICATION
-                        ),
-                        on_click=self.open_classification_dialog,
-                    )
-                    self._filter_by_class_button.disable()
-                self._button_next_second = ui.button(
-                    ">", on_click=self._viewmodel.next_second
-                )
-                self._button_next_second.mark(MARKER_NEXT_SECONDS_BUTTON)
-                self._button_next_second.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_SECONDS_BUTTON}"
-                )
-                self._button_next_frame = ui.button(
-                    ">", on_click=self._viewmodel.next_frame
-                )
-                self._button_next_frame.mark(MARKER_NEXT_FRAMES_BUTTON)
-                self._button_next_frame.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_FRAMES_BUTTON}"
-                )
-                self._button_next_event = ui.button(
-                    ">", on_click=self._viewmodel.next_event
-                )
-                self._button_next_event.mark(MARKER_NEXT_EVENT_BUTTON)
-                self._button_next_event.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_EVENT_BUTTON}"
-                )
+            self._button_next_frame = self._step_button(
+                NEXT_ICON, self._viewmodel.next_frame, MARKER_NEXT_FRAMES_BUTTON
+            )
         self.set_enabled_general_buttons(False)
+
+    def _step_button(
+        self, icon: str, on_click: Callable[[], None], marker: str
+    ) -> ui.button:
+        button = ui.button(icon=icon, on_click=on_click).props("flat dense round")
+        self._mark(button, marker)
+        return button
+
+    @staticmethod
+    def _mark(element: ui.element, marker: str) -> None:
+        """Attach a stable test marker for Playwright and the NiceGUI user."""
+        element.mark(marker)
+        element.props(f"{TestIdAttributes.DATA_TESTID}={marker}")
 
     def change_button_date(self, checkbox_status: bool) -> None:
         if checkbox_status:

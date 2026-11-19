@@ -98,6 +98,20 @@ def create_section_shape(
     return Polyline(id=id, points=coordinates, color=color)
 
 
+def fit_into_workspace(width: int, height: int) -> str:
+    """Style the image as large as the workspace allows, keeping its aspect ratio.
+
+    The mouse positions are scaled by the size of the image element. Stretching
+    or letterboxing the image inside its element would shift them, so the
+    element itself takes the aspect ratio of the image. The workspace provides
+    its size as a CSS container.
+    """
+    return (
+        f"aspect-ratio: {width} / {height}; "
+        f"width: min(100cqw, calc(100cqh * {width} / {height}))"
+    )
+
+
 def to_point(x: float, y: float) -> Point:
     return round(x), round(y)
 
@@ -554,6 +568,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def _change_image(self) -> None:
         if self._current_image and self._background_image:
             self._background_image.set_source(self._current_image)
+            self._background_image.style(fit_into_workspace(*self._current_image.size))
             self._fit_overlay_to(self._current_image)
         else:
             self.clear_image()

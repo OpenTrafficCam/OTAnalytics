@@ -9,6 +9,7 @@ from unittest.mock import Mock
 
 import pytest
 from nicegui import ui
+from nicegui.element import Element
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.default_values import SUPPORTED_FORMATS
@@ -28,10 +29,22 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
     VALID_FIELD_CLASS,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+    MARKER_FILTER_BY_DATE_BUTTON,
+    MARKER_FILTER_BY_DATE_CHECKBOX,
     MARKER_FILTER_END_DATE_INPUT,
     MARKER_FILTER_END_TIME_INPUT,
+    MARKER_FILTER_RANGE_LABEL,
     MARKER_FILTER_START_DATE_INPUT,
     MARKER_FILTER_START_TIME_INPUT,
+    MARKER_NEXT_DATE_BUTTON,
+    MARKER_NEXT_EVENT_BUTTON,
+    MARKER_NEXT_FRAMES_BUTTON,
+    MARKER_NEXT_SECONDS_BUTTON,
+    MARKER_PREV_DATE_BUTTON,
+    MARKER_PREV_EVENT_BUTTON,
+    MARKER_PREV_FRAMES_BUTTON,
+    MARKER_PREV_SECONDS_BUTTON,
+    MARKER_TIME_BAR,
     VisualizationFiltersForm,
 )
 
@@ -148,6 +161,73 @@ class TestBeforeThePageIsBuilt:
         target = create_target(create_given())
 
         assert target.get_general_buttons() == []
+
+
+TIME_BAR_ORDER = [
+    MARKER_FILTER_BY_DATE_CHECKBOX,
+    MARKER_FILTER_BY_DATE_BUTTON,
+    MARKER_PREV_DATE_BUTTON,
+    MARKER_FILTER_RANGE_LABEL,
+    MARKER_NEXT_DATE_BUTTON,
+    MARKER_PREV_EVENT_BUTTON,
+    MARKER_NEXT_EVENT_BUTTON,
+    MARKER_PREV_SECONDS_BUTTON,
+    MARKER_NEXT_SECONDS_BUTTON,
+    MARKER_PREV_FRAMES_BUTTON,
+    MARKER_NEXT_FRAMES_BUTTON,
+]
+FILTER_BY_CLASS = "Filter by classification"
+
+
+def descendants(element: Element) -> list[Element]:
+    result = []
+    for child in element.default_slot.children:
+        result.append(child)
+        result.extend(descendants(child))
+    return result
+
+
+def first_marker(element: Element) -> str | None:
+    return next((m for m in element._markers if m in TIME_BAR_ORDER), None)
+
+
+class TestTimeBar:
+    async def test_shows_controls_in_one_row_in_workflow_order(
+        self, user: User
+    ) -> None:
+        target = create_target(create_given())
+
+        @ui.page("/test")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test")
+
+        time_bar = user.find(marker=MARKER_TIME_BAR).elements.pop()
+        assert isinstance(time_bar, ui.row)
+        markers = [
+            marker
+            for element in descendants(time_bar)
+            if (marker := first_marker(element)) is not None
+        ]
+        assert markers == TIME_BAR_ORDER
+
+    async def test_has_no_class_filter(self, user: User) -> None:
+        given = create_given()
+        given.resource_manager.get.side_effect = lambda key: (
+            FILTER_BY_CLASS
+            if key == VisualizationFiltersKeys.BUTTON_FILTER_BY_CLASSIFICATION
+            else LABELS.get(key, "label")
+        )
+        target = create_target(given)
+
+        @ui.page("/test")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test")
+
+        await user.should_not_see(FILTER_BY_CLASS)
 
 
 BICYCLE = "bicycle"
