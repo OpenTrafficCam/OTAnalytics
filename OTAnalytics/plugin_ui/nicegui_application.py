@@ -244,7 +244,6 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             self.resource_manager,
             self.add_track_form,
             self.add_video_form,
-            self.visualization_offset_slider_form,
         )
 
     @cached_property
@@ -480,7 +479,11 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def visualization_layers(self) -> VisualizationLayers:
-        return VisualizationLayers(self.resource_manager, self.layers_form)
+        return VisualizationLayers(
+            self.resource_manager,
+            self.layers_form,
+            self.visualization_offset_slider_form,
+        )
 
     @cached_property
     def track_statistic_form(self) -> TrackStatisticForm:
