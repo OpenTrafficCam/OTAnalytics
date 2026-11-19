@@ -32,6 +32,11 @@ class ConfigurationBarKeys(ResourceKey):
     LABEL_GROUP_SECTIONS = "label-group-sections"
     LABEL_GROUP_FLOWS = "label-group-flows"
     LABEL_GROUP_ANALYSIS = "label-group-analysis"
+    SUMMARY_PROJECT = "summary-project"
+    SUMMARY_SVZ = "summary-svz"
+    SUMMARY_SECTIONS = "summary-sections"
+    SUMMARY_FLOWS = "summary-flows"
+    SUMMARY_ANALYSIS = "summary-analysis"
 
 
 class AnalysisKeys(ResourceKey):
@@ -260,10 +265,15 @@ DEFAULT_RESOURCE_MAP = {
         "Please add at least {count} points to finish the section."
     ),
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
-    ConfigurationBarKeys.LABEL_GROUP_PROJECT: "1 Project & files",
-    ConfigurationBarKeys.LABEL_GROUP_SECTIONS: "2 Sections",
-    ConfigurationBarKeys.LABEL_GROUP_FLOWS: "3 Flows",
-    ConfigurationBarKeys.LABEL_GROUP_ANALYSIS: "4 Analysis & export",
+    ConfigurationBarKeys.LABEL_GROUP_PROJECT: "Project & files",
+    ConfigurationBarKeys.LABEL_GROUP_SECTIONS: "Sections",
+    ConfigurationBarKeys.LABEL_GROUP_FLOWS: "Flows",
+    ConfigurationBarKeys.LABEL_GROUP_ANALYSIS: "Analysis & export",
+    ConfigurationBarKeys.SUMMARY_PROJECT: "{tracks} track files · {videos} videos",
+    ConfigurationBarKeys.SUMMARY_SVZ: "Counting location",
+    ConfigurationBarKeys.SUMMARY_SECTIONS: "{sections} sections",
+    ConfigurationBarKeys.SUMMARY_FLOWS: "{flows} flows · {assigned} tracks assigned",
+    ConfigurationBarKeys.SUMMARY_ANALYSIS: "Configuration and exports",
     FlowAndSectionKeys.TAB_SECTION: "Section",
     FlowAndSectionKeys.TAB_FLOW: "Flow",
     FlowKeys.TABLE_COLUMN_NAME: "Flow",
@@ -348,7 +358,7 @@ DEFAULT_RESOURCE_MAP = {
     TrackFormKeys.TAB_VIDEO: "Videos",
     TrackStatisticKeys.COLUMN_NAME: "Name",
     TrackStatisticKeys.COLUMN_NUMBER: "Number",
-    TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER: "Track Statistics",
+    TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER: "Track statistics",
     TrackStatisticKeys.LABEL_ALL_TRACKS: "All tracks:",
     TrackStatisticKeys.LABEL_TRACKS_INTERSECTING_NOT_ASSIGNED: "Tracks intersecting not assigned:",  # noqa
     TrackStatisticKeys.LABEL_TRACKS_ASSIGNED_TO_FLOWS: "Tracks assigned to flows:",

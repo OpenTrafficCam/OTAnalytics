@@ -13,7 +13,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
     global_theme,
 )
 
-PRIMARY_COLOR = "#415841"
+PRIMARY_COLOR = "#37483e"
 NICEGUI_GUI = Path(STYLESHEET).parents[2]
 CLASS_IN_PYTHON = re.compile(r"""["' ](ota-[a-z-]+)""")
 CLASS_IN_CSS = re.compile(r"\.(ota-[a-z-]+|otanalytics-[a-z-]+)")
@@ -74,3 +74,38 @@ class TestStylesheet:
                 pass
 
         assert "primary" not in mock_ui.colors.call_args.kwargs
+
+
+class TestDensity:
+    async def test_controls_are_compact(self, user: User) -> None:
+        @ui.page("/test-density")
+        def page() -> None:
+            with global_theme():
+                ui.button("button").mark("button")
+                ui.input("input").mark("input")
+                ui.checkbox("checkbox").mark("checkbox")
+                ui.table(columns=[], rows=[]).mark("table")
+
+        await user.open("/test-density")
+
+        def props(marker: str) -> dict:
+            return user.find(marker=marker).elements.pop().props
+
+        assert {"dense", "unelevated", "no-caps"} <= set(props("button"))
+        assert {"dense", "outlined"} <= set(props("input"))
+        assert "dense" in props("checkbox")
+        assert {"dense", "flat", "bordered"} <= set(props("table"))
+
+    def test_uses_the_design_palette(self) -> None:
+        css = Path(STYLESHEET).read_text(encoding="utf-8")
+
+        for token in (
+            "--ota-primary: #37483e",
+            "--ota-text-muted: #596d63",
+            "--ota-border: #d9e2dd",
+            "--ota-border-strong: #b4c2bb",
+            "--ota-bg: #f6f8f7",
+            "--ota-selected: #d4e1da",
+            "--nicegui-default-gap: 8px",
+        ):
+            assert token in css, token

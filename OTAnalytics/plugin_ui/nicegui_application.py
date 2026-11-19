@@ -159,7 +159,15 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         super().register_observers()
         self.register_flow_track_count_observers()
         self.register_track_assignment_observers()
+        self.register_configuration_bar_observers()
+
+    def register_configuration_bar_observers(self) -> None:
+        """Keep the group summaries of the configuration bar up to date."""
         self.track_repository.register_tracks_observer(self.configuration_bar)
+        self.datastore.register_video_observer(self.configuration_bar)
+        self.section_repository.register_sections_observer(self.configuration_bar)
+        self.flow_repository.register_flows_observer(self.configuration_bar)
+        self.event_repository.register_observer(self.configuration_bar.notify_events)
 
     def register_flow_track_count_observers(self) -> None:
         """Keep the number of assigned tracks in the flow table up to date.

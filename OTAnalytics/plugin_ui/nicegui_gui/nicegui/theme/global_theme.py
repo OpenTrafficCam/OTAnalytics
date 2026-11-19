@@ -30,9 +30,14 @@ def global_theme() -> Generator[None, None, None]:
         error="#E60000",
         info="#4A90E2",
     )
-    ui.button.default_props(add="no-caps")
-    ui.checkbox.default_props("keep-color")
-    ui.input.default_props("color=accent")
-    ui.number.default_props("color=accent")
+    # Compact desktop density; sizes are set in the stylesheet.
+    ui.button.default_props(add="no-caps unelevated dense")
+    ui.checkbox.default_props("keep-color dense")
+    ui.switch.default_props("dense")
+    ui.input.default_props("color=accent outlined dense")
+    ui.number.default_props("color=accent outlined dense")
+    ui.select.default_props("outlined dense")
+    ui.tabs.default_props("dense")
+    ui.table.default_props("dense flat bordered")
     ui.add_css(STYLESHEET)
     yield

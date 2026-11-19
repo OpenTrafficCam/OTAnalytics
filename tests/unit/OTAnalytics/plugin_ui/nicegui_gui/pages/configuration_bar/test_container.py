@@ -8,7 +8,11 @@ from nicegui import ui
 from nicegui.element import Element
 from nicegui.testing import User
 
-from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.application.resources.resource_manager import (
+    ConfigurationBarKeys,
+    ResourceManager,
+    SvzMetadataKeys,
+)
 from OTAnalytics.domain.track import TrackId
 from OTAnalytics.domain.track_repository import TrackRepositoryEvent
 from OTAnalytics.plugin_datastore.python_track_store import PythonTrackIdSet
@@ -51,6 +55,10 @@ def create_view_model(
     view_model = Mock()
     view_model.show_svz.return_value = show_svz
     view_model.get_all_track_files.return_value = track_files or set()
+    view_model.get_all_videos.return_value = []
+    view_model.get_all_sections.return_value = []
+    view_model.get_all_flows.return_value = []
+    view_model.get_tracks_assigned_to_each_flow.return_value = {}
     return view_model
 
 
@@ -183,3 +191,89 @@ class TestConfigurationBar:
         target.notify_tracks(
             TrackRepositoryEvent.create_added(PythonTrackIdSet({TrackId("1")}))
         )
+
+
+def header_texts(user: User, marker: str) -> list[str]:
+    """Texts in the header of a group, in order."""
+    expansion = group(user, marker)
+    header = expansion.slots["header"]
+    texts: list[str] = []
+
+    def collect(element: Element) -> None:
+        if isinstance(element, ui.label):
+            texts.append(element.text)
+        for child in element.default_slot.children:
+            collect(child)
+
+    for child in header.children:
+        collect(child)
+    return texts
+
+
+class TestGroupHeaders:
+    @pytest.mark.parametrize(
+        "marker, step, title",
+        [
+            (MARKER_GROUP_PROJECT, "1", ConfigurationBarKeys.LABEL_GROUP_PROJECT),
+            (MARKER_GROUP_SVZ, "SVZ", SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER),
+            (MARKER_TAB_SECTION, "2", ConfigurationBarKeys.LABEL_GROUP_SECTIONS),
+            (MARKER_TAB_FLOW, "3", ConfigurationBarKeys.LABEL_GROUP_FLOWS),
+            (MARKER_GROUP_ANALYSIS, "4", ConfigurationBarKeys.LABEL_GROUP_ANALYSIS),
+        ],
+    )
+    async def test_show_step_and_title(
+        self,
+        user: User,
+        resource_manager: ResourceManager,
+        marker: str,
+        step: str,
+        title: ConfigurationBarKeys | SvzMetadataKeys,
+    ) -> None:
+        await open_page(user, create_target(resource_manager, create_view_model()))
+
+        texts = header_texts(user, marker)
+
+        assert texts[:2] == [step, resource_manager.get(title)]
+
+    async def test_summarize_the_project(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        view_model = create_view_model(track_files={Path("a.ottrk"), Path("b.ottrk")})
+        view_model.get_all_videos.return_value = [Mock()]
+        view_model.get_all_sections.return_value = [Mock()] * 5
+        view_model.get_all_flows.return_value = [Mock()] * 6
+        view_model.get_tracks_assigned_to_each_flow.return_value = {"a": 3, "b": 4}
+
+        await open_page(user, create_target(resource_manager, view_model))
+
+        assert header_texts(user, MARKER_GROUP_PROJECT)[2] == "2 track files · 1 videos"
+        assert header_texts(user, MARKER_TAB_SECTION)[2] == "5 sections"
+        assert header_texts(user, MARKER_TAB_FLOW)[2] == "6 flows · 7 tracks assigned"
+
+    async def test_summaries_follow_changes(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        view_model = create_view_model()
+        target = create_target(resource_manager, view_model)
+        await open_page(user, target)
+        view_model.get_all_sections.return_value = [Mock()] * 2
+        view_model.get_all_flows.return_value = [Mock()]
+        view_model.get_all_videos.return_value = [Mock()] * 3
+
+        target.notify_sections(Mock())
+        target.notify_flows([])
+        target.notify_videos([])
+
+        assert header_texts(user, MARKER_TAB_SECTION)[2] == "2 sections"
+        assert header_texts(user, MARKER_TAB_FLOW)[2] == "1 flows · 0 tracks assigned"
+        assert header_texts(user, MARKER_GROUP_PROJECT)[2] == "0 track files · 3 videos"
+
+    def test_changes_before_build_are_ignored(
+        self, resource_manager: ResourceManager
+    ) -> None:
+        target = create_target(resource_manager, create_view_model())
+
+        target.notify_sections(Mock())
+        target.notify_flows([])
+        target.notify_videos([])
+        target.notify_events(Mock())

@@ -116,3 +116,21 @@ class TestTrackStatisticForm:
         await user.open(ENDPOINT)
 
         assert value_of(user, resource_manager.get(LABEL_ALL)) == "101"
+
+    async def test_starts_with_a_title(self, user: User) -> None:
+        resource_manager = ResourceManager()
+        target = TrackStatisticForm(resource_manager, Mock())
+
+        @ui.page(ENDPOINT)
+        def page() -> None:
+            target.build()
+
+        await user.open(ENDPOINT)
+
+        status_bar = user.find(marker=MARKER_TRACK_STATISTICS).elements.pop()
+        first = status_bar.default_slot.children[0]
+        assert isinstance(first, ui.label)
+        assert first.text == resource_manager.get(
+            TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER
+        )
+        assert "ota-stats-title" in first.classes

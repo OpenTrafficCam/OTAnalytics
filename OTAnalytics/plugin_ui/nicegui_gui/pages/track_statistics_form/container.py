@@ -85,6 +85,11 @@ class TrackStatisticForm(AbstractFrameTrackStatistics):
     def build(self) -> None:
         self._values = []
         with ui.row(wrap=False).classes("ota-stats").mark(MARKER_TRACK_STATISTICS):
+            ui.label(
+                self._resource_manager.get(
+                    TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER
+                )
+            ).classes("ota-stats-title")
             for row in self._rows:
                 with ui.row(wrap=False).classes("ota-stat"):
                     ui.label(row[COLUMN_NAME]).classes("ota-stat-label")

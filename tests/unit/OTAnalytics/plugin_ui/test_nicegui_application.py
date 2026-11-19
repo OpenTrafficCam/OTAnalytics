@@ -159,6 +159,42 @@ class TestTrackAssignmentObservers:
         track_repository.register_tracks_observer.assert_called_once_with(flow_form)
 
 
+class TestConfigurationBarObservers:
+    def test_summaries_follow_the_project(self) -> None:
+        target = create_target(create_given())
+        repositories = {
+            name: Mock()
+            for name in (
+                "datastore",
+                "track_repository",
+                "section_repository",
+                "flow_repository",
+                "event_repository",
+            )
+        }
+        configuration_bar = Mock()
+        target.__dict__.update(repositories)
+        target.__dict__["configuration_bar"] = configuration_bar
+
+        target.register_configuration_bar_observers()
+
+        repositories[
+            "track_repository"
+        ].register_tracks_observer.assert_called_once_with(configuration_bar)
+        repositories["datastore"].register_video_observer.assert_called_once_with(
+            configuration_bar
+        )
+        repositories[
+            "section_repository"
+        ].register_sections_observer.assert_called_once_with(configuration_bar)
+        repositories["flow_repository"].register_flows_observer.assert_called_once_with(
+            configuration_bar
+        )
+        repositories["event_repository"].register_observer.assert_called_once_with(
+            configuration_bar.notify_events
+        )
+
+
 class TestVisualization:
     def test_track_image_has_no_class_legend(self) -> None:
         """The class legend on the canvas replaces the one in the track image."""

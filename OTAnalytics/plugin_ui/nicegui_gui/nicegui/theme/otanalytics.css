@@ -1,27 +1,51 @@
 /* Stylesheet of the OTAnalytics web UI, loaded once by global_theme(). */
 
 :root {
-  /* Colours */
-  --ota-primary: #415841;
-  --ota-surface: #ffffff;
-  --ota-border: #e5e7eb;
-  --ota-text-muted: #616161;
+  /* Compact desktop density instead of NiceGUI's 1rem padding and gaps */
+  --nicegui-default-padding: 8px;
+  --nicegui-default-gap: 8px;
 
-  /* Spacing, radius and fonts */
-  --ota-space-1: 0.25rem;
-  --ota-space-2: 0.5rem;
-  --ota-space-3: 0.75rem;
-  --ota-space-4: 1rem;
-  --ota-radius-sm: 0.125rem;
-  --ota-font-size-sm: 0.875rem;
-  --ota-line-height-sm: 1.25rem;
+  /* Colours */
+  --ota-primary: #37483e;
+  --ota-primary-hover: #2a362e;
+  --ota-text: #37483e;
+  --ota-text-strong: #111914;
+  --ota-text-muted: #596d63;
+  --ota-border: #d9e2dd;
+  --ota-border-light: #e8efeb;
+  --ota-border-strong: #b4c2bb;
+  --ota-bg: #f6f8f7;
+  --ota-hover: #f4f7f5;
+  --ota-surface: #ffffff;
+  --ota-selected: #d4e1da;
+  --ota-on-primary-muted: #d4e1da;
+  --ota-fresh: #4d6856;
+  --ota-stale-dot: #b48a2a;
+  --ota-stale-text: #7a5a14;
+
+  /* Fonts */
+  --ota-font: "Open Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ota-font-mono: "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
+  --ota-font-size: 13px;
+  --ota-font-size-sm: 12px;
+  --ota-font-size-xs: 11px;
+
+  /* Spacing and radius */
+  --ota-space-1: 4px;
+  --ota-space-2: 8px;
+  --ota-space-3: 12px;
+  --ota-space-4: 16px;
+  --ota-radius: 6px;
+  --ota-radius-lg: 8px;
 
   /* Layout */
   --ota-header-height: 52px;
+  --ota-status-height: 30px;
   --ota-left-width: 344px;
   --ota-right-width: 288px;
+  --ota-control-height: 28px;
+  --ota-field-height: 32px;
   --ota-step-input-width: 5rem;
-  --ota-swatch-size: 0.75rem;
   --ota-stale-opacity: 0.4;
 }
 
@@ -29,6 +53,11 @@
    inline on the body, including a default primary, so this one is important. */
 body {
   --q-primary: var(--ota-primary) !important;
+  font-family: var(--ota-font);
+  font-size: var(--ota-font-size);
+  line-height: 1.4;
+  color: var(--ota-text);
+  background: var(--ota-bg);
 }
 
 /* Page frame: only the side panels scroll, not the page. */
@@ -52,18 +81,24 @@ body:has(.ota-app) {
 
 .ota-left,
 .ota-right {
-  flex-shrink: 0;
+  flex: none;
   height: 100%;
   overflow-y: auto;
-  padding: var(--ota-space-2);
+  padding: var(--ota-space-3);
 }
 
 .ota-left {
   width: var(--ota-left-width);
+  gap: var(--ota-space-2);
+  background: var(--ota-bg);
+  border-right: 1px solid var(--ota-border);
 }
 
 .ota-right {
   width: var(--ota-right-width);
+  gap: var(--ota-space-1);
+  background: var(--ota-surface);
+  border-left: 1px solid var(--ota-border);
 }
 
 .ota-center {
@@ -72,17 +107,8 @@ body:has(.ota-app) {
   flex-direction: column;
   min-width: 0;
   height: 100%;
-  padding: var(--ota-space-2);
-}
-
-.ota-statusbar {
-  width: 100%;
-  flex-shrink: 0;
-  flex-wrap: nowrap;
-  align-items: center;
-  padding: var(--ota-space-1) var(--ota-space-3);
-  border-top: 1px solid var(--ota-border);
-  background-color: var(--ota-surface);
+  padding: var(--ota-space-3);
+  gap: 10px;
 }
 
 /* Header */
@@ -90,9 +116,9 @@ body:has(.ota-app) {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 16px;
+  gap: var(--ota-space-4);
   height: var(--ota-header-height);
-  padding: 0 16px;
+  padding: 0 var(--ota-space-4);
   background-color: var(--ota-primary);
   color: #ffffff;
 }
@@ -120,7 +146,7 @@ body:has(.ota-app) {
 .ota-project-title {
   flex-wrap: nowrap;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--ota-space-2);
   min-width: 0;
 }
 
@@ -133,23 +159,15 @@ body:has(.ota-app) {
 }
 
 .ota-save-state {
-  font-size: 12px;
-  color: #d4e1da;
+  font-size: var(--ota-font-size-sm);
+  color: var(--ota-on-primary-muted);
   white-space: nowrap;
 }
 
 .ota-header-actions {
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: var(--ota-space-2);
   margin-left: auto;
-}
-
-.ota-header .q-btn {
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
 }
 
 .ota-header .q-btn--outline {
@@ -166,10 +184,185 @@ body:has(.ota-app) {
   color: var(--ota-primary) !important;
 }
 
-/* Workflow accordion and layer groups */
-.ota-group,
+/* Buttons */
+.q-btn {
+  min-height: var(--ota-control-height);
+  padding: 0 10px;
+  border-radius: var(--ota-radius);
+  font-size: var(--ota-font-size-sm);
+  font-weight: 600;
+}
+
+.q-btn .q-btn__content {
+  min-height: var(--ota-control-height);
+}
+
+.q-btn--round {
+  padding: 0;
+}
+
+/* Fields */
+.q-field--dense .q-field__control,
+.q-field--dense .q-field__marginal {
+  height: var(--ota-field-height);
+  min-height: var(--ota-field-height);
+}
+
+.q-field--dense .q-field__native {
+  font-size: var(--ota-font-size);
+}
+
+.q-field--outlined .q-field__control {
+  border-radius: var(--ota-radius);
+}
+
+.q-field--outlined .q-field__control:before {
+  border-color: var(--ota-border-strong);
+}
+
+.q-field__label {
+  font-size: var(--ota-font-size-sm);
+}
+
+/* Checkboxes and switches */
+.q-checkbox--dense,
+.q-toggle--dense {
+  min-height: var(--ota-control-height);
+  gap: var(--ota-space-2);
+  font-size: var(--ota-font-size);
+}
+
+/* Workflow accordion */
+.ota-group.q-expansion-item {
+  width: 100%;
+  background: var(--ota-surface);
+  border: 1px solid var(--ota-border);
+  border-radius: var(--ota-radius-lg);
+  overflow: hidden;
+}
+
+.ota-group .q-expansion-item__container > .q-item {
+  min-height: 0;
+  padding: var(--ota-space-3) 14px;
+}
+
+.ota-group .q-expansion-item__container > .q-item:hover {
+  background: var(--ota-hover);
+}
+
+.ota-group .q-expansion-item__content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: var(--ota-space-1) 14px var(--ota-space-4);
+  border-top: 1px solid var(--ota-border-light);
+}
+
+.ota-group-header {
+  flex: 1;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--ota-space-3);
+  min-width: 0;
+}
+
+.ota-step-badge {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--ota-primary);
+  color: #ffffff;
+  font-size: var(--ota-font-size-sm);
+  font-weight: 700;
+  line-height: 24px;
+  text-align: center;
+}
+
+.ota-step-badge--secondary {
+  background: var(--ota-border-light);
+  color: var(--ota-primary);
+  font-size: 10px;
+}
+
+.ota-group-heading {
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ota-group-title {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ota-text);
+}
+
+.ota-group-summary {
+  overflow: hidden;
+  font-size: var(--ota-font-size-sm);
+  line-height: 1.3;
+  color: var(--ota-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Layer groups (right panel) */
 .ota-layer-group {
   width: 100%;
+  border-bottom: 1px solid var(--ota-border-light);
+}
+
+.ota-layer-group .q-item {
+  min-height: 0;
+  padding: var(--ota-space-2) 6px;
+  border-radius: var(--ota-radius);
+  font-size: var(--ota-font-size);
+  font-weight: 700;
+}
+
+.ota-layer-group .q-expansion-item__content {
+  display: flex;
+  flex-direction: column;
+  padding: 0 6px 6px 10px;
+}
+
+/* Tabs inside groups */
+.q-tabs--dense .q-tab {
+  min-height: var(--ota-field-height);
+  padding: 0 10px;
+  font-size: var(--ota-font-size-sm);
+}
+
+.q-tab-panel {
+  padding: var(--ota-space-2) 0;
+}
+
+/* Tables and lists */
+.q-table--bordered {
+  border-color: var(--ota-border);
+  border-radius: var(--ota-radius);
+}
+
+.q-table--dense .q-table th {
+  padding: 6px 10px;
+  background: var(--ota-bg);
+  color: var(--ota-text-muted);
+  font-size: var(--ota-font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.q-table--dense .q-table td {
+  padding: 7px 10px;
+  font-size: var(--ota-font-size);
+  color: var(--ota-text-strong);
+}
+
+.q-table tbody tr.selected td {
+  background: var(--ota-selected);
+  font-weight: 600;
 }
 
 /* Canvas: offers its size to the image, which keeps its aspect ratio. */
@@ -191,6 +384,10 @@ body:has(.ota-app) {
   align-items: center;
   gap: var(--ota-space-2);
   overflow-x: auto;
+  padding: 10px 14px var(--ota-space-2);
+  background: var(--ota-surface);
+  border: 1px solid var(--ota-border);
+  border-radius: var(--ota-radius-lg);
 }
 
 .ota-step-input {
@@ -206,7 +403,8 @@ body:has(.ota-app) {
 }
 
 .ota-legend-content {
-  padding: var(--ota-space-2);
+  width: 248px;
+  padding: var(--ota-space-3);
   gap: var(--ota-space-1);
 }
 
@@ -214,31 +412,52 @@ body:has(.ota-app) {
   flex-wrap: nowrap;
   align-items: center;
   gap: var(--ota-space-2);
+  min-height: var(--ota-control-height);
 }
 
 .ota-swatch {
   display: inline-block;
-  width: var(--ota-swatch-size);
-  height: var(--ota-swatch-size);
-  border-radius: var(--ota-radius-sm);
+  flex: none;
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
 }
 
 /* Status bar: track statistics and the assignment notice */
+.ota-statusbar {
+  width: 100%;
+  height: var(--ota-status-height);
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 22px;
+  overflow: hidden;
+  padding: 0 var(--ota-space-4);
+  border-top: 1px solid var(--ota-border);
+  background-color: var(--ota-surface);
+  font-size: var(--ota-font-size-sm);
+  color: var(--ota-text-muted);
+}
+
 .ota-stats {
   flex: 1 1 0%;
   min-width: 0;
   flex-wrap: nowrap;
-  align-items: center;
-  column-gap: var(--ota-space-4);
+  align-items: baseline;
+  column-gap: 22px;
   overflow-x: auto;
-  font-size: var(--ota-font-size-sm);
-  line-height: var(--ota-line-height-sm);
+}
+
+.ota-stats-title {
+  font-weight: 700;
+  color: var(--ota-text);
+  white-space: nowrap;
 }
 
 .ota-stat {
   flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ota-space-1);
+  align-items: baseline;
+  gap: 6px;
 }
 
 .ota-stat-label,
@@ -246,21 +465,16 @@ body:has(.ota-app) {
   white-space: nowrap;
 }
 
-.ota-stat-label {
-  color: var(--ota-text-muted);
-}
-
 .ota-stat-value {
-  font-weight: 500;
+  font-family: var(--ota-font-mono);
+  color: var(--ota-text);
 }
 
 .ota-assignment-notice {
   flex-wrap: nowrap;
   align-items: center;
-  gap: var(--ota-space-1);
-  font-size: var(--ota-font-size-sm);
-  line-height: var(--ota-line-height-sm);
-  color: var(--q-warning);
+  gap: 6px;
+  color: var(--ota-stale-text);
   white-space: nowrap;
 }
 
@@ -272,11 +486,12 @@ body:has(.ota-app) {
 /* Forms */
 .ota-button-row {
   width: 100%;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .ota-button-row > .q-btn {
-  width: 100%;
-  max-width: 45%;
+  flex: 1 1 40%;
 }
 
 .ota-datetime-field {
@@ -293,10 +508,16 @@ body:has(.ota-app) {
 }
 
 /* Marks a form field whose input passed its validation: draws the underline
-   like Quasar draws it for an error, but green. */
-.q-field.otanalytics-valid-field .q-field__control:after {
+   or, for outlined fields, the border like Quasar draws it for an error, but
+   green. */
+.q-field:not(.q-field--outlined).otanalytics-valid-field .q-field__control:after {
   background: var(--q-positive);
   transform: scale3d(1, 1, 1);
+}
+
+.q-field--outlined.otanalytics-valid-field .q-field__control:after {
+  border-color: var(--q-positive);
+  border-width: 2px;
 }
 
 .q-field.otanalytics-valid-field .q-field__label {
