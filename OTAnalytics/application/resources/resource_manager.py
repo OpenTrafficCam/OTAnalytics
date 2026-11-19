@@ -194,6 +194,8 @@ class VisualizationFiltersKeys(ResourceKey):
     BUTTON_ALL_CLASSES = "button-all-classes"
     BUTTON_NO_CLASSES = "button-no-classes"
     LABEL_EVENT = "label-event"
+    LABEL_STEP_SECONDS = "label-step-seconds"
+    LABEL_STEP_FRAMES = "label-step-frames"
     LABEL_DATE_RANGE_FROM = "label-date-range-from"
     LABEL_DATE_RANGE_TO = "label-date-range-to"
     LABEL_FIRST_DETECTION_OCCURRENCE = "label-first-detection-occurrence"
@@ -378,6 +380,8 @@ DEFAULT_RESOURCE_MAP = {
     VisualizationFiltersKeys.BUTTON_ALL_CLASSES: "All",
     VisualizationFiltersKeys.BUTTON_NO_CLASSES: "None",
     VisualizationFiltersKeys.LABEL_EVENT: "Event",
+    VisualizationFiltersKeys.LABEL_STEP_SECONDS: "{seconds} s",
+    VisualizationFiltersKeys.LABEL_STEP_FRAMES: "{frames} frames",
     VisualizationFiltersKeys.LABEL_DATE_RANGE_TO: "To",
     VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM: "From",
     VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE: "Last detection occurrence",  # noqa

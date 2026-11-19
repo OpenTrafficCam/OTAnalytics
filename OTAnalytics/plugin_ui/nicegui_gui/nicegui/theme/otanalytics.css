@@ -414,18 +414,103 @@ body:has(.ota-app) {
 /* Time bar under the canvas */
 .ota-timebar {
   width: 100%;
-  flex-wrap: nowrap;
-  align-items: center;
+  flex: none;
   gap: var(--ota-space-2);
-  overflow-x: auto;
   padding: 10px 14px var(--ota-space-2);
   background: var(--ota-surface);
   border: 1px solid var(--ota-border);
   border-radius: var(--ota-radius-lg);
 }
 
-.ota-step-input {
+.ota-timebar-controls {
+  width: 100%;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--ota-space-3);
+  overflow-x: auto;
+}
+
+.ota-date-range {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.ota-date-range-label {
+  padding: 0 6px;
+  color: var(--ota-text-strong);
+  font-family: var(--ota-font-mono);
+  font-size: var(--ota-font-size);
+  white-space: nowrap;
+}
+
+.ota-stepgroup {
+  flex: none;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--ota-border);
+  border-radius: var(--ota-radius);
+  background: var(--ota-surface);
+}
+
+.ota-stepgroup > .q-btn--round {
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+}
+
+.ota-stepgroup-label {
+  min-width: 40px;
+  padding: 0 var(--ota-space-1);
+  color: var(--ota-text-muted);
+  font-size: var(--ota-font-size-sm);
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ota-step-menu {
   width: var(--ota-step-input-width);
+  padding: var(--ota-space-2);
+  box-sizing: content-box;
+}
+
+/* Timeline: the date filter between the first and last detection */
+.ota-timeline {
+  position: relative;
+  width: 100%;
+  height: 26px;
+}
+
+.ota-timeline-track {
+  position: absolute;
+  top: 9px;
+  right: 0;
+  left: 0;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--ota-border-light);
+}
+
+.ota-timeline-window {
+  position: absolute;
+  top: 3px;
+  box-sizing: border-box;
+  min-width: 4px;
+  height: 20px;
+  border: 2px solid var(--ota-primary);
+  border-radius: 4px;
+  background: rgba(55, 72, 62, 0.22);
+}
+
+.ota-timeline-ticks {
+  width: 100%;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  color: var(--ota-text-muted);
+  font-family: var(--ota-font-mono);
+  font-size: var(--ota-font-size-xs);
 }
 
 /* Class legend on the canvas */

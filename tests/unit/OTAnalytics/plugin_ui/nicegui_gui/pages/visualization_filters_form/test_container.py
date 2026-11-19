@@ -46,9 +46,15 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.containe
     MARKER_PREV_EVENT_BUTTON,
     MARKER_PREV_FRAMES_BUTTON,
     MARKER_PREV_SECONDS_BUTTON,
+    MARKER_STEP_EVENT,
+    MARKER_STEP_FRAMES,
+    MARKER_STEP_SECONDS,
     MARKER_TIME_BAR,
+    MARKER_TIMELINE_WINDOW,
     FilterClassificationForm,
     VisualizationFiltersForm,
+    timeline_ticks,
+    timeline_window,
 )
 
 APPLY = "Apply from resources"
@@ -80,6 +86,8 @@ LABELS = {
     VisualizationFiltersKeys.MESSAGE_INVALID_MINUTE: INVALID_MINUTE,
     VisualizationFiltersKeys.MESSAGE_INVALID_SECOND: INVALID_SECOND,
     VisualizationFiltersKeys.MESSAGE_START_NOT_BEFORE_END: START_NOT_BEFORE_END,
+    VisualizationFiltersKeys.LABEL_STEP_SECONDS: "{seconds} s",
+    VisualizationFiltersKeys.LABEL_STEP_FRAMES: "{frames} frames",
 }
 
 A_RANGE: DateRangeDto = {"start_date": "2023-05-24", "end_date": "2023-05-25"}
@@ -98,6 +106,9 @@ def create_given() -> Given:
     view_model = Mock()
     view_model.get_skip_seconds.return_value = 1
     view_model.get_skip_frames.return_value = 1
+    view_model.get_first_detection_occurrence.return_value = None
+    view_model.get_last_detection_occurrence.return_value = None
+    view_model.get_filter_tracks_by_date_setting.return_value = DateRange(None, None)
     view_model.validate_date.side_effect = lambda value: any(
         validate_date(value, date_format) for date_format in SUPPORTED_FORMATS
     )
@@ -207,7 +218,6 @@ class TestTimeBar:
         await user.open("/test")
 
         time_bar = user.find(marker=MARKER_TIME_BAR).elements.pop()
-        assert isinstance(time_bar, ui.row)
         markers = [
             marker
             for element in descendants(time_bar)
@@ -231,6 +241,144 @@ class TestTimeBar:
         await user.open("/test")
 
         await user.should_not_see(FILTER_BY_CLASS)
+
+
+FIRST_DETECTION = datetime(2024, 5, 14, 7, 0, 0)
+LAST_DETECTION = datetime(2024, 5, 14, 8, 0, 0)
+
+
+async def open_time_bar(user: User, given: Given) -> VisualizationFiltersForm:
+    target = create_target(given)
+
+    @ui.page("/test")
+    def page() -> None:
+        target.build()
+
+    await user.open("/test")
+    return target
+
+
+def given_with_detections(window: DateRange) -> Given:
+    given = create_given()
+    given.view_model.get_first_detection_occurrence.return_value = FIRST_DETECTION
+    given.view_model.get_last_detection_occurrence.return_value = LAST_DETECTION
+    given.view_model.get_filter_tracks_by_date_setting.return_value = window
+    return given
+
+
+class TestTimeline:
+    def test_window_is_placed_between_first_and_last_detection(self) -> None:
+        window = timeline_window(
+            FIRST_DETECTION,
+            LAST_DETECTION,
+            datetime(2024, 5, 14, 7, 15),
+            datetime(2024, 5, 14, 7, 20),
+        )
+
+        assert window == pytest.approx((25.0, 100 / 12))
+
+    def test_open_bounds_reach_first_and_last_detection(self) -> None:
+        assert timeline_window(FIRST_DETECTION, LAST_DETECTION, None, None) == (
+            0.0,
+            100.0,
+        )
+
+    def test_without_detections_there_is_no_window(self) -> None:
+        assert timeline_window(None, None, None, None) is None
+
+    def test_ticks_split_the_detections_evenly(self) -> None:
+        assert timeline_ticks(FIRST_DETECTION, LAST_DETECTION) == [
+            "07:00",
+            "07:15",
+            "07:30",
+            "07:45",
+            "08:00",
+        ]
+
+    def test_ticks_show_the_day_for_more_than_a_day(self) -> None:
+        ticks = timeline_ticks(FIRST_DETECTION, datetime(2024, 5, 16, 7, 0))
+
+        assert ticks[0] == "14.05. 07:00"
+        assert ticks[-1] == "16.05. 07:00"
+
+    async def test_shows_the_current_window(self, user: User) -> None:
+        given = given_with_detections(
+            DateRange(datetime(2024, 5, 14, 7, 15), datetime(2024, 5, 14, 7, 20))
+        )
+        target = await open_time_bar(user, given)
+
+        target.update_date_range(A_RANGE)
+
+        window = user.find(marker=MARKER_TIMELINE_WINDOW).elements.pop()
+        assert window._style["left"] == "25.000%"
+        assert window._style["width"] == "8.333%"
+        assert window.visible
+        await user.should_see("07:45")
+
+    async def test_hides_the_window_without_detections(self, user: User) -> None:
+        given = create_given()
+        given.view_model.get_first_detection_occurrence.return_value = None
+        given.view_model.get_last_detection_occurrence.return_value = None
+        given.view_model.get_filter_tracks_by_date_setting.return_value = DateRange(
+            None, None
+        )
+
+        await open_time_bar(user, given)
+
+        await user.should_not_see(marker=MARKER_TIMELINE_WINDOW)
+
+
+def step_text(user: User, marker: str) -> str:
+    step = user.find(marker=marker).elements.pop()
+    assert isinstance(step, ui.button)
+    return step.text
+
+
+class TestStepGroups:
+    @pytest.mark.parametrize(
+        "previous, step, next",
+        [
+            (MARKER_PREV_EVENT_BUTTON, MARKER_STEP_EVENT, MARKER_NEXT_EVENT_BUTTON),
+            (
+                MARKER_PREV_SECONDS_BUTTON,
+                MARKER_STEP_SECONDS,
+                MARKER_NEXT_SECONDS_BUTTON,
+            ),
+            (MARKER_PREV_FRAMES_BUTTON, MARKER_STEP_FRAMES, MARKER_NEXT_FRAMES_BUTTON),
+        ],
+    )
+    async def test_group_the_step_between_its_buttons(
+        self, user: User, previous: str, step: str, next: str
+    ) -> None:
+        await open_time_bar(user, given_with_detections(DateRange(None, None)))
+
+        label = user.find(marker=step).elements.pop()
+        assert label.parent_slot is not None
+        group = label.parent_slot.parent
+        assert "ota-stepgroup" in group.classes
+        children = group.default_slot.children
+        assert previous in children[0]._markers
+        assert children[1] is label
+        assert next in children[2]._markers
+
+    async def test_show_the_step_sizes(self, user: User) -> None:
+        given = given_with_detections(DateRange(None, None))
+        given.view_model.get_skip_seconds.return_value = 2
+        given.view_model.get_skip_frames.return_value = 5
+
+        await open_time_bar(user, given)
+
+        assert step_text(user, MARKER_STEP_SECONDS) == "2 s"
+        assert step_text(user, MARKER_STEP_FRAMES) == "5 frames"
+
+    async def test_changing_a_step_size_updates_its_label(self, user: User) -> None:
+        given = given_with_detections(DateRange(None, None))
+        target = await open_time_bar(user, given)
+
+        target._input_seconds.set_value(10)
+
+        given.view_model.update_skip_time.assert_called_with(10, 1)
+        assert step_text(user, MARKER_STEP_SECONDS) == "10 s"
 
 
 BICYCLE = "bicycle"

@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from nicegui import ui
@@ -48,12 +48,49 @@ MARKER_NEXT_FRAMES_BUTTON = "marker-next-frames"
 MARKER_PREV_EVENT_BUTTON = "marker-prev-event"
 MARKER_NEXT_EVENT_BUTTON = "marker-next-event"
 MARKER_TIME_BAR = "marker-time-bar"
+MARKER_TIMELINE_WINDOW = "marker-timeline-window"
+MARKER_STEP_EVENT = "marker-step-event"
+MARKER_STEP_SECONDS = "marker-step-seconds"
+MARKER_STEP_FRAMES = "marker-step-frames"
+TIMELINE_TICKS = 5
+TIME_FORMAT = "%H:%M"
+DAY_TIME_FORMAT = "%d.%m. %H:%M"
 MARKER_CLASS_FILTER_BUTTON = "marker-class-filter-button"
 MARKER_CLASS_SWATCH = "marker-class-swatch"
 
 PREVIOUS_ICON = "chevron_left"
 NEXT_ICON = "chevron_right"
-STEP_INPUT_CLASSES = "ota-step-input"
+
+
+def timeline_window(
+    first: datetime | None,
+    last: datetime | None,
+    start: datetime | None,
+    end: datetime | None,
+) -> tuple[float, float] | None:
+    """Place the date filter between the first and last detection.
+
+    Returns:
+        tuple[float, float] | None: left and width in percent of the detections,
+            None without detections. Open bounds reach the first or last detection.
+    """
+    if first is None or last is None or last <= first:
+        return None
+    span = (last - first).total_seconds()
+    window_start = max(start or first, first)
+    window_end = min(end or last, last)
+    left = (window_start - first).total_seconds() / span * 100
+    right = (window_end - first).total_seconds() / span * 100
+    return left, max(right - left, 0.0)
+
+
+def timeline_ticks(first: datetime, last: datetime) -> list[str]:
+    """Times evenly spread from the first to the last detection."""
+    time_format = TIME_FORMAT if last - first <= timedelta(days=1) else DAY_TIME_FORMAT
+    step = (last - first) / (TIMELINE_TICKS - 1)
+    return [
+        (first + step * index).strftime(time_format) for index in range(TIMELINE_TICKS)
+    ]
 
 
 class FilterDateRangeForm:
@@ -402,6 +439,10 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._filter_by_date_button_left: ui.button | None = None
         self._filter_by_date_button_right: ui.button | None = None
         self._label_filter_by_date: ui.label | None = None
+        self._step_seconds: ui.button | None = None
+        self._step_frames: ui.button | None = None
+        self._timeline_window: ui.element | None = None
+        self._timeline_ticks: ui.row | None = None
         self._introduce_to_viewmodel()
         self._frames_to_skip = 0
         self._seconds_to_skip = 0
@@ -435,24 +476,33 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._viewmodel.set_video_control_frame(self)
 
     def build(self) -> None:
-        """Build the time bar: date filter, date range and the step groups."""
-        with ui.row(wrap=False).classes("ota-timebar").mark(MARKER_TIME_BAR):
-            self._filter_by_date_checkbox.build()
-            self._filter_by_date_button = ui.button(
-                self._resource_manager.get(
-                    VisualizationFiltersKeys.BUTTON_FILTER_BY_DATE
-                ),
-                on_click=self.open_range_dialog,
-            )
-            self._mark(self._filter_by_date_button, MARKER_FILTER_BY_DATE_BUTTON)
-            self._filter_by_date_button.disable()
+        """Build the time bar: date filter, date range, step groups and timeline."""
+        with ui.column().classes("ota-timebar").mark(MARKER_TIME_BAR):
+            with ui.row(wrap=False).classes("ota-timebar-controls"):
+                self._build_date_filter()
+                ui.space()
+                self._build_step_groups()
+            self._build_timeline()
+        self.set_enabled_general_buttons(False)
+        self._show_timeline()
 
+    def _build_date_filter(self) -> None:
+        self._filter_by_date_checkbox.build()
+        self._filter_by_date_button = ui.button(
+            self._resource_manager.get(VisualizationFiltersKeys.BUTTON_FILTER_BY_DATE),
+            icon="event",
+            on_click=self.open_range_dialog,
+        ).props("outline")
+        self._mark(self._filter_by_date_button, MARKER_FILTER_BY_DATE_BUTTON)
+        self._filter_by_date_button.disable()
+
+        with ui.row(wrap=False).classes("ota-date-range"):
             self._filter_by_date_button_left = self._step_button(
                 PREVIOUS_ICON,
                 self._viewmodel.switch_to_prev_date_range,
                 MARKER_PREV_DATE_BUTTON,
             )
-            self._label_filter_by_date = ui.label().classes("whitespace-nowrap")
+            self._label_filter_by_date = ui.label().classes("ota-date-range-label")
             # Expose the current applied date range for Playwright assertions
             self._mark(self._label_filter_by_date, MARKER_FILTER_RANGE_LABEL)
             self._filter_by_date_button_right = self._step_button(
@@ -460,36 +510,95 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
                 self._viewmodel.switch_to_next_date_range,
                 MARKER_NEXT_DATE_BUTTON,
             )
-            self._filter_by_date_button_left.disable()
-            self._filter_by_date_button_right.disable()
+        self._filter_by_date_button_left.disable()
+        self._filter_by_date_button_right.disable()
 
-            ui.space()
+    def _build_step_groups(self) -> None:
+        """Event, seconds and frames, each between its previous and next button.
+
+        The seconds and frames show their step size, which opens on click.
+        """
+        with ui.row(wrap=False).classes("ota-stepgroup"):
             self._button_previous_event = self._step_button(
                 PREVIOUS_ICON, self._viewmodel.previous_event, MARKER_PREV_EVENT_BUTTON
             )
-            ui.label(self._resource_manager.get(VisualizationFiltersKeys.LABEL_EVENT))
+            event = ui.label(
+                self._resource_manager.get(VisualizationFiltersKeys.LABEL_EVENT)
+            ).classes("ota-stepgroup-label")
+            event.mark(MARKER_STEP_EVENT)
             self._button_next_event = self._step_button(
                 NEXT_ICON, self._viewmodel.next_event, MARKER_NEXT_EVENT_BUTTON
             )
+        with ui.row(wrap=False).classes("ota-stepgroup"):
             self._button_previous_second = self._step_button(
                 PREVIOUS_ICON,
                 self._viewmodel.previous_second,
                 MARKER_PREV_SECONDS_BUTTON,
             )
-            with ui.element("div").classes(STEP_INPUT_CLASSES):
-                self._input_seconds.build()
+            self._step_seconds = self._step_size(
+                self._input_seconds, MARKER_STEP_SECONDS
+            )
             self._button_next_second = self._step_button(
                 NEXT_ICON, self._viewmodel.next_second, MARKER_NEXT_SECONDS_BUTTON
             )
+        with ui.row(wrap=False).classes("ota-stepgroup"):
             self._button_previous_frame = self._step_button(
                 PREVIOUS_ICON, self._viewmodel.previous_frame, MARKER_PREV_FRAMES_BUTTON
             )
-            with ui.element("div").classes(STEP_INPUT_CLASSES):
-                self._input_frames.build()
+            self._step_frames = self._step_size(self._input_frames, MARKER_STEP_FRAMES)
             self._button_next_frame = self._step_button(
                 NEXT_ICON, self._viewmodel.next_frame, MARKER_NEXT_FRAMES_BUTTON
             )
-        self.set_enabled_general_buttons(False)
+        self._show_step_sizes()
+
+    def _step_size(self, field: FormFieldInteger, marker: str) -> ui.button:
+        label = ui.button().props("flat dense no-caps").classes("ota-stepgroup-label")
+        label.mark(marker)
+        with label, ui.menu(), ui.element("div").classes("ota-step-menu"):
+            field.build()
+        return label
+
+    def _show_step_sizes(self) -> None:
+        if self._step_seconds is not None:
+            self._step_seconds.set_text(
+                self._resource_manager.get(
+                    VisualizationFiltersKeys.LABEL_STEP_SECONDS
+                ).format(seconds=self._input_seconds.value)
+            )
+        if self._step_frames is not None:
+            self._step_frames.set_text(
+                self._resource_manager.get(
+                    VisualizationFiltersKeys.LABEL_STEP_FRAMES
+                ).format(frames=self._input_frames.value)
+            )
+
+    def _build_timeline(self) -> None:
+        with ui.element("div").classes("ota-timeline"):
+            ui.element("div").classes("ota-timeline-track")
+            self._timeline_window = ui.element("div").classes("ota-timeline-window")
+            self._timeline_window.mark(MARKER_TIMELINE_WINDOW)
+        self._timeline_ticks = ui.row(wrap=False).classes("ota-timeline-ticks")
+
+    def _show_timeline(self) -> None:
+        """Show where the date filter lies between the first and last detection."""
+        if self._timeline_window is None or self._timeline_ticks is None:
+            return
+        first = self._viewmodel.get_first_detection_occurrence()
+        last = self._viewmodel.get_last_detection_occurrence()
+        date_range = self._viewmodel.get_filter_tracks_by_date_setting()
+        window = timeline_window(
+            first, last, date_range.start_date, date_range.end_date
+        )
+        self._timeline_ticks.clear()
+        if window is None or first is None or last is None:
+            self._timeline_window.set_visibility(False)
+            return
+        left, width = window
+        self._timeline_window.style(f"left: {left:.3f}%; width: {width:.3f}%")
+        self._timeline_window.set_visibility(True)
+        with self._timeline_ticks:
+            for tick in timeline_ticks(first, last):
+                ui.label(tick)
 
     def _step_button(
         self, icon: str, on_click: Callable[[], None], marker: str
@@ -514,6 +623,7 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._viewmodel.update_skip_time(
             self._input_seconds.value, self._input_frames.value
         )
+        self._show_step_sizes()
 
     def open_range_dialog(self) -> None:
         self._filter_by_date_popup.open()
@@ -553,6 +663,8 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
     def enable_filter_by_date_button(self) -> None:
         for button in self._date_buttons():
             button.enable()
+        # Called once tracks are loaded, so their detections are known.
+        self._show_timeline()
 
     def set_inactive_color_on_filter_by_class_button(self) -> None:
         """The class legend on the canvas shows the state of the class filter."""
@@ -566,6 +678,7 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         """The class legend on the canvas shows the state of the class filter."""
 
     def update_date_range(self, date_range: DateRangeDto) -> None:
+        self._show_timeline()
         if self._label_filter_by_date is None:
             # The range still reaches the view model's state, so the label shows
             # it as soon as `build()` reads that state. Nothing is lost here.
