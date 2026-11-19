@@ -1820,6 +1820,7 @@ class DummyViewModel(
 
     def set_video_control_frame(self, frame: AbstractFrame) -> None:
         self._frame_video_control = frame
+        self._update_enabled_video_control_buttons()
 
     def set_button_quick_save_config(
         self, button_quick_save_config: AbstractButtonQuickSaveConfig

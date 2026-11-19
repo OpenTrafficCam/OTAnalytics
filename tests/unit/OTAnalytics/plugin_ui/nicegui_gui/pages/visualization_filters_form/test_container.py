@@ -141,6 +141,27 @@ class TestBeforeThePageIsBuilt:
 
         call(target)
 
+    async def test_asks_for_the_button_states_once_built(self, user: User) -> None:
+        """The page may be built after the video was loaded, so the step buttons
+        take their state from the view model instead of starting disabled.
+
+        #Requirement https://openproject.platomo.de/wp/10710
+        """
+        given = create_given()
+        target = create_target(given)
+        buttons_when_introduced: list[int] = []
+        given.view_model.set_video_control_frame.side_effect = lambda frame: (
+            buttons_when_introduced.append(len(frame.get_general_buttons()))
+        )
+
+        @ui.page("/test")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test")
+
+        assert buttons_when_introduced[-1] == 6
+
     def test_offers_no_general_buttons_yet(self) -> None:
         """
         #Requirement https://openproject.platomo.de/wp/10325

@@ -467,7 +467,8 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
                 self._button_next_event.props(
                     f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_EVENT_BUTTON}"
                 )
-        self.set_enabled_general_buttons(False)
+        # Buttons did not exist on first introduction, apply their states now
+        self._viewmodel.set_video_control_frame(self)
 
     def change_button_date(self, checkbox_status: bool) -> None:
         if checkbox_status:

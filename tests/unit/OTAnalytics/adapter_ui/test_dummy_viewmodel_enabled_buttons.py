@@ -130,6 +130,25 @@ class TestSectionButtons:
 
 
 class TestVideoControlButtons:
+    def test_enabled_when_introduced_with_a_video(self) -> None:
+        """The page may be opened after the video was loaded.
+
+        #Requirement https://openproject.platomo.de/wp/10710
+        """
+        given = setup_with_video(create_given())
+
+        create_target(given)
+
+        assert last_video_control_enabled(given) is True
+
+    def test_disabled_when_introduced_without_a_video(self) -> None:
+        """#Requirement https://openproject.platomo.de/wp/10710"""
+        given = create_given()
+
+        create_target(given)
+
+        assert last_video_control_enabled(given) is False
+
     def test_enabled_once_the_orthophoto_arrives(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10404"""
         given = create_given()
