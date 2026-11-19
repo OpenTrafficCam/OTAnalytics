@@ -54,6 +54,7 @@ def viewmodel() -> Mock:
         FLOW_ID_1: 3,
         FLOW_ID_2: 0,
     }
+    viewmodel.get_auto_assignment.return_value = False
 
     return viewmodel
 

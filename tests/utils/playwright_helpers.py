@@ -64,6 +64,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
     MARKER_GROUP_ANALYSIS,
     MARKER_GROUP_PROJECT,
+    MARKER_TAB_FLOW,
     MARKER_TAB_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
@@ -78,6 +79,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form im
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     MARKER_FLOW_TABLE,
+    MARKER_UPDATE_FLOW_HIGHLIGHTING,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
     MARKER_FILTER_BY_DATE_APPLY_BUTTON,
@@ -90,7 +92,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.containe
     MARKER_FILTER_START_TIME_INPUT,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
-    MARKER_UPDATE_FLOW_HIGHLIGHTING,
     MARKER_VISUALIZATION_LAYERS_ALL,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
@@ -1252,13 +1253,14 @@ def enable_all_tracks_layer(page: Page) -> None:
 def update_flow_highlighting(
     page: Page, timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS
 ) -> None:
-    """Click the 'Update flow highlighting' button and wait for processing.
+    """Click the 'Update now' track assignment button and wait for processing.
 
     Args:
         page: Playwright page object
         timeout_ms: Timeout in milliseconds to wait after
         clicking (default: PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
     """
+    open_group(page, MARKER_TAB_FLOW)
     button = page.get_by_test_id(MARKER_UPDATE_FLOW_HIGHLIGHTING)
     button.scroll_into_view_if_needed()
     button.click()

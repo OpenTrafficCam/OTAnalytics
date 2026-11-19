@@ -253,6 +253,18 @@ class ViewModel(
         pass
 
     @abstractmethod
+    def set_auto_assignment(self, enabled: bool) -> None:
+        """Set whether tracks are assigned to flows after every change.
+
+        The setting lives for the session only.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_auto_assignment(self) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
     def save_events(self, file: str) -> None:
         pass
 

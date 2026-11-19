@@ -11,6 +11,7 @@ from OTAnalytics.application.resources.resource_manager import FlowKeys, Resourc
 from OTAnalytics.application.state import FlowState
 from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.flow import FLOW_NAME, Flow, FlowId, FlowListObserver
+from OTAnalytics.domain.section import SectionId
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
@@ -26,6 +27,11 @@ MARKER_BUTTON_ADD = "marker-button-add"
 MARKER_BUTTON_GENERATE = "marker-button-generate"
 MARKER_BUTTON_REMOVE = "marker-button-remove"
 MARKER_BUTTON_PROPERTIES = "marker-button-properties"
+MARKER_UPDATE_FLOW_HIGHLIGHTING = "marker-update-flow-highlighting"
+MARKER_AUTO_ASSIGNMENT = "marker-auto-assignment"
+AUTO_ASSIGNMENT_DELAY = 0.5
+"""Seconds without changes before tracks are assigned, so drawing several
+sections in a row triggers one assignment."""
 COLUMN_TRACKS_ASSIGNED = "tracks_assigned"
 
 
@@ -85,6 +91,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObs
         self._button_add: ui.button | None = None
         self._button_generate: ui.button | None = None
         self._button_properties: ui.button | None = None
+        self._assignment_row: ui.row | None = None
+        self._assignment_timer: ui.timer | None = None
         self._introduce_to_viewmodel()
 
     def _introduce_to_viewmodel(self) -> None:
@@ -130,10 +138,58 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObs
             ).style(BUTTON_WIDTH)
             self._button_properties.mark(MARKER_BUTTON_PROPERTIES)
             self._button_properties.props(f"{TEST_ID}={MARKER_BUTTON_PROPERTIES}")
+        self._build_track_assignment()
         self.update_items()
         # Buttons did not exist on first introduction, apply their states now
         self._viewmodel.set_flows_frame(self)
         return self
+
+    def _build_track_assignment(self) -> None:
+        ui.label(self._resource_manager.get(FlowKeys.LABEL_TRACK_ASSIGNMENT)).classes(
+            "text-subtitle2"
+        )
+        with ui.row().classes("w-full items-center") as self._assignment_row:
+            switch = ui.switch(
+                self._resource_manager.get(FlowKeys.SWITCH_AUTO_ASSIGNMENT),
+                value=self._viewmodel.get_auto_assignment(),
+                on_change=lambda event: self._viewmodel.set_auto_assignment(
+                    event.value
+                ),
+            )
+            switch.mark(MARKER_AUTO_ASSIGNMENT)
+            switch.props(f"{TEST_ID}={MARKER_AUTO_ASSIGNMENT}")
+            button = ui.button(
+                self._resource_manager.get(FlowKeys.BUTTON_UPDATE_ASSIGNMENT),
+                on_click=self._viewmodel.create_events,
+            )
+            button.mark(MARKER_UPDATE_FLOW_HIGHLIGHTING)
+            button.props(f"{TEST_ID}={MARKER_UPDATE_FLOW_HIGHLIGHTING}")
+
+    def notify_section_changed(self, _: SectionId) -> None:
+        self._schedule_assignment()
+
+    def _schedule_assignment(self) -> None:
+        """Assign the tracks once the changes pause, if automatic assignment is on.
+
+        Without a built page there is nobody to show the assignment to.
+        """
+        if (
+            self._assignment_row is None
+            or not self._viewmodel.get_auto_assignment()
+            or not self._viewmodel.get_all_flows()
+        ):
+            return
+        if self._assignment_timer is not None:
+            self._assignment_timer.cancel()
+        with self._assignment_row:
+            self._assignment_timer = ui.timer(
+                AUTO_ASSIGNMENT_DELAY, self._assign_tracks, once=True
+            )
+
+    def _assign_tracks(self) -> None:
+        self._assignment_timer = None
+        if self._viewmodel.get_auto_assignment():
+            self._viewmodel.create_events()
 
     async def add_flow(self, _: ClickEventArguments) -> None:
         await self._viewmodel.add_flow()
@@ -157,6 +213,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObs
         been cleared, so the number of assigned tracks is up to date.
         """
         self.update_items()
+        self._schedule_assignment()
 
     def notify_events(self, _: EventRepositoryEvent) -> None:
         """Refresh the number of assigned tracks after events changed."""

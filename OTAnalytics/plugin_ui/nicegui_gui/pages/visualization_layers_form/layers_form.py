@@ -10,7 +10,6 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.plotting import Layer, LayerGroup
 from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
-    VisualizationLayersKeys,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
 from OTAnalytics.plugin_ui.visualization.visualization import ALL
@@ -19,7 +18,6 @@ MARKER_PROJECT_NAME = "marker-project-name"
 MARKER_START_DATE = "marker-start-date"
 MARKER_START_TIME = "marker-start-time"
 MARKER_VISUALIZATION_LAYERS_ALL = "marker-visualization-layers-all"
-MARKER_UPDATE_FLOW_HIGHLIGHTING = "marker-update-flow-highlighting"
 
 
 def group_label(layer_group: LayerGroup) -> str:
@@ -60,16 +58,6 @@ class LayersForm(AbstractFrameTrackPlotting):
             with expansion:
                 for layer in layer_group.layers:
                     self._build_checkbox(layer_group, layer)
-        button = ui.button(
-            self._resource_manager.get(
-                VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING
-            ),
-            on_click=self._create_events,
-        )
-        button.mark(MARKER_UPDATE_FLOW_HIGHLIGHTING)
-        button.props(
-            f"{TestIdAttributes.DATA_TESTID}={MARKER_UPDATE_FLOW_HIGHLIGHTING}"
-        )
         return self
 
     def _build_checkbox(self, layer_group: LayerGroup, layer: Layer) -> None:
@@ -84,9 +72,6 @@ class LayersForm(AbstractFrameTrackPlotting):
             checkbox.props(
                 f"{TestIdAttributes.DATA_TESTID}={MARKER_VISUALIZATION_LAYERS_ALL}"
             )
-
-    def _create_events(self) -> None:
-        self._viewmodel.create_events()
 
     def update(self, name: str, start_date: Optional[datetime]) -> None:
         pass

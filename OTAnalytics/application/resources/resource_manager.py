@@ -95,6 +95,9 @@ class FlowKeys(ResourceKey):
     BUTTON_GENERATE = "button-generate"
     BUTTON_PROPERTIES = "button-properties"
     BUTTON_REMOVE = "button-remove"
+    LABEL_TRACK_ASSIGNMENT = "label-track-assignment"
+    SWITCH_AUTO_ASSIGNMENT = "switch-auto-assignment"
+    BUTTON_UPDATE_ASSIGNMENT = "button-update-assignment"
 
 
 class FlowAndSectionKeys(ResourceKey):
@@ -264,6 +267,9 @@ DEFAULT_RESOURCE_MAP = {
     FlowKeys.BUTTON_GENERATE: "Generate",
     FlowKeys.BUTTON_REMOVE: "Remove",
     FlowKeys.BUTTON_PROPERTIES: "Properties",
+    FlowKeys.LABEL_TRACK_ASSIGNMENT: "Track assignment",
+    FlowKeys.SWITCH_AUTO_ASSIGNMENT: "Update automatically",
+    FlowKeys.BUTTON_UPDATE_ASSIGNMENT: "Update now",
     EditFlowDialogKeys.LABEL_NAME: "Name",
     EditFlowDialogKeys.LABEL_START_SECTION: "Start section",
     EditFlowDialogKeys.LABEL_END_SECTION: "End section",

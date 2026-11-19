@@ -161,6 +161,9 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         """
         self.flow_repository.register_flows_observer(self.flow_form)
         self.event_repository.register_observer(self.flow_form.notify_events)
+        self.datastore.register_section_changed_observer(
+            self.flow_form.notify_section_changed
+        )
 
     @cached_property
     def webserver(self) -> Webserver:

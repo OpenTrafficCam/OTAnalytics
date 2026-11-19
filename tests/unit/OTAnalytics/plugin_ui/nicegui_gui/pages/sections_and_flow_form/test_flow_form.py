@@ -1,7 +1,8 @@
 """Tests editing a flow by double-clicking it in the WebUI flow table."""
 
+import asyncio
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from nicegui import ui
@@ -11,7 +12,10 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.state import FlowState
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
+    AUTO_ASSIGNMENT_DELAY,
+    MARKER_AUTO_ASSIGNMENT,
     MARKER_FLOW_TABLE,
+    MARKER_UPDATE_FLOW_HIGHLIGHTING,
     FlowForm,
 )
 from tests.utils.nicegui_table import double_click_row, wait_until_awaited
@@ -34,6 +38,7 @@ def create_viewmodel() -> MagicMock:
     viewmodel = MagicMock(spec=ViewModel)
     viewmodel.get_all_flows.return_value = [FakeFlow(FLOW_ID, "Flow 1")]
     viewmodel.get_tracks_assigned_to_each_flow.return_value = {}
+    viewmodel.get_auto_assignment.return_value = False
     return viewmodel
 
 
@@ -104,3 +109,99 @@ class TestFlowFormDoubleClick:
         await wait_until_awaited(viewmodel.edit_selected_flow)
 
         viewmodel.edit_selected_flow.assert_awaited_once()
+
+
+AUTO_ENDPOINT = "/test-flow-form-auto-assignment"
+SECTION_ID = Mock()
+AFTER_DEBOUNCE = AUTO_ASSIGNMENT_DELAY + 0.3
+
+
+def create_auto_viewmodel(auto: bool) -> MagicMock:
+    viewmodel = create_viewmodel()
+    viewmodel.get_auto_assignment.return_value = auto
+    return viewmodel
+
+
+async def open_flow_form(
+    user: User, viewmodel: MagicMock, resource_manager: ResourceManager
+) -> FlowForm:
+    target = FlowForm(viewmodel, create_flow_state(), resource_manager)
+
+    @ui.page(AUTO_ENDPOINT)
+    def page() -> None:
+        target.build()
+
+    await user.open(AUTO_ENDPOINT)
+    return target
+
+
+class TestTrackAssignment:
+    async def test_update_now_creates_events(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=False)
+        await open_flow_form(user, viewmodel, resource_manager)
+
+        user.find(marker=MARKER_UPDATE_FLOW_HIGHLIGHTING).click()
+
+        viewmodel.create_events.assert_called_once_with()
+
+    async def test_switch_shows_and_sets_the_view_model_state(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=True)
+        await open_flow_form(user, viewmodel, resource_manager)
+        switch = user.find(marker=MARKER_AUTO_ASSIGNMENT).elements.pop()
+        assert isinstance(switch, ui.switch)
+        assert switch.value is True
+
+        user.find(marker=MARKER_AUTO_ASSIGNMENT).click()
+
+        viewmodel.set_auto_assignment.assert_called_once_with(False)
+
+    async def test_changes_create_events_once_after_a_pause(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=True)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+
+        target.notify_section_changed(SECTION_ID)
+        target.notify_flows([])
+        target.notify_section_changed(SECTION_ID)
+        await asyncio.sleep(AFTER_DEBOUNCE)
+
+        viewmodel.create_events.assert_called_once_with()
+
+    async def test_changes_do_nothing_without_auto_assignment(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=False)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+
+        target.notify_section_changed(SECTION_ID)
+        target.notify_flows([])
+        await asyncio.sleep(AFTER_DEBOUNCE)
+
+        viewmodel.create_events.assert_not_called()
+
+    async def test_changes_without_flows_do_nothing(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=True)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+        viewmodel.get_all_flows.return_value = []
+
+        target.notify_flows([])
+        await asyncio.sleep(AFTER_DEBOUNCE)
+
+        viewmodel.create_events.assert_not_called()
+
+    def test_changes_before_build_do_nothing(
+        self, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=True)
+        target = FlowForm(viewmodel, create_flow_state(), resource_manager)
+
+        target.notify_section_changed(SECTION_ID)
+
+        viewmodel.create_events.assert_not_called()
