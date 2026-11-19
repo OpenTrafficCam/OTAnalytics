@@ -1948,6 +1948,12 @@ class DummyViewModel(
         self._frame_track_statistics = frame
 
     def update_track_statistics(self, _: EventRepositoryEvent | FilterElement) -> None:
+        # TODO: Calculate the statistics off the event loop, like create_events_async
+        #  and TrackImageUpdater.update_image do, once the faster plotting is merged.
+        #  In the WebUI, it blocks the event loop for 6 to 9 seconds after loading
+        #  30 minutes of tracks, mostly in SvzNumberOfTracksToBeValidated, and runs
+        #  several times in a row. Clicks are handled late then, and blocks longer than
+        #  NiceGUI's heartbeat (about 6 seconds) make the page reload.
         statistics = self._application.calculate_track_statistics()
         self.frame_track_statistics.update_track_statistics(statistics)
 
