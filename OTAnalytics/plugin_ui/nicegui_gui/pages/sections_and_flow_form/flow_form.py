@@ -266,9 +266,17 @@ class FlowForm(
         self.update_items()
         self._on_assignment_input_changed()
 
-    def notify_events(self, _: EventRepositoryEvent) -> None:
-        """Refresh the number of assigned tracks after events changed."""
+    def notify_events(self, events: EventRepositoryEvent) -> None:
+        """Refresh the number of assigned tracks after events changed.
+
+        Events are only added by an assignment, wherever it was started, e.g. by
+        an export. An assignment that finds no event still reports adding none.
+        Changes that remove events mark the assignment out of date through the
+        section and track observers.
+        """
         self.update_items()
+        if not list(events.removed):
+            self._set_outdated(False)
 
     def update_items(self) -> None:
         self._flow_table.update(
