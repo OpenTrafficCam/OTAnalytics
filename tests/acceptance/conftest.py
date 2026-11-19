@@ -50,6 +50,9 @@ ACCEPTANCE_TEST_TRACK_FILES = [
 ]
 # Second video file for tests that need multiple videos
 ACCEPTANCE_TEST_VIDEO_FILE_2 = "OTCamera19_FR20_2023-05-24_08-15-00.mp4"
+# Sections of the test project in pixels of the image, copied from
+# OTCamera19_FR20_2023-05-24.otconfig, whose sections match the tracks
+SECTIONS = {"South": [(30, 261), (296, 725)], "East": [(293, 724), (787, 316)]}
 
 T = TypeVar("T")
 YieldFixture = Generator[T, None, None]

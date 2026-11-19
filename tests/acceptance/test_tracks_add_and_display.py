@@ -4,7 +4,11 @@ import pytest
 from playwright.sync_api import Page  # type: ignore
 
 from OTAnalytics.application.resources.resource_manager import ResourceManager
-from tests.acceptance.conftest import PLAYWRIGHT_VISIBLE_TIMEOUT_MS, NiceGUITestServer
+from tests.acceptance.conftest import (
+    PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+    TRACK_LOADING_TIMEOUT_MS,
+    NiceGUITestServer,
+)
 from tests.utils.playwright_helpers import (
     capture_and_verify_baseline,
     enable_all_tracks_layer,
@@ -23,6 +27,7 @@ from tests.utils.playwright_helpers import (
 
 SCREENSHOT_PATH = "screenshots"
 ALL_TRACKS_FILE_NAME = "all_tracks.png"
+ADDED_TRACKS_FILE_NAME = "added_tracks.png"
 FILTERED_TRACKS_FILE_NAME = "filtered_tracks.png"
 
 # Ensure pytest-playwright is available; otherwise skip this module
@@ -74,10 +79,12 @@ def test_add_tracks_and_display_all(
     enable_all_tracks_layer(page)
 
     # Verify trajectories are displayed (canvas changed)
-    wait_for_canvas_change(page, canvas, canvas_before_tracks)
+    wait_for_canvas_change(
+        page, canvas, canvas_before_tracks, timeout=TRACK_LOADING_TIMEOUT_MS / 1000
+    )
 
     # Capture and compare with reference image
-    reference_path = acceptance_test_data_folder / ALL_TRACKS_FILE_NAME
+    reference_path = acceptance_test_data_folder / ADDED_TRACKS_FILE_NAME
     capture_and_verify_baseline(canvas, reference_path)
 
 
