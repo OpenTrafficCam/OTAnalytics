@@ -7,7 +7,6 @@ import pytest
 from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import (
-    FlowAndSectionKeys,
     ResourceManager,
     SectionKeys,
 )
@@ -25,7 +24,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     EDIT_KNOB_ID_PREFIX,
     MARKER_INTERACTIVE_IMAGE,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
+    MARKER_TAB_FLOW,
     MARKER_TAB_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
@@ -51,6 +51,7 @@ from tests.utils.playwright_helpers import (
     go_to_sections_with_one_video,
     load_main_page,
     navigate_and_prepare,
+    open_group,
     save_project_as,
     search_for_marker_element,
     setup_with_preconfigured_otconfig,
@@ -109,7 +110,7 @@ class TestAddLineSectionWithDialog:
 
         # Switch to Sections tab
 
-        search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
+        open_group(page, MARKER_TAB_SECTION)
 
         # Create two additional sections
         names = ["First-Line", "Second-Line"]
@@ -140,9 +141,7 @@ class TestAddLineSectionWithDialog:
         setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
 
         # Switch to Flows tab (sections already exist from preconfigured file)
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
-        ).click()
+        open_group(page, MARKER_TAB_FLOW)
 
         custom_flow_name = "My-Flow"
         create_flow(page, resource_manager, custom_flow_name)
@@ -189,9 +188,7 @@ class TestAddLineSectionWithDialog:
         names = ["North-Section", "South-Section"]
 
         # Switch to Flows tab
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
-        ).click()
+        open_group(page, MARKER_TAB_FLOW)
 
         # Create one flow then remove it
         temp_flow_name = "Temp-Flow"
@@ -283,7 +280,7 @@ def _open_sections_of_preconfigured_project(
         Path(__file__).parents[1] / "data" / "sections_created_test_file.otconfig"
     )
     setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
-    search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
+    open_group(page, MARKER_TAB_SECTION)
     _dismiss_notifications(page)
 
 

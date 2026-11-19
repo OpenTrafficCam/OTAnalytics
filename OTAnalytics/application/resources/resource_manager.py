@@ -28,6 +28,10 @@ class CanvasKeys(ResourceKey):
 
 class ConfigurationBarKeys(ResourceKey):
     LABEL_CONFIGURATION_BAR_FORM_HEADER = "label-configuration-bar-form-header"
+    LABEL_GROUP_PROJECT = "label-group-project"
+    LABEL_GROUP_SECTIONS = "label-group-sections"
+    LABEL_GROUP_FLOWS = "label-group-flows"
+    LABEL_GROUP_ANALYSIS = "label-group-analysis"
 
 
 class AnalysisKeys(ResourceKey):
@@ -244,6 +248,10 @@ DEFAULT_RESOURCE_MAP = {
         "Please add at least {count} points to finish the section."
     ),
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
+    ConfigurationBarKeys.LABEL_GROUP_PROJECT: "1 Project & files",
+    ConfigurationBarKeys.LABEL_GROUP_SECTIONS: "2 Sections",
+    ConfigurationBarKeys.LABEL_GROUP_FLOWS: "3 Flows",
+    ConfigurationBarKeys.LABEL_GROUP_ANALYSIS: "4 Analysis & export",
     FlowAndSectionKeys.TAB_SECTION: "Section",
     FlowAndSectionKeys.TAB_FLOW: "Flow",
     FlowKeys.TABLE_COLUMN_NAME: "Flow",

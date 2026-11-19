@@ -104,9 +104,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.static_analysis_c
     StaticAnalysisConfigForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import RemarkForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
-    SectionsAndFlowForm,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     FlowForm,
 )
@@ -153,6 +150,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     def register_observers(self) -> None:
         super().register_observers()
         self.register_flow_track_count_observers()
+        self.track_repository.register_tracks_observer(self.configuration_bar)
 
     def register_flow_track_count_observers(self) -> None:
         """Keep the number of assigned tracks in the flow table up to date.
@@ -209,11 +207,14 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     def configuration_bar(self) -> ConfigurationBar:
         return ConfigurationBar(
             resource_manager=self.resource_manager,
+            view_model=self.view_model,
             project_form=self.project_form,
             static_analysis_config_form=self.static_analysis_config_form,
             svz_metadata_form=self.svz_metadata_form,
             track_form=self.track_form,
-            sections_and_flow_form=self.sections_and_flow_form,
+            remark_form=self.remarks_form,
+            sections_form=self.section_form,
+            flow_form=self.flow_form,
             analysis_form=self.analysis_form,
         )
 
@@ -226,14 +227,6 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     @cached_property
     def remarks_form(self) -> RemarkForm:
         return RemarkForm(self.resource_manager, self.view_model)
-
-    @cached_property
-    def sections_and_flow_form(self) -> SectionsAndFlowForm:
-        return SectionsAndFlowForm(
-            self.resource_manager,
-            self.section_form,
-            self.flow_form,
-        )
 
     @cached_property
     def track_form(self) -> TrackForm:
@@ -472,7 +465,6 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return VisualizationFilters(
             self.resource_manager,
             self.visualization_filter_form,
-            self.remarks_form,
             self.track_statistic_form,
         )
 
