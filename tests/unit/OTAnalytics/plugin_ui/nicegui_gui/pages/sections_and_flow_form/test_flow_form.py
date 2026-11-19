@@ -13,9 +13,11 @@ from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.state import FlowState
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     AUTO_ASSIGNMENT_DELAY,
+    COLUMN_TRACKS_ASSIGNED,
     MARKER_AUTO_ASSIGNMENT,
     MARKER_FLOW_TABLE,
     MARKER_UPDATE_FLOW_HIGHLIGHTING,
+    OUTDATED_CLASSES,
     FlowForm,
 )
 from tests.utils.nicegui_table import double_click_row, wait_until_awaited
@@ -205,3 +207,69 @@ class TestTrackAssignment:
         target.notify_section_changed(SECTION_ID)
 
         viewmodel.create_events.assert_not_called()
+
+
+def tracks_column_classes(user: User) -> str:
+    table = user.find(marker=MARKER_FLOW_TABLE).elements.pop()
+    assert isinstance(table, ui.table)
+    column = next(c for c in table.columns if c["name"] == COLUMN_TRACKS_ASSIGNED)
+    return str(column.get("classes", ""))
+
+
+class TestOutdatedAssignment:
+    async def test_changes_mark_the_assignment_outdated(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=False)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+        observer = Mock()
+        target.register_outdated_observer(observer)
+
+        target.notify_section_changed(SECTION_ID)
+
+        observer.assert_called_once_with(True)
+        assert OUTDATED_CLASSES in tracks_column_classes(user)
+
+    async def test_update_now_marks_the_assignment_up_to_date(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=False)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+        observer = Mock()
+        target.register_outdated_observer(observer)
+        target.notify_flows([])
+
+        user.find(marker=MARKER_UPDATE_FLOW_HIGHLIGHTING).click()
+
+        assert observer.call_args_list[-1].args == (False,)
+        assert OUTDATED_CLASSES not in tracks_column_classes(user)
+
+    async def test_automatic_assignment_marks_it_up_to_date(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=True)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+
+        target.notify_section_changed(SECTION_ID)
+        assert target.is_outdated()
+        await asyncio.sleep(AFTER_DEBOUNCE)
+
+        assert not target.is_outdated()
+
+    async def test_changes_before_build_are_assigned_once_built(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """E.g. a project preloaded from the command line."""
+        viewmodel = create_auto_viewmodel(auto=True)
+        target = FlowForm(viewmodel, create_flow_state(), resource_manager)
+        target.notify_flows([])
+
+        @ui.page(AUTO_ENDPOINT)
+        def page() -> None:
+            target.build()
+
+        await user.open(AUTO_ENDPOINT)
+        await asyncio.sleep(AFTER_DEBOUNCE)
+
+        viewmodel.create_events.assert_called_once_with()
+        assert not target.is_outdated()

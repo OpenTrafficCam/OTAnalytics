@@ -76,6 +76,7 @@ KNOB_RADIUS = 6
 HIGHLIGHTED_KNOB_RADIUS = 8
 HIGHLIGHTED_KNOB_STROKE_WIDTH = 3
 KNOB_CATCH_RADIUS = 15
+OUTDATED_OPACITY = 0.4
 SECTION_TEXT_OFFSET_Y = -12
 
 # Keys of the arrow style, named like the options of the customtkinter canvas
@@ -195,6 +196,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._sections: SectionResource = SectionResource({})
         self._flows: LineResources = LineResources({})
         self._circles: CircleResources = CircleResources({})
+        self._flows_outdated = False
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_frame_canvas(self)
@@ -416,10 +418,20 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def draw_all(self) -> None:
         if self._overlay:
             self._overlay.content = self._sections.to_svg()
-            self._overlay.content += self._flows.to_svg()
+            self._overlay.content += self._flows_svg()
             self._overlay.content += self._circles.to_svg()
             self._overlay.content += self._edit_geometry()
             self.draw_new_section()
+
+    def _flows_svg(self) -> str:
+        if self._flows_outdated:
+            return f'<g opacity="{OUTDATED_OPACITY}">{self._flows.to_svg()}</g>'
+        return self._flows.to_svg()
+
+    def set_flows_outdated(self, outdated: bool) -> None:
+        """Dim the flows while their track assignment is out of date."""
+        self._flows_outdated = outdated
+        self.draw_all()
 
     def draw_new_section(self) -> None:
         if not self._overlay:

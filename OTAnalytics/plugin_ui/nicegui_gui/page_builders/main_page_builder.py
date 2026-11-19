@@ -4,6 +4,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.page_builder import NiceguiPageBu
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
     ConfigurationBar,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.assignment_status import (  # noqa
+    AssignmentStatus,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.track_statistics_form.container import (
     TrackStatisticForm,
 )
@@ -30,6 +33,7 @@ class MainPageBuilder(NiceguiPageBuilder):
         visualization_filters: VisualizationFilters,
         visualization_layers: VisualizationLayers,
         status_bar: TrackStatisticForm,
+        assignment_status: AssignmentStatus,
     ) -> None:
         super().__init__(endpoint_name)
         self.configuration_bar = configuration_bar
@@ -37,6 +41,7 @@ class MainPageBuilder(NiceguiPageBuilder):
         self.visualization_filters = visualization_filters
         self.visualization_layers = visualization_layers
         self.status_bar = status_bar
+        self.assignment_status = assignment_status
 
     def _build(self) -> None:
         # The page keeps the window height, so only the side panels scroll.
@@ -68,3 +73,4 @@ class MainPageBuilder(NiceguiPageBuilder):
             .mark(MARKER_STATUS_BAR)
         ):
             self.status_bar.build()
+            self.assignment_status.build()

@@ -142,6 +142,11 @@ class CustomTable:
         if self._instantiated:
             self._table.update()
 
+    def update_columns(self, columns: List[dict]) -> None:
+        self._columns = columns
+        if self._instantiated:
+            self._table.columns = columns
+
     def select(self, item_ids: list[str]) -> None:
         if self._instantiated:
             self._table.selected = self._rows_to_select(item_ids)

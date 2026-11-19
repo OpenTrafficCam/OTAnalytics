@@ -104,6 +104,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.static_analysis_c
     StaticAnalysisConfigForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import RemarkForm
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.assignment_status import (  # noqa
+    AssignmentStatus,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     FlowForm,
 )
@@ -151,6 +154,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     def register_observers(self) -> None:
         super().register_observers()
         self.register_flow_track_count_observers()
+        self.register_track_assignment_observers()
         self.track_repository.register_tracks_observer(self.configuration_bar)
 
     def register_flow_track_count_observers(self) -> None:
@@ -161,9 +165,15 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         """
         self.flow_repository.register_flows_observer(self.flow_form)
         self.event_repository.register_observer(self.flow_form.notify_events)
+
+    def register_track_assignment_observers(self) -> None:
+        """Let the flow form follow changes of the inputs of the track assignment
+        and show where the assignment is out of date."""
         self.datastore.register_section_changed_observer(
             self.flow_form.notify_section_changed
         )
+        self.flow_form.register_outdated_observer(self.canvas_form.set_flows_outdated)
+        self.flow_form.register_outdated_observer(self.assignment_status.show_outdated)
 
     @cached_property
     def webserver(self) -> Webserver:
@@ -185,6 +195,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
             status_bar=self.track_statistic_form,
+            assignment_status=self.assignment_status,
         )
         self.preload_project()
         return NiceguiWebserver(
@@ -487,6 +498,10 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             self.layers_form,
             self.visualization_offset_slider_form,
         )
+
+    @cached_property
+    def assignment_status(self) -> AssignmentStatus:
+        return AssignmentStatus(self.resource_manager, self.flow_form.update_assignment)
 
     @cached_property
     def track_statistic_form(self) -> TrackStatisticForm:

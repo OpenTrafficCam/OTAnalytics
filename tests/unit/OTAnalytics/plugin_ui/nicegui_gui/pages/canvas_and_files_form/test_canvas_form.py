@@ -38,6 +38,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     MOUSE_MOVE,
     MOUSE_UP,
     NORMAL_COLOR,
+    OUTDATED_OPACITY,
     RELEASE_FOCUS,
     SELECTED_COLOR,
     UPDATE_VIEWBOX,
@@ -989,6 +990,23 @@ class TestCanvasFormImageHandling:
         mock_ui.interactive_image.return_value.set_source.assert_called_with(
             mock_pil_image
         )
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_outdated_flows_are_dimmed(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+
+        canvas_form.set_flows_outdated(True)
+        dimmed = overlay_content(mock_ui)
+        canvas_form.set_flows_outdated(False)
+
+        assert f'<g opacity="{OUTDATED_OPACITY}">' in dimmed
+        assert "opacity" not in overlay_content(mock_ui)
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"

@@ -98,6 +98,8 @@ class FlowKeys(ResourceKey):
     LABEL_TRACK_ASSIGNMENT = "label-track-assignment"
     SWITCH_AUTO_ASSIGNMENT = "switch-auto-assignment"
     BUTTON_UPDATE_ASSIGNMENT = "button-update-assignment"
+    LABEL_ASSIGNMENT_OUTDATED = "label-assignment-outdated"
+    BUTTON_UPDATE_OUTDATED = "button-update-outdated"
 
 
 class FlowAndSectionKeys(ResourceKey):
@@ -270,6 +272,8 @@ DEFAULT_RESOURCE_MAP = {
     FlowKeys.LABEL_TRACK_ASSIGNMENT: "Track assignment",
     FlowKeys.SWITCH_AUTO_ASSIGNMENT: "Update automatically",
     FlowKeys.BUTTON_UPDATE_ASSIGNMENT: "Update now",
+    FlowKeys.LABEL_ASSIGNMENT_OUTDATED: "Assignment out of date ·",
+    FlowKeys.BUTTON_UPDATE_OUTDATED: "Update",
     EditFlowDialogKeys.LABEL_NAME: "Name",
     EditFlowDialogKeys.LABEL_START_SECTION: "Start section",
     EditFlowDialogKeys.LABEL_END_SECTION: "End section",

@@ -20,6 +20,7 @@ WORKSPACE = "workspace"
 FILTERS = "visualization filters"
 LAYERS = "visualization layers"
 STATUS = "track statistics"
+ASSIGNMENT = "assignment status"
 PANEL_MARKERS = {
     MARKER_LEFT_PANEL,
     MARKER_CENTER_PANEL,
@@ -58,6 +59,7 @@ class TestMainPageBuilder:
             visualization_filters=part(FILTERS),
             visualization_layers=part(LAYERS),
             status_bar=part(STATUS),
+            assignment_status=part(ASSIGNMENT),
         ).build(Mock())
 
         await user.open(ENDPOINT)
@@ -71,6 +73,7 @@ class TestMainPageBuilder:
         assert panel_of(user, LAYERS) is right
         status_bar = user.find(marker=MARKER_STATUS_BAR).elements.pop()
         assert panel_of(user, STATUS) is status_bar
+        assert panel_of(user, ASSIGNMENT) is status_bar
 
     async def test_only_side_panels_scroll(self, user: User) -> None:
         MainPageBuilder(
@@ -80,6 +83,7 @@ class TestMainPageBuilder:
             visualization_filters=part(FILTERS),
             visualization_layers=part(LAYERS),
             status_bar=part(STATUS),
+            assignment_status=part(ASSIGNMENT),
         ).build(Mock())
 
         await user.open(ENDPOINT)

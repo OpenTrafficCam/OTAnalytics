@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Mapping, Self
+from typing import Any, Callable, Iterable, Mapping, Self
 
 from nicegui import ui
 from nicegui.elements.button import Button
@@ -32,21 +32,28 @@ MARKER_AUTO_ASSIGNMENT = "marker-auto-assignment"
 AUTO_ASSIGNMENT_DELAY = 0.5
 """Seconds without changes before tracks are assigned, so drawing several
 sections in a row triggers one assignment."""
+OUTDATED_CLASSES = "text-grey-5"
 COLUMN_TRACKS_ASSIGNED = "tracks_assigned"
 
 
-def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
+def create_columns(
+    resource_manager: ResourceManager, outdated: bool = False
+) -> list[dict[str, str]]:
+    """Columns of the flow table; outdated track counts are dimmed."""
+    tracks_assigned = {
+        "name": COLUMN_TRACKS_ASSIGNED,
+        "label": resource_manager.get(FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED),
+        "field": COLUMN_TRACKS_ASSIGNED,
+    }
+    if outdated:
+        tracks_assigned["classes"] = OUTDATED_CLASSES
     return [
         {
             "name": FLOW_NAME,
             "label": resource_manager.get(FlowKeys.TABLE_COLUMN_NAME),
             "field": "name",
         },
-        {
-            "name": COLUMN_TRACKS_ASSIGNED,
-            "label": resource_manager.get(FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED),
-            "field": COLUMN_TRACKS_ASSIGNED,
-        },
+        tracks_assigned,
     ]
 
 
@@ -93,6 +100,8 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObs
         self._button_properties: ui.button | None = None
         self._assignment_row: ui.row | None = None
         self._assignment_timer: ui.timer | None = None
+        self._outdated = False
+        self._outdated_observers: list[Callable[[bool], None]] = []
         self._introduce_to_viewmodel()
 
     def _introduce_to_viewmodel(self) -> None:
@@ -140,6 +149,9 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObs
             self._button_properties.props(f"{TEST_ID}={MARKER_BUTTON_PROPERTIES}")
         self._build_track_assignment()
         self.update_items()
+        if self._outdated:
+            # Changed before there was a page, e.g. by a preloaded project.
+            self._schedule_assignment()
         # Buttons did not exist on first introduction, apply their states now
         self._viewmodel.set_flows_frame(self)
         return self
@@ -160,13 +172,40 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObs
             switch.props(f"{TEST_ID}={MARKER_AUTO_ASSIGNMENT}")
             button = ui.button(
                 self._resource_manager.get(FlowKeys.BUTTON_UPDATE_ASSIGNMENT),
-                on_click=self._viewmodel.create_events,
+                on_click=self.update_assignment,
             )
             button.mark(MARKER_UPDATE_FLOW_HIGHLIGHTING)
             button.props(f"{TEST_ID}={MARKER_UPDATE_FLOW_HIGHLIGHTING}")
 
+    def register_outdated_observer(self, observer: Callable[[bool], None]) -> None:
+        """Listen to whether the track assignment is out of date."""
+        self._outdated_observers.append(observer)
+
+    def is_outdated(self) -> bool:
+        return self._outdated
+
+    def update_assignment(self) -> None:
+        """Assign the tracks to the flows now."""
+        self._viewmodel.create_events()
+        self._set_outdated(False)
+
     def notify_section_changed(self, _: SectionId) -> None:
+        self._on_assignment_input_changed()
+
+    def _on_assignment_input_changed(self) -> None:
+        """Without flows there is no assignment that could be out of date."""
+        self._set_outdated(bool(self._viewmodel.get_all_flows()))
         self._schedule_assignment()
+
+    def _set_outdated(self, outdated: bool) -> None:
+        if outdated == self._outdated:
+            return
+        self._outdated = outdated
+        self._flow_table.update_columns(
+            create_columns(self._resource_manager, outdated)
+        )
+        for observer in self._outdated_observers:
+            observer(outdated)
 
     def _schedule_assignment(self) -> None:
         """Assign the tracks once the changes pause, if automatic assignment is on.
@@ -189,7 +228,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObs
     def _assign_tracks(self) -> None:
         self._assignment_timer = None
         if self._viewmodel.get_auto_assignment():
-            self._viewmodel.create_events()
+            self.update_assignment()
 
     async def add_flow(self, _: ClickEventArguments) -> None:
         await self._viewmodel.add_flow()
@@ -213,7 +252,7 @@ class FlowForm(ButtonForm, AbstractFrame, AbstractTreeviewInterface, FlowListObs
         been cleared, so the number of assigned tracks is up to date.
         """
         self.update_items()
-        self._schedule_assignment()
+        self._on_assignment_input_changed()
 
     def notify_events(self, _: EventRepositoryEvent) -> None:
         """Refresh the number of assigned tracks after events changed."""

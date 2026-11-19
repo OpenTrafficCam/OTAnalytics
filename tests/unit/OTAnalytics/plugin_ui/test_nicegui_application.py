@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -129,6 +129,31 @@ class TestFlowTrackCountObservers:
         event_repository.register_observer.assert_called_once_with(
             flow_form.notify_events
         )
+
+
+class TestTrackAssignmentObservers:
+    def test_flow_form_follows_sections_and_reports_outdated_assignment(
+        self,
+    ) -> None:
+        target = create_target(create_given())
+        datastore = Mock()
+        flow_form = Mock()
+        canvas_form = Mock()
+        assignment_status = Mock()
+        target.__dict__["datastore"] = datastore
+        target.__dict__["flow_form"] = flow_form
+        target.__dict__["canvas_form"] = canvas_form
+        target.__dict__["assignment_status"] = assignment_status
+
+        target.register_track_assignment_observers()
+
+        datastore.register_section_changed_observer.assert_called_once_with(
+            flow_form.notify_section_changed
+        )
+        assert flow_form.register_outdated_observer.call_args_list == [
+            call(canvas_form.set_flows_outdated),
+            call(assignment_status.show_outdated),
+        ]
 
 
 @dataclass
