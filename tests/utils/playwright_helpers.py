@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
@@ -45,6 +46,9 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.progressbar import (
     MARKER_PROGRESSBAR_CANCEL,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
+    VALID_FIELD_CLASS,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_TRACK_TAB,
@@ -1034,7 +1038,8 @@ def enable_and_apply_date_filter(
 
     Args:
         page: Playwright page object
-        use_minimal_range: If True, sets end = start for minimal range (default: True)
+        use_minimal_range: If True, sets end one second after start, as the app
+            rejects ranges whose start is not before the end (default: True)
         custom_start_date: Optional custom start date (format: YYYY-MM-DD)
         custom_start_time: Optional custom start time (format: HH:MM:SS)
         custom_end_date: Optional custom end date (format: YYYY-MM-DD)
@@ -1077,29 +1082,33 @@ def enable_and_apply_date_filter(
     end_date_input.wait_for(state="visible")
     end_time_input.wait_for(state="visible")
 
-    # Configure filter range
+    # Configure filter range. Fill at once: typing fast loses characters, as each
+    # keystroke makes a round trip to the app that may overwrite the next one.
     if custom_start_date:
-        start_date_input.fill("")
-        start_date_input.type(custom_start_date)
+        start_date_input.fill(custom_start_date)
     if custom_start_time:
-        start_time_input.fill("")
-        start_time_input.type(custom_start_time)
+        start_time_input.fill(custom_start_time)
 
     if use_minimal_range and not (custom_end_date or custom_end_time):
-        # Set end = start for minimal range
-        start_date_value = start_date_input.input_value()
-        start_time_value = start_time_input.input_value()
-        end_date_input.fill("")
-        end_date_input.type(start_date_value)
-        end_time_input.fill("")
-        end_time_input.type(start_time_value)
+        start = datetime.strptime(
+            f"{start_date_input.input_value()} {start_time_input.input_value()}",
+            "%Y-%m-%d %H:%M:%S",
+        )
+        end = start + timedelta(seconds=1)
+        end_date_input.fill(end.strftime("%Y-%m-%d"))
+        end_time_input.fill(end.strftime("%H:%M:%S"))
+        # Apply reads the end from the app. Wait until the app validated the new end,
+        # otherwise Apply may still read the previous one, which equals the start.
+        expect(
+            end_time_input.locator(
+                f"xpath=ancestor-or-self::*[contains(@class, '{VALID_FIELD_CLASS}')]"
+            )
+        ).to_have_count(1)
     else:
         if custom_end_date:
-            end_date_input.fill("")
-            end_date_input.type(custom_end_date)
+            end_date_input.fill(custom_end_date)
         if custom_end_time:
-            end_time_input.fill("")
-            end_time_input.type(custom_end_time)
+            end_time_input.fill(custom_end_time)
 
     # Apply filter
     apply_btn = page.get_by_test_id(MARKER_FILTER_BY_DATE_APPLY_BUTTON)
@@ -1116,8 +1125,9 @@ def verify_filter_active(page: Page) -> None:
     filter_button = page.get_by_test_id(MARKER_FILTER_BY_DATE_BUTTON)
     filter_button.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
 
-    # Wait for the attribute to be set
-    deadline = time.time() + ACCEPTANCE_TEST_WAIT_TIMEOUT
+    # Wait for the attribute to be set. After loading tracks, the app may be busy
+    # with statistics for several seconds before it handles the Apply click.
+    deadline = time.time() + TRACK_LOADING_TIMEOUT_MS / 1000
     while time.time() < deadline:
         active_value = filter_button.get_attribute("data-filter-by-date-active")
         if active_value == "true":
