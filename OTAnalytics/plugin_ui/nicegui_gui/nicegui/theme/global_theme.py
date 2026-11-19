@@ -19,8 +19,8 @@ STALE_CLASS = "ota-stale"
 
 @contextmanager
 def global_theme() -> Generator[None, None, None]:
+    # The primary colour is defined in the stylesheet.
     ui.colors(
-        primary="#415841",
         secondary="#97D5E0",
         accent="#70A9A1",
         background="#F5F5F5",

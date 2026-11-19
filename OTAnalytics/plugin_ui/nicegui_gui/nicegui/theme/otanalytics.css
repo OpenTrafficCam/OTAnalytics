@@ -1,8 +1,8 @@
 /* Stylesheet of the OTAnalytics web UI, loaded once by global_theme(). */
 
 :root {
-  /* Colours: the primary colour is set once by ui.colors() in global_theme.py. */
-  --ota-primary: var(--q-primary);
+  /* Colours */
+  --ota-primary: #415841;
   --ota-surface: #ffffff;
   --ota-border: #e5e7eb;
   --ota-text-muted: #616161;
@@ -22,6 +22,12 @@
   --ota-step-input-width: 5rem;
   --ota-swatch-size: 0.75rem;
   --ota-stale-opacity: 0.4;
+}
+
+/* Quasar takes its primary colour from here. ui.colors() writes every colour
+   inline on the body, including a default primary, so this one is important. */
+body {
+  --q-primary: var(--ota-primary) !important;
 }
 
 /* Page frame: only the side panels scroll, not the page. */

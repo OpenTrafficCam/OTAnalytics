@@ -2,6 +2,7 @@
 
 import re
 from pathlib import Path
+from unittest.mock import patch
 
 from nicegui import ui
 from nicegui.testing import User
@@ -12,6 +13,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
     global_theme,
 )
 
+PRIMARY_COLOR = "#415841"
 NICEGUI_GUI = Path(STYLESHEET).parents[2]
 CLASS_IN_PYTHON = re.compile(r"""["' ](ota-[a-z-]+)""")
 CLASS_IN_CSS = re.compile(r"\.(ota-[a-z-]+|otanalytics-[a-z-]+)")
@@ -55,3 +57,20 @@ class TestStylesheet:
 
         assert user.client is not None
         assert ".ota-left" in user.client.head_html
+
+    def test_defines_the_primary_colour(self) -> None:
+        """ui.colors() writes every colour inline on the body, so the stylesheet
+        overrides it."""
+        css = Path(STYLESHEET).read_text(encoding="utf-8")
+
+        assert f"--ota-primary: {PRIMARY_COLOR}" in css
+        assert "--q-primary: var(--ota-primary) !important" in css
+
+    def test_leaves_the_primary_colour_to_the_stylesheet(self) -> None:
+        with patch(
+            "OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme.ui"
+        ) as mock_ui:
+            with global_theme():
+                pass
+
+        assert "primary" not in mock_ui.colors.call_args.kwargs
