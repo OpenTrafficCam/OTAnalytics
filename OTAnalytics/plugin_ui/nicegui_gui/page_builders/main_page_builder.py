@@ -12,6 +12,10 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import (
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
 
+MARKER_LEFT_PANEL = "marker-left-panel"
+MARKER_CENTER_PANEL = "marker-center-panel"
+MARKER_RIGHT_PANEL = "marker-right-panel"
+
 
 class MainPageBuilder(NiceguiPageBuilder):
     def __init__(
@@ -29,14 +33,26 @@ class MainPageBuilder(NiceguiPageBuilder):
         self.visualization_layers = visualization_layers
 
     def _build(self) -> None:
-        with ui.grid(columns=8).classes("w-full"):
-            with ui.column().classes("col-span-1"):
+        # The page keeps the window height, so only the side panels scroll.
+        ui.query("body").classes("overflow-hidden")
+        ui.query(".nicegui-content").classes("h-screen p-0")
+        with ui.row(wrap=False).classes("w-full h-full gap-0 no-wrap"):
+            with (
+                ui.column()
+                .classes("w-[344px] shrink-0 h-full overflow-y-auto p-2")
+                .mark(MARKER_LEFT_PANEL)
+            ):
                 self.configuration_bar.build()
-            with ui.column().classes("col-span-6"):
-                with ui.grid():
-                    with ui.row():
-                        self.workspace.build()
-                    with ui.row():
-                        self.visualization_filters.build()
-            with ui.column().classes("col-span-1"):
+            with (
+                ui.column()
+                .classes("flex-1 min-w-0 h-full flex flex-col p-2")
+                .mark(MARKER_CENTER_PANEL)
+            ):
+                self.workspace.build()
+                self.visualization_filters.build()
+            with (
+                ui.column()
+                .classes("w-[288px] shrink-0 h-full overflow-y-auto p-2")
+                .mark(MARKER_RIGHT_PANEL)
+            ):
                 self.visualization_layers.build()

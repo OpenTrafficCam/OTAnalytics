@@ -1,0 +1,84 @@
+"""Tests the three-panel frame of the main page."""
+
+from unittest.mock import Mock
+
+from nicegui import ui
+from nicegui.element import Element
+from nicegui.testing import User
+
+from OTAnalytics.plugin_ui.nicegui_gui.page_builders.main_page_builder import (
+    MARKER_CENTER_PANEL,
+    MARKER_LEFT_PANEL,
+    MARKER_RIGHT_PANEL,
+    MainPageBuilder,
+)
+
+ENDPOINT = "/test-main-page"
+CONFIGURATION = "configuration bar"
+WORKSPACE = "workspace"
+FILTERS = "visualization filters"
+LAYERS = "visualization layers"
+
+
+def part(text: str) -> Mock:
+    part = Mock()
+    part.build.side_effect = lambda: ui.label(text)
+    return part
+
+
+def ancestors(element: Element) -> list[Element]:
+    result = []
+    while (parent := element.parent_slot) is not None:
+        element = parent.parent
+        result.append(element)
+    return result
+
+
+def panel_of(user: User, text: str) -> Element:
+    label = user.find(text).elements.pop()
+    return next(
+        element
+        for element in ancestors(label)
+        if {MARKER_LEFT_PANEL, MARKER_CENTER_PANEL, MARKER_RIGHT_PANEL}
+        & set(element._markers)
+    )
+
+
+class TestMainPageBuilder:
+    async def test_builds_parts_in_their_panels(self, user: User) -> None:
+        MainPageBuilder(
+            ENDPOINT,
+            configuration_bar=part(CONFIGURATION),
+            workspace=part(WORKSPACE),
+            visualization_filters=part(FILTERS),
+            visualization_layers=part(LAYERS),
+        ).build(Mock())
+
+        await user.open(ENDPOINT)
+
+        left = user.find(marker=MARKER_LEFT_PANEL).elements.pop()
+        center = user.find(marker=MARKER_CENTER_PANEL).elements.pop()
+        right = user.find(marker=MARKER_RIGHT_PANEL).elements.pop()
+        assert panel_of(user, CONFIGURATION) is left
+        assert panel_of(user, WORKSPACE) is center
+        assert panel_of(user, FILTERS) is center
+        assert panel_of(user, LAYERS) is right
+
+    async def test_only_side_panels_scroll(self, user: User) -> None:
+        MainPageBuilder(
+            ENDPOINT,
+            configuration_bar=part(CONFIGURATION),
+            workspace=part(WORKSPACE),
+            visualization_filters=part(FILTERS),
+            visualization_layers=part(LAYERS),
+        ).build(Mock())
+
+        await user.open(ENDPOINT)
+
+        left = user.find(marker=MARKER_LEFT_PANEL).elements.pop()
+        center = user.find(marker=MARKER_CENTER_PANEL).elements.pop()
+        right = user.find(marker=MARKER_RIGHT_PANEL).elements.pop()
+        assert "overflow-y-auto" in left.classes
+        assert "overflow-y-auto" in right.classes
+        assert "flex-1" in center.classes
+        assert "min-w-0" in center.classes
