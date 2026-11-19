@@ -2,7 +2,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Sequence
 
 import pytest
 from PIL import Image, ImageChops  # type: ignore
@@ -746,7 +746,7 @@ def create_section(
     page: Page,
     rm: ResourceManager,
     section_name: str = "Name",
-    positions: list[tuple[int, int]] | None = None,
+    positions: Sequence[tuple[float, float]] | None = None,
 ) -> None:
     """Create a line section on the canvas via dialog and assert it's visible.
 

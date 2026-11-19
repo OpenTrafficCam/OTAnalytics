@@ -8,6 +8,7 @@ This test creates:
 These test data files can be used by other tests to skip setup steps.
 """
 
+import json
 import shutil
 from pathlib import Path
 
@@ -18,6 +19,9 @@ from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_TRACK_TAB,
     MARKER_VIDEO_TAB,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+    MARKER_INTERACTIVE_IMAGE,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
     MARKER_TAB_FLOW,
@@ -38,6 +42,7 @@ from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_TRACK_FILES,
     ACCEPTANCE_TEST_VIDEO_FILE,
     PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+    SECTIONS,
     NiceGUITestServer,
 )
 from tests.utils.playwright_helpers import (
@@ -83,8 +88,8 @@ class TestCreateImportantTestData:
         - Navigate to the main page and fill project information
         - Add a test video
         - Add track files
-        - Create two sections with different coordinates
-        - Create a flow between the sections
+        - Create the SECTIONS
+        - Create the flows between them in both directions
         - Save the configuration as 'sections_created_test_file.otconfig'
 
         The resulting file can be used by other tests to skip these setup steps.
@@ -125,36 +130,40 @@ class TestCreateImportantTestData:
         # Switch to Sections tab
         search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
 
-        # Create two sections with different names and coordinates
-        section_names = ["North-Section", "South-Section"]
-        section_coords = [
-            [(20, 20), (140, 60)],  # First section coordinates
-            [(220, 80), (340, 140)],  # Second section coordinates
-        ]
+        # Clicks are in pixels of the displayed canvas, not of the image
+        image = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).locator("img")
+        scale = image.evaluate("image => image.clientWidth / image.naturalWidth")
+        for name, points in SECTIONS.items():
+            positions = [(x * scale, y * scale) for x, y in points]
+            create_section(page, resource_manager, name, positions=positions)
 
-        for name, coords in zip(section_names, section_coords):
-            create_section(page, resource_manager, name, positions=coords)
-
-        # Switch to Flows tab and create flows
         search_for_marker_element(page, MARKER_TAB_FLOW).first.click()
+        first, second = SECTIONS
+        flows = {
+            f"{first} --> {second}": (first, second),
+            f"{second} --> {first}": (second, first),
+        }
+        for flow_name, (start, end) in flows.items():
+            create_flow(
+                page,
+                resource_manager,
+                flow_name,
+                list(SECTIONS).index(start),
+                list(SECTIONS).index(end),
+            )
+            wait_for_flow_present(page, flow_name)
 
-        # Create a flow between the two sections
-        flow_name = "Test-Flow"
-        create_flow(
-            page,
-            resource_manager,
-            flow_name,
-            start_section_index=0,
-            end_section_index=1,
-        )
-        wait_for_flow_present(page, flow_name)
-
-        # Save the configuration file
         output_path = test_data_tmp_dir / "sections_created_test_file.otconfig"
         save_project_as(page, resource_manager, output_path)
-
-        # Verify the file was created
         assert output_path.exists(), f"Configuration file not created: {output_path}"
+
+        # The flow dialog selects sections by position, so check the directions
+        saved = json.loads(output_path.read_text())
+        names = {section["id"]: section["name"] for section in saved["sections"]}
+        assert {
+            flow["name"]: (names[flow["start"]], names[flow["end"]])
+            for flow in saved["flows"]
+        } == flows
 
         # Also copy to the main test data directory for reuse
         permanent_path = data_dir / "sections_created_test_file.otconfig"

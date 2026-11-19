@@ -31,44 +31,44 @@
     "sections": [
         {
             "id": "1",
-            "name": "North-Section",
+            "name": "South",
             "type": "line",
             "relative_offset_coordinates": {
                 "section-enter": {
-                    "x": 0.5,
-                    "y": 0.5
+                    "x": 1.0,
+                    "y": 0.7
                 }
             },
             "coordinates": [
                 {
-                    "x": 22,
-                    "y": 22
+                    "x": 30,
+                    "y": 261
                 },
                 {
-                    "x": 154,
-                    "y": 66
+                    "x": 296,
+                    "y": 725
                 }
             ],
             "plugin_data": {}
         },
         {
             "id": "2",
-            "name": "South-Section",
+            "name": "East",
             "type": "line",
             "relative_offset_coordinates": {
                 "section-enter": {
-                    "x": 0.5,
-                    "y": 0.5
+                    "x": 0.0,
+                    "y": 0.7
                 }
             },
             "coordinates": [
                 {
-                    "x": 242,
-                    "y": 88
+                    "x": 293,
+                    "y": 724
                 },
                 {
-                    "x": 374,
-                    "y": 154
+                    "x": 787,
+                    "y": 316
                 }
             ],
             "plugin_data": {}
@@ -77,10 +77,17 @@
     "flows": [
         {
             "id": "1",
-            "name": "Test-Flow",
+            "name": "South --> East",
+            "start": "1",
+            "end": "2",
+            "distance": null
+        },
+        {
+            "id": "8",
+            "name": "East --> South",
             "start": "2",
             "end": "1",
-            "distance": 42.0
+            "distance": null
         }
     ],
     "remark": ""
