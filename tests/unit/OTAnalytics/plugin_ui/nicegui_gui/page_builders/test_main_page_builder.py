@@ -95,3 +95,20 @@ class TestMainPageBuilder:
         assert "overflow-y-auto" in right.classes
         assert "flex-1" in center.classes
         assert "min-w-0" in center.classes
+
+    async def test_status_bar_keeps_one_line(self, user: User) -> None:
+        """A wrapping status bar would shrink the canvas whenever a notice shows."""
+        MainPageBuilder(
+            ENDPOINT,
+            configuration_bar=part(CONFIGURATION),
+            workspace=part(WORKSPACE),
+            visualization_filters=part(FILTERS),
+            visualization_layers=part(LAYERS),
+            status_bar=part(STATUS),
+            assignment_status=part(ASSIGNMENT),
+        ).build(Mock())
+
+        await user.open(ENDPOINT)
+
+        status_bar = user.find(marker=MARKER_STATUS_BAR).elements.pop()
+        assert "no-wrap" in status_bar.classes

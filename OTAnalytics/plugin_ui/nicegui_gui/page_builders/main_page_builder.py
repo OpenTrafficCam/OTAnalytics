@@ -68,8 +68,8 @@ class MainPageBuilder(NiceguiPageBuilder):
             ):
                 self.visualization_layers.build()
         with (
-            ui.row()
-            .classes("w-full shrink-0 px-3 py-1 border-t bg-white")
+            ui.row(wrap=False)
+            .classes("w-full shrink-0 items-center px-3 py-1 border-t bg-white no-wrap")
             .mark(MARKER_STATUS_BAR)
         ):
             self.status_bar.build()

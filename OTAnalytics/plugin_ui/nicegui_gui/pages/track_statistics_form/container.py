@@ -86,7 +86,9 @@ class TrackStatisticForm(AbstractFrameTrackStatistics):
         self._values = []
         with (
             ui.row(wrap=False)
-            .classes("w-full items-center gap-x-4 no-wrap overflow-x-auto text-sm")
+            .classes(
+                "flex-1 min-w-0 items-center gap-x-4 no-wrap overflow-x-auto text-sm"
+            )
             .mark(MARKER_TRACK_STATISTICS)
         ):
             for row in self._rows:
