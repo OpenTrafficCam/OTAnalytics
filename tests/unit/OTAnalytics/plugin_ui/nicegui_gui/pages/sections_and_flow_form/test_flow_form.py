@@ -11,6 +11,7 @@ from nicegui.testing import User
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.state import FlowState
+from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import STALE_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     AUTO_ASSIGNMENT_DELAY,
@@ -294,5 +295,40 @@ class TestOutdatedAssignment:
         target = await open_flow_form(user, viewmodel, resource_manager)
 
         target.notify_tracks(Mock())
+
+        assert target.is_outdated()
+
+    async def test_added_events_mark_the_assignment_up_to_date(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """Assigned elsewhere, e.g. by an export."""
+        viewmodel = create_auto_viewmodel(auto=False)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+        target.notify_section_changed(SECTION_ID)
+
+        target.notify_events(EventRepositoryEvent([Mock()], []))
+
+        assert not target.is_outdated()
+
+    async def test_assignment_without_events_marks_it_up_to_date(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """No track intersects a section, so no event is added."""
+        viewmodel = create_auto_viewmodel(auto=False)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+        target.notify_section_changed(SECTION_ID)
+
+        target.notify_events(EventRepositoryEvent([], []))
+
+        assert not target.is_outdated()
+
+    async def test_removed_events_keep_the_assignment_outdated(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=False)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+        target.notify_section_changed(SECTION_ID)
+
+        target.notify_events(EventRepositoryEvent([], [Mock()]))
 
         assert target.is_outdated()

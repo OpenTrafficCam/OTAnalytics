@@ -305,7 +305,7 @@ class TestFlowFormTrackCount:
             FLOW_ID_2: 9,
         }
 
-        flow_form.notify_events(Mock(spec=EventRepositoryEvent))
+        flow_form.notify_events(EventRepositoryEvent([], []))
 
         counts = [row[COLUMN_TRACKS_ASSIGNED] for row in flow_form._flow_table._rows]
         assert counts == [1, 9]
