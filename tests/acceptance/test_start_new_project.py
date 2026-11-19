@@ -16,9 +16,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (  # noqa
     MARKER_INTERACTIVE_IMAGE,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
-    MARKER_GROUP_PROJECT,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     MARKER_PROJECT_NEW,
     MARKER_PROJECT_OPEN,
@@ -32,7 +29,6 @@ from tests.utils.playwright_helpers import (
     answer_confirmation,
     import_project_and_assert_values,
     load_main_page,
-    open_group,
     read_project_info_values,
     search_for_marker_element,
 )
@@ -76,8 +72,6 @@ class TestStartNewProject:
         )
         expect(overlay.first).to_be_attached()
 
-        open_group(page, MARKER_GROUP_PROJECT)
-
         search_for_marker_element(page, MARKER_PROJECT_NEW).first.click()
         answer_confirmation(page, MARKER_APPLY)
 
@@ -102,8 +96,6 @@ class TestStartNewProject:
             page, resource_manager, otconfig, LOADED_PROJECT
         )
 
-        open_group(page, MARKER_GROUP_PROJECT)
-
         search_for_marker_element(page, MARKER_PROJECT_NEW).first.click()
         answer_confirmation(page, MARKER_CANCEL)
 
@@ -126,8 +118,6 @@ class TestOpenProject:
         import_project_and_assert_values(
             page, resource_manager, otconfig, LOADED_PROJECT
         )
-
-        open_group(page, MARKER_GROUP_PROJECT)
 
         search_for_marker_element(page, MARKER_PROJECT_OPEN).first.click()
         search_for_marker_element(page, MARKER_APPLY).first.wait_for(state="visible")

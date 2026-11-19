@@ -98,11 +98,14 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import 
     ConfigurationBar,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
+    ProjectActions,
     ProjectForm,
+    ProjectTitle,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.static_analysis_config_form import (  # noqa
     StaticAnalysisConfigForm,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.header.header_bar import HeaderBar
 from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import RemarkForm
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.assignment_status import (  # noqa
     AssignmentStatus,
@@ -203,7 +206,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         self.preload_project()
         return NiceguiWebserver(
             page_builders=[main_page_builder],
-            layout_components=NiceguiLayoutComponents(),
+            layout_components=NiceguiLayoutComponents(self.header_bar),
             hostname=DEFAULT_HOSTNAME,
             port=DEFAULT_PORT,
         )
@@ -318,7 +321,28 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def project_form(self) -> ProjectForm:
-        return ProjectForm(self.view_model, self.resource_manager)
+        return ProjectForm(
+            self.view_model,
+            self.resource_manager,
+            self.project_actions,
+            self.project_title,
+        )
+
+    @cached_property
+    def project_title(self) -> ProjectTitle:
+        return ProjectTitle(self.resource_manager)
+
+    @cached_property
+    def project_actions(self) -> ProjectActions:
+        return ProjectActions(
+            self.view_model, self.resource_manager, self.project_title
+        )
+
+    @cached_property
+    def header_bar(self) -> HeaderBar:
+        return HeaderBar(
+            self.resource_manager, self.project_title, self.project_actions
+        )
 
     @cached_property
     def get_do_events_of_current_analysis_config(

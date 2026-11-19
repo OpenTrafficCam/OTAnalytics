@@ -281,7 +281,6 @@ def save_project_otconfig(
     in tests. Filename field expects the name without extension.
     """
     # Open Save As dialog
-    open_group(page, MARKER_GROUP_PROJECT)
     search_for_marker_element(page, MARKER_PROJECT_SAVE_AS).first.click()
     # Wait for dialog to be visible
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
@@ -490,8 +489,6 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     - Wait for tracks to load
     """
 
-    open_group(page, MARKER_GROUP_PROJECT)
-
     search_for_marker_element(page, MARKER_PROJECT_OPEN).first.click()
     # Interact with the FileChooserDialog to choose the file using markers
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.wait_for(state="visible")
@@ -551,7 +548,6 @@ def save_project_as(page: Page, rm: ResourceManager, path: Path) -> None:
     - Fill the directory and filename in the NiceGUI file chooser via markers.
     - Apply the dialog.
     """
-    open_group(page, MARKER_GROUP_PROJECT)
     search_for_marker_element(page, MARKER_PROJECT_SAVE_AS).first.click()
 
     # Interact with the FileChooserDialog

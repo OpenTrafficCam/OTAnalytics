@@ -65,6 +65,9 @@ class ProjectKeys(ResourceKey):
     LABEL_SAVE_AS_PROJECT = "label-save-project"
     LABEL_START_DATE = "label-start-date"
     LABEL_START_TIME = "label-start-time"
+    LABEL_UNTITLED_PROJECT = "label-untitled-project"
+    LABEL_ALL_CHANGES_SAVED = "label-all-changes-saved"
+    LABEL_UNSAVED_CHANGES = "label-unsaved-changes"
 
 
 class TrackFormKeys(ResourceKey):
@@ -306,6 +309,9 @@ DEFAULT_RESOURCE_MAP = {
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
     ProjectKeys.LABEL_QUICK_SAVE: "Save",
     ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
+    ProjectKeys.LABEL_UNTITLED_PROJECT: "Untitled project",
+    ProjectKeys.LABEL_ALL_CHANGES_SAVED: "· All changes saved",
+    ProjectKeys.LABEL_UNSAVED_CHANGES: "· Unsaved changes",
     RemarkKeys.LABEL_REMARK_HEADER: "Remark",
     RemarkKeys.REMARK_NO_COMMENT: "No Comment",
     SectionKeys.BUTTON_ADD_AREA: "Add area...",
