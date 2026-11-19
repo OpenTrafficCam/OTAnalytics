@@ -10,6 +10,7 @@ from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.default_values import DATETIME_FORMAT
 from OTAnalytics.adapter_ui.dto import DateRangeDto
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.resources.resource_manager import (
     GeneralKeys,
@@ -47,6 +48,8 @@ MARKER_NEXT_FRAMES_BUTTON = "marker-next-frames"
 MARKER_PREV_EVENT_BUTTON = "marker-prev-event"
 MARKER_NEXT_EVENT_BUTTON = "marker-next-event"
 MARKER_TIME_BAR = "marker-time-bar"
+MARKER_CLASS_FILTER_BUTTON = "marker-class-filter-button"
+MARKER_CLASS_SWATCH = "marker-class-swatch"
 
 PREVIOUS_ICON = "chevron_left"
 NEXT_ICON = "chevron_right"
@@ -244,56 +247,102 @@ class FilterDateRangeForm:
 
 
 class FilterClassificationForm:
-    """Dialog to select the classes whose tracks are shown.
+    """Class legend on the canvas to select the classes whose tracks are shown.
 
-    The checkboxes show the current class filter selection. Without a selection,
-    every class counts as selected, as in the customtkinter GUI.
+    Every change applies at once. The filter is on while at least one class is
+    unchecked and off while all are checked, as then every track is shown.
+    Without a selection, every class counts as selected, as in the customtkinter
+    GUI.
     """
 
-    def __init__(self, resource_manager: ResourceManager, viewmodel: ViewModel) -> None:
+    def __init__(
+        self,
+        resource_manager: ResourceManager,
+        viewmodel: ViewModel,
+        color_palette_provider: ColorPaletteProvider,
+    ) -> None:
         self._resource_manager = resource_manager
         self._viewmodel = viewmodel
+        self._color_palette_provider = color_palette_provider
         self._classes: list[str] = []
         self._selected_classes: set[str] = set()
+        self._checkboxes: dict[str, ui.checkbox] = {}
+        self._updating_checkboxes = False
+        # Created by `build()`, which runs when a browser asks for the page.
+        self._button: ui.button | None = None
+        self._menu: ui.menu | None = None
+        self._content: ui.column | None = None
+
+    def build(self) -> None:
+        with ui.element("div").classes("absolute top-3 right-3 z-10"):
+            self._button = ui.button(
+                self._label(VisualizationFiltersKeys.BUTTON_CLASSES),
+                icon="palette",
+                on_click=self.open,
+            )
+            self._button.mark(MARKER_CLASS_FILTER_BUTTON)
+            self._button.props(
+                f"{TestIdAttributes.DATA_TESTID}={MARKER_CLASS_FILTER_BUTTON}"
+            )
+            with self._button:
+                # Opened by the click handler, after the legend is refreshed.
+                with ui.menu().props("no-parent-event") as self._menu:
+                    self._content = ui.column().classes("p-2 gap-1")
+        self._show_filter_state(self._viewmodel.get_class_filter_selection())
 
     def open(self) -> None:
+        """Open the legend with the classes known by now."""
+        if self._menu is None:
+            return
+        self._refresh()
+        self._menu.open()
+
+    def _refresh(self) -> None:
+        if self._content is None:
+            return
         self._classes = self._viewmodel.get_classes()
         self._selected_classes = set(self._current_selection())
-        with ui.dialog() as self._dialog, ui.card():
+        self._checkboxes = {}
+        self._content.clear()
+        palette = self._color_palette_provider.get()
+        with self._content:
+            with ui.row().classes("gap-1"):
+                ui.button(
+                    self._label(VisualizationFiltersKeys.BUTTON_ALL_CLASSES),
+                    on_click=lambda: self._select_all(True),
+                ).props("flat dense")
+                ui.button(
+                    self._label(VisualizationFiltersKeys.BUTTON_NO_CLASSES),
+                    on_click=lambda: self._select_all(False),
+                ).props("flat dense")
             for classification in self._classes:
-                self._build_checkbox(classification)
-            with ui.row():
-                self._build_buttons()
-        self._dialog.open()
+                self._build_entry(classification, palette.get(classification))
 
     def _current_selection(self) -> list[str]:
         selection = self._viewmodel.get_class_filter_selection()
         return self._classes if selection is None else selection
 
-    def _build_checkbox(self, classification: str) -> None:
-        FormFieldCheckbox(
-            label_text=classification,
-            initial_value=classification in self._selected_classes,
-            on_value_change=self._create_class_toggle(classification),
-        ).build()
+    def _build_entry(self, classification: str, color: str | None) -> None:
+        with ui.row().classes("items-center gap-2 no-wrap"):
+            swatch = ui.element("span").classes("inline-block w-3 h-3 rounded-sm")
+            swatch.style(f"background-color: {color or 'transparent'}")
+            swatch.mark(MARKER_CLASS_SWATCH)
+            self._checkboxes[classification] = ui.checkbox(
+                classification,
+                value=classification in self._selected_classes,
+                on_change=self._create_class_toggle(classification),
+            ).props("dense")
 
     def _create_class_toggle(
         self, classification: str
     ) -> Callable[[ValueChangeEventArguments], None]:
         def toggle(event: ValueChangeEventArguments) -> None:
+            if self._updating_checkboxes:
+                return
             self._select_class(classification, event.value)
+            self._apply()
 
         return toggle
-
-    def _build_buttons(self) -> None:
-        ui.button(
-            self._resource_manager.get(GeneralKeys.LABEL_APPLY),
-            on_click=self._on_apply_button_clicked,
-        )
-        ui.button(
-            self._resource_manager.get(GeneralKeys.LABEL_RESET),
-            on_click=self._on_reset_button_clicked,
-        )
 
     def _select_class(self, classification: str, selected: bool) -> None:
         if selected:
@@ -301,14 +350,33 @@ class FilterClassificationForm:
         else:
             self._selected_classes.discard(classification)
 
-    def _on_apply_button_clicked(self) -> None:
-        self._viewmodel.apply_filter_tracks_by_class(self._selected_classes)
-        logger().info("Filter tracks by classification applied")
-        self._dialog.close()
+    def _select_all(self, selected: bool) -> None:
+        self._updating_checkboxes = True
+        try:
+            for checkbox in self._checkboxes.values():
+                checkbox.set_value(selected)
+        finally:
+            self._updating_checkboxes = False
+        self._selected_classes = set(self._classes) if selected else set()
+        self._apply()
 
-    def _on_reset_button_clicked(self) -> None:
-        self._viewmodel.reset_filter_tracks_by_class()
-        self._dialog.close()
+    def _apply(self) -> None:
+        if self._selected_classes >= set(self._classes):
+            self._viewmodel.reset_filter_tracks_by_class()
+            self._show_filter_state(None)
+        else:
+            self._viewmodel.apply_filter_tracks_by_class(set(self._selected_classes))
+            self._show_filter_state(list(self._selected_classes))
+        logger().info("Filter tracks by classification applied")
+
+    def _show_filter_state(self, selection: list[str] | None) -> None:
+        if self._button is None:
+            return
+        color = "primary" if selection is None else "orange"
+        self._button.props(f"color={color}")
+
+    def _label(self, key: VisualizationFiltersKeys) -> str:
+        return self._resource_manager.get(key)
 
 
 class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
@@ -333,7 +401,6 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._filter_by_date_button: ui.button | None = None
         self._filter_by_date_button_left: ui.button | None = None
         self._filter_by_date_button_right: ui.button | None = None
-        self._filter_by_class_button: ui.button | None = None
         self._label_filter_by_date: ui.label | None = None
         self._introduce_to_viewmodel()
         self._frames_to_skip = 0
@@ -346,9 +413,6 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
             on_value_change=lambda e: self.change_button_date(e.value),
         )
         self._filter_by_date_popup = FilterDateRangeForm(
-            self._resource_manager, self._viewmodel
-        )
-        self._filter_by_class_popup = FilterClassificationForm(
             self._resource_manager, self._viewmodel
         )
         self._input_seconds = FormFieldInteger(
@@ -450,19 +514,10 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         else:
             self._viewmodel.disable_filter_track_by_date()
 
-    def change_button_class(self, checkbox_status: bool) -> None:
-        if checkbox_status:
-            self._viewmodel.enable_filter_track_by_class()
-        else:
-            self._viewmodel.disable_filter_track_by_class()
-
     def on_input_change(self, _: ValueChangeEventArguments) -> None:
         self._viewmodel.update_skip_time(
             self._input_seconds.value, self._input_frames.value
         )
-
-    def open_classification_dialog(self) -> None:
-        self._filter_by_class_popup.open()
 
     def open_range_dialog(self) -> None:
         self._filter_by_date_popup.open()
@@ -494,23 +549,17 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._filter_by_date_button.props("data-filter-by-date-active=false")
 
     def set_active_color_on_filter_by_class_button(self) -> None:
-        if self._filter_by_class_button is None:
-            return
-        self._filter_by_class_button.props("color=orange")
+        """The class legend on the canvas shows the state of the class filter."""
 
     def enable_filter_by_class_button(self) -> None:
-        if self._filter_by_class_button is None:
-            return
-        self._filter_by_class_button.enable()
+        """The class legend on the canvas shows the state of the class filter."""
 
     def enable_filter_by_date_button(self) -> None:
         for button in self._date_buttons():
             button.enable()
 
     def set_inactive_color_on_filter_by_class_button(self) -> None:
-        if self._filter_by_class_button is None:
-            return
-        self._filter_by_class_button.props("color=primary")
+        """The class legend on the canvas shows the state of the class filter."""
 
     def disable_filter_by_date_button(self) -> None:
         self.set_inactive_color_on_filter_by_date_button()
@@ -518,9 +567,7 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
             button.disable()
 
     def disable_filter_by_class_button(self) -> None:
-        if self._filter_by_class_button is None:
-            return
-        self._filter_by_class_button.disable()
+        """The class legend on the canvas shows the state of the class filter."""
 
     def update_date_range(self, date_range: DateRangeDto) -> None:
         if self._label_filter_by_date is None:

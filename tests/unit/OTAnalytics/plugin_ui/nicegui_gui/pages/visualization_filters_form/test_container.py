@@ -29,6 +29,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
     VALID_FIELD_CLASS,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+    MARKER_CLASS_FILTER_BUTTON,
+    MARKER_CLASS_SWATCH,
     MARKER_FILTER_BY_DATE_BUTTON,
     MARKER_FILTER_BY_DATE_CHECKBOX,
     MARKER_FILTER_END_DATE_INPUT,
@@ -45,6 +47,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.containe
     MARKER_PREV_FRAMES_BUTTON,
     MARKER_PREV_SECONDS_BUTTON,
     MARKER_TIME_BAR,
+    FilterClassificationForm,
     VisualizationFiltersForm,
 )
 
@@ -234,21 +237,36 @@ BICYCLE = "bicycle"
 CAR = "car"
 TRUCK = "truck"
 ALL_CLASSES = [BICYCLE, CAR, TRUCK]
+PALETTE = {BICYCLE: "lime", CAR: "blue", TRUCK: "#FF0000"}
+CLASSES = "Classes"
+ALL = "All"
+NONE = "None"
+CLASS_LABELS = {
+    VisualizationFiltersKeys.BUTTON_CLASSES: CLASSES,
+    VisualizationFiltersKeys.BUTTON_ALL_CLASSES: ALL,
+    VisualizationFiltersKeys.BUTTON_NO_CLASSES: NONE,
+}
 
 
-async def open_classification_dialog(
+async def open_class_legend(
     user: User, given: Given, selection: list[str] | None
 ) -> None:
+    given.resource_manager.get.side_effect = lambda key: CLASS_LABELS.get(
+        key, LABELS.get(key, "label")
+    )
     given.view_model.get_classes.return_value = ALL_CLASSES
     given.view_model.get_class_filter_selection.return_value = selection
-    target = create_target(given)
+    palette = Mock()
+    palette.get.return_value = PALETTE
+    target = FilterClassificationForm(given.resource_manager, given.view_model, palette)
 
     @ui.page("/test")
     def page() -> None:
-        target.open_classification_dialog()
+        target.build()
 
     await user.open("/test")
-    await user.should_see(APPLY)
+    user.find(marker=MARKER_CLASS_FILTER_BUTTON).click()
+    await user.should_see(BICYCLE)
 
 
 def checked_classes(user: User) -> list[str]:
@@ -259,16 +277,36 @@ def checked_classes(user: User) -> list[str]:
     )
 
 
-class TestClassificationDialog:
-    async def test_toggling_a_checkbox_changes_only_its_own_class(
+class TestClassLegend:
+    async def test_shows_the_current_selection(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=[CAR, TRUCK])
+
+        assert checked_classes(user) == [CAR, TRUCK]
+
+    async def test_without_selection_all_classes_are_checked(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=None)
+
+        assert checked_classes(user) == ALL_CLASSES
+
+    async def test_shows_a_swatch_in_the_class_color(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=None)
+
+        swatch_colors = sorted(
+            str(element._style.get("background-color"))
+            for element in user.find(marker=MARKER_CLASS_SWATCH).elements
+        )
+        assert swatch_colors == sorted(PALETTE.values())
+
+    async def test_unchecking_a_class_applies_the_filter_at_once(
         self, user: User
     ) -> None:
         given = create_given()
-        await open_classification_dialog(user, given, selection=None)
+        await open_class_legend(user, given, selection=None)
 
         user.find(kind=ui.checkbox, content=BICYCLE).click()
-        assert checked_classes(user) == [CAR, TRUCK]
-        user.find(APPLY).click()
 
         given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
             {CAR, TRUCK}
@@ -278,75 +316,49 @@ class TestClassificationDialog:
         self, user: User
     ) -> None:
         given = create_given()
-        await open_classification_dialog(user, given, selection=[CAR])
+        await open_class_legend(user, given, selection=[CAR])
 
         user.find(kind=ui.checkbox, content=TRUCK).click()
-        user.find(APPLY).click()
 
         given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
             {CAR, TRUCK}
         )
 
-    async def test_applying_unchanged_partial_selection_keeps_it(
-        self, user: User
-    ) -> None:
+    async def test_checking_every_class_turns_the_filter_off(self, user: User) -> None:
         given = create_given()
-        await open_classification_dialog(user, given, selection=[CAR, TRUCK])
+        await open_class_legend(user, given, selection=[CAR, TRUCK])
 
-        assert checked_classes(user) == [CAR, TRUCK]
-        user.find(APPLY).click()
-
-        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
-            {CAR, TRUCK}
-        )
-
-    async def test_without_selection_all_classes_are_selected(self, user: User) -> None:
-        given = create_given()
-        await open_classification_dialog(user, given, selection=None)
-
-        assert checked_classes(user) == ALL_CLASSES
-        user.find(APPLY).click()
-
-        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
-            set(ALL_CLASSES)
-        )
-
-    async def test_empty_selection_selects_no_class(self, user: User) -> None:
-        given = create_given()
-        await open_classification_dialog(user, given, selection=[])
-
-        assert checked_classes(user) == []
-        user.find(APPLY).click()
-
-        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(set())
-
-    async def test_apply_closes_the_dialog(self, user: User) -> None:
-        given = create_given()
-        await open_classification_dialog(user, given, selection=None)
-
-        user.find(APPLY).click()
-
-        dialog = user.find(kind=ui.dialog).elements.pop()
-        assert dialog.value is False
-
-    async def test_shows_reset_label_from_resources(self, user: User) -> None:
-        given = create_given()
-        await open_classification_dialog(user, given, selection=None)
-
-        await user.should_see(RESET)
-
-    async def test_reset_resets_the_class_filter_and_closes_the_dialog(
-        self, user: User
-    ) -> None:
-        given = create_given()
-        await open_classification_dialog(user, given, selection=[CAR])
-
-        user.find(RESET).click()
+        user.find(kind=ui.checkbox, content=BICYCLE).click()
 
         given.view_model.reset_filter_tracks_by_class.assert_called_once_with()
         given.view_model.apply_filter_tracks_by_class.assert_not_called()
-        dialog = user.find(kind=ui.dialog).elements.pop()
-        assert dialog.value is False
+
+    async def test_all_turns_the_filter_off(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=[CAR])
+
+        user.find(ALL).click()
+
+        given.view_model.reset_filter_tracks_by_class.assert_called_once_with()
+        assert checked_classes(user) == ALL_CLASSES
+
+    async def test_none_hides_every_class(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=None)
+
+        user.find(NONE).click()
+
+        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(set())
+        assert checked_classes(user) == []
+
+    async def test_reopening_shows_classes_loaded_meanwhile(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=None)
+        given.view_model.get_classes.return_value = [*ALL_CLASSES, "pedestrian"]
+
+        user.find(marker=MARKER_CLASS_FILTER_BUTTON).click()
+
+        await user.should_see("pedestrian")
 
 
 FIRST_OCCURRENCE = datetime(2023, 5, 24, 8, 0, 0, tzinfo=timezone.utc)

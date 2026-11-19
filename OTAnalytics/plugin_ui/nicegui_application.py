@@ -120,6 +120,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
     VisualizationFilters,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+    FilterClassificationForm,
     VisualizationFiltersForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import (
@@ -221,7 +222,16 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     @cached_property
     def canvas_and_files_form(self) -> CanvasAndFilesForm:
         return CanvasAndFilesForm(
-            self.resource_manager, self.canvas_form, self.files_form
+            self.resource_manager,
+            self.canvas_form,
+            self.files_form,
+            self.class_legend,
+        )
+
+    @cached_property
+    def class_legend(self) -> FilterClassificationForm:
+        return FilterClassificationForm(
+            self.resource_manager, self.view_model, self.color_palette_provider
         )
 
     @cached_property

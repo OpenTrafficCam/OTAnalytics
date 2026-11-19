@@ -174,6 +174,9 @@ class VisualizationFiltersKeys(ResourceKey):
     LABEL_VISUALIZATION_FILTERS_FORM_HEADER = "label-visualization-filters-form-header"
     BUTTON_FILTER_BY_DATE = "button-filter-by-date"
     BUTTON_FILTER_BY_CLASSIFICATION = "button-filter-by-classification"
+    BUTTON_CLASSES = "button-classes"
+    BUTTON_ALL_CLASSES = "button-all-classes"
+    BUTTON_NO_CLASSES = "button-no-classes"
     LABEL_EVENT = "label-event"
     LABEL_DATE_RANGE_FROM = "label-date-range-from"
     LABEL_DATE_RANGE_TO = "label-date-range-to"
@@ -340,6 +343,9 @@ DEFAULT_RESOURCE_MAP = {
     VisualizationFiltersKeys.LABEL_VISUALIZATION_FILTERS_FORM_HEADER: "Visualization Filters",  # noqa
     VisualizationFiltersKeys.BUTTON_FILTER_BY_DATE: "Filter by Date",
     VisualizationFiltersKeys.BUTTON_FILTER_BY_CLASSIFICATION: "Filter by Classification",  # noqa
+    VisualizationFiltersKeys.BUTTON_CLASSES: "Classes",
+    VisualizationFiltersKeys.BUTTON_ALL_CLASSES: "All",
+    VisualizationFiltersKeys.BUTTON_NO_CLASSES: "None",
     VisualizationFiltersKeys.LABEL_EVENT: "Event",
     VisualizationFiltersKeys.LABEL_DATE_RANGE_TO: "To",
     VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM: "From",
