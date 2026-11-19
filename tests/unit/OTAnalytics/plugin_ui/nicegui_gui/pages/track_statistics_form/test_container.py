@@ -1,3 +1,8 @@
+from unittest.mock import Mock
+
+from nicegui import ui
+from nicegui.testing import User
+
 from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
     TrackStatisticKeys,
@@ -6,8 +11,13 @@ from OTAnalytics.application.use_cases.track_statistics import TrackStatistics
 from OTAnalytics.plugin_ui.nicegui_gui.pages.track_statistics_form.container import (
     COLUMN_NAME,
     COLUMN_NUMBER,
+    MARKER_TRACK_STATISTICS,
+    TrackStatisticForm,
     map_to_ui,
 )
+
+LABEL_ALL = TrackStatisticKeys.LABEL_ALL_TRACKS
+LABEL_ASSIGNED = TrackStatisticKeys.LABEL_TRACKS_ASSIGNED_TO_FLOWS
 
 
 def create_track_statistics() -> TrackStatistics:
@@ -48,3 +58,60 @@ class TestMapToUi:
             {COLUMN_NAME: resource_manager.get(key), COLUMN_NUMBER: value}
             for key, value in expected
         ]
+
+
+ENDPOINT = "/test-track-statistics"
+
+
+def value_of(user: User, label: str) -> str:
+    """The text right of the given label in the status bar."""
+    label_element = user.find(kind=ui.label, content=label).elements.pop()
+    assert label_element.parent_slot is not None
+    siblings = label_element.parent_slot.children
+    value = siblings[siblings.index(label_element) + 1]
+    assert isinstance(value, ui.label)
+    return value.text
+
+
+class TestTrackStatisticForm:
+    async def test_shows_statistics_in_one_row(self, user: User) -> None:
+        resource_manager = ResourceManager()
+        target = TrackStatisticForm(resource_manager, Mock())
+
+        @ui.page(ENDPOINT)
+        def page() -> None:
+            target.build()
+
+        await user.open(ENDPOINT)
+
+        status_bar = user.find(marker=MARKER_TRACK_STATISTICS).elements.pop()
+        assert isinstance(status_bar, ui.row)
+        await user.should_not_see(kind=ui.table)
+        assert value_of(user, resource_manager.get(LABEL_ALL)) == "0"
+
+    async def test_update_changes_the_values(self, user: User) -> None:
+        resource_manager = ResourceManager()
+        target = TrackStatisticForm(resource_manager, Mock())
+
+        @ui.page(ENDPOINT)
+        def page() -> None:
+            target.build()
+
+        await user.open(ENDPOINT)
+        target.update_track_statistics(create_track_statistics())
+
+        assert value_of(user, resource_manager.get(LABEL_ALL)) == "101"
+        assert value_of(user, resource_manager.get(LABEL_ASSIGNED)) == "69 (69.7%)"
+
+    async def test_statistics_updated_before_build_are_shown(self, user: User) -> None:
+        resource_manager = ResourceManager()
+        target = TrackStatisticForm(resource_manager, Mock())
+        target.update_track_statistics(create_track_statistics())
+
+        @ui.page(ENDPOINT)
+        def page() -> None:
+            target.build()
+
+        await user.open(ENDPOINT)
+
+        assert value_of(user, resource_manager.get(LABEL_ALL)) == "101"

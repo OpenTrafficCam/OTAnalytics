@@ -181,6 +181,7 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             workspace=self.workspace,
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
+            status_bar=self.track_statistic_form,
         )
         self.preload_project()
         return NiceguiWebserver(
@@ -474,7 +475,6 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return VisualizationFilters(
             self.resource_manager,
             self.visualization_filter_form,
-            self.track_statistic_form,
         )
 
     @cached_property

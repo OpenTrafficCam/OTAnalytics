@@ -10,6 +10,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.page_builders.main_page_builder import (
     MARKER_CENTER_PANEL,
     MARKER_LEFT_PANEL,
     MARKER_RIGHT_PANEL,
+    MARKER_STATUS_BAR,
     MainPageBuilder,
 )
 
@@ -18,6 +19,13 @@ CONFIGURATION = "configuration bar"
 WORKSPACE = "workspace"
 FILTERS = "visualization filters"
 LAYERS = "visualization layers"
+STATUS = "track statistics"
+PANEL_MARKERS = {
+    MARKER_LEFT_PANEL,
+    MARKER_CENTER_PANEL,
+    MARKER_RIGHT_PANEL,
+    MARKER_STATUS_BAR,
+}
 
 
 def part(text: str) -> Mock:
@@ -37,10 +45,7 @@ def ancestors(element: Element) -> list[Element]:
 def panel_of(user: User, text: str) -> Element:
     label = user.find(text).elements.pop()
     return next(
-        element
-        for element in ancestors(label)
-        if {MARKER_LEFT_PANEL, MARKER_CENTER_PANEL, MARKER_RIGHT_PANEL}
-        & set(element._markers)
+        element for element in ancestors(label) if PANEL_MARKERS & set(element._markers)
     )
 
 
@@ -52,6 +57,7 @@ class TestMainPageBuilder:
             workspace=part(WORKSPACE),
             visualization_filters=part(FILTERS),
             visualization_layers=part(LAYERS),
+            status_bar=part(STATUS),
         ).build(Mock())
 
         await user.open(ENDPOINT)
@@ -63,6 +69,8 @@ class TestMainPageBuilder:
         assert panel_of(user, WORKSPACE) is center
         assert panel_of(user, FILTERS) is center
         assert panel_of(user, LAYERS) is right
+        status_bar = user.find(marker=MARKER_STATUS_BAR).elements.pop()
+        assert panel_of(user, STATUS) is status_bar
 
     async def test_only_side_panels_scroll(self, user: User) -> None:
         MainPageBuilder(
@@ -71,6 +79,7 @@ class TestMainPageBuilder:
             workspace=part(WORKSPACE),
             visualization_filters=part(FILTERS),
             visualization_layers=part(LAYERS),
+            status_bar=part(STATUS),
         ).build(Mock())
 
         await user.open(ENDPOINT)
