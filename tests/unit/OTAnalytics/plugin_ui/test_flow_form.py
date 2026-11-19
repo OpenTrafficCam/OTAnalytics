@@ -249,11 +249,11 @@ class TestCreateColumns:
     ) -> None:
         columns = create_columns(resource_manager)
 
-        assert {
-            "name": COLUMN_TRACKS_ASSIGNED,
-            "label": resource_manager.get(FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED),
-            "field": COLUMN_TRACKS_ASSIGNED,
-        } in columns
+        tracks = next(c for c in columns if c["name"] == COLUMN_TRACKS_ASSIGNED)
+        assert tracks["label"] == resource_manager.get(
+            FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED
+        )
+        assert tracks["field"] == COLUMN_TRACKS_ASSIGNED
 
 
 class TestMapToUi:

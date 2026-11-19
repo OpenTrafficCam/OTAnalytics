@@ -30,6 +30,9 @@ MARKER_BUTTON_REMOVE = "marker-button-remove"
 MARKER_BUTTON_PROPERTIES = "marker-button-properties"
 MARKER_UPDATE_FLOW_HIGHLIGHTING = "marker-update-flow-highlighting"
 MARKER_AUTO_ASSIGNMENT = "marker-auto-assignment"
+MARKER_ASSIGNMENT_BOX = "marker-assignment-box"
+MARKER_ASSIGNMENT_STATE = "marker-assignment-state"
+NUMBER_CLASS = "ota-num"
 AUTO_ASSIGNMENT_DELAY = 0.5
 """Seconds without changes before tracks are assigned, so drawing several
 sections in a row triggers one assignment."""
@@ -44,9 +47,11 @@ def create_columns(
         "name": COLUMN_TRACKS_ASSIGNED,
         "label": resource_manager.get(FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED),
         "field": COLUMN_TRACKS_ASSIGNED,
+        "align": "right",
+        "classes": NUMBER_CLASS,
     }
     if outdated:
-        tracks_assigned["classes"] = STALE_CLASS
+        tracks_assigned["classes"] = f"{NUMBER_CLASS} {STALE_CLASS}"
     return [
         {
             "name": FLOW_NAME,
@@ -106,6 +111,9 @@ class FlowForm(
         self._button_properties: ui.button | None = None
         self._assignment_row: ui.row | None = None
         self._assignment_timer: ui.timer | None = None
+        self._assignment_dot: ui.element | None = None
+        self._assignment_state: ui.label | None = None
+        self._update_now: ui.button | None = None
         self._outdated = False
         self._outdated_observers: list[Callable[[bool], None]] = []
         self._introduce_to_viewmodel()
@@ -126,34 +134,27 @@ class FlowForm(
         await self._viewmodel.edit_selected_flow()
 
     def build(self) -> Self:
-        self._flow_table.build()
         with ui.row().classes(BUTTON_ROW):
             self._button_add = ui.button(
-                self._resource_manager.get(FlowKeys.BUTTON_ADD), on_click=self.add_flow
+                self._resource_manager.get(FlowKeys.BUTTON_ADD),
+                icon="add",
+                on_click=self.add_flow,
             )
             self._button_add.mark(MARKER_BUTTON_ADD)
             self._button_add.props(f"{TEST_ID}={MARKER_BUTTON_ADD}")
-            self._button_generate = ui.button(
-                self._resource_manager.get(FlowKeys.BUTTON_GENERATE),
-                on_click=self.generate_flow,
+            self._button_generate = self._secondary_button(
+                FlowKeys.BUTTON_GENERATE, self.generate_flow, MARKER_BUTTON_GENERATE
             )
-            self._button_generate.mark(MARKER_BUTTON_GENERATE)
-            self._button_generate.props(f"{TEST_ID}={MARKER_BUTTON_GENERATE}")
-
-        with ui.row().classes(BUTTON_ROW):
-            self._button_remove = ui.button(
-                self._resource_manager.get(FlowKeys.BUTTON_REMOVE),
-                on_click=self.remove_flow,
+            self._button_properties = self._secondary_button(
+                FlowKeys.BUTTON_PROPERTIES,
+                self.show_flow_properties,
+                MARKER_BUTTON_PROPERTIES,
             )
-            self._button_remove.mark(MARKER_BUTTON_REMOVE)
-            self._button_remove.props(f"{TEST_ID}={MARKER_BUTTON_REMOVE}")
-            self._button_properties = ui.button(
-                self._resource_manager.get(FlowKeys.BUTTON_PROPERTIES),
-                on_click=self.show_flow_properties,
+            self._button_remove = self._secondary_button(
+                FlowKeys.BUTTON_REMOVE, self.remove_flow, MARKER_BUTTON_REMOVE
             )
-            self._button_properties.mark(MARKER_BUTTON_PROPERTIES)
-            self._button_properties.props(f"{TEST_ID}={MARKER_BUTTON_PROPERTIES}")
         self._build_track_assignment()
+        self._flow_table.build()
         self.update_items()
         if self._outdated:
             # Changed before there was a page, e.g. by a preloaded project.
@@ -162,26 +163,69 @@ class FlowForm(
         self._viewmodel.set_flows_frame(self)
         return self
 
+    def _secondary_button(
+        self, key: FlowKeys, on_click: Callable[..., Any], marker: str
+    ) -> ui.button:
+        button = ui.button(self._resource_manager.get(key), on_click=on_click)
+        button.props("outline")
+        button.mark(marker)
+        button.props(f"{TEST_ID}={marker}")
+        return button
+
     def _build_track_assignment(self) -> None:
-        ui.label(self._resource_manager.get(FlowKeys.LABEL_TRACK_ASSIGNMENT)).classes(
-            "text-subtitle2"
+        with ui.column().classes("ota-assignment").mark(MARKER_ASSIGNMENT_BOX):
+            with ui.row(wrap=False).classes("ota-assignment-head"):
+                ui.label(
+                    self._resource_manager.get(FlowKeys.LABEL_TRACK_ASSIGNMENT)
+                ).classes("ota-assignment-title")
+                switch = ui.switch(
+                    self._resource_manager.get(FlowKeys.SWITCH_AUTO_ASSIGNMENT),
+                    value=self._viewmodel.get_auto_assignment(),
+                    on_change=lambda event: self._set_auto_assignment(event.value),
+                )
+                switch.mark(MARKER_AUTO_ASSIGNMENT)
+                switch.props(f"{TEST_ID}={MARKER_AUTO_ASSIGNMENT}")
+            with ui.row(wrap=False).classes("ota-assignment-state") as row:
+                self._assignment_row = row
+                self._assignment_dot = ui.element("span").classes("ota-dot")
+                self._assignment_state = ui.label().classes("ota-assignment-text")
+                self._assignment_state.mark(MARKER_ASSIGNMENT_STATE)
+                self._update_now = ui.button(
+                    self._resource_manager.get(FlowKeys.BUTTON_UPDATE_ASSIGNMENT),
+                    on_click=self.update_assignment,
+                )
+                self._update_now.mark(MARKER_UPDATE_FLOW_HIGHLIGHTING)
+                self._update_now.props(f"{TEST_ID}={MARKER_UPDATE_FLOW_HIGHLIGHTING}")
+        self._show_assignment_state()
+
+    def _set_auto_assignment(self, enabled: bool) -> None:
+        self._viewmodel.set_auto_assignment(enabled)
+        self._show_assignment_state()
+
+    def _show_assignment_state(self) -> None:
+        """Up to date, or out of date with the offer to update now."""
+        if (
+            self._assignment_state is None
+            or self._assignment_dot is None
+            or self._update_now is None
+        ):
+            return
+        if self._outdated:
+            key = FlowKeys.STATUS_OUT_OF_DATE
+        elif self._viewmodel.get_auto_assignment():
+            key = FlowKeys.STATUS_UP_TO_DATE_AUTO
+        else:
+            key = FlowKeys.STATUS_UP_TO_DATE_MANUAL
+        self._assignment_state.set_text(self._resource_manager.get(key))
+        self._assignment_dot.classes(
+            add="ota-dot--stale" if self._outdated else "ota-dot--fresh",
+            remove="ota-dot--fresh" if self._outdated else "ota-dot--stale",
         )
-        with ui.row().classes("w-full items-center") as self._assignment_row:
-            switch = ui.switch(
-                self._resource_manager.get(FlowKeys.SWITCH_AUTO_ASSIGNMENT),
-                value=self._viewmodel.get_auto_assignment(),
-                on_change=lambda event: self._viewmodel.set_auto_assignment(
-                    event.value
-                ),
-            )
-            switch.mark(MARKER_AUTO_ASSIGNMENT)
-            switch.props(f"{TEST_ID}={MARKER_AUTO_ASSIGNMENT}")
-            button = ui.button(
-                self._resource_manager.get(FlowKeys.BUTTON_UPDATE_ASSIGNMENT),
-                on_click=self.update_assignment,
-            )
-            button.mark(MARKER_UPDATE_FLOW_HIGHLIGHTING)
-            button.props(f"{TEST_ID}={MARKER_UPDATE_FLOW_HIGHLIGHTING}")
+        self._assignment_state.classes(
+            add="ota-assignment-text--stale" if self._outdated else None,
+            remove=None if self._outdated else "ota-assignment-text--stale",
+        )
+        self._update_now.set_visibility(self._outdated)
 
     def register_outdated_observer(self, observer: Callable[[bool], None]) -> None:
         """Listen to whether the track assignment is out of date."""
@@ -210,6 +254,7 @@ class FlowForm(
         self._flow_table.update_columns(
             create_columns(self._resource_manager, outdated)
         )
+        self._show_assignment_state()
         for observer in self._outdated_observers:
             observer(outdated)
 

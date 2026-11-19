@@ -9,17 +9,28 @@ from nicegui import ui
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.application.resources.resource_manager import (
+    FlowKeys,
+    ResourceManager,
+)
 from OTAnalytics.application.state import FlowState
 from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import STALE_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     AUTO_ASSIGNMENT_DELAY,
     COLUMN_TRACKS_ASSIGNED,
+    MARKER_ASSIGNMENT_BOX,
+    MARKER_ASSIGNMENT_STATE,
     MARKER_AUTO_ASSIGNMENT,
+    MARKER_BUTTON_ADD,
+    MARKER_BUTTON_GENERATE,
+    MARKER_BUTTON_PROPERTIES,
+    MARKER_BUTTON_REMOVE,
     MARKER_FLOW_TABLE,
     MARKER_UPDATE_FLOW_HIGHLIGHTING,
+    NUMBER_CLASS,
     FlowForm,
+    create_columns,
 )
 from tests.utils.nicegui_table import double_click_row, wait_until_awaited
 
@@ -143,7 +154,8 @@ class TestTrackAssignment:
         self, user: User, resource_manager: ResourceManager
     ) -> None:
         viewmodel = create_auto_viewmodel(auto=False)
-        await open_flow_form(user, viewmodel, resource_manager)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+        target.notify_section_changed(SECTION_ID)
 
         user.find(marker=MARKER_UPDATE_FLOW_HIGHLIGHTING).click()
 
@@ -332,3 +344,92 @@ class TestOutdatedAssignment:
         target.notify_events(EventRepositoryEvent([], [Mock()]))
 
         assert target.is_outdated()
+
+
+def status_text(user: User) -> str:
+    status = user.find(marker=MARKER_ASSIGNMENT_STATE).elements.pop()
+    assert isinstance(status, ui.label)
+    return status.text
+
+
+class TestFlowGroupDesign:
+    async def test_shows_buttons_then_assignment_then_flows(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        await open_flow_form(user, create_auto_viewmodel(auto=True), resource_manager)
+
+        assert user.client is not None
+        order = [
+            marker
+            for element in user.client.layout.descendants()
+            for marker in element._markers
+            if marker in (MARKER_BUTTON_ADD, MARKER_ASSIGNMENT_BOX, MARKER_FLOW_TABLE)
+        ]
+        assert order == [MARKER_BUTTON_ADD, MARKER_ASSIGNMENT_BOX, MARKER_FLOW_TABLE]
+
+    async def test_add_is_the_primary_action(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        await open_flow_form(user, create_auto_viewmodel(auto=True), resource_manager)
+
+        def props(marker: str) -> dict:
+            return user.find(marker=marker).elements.pop().props
+
+        assert "outline" not in props(MARKER_BUTTON_ADD)
+        for marker in (
+            MARKER_BUTTON_GENERATE,
+            MARKER_BUTTON_PROPERTIES,
+            MARKER_BUTTON_REMOVE,
+        ):
+            assert "outline" in props(marker), marker
+
+    async def test_up_to_date_with_automatic_assignment(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        await open_flow_form(user, create_auto_viewmodel(auto=True), resource_manager)
+
+        assert status_text(user) == resource_manager.get(
+            FlowKeys.STATUS_UP_TO_DATE_AUTO
+        )
+        await user.should_not_see(marker=MARKER_UPDATE_FLOW_HIGHLIGHTING)
+
+    async def test_up_to_date_in_manual_mode(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        await open_flow_form(user, create_auto_viewmodel(auto=False), resource_manager)
+
+        assert status_text(user) == resource_manager.get(
+            FlowKeys.STATUS_UP_TO_DATE_MANUAL
+        )
+
+    async def test_out_of_date_offers_update_now(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=False)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+
+        target.notify_section_changed(SECTION_ID)
+
+        assert status_text(user) == resource_manager.get(FlowKeys.STATUS_OUT_OF_DATE)
+        await user.should_see(marker=MARKER_UPDATE_FLOW_HIGHLIGHTING)
+
+    async def test_switch_changes_the_status(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = create_auto_viewmodel(auto=True)
+        await open_flow_form(user, viewmodel, resource_manager)
+        viewmodel.get_auto_assignment.return_value = False
+
+        user.find(marker=MARKER_AUTO_ASSIGNMENT).click()
+
+        assert status_text(user) == resource_manager.get(
+            FlowKeys.STATUS_UP_TO_DATE_MANUAL
+        )
+
+    def test_track_counts_are_right_aligned_numbers(
+        self, resource_manager: ResourceManager
+    ) -> None:
+        tracks = create_columns(resource_manager)[1]
+
+        assert tracks["align"] == "right"
+        assert NUMBER_CLASS in tracks["classes"]

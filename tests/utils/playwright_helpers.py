@@ -1258,6 +1258,9 @@ def update_flow_highlighting(
     """
     open_group(page, MARKER_TAB_FLOW)
     button = page.get_by_test_id(MARKER_UPDATE_FLOW_HIGHLIGHTING)
+    # Shown only while the assignment is out of date.
+    if not button.is_visible():
+        return
     button.scroll_into_view_if_needed()
     button.click()
     page.wait_for_timeout(timeout_ms)
