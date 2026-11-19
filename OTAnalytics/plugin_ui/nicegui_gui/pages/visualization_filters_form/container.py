@@ -53,7 +53,7 @@ MARKER_CLASS_SWATCH = "marker-class-swatch"
 
 PREVIOUS_ICON = "chevron_left"
 NEXT_ICON = "chevron_right"
-STEP_INPUT_CLASSES = "w-20"
+STEP_INPUT_CLASSES = "ota-step-input"
 
 
 class FilterDateRangeForm:
@@ -274,7 +274,7 @@ class FilterClassificationForm:
         self._content: ui.column | None = None
 
     def build(self) -> None:
-        with ui.element("div").classes("absolute top-3 right-3 z-10"):
+        with ui.element("div").classes("ota-legend"):
             self._button = ui.button(
                 self._label(VisualizationFiltersKeys.BUTTON_CLASSES),
                 icon="palette",
@@ -287,7 +287,7 @@ class FilterClassificationForm:
             with self._button:
                 # Opened by the click handler, after the legend is refreshed.
                 with ui.menu().props("no-parent-event") as self._menu:
-                    self._content = ui.column().classes("p-2 gap-1")
+                    self._content = ui.column().classes("ota-legend-content")
         self._show_filter_state(self._viewmodel.get_class_filter_selection())
 
     def open(self) -> None:
@@ -323,8 +323,8 @@ class FilterClassificationForm:
         return self._classes if selection is None else selection
 
     def _build_entry(self, classification: str, color: str | None) -> None:
-        with ui.row().classes("items-center gap-2 no-wrap"):
-            swatch = ui.element("span").classes("inline-block w-3 h-3 rounded-sm")
+        with ui.row().classes("ota-legend-entry"):
+            swatch = ui.element("span").classes("ota-swatch")
             swatch.style(f"background-color: {color or 'transparent'}")
             swatch.mark(MARKER_CLASS_SWATCH)
             self._checkboxes[classification] = ui.checkbox(
@@ -436,11 +436,7 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
 
     def build(self) -> None:
         """Build the time bar: date filter, date range and the step groups."""
-        with (
-            ui.row(wrap=False)
-            .classes("w-full items-center gap-2 no-wrap overflow-x-auto")
-            .mark(MARKER_TIME_BAR)
-        ):
+        with ui.row(wrap=False).classes("ota-timebar").mark(MARKER_TIME_BAR):
             self._filter_by_date_checkbox.build()
             self._filter_by_date_button = ui.button(
                 self._resource_manager.get(

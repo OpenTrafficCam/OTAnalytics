@@ -11,13 +11,13 @@ from nicegui.testing import User
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.state import FlowState
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import STALE_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     AUTO_ASSIGNMENT_DELAY,
     COLUMN_TRACKS_ASSIGNED,
     MARKER_AUTO_ASSIGNMENT,
     MARKER_FLOW_TABLE,
     MARKER_UPDATE_FLOW_HIGHLIGHTING,
-    OUTDATED_CLASSES,
     FlowForm,
 )
 from tests.utils.nicegui_table import double_click_row, wait_until_awaited
@@ -241,7 +241,7 @@ class TestOutdatedAssignment:
         target.notify_section_changed(SECTION_ID)
 
         observer.assert_called_once_with(True)
-        assert OUTDATED_CLASSES in tracks_column_classes(user)
+        assert STALE_CLASS in tracks_column_classes(user)
 
     async def test_update_now_marks_the_assignment_up_to_date(
         self, user: User, resource_manager: ResourceManager
@@ -255,7 +255,7 @@ class TestOutdatedAssignment:
         user.find(marker=MARKER_UPDATE_FLOW_HIGHLIGHTING).click()
 
         assert observer.call_args_list[-1].args == (False,)
-        assert OUTDATED_CLASSES not in tracks_column_classes(user)
+        assert STALE_CLASS not in tracks_column_classes(user)
 
     async def test_automatic_assignment_marks_it_up_to_date(
         self, user: User, resource_manager: ResourceManager

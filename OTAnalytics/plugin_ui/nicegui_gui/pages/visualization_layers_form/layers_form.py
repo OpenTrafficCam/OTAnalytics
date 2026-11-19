@@ -52,7 +52,7 @@ class LayersForm(AbstractFrameTrackPlotting):
         self._group_expansions = {}
         for layer_group in self._layers:
             expansion = ui.expansion(group_label(layer_group), value=True).classes(
-                "w-full"
+                "ota-layer-group"
             )
             self._group_expansions[layer_group.name] = expansion
             with expansion:

@@ -1,0 +1,216 @@
+/* Stylesheet of the OTAnalytics web UI, loaded once by global_theme(). */
+
+:root {
+  /* Colours: the primary colour is set once by ui.colors() in global_theme.py. */
+  --ota-primary: var(--q-primary);
+  --ota-surface: #ffffff;
+  --ota-border: #e5e7eb;
+  --ota-text-muted: #616161;
+
+  /* Spacing, radius and fonts */
+  --ota-space-1: 0.25rem;
+  --ota-space-2: 0.5rem;
+  --ota-space-3: 0.75rem;
+  --ota-space-4: 1rem;
+  --ota-radius-sm: 0.125rem;
+  --ota-font-size-sm: 0.875rem;
+  --ota-line-height-sm: 1.25rem;
+
+  /* Layout */
+  --ota-left-width: 344px;
+  --ota-right-width: 288px;
+  --ota-step-input-width: 5rem;
+  --ota-swatch-size: 0.75rem;
+  --ota-stale-opacity: 0.4;
+}
+
+/* Page frame: only the side panels scroll, not the page. */
+body:has(.ota-app) {
+  overflow: hidden;
+}
+
+.ota-app {
+  height: 100vh;
+  padding: 0;
+  gap: 0;
+}
+
+.ota-panels {
+  width: 100%;
+  flex: 1 1 0%;
+  min-height: 0;
+  gap: 0;
+  flex-wrap: nowrap;
+}
+
+.ota-left,
+.ota-right {
+  flex-shrink: 0;
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--ota-space-2);
+}
+
+.ota-left {
+  width: var(--ota-left-width);
+}
+
+.ota-right {
+  width: var(--ota-right-width);
+}
+
+.ota-center {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  padding: var(--ota-space-2);
+}
+
+.ota-statusbar {
+  width: 100%;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  align-items: center;
+  padding: var(--ota-space-1) var(--ota-space-3);
+  border-top: 1px solid var(--ota-border);
+  background-color: var(--ota-surface);
+}
+
+/* Workflow accordion and layer groups */
+.ota-group,
+.ota-layer-group {
+  width: 100%;
+}
+
+/* Canvas: offers its size to the image, which keeps its aspect ratio. */
+.ota-workspace {
+  position: relative;
+  display: flex;
+  flex: 1 1 0%;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  container-type: size;
+}
+
+/* Time bar under the canvas */
+.ota-timebar {
+  width: 100%;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--ota-space-2);
+  overflow-x: auto;
+}
+
+.ota-step-input {
+  width: var(--ota-step-input-width);
+}
+
+/* Class legend on the canvas */
+.ota-legend {
+  position: absolute;
+  top: var(--ota-space-3);
+  right: var(--ota-space-3);
+  z-index: 10;
+}
+
+.ota-legend-content {
+  padding: var(--ota-space-2);
+  gap: var(--ota-space-1);
+}
+
+.ota-legend-entry {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--ota-space-2);
+}
+
+.ota-swatch {
+  display: inline-block;
+  width: var(--ota-swatch-size);
+  height: var(--ota-swatch-size);
+  border-radius: var(--ota-radius-sm);
+}
+
+/* Status bar: track statistics and the assignment notice */
+.ota-stats {
+  flex: 1 1 0%;
+  min-width: 0;
+  flex-wrap: nowrap;
+  align-items: center;
+  column-gap: var(--ota-space-4);
+  overflow-x: auto;
+  font-size: var(--ota-font-size-sm);
+  line-height: var(--ota-line-height-sm);
+}
+
+.ota-stat {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--ota-space-1);
+}
+
+.ota-stat-label,
+.ota-stat-value {
+  white-space: nowrap;
+}
+
+.ota-stat-label {
+  color: var(--ota-text-muted);
+}
+
+.ota-stat-value {
+  font-weight: 500;
+}
+
+.ota-assignment-notice {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--ota-space-1);
+  font-size: var(--ota-font-size-sm);
+  line-height: var(--ota-line-height-sm);
+  color: var(--q-warning);
+  white-space: nowrap;
+}
+
+/* Out of date: track counts and flow arrows of an outdated assignment */
+.ota-stale {
+  opacity: var(--ota-stale-opacity);
+}
+
+/* Forms */
+.ota-button-row {
+  width: 100%;
+}
+
+.ota-button-row > .q-btn {
+  width: 100%;
+  max-width: 45%;
+}
+
+.ota-datetime-field {
+  max-width: 40%;
+}
+
+.ota-dialog {
+  width: 24rem;
+}
+
+.ota-dialog-wide {
+  width: 100%;
+  max-width: 70%;
+}
+
+/* Marks a form field whose input passed its validation: draws the underline
+   like Quasar draws it for an error, but green. */
+.q-field.otanalytics-valid-field .q-field__control:after {
+  background: var(--q-positive);
+  transform: scale3d(1, 1, 1);
+}
+
+.q-field.otanalytics-valid-field .q-field__label {
+  color: var(--q-positive);
+}

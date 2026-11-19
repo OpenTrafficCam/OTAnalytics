@@ -84,20 +84,12 @@ class TrackStatisticForm(AbstractFrameTrackStatistics):
 
     def build(self) -> None:
         self._values = []
-        with (
-            ui.row(wrap=False)
-            .classes(
-                "flex-1 min-w-0 items-center gap-x-4 no-wrap overflow-x-auto text-sm"
-            )
-            .mark(MARKER_TRACK_STATISTICS)
-        ):
+        with ui.row(wrap=False).classes("ota-stats").mark(MARKER_TRACK_STATISTICS):
             for row in self._rows:
-                with ui.row(wrap=False).classes("items-center gap-1 no-wrap"):
-                    ui.label(row[COLUMN_NAME]).classes("text-grey-7 whitespace-nowrap")
+                with ui.row(wrap=False).classes("ota-stat"):
+                    ui.label(row[COLUMN_NAME]).classes("ota-stat-label")
                     self._values.append(
-                        ui.label(row[COLUMN_NUMBER]).classes(
-                            "font-medium whitespace-nowrap"
-                        )
+                        ui.label(row[COLUMN_NUMBER]).classes("ota-stat-value")
                     )
 
     def update_track_statistics(self, track_statistics: TrackStatistics) -> None:

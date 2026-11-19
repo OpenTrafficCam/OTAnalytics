@@ -17,10 +17,5 @@ class Workspace:
 
     def build(self) -> None:
         # Takes the height the time bar leaves and offers its size to the canvas.
-        with (
-            ui.element("div")
-            .classes("relative flex-1 min-h-0 w-full flex items-center justify-center")
-            .style("container-type: size")
-            .mark(MARKER_WORKSPACE)
-        ):
+        with ui.element("div").classes("ota-workspace").mark(MARKER_WORKSPACE):
             self._canvas_files_bar.build()

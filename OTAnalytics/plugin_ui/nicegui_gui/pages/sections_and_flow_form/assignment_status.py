@@ -24,13 +24,9 @@ class AssignmentStatus:
         self._notice: ui.row | None = None
 
     def build(self) -> None:
-        with ui.row(wrap=False).classes(
-            "items-center gap-1 no-wrap text-sm text-warning"
-        ) as self._notice:
+        with ui.row(wrap=False).classes("ota-assignment-notice") as self._notice:
             ui.icon("warning")
-            ui.label(
-                self._resource_manager.get(FlowKeys.LABEL_ASSIGNMENT_OUTDATED)
-            ).classes("whitespace-nowrap")
+            ui.label(self._resource_manager.get(FlowKeys.LABEL_ASSIGNMENT_OUTDATED))
             ui.button(
                 self._resource_manager.get(FlowKeys.BUTTON_UPDATE_OUTDATED),
                 on_click=self._update_assignment,

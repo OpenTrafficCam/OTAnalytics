@@ -31,7 +31,7 @@ class OffsetSliderForm:
         self.x_offset_slider: ui.slider | None = None
 
     def build(self) -> None:
-        with ui.grid(rows=2).style("width: 100%"):
+        with ui.grid(rows=2).classes("w-full"):
             with ui.row(wrap=False):
                 ui.label(
                     self._resource_manager.get(OffsetSliderKeys.LABEL_COORDINATE_X)

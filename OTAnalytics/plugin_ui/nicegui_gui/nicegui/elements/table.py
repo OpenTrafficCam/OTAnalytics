@@ -97,7 +97,7 @@ class CustomTable:
             selection=self._selection,
         ) as table:
             self.__table = table
-            self.__table.style("width: 100%")
+            self.__table.classes("w-full")
             # Register row click handling
             if self._auto_select_on_row_click:
                 table.on(ROW_CLICK_EVENT, self._internal_on_row_click)

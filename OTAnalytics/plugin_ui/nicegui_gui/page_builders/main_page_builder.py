@@ -45,32 +45,15 @@ class MainPageBuilder(NiceguiPageBuilder):
 
     def _build(self) -> None:
         # The page keeps the window height, so only the side panels scroll.
-        ui.query("body").classes("overflow-hidden")
-        ui.query(".nicegui-content").classes("h-screen p-0 gap-0")
-        with ui.row(wrap=False).classes("w-full flex-1 min-h-0 gap-0 no-wrap"):
-            with (
-                ui.column()
-                .classes("w-[344px] shrink-0 h-full overflow-y-auto p-2")
-                .mark(MARKER_LEFT_PANEL)
-            ):
+        ui.query(".nicegui-content").classes("ota-app")
+        with ui.row(wrap=False).classes("ota-panels"):
+            with ui.column().classes("ota-left").mark(MARKER_LEFT_PANEL):
                 self.configuration_bar.build()
-            with (
-                ui.column()
-                .classes("flex-1 min-w-0 h-full flex flex-col p-2")
-                .mark(MARKER_CENTER_PANEL)
-            ):
+            with ui.column().classes("ota-center").mark(MARKER_CENTER_PANEL):
                 self.workspace.build()
                 self.visualization_filters.build()
-            with (
-                ui.column()
-                .classes("w-[288px] shrink-0 h-full overflow-y-auto p-2")
-                .mark(MARKER_RIGHT_PANEL)
-            ):
+            with ui.column().classes("ota-right").mark(MARKER_RIGHT_PANEL):
                 self.visualization_layers.build()
-        with (
-            ui.row(wrap=False)
-            .classes("w-full shrink-0 items-center px-3 py-1 border-t bg-white no-wrap")
-            .mark(MARKER_STATUS_BAR)
-        ):
+        with ui.row(wrap=False).classes("ota-statusbar").mark(MARKER_STATUS_BAR):
             self.status_bar.build()
             self.assignment_status.build()

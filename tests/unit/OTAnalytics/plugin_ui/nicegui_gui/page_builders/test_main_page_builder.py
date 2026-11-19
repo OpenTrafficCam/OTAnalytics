@@ -91,10 +91,9 @@ class TestMainPageBuilder:
         left = user.find(marker=MARKER_LEFT_PANEL).elements.pop()
         center = user.find(marker=MARKER_CENTER_PANEL).elements.pop()
         right = user.find(marker=MARKER_RIGHT_PANEL).elements.pop()
-        assert "overflow-y-auto" in left.classes
-        assert "overflow-y-auto" in right.classes
-        assert "flex-1" in center.classes
-        assert "min-w-0" in center.classes
+        assert "ota-left" in left.classes
+        assert "ota-right" in right.classes
+        assert "ota-center" in center.classes
 
     async def test_status_bar_keeps_one_line(self, user: User) -> None:
         """A wrapping status bar would shrink the canvas whenever a notice shows."""
@@ -111,4 +110,4 @@ class TestMainPageBuilder:
         await user.open(ENDPOINT)
 
         status_bar = user.find(marker=MARKER_STATUS_BAR).elements.pop()
-        assert "no-wrap" in status_bar.classes
+        assert "ota-statusbar" in status_bar.classes

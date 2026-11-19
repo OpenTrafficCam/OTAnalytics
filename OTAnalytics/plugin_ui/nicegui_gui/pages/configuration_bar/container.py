@@ -110,7 +110,7 @@ class ConfigurationBar(TrackListObserver):
         is_open: bool = False,
     ) -> ui.expansion:
         group = ui.expansion(self._resource_manager.get(label), value=is_open).classes(
-            "w-full"
+            "ota-group"
         )
         group.mark(marker)
         group.props(f"{TEST_ID}={marker}")

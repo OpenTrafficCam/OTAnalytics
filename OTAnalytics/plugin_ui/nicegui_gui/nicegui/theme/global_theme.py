@@ -1,21 +1,20 @@
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Generator
 
 from nicegui import ui
 
+STYLESHEET = Path(__file__).with_name("otanalytics.css")
+"""Styles of the web UI. Classes are prefixed with `ota-`."""
+
 VALID_FIELD_CLASS = "otanalytics-valid-field"
 """Marks a form field whose input passed its validation."""
 
-# Draws the underline like Quasar draws it for an error, but green.
-VALID_FIELD_CSS = f"""
-.q-field.{VALID_FIELD_CLASS} .q-field__control:after {{
-    background: var(--q-positive);
-    transform: scale3d(1, 1, 1);
-}}
-.q-field.{VALID_FIELD_CLASS} .q-field__label {{
-    color: var(--q-positive);
-}}
-"""
+DATETIME_FIELD_CLASS = "ota-datetime-field"
+DIALOG_CLASS = "ota-dialog"
+WIDE_DIALOG_CLASS = "ota-dialog-wide"
+STALE_CLASS = "ota-stale"
+"""Dims what an out-of-date track assignment shows."""
 
 
 @contextmanager
@@ -35,5 +34,5 @@ def global_theme() -> Generator[None, None, None]:
     ui.checkbox.default_props("keep-color")
     ui.input.default_props("color=accent")
     ui.number.default_props("color=accent")
-    ui.add_css(VALID_FIELD_CSS)
+    ui.add_css(STYLESHEET)
     yield

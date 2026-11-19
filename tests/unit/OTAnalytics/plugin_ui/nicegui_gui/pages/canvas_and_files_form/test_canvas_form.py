@@ -27,6 +27,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polygon import Polygon
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import STALE_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     CLICK,
     EDIT_COLOR,
@@ -38,7 +39,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     MOUSE_MOVE,
     MOUSE_UP,
     NORMAL_COLOR,
-    OUTDATED_OPACITY,
     RELEASE_FOCUS,
     SELECTED_COLOR,
     UPDATE_VIEWBOX,
@@ -1005,8 +1005,8 @@ class TestCanvasFormImageHandling:
         dimmed = overlay_content(mock_ui)
         canvas_form.set_flows_outdated(False)
 
-        assert f'<g opacity="{OUTDATED_OPACITY}">' in dimmed
-        assert "opacity" not in overlay_content(mock_ui)
+        assert f'<g class="{STALE_CLASS}">' in dimmed
+        assert STALE_CLASS not in overlay_content(mock_ui)
 
     @patch(
         "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"

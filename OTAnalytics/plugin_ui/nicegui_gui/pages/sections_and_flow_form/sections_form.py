@@ -18,8 +18,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
 )
 from OTAnalytics.plugin_ui.utils.asyncio_helper import run_async
 
-BUTTON_WIDTH = "max-width: 45%; width: 100%"
-BASIC_WIDTH = "width: 100%"
+BUTTON_ROW = "ota-button-row"
 MARKER_SECTION_TABLE = "marker-section-table"
 MARKER_BUTTON_ADD_LINE = "marker-button-add-line"
 MARKER_BUTTON_ADD_AREA = "marker-button-add-area"
@@ -92,38 +91,38 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
 
     def build(self) -> Self:
         self._section_table.build()
-        with ui.grid(rows=3).style(BASIC_WIDTH):
-            with ui.row().style(BASIC_WIDTH):
+        with ui.grid(rows=3).classes("w-full"):
+            with ui.row().classes(BUTTON_ROW):
                 self._button_add_line = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_LINE),
                     on_click=self._viewmodel.add_line_section,
-                ).style(BUTTON_WIDTH)
+                )
                 self._button_add_line.mark(MARKER_BUTTON_ADD_LINE)
 
                 self._button_add_areas = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_ADD_AREA),
                     on_click=self._viewmodel.add_area_section,
-                ).style(BUTTON_WIDTH)
+                )
                 self._button_add_areas.mark(MARKER_BUTTON_ADD_AREA)
 
-            with ui.row().style(BASIC_WIDTH):
+            with ui.row().classes(BUTTON_ROW):
                 self._button_edit = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_EDIT),
                     on_click=self._viewmodel.edit_section_geometry,
-                ).style(BUTTON_WIDTH)
+                )
                 self._button_edit.mark(MARKER_BUTTON_EDIT)
 
                 self._button_properties = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_PROPERTIES),
                     on_click=self._viewmodel.edit_selected_section_metadata,
-                ).style(BUTTON_WIDTH)
+                )
                 self._button_properties.mark(MARKER_BUTTON_PROPERTIES)
 
-            with ui.row().style(BASIC_WIDTH):
+            with ui.row().classes("w-full"):
                 self._button_remove = ui.button(
                     self._resource_manager.get(SectionKeys.BUTTON_REMOVE),
                     on_click=self.remove_sections,
-                ).style(BASIC_WIDTH)
+                ).classes("w-full")
                 self._button_remove.mark(MARKER_BUTTON_REMOVE)
         self.update_items()
         # Buttons did not exist on first introduction, apply their states now

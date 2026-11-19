@@ -30,5 +30,4 @@ class TestWorkspace:
         label = user.find(CANVAS).elements.pop()
         assert label.parent_slot is not None
         assert label.parent_slot.parent is container
-        assert {"flex-1", "min-h-0", "w-full"} <= set(container.classes)
-        assert container._style.get("container-type") == "size"
+        assert "ota-workspace" in container.classes

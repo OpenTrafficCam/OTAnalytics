@@ -29,6 +29,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.text import Text
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import STALE_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geometry import (  # noqa
     Point,
     close_area,
@@ -76,7 +77,6 @@ KNOB_RADIUS = 6
 HIGHLIGHTED_KNOB_RADIUS = 8
 HIGHLIGHTED_KNOB_STROKE_WIDTH = 3
 KNOB_CATCH_RADIUS = 15
-OUTDATED_OPACITY = 0.4
 SECTION_TEXT_OFFSET_Y = -12
 
 # Keys of the arrow style, named like the options of the customtkinter canvas
@@ -425,7 +425,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def _flows_svg(self) -> str:
         if self._flows_outdated:
-            return f'<g opacity="{OUTDATED_OPACITY}">{self._flows.to_svg()}</g>'
+            return f'<g class="{STALE_CLASS}">{self._flows.to_svg()}</g>'
         return self._flows.to_svg()
 
     def set_flows_outdated(self, outdated: bool) -> None:

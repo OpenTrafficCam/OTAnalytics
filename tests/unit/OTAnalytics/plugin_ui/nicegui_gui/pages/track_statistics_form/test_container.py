@@ -86,7 +86,7 @@ class TestTrackStatisticForm:
 
         status_bar = user.find(marker=MARKER_TRACK_STATISTICS).elements.pop()
         assert isinstance(status_bar, ui.row)
-        assert {"flex-1", "min-w-0"} <= set(status_bar.classes)
+        assert "ota-stats" in status_bar.classes
         await user.should_not_see(kind=ui.table)
         assert value_of(user, resource_manager.get(LABEL_ALL)) == "0"
 
