@@ -1,3 +1,4 @@
+import asyncio
 from abc import ABC, abstractmethod
 from typing import Callable
 
@@ -21,6 +22,11 @@ class CreateIntersectionEvents(ABC):
     def __call__(self) -> None:
         raise NotImplementedError
 
+    @abstractmethod
+    async def call_async(self) -> None:
+        """Like calling it, but intersects without blocking the event loop."""
+        raise NotImplementedError
+
 
 class CreateSceneEvents(ABC):
     """
@@ -30,6 +36,11 @@ class CreateSceneEvents(ABC):
 
     @abstractmethod
     def __call__(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def call_async(self) -> None:
+        """Like calling it, but detects without blocking the event loop."""
         raise NotImplementedError
 
 
@@ -123,6 +134,15 @@ class SimpleCreateIntersectionEvents(CreateIntersectionEvents):
         section_ids = [section.id for section in sections]
         self._add_events(events, section_ids)
 
+    async def call_async(self) -> None:
+        """Intersect on a worker thread. Adding the events notifies observers that
+        mutate widgets, so it stays on the event loop."""
+        sections = self._section_provider()
+        if not sections:
+            return
+        events = await asyncio.to_thread(self._run_intersect, sections)
+        self._add_events(events, [section.id for section in sections])
+
 
 class SimpleCreateSceneEvents(CreateSceneEvents):
     """Create scene enter and leave events and add them to the event repository.
@@ -150,6 +170,12 @@ class SimpleCreateSceneEvents(CreateSceneEvents):
         events = self._scene_action_detector.detect(tracks)
         self._add_events(events)
 
+    async def call_async(self) -> None:
+        """Detect on a worker thread. Adding the events stays on the event loop."""
+        tracks = self._get_tracks.as_dataset()
+        events = await asyncio.to_thread(self._scene_action_detector.detect, tracks)
+        self._add_events(events)
+
 
 class CreateEvents:
     def __init__(
@@ -169,3 +195,8 @@ class CreateEvents:
         """
         self._create_intersection_events()
         self._create_scene_events()
+
+    async def call_async(self) -> None:
+        """Like calling it, but keeps the event loop and thereby the ui responsive."""
+        await self._create_intersection_events.call_async()
+        await self._create_scene_events.call_async()

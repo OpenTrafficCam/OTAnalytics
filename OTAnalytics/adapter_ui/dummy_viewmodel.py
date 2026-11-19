@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import functools
 from datetime import datetime
@@ -1502,6 +1503,20 @@ class DummyViewModel(
         self.notify_flows(self.get_all_flow_ids())
         start_msg_popup.update_message(message="Creating events completed")
         sleep(1)
+        start_msg_popup.close()
+        logger().info("Events created")
+
+    async def create_events_async(self) -> None:
+        """Like `create_events`, but keeps the ui responsive."""
+        logger().info("Creating events")
+        start_msg_popup = self._ui_factory.minimal_info_box(
+            message="Create events...",
+            initial_position=self.get_position(),
+        )
+        await self._application.create_events_async()
+        self.notify_flows(self.get_all_flow_ids())
+        start_msg_popup.update_message(message="Creating events completed")
+        await asyncio.sleep(1)
         start_msg_popup.close()
         logger().info("Events created")
 

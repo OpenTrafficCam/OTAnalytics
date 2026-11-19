@@ -71,8 +71,8 @@ class LayersForm(AbstractFrameTrackPlotting):
         )
         return self
 
-    def _create_events(self) -> None:
-        self._viewmodel.create_events()
+    async def _create_events(self) -> None:
+        await self._viewmodel.create_events_async()
 
     def update(self, name: str, start_date: Optional[datetime]) -> None:
         pass
