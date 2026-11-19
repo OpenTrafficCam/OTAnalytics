@@ -143,13 +143,26 @@ class ArgparseCliParser(CliParser):
         self._parser.add_argument(
             "--geo-track-export",
             action="store_true",
-            help="Export tracks as GeoJSON.",
+            help=(
+                "Export reduced tracks (id, class, geo coordinate, time) "
+                "as .geo_tracks.json.bz2 file."
+            ),
             required=False,
         )
         self._parser.add_argument(
             "--traffic-statistics",
             action="store_true",
             help="Export traffic statistics. Uses the otconfig settings or defaults.",
+            required=False,
+        )
+        self._parser.add_argument(
+            "--traffic-statistics-restore",
+            nargs="+",
+            type=str,
+            help=(
+                "Road user assignment CSV files to restore the traffic statistics "
+                "state from."
+            ),
             required=False,
         )
         self._parser.add_argument(
@@ -214,4 +227,5 @@ class ArgparseCliParser(CliParser):
             exclude_classes=args.exclude_classes,
             geo_track_export=args.geo_track_export,
             traffic_statistics=args.traffic_statistics,
+            traffic_statistics_restore_files=args.traffic_statistics_restore,
         )
