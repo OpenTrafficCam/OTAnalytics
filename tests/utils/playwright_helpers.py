@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import time
@@ -6,9 +7,12 @@ from typing import Any, Iterable, Sequence
 
 import pytest
 from PIL import Image, ImageChops  # type: ignore
-from playwright.sync_api import Error, Page, TimeoutError
+from playwright.sync_api import Error, Page, TimeoutError, expect
 
-from OTAnalytics.application.config import SUPPORTED_VIDEO_FILE_TYPES
+from OTAnalytics.application.config import (
+    DEFAULT_TRACK_OFFSET,
+    SUPPORTED_VIDEO_FILE_TYPES,
+)
 from OTAnalytics.application.resources.resource_manager import (
     AddTracksKeys,
     AddVideoKeys,
@@ -877,7 +881,7 @@ def toggle_and_screenshot(
     screenshot_folder: Path,
     filename_base: str,
     nth: int = 0,
-    timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS,
+    timeout_ms: int = TRACK_LOADING_TIMEOUT_MS,
 ) -> None:
     """Toggle a checkbox on, take screenshot, then toggle off.
 
@@ -888,20 +892,35 @@ def toggle_and_screenshot(
         screenshot_folder: Folder where screenshots will be saved
         filename_base: Base name for screenshot files
         nth: Which occurrence to use if multiple checkboxes have same text
-        timeout_ms: Timeout in milliseconds to wait after toggling
+        timeout_ms: Timeout in milliseconds for the canvas to change after toggling
     """
     checkbox = page.get_by_text(checkbox_text, exact=True).nth(nth)
     checkbox.scroll_into_view_if_needed()
+    # Some layers take many seconds to plot, so wait for the image to change
+    image = canvas.locator(":scope > img")
+    before = image.get_attribute("src") or ""
 
-    # Toggle on and screenshot
     if not checkbox.is_checked():
         checkbox.click()
-    page.wait_for_timeout(timeout_ms)
-    canvas.screenshot(path=screenshot_folder / f"{filename_base}.png")
+    expect(image).not_to_have_attribute("src", before, timeout=timeout_ms)
+    # Let the layer settle before saving it and toggling it off
+    page.wait_for_timeout(PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    save_canvas(canvas, screenshot_folder / f"{filename_base}.png")
 
-    # Toggle off (no screenshot)
+    shown = image.get_attribute("src") or ""
     checkbox.click()
-    page.wait_for_timeout(timeout_ms)
+    expect(image).not_to_have_attribute("src", shown, timeout=timeout_ms)
+
+
+def save_canvas(canvas: Any, path: Path) -> None:
+    """Save the image the backend sent to the canvas and the svg of its sections.
+
+    Unlike a screenshot, neither depends on how the browser lays out the page.
+    """
+    source = canvas.locator(":scope > img").get_attribute("src")
+    path.write_bytes(base64.b64decode(source.split(",", 1)[1]))
+    sections = canvas.locator(".nicegui-interactive-image-layer > svg > g").last
+    path.with_suffix(".svg").write_text(sections.inner_html())
 
 
 def wait_for_canvas_change(
@@ -1247,16 +1266,35 @@ def click_update_offset_button(
 
     if offset_button.count() > 0:
         offset_button.scroll_into_view_if_needed()
-        canvas.screenshot(path=screenshot_folder / "offset_before.png")
+        save_canvas(canvas, screenshot_folder / "offset_before.png")
+        before = canvas.locator(":scope > img").get_attribute("src") or ""
 
         # Only click if enabled
         if not offset_button.is_disabled():
             offset_button.click()
             page.wait_for_timeout(timeout_ms)
-            canvas.screenshot(path=screenshot_folder / "offset_after.png")
+            save_canvas(canvas, screenshot_folder / "offset_after.png")
+            reset_track_offset(page, canvas, before)
             return True
 
     return False
+
+
+def reset_track_offset(page: Page, canvas: Any, default_source: str) -> None:
+    """Reset the track offset sliders, so later steps use the default offset.
+
+    The default lies in the middle of both sliders. The canvas then shows the
+    image it showed with the default offset again.
+    """
+    for slider, value in zip(
+        page.get_by_role("slider").all(),
+        (DEFAULT_TRACK_OFFSET.x, DEFAULT_TRACK_OFFSET.y),
+    ):
+        slider.click()
+        expect(slider).to_have_attribute("aria-valuenow", str(value))
+    expect(canvas.locator(":scope > img")).to_have_attribute(
+        "src", default_source, timeout=TRACK_LOADING_TIMEOUT_MS
+    )
 
 
 def _verify_screenshot_against_reference(
@@ -1308,9 +1346,13 @@ def capture_and_verify_baseline(
     )
     if page and timeout_ms:
         page.wait_for_timeout(timeout_ms)
-    canvas_screenshot = canvas.screenshot(path=actual_screenshot_path)
+    save_canvas(canvas, actual_screenshot_path)
     _verify_screenshot_against_reference(actual_screenshot_path, reference_screenshot)
-    return canvas_screenshot
+    assert (
+        actual_screenshot_path.with_suffix(".svg").read_text()
+        == reference_screenshot.with_suffix(".svg").read_text()
+    ), "Sections differ from reference"
+    return canvas.screenshot()
 
 
 def verify_filter_range_label_visible(page: Page) -> None:
@@ -1389,7 +1431,8 @@ def assert_screenshot_equal(
     diff_stat = list(diff.getdata())
 
     # Calculate difference ratio
-    pixels_different = sum(1 for pixel in diff_stat if pixel != (0, 0, 0))
+    # any() also fits images with an alpha channel, like those of the backend
+    pixels_different = sum(1 for pixel in diff_stat if any(pixel))
     total_pixels = actual_image.size[0] * actual_image.size[1]
     diff_ratio = pixels_different / total_pixels if total_pixels > 0 else 0
 
