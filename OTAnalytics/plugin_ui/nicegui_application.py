@@ -164,6 +164,8 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         self.datastore.register_section_changed_observer(
             self.flow_form.notify_section_changed
         )
+        # After the events were cleared for the changed tracks.
+        self.track_repository.register_tracks_observer(self.flow_form)
 
     @cached_property
     def webserver(self) -> Webserver:

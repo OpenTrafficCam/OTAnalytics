@@ -170,7 +170,20 @@ class TestTrackAssignment:
         target.notify_section_changed(SECTION_ID)
         await asyncio.sleep(AFTER_DEBOUNCE)
 
-        viewmodel.create_events.assert_called_once_with()
+        viewmodel.assign_tracks.assert_called_once_with()
+        viewmodel.create_events.assert_not_called()
+
+    async def test_loaded_tracks_are_assigned_once_after_a_pause(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """Loading tracks clears every event, e.g. when a project is opened."""
+        viewmodel = create_auto_viewmodel(auto=True)
+        target = await open_flow_form(user, viewmodel, resource_manager)
+
+        target.notify_tracks(Mock())
+        await asyncio.sleep(AFTER_DEBOUNCE)
+
+        viewmodel.assign_tracks.assert_called_once_with()
 
     async def test_changes_do_nothing_without_auto_assignment(
         self, user: User, resource_manager: ResourceManager
@@ -182,7 +195,7 @@ class TestTrackAssignment:
         target.notify_flows([])
         await asyncio.sleep(AFTER_DEBOUNCE)
 
-        viewmodel.create_events.assert_not_called()
+        viewmodel.assign_tracks.assert_not_called()
 
     async def test_changes_without_flows_do_nothing(
         self, user: User, resource_manager: ResourceManager
@@ -194,7 +207,7 @@ class TestTrackAssignment:
         target.notify_flows([])
         await asyncio.sleep(AFTER_DEBOUNCE)
 
-        viewmodel.create_events.assert_not_called()
+        viewmodel.assign_tracks.assert_not_called()
 
     def test_changes_before_build_do_nothing(
         self, resource_manager: ResourceManager
@@ -204,4 +217,4 @@ class TestTrackAssignment:
 
         target.notify_section_changed(SECTION_ID)
 
-        viewmodel.create_events.assert_not_called()
+        viewmodel.assign_tracks.assert_not_called()
