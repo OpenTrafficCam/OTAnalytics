@@ -1,6 +1,6 @@
 import random
 
-from matplotlib import colors as mcolors
+from PIL import ImageColor
 
 from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.tls8plus1_classes import Tls8plus1Classes
@@ -51,11 +51,11 @@ class ColorPaletteProvider:
     def update(self, classifications: frozenset[str]) -> None:
         for classification in classifications:
             if classification in self._default_palette.keys():
-                self._palette[classification] = self._default_palette[classification]
-                color = mcolors.CSS4_COLORS.get(self._default_palette[classification])
-                self._numeric[classification] = hex_to_rgb_tuple(str(color))
+                color = self._default_palette[classification]
             else:
-                self._palette[classification] = self._generate_random_color()
+                color = self._generate_random_color()
+            self._palette[classification] = color
+            self._numeric[classification] = to_rgb(color)
 
     @staticmethod
     def _generate_random_color() -> str:
@@ -71,22 +71,15 @@ class ColorPaletteProvider:
         return self._numeric
 
 
-def hex_to_rgb_tuple(hex_color: str) -> tuple[int, int, int]:
-    """
-    Converts a hex color string to an RGB tuple of integers.
+def to_rgb(color: str) -> tuple[int, int, int]:
+    """Convert a color name or hex color string to an RGB tuple of integers.
 
     Args:
-        hex_color (str): Hex color string (e.g., "#FF5733" or "FF5733")
+        color (str): CSS color name (e.g., "blue") or hex color string
+            (e.g., "#FF5733").
 
     Returns:
-        tuple: RGB tuple (r, g, b) with values from 0-255
+        tuple[int, int, int]: RGB tuple (r, g, b) with values from 0-255.
     """
-    # Remove the '#' at the beginning, if present
-    hex_color = hex_color.lstrip("#")
-
-    # Convert each two-digit hex value to int
-    r = int(hex_color[0:2], 16)
-    g = int(hex_color[2:4], 16)
-    b = int(hex_color[4:6], 16)
-
-    return r, g, b
+    red, green, blue = ImageColor.getrgb(color)[:3]
+    return red, green, blue

@@ -975,6 +975,146 @@ class MatplotlibTrackPlotter(TrackPlotter):
         return self._track_image_factory.create(image_array)
 
 
+class TrackPlotterFactory(ABC):
+    """Creates the track plotters of one render backend."""
+
+    @abstractmethod
+    def create_track_geometry_plotter(
+        self,
+        data_provider: PolarsDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float,
+        enable_legend: bool,
+    ) -> TrackPlotter:
+        """Plotter drawing each track as a line, like `TrackGeometryPlotter`."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_track_start_end_point_plotter(
+        self,
+        data_provider: PolarsDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float,
+        enable_legend: bool,
+    ) -> TrackPlotter:
+        """Plotter drawing start and end of each track, like
+        `TrackStartEndPointPlotter`."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_track_bounding_box_plotter(
+        self,
+        data_provider: PolarsDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float,
+        linewidth: float,
+    ) -> TrackPlotter:
+        """Plotter drawing the bounding box of each detection, like
+        `TrackBoundingBoxPlotter`."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_track_point_plotter(
+        self,
+        data_provider: PolarsDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float,
+        markersize: float,
+        marker: str,
+    ) -> TrackPlotter:
+        """Plotter drawing a marker per detection, like `TrackPointPlotter`."""
+        raise NotImplementedError
+
+
+class MatplotlibTrackPlotterFactory(TrackPlotterFactory):
+    """Creates the matplotlib based track plotters."""
+
+    def __init__(
+        self,
+        track_image_factory: TrackImageFactory,
+        track_view_state: TrackViewState,
+    ) -> None:
+        self._track_image_factory = track_image_factory
+        self._track_view_state = track_view_state
+
+    def create_track_geometry_plotter(
+        self,
+        data_provider: PolarsDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float,
+        enable_legend: bool,
+    ) -> TrackPlotter:
+        implementation: MatplotlibPlotterImplementation
+        if enable_legend:
+            implementation = TrackGeometryPlotter(
+                data_provider,
+                color_palette_provider,
+                alpha=alpha,
+                enable_legend=enable_legend,
+            )
+        else:
+            implementation = NonLegendTrackGeometryPlotter(
+                data_provider, color_palette_provider, alpha=alpha
+            )
+        return self._wrap(implementation)
+
+    def create_track_start_end_point_plotter(
+        self,
+        data_provider: PolarsDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float,
+        enable_legend: bool,
+    ) -> TrackPlotter:
+        return self._wrap(
+            TrackStartEndPointPlotter(
+                data_provider,
+                color_palette_provider,
+                enable_legend=enable_legend,
+                alpha=alpha,
+            )
+        )
+
+    def create_track_bounding_box_plotter(
+        self,
+        data_provider: PolarsDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float,
+        linewidth: float,
+    ) -> TrackPlotter:
+        return self._wrap(
+            TrackBoundingBoxPlotter(
+                data_provider,
+                color_palette_provider,
+                self._track_view_state,
+                alpha=alpha,
+                linewidth=linewidth,
+            )
+        )
+
+    def create_track_point_plotter(
+        self,
+        data_provider: PolarsDataFrameProvider,
+        color_palette_provider: ColorPaletteProvider,
+        alpha: float,
+        markersize: float,
+        marker: str,
+    ) -> TrackPlotter:
+        return self._wrap(
+            TrackPointPlotter(
+                data_provider,
+                color_palette_provider,
+                alpha=alpha,
+                markersize=markersize,
+                marker=marker,
+            )
+        )
+
+    def _wrap(self, implementation: MatplotlibPlotterImplementation) -> TrackPlotter:
+        return MatplotlibTrackPlotter(
+            implementation, track_image_factory=self._track_image_factory
+        )
+
+
 class PilImageFactory(TrackImageFactory):
     """Factory to create TrackImage objects using PIL."""
 
