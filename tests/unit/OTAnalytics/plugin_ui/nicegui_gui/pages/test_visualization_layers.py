@@ -6,7 +6,10 @@ from nicegui import ui
 from nicegui.element import Element
 from nicegui.testing import User
 
-from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.application.resources.resource_manager import (
+    ResourceManager,
+    VisualizationOffsetSliderKeys,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import (
     VisualizationLayers,
 )
@@ -49,3 +52,6 @@ class TestVisualizationLayers:
             if text in (LAYERS, TRACK_REFERENCE_POINT, OFFSET)
         ]
         assert texts == [LAYERS, TRACK_REFERENCE_POINT, OFFSET]
+        await user.should_see(
+            resource_manager.get(VisualizationOffsetSliderKeys.LABEL_DESCRIPTION)
+        )

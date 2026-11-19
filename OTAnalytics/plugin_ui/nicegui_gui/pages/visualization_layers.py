@@ -29,12 +29,19 @@ class VisualizationLayers:
             self._resource_manager.get(
                 VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER
             )
-        )
+        ).classes("ota-panel-title")
 
         self._layers_form.build()
-        ui.label(
-            self._resource_manager.get(
-                VisualizationOffsetSliderKeys.LABEL_TRACK_REFERENCE_POINT
-            )
-        ).classes("text-subtitle2")
-        self._offset_slider_form.build()
+        with ui.column().classes("ota-reference-point"):
+            with ui.column().classes("gap-0"):
+                ui.label(
+                    self._resource_manager.get(
+                        VisualizationOffsetSliderKeys.LABEL_TRACK_REFERENCE_POINT
+                    )
+                ).classes("ota-reference-title")
+                ui.label(
+                    self._resource_manager.get(
+                        VisualizationOffsetSliderKeys.LABEL_DESCRIPTION
+                    )
+                ).classes("ota-reference-description")
+            self._offset_slider_form.build()

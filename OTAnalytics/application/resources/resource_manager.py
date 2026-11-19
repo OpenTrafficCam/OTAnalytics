@@ -176,6 +176,7 @@ class OffsetSliderKeys(ResourceKey):
 class VisualizationOffsetSliderKeys(ResourceKey):
     BUTTON_UPDATE_OFFSET = "offset-slider-keys-button-update-offset"
     LABEL_TRACK_REFERENCE_POINT = "offset-slider-keys-label-track-reference-point"
+    LABEL_DESCRIPTION = "offset-slider-keys-label-description"
 
 
 class RemarkKeys(ResourceKey):
@@ -425,9 +426,12 @@ DEFAULT_RESOURCE_MAP = {
         "Start must be before end."
     ),
     VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING: "Update flow highlighting",
-    VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
+    VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Layers",
     VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
     VisualizationOffsetSliderKeys.LABEL_TRACK_REFERENCE_POINT: "Track reference point",
+    VisualizationOffsetSliderKeys.LABEL_DESCRIPTION: (
+        "Point of the bounding box at which tracks are drawn."
+    ),
     WorkspaceKeys.LABEL_WORKSPACE_FORM_HEADER: "Workspace",
     LoadWindowKeys.LABEL_START_DATE: "Start date (UTC)",
     LoadWindowKeys.LABEL_START_TIME: "Start time (UTC)",
