@@ -131,6 +131,30 @@ class TestFlowTrackCountObservers:
         )
 
 
+class TestVisualization:
+    def test_track_image_has_no_class_legend(self) -> None:
+        """The class legend on the canvas replaces the one in the track image."""
+        target = create_target(create_given())
+        for name in (
+            "datastore",
+            "intersection_repository",
+            "track_view_state",
+            "videos_metadata",
+            "section_state",
+            "color_palette_provider",
+            "progressbar_builder",
+            "track_image_factory",
+            "track_id_set_factory",
+            "current_orthophoto_image",
+        ):
+            target.__dict__[name] = Mock()
+
+        builder = target.visualization_builder
+
+        assert builder._enable_single_legend is False
+        assert builder._enable_multi_legend is False
+
+
 @dataclass
 class Given:
     run_config: Mock

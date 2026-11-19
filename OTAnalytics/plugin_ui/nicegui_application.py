@@ -131,6 +131,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_fo
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
 from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
+from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 
 DEFAULT_HOSTNAME = "localhost"
 DEFAULT_PORT = 5000
@@ -217,6 +218,24 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             sections_form=self.section_form,
             flow_form=self.flow_form,
             analysis_form=self.analysis_form,
+        )
+
+    @cached_property
+    def visualization_builder(self) -> VisualizationBuilder:
+        """Without a legend in the track image: the class legend on the canvas
+        shows the class colours."""
+        return VisualizationBuilder(
+            self.datastore,
+            self.intersection_repository,
+            self.track_view_state,
+            self.videos_metadata,
+            self.section_state,
+            self.color_palette_provider,
+            self.progressbar_builder,
+            self.track_image_factory,
+            self.track_id_set_factory,
+            self.current_orthophoto_image.get,
+            enable_single_legend=False,
         )
 
     @cached_property
