@@ -1,3 +1,5 @@
+import threading
+from threading import current_thread
 from unittest.mock import Mock, call
 
 import pytest
@@ -76,6 +78,28 @@ class TestSimpleCreateIntersectionEvents:
         run_intersect.assert_not_called()
         add_events.assert_not_called()
 
+    async def test_intersects_on_worker_thread(
+        self, section: Mock, event: Mock
+    ) -> None:
+        threads: list[threading.Thread] = []
+
+        def intersect(_: list[Section]) -> list[Mock]:
+            threads.append(current_thread())
+            return [event]
+
+        add_events = Mock(spec=AddEvents)
+        add_events.side_effect = lambda *_: threads.append(current_thread())
+
+        await SimpleCreateIntersectionEvents(
+            Mock(spec=RunIntersect, side_effect=intersect),
+            Mock(return_value=[section]),
+            add_events,
+        ).call_async()
+
+        assert threads[0] is not current_thread()
+        assert threads[1:] == [current_thread()]
+        assert add_events.call_args == call([event], [section.id])
+
 
 class TestSimpleCreateSceneEvents:
     def test_create_scene_events(self, event: Mock) -> None:
@@ -95,6 +119,26 @@ class TestSimpleCreateSceneEvents:
         get_all_tracks.as_dataset.assert_called_once()
         scene_action_detector.detect.assert_called_once_with(dataset)
         add_events.assert_called_once_with([event])
+
+    async def test_detects_on_worker_thread(self, event: Mock) -> None:
+        threads: list[threading.Thread] = []
+
+        def detect(_: TrackDataset) -> list[Mock]:
+            threads.append(current_thread())
+            return [event]
+
+        scene_action_detector = Mock(spec=SceneActionDetector)
+        scene_action_detector.detect.side_effect = detect
+        add_events = Mock(spec=AddEvents)
+        add_events.side_effect = lambda *_: threads.append(current_thread())
+
+        await SimpleCreateSceneEvents(
+            Mock(spec=GetAllTracks), scene_action_detector, add_events
+        ).call_async()
+
+        assert threads[0] is not current_thread()
+        assert threads[1:] == [current_thread()]
+        assert add_events.call_args == call([event])
 
 
 class TestCreateEvents:
@@ -118,6 +162,17 @@ class TestCreateEvents:
 
         create_intersection_events.assert_called_once()
         create_scene_events.assert_called_once()
+
+    async def test_create_events_async(self) -> None:
+        create_intersection_events = Mock(spec=CreateIntersectionEvents)
+        create_scene_events = Mock(spec=CreateSceneEvents)
+
+        await CreateEvents(
+            Mock(spec=ClearAllEvents), create_intersection_events, create_scene_events
+        ).call_async()
+
+        create_intersection_events.call_async.assert_awaited_once()
+        create_scene_events.call_async.assert_awaited_once()
 
 
 class TestFilterOutCuttingSections:

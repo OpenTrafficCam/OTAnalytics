@@ -253,6 +253,10 @@ class ViewModel(
         pass
 
     @abstractmethod
+    async def create_events_async(self) -> None:
+        pass
+
+    @abstractmethod
     def save_events(self, file: str) -> None:
         pass
 

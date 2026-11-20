@@ -2,7 +2,7 @@ import time
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Page  # type: ignore  # noqa: E402
+from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import (
     ResourceManager,
@@ -135,6 +135,8 @@ class TestVideoImportAndDisplay:
             .first
         )
         img.wait_for(state="visible")
+        # The frame is plotted off the event loop, so it arrives a moment later
+        expect(img).not_to_have_attribute("src", "")
         src1 = img.get_attribute("src") or ""
         assert src1, "Preview image src should not be empty after selecting first video"
 

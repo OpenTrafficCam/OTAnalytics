@@ -1,3 +1,5 @@
+import asyncio
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -254,6 +256,71 @@ class TestTrackImageUpdater:
         assert track_view_state.background_image.get() == background_image
 
         plotter.plot.assert_called_once()
+
+    async def test_update_image_plots_on_worker_thread(self) -> None:
+        image = Mock(spec=TrackImage)
+        threads: list[threading.Thread] = []
+
+        def plot() -> TrackImage:
+            threads.append(threading.current_thread())
+            return image
+
+        track_view_state = TrackViewState()
+        updater = self._create_updater(track_view_state, plot)
+
+        updater.update_image()
+
+        assert track_view_state.background_image.get() is None
+        await _wait_until(lambda: track_view_state.background_image.get() is image)
+        assert threads[0] is not threading.current_thread()
+
+    async def test_update_image_shows_only_latest_image(self) -> None:
+        outdated = Mock(spec=TrackImage)
+        latest = Mock(spec=TrackImage)
+        images = iter([outdated, latest])
+        plotting = threading.Event()
+        proceed = threading.Event()
+
+        def plot() -> TrackImage:
+            image = next(images)
+            if image is outdated:
+                plotting.set()
+                proceed.wait(timeout=5)
+            return image
+
+        track_view_state = TrackViewState()
+        shown: list[Optional[TrackImage]] = []
+        track_view_state.background_image.register(shown.append)
+        updater = self._create_updater(track_view_state, plot)
+
+        updater.update_image()
+        await asyncio.to_thread(plotting.wait, 5)
+        updater.update_image()
+        updater.update_image()
+        proceed.set()
+
+        await _wait_until(lambda: shown == [latest])
+
+    def _create_updater(
+        self, track_view_state: TrackViewState, plot: Callable[[], TrackImage]
+    ) -> TrackImageUpdater:
+        plotter = Mock(spec=Plotter)
+        plotter.plot.side_effect = plot
+        return TrackImageUpdater(
+            Mock(spec=Datastore),
+            track_view_state,
+            SectionState(Mock()),
+            FlowState(),
+            plotter,
+        )
+
+
+async def _wait_until(condition: Callable[[], bool]) -> None:
+    for _ in range(500):
+        if condition():
+            return
+        await asyncio.sleep(0.01)
+    assert condition()
 
 
 @pytest.fixture
