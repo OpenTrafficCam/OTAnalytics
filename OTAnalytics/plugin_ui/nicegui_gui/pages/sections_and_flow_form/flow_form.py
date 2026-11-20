@@ -13,8 +13,8 @@ from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.flow import FLOW_NAME, Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button import CustomButton
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.ota_button import ota_button
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
     CustomTable,
@@ -175,14 +175,13 @@ class FlowForm(
         secondary: bool = False,
         icon: str | None = None,
     ) -> ui.button:
-        return ota_button(
+        return CustomButton(
             self._resource_manager.get(key),
             on_click,
-            marker,
+            marker=marker,
             secondary=secondary,
             icon=icon,
-            test_id=True,
-        )
+        ).build()
 
     def _build_track_assignment(self) -> None:
         with ui.column().classes("ota-assignment").mark(MARKER_ASSIGNMENT_BOX):
