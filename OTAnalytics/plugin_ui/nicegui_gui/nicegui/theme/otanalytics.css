@@ -654,12 +654,12 @@ body:has(.ota-app) {
 
 /* Tags in lists, e.g. the type of a section */
 .ota-tag {
-  padding: 1px var(--ota-space-2);
-  border: 1px solid var(--ota-border);
-  border-radius: 999px;
-  background: var(--ota-surface);
-  color: var(--ota-text-muted);
-  font-size: var(--ota-font-size-xs);
+    padding: 1px var(--ota-space-2);
+    border: 1px solid var(--ota-border);
+    border-radius: 999px;
+    background: var(--ota-surface);
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-xs);
 }
 
 /* Numbers in lists, e.g. the tracks assigned to a flow */
