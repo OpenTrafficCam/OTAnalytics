@@ -654,65 +654,65 @@ body:has(.ota-app) {
 
 /* Right panel */
 .ota-panel-title {
-  margin: var(--ota-space-1) 6px 6px;
-  color: var(--ota-text);
-  font-size: 14px;
-  font-weight: 700;
+    margin: var(--ota-space-1) 6px 6px;
+    color: var(--ota-text);
+    font-size: 14px;
+    font-weight: 700;
 }
 
 /* Track reference point: the point of the bounding box at which tracks are drawn */
 .ota-reference-point {
-  width: 100%;
-  gap: 10px;
-  margin-top: var(--ota-space-3);
-  padding: var(--ota-space-3) 6px 0;
-  border-top: 1px solid var(--ota-border);
+    width: 100%;
+    gap: 10px;
+    margin-top: var(--ota-space-3);
+    padding: var(--ota-space-3) 6px 0;
+    border-top: 1px solid var(--ota-border);
 }
 
 .ota-reference-title {
-  color: var(--ota-text);
-  font-size: 14px;
-  font-weight: 700;
+    color: var(--ota-text);
+    font-size: 14px;
+    font-weight: 700;
 }
 
 .ota-reference-description {
-  color: var(--ota-text-muted);
-  font-size: var(--ota-font-size-sm);
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-sm);
 }
 
 .ota-offset-box {
-  position: relative;
-  align-self: stretch;
-  height: 84px;
-  margin: 6px 14px;
-  border: 2px dashed var(--ota-border-strong);
-  border-radius: 4px;
-  background: var(--ota-hover);
+    position: relative;
+    align-self: stretch;
+    height: 84px;
+    margin: 6px 14px;
+    border: 2px dashed var(--ota-border-strong);
+    border-radius: 4px;
+    background: var(--ota-hover);
 }
 
 .ota-offset-point {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: var(--ota-primary);
-  box-shadow: 0 0 0 3px #ffffff;
-  transform: translate(-50%, -50%);
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: var(--ota-primary);
+    box-shadow: 0 0 0 3px #fff;
+    transform: translate(-50%, -50%);
 }
 
 .ota-offset-row {
-  width: 100%;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ota-space-2);
-  color: var(--ota-text-muted);
-  font-size: var(--ota-font-size-sm);
-  font-weight: 600;
+    width: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-2);
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-sm);
+    font-weight: 600;
 }
 
 .ota-offset-value {
-  width: 32px;
-  text-align: right;
+    width: 32px;
+    text-align: right;
 }
 
 /* Tags in lists, e.g. the type of a section */
