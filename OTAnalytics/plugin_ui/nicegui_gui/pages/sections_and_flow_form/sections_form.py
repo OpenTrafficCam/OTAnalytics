@@ -12,6 +12,7 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.application.state import SectionState
 from OTAnalytics.domain.section import NAME, Section, SectionType
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.ota_button import ota_button
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
     CustomTable,
@@ -106,29 +107,36 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
 
     def build(self) -> Self:
         with ui.row().classes(BUTTON_ROW):
-            self._button_add_line = ui.button(
-                self._resource_manager.get(SectionKeys.BUTTON_ADD_LINE),
+            self._button_add_line = self._button(
+                SectionKeys.BUTTON_ADD_LINE,
+                self._viewmodel.add_line_section,
+                MARKER_BUTTON_ADD_LINE,
                 icon="add",
-                on_click=self._viewmodel.add_line_section,
             )
-            self._button_add_line.mark(MARKER_BUTTON_ADD_LINE)
-            self._button_add_areas = self._secondary_button(
+            self._button_add_areas = self._button(
                 SectionKeys.BUTTON_ADD_AREA,
                 self._viewmodel.add_area_section,
                 MARKER_BUTTON_ADD_AREA,
-            ).props("icon=add")
-            self._button_edit = self._secondary_button(
+                secondary=True,
+                icon="add",
+            )
+            self._button_edit = self._button(
                 SectionKeys.BUTTON_EDIT,
                 self._viewmodel.edit_section_geometry,
                 MARKER_BUTTON_EDIT,
+                secondary=True,
             )
-            self._button_properties = self._secondary_button(
+            self._button_properties = self._button(
                 SectionKeys.BUTTON_PROPERTIES,
                 self._viewmodel.edit_selected_section_metadata,
                 MARKER_BUTTON_PROPERTIES,
+                secondary=True,
             )
-            self._button_remove = self._secondary_button(
-                SectionKeys.BUTTON_REMOVE, self.remove_sections, MARKER_BUTTON_REMOVE
+            self._button_remove = self._button(
+                SectionKeys.BUTTON_REMOVE,
+                self.remove_sections,
+                MARKER_BUTTON_REMOVE,
+                secondary=True,
             )
         self._section_table.build()
         self._section_table.add_cell_slot(COLUMN_TYPE, TYPE_TAG)
@@ -137,13 +145,21 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
         self._viewmodel.set_sections_frame(self)
         return self
 
-    def _secondary_button(
-        self, key: SectionKeys, on_click: Callable[..., Any], marker: str
+    def _button(
+        self,
+        key: SectionKeys,
+        on_click: Callable[..., Any],
+        marker: str,
+        secondary: bool = False,
+        icon: str | None = None,
     ) -> ui.button:
-        button = ui.button(self._resource_manager.get(key), on_click=on_click)
-        button.props("outline")
-        button.mark(marker)
-        return button
+        return ota_button(
+            self._resource_manager.get(key),
+            on_click,
+            marker,
+            secondary=secondary,
+            icon=icon,
+        )
 
     def get_add_buttons(self) -> list[Button]:
         if self._button_add_line and self._button_add_areas:
