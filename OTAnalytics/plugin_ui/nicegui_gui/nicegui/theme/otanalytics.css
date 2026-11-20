@@ -1,644 +1,646 @@
 /* Stylesheet of the OTAnalytics web UI, loaded once by global_theme(). */
 
 :root {
-  /* Compact desktop density instead of NiceGUI's 1rem padding and gaps */
-  --nicegui-default-padding: 8px;
-  --nicegui-default-gap: 8px;
+    /* Compact desktop density instead of NiceGUI's 1rem padding and gaps */
+    --nicegui-default-padding: 8px;
+    --nicegui-default-gap: 8px;
 
-  /* Colours */
-  --ota-primary: #37483e;
-  --ota-primary-hover: #2a362e;
-  --ota-text: #37483e;
-  --ota-text-strong: #111914;
-  --ota-text-muted: #596d63;
-  --ota-border: #d9e2dd;
-  --ota-border-light: #e8efeb;
-  --ota-border-strong: #b4c2bb;
-  --ota-bg: #f6f8f7;
-  --ota-hover: #f4f7f5;
-  --ota-surface: #ffffff;
-  --ota-selected: #d4e1da;
-  --ota-on-primary-muted: #d4e1da;
-  --ota-fresh: #4d6856;
-  --ota-stale-dot: #b48a2a;
-  --ota-stale-text: #7a5a14;
+    /* Colours */
+    --ota-primary: #37483e;
+    --ota-primary-hover: #2a362e;
+    --ota-text: #37483e;
+    --ota-text-strong: #111914;
+    --ota-text-muted: #596d63;
+    --ota-border: #d9e2dd;
+    --ota-border-light: #e8efeb;
+    --ota-border-strong: #b4c2bb;
+    --ota-bg: #f6f8f7;
+    --ota-hover: #f4f7f5;
+    --ota-surface: #fff;
+    --ota-selected: #d4e1da;
+    --ota-on-primary-muted: #d4e1da;
+    --ota-fresh: #4d6856;
+    --ota-stale-dot: #b48a2a;
+    --ota-stale-text: #7a5a14;
 
-  /* Fonts */
-  --ota-font: "Open Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --ota-font-mono: "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
-  --ota-font-size: 13px;
-  --ota-font-size-sm: 12px;
-  --ota-font-size-xs: 11px;
+    /* Fonts */
+    --ota-font: "Open Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --ota-font-mono: "Roboto Mono", ui-monospace, menlo, consolas, monospace;
+    --ota-font-size: 13px;
+    --ota-font-size-sm: 12px;
+    --ota-font-size-xs: 11px;
 
-  /* Spacing and radius */
-  --ota-space-1: 4px;
-  --ota-space-2: 8px;
-  --ota-space-3: 12px;
-  --ota-space-4: 16px;
-  --ota-radius: 6px;
-  --ota-radius-lg: 8px;
+    /* Spacing and radius */
+    --ota-space-1: 4px;
+    --ota-space-2: 8px;
+    --ota-space-3: 12px;
+    --ota-space-4: 16px;
+    --ota-radius: 6px;
+    --ota-radius-lg: 8px;
 
-  /* Layout */
-  --ota-header-height: 52px;
-  --ota-status-height: 30px;
-  --ota-left-width: 344px;
-  --ota-right-width: 288px;
-  --ota-control-height: 28px;
-  --ota-field-height: 32px;
-  --ota-step-input-width: 5rem;
-  --ota-stale-opacity: 0.4;
+    /* Layout */
+    --ota-header-height: 52px;
+    --ota-status-height: 30px;
+    --ota-left-width: 344px;
+    --ota-right-width: 288px;
+    --ota-control-height: 28px;
+    --ota-field-height: 32px;
+    --ota-step-input-width: 5rem;
+    --ota-stale-opacity: 0.4;
 }
 
 /* Quasar takes its primary colour from here. ui.colors() writes every colour
    inline on the body, including a default primary, so this one is important. */
 body {
-  --q-primary: var(--ota-primary) !important;
-  font-family: var(--ota-font);
-  font-size: var(--ota-font-size);
-  line-height: 1.4;
-  color: var(--ota-text);
-  background: var(--ota-bg);
+    --q-primary: var(--ota-primary) !important;
+
+    font-family: var(--ota-font);
+    font-size: var(--ota-font-size);
+    line-height: 1.4;
+    color: var(--ota-text);
+    background: var(--ota-bg);
 }
 
 /* Page frame: only the side panels scroll, not the page. */
 body:has(.ota-app) {
-  overflow: hidden;
+    overflow: hidden;
 }
 
 .ota-app {
-  height: calc(100vh - var(--ota-header-height));
-  padding: 0;
-  gap: 0;
+    height: calc(100vh - var(--ota-header-height));
+    padding: 0;
+    gap: 0;
 }
 
 .ota-panels {
-  width: 100%;
-  flex: 1 1 0%;
-  min-height: 0;
-  gap: 0;
-  flex-wrap: nowrap;
+    width: 100%;
+    flex: 1 1 0%;
+    min-height: 0;
+    gap: 0;
+    flex-wrap: nowrap;
 }
 
 .ota-left,
 .ota-right {
-  flex: none;
-  height: 100%;
-  overflow-y: auto;
-  padding: var(--ota-space-3);
+    flex: none;
+    height: 100%;
+    overflow-y: auto;
+    padding: var(--ota-space-3);
 }
 
 .ota-left {
-  width: var(--ota-left-width);
-  gap: var(--ota-space-2);
-  background: var(--ota-bg);
-  border-right: 1px solid var(--ota-border);
+    width: var(--ota-left-width);
+    gap: var(--ota-space-2);
+    background: var(--ota-bg);
+    border-right: 1px solid var(--ota-border);
 }
 
 .ota-right {
-  width: var(--ota-right-width);
-  gap: var(--ota-space-1);
-  background: var(--ota-surface);
-  border-left: 1px solid var(--ota-border);
+    width: var(--ota-right-width);
+    gap: var(--ota-space-1);
+    background: var(--ota-surface);
+    border-left: 1px solid var(--ota-border);
 }
 
 .ota-center {
-  display: flex;
-  flex: 1 1 0%;
-  flex-direction: column;
-  min-width: 0;
-  height: 100%;
-  padding: var(--ota-space-3);
-  gap: 10px;
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+    padding: var(--ota-space-3);
+    gap: 10px;
 }
 
 /* Header */
 .ota-header {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ota-space-4);
-  height: var(--ota-header-height);
-  padding: 0 var(--ota-space-4);
-  background-color: var(--ota-primary);
-  color: #ffffff;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-4);
+    height: var(--ota-header-height);
+    padding: 0 var(--ota-space-4);
+    background-color: var(--ota-primary);
+    color: #fff;
 }
 
 .ota-brand {
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 10px;
-  font-size: 18px;
-  font-weight: 700;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
 }
 
 .ota-brand-icon {
-  font-size: 26px;
-  color: #b4cbc0;
+    font-size: 26px;
+    color: #b4cbc0;
 }
 
 .ota-header-divider {
-  flex: none;
-  width: 1px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.25);
+    flex: none;
+    width: 1px;
+    height: 24px;
+    background: rgb(255 255 255 / 25%);
 }
 
 .ota-project-title {
-  flex-wrap: nowrap;
-  align-items: baseline;
-  gap: var(--ota-space-2);
-  min-width: 0;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: var(--ota-space-2);
+    min-width: 0;
 }
 
 .ota-project-name {
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .ota-save-state {
-  font-size: var(--ota-font-size-sm);
-  color: var(--ota-on-primary-muted);
-  white-space: nowrap;
+    font-size: var(--ota-font-size-sm);
+    color: var(--ota-on-primary-muted);
+    white-space: nowrap;
 }
 
 .ota-header-actions {
-  flex-wrap: nowrap;
-  gap: var(--ota-space-2);
-  margin-left: auto;
+    flex-wrap: nowrap;
+    gap: var(--ota-space-2);
+    margin-left: auto;
 }
 
 .ota-header .q-btn--outline {
-  color: #ffffff !important;
+    color: #fff !important;
 }
 
-.ota-header .q-btn--outline:before {
-  border-color: rgba(255, 255, 255, 0.35);
+.ota-header .q-btn--outline::before {
+    border-color: rgb(255 255 255 / 35%);
 }
 
 /* Save: solid white unless there are unsaved changes, then orange. */
 .ota-header .ota-header-primary:not(.bg-orange) {
-  background: #ffffff !important;
-  color: var(--ota-primary) !important;
+    background: #fff !important;
+    color: var(--ota-primary) !important;
 }
 
 /* Buttons */
 .q-btn {
-  min-height: var(--ota-control-height);
-  padding: 0 10px;
-  border-radius: var(--ota-radius);
-  font-size: var(--ota-font-size-sm);
-  font-weight: 600;
+    min-height: var(--ota-control-height);
+    padding: 0 10px;
+    border-radius: var(--ota-radius);
+    font-size: var(--ota-font-size-sm);
+    font-weight: 600;
 }
 
 .q-btn .q-btn__content {
-  min-height: var(--ota-control-height);
+    min-height: var(--ota-control-height);
 }
 
 .q-btn--round {
-  padding: 0;
+    padding: 0;
 }
 
 /* Fields */
 .q-field--dense .q-field__control,
 .q-field--dense .q-field__marginal {
-  height: var(--ota-field-height);
-  min-height: var(--ota-field-height);
+    height: var(--ota-field-height);
+    min-height: var(--ota-field-height);
 }
 
 .q-field--dense .q-field__native {
-  font-size: var(--ota-font-size);
+    font-size: var(--ota-font-size);
 }
 
 .q-field--outlined .q-field__control {
-  border-radius: var(--ota-radius);
+    border-radius: var(--ota-radius);
 }
 
-.q-field--outlined .q-field__control:before {
-  border-color: var(--ota-border-strong);
+.q-field--outlined .q-field__control::before {
+    border-color: var(--ota-border-strong);
 }
 
 .q-field__label {
-  font-size: var(--ota-font-size-sm);
+    font-size: var(--ota-font-size-sm);
 }
 
 /* Checkboxes and switches */
 .q-checkbox--dense,
 .q-toggle--dense {
-  min-height: var(--ota-control-height);
-  gap: var(--ota-space-2);
-  font-size: var(--ota-font-size);
+    min-height: var(--ota-control-height);
+    gap: var(--ota-space-2);
+    font-size: var(--ota-font-size);
 }
 
 /* Workflow accordion */
 .ota-group.q-expansion-item {
-  width: 100%;
-  background: var(--ota-surface);
-  border: 1px solid var(--ota-border);
-  border-radius: var(--ota-radius-lg);
-  overflow: hidden;
+    width: 100%;
+    background: var(--ota-surface);
+    border: 1px solid var(--ota-border);
+    border-radius: var(--ota-radius-lg);
+    overflow: hidden;
 }
 
 .ota-group .q-expansion-item__container > .q-item {
-  min-height: 0;
-  padding: var(--ota-space-3) 14px;
+    min-height: 0;
+    padding: var(--ota-space-3) 14px;
 }
 
 .ota-group .q-expansion-item__container > .q-item:hover {
-  background: var(--ota-hover);
+    background: var(--ota-hover);
 }
 
 .ota-group .q-expansion-item__content {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: var(--ota-space-1) 14px var(--ota-space-4);
-  border-top: 1px solid var(--ota-border-light);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: var(--ota-space-1) 14px var(--ota-space-4);
+    border-top: 1px solid var(--ota-border-light);
 }
 
 .ota-group-header {
-  flex: 1;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ota-space-3);
-  min-width: 0;
+    flex: 1;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-3);
+    min-width: 0;
 }
 
 .ota-step-badge {
-  flex: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  background: var(--ota-primary);
-  color: #ffffff;
-  font-size: var(--ota-font-size-sm);
-  font-weight: 700;
-  line-height: 24px;
-  text-align: center;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--ota-primary);
+    color: #fff;
+    font-size: var(--ota-font-size-sm);
+    font-weight: 700;
+    line-height: 24px;
+    text-align: center;
 }
 
 .ota-step-badge--secondary {
-  background: var(--ota-border-light);
-  color: var(--ota-primary);
-  font-size: 10px;
+    background: var(--ota-border-light);
+    color: var(--ota-primary);
+    font-size: 10px;
 }
 
 .ota-group-heading {
-  flex: 1;
-  gap: 2px;
-  min-width: 0;
+    flex: 1;
+    gap: 2px;
+    min-width: 0;
 }
 
 .ota-group-title {
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.3;
-  color: var(--ota-text);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ota-text);
 }
 
 .ota-group-summary {
-  overflow: hidden;
-  font-size: var(--ota-font-size-sm);
-  line-height: 1.3;
-  color: var(--ota-text-muted);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+    overflow: hidden;
+    font-size: var(--ota-font-size-sm);
+    line-height: 1.3;
+    color: var(--ota-text-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 /* Project group: track files, videos and remark */
 .ota-subheading {
-  margin: var(--ota-space-2) 0 0;
-  color: var(--ota-text-muted);
-  font-size: var(--ota-font-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+    margin: var(--ota-space-2) 0 0;
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .ota-file-section,
 .ota-file-list {
-  width: 100%;
-  gap: 6px;
+    width: 100%;
+    gap: 6px;
 }
 
 .ota-file {
-  width: 100%;
-  overflow: hidden;
-  padding: var(--ota-space-1) var(--ota-space-2);
-  border-radius: var(--ota-radius);
-  background: var(--ota-bg);
-  color: var(--ota-text);
-  font-family: var(--ota-font-mono);
-  font-size: var(--ota-font-size-sm);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+    width: 100%;
+    overflow: hidden;
+    padding: var(--ota-space-1) var(--ota-space-2);
+    border-radius: var(--ota-radius);
+    background: var(--ota-bg);
+    color: var(--ota-text);
+    font-family: var(--ota-font-mono);
+    font-size: var(--ota-font-size-sm);
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 /* Outline buttons use the strong border of the design. */
-.q-btn--outline:before {
-  border-color: var(--ota-border-strong);
+.q-btn--outline::before {
+    border-color: var(--ota-border-strong);
 }
 
 /* Layer groups (right panel) */
 .ota-layer-group {
-  width: 100%;
-  border-bottom: 1px solid var(--ota-border-light);
+    width: 100%;
+    border-bottom: 1px solid var(--ota-border-light);
 }
 
 .ota-layer-group .q-item {
-  min-height: 0;
-  padding: var(--ota-space-2) 6px;
-  border-radius: var(--ota-radius);
-  font-size: var(--ota-font-size);
-  font-weight: 700;
+    min-height: 0;
+    padding: var(--ota-space-2) 6px;
+    border-radius: var(--ota-radius);
+    font-size: var(--ota-font-size);
+    font-weight: 700;
 }
 
 .ota-layer-group .q-expansion-item__content {
-  display: flex;
-  flex-direction: column;
-  padding: 0 6px 6px 10px;
+    display: flex;
+    flex-direction: column;
+    padding: 0 6px 6px 10px;
 }
 
 /* Tabs inside groups */
 .q-tabs--dense .q-tab {
-  min-height: var(--ota-field-height);
-  padding: 0 10px;
-  font-size: var(--ota-font-size-sm);
+    min-height: var(--ota-field-height);
+    padding: 0 10px;
+    font-size: var(--ota-font-size-sm);
 }
 
 .q-tab-panel {
-  padding: var(--ota-space-2) 0;
+    padding: var(--ota-space-2) 0;
 }
 
 /* Tables and lists */
 .q-table--bordered {
-  border-color: var(--ota-border);
-  border-radius: var(--ota-radius);
+    border-color: var(--ota-border);
+    border-radius: var(--ota-radius);
 }
 
 .q-table--dense .q-table th {
-  padding: 6px 10px;
-  background: var(--ota-bg);
-  color: var(--ota-text-muted);
-  font-size: var(--ota-font-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+    padding: 6px 10px;
+    background: var(--ota-bg);
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .q-table--dense .q-table td {
-  padding: 7px 10px;
-  font-size: var(--ota-font-size);
-  color: var(--ota-text-strong);
+    padding: 7px 10px;
+    font-size: var(--ota-font-size);
+    color: var(--ota-text-strong);
 }
 
 .q-table tbody tr.selected td {
-  background: var(--ota-selected);
-  font-weight: 600;
+    background: var(--ota-selected);
+    font-weight: 600;
 }
 
 /* Canvas: offers its size to the image, which keeps its aspect ratio. */
 .ota-workspace {
-  position: relative;
-  display: flex;
-  flex: 1 1 0%;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 0;
-  container-type: size;
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    container-type: size;
 }
 
 /* Time bar under the canvas */
 .ota-timebar {
-  width: 100%;
-  flex: none;
-  gap: var(--ota-space-2);
-  padding: 10px 14px var(--ota-space-2);
-  background: var(--ota-surface);
-  border: 1px solid var(--ota-border);
-  border-radius: var(--ota-radius-lg);
+    width: 100%;
+    flex: none;
+    gap: var(--ota-space-2);
+    padding: 10px 14px var(--ota-space-2);
+    background: var(--ota-surface);
+    border: 1px solid var(--ota-border);
+    border-radius: var(--ota-radius-lg);
 }
 
 .ota-timebar-controls {
-  width: 100%;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ota-space-3);
-  overflow-x: auto;
+    width: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-3);
+    overflow-x: auto;
 }
 
 .ota-date-range {
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 2px;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 2px;
 }
 
 .ota-date-range-label {
-  padding: 0 6px;
-  color: var(--ota-text-strong);
-  font-family: var(--ota-font-mono);
-  font-size: var(--ota-font-size);
-  white-space: nowrap;
+    padding: 0 6px;
+    color: var(--ota-text-strong);
+    font-family: var(--ota-font-mono);
+    font-size: var(--ota-font-size);
+    white-space: nowrap;
 }
 
 .ota-stepgroup {
-  flex: none;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 0;
-  border: 1px solid var(--ota-border);
-  border-radius: var(--ota-radius);
-  background: var(--ota-surface);
+    flex: none;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--ota-border);
+    border-radius: var(--ota-radius);
+    background: var(--ota-surface);
 }
 
 .ota-stepgroup > .q-btn--round {
-  width: 30px;
-  height: 30px;
-  min-height: 30px;
+    width: 30px;
+    height: 30px;
+    min-height: 30px;
 }
 
 .ota-stepgroup-label {
-  min-width: 40px;
-  padding: 0 var(--ota-space-1);
-  color: var(--ota-text-muted);
-  font-size: var(--ota-font-size-sm);
-  font-weight: 600;
-  text-align: center;
-  white-space: nowrap;
+    min-width: 40px;
+    padding: 0 var(--ota-space-1);
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-sm);
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
 }
 
 .ota-step-menu {
-  width: var(--ota-step-input-width);
-  padding: var(--ota-space-2);
-  box-sizing: content-box;
+    width: var(--ota-step-input-width);
+    padding: var(--ota-space-2);
+    box-sizing: content-box;
 }
 
 /* Timeline: the date filter between the first and last detection */
 .ota-timeline {
-  position: relative;
-  width: 100%;
-  height: 26px;
+    position: relative;
+    width: 100%;
+    height: 26px;
 }
 
 .ota-timeline-track {
-  position: absolute;
-  top: 9px;
-  right: 0;
-  left: 0;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--ota-border-light);
+    position: absolute;
+    top: 9px;
+    right: 0;
+    left: 0;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--ota-border-light);
 }
 
 .ota-timeline-window {
-  position: absolute;
-  top: 3px;
-  box-sizing: border-box;
-  min-width: 4px;
-  height: 20px;
-  border: 2px solid var(--ota-primary);
-  border-radius: 4px;
-  background: rgba(55, 72, 62, 0.22);
+    position: absolute;
+    top: 3px;
+    box-sizing: border-box;
+    min-width: 4px;
+    height: 20px;
+    border: 2px solid var(--ota-primary);
+    border-radius: 4px;
+    background: rgb(55 72 62 / 22%);
 }
 
 .ota-timeline-ticks {
-  width: 100%;
-  flex-wrap: nowrap;
-  justify-content: space-between;
-  color: var(--ota-text-muted);
-  font-family: var(--ota-font-mono);
-  font-size: var(--ota-font-size-xs);
+    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    color: var(--ota-text-muted);
+    font-family: var(--ota-font-mono);
+    font-size: var(--ota-font-size-xs);
 }
 
 /* Class legend on the canvas */
 .ota-legend {
-  position: absolute;
-  top: var(--ota-space-3);
-  right: var(--ota-space-3);
-  z-index: 10;
+    position: absolute;
+    top: var(--ota-space-3);
+    right: var(--ota-space-3);
+    z-index: 10;
 }
 
 .ota-legend-content {
-  width: 248px;
-  padding: var(--ota-space-3);
-  gap: var(--ota-space-1);
+    width: 248px;
+    padding: var(--ota-space-3);
+    gap: var(--ota-space-1);
 }
 
 .ota-legend-entry {
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ota-space-2);
-  min-height: var(--ota-control-height);
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-2);
+    min-height: var(--ota-control-height);
 }
 
 .ota-swatch {
-  display: inline-block;
-  flex: none;
-  width: 18px;
-  height: 4px;
-  border-radius: 2px;
+    display: inline-block;
+    flex: none;
+    width: 18px;
+    height: 4px;
+    border-radius: 2px;
 }
 
 /* Status bar: track statistics and the assignment notice */
 .ota-statusbar {
-  width: 100%;
-  height: var(--ota-status-height);
-  flex-shrink: 0;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 22px;
-  overflow: hidden;
-  padding: 0 var(--ota-space-4);
-  border-top: 1px solid var(--ota-border);
-  background-color: var(--ota-surface);
-  font-size: var(--ota-font-size-sm);
-  color: var(--ota-text-muted);
+    width: 100%;
+    height: var(--ota-status-height);
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 22px;
+    overflow: hidden;
+    padding: 0 var(--ota-space-4);
+    border-top: 1px solid var(--ota-border);
+    background-color: var(--ota-surface);
+    font-size: var(--ota-font-size-sm);
+    color: var(--ota-text-muted);
 }
 
 .ota-stats {
-  flex: 1 1 0%;
-  min-width: 0;
-  flex-wrap: nowrap;
-  align-items: baseline;
-  column-gap: 22px;
-  overflow-x: auto;
+    flex: 1 1 0%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    column-gap: 22px;
+    overflow-x: auto;
 }
 
 .ota-stats-title {
-  font-weight: 700;
-  color: var(--ota-text);
-  white-space: nowrap;
+    font-weight: 700;
+    color: var(--ota-text);
+    white-space: nowrap;
 }
 
 .ota-stat {
-  flex-wrap: nowrap;
-  align-items: baseline;
-  gap: 6px;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: 6px;
 }
 
 .ota-stat-label,
 .ota-stat-value {
-  white-space: nowrap;
+    white-space: nowrap;
 }
 
 .ota-stat-value {
-  font-family: var(--ota-font-mono);
-  color: var(--ota-text);
+    font-family: var(--ota-font-mono);
+    color: var(--ota-text);
 }
 
 .ota-assignment-notice {
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 6px;
-  color: var(--ota-stale-text);
-  white-space: nowrap;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--ota-stale-text);
+    white-space: nowrap;
 }
 
 /* Out of date: track counts and flow arrows of an outdated assignment */
 .ota-stale {
-  opacity: var(--ota-stale-opacity);
+    opacity: var(--ota-stale-opacity);
 }
 
 /* Forms */
 .ota-button-row {
-  width: 100%;
-  flex-wrap: wrap;
-  gap: 6px;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .ota-button-row > .q-btn {
-  flex: 1 1 40%;
+    flex: 1 1 40%;
 }
 
 .ota-datetime-field {
-  max-width: 40%;
+    max-width: 40%;
 }
 
 .ota-dialog {
-  width: 24rem;
+    width: 24rem;
 }
 
 .ota-dialog-wide {
-  width: 100%;
-  max-width: 70%;
+    width: 100%;
+    max-width: 70%;
 }
 
 /* Marks a form field whose input passed its validation: draws the underline
    or, for outlined fields, the border like Quasar draws it for an error, but
    green. */
-.q-field:not(.q-field--outlined).otanalytics-valid-field .q-field__control:after {
-  background: var(--q-positive);
-  transform: scale3d(1, 1, 1);
+.q-field:not(.q-field--outlined).otanalytics-valid-field
+    .q-field__control::after {
+    background: var(--q-positive);
+    transform: scale3d(1, 1, 1);
 }
 
-.q-field--outlined.otanalytics-valid-field .q-field__control:after {
-  border-color: var(--q-positive);
-  border-width: 2px;
+.q-field--outlined.otanalytics-valid-field .q-field__control::after {
+    border-color: var(--q-positive);
+    border-width: 2px;
 }
 
 .q-field.otanalytics-valid-field .q-field__label {
-  color: var(--q-positive);
+    color: var(--q-positive);
 }
