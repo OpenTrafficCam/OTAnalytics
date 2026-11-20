@@ -11,6 +11,7 @@ from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.state import SectionState
 from OTAnalytics.domain.section import SectionType
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form import flow_form
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
     COLUMN_TYPE,
     MARKER_BUTTON_ADD_AREA,
@@ -192,13 +193,11 @@ class TestSectionButtons:
         ]
         assert order == [MARKER_BUTTON_ADD_LINE, MARKER_SECTION_TABLE]
 
-    async def test_buttons_leave_test_ids_to_the_flow_buttons(
+    async def test_buttons_have_test_ids_of_their_own(
         self, user: User, resource_manager: ResourceManager
     ) -> None:
-        """Browser tests click the first element with a flow button's test id.
-
-        Section buttons share these markers and come first on the page.
-        """
+        """Browser tests click the first element with a test id, so section
+        buttons must not share test ids with the flow buttons below them."""
         target = SectionsForm(
             create_viewmodel(), create_section_state(), resource_manager
         )
@@ -209,6 +208,19 @@ class TestSectionButtons:
 
         await user.open("/test-section-button-ids")
 
-        for marker in (MARKER_BUTTON_PROPERTIES, MARKER_BUTTON_REMOVE):
+        flow_markers = {
+            flow_form.MARKER_BUTTON_ADD,
+            flow_form.MARKER_BUTTON_GENERATE,
+            flow_form.MARKER_BUTTON_PROPERTIES,
+            flow_form.MARKER_BUTTON_REMOVE,
+        }
+        for marker in (
+            MARKER_BUTTON_ADD_LINE,
+            MARKER_BUTTON_ADD_AREA,
+            MARKER_BUTTON_EDIT,
+            MARKER_BUTTON_PROPERTIES,
+            MARKER_BUTTON_REMOVE,
+        ):
             button = user.find(marker=marker).elements.pop()
-            assert TEST_ID not in button.props, marker
+            assert button.props[TEST_ID] == marker, marker
+            assert marker not in flow_markers, marker

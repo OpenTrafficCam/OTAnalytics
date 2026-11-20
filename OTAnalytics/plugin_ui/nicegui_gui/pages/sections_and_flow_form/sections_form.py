@@ -11,8 +11,8 @@ from OTAnalytics.application.resources.resource_manager import (
 )
 from OTAnalytics.application.state import SectionState
 from OTAnalytics.domain.section import NAME, Section, SectionType
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button import CustomButton
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.ota_button import ota_button
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
     CustomTable,
@@ -21,11 +21,11 @@ from OTAnalytics.plugin_ui.utils.asyncio_helper import run_async
 
 BUTTON_ROW = "ota-button-row"
 MARKER_SECTION_TABLE = "marker-section-table"
-MARKER_BUTTON_ADD_LINE = "marker-button-add-line"
-MARKER_BUTTON_ADD_AREA = "marker-button-add-area"
-MARKER_BUTTON_EDIT = "marker-button-edit"
-MARKER_BUTTON_PROPERTIES = "marker-button-properties"
-MARKER_BUTTON_REMOVE = "marker-button-remove"
+MARKER_BUTTON_ADD_LINE = "marker-section-button-add-line"
+MARKER_BUTTON_ADD_AREA = "marker-section-button-add-area"
+MARKER_BUTTON_EDIT = "marker-section-button-edit"
+MARKER_BUTTON_PROPERTIES = "marker-section-button-properties"
+MARKER_BUTTON_REMOVE = "marker-section-button-remove"
 COLUMN_TYPE = "type_label"
 TYPE_TAG = '<q-td :props="props"><span class="ota-tag">{{ props.value }}</span></q-td>'
 TYPE_LABELS = {
@@ -153,13 +153,13 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
         secondary: bool = False,
         icon: str | None = None,
     ) -> ui.button:
-        return ota_button(
+        return CustomButton(
             self._resource_manager.get(key),
             on_click,
-            marker,
+            marker=marker,
             secondary=secondary,
             icon=icon,
-        )
+        ).build()
 
     def get_add_buttons(self) -> list[Button]:
         if self._button_add_line and self._button_add_areas:
