@@ -28,6 +28,15 @@ class CanvasKeys(ResourceKey):
 
 class ConfigurationBarKeys(ResourceKey):
     LABEL_CONFIGURATION_BAR_FORM_HEADER = "label-configuration-bar-form-header"
+    LABEL_GROUP_PROJECT = "label-group-project"
+    LABEL_GROUP_SECTIONS = "label-group-sections"
+    LABEL_GROUP_FLOWS = "label-group-flows"
+    LABEL_GROUP_ANALYSIS = "label-group-analysis"
+    SUMMARY_PROJECT = "summary-project"
+    SUMMARY_SVZ = "summary-svz"
+    SUMMARY_SECTIONS = "summary-sections"
+    SUMMARY_FLOWS = "summary-flows"
+    SUMMARY_ANALYSIS = "summary-analysis"
 
 
 class AnalysisKeys(ResourceKey):
@@ -61,11 +70,16 @@ class ProjectKeys(ResourceKey):
     LABEL_SAVE_AS_PROJECT = "label-save-project"
     LABEL_START_DATE = "label-start-date"
     LABEL_START_TIME = "label-start-time"
+    LABEL_UNTITLED_PROJECT = "label-untitled-project"
+    LABEL_ALL_CHANGES_SAVED = "label-all-changes-saved"
+    LABEL_UNSAVED_CHANGES = "label-unsaved-changes"
 
 
 class TrackFormKeys(ResourceKey):
     TAB_TRACK = "tab-one"
     TAB_VIDEO = "tab-two"
+    LABEL_TRACK_FILES = "label-track-files"
+    LABEL_VIDEOS = "label-videos"
 
 
 class SvzMetadataKeys(ResourceKey):
@@ -91,6 +105,14 @@ class FlowKeys(ResourceKey):
     BUTTON_GENERATE = "button-generate"
     BUTTON_PROPERTIES = "button-properties"
     BUTTON_REMOVE = "button-remove"
+    LABEL_TRACK_ASSIGNMENT = "label-track-assignment"
+    SWITCH_AUTO_ASSIGNMENT = "switch-auto-assignment"
+    BUTTON_UPDATE_ASSIGNMENT = "button-update-assignment"
+    STATUS_UP_TO_DATE_AUTO = "status-up-to-date-auto"
+    STATUS_UP_TO_DATE_MANUAL = "status-up-to-date-manual"
+    STATUS_OUT_OF_DATE = "status-out-of-date"
+    LABEL_ASSIGNMENT_OUTDATED = "label-assignment-outdated"
+    BUTTON_UPDATE_OUTDATED = "button-update-outdated"
 
 
 class FlowAndSectionKeys(ResourceKey):
@@ -140,6 +162,10 @@ class SectionKeys(ResourceKey):
     BUTTON_PROPERTIES = "button-properties"
     BUTTON_REMOVE = "button-remove"
     TABLE_COLUMN_NAME = "table-column-name"
+    TABLE_COLUMN_TYPE = "table-column-type"
+    TYPE_LINE = "type-line"
+    TYPE_AREA = "type-area"
+    TYPE_CUTTING = "type-cutting"
 
 
 class OffsetSliderKeys(ResourceKey):
@@ -149,6 +175,8 @@ class OffsetSliderKeys(ResourceKey):
 
 class VisualizationOffsetSliderKeys(ResourceKey):
     BUTTON_UPDATE_OFFSET = "offset-slider-keys-button-update-offset"
+    LABEL_TRACK_REFERENCE_POINT = "offset-slider-keys-label-track-reference-point"
+    LABEL_DESCRIPTION = "offset-slider-keys-label-description"
 
 
 class RemarkKeys(ResourceKey):
@@ -170,7 +198,12 @@ class VisualizationFiltersKeys(ResourceKey):
     LABEL_VISUALIZATION_FILTERS_FORM_HEADER = "label-visualization-filters-form-header"
     BUTTON_FILTER_BY_DATE = "button-filter-by-date"
     BUTTON_FILTER_BY_CLASSIFICATION = "button-filter-by-classification"
+    BUTTON_CLASSES = "button-classes"
+    BUTTON_ALL_CLASSES = "button-all-classes"
+    BUTTON_NO_CLASSES = "button-no-classes"
     LABEL_EVENT = "label-event"
+    LABEL_STEP_SECONDS = "label-step-seconds"
+    LABEL_STEP_FRAMES = "label-step-frames"
     LABEL_DATE_RANGE_FROM = "label-date-range-from"
     LABEL_DATE_RANGE_TO = "label-date-range-to"
     LABEL_FIRST_DETECTION_OCCURRENCE = "label-first-detection-occurrence"
@@ -244,6 +277,15 @@ DEFAULT_RESOURCE_MAP = {
         "Please add at least {count} points to finish the section."
     ),
     ConfigurationBarKeys.LABEL_CONFIGURATION_BAR_FORM_HEADER: "Configuration Bar",
+    ConfigurationBarKeys.LABEL_GROUP_PROJECT: "Project & files",
+    ConfigurationBarKeys.LABEL_GROUP_SECTIONS: "Sections",
+    ConfigurationBarKeys.LABEL_GROUP_FLOWS: "Flows",
+    ConfigurationBarKeys.LABEL_GROUP_ANALYSIS: "Analysis & export",
+    ConfigurationBarKeys.SUMMARY_PROJECT: "{tracks} track files · {videos} videos",
+    ConfigurationBarKeys.SUMMARY_SVZ: "Counting location",
+    ConfigurationBarKeys.SUMMARY_SECTIONS: "{sections} sections",
+    ConfigurationBarKeys.SUMMARY_FLOWS: "{flows} flows · {assigned} tracks assigned",
+    ConfigurationBarKeys.SUMMARY_ANALYSIS: "Configuration and exports",
     FlowAndSectionKeys.TAB_SECTION: "Section",
     FlowAndSectionKeys.TAB_FLOW: "Flow",
     FlowKeys.TABLE_COLUMN_NAME: "Flow",
@@ -252,6 +294,16 @@ DEFAULT_RESOURCE_MAP = {
     FlowKeys.BUTTON_GENERATE: "Generate",
     FlowKeys.BUTTON_REMOVE: "Remove",
     FlowKeys.BUTTON_PROPERTIES: "Properties",
+    FlowKeys.LABEL_TRACK_ASSIGNMENT: "Track assignment",
+    FlowKeys.SWITCH_AUTO_ASSIGNMENT: "Update automatically",
+    FlowKeys.BUTTON_UPDATE_ASSIGNMENT: "Update now",
+    FlowKeys.STATUS_UP_TO_DATE_AUTO: (
+        "Up to date · updates when sections or flows change"
+    ),
+    FlowKeys.STATUS_UP_TO_DATE_MANUAL: "Up to date · manual mode",
+    FlowKeys.STATUS_OUT_OF_DATE: "Out of date: sections or flows changed.",
+    FlowKeys.LABEL_ASSIGNMENT_OUTDATED: "Assignment out of date ·",
+    FlowKeys.BUTTON_UPDATE_OUTDATED: "Update",
     EditFlowDialogKeys.LABEL_NAME: "Name",
     EditFlowDialogKeys.LABEL_START_SECTION: "Start section",
     EditFlowDialogKeys.LABEL_END_SECTION: "End section",
@@ -284,6 +336,9 @@ DEFAULT_RESOURCE_MAP = {
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
     ProjectKeys.LABEL_QUICK_SAVE: "Save",
     ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
+    ProjectKeys.LABEL_UNTITLED_PROJECT: "Untitled project",
+    ProjectKeys.LABEL_ALL_CHANGES_SAVED: "· All changes saved",
+    ProjectKeys.LABEL_UNSAVED_CHANGES: "· Unsaved changes",
     RemarkKeys.LABEL_REMARK_HEADER: "Remark",
     RemarkKeys.REMARK_NO_COMMENT: "No Comment",
     SectionKeys.BUTTON_ADD_AREA: "Add area...",
@@ -292,6 +347,10 @@ DEFAULT_RESOURCE_MAP = {
     SectionKeys.BUTTON_PROPERTIES: "Properties...",
     SectionKeys.BUTTON_REMOVE: "Remove...",
     SectionKeys.TABLE_COLUMN_NAME: "Section",
+    SectionKeys.TABLE_COLUMN_TYPE: "Type",
+    SectionKeys.TYPE_LINE: "Line",
+    SectionKeys.TYPE_AREA: "Area",
+    SectionKeys.TYPE_CUTTING: "Cutting",
     StaticAnalysisConfigKeys.LABEL_STATIC_ANALYSIS_CONFIG_FORM_HEADER: "Analysis Configuration",  # noqa
     StaticAnalysisConfigKeys.LABEL_DO_EVENTS: "Create events",
     StaticAnalysisConfigKeys.LABEL_DO_COUNTING: "Create counts",
@@ -318,9 +377,11 @@ DEFAULT_RESOURCE_MAP = {
     SvzMetadataKeys.LABEL_Y_COORDINATE: "Y Koordinate",
     TrackFormKeys.TAB_TRACK: "Track",
     TrackFormKeys.TAB_VIDEO: "Videos",
+    TrackFormKeys.LABEL_TRACK_FILES: "Track files",
+    TrackFormKeys.LABEL_VIDEOS: "Videos",
     TrackStatisticKeys.COLUMN_NAME: "Name",
     TrackStatisticKeys.COLUMN_NUMBER: "Number",
-    TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER: "Track Statistics",
+    TrackStatisticKeys.LABEL_TRACK_STATISTIC_FORM_HEADER: "Track statistics",
     TrackStatisticKeys.LABEL_ALL_TRACKS: "All tracks:",
     TrackStatisticKeys.LABEL_TRACKS_INTERSECTING_NOT_ASSIGNED: "Tracks intersecting not assigned:",  # noqa
     TrackStatisticKeys.LABEL_TRACKS_ASSIGNED_TO_FLOWS: "Tracks assigned to flows:",
@@ -332,7 +393,12 @@ DEFAULT_RESOURCE_MAP = {
     VisualizationFiltersKeys.LABEL_VISUALIZATION_FILTERS_FORM_HEADER: "Visualization Filters",  # noqa
     VisualizationFiltersKeys.BUTTON_FILTER_BY_DATE: "Filter by Date",
     VisualizationFiltersKeys.BUTTON_FILTER_BY_CLASSIFICATION: "Filter by Classification",  # noqa
+    VisualizationFiltersKeys.BUTTON_CLASSES: "Classes",
+    VisualizationFiltersKeys.BUTTON_ALL_CLASSES: "All",
+    VisualizationFiltersKeys.BUTTON_NO_CLASSES: "None",
     VisualizationFiltersKeys.LABEL_EVENT: "Event",
+    VisualizationFiltersKeys.LABEL_STEP_SECONDS: "{seconds} s",
+    VisualizationFiltersKeys.LABEL_STEP_FRAMES: "{frames} frames",
     VisualizationFiltersKeys.LABEL_DATE_RANGE_TO: "To",
     VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM: "From",
     VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE: "Last detection occurrence",  # noqa
@@ -360,8 +426,12 @@ DEFAULT_RESOURCE_MAP = {
         "Start must be before end."
     ),
     VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING: "Update flow highlighting",
-    VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
+    VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Layers",
     VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
+    VisualizationOffsetSliderKeys.LABEL_TRACK_REFERENCE_POINT: "Track reference point",
+    VisualizationOffsetSliderKeys.LABEL_DESCRIPTION: (
+        "Point of the bounding box at which tracks are drawn."
+    ),
     WorkspaceKeys.LABEL_WORKSPACE_FORM_HEADER: "Workspace",
     LoadWindowKeys.LABEL_START_DATE: "Start date (UTC)",
     LoadWindowKeys.LABEL_START_TIME: "Start time (UTC)",

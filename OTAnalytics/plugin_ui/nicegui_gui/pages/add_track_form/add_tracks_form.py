@@ -29,8 +29,9 @@ class AddTracksForm(ButtonForm):
     def build(self) -> Self:
         self._add_tracks_button = ui.button(
             self._resource_manager.get(AddTracksKeys.BUTTON_ADD_TRACKS),
+            icon="add",
             on_click=self._view_model.load_tracks,
-        )
+        ).props("outline")
         return self
 
     def get_general_buttons(self) -> list[Button]:

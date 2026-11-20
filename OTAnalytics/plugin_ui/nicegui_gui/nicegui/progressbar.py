@@ -18,6 +18,7 @@ from OTAnalytics.domain.progress import (
     Counter,
     ProgressbarBuilder,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import DIALOG_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_PROGRESSBAR_CANCEL = "progressbar-cancel"
@@ -89,7 +90,7 @@ class NiceguiProgressbar(CompletionProgress):
         """
         if not _has_browser_to_show_in() or self._state.finished:
             return
-        with ui.dialog().props("persistent") as dialog, ui.card().classes("w-96"):
+        with ui.dialog().props("persistent") as dialog, ui.card().classes(DIALOG_CLASS):
             self._dialog = dialog
             self._message = ui.label(self._state.message)
             self._message.props(f"{TEST_ID}={MARKER_MESSAGE}")

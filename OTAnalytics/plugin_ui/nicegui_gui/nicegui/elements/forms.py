@@ -17,6 +17,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     MissingInstanceError,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
+    DATETIME_FIELD_CLASS,
     VALID_FIELD_CLASS,
 )
 
@@ -547,7 +548,7 @@ class FormFieldDate(FormField[Input, Optional[date]]):
                 value=self.initial_value_text,
                 validation=self._marking_validation(self._validation),
             )
-            .style("max-width: 40%")
+            .classes(DATETIME_FIELD_CLASS)
             .props("mask='####-##-##'")
         )
         with self._instance:
@@ -638,7 +639,7 @@ class FormFieldTime(FormField[Input, Optional[time]]):
                 value=self.initial_value_text,
                 validation=self._marking_validation(self._validation),
             )
-            .style("max-width: 40%")
+            .classes(DATETIME_FIELD_CLASS)
             .props("mask='##:##:##'")
         )
         with self._instance:

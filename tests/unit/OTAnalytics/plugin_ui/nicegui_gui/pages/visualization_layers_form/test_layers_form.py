@@ -12,6 +12,12 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_fo
 )
 
 LAYER_NAME = "Background"
+OTHER_LAYER_NAME = "Sections"
+GROUP_NAME = "Group"
+
+
+def group_labels(user: User) -> list[str]:
+    return [expansion.text for expansion in user.find(kind=ui.expansion).elements]
 
 
 class TestLayersForm:
@@ -58,3 +64,55 @@ class TestLayersForm:
         checkbox = user.find(LAYER_NAME).elements.pop()
         assert isinstance(checkbox, ui.checkbox)
         assert checkbox.value is True
+
+    async def test_groups_show_how_many_layers_are_on(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        layers = [
+            PlottingLayer(LAYER_NAME, Mock(), enabled=True),
+            PlottingLayer(OTHER_LAYER_NAME, Mock(), enabled=False),
+        ]
+        target = LayersForm(Mock(), resource_manager, [LayerGroup(GROUP_NAME, layers)])
+
+        @ui.page("/test")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test")
+
+        assert group_labels(user) == [f"{GROUP_NAME} (1/2)"]
+
+    async def test_group_count_follows_checkboxes_and_resets(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        layer = PlottingLayer(LAYER_NAME, Mock(), enabled=False)
+        other = PlottingLayer(OTHER_LAYER_NAME, Mock(), enabled=False)
+        target = LayersForm(
+            Mock(), resource_manager, [LayerGroup(GROUP_NAME, [layer, other])]
+        )
+
+        @ui.page("/test")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test")
+        user.find(LAYER_NAME).click()
+        assert group_labels(user) == [f"{GROUP_NAME} (1/2)"]
+
+        layer.reset()
+        assert group_labels(user) == [f"{GROUP_NAME} (0/2)"]
+
+    async def test_groups_are_open(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        layer = PlottingLayer(LAYER_NAME, Mock(), enabled=False)
+        target = LayersForm(Mock(), resource_manager, [LayerGroup(GROUP_NAME, [layer])])
+
+        @ui.page("/test")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test")
+
+        expansion = user.find(kind=ui.expansion).elements.pop()
+        assert expansion.value is True

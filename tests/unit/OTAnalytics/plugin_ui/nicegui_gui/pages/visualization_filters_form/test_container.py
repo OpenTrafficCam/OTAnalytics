@@ -9,6 +9,7 @@ from unittest.mock import Mock
 
 import pytest
 from nicegui import ui
+from nicegui.element import Element
 from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.default_values import SUPPORTED_FORMATS
@@ -28,11 +29,32 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
     VALID_FIELD_CLASS,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+    MARKER_CLASS_FILTER_BUTTON,
+    MARKER_CLASS_SWATCH,
+    MARKER_FILTER_BY_DATE_BUTTON,
+    MARKER_FILTER_BY_DATE_CHECKBOX,
     MARKER_FILTER_END_DATE_INPUT,
     MARKER_FILTER_END_TIME_INPUT,
+    MARKER_FILTER_RANGE_LABEL,
     MARKER_FILTER_START_DATE_INPUT,
     MARKER_FILTER_START_TIME_INPUT,
+    MARKER_NEXT_DATE_BUTTON,
+    MARKER_NEXT_EVENT_BUTTON,
+    MARKER_NEXT_FRAMES_BUTTON,
+    MARKER_NEXT_SECONDS_BUTTON,
+    MARKER_PREV_DATE_BUTTON,
+    MARKER_PREV_EVENT_BUTTON,
+    MARKER_PREV_FRAMES_BUTTON,
+    MARKER_PREV_SECONDS_BUTTON,
+    MARKER_STEP_EVENT,
+    MARKER_STEP_FRAMES,
+    MARKER_STEP_SECONDS,
+    MARKER_TIME_BAR,
+    MARKER_TIMELINE_WINDOW,
+    FilterClassificationForm,
     VisualizationFiltersForm,
+    timeline_ticks,
+    timeline_window,
 )
 
 APPLY = "Apply from resources"
@@ -64,6 +86,8 @@ LABELS = {
     VisualizationFiltersKeys.MESSAGE_INVALID_MINUTE: INVALID_MINUTE,
     VisualizationFiltersKeys.MESSAGE_INVALID_SECOND: INVALID_SECOND,
     VisualizationFiltersKeys.MESSAGE_START_NOT_BEFORE_END: START_NOT_BEFORE_END,
+    VisualizationFiltersKeys.LABEL_STEP_SECONDS: "{seconds} s",
+    VisualizationFiltersKeys.LABEL_STEP_FRAMES: "{frames} frames",
 }
 
 A_RANGE: DateRangeDto = {"start_date": "2023-05-24", "end_date": "2023-05-25"}
@@ -82,6 +106,9 @@ def create_given() -> Given:
     view_model = Mock()
     view_model.get_skip_seconds.return_value = 1
     view_model.get_skip_frames.return_value = 1
+    view_model.get_first_detection_occurrence.return_value = None
+    view_model.get_last_detection_occurrence.return_value = None
+    view_model.get_filter_tracks_by_date_setting.return_value = DateRange(None, None)
     view_model.validate_date.side_effect = lambda value: any(
         validate_date(value, date_format) for date_format in SUPPORTED_FORMATS
     )
@@ -150,25 +177,244 @@ class TestBeforeThePageIsBuilt:
         assert target.get_general_buttons() == []
 
 
-BICYCLE = "bicycle"
-CAR = "car"
-TRUCK = "truck"
-ALL_CLASSES = [BICYCLE, CAR, TRUCK]
+TIME_BAR_ORDER = [
+    MARKER_FILTER_BY_DATE_CHECKBOX,
+    MARKER_FILTER_BY_DATE_BUTTON,
+    MARKER_PREV_DATE_BUTTON,
+    MARKER_FILTER_RANGE_LABEL,
+    MARKER_NEXT_DATE_BUTTON,
+    MARKER_PREV_EVENT_BUTTON,
+    MARKER_NEXT_EVENT_BUTTON,
+    MARKER_PREV_SECONDS_BUTTON,
+    MARKER_NEXT_SECONDS_BUTTON,
+    MARKER_PREV_FRAMES_BUTTON,
+    MARKER_NEXT_FRAMES_BUTTON,
+]
+FILTER_BY_CLASS = "Filter by classification"
 
 
-async def open_classification_dialog(
-    user: User, given: Given, selection: list[str] | None
-) -> None:
-    given.view_model.get_classes.return_value = ALL_CLASSES
-    given.view_model.get_class_filter_selection.return_value = selection
+def descendants(element: Element) -> list[Element]:
+    result = []
+    for child in element.default_slot.children:
+        result.append(child)
+        result.extend(descendants(child))
+    return result
+
+
+def first_marker(element: Element) -> str | None:
+    return next((m for m in element._markers if m in TIME_BAR_ORDER), None)
+
+
+class TestTimeBar:
+    async def test_shows_controls_in_one_row_in_workflow_order(
+        self, user: User
+    ) -> None:
+        target = create_target(create_given())
+
+        @ui.page("/test")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test")
+
+        time_bar = user.find(marker=MARKER_TIME_BAR).elements.pop()
+        markers = [
+            marker
+            for element in descendants(time_bar)
+            if (marker := first_marker(element)) is not None
+        ]
+        assert markers == TIME_BAR_ORDER
+
+    async def test_has_no_class_filter(self, user: User) -> None:
+        given = create_given()
+        given.resource_manager.get.side_effect = lambda key: (
+            FILTER_BY_CLASS
+            if key == VisualizationFiltersKeys.BUTTON_FILTER_BY_CLASSIFICATION
+            else LABELS.get(key, "label")
+        )
+        target = create_target(given)
+
+        @ui.page("/test")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test")
+
+        await user.should_not_see(FILTER_BY_CLASS)
+
+
+FIRST_DETECTION = datetime(2024, 5, 14, 7, 0, 0)
+LAST_DETECTION = datetime(2024, 5, 14, 8, 0, 0)
+
+
+async def open_time_bar(user: User, given: Given) -> VisualizationFiltersForm:
     target = create_target(given)
 
     @ui.page("/test")
     def page() -> None:
-        target.open_classification_dialog()
+        target.build()
 
     await user.open("/test")
-    await user.should_see(APPLY)
+    return target
+
+
+def given_with_detections(window: DateRange) -> Given:
+    given = create_given()
+    given.view_model.get_first_detection_occurrence.return_value = FIRST_DETECTION
+    given.view_model.get_last_detection_occurrence.return_value = LAST_DETECTION
+    given.view_model.get_filter_tracks_by_date_setting.return_value = window
+    return given
+
+
+class TestTimeline:
+    def test_window_is_placed_between_first_and_last_detection(self) -> None:
+        window = timeline_window(
+            FIRST_DETECTION,
+            LAST_DETECTION,
+            datetime(2024, 5, 14, 7, 15),
+            datetime(2024, 5, 14, 7, 20),
+        )
+
+        assert window == pytest.approx((25.0, 100 / 12))
+
+    def test_open_bounds_reach_first_and_last_detection(self) -> None:
+        assert timeline_window(FIRST_DETECTION, LAST_DETECTION, None, None) == (
+            0.0,
+            100.0,
+        )
+
+    def test_without_detections_there_is_no_window(self) -> None:
+        assert timeline_window(None, None, None, None) is None
+
+    def test_ticks_split_the_detections_evenly(self) -> None:
+        assert timeline_ticks(FIRST_DETECTION, LAST_DETECTION) == [
+            "07:00",
+            "07:15",
+            "07:30",
+            "07:45",
+            "08:00",
+        ]
+
+    def test_ticks_show_the_day_for_more_than_a_day(self) -> None:
+        ticks = timeline_ticks(FIRST_DETECTION, datetime(2024, 5, 16, 7, 0))
+
+        assert ticks[0] == "14.05. 07:00"
+        assert ticks[-1] == "16.05. 07:00"
+
+    async def test_shows_the_current_window(self, user: User) -> None:
+        given = given_with_detections(
+            DateRange(datetime(2024, 5, 14, 7, 15), datetime(2024, 5, 14, 7, 20))
+        )
+        target = await open_time_bar(user, given)
+
+        target.update_date_range(A_RANGE)
+
+        window = user.find(marker=MARKER_TIMELINE_WINDOW).elements.pop()
+        assert window._style["left"] == "25.000%"
+        assert window._style["width"] == "8.333%"
+        assert window.visible
+        await user.should_see("07:45")
+
+    async def test_hides_the_window_without_detections(self, user: User) -> None:
+        given = create_given()
+        given.view_model.get_first_detection_occurrence.return_value = None
+        given.view_model.get_last_detection_occurrence.return_value = None
+        given.view_model.get_filter_tracks_by_date_setting.return_value = DateRange(
+            None, None
+        )
+
+        await open_time_bar(user, given)
+
+        await user.should_not_see(marker=MARKER_TIMELINE_WINDOW)
+
+
+def step_text(user: User, marker: str) -> str:
+    step = user.find(marker=marker).elements.pop()
+    assert isinstance(step, ui.button)
+    return step.text
+
+
+class TestStepGroups:
+    @pytest.mark.parametrize(
+        "previous, step, next",
+        [
+            (MARKER_PREV_EVENT_BUTTON, MARKER_STEP_EVENT, MARKER_NEXT_EVENT_BUTTON),
+            (
+                MARKER_PREV_SECONDS_BUTTON,
+                MARKER_STEP_SECONDS,
+                MARKER_NEXT_SECONDS_BUTTON,
+            ),
+            (MARKER_PREV_FRAMES_BUTTON, MARKER_STEP_FRAMES, MARKER_NEXT_FRAMES_BUTTON),
+        ],
+    )
+    async def test_group_the_step_between_its_buttons(
+        self, user: User, previous: str, step: str, next: str
+    ) -> None:
+        await open_time_bar(user, given_with_detections(DateRange(None, None)))
+
+        label = user.find(marker=step).elements.pop()
+        assert label.parent_slot is not None
+        group = label.parent_slot.parent
+        assert "ota-stepgroup" in group.classes
+        children = group.default_slot.children
+        assert previous in children[0]._markers
+        assert children[1] is label
+        assert next in children[2]._markers
+
+    async def test_show_the_step_sizes(self, user: User) -> None:
+        given = given_with_detections(DateRange(None, None))
+        given.view_model.get_skip_seconds.return_value = 2
+        given.view_model.get_skip_frames.return_value = 5
+
+        await open_time_bar(user, given)
+
+        assert step_text(user, MARKER_STEP_SECONDS) == "2 s"
+        assert step_text(user, MARKER_STEP_FRAMES) == "5 frames"
+
+    async def test_changing_a_step_size_updates_its_label(self, user: User) -> None:
+        given = given_with_detections(DateRange(None, None))
+        target = await open_time_bar(user, given)
+
+        target._input_seconds.set_value(10)
+
+        given.view_model.update_skip_time.assert_called_with(10, 1)
+        assert step_text(user, MARKER_STEP_SECONDS) == "10 s"
+
+
+BICYCLE = "bicycle"
+CAR = "car"
+TRUCK = "truck"
+ALL_CLASSES = [BICYCLE, CAR, TRUCK]
+PALETTE = {BICYCLE: "lime", CAR: "blue", TRUCK: "#FF0000"}
+CLASSES = "Classes"
+ALL = "All"
+NONE = "None"
+CLASS_LABELS = {
+    VisualizationFiltersKeys.BUTTON_CLASSES: CLASSES,
+    VisualizationFiltersKeys.BUTTON_ALL_CLASSES: ALL,
+    VisualizationFiltersKeys.BUTTON_NO_CLASSES: NONE,
+}
+
+
+async def open_class_legend(
+    user: User, given: Given, selection: list[str] | None
+) -> None:
+    given.resource_manager.get.side_effect = lambda key: CLASS_LABELS.get(
+        key, LABELS.get(key, "label")
+    )
+    given.view_model.get_classes.return_value = ALL_CLASSES
+    given.view_model.get_class_filter_selection.return_value = selection
+    palette = Mock()
+    palette.get.return_value = PALETTE
+    target = FilterClassificationForm(given.resource_manager, given.view_model, palette)
+
+    @ui.page("/test")
+    def page() -> None:
+        target.build()
+
+    await user.open("/test")
+    user.find(marker=MARKER_CLASS_FILTER_BUTTON).click()
+    await user.should_see(BICYCLE)
 
 
 def checked_classes(user: User) -> list[str]:
@@ -179,16 +425,36 @@ def checked_classes(user: User) -> list[str]:
     )
 
 
-class TestClassificationDialog:
-    async def test_toggling_a_checkbox_changes_only_its_own_class(
+class TestClassLegend:
+    async def test_shows_the_current_selection(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=[CAR, TRUCK])
+
+        assert checked_classes(user) == [CAR, TRUCK]
+
+    async def test_without_selection_all_classes_are_checked(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=None)
+
+        assert checked_classes(user) == ALL_CLASSES
+
+    async def test_shows_a_swatch_in_the_class_color(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=None)
+
+        swatch_colors = sorted(
+            str(element._style.get("background-color"))
+            for element in user.find(marker=MARKER_CLASS_SWATCH).elements
+        )
+        assert swatch_colors == sorted(PALETTE.values())
+
+    async def test_unchecking_a_class_applies_the_filter_at_once(
         self, user: User
     ) -> None:
         given = create_given()
-        await open_classification_dialog(user, given, selection=None)
+        await open_class_legend(user, given, selection=None)
 
         user.find(kind=ui.checkbox, content=BICYCLE).click()
-        assert checked_classes(user) == [CAR, TRUCK]
-        user.find(APPLY).click()
 
         given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
             {CAR, TRUCK}
@@ -198,75 +464,49 @@ class TestClassificationDialog:
         self, user: User
     ) -> None:
         given = create_given()
-        await open_classification_dialog(user, given, selection=[CAR])
+        await open_class_legend(user, given, selection=[CAR])
 
         user.find(kind=ui.checkbox, content=TRUCK).click()
-        user.find(APPLY).click()
 
         given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
             {CAR, TRUCK}
         )
 
-    async def test_applying_unchanged_partial_selection_keeps_it(
-        self, user: User
-    ) -> None:
+    async def test_checking_every_class_turns_the_filter_off(self, user: User) -> None:
         given = create_given()
-        await open_classification_dialog(user, given, selection=[CAR, TRUCK])
+        await open_class_legend(user, given, selection=[CAR, TRUCK])
 
-        assert checked_classes(user) == [CAR, TRUCK]
-        user.find(APPLY).click()
-
-        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
-            {CAR, TRUCK}
-        )
-
-    async def test_without_selection_all_classes_are_selected(self, user: User) -> None:
-        given = create_given()
-        await open_classification_dialog(user, given, selection=None)
-
-        assert checked_classes(user) == ALL_CLASSES
-        user.find(APPLY).click()
-
-        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(
-            set(ALL_CLASSES)
-        )
-
-    async def test_empty_selection_selects_no_class(self, user: User) -> None:
-        given = create_given()
-        await open_classification_dialog(user, given, selection=[])
-
-        assert checked_classes(user) == []
-        user.find(APPLY).click()
-
-        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(set())
-
-    async def test_apply_closes_the_dialog(self, user: User) -> None:
-        given = create_given()
-        await open_classification_dialog(user, given, selection=None)
-
-        user.find(APPLY).click()
-
-        dialog = user.find(kind=ui.dialog).elements.pop()
-        assert dialog.value is False
-
-    async def test_shows_reset_label_from_resources(self, user: User) -> None:
-        given = create_given()
-        await open_classification_dialog(user, given, selection=None)
-
-        await user.should_see(RESET)
-
-    async def test_reset_resets_the_class_filter_and_closes_the_dialog(
-        self, user: User
-    ) -> None:
-        given = create_given()
-        await open_classification_dialog(user, given, selection=[CAR])
-
-        user.find(RESET).click()
+        user.find(kind=ui.checkbox, content=BICYCLE).click()
 
         given.view_model.reset_filter_tracks_by_class.assert_called_once_with()
         given.view_model.apply_filter_tracks_by_class.assert_not_called()
-        dialog = user.find(kind=ui.dialog).elements.pop()
-        assert dialog.value is False
+
+    async def test_all_turns_the_filter_off(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=[CAR])
+
+        user.find(ALL).click()
+
+        given.view_model.reset_filter_tracks_by_class.assert_called_once_with()
+        assert checked_classes(user) == ALL_CLASSES
+
+    async def test_none_hides_every_class(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=None)
+
+        user.find(NONE).click()
+
+        given.view_model.apply_filter_tracks_by_class.assert_called_once_with(set())
+        assert checked_classes(user) == []
+
+    async def test_reopening_shows_classes_loaded_meanwhile(self, user: User) -> None:
+        given = create_given()
+        await open_class_legend(user, given, selection=None)
+        given.view_model.get_classes.return_value = [*ALL_CLASSES, "pedestrian"]
+
+        user.find(marker=MARKER_CLASS_FILTER_BUTTON).click()
+
+        await user.should_see("pedestrian")
 
 
 FIRST_OCCURRENCE = datetime(2023, 5, 24, 8, 0, 0, tzinfo=timezone.utc)

@@ -54,6 +54,7 @@ def viewmodel() -> Mock:
         FLOW_ID_1: 3,
         FLOW_ID_2: 0,
     }
+    viewmodel.get_auto_assignment.return_value = False
 
     return viewmodel
 
@@ -248,11 +249,11 @@ class TestCreateColumns:
     ) -> None:
         columns = create_columns(resource_manager)
 
-        assert {
-            "name": COLUMN_TRACKS_ASSIGNED,
-            "label": resource_manager.get(FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED),
-            "field": COLUMN_TRACKS_ASSIGNED,
-        } in columns
+        tracks = next(c for c in columns if c["name"] == COLUMN_TRACKS_ASSIGNED)
+        assert tracks["label"] == resource_manager.get(
+            FlowKeys.TABLE_COLUMN_TRACKS_ASSIGNED
+        )
+        assert tracks["field"] == COLUMN_TRACKS_ASSIGNED
 
 
 class TestMapToUi:
@@ -304,7 +305,7 @@ class TestFlowFormTrackCount:
             FLOW_ID_2: 9,
         }
 
-        flow_form.notify_events(Mock(spec=EventRepositoryEvent))
+        flow_form.notify_events(EventRepositoryEvent([], []))
 
         counts = [row[COLUMN_TRACKS_ASSIGNED] for row in flow_form._flow_table._rows]
         assert counts == [1, 9]

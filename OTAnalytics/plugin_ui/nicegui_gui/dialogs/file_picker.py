@@ -4,6 +4,10 @@ from typing import Any, Dict, List, Optional
 
 from nicegui import events, ui
 
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
+    WIDE_DIALOG_CLASS,
+)
+
 OK_BUTTON_NAME: str = "Ok"
 CANCEL_BUTTON_NAME: str = "Cancel"
 DATA: str = "data"
@@ -104,7 +108,7 @@ class LocalFilePicker(ui.dialog):
                     else self.extension_options.get("All File Endings")
                 )
 
-        with self, ui.card().style("max-width: 70%; width: 100%"):
+        with self, ui.card().classes(WIDE_DIALOG_CLASS):
             self.add_drives_toggle()
             with ui.row().classes("w-full"):
                 self.path_input: ui.input = ui.input(

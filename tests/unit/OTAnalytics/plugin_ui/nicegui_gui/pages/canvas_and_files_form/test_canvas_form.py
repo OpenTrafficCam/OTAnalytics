@@ -27,6 +27,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polygon import Polygon
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import STALE_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     CLICK,
     EDIT_COLOR,
@@ -44,6 +45,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     UPDATE_VIEWBOX,
     CanvasForm,
     circle_to_coordinates,
+    fit_into_workspace,
 )
 
 DEFAULT_IMAGE_SIZE = (640, 480)
@@ -147,6 +149,12 @@ def setup_canvas_form_with_mocks(
 
 class TestCanvasFormHelperFunctions:
     """Test helper functions used by CanvasForm."""
+
+    def test_fit_into_workspace_keeps_the_aspect_ratio(self) -> None:
+        style = fit_into_workspace(1600, 900)
+
+        assert "aspect-ratio: 1600 / 900" in style
+        assert "width: min(100cqw, calc(100cqh * 1600 / 900))" in style
 
     def test_circle_to_coordinates(self) -> None:
         # Arrange
@@ -982,6 +990,42 @@ class TestCanvasFormImageHandling:
         assert canvas_form._current_image == mock_pil_image
         mock_ui.interactive_image.return_value.set_source.assert_called_with(
             mock_pil_image
+        )
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_outdated_flows_are_dimmed(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+
+        canvas_form.set_flows_outdated(True)
+        dimmed = overlay_content(mock_ui)
+        canvas_form.set_flows_outdated(False)
+
+        assert f'<g class="{STALE_CLASS}">' in dimmed
+        assert STALE_CLASS not in overlay_content(mock_ui)
+
+    @patch(
+        "OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form.ui"
+    )
+    def test_update_background_fits_the_image_into_the_workspace(
+        self, mock_ui: Any, mock_viewmodel: Mock, mock_resource_manager: Mock
+    ) -> None:
+        """The image keeps its aspect ratio, so clicks map to image pixels."""
+        canvas_form = setup_canvas_form_with_mocks(
+            mock_ui, mock_viewmodel, mock_resource_manager
+        )
+        mock_track_image = Mock(spec=TrackImage)
+        mock_track_image.as_image.return_value = create_mock_image((1600, 900))
+
+        canvas_form.update_background(mock_track_image)
+
+        mock_ui.interactive_image.return_value.style.assert_called_with(
+            fit_into_workspace(1600, 900)
         )
 
     @patch(

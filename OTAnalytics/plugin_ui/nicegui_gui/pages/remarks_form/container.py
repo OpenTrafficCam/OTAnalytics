@@ -23,7 +23,9 @@ class RemarkForm(AbstractFrameRemark):
         self._viewmodel.set_remark_frame(self)
 
     def build(self) -> None:
-        ui.label(self._resource_manager.get(RemarkKeys.LABEL_REMARK_HEADER))
+        ui.label(self._resource_manager.get(RemarkKeys.LABEL_REMARK_HEADER)).classes(
+            "ota-subheading"
+        )
         self._remark_label = ui.label()
         self.load_remark()
 

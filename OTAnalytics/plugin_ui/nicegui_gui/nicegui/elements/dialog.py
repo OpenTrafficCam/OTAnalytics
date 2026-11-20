@@ -7,6 +7,7 @@ from OTAnalytics.application.resources.resource_manager import (
     GeneralKeys,
     ResourceManager,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import DIALOG_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_APPLY = "apply"
@@ -36,7 +37,7 @@ class BaseDialog:
         self.resource_manager = resource_manager
 
     def build(self) -> ui.dialog:
-        with ui.dialog() as dialog, ui.card().classes("w-96"):
+        with ui.dialog() as dialog, ui.card().classes(DIALOG_CLASS):
             self.build_content()
             with ui.row():
                 apply = ui.button(

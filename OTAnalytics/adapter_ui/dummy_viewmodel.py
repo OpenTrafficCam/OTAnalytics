@@ -360,6 +360,7 @@ class DummyViewModel(
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
         self._show_svz = show_svz
+        self._auto_assignment = True
         self._add_new_section = add_new_section
         self._update_section_coordinates = update_section_coordinates
         self._window: Optional[AbstractMainWindow] = None
@@ -1487,6 +1488,16 @@ class DummyViewModel(
                 initial_position=position,
                 message_type=MessageType.WARNING,
             )
+
+    def set_auto_assignment(self, enabled: bool) -> None:
+        self._auto_assignment = enabled
+
+    def get_auto_assignment(self) -> bool:
+        return self._auto_assignment
+
+    def assign_tracks(self) -> None:
+        self._application.create_events()
+        self.notify_flows(self.get_all_flow_ids())
 
     def create_events(self) -> None:
         logger().info("Creating events")

@@ -97,7 +97,7 @@ class CustomTable:
             selection=self._selection,
         ) as table:
             self.__table = table
-            self.__table.style("width: 100%")
+            self.__table.classes("w-full")
             # Register row click handling
             if self._auto_select_on_row_click:
                 table.on(ROW_CLICK_EVENT, self._internal_on_row_click)
@@ -141,6 +141,15 @@ class CustomTable:
         self._rows.extend(rows)
         if self._instantiated:
             self._table.update()
+
+    def add_cell_slot(self, column: str, template: str) -> None:
+        """Render the cells of a column with a Vue template, e.g. as tags."""
+        self._table.add_slot(f"body-cell-{column}", template)
+
+    def update_columns(self, columns: List[dict]) -> None:
+        self._columns = columns
+        if self._instantiated:
+            self._table.columns = columns
 
     def select(self, item_ids: list[str]) -> None:
         if self._instantiated:
