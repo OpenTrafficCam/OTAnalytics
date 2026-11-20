@@ -14,6 +14,7 @@ from OTAnalytics.domain.flow import FLOW_NAME, Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import SectionId
 from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.ota_button import ota_button
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
     COLUMN_ID,
     CustomTable,
@@ -135,23 +136,26 @@ class FlowForm(
 
     def build(self) -> Self:
         with ui.row().classes(BUTTON_ROW):
-            self._button_add = ui.button(
-                self._resource_manager.get(FlowKeys.BUTTON_ADD),
-                icon="add",
-                on_click=self.add_flow,
+            self._button_add = self._button(
+                FlowKeys.BUTTON_ADD, self.add_flow, MARKER_BUTTON_ADD, icon="add"
             )
-            self._button_add.mark(MARKER_BUTTON_ADD)
-            self._button_add.props(f"{TEST_ID}={MARKER_BUTTON_ADD}")
-            self._button_generate = self._secondary_button(
-                FlowKeys.BUTTON_GENERATE, self.generate_flow, MARKER_BUTTON_GENERATE
+            self._button_generate = self._button(
+                FlowKeys.BUTTON_GENERATE,
+                self.generate_flow,
+                MARKER_BUTTON_GENERATE,
+                secondary=True,
             )
-            self._button_properties = self._secondary_button(
+            self._button_properties = self._button(
                 FlowKeys.BUTTON_PROPERTIES,
                 self.show_flow_properties,
                 MARKER_BUTTON_PROPERTIES,
+                secondary=True,
             )
-            self._button_remove = self._secondary_button(
-                FlowKeys.BUTTON_REMOVE, self.remove_flow, MARKER_BUTTON_REMOVE
+            self._button_remove = self._button(
+                FlowKeys.BUTTON_REMOVE,
+                self.remove_flow,
+                MARKER_BUTTON_REMOVE,
+                secondary=True,
             )
         self._build_track_assignment()
         self._flow_table.build()
@@ -163,14 +167,22 @@ class FlowForm(
         self._viewmodel.set_flows_frame(self)
         return self
 
-    def _secondary_button(
-        self, key: FlowKeys, on_click: Callable[..., Any], marker: str
+    def _button(
+        self,
+        key: FlowKeys,
+        on_click: Callable[..., Any],
+        marker: str,
+        secondary: bool = False,
+        icon: str | None = None,
     ) -> ui.button:
-        button = ui.button(self._resource_manager.get(key), on_click=on_click)
-        button.props("outline")
-        button.mark(marker)
-        button.props(f"{TEST_ID}={marker}")
-        return button
+        return ota_button(
+            self._resource_manager.get(key),
+            on_click,
+            marker,
+            secondary=secondary,
+            icon=icon,
+            test_id=True,
+        )
 
     def _build_track_assignment(self) -> None:
         with ui.column().classes("ota-assignment").mark(MARKER_ASSIGNMENT_BOX):
@@ -190,12 +202,11 @@ class FlowForm(
                 self._assignment_dot = ui.element("span").classes("ota-dot")
                 self._assignment_state = ui.label().classes("ota-assignment-text")
                 self._assignment_state.mark(MARKER_ASSIGNMENT_STATE)
-                self._update_now = ui.button(
-                    self._resource_manager.get(FlowKeys.BUTTON_UPDATE_ASSIGNMENT),
-                    on_click=self.update_assignment,
+                self._update_now = self._button(
+                    FlowKeys.BUTTON_UPDATE_ASSIGNMENT,
+                    self.update_assignment,
+                    MARKER_UPDATE_FLOW_HIGHLIGHTING,
                 )
-                self._update_now.mark(MARKER_UPDATE_FLOW_HIGHLIGHTING)
-                self._update_now.props(f"{TEST_ID}={MARKER_UPDATE_FLOW_HIGHLIGHTING}")
         self._show_assignment_state()
 
     def _set_auto_assignment(self, enabled: bool) -> None:
