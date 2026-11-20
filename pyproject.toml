@@ -27,7 +27,7 @@ dependencies = [
     "av==19.0.2",
     "customtkinter==5.2.2",
     "fastapi==0.162.0",
-    "ijson==3.3.0",
+    "ijson==3.6.0",
     "matplotlib==3.11.2",
     "more-itertools==10.7.0",
     "nicegui==4.0.0",
