@@ -1,5 +1,10 @@
 /* Stylesheet of the OTAnalytics web UI, loaded once by global_theme(). */
 
+/* Quasar names its classes with BEM (q-btn--outline, q-field__control), and so
+   do our modifiers (ota-dot--stale). Overrides of framework styles do not keep
+   the specificity order of unrelated selectors. */
+/* stylelint-disable selector-class-pattern, no-descending-specificity */
+
 :root {
     /* Compact desktop density instead of NiceGUI's 1rem padding and gaps */
     --nicegui-default-padding: 8px;
