@@ -10,6 +10,8 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
+    cooldown:
+      default-days: 7
     reviewers:
       - "briemla"
     assignees:
@@ -19,6 +21,8 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
+    cooldown:
+      default-days: 7
     reviewers:
       - "briemla"
     assignees:
