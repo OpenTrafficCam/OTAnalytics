@@ -23,6 +23,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_for
     create_columns,
     map_to_ui,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 from tests.utils.nicegui_table import double_click_row, wait_until_awaited
 
 ENDPOINT_NAME = "/test-sections-form-double-click"
@@ -190,3 +191,24 @@ class TestSectionButtons:
             if marker in (MARKER_BUTTON_ADD_LINE, MARKER_SECTION_TABLE)
         ]
         assert order == [MARKER_BUTTON_ADD_LINE, MARKER_SECTION_TABLE]
+
+    async def test_buttons_leave_test_ids_to_the_flow_buttons(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """Browser tests click the first element with a flow button's test id.
+
+        Section buttons share these markers and come first on the page.
+        """
+        target = SectionsForm(
+            create_viewmodel(), create_section_state(), resource_manager
+        )
+
+        @ui.page("/test-section-button-ids")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test-section-button-ids")
+
+        for marker in (MARKER_BUTTON_PROPERTIES, MARKER_BUTTON_REMOVE):
+            button = user.find(marker=marker).elements.pop()
+            assert TEST_ID not in button.props, marker

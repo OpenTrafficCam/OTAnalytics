@@ -32,6 +32,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form im
     FlowForm,
     create_columns,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 from tests.utils.nicegui_table import double_click_row, wait_until_awaited
 
 ENDPOINT_NAME = "/test-flow-form-double-click"
@@ -382,6 +383,27 @@ class TestFlowGroupDesign:
             MARKER_BUTTON_REMOVE,
         ):
             assert "outline" in props(marker), marker
+
+    async def test_buttons_can_be_found_by_browser_tests(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        await open_flow_form(user, create_auto_viewmodel(auto=False), resource_manager)
+
+        assert user.client is not None
+        # Includes hidden buttons, like "Update now" while nothing is outdated.
+        test_ids = {
+            marker: element.props.get(TEST_ID)
+            for element in user.client.layout.descendants()
+            for marker in element._markers
+        }
+        for marker in (
+            MARKER_BUTTON_ADD,
+            MARKER_BUTTON_GENERATE,
+            MARKER_BUTTON_PROPERTIES,
+            MARKER_BUTTON_REMOVE,
+            MARKER_UPDATE_FLOW_HIGHLIGHTING,
+        ):
+            assert test_ids[marker] == marker, marker
 
     async def test_up_to_date_with_automatic_assignment(
         self, user: User, resource_manager: ResourceManager
