@@ -59,6 +59,7 @@ CONTEXT_MENU = "contextmenu.prevent"
 PASSIVE_MOUSE_EVENTS = [CLICK]
 EDITOR_MOUSE_EVENTS = [CLICK, MOUSE_MOVE, MOUSE_UP]
 EVENTS_PROP = "events"
+SIZE_PROP = "size"
 UPDATE_VIEWBOX = "updateViewbox"
 RELEASE_FOCUS = "document.activeElement?.blur()"
 NOTIFICATION_TYPE_WARNING: Final = "warning"
@@ -564,10 +565,16 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         The layer would take its size from the image's "loaded" event, which is
         lost if the image loads before the page is connected. Without a size the
         layer stays invisible.
+
+        The layer has no source of its own. It scales the coordinates of its
+        pointer events by its size, so without a size they are not in pixels of
+        the image.
         """
         if self._overlay is None:
             return
         width, height = image.size
+        self._overlay._props[SIZE_PROP] = (width, height)
+        self._overlay.update()
         self._overlay.run_method(UPDATE_VIEWBOX, width, height)
 
     def clear_image(self) -> None:
