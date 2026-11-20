@@ -1,304 +1,304 @@
 /* Stylesheet of the OTAnalytics web UI, loaded once by global_theme(). */
 
 :root {
-  /* Colours */
-  --ota-primary: #415841;
-  --ota-surface: #ffffff;
-  --ota-border: #e5e7eb;
-  --ota-text-muted: #616161;
+    /* Colours */
+    --ota-primary: #415841;
+    --ota-surface: #fff;
+    --ota-border: #e5e7eb;
+    --ota-text-muted: #616161;
 
-  /* Spacing, radius and fonts */
-  --ota-space-1: 0.25rem;
-  --ota-space-2: 0.5rem;
-  --ota-space-3: 0.75rem;
-  --ota-space-4: 1rem;
-  --ota-radius-sm: 0.125rem;
-  --ota-font-size-sm: 0.875rem;
-  --ota-line-height-sm: 1.25rem;
+    /* Spacing, radius and fonts */
+    --ota-space-1: 0.25rem;
+    --ota-space-2: 0.5rem;
+    --ota-space-3: 0.75rem;
+    --ota-space-4: 1rem;
+    --ota-radius-sm: 0.125rem;
+    --ota-font-size-sm: 0.875rem;
+    --ota-line-height-sm: 1.25rem;
 
-  /* Layout */
-  --ota-header-height: 52px;
-  --ota-left-width: 344px;
-  --ota-right-width: 288px;
-  --ota-step-input-width: 5rem;
-  --ota-swatch-size: 0.75rem;
-  --ota-stale-opacity: 0.4;
+    /* Layout */
+    --ota-header-height: 52px;
+    --ota-left-width: 344px;
+    --ota-right-width: 288px;
+    --ota-step-input-width: 5rem;
+    --ota-swatch-size: 0.75rem;
+    --ota-stale-opacity: 0.4;
 }
 
 /* Quasar takes its primary colour from here. ui.colors() writes every colour
    inline on the body, including a default primary, so this one is important. */
 body {
-  --q-primary: var(--ota-primary) !important;
+    --q-primary: var(--ota-primary) !important;
 }
 
 /* Page frame: only the side panels scroll, not the page. */
 body:has(.ota-app) {
-  overflow: hidden;
+    overflow: hidden;
 }
 
 .ota-app {
-  height: calc(100vh - var(--ota-header-height));
-  padding: 0;
-  gap: 0;
+    height: calc(100vh - var(--ota-header-height));
+    padding: 0;
+    gap: 0;
 }
 
 .ota-panels {
-  width: 100%;
-  flex: 1 1 0%;
-  min-height: 0;
-  gap: 0;
-  flex-wrap: nowrap;
+    width: 100%;
+    flex: 1 1 0%;
+    min-height: 0;
+    gap: 0;
+    flex-wrap: nowrap;
 }
 
 .ota-left,
 .ota-right {
-  flex-shrink: 0;
-  height: 100%;
-  overflow-y: auto;
-  padding: var(--ota-space-2);
+    flex-shrink: 0;
+    height: 100%;
+    overflow-y: auto;
+    padding: var(--ota-space-2);
 }
 
 .ota-left {
-  width: var(--ota-left-width);
+    width: var(--ota-left-width);
 }
 
 .ota-right {
-  width: var(--ota-right-width);
+    width: var(--ota-right-width);
 }
 
 .ota-center {
-  display: flex;
-  flex: 1 1 0%;
-  flex-direction: column;
-  min-width: 0;
-  height: 100%;
-  padding: var(--ota-space-2);
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+    padding: var(--ota-space-2);
 }
 
 .ota-statusbar {
-  width: 100%;
-  flex-shrink: 0;
-  flex-wrap: nowrap;
-  align-items: center;
-  padding: var(--ota-space-1) var(--ota-space-3);
-  border-top: 1px solid var(--ota-border);
-  background-color: var(--ota-surface);
+    width: 100%;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: var(--ota-space-1) var(--ota-space-3);
+    border-top: 1px solid var(--ota-border);
+    background-color: var(--ota-surface);
 }
 
 /* Header */
 .ota-header {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 16px;
-  height: var(--ota-header-height);
-  padding: 0 16px;
-  background-color: var(--ota-primary);
-  color: #ffffff;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 16px;
+    height: var(--ota-header-height);
+    padding: 0 16px;
+    background-color: var(--ota-primary);
+    color: #fff;
 }
 
 .ota-brand {
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 10px;
-  font-size: 18px;
-  font-weight: 700;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
 }
 
 .ota-brand-icon {
-  font-size: 26px;
-  color: #b4cbc0;
+    font-size: 26px;
+    color: #b4cbc0;
 }
 
 .ota-header-divider {
-  flex: none;
-  width: 1px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.25);
+    flex: none;
+    width: 1px;
+    height: 24px;
+    background: rgb(255 255 255 / 25%);
 }
 
 .ota-project-title {
-  flex-wrap: nowrap;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
 }
 
 .ota-project-name {
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .ota-save-state {
-  font-size: 12px;
-  color: #d4e1da;
-  white-space: nowrap;
+    font-size: 12px;
+    color: #d4e1da;
+    white-space: nowrap;
 }
 
 .ota-header-actions {
-  flex-wrap: nowrap;
-  gap: 8px;
-  margin-left: auto;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-left: auto;
 }
 
 .ota-header .q-btn {
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .ota-header .q-btn--outline {
-  color: #ffffff !important;
+    color: #fff !important;
 }
 
-.ota-header .q-btn--outline:before {
-  border-color: rgba(255, 255, 255, 0.35);
+.ota-header .q-btn--outline::before {
+    border-color: rgb(255 255 255 / 35%);
 }
 
 /* Save: solid white unless there are unsaved changes, then orange. */
 .ota-header .ota-header-primary:not(.bg-orange) {
-  background: #ffffff !important;
-  color: var(--ota-primary) !important;
+    background: #fff !important;
+    color: var(--ota-primary) !important;
 }
 
 /* Workflow accordion and layer groups */
 .ota-group,
 .ota-layer-group {
-  width: 100%;
+    width: 100%;
 }
 
 /* Canvas: offers its size to the image, which keeps its aspect ratio. */
 .ota-workspace {
-  position: relative;
-  display: flex;
-  flex: 1 1 0%;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 0;
-  container-type: size;
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    container-type: size;
 }
 
 /* Time bar under the canvas */
 .ota-timebar {
-  width: 100%;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ota-space-2);
-  overflow-x: auto;
+    width: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-2);
+    overflow-x: auto;
 }
 
 .ota-step-input {
-  width: var(--ota-step-input-width);
+    width: var(--ota-step-input-width);
 }
 
 /* Class legend on the canvas */
 .ota-legend {
-  position: absolute;
-  top: var(--ota-space-3);
-  right: var(--ota-space-3);
-  z-index: 10;
+    position: absolute;
+    top: var(--ota-space-3);
+    right: var(--ota-space-3);
+    z-index: 10;
 }
 
 .ota-legend-content {
-  padding: var(--ota-space-2);
-  gap: var(--ota-space-1);
+    padding: var(--ota-space-2);
+    gap: var(--ota-space-1);
 }
 
 .ota-legend-entry {
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ota-space-2);
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-2);
 }
 
 .ota-swatch {
-  display: inline-block;
-  width: var(--ota-swatch-size);
-  height: var(--ota-swatch-size);
-  border-radius: var(--ota-radius-sm);
+    display: inline-block;
+    width: var(--ota-swatch-size);
+    height: var(--ota-swatch-size);
+    border-radius: var(--ota-radius-sm);
 }
 
 /* Status bar: track statistics and the assignment notice */
 .ota-stats {
-  flex: 1 1 0%;
-  min-width: 0;
-  flex-wrap: nowrap;
-  align-items: center;
-  column-gap: var(--ota-space-4);
-  overflow-x: auto;
-  font-size: var(--ota-font-size-sm);
-  line-height: var(--ota-line-height-sm);
+    flex: 1 1 0%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    align-items: center;
+    column-gap: var(--ota-space-4);
+    overflow-x: auto;
+    font-size: var(--ota-font-size-sm);
+    line-height: var(--ota-line-height-sm);
 }
 
 .ota-stat {
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ota-space-1);
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-1);
 }
 
 .ota-stat-label,
 .ota-stat-value {
-  white-space: nowrap;
+    white-space: nowrap;
 }
 
 .ota-stat-label {
-  color: var(--ota-text-muted);
+    color: var(--ota-text-muted);
 }
 
 .ota-stat-value {
-  font-weight: 500;
+    font-weight: 500;
 }
 
 .ota-assignment-notice {
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ota-space-1);
-  font-size: var(--ota-font-size-sm);
-  line-height: var(--ota-line-height-sm);
-  color: var(--q-warning);
-  white-space: nowrap;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-1);
+    font-size: var(--ota-font-size-sm);
+    line-height: var(--ota-line-height-sm);
+    color: var(--q-warning);
+    white-space: nowrap;
 }
 
 /* Out of date: track counts and flow arrows of an outdated assignment */
 .ota-stale {
-  opacity: var(--ota-stale-opacity);
+    opacity: var(--ota-stale-opacity);
 }
 
 /* Forms */
 .ota-button-row {
-  width: 100%;
+    width: 100%;
 }
 
 .ota-button-row > .q-btn {
-  width: 100%;
-  max-width: 45%;
+    width: 100%;
+    max-width: 45%;
 }
 
 .ota-datetime-field {
-  max-width: 40%;
+    max-width: 40%;
 }
 
 .ota-dialog {
-  width: 24rem;
+    width: 24rem;
 }
 
 .ota-dialog-wide {
-  width: 100%;
-  max-width: 70%;
+    width: 100%;
+    max-width: 70%;
 }
 
 /* Marks a form field whose input passed its validation: draws the underline
    like Quasar draws it for an error, but green. */
-.q-field.otanalytics-valid-field .q-field__control:after {
-  background: var(--q-positive);
-  transform: scale3d(1, 1, 1);
+.q-field.otanalytics-valid-field .q-field__control::after {
+    background: var(--q-positive);
+    transform: scale3d(1, 1, 1);
 }
 
 .q-field.otanalytics-valid-field .q-field__label {
-  color: var(--q-positive);
+    color: var(--q-positive);
 }
