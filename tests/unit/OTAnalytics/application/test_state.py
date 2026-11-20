@@ -298,6 +298,21 @@ class TestVideosMetadata:
 
         assert videos_metadata.first_video_start is None
         assert videos_metadata.last_video_end is None
+        assert videos_metadata.get_all() == []
+
+    def test_get_all_is_sorted_by_start(
+        self,
+        first_full_metadata: VideoMetadata,
+        second_full_metadata: VideoMetadata,
+    ) -> None:
+        videos_metadata = VideosMetadata()
+        videos_metadata.update(second_full_metadata)
+        videos_metadata.update(first_full_metadata)
+
+        assert videos_metadata.get_all() == [
+            first_full_metadata,
+            second_full_metadata,
+        ]
 
     def test_update_single_full_item(self, first_full_metadata: VideoMetadata) -> None:
         videos_metadata = VideosMetadata()
