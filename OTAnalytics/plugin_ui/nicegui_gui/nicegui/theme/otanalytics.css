@@ -310,36 +310,36 @@ body:has(.ota-app) {
 
 /* Project group: track files, videos and remark */
 .ota-subheading {
-  margin: var(--ota-space-2) 0 0;
-  color: var(--ota-text-muted);
-  font-size: var(--ota-font-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+    margin: var(--ota-space-2) 0 0;
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .ota-file-section,
 .ota-file-list {
-  width: 100%;
-  gap: 6px;
+    width: 100%;
+    gap: 6px;
 }
 
 .ota-file {
-  width: 100%;
-  overflow: hidden;
-  padding: var(--ota-space-1) var(--ota-space-2);
-  border-radius: var(--ota-radius);
-  background: var(--ota-bg);
-  color: var(--ota-text);
-  font-family: var(--ota-font-mono);
-  font-size: var(--ota-font-size-sm);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+    width: 100%;
+    overflow: hidden;
+    padding: var(--ota-space-1) var(--ota-space-2);
+    border-radius: var(--ota-radius);
+    background: var(--ota-bg);
+    color: var(--ota-text);
+    font-family: var(--ota-font-mono);
+    font-size: var(--ota-font-size-sm);
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 /* Outline buttons use the strong border of the design. */
-.q-btn--outline:before {
-  border-color: var(--ota-border-strong);
+.q-btn--outline::before {
+    border-color: var(--ota-border-strong);
 }
 
 /* Layer groups (right panel) */
