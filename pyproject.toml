@@ -24,7 +24,7 @@ classifiers = [
 keywords = ["OpenTrafficCam", "Traffic Analysis", "Traffic Counting", "Trajectories"]
 dependencies = [
     "aioboto3==15.5.0",
-    "av==13.0.0",
+    "av==19.0.2",
     "customtkinter==5.2.2",
     "fastapi==0.162.0",
     "ijson==3.3.0",
@@ -32,7 +32,7 @@ dependencies = [
     "more-itertools==10.7.0",
     "nicegui==4.0.0",
     "numpy==2.1.1",
-    "opencv-python-headless==4.10.0.84",
+    "opencv-python-headless==5.0.0.93",
     "openpyxl==3.1.5",
     "pandas==2.3.3",
     "pillow==13.0.0",
