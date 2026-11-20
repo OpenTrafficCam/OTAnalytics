@@ -600,63 +600,63 @@ body:has(.ota-app) {
 
 /* Flows group: track assignment */
 .ota-assignment {
-  width: 100%;
-  gap: 6px;
-  padding: var(--ota-space-2) 10px;
-  border: 1px solid var(--ota-border);
-  border-radius: var(--ota-radius);
-  background: var(--ota-bg);
+    width: 100%;
+    gap: 6px;
+    padding: var(--ota-space-2) 10px;
+    border: 1px solid var(--ota-border);
+    border-radius: var(--ota-radius);
+    background: var(--ota-bg);
 }
 
 .ota-assignment-head,
 .ota-assignment-state {
-  width: 100%;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ota-space-2);
+    width: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-2);
 }
 
 .ota-assignment-title {
-  flex: 1;
-  color: var(--ota-text);
-  font-size: var(--ota-font-size);
-  font-weight: 700;
+    flex: 1;
+    color: var(--ota-text);
+    font-size: var(--ota-font-size);
+    font-weight: 700;
 }
 
 .ota-assignment-head .q-toggle {
-  font-size: var(--ota-font-size-sm);
+    font-size: var(--ota-font-size-sm);
 }
 
 .ota-assignment-text {
-  flex: 1;
-  color: var(--ota-text-muted);
-  font-size: var(--ota-font-size-sm);
+    flex: 1;
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-sm);
 }
 
 .ota-assignment-text--stale {
-  color: var(--ota-stale-text);
+    color: var(--ota-stale-text);
 }
 
 .ota-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
 }
 
 .ota-dot--fresh {
-  background: var(--ota-fresh);
+    background: var(--ota-fresh);
 }
 
 .ota-dot--stale {
-  background: var(--ota-stale-dot);
+    background: var(--ota-stale-dot);
 }
 
 /* Numbers in lists, e.g. the tracks assigned to a flow */
 .ota-num {
-  color: var(--ota-text);
-  font-family: var(--ota-font-mono);
-  font-size: var(--ota-font-size-sm);
+    color: var(--ota-text);
+    font-family: var(--ota-font-mono);
+    font-size: var(--ota-font-size-sm);
 }
 
 /* Out of date: track counts and flow arrows of an outdated assignment */
