@@ -88,7 +88,6 @@
     /* Layout */
     --ota-header-height: 52px;
     --ota-status-height: 30px;
-    --ota-left-width: 400px;
     --ota-right-width: 288px;
     --ota-control-height: 28px;
     --ota-field-height: 32px;
@@ -119,10 +118,31 @@ body:has(.ota-app) {
     gap: 0;
 }
 
+/* Splitter between the left panel and the rest. Its width is set in
+   main_page_builder.py, as the user drags it. */
 .ota-panels {
     width: 100%;
     flex: 1 1 0%;
     min-height: 0;
+}
+
+/* Only the panels inside scroll, not the splitter's sides. */
+.ota-panels > .q-splitter__panel {
+    overflow: hidden;
+}
+
+.ota-panels > .q-splitter__separator {
+    background: var(--ota-border);
+}
+
+.ota-panels > .q-splitter__separator:hover,
+.ota-panels.q-splitter--active > .q-splitter__separator {
+    background: var(--ota-primary);
+}
+
+.ota-main {
+    width: 100%;
+    height: 100%;
     gap: 0;
     flex-wrap: nowrap;
 }
@@ -136,10 +156,9 @@ body:has(.ota-app) {
 }
 
 .ota-left {
-    width: var(--ota-left-width);
+    width: 100%;
     gap: var(--ota-space-2);
     background: var(--ota-bg);
-    border-right: 1px solid var(--ota-border);
 }
 
 .ota-right {

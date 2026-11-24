@@ -7,8 +7,11 @@ from nicegui.element import Element
 from nicegui.testing import User
 
 from OTAnalytics.plugin_ui.nicegui_gui.page_builders.main_page_builder import (
+    LEFT_PANEL_LIMITS,
+    LEFT_PANEL_WIDTH,
     MARKER_CENTER_PANEL,
     MARKER_LEFT_PANEL,
+    MARKER_PANEL_SPLITTER,
     MARKER_RIGHT_PANEL,
     MARKER_STATUS_BAR,
     MainPageBuilder,
@@ -94,6 +97,32 @@ class TestMainPageBuilder:
         assert "ota-left" in left.classes
         assert "ota-right" in right.classes
         assert "ota-center" in center.classes
+
+    async def test_left_panel_is_resizable(self, user: User) -> None:
+        MainPageBuilder(
+            ENDPOINT,
+            configuration_bar=part(CONFIGURATION),
+            workspace=part(WORKSPACE),
+            visualization_filters=part(FILTERS),
+            visualization_layers=part(LAYERS),
+            status_bar=part(STATUS),
+            assignment_status=part(ASSIGNMENT),
+        ).build(Mock())
+
+        await user.open(ENDPOINT)
+
+        splitter = user.find(marker=MARKER_PANEL_SPLITTER).elements.pop()
+        left = user.find(marker=MARKER_LEFT_PANEL).elements.pop()
+        center = user.find(marker=MARKER_CENTER_PANEL).elements.pop()
+        right = user.find(marker=MARKER_RIGHT_PANEL).elements.pop()
+        assert isinstance(splitter, ui.splitter)
+        assert splitter.value == LEFT_PANEL_WIDTH
+        assert splitter.props["unit"] == "px"
+        assert splitter.props["limits"] == LEFT_PANEL_LIMITS
+        assert left.parent_slot is splitter.before
+        main = ancestors(center)[0]
+        assert ancestors(right)[0] is main
+        assert main.parent_slot is splitter.after
 
     async def test_status_bar_keeps_one_line(self, user: User) -> None:
         """A wrapping status bar would shrink the canvas whenever a notice shows."""
