@@ -90,6 +90,8 @@ class AddVideoForm(ButtonForm, AbstractTreeviewInterface):
 
     def build(self) -> Self:
         self._video_table.build()
+        # Video names differ at their end, in date and time.
+        self._video_table.truncate_column(COLUMN_NAME, cut_start=True)
         with ui.row().classes("ota-button-row"):
             self._build_buttons()
         self._update_video_table()

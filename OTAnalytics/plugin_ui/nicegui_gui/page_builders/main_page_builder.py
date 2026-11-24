@@ -26,8 +26,9 @@ MARKER_PANEL_SPLITTER = "marker-panel-splitter"
 
 LEFT_PANEL_WIDTH = 400
 """Initial width of the left panel in pixels."""
-LEFT_PANEL_LIMITS = (280, 640)
-"""Narrowest and widest the user can drag the left panel, in pixels."""
+LEFT_PANEL_LIMITS = (289, 640)
+"""Narrowest and widest the user can drag the left panel, in pixels. The
+narrowest fits the minimum width of its groups (265px) and its padding."""
 
 
 class MainPageBuilder(NiceguiPageBuilder):

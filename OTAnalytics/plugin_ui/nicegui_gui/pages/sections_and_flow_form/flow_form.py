@@ -159,6 +159,7 @@ class FlowForm(
             )
         self._build_track_assignment()
         self._flow_table.build()
+        self._flow_table.truncate_column(FLOW_NAME)
         self.update_items()
         if self._outdated:
             # Changed before there was a page, e.g. by a preloaded project.

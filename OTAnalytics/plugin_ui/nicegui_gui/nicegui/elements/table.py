@@ -12,6 +12,15 @@ HEADER_SLOT = "header"
 BODY_SLOT = "body"
 
 COLUMN_ID = "id"
+TRUNCATING_TABLE_CLASS = "ota-truncating-table"
+TRUNCATE_END_CELL = (
+    '<q-td :props="props" class="ota-truncate" :title="props.value">'
+    "{{ props.value }}</q-td>"
+)
+TRUNCATE_START_CELL = (
+    '<q-td :props="props" class="ota-truncate ota-truncate-start"'
+    ' :title="props.value"><span>{{ props.value }}</span></q-td>'
+)
 ROW_CLICK_EVENT = "rowClick"
 ROW_DOUBLE_CLICK_EVENT = "rowDblclick"
 
@@ -145,6 +154,17 @@ class CustomTable:
     def add_cell_slot(self, column: str, template: str) -> None:
         """Render the cells of a column with a Vue template, e.g. as tags."""
         self._table.add_slot(f"body-cell-{column}", template)
+
+    def truncate_column(self, column: str, cut_start: bool = False) -> None:
+        """Shorten the values of a column that do not fit, so the table fits its
+        container. The column takes the space the others leave. An ellipsis
+        replaces the end, or the start with `cut_start`, and the full value
+        shows on hover.
+        """
+        self._table.classes(TRUNCATING_TABLE_CLASS)
+        self.add_cell_slot(
+            column, TRUNCATE_START_CELL if cut_start else TRUNCATE_END_CELL
+        )
 
     def update_columns(self, columns: List[dict]) -> None:
         self._columns = columns

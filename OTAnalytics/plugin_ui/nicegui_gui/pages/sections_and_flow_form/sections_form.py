@@ -140,6 +140,7 @@ class SectionsForm(ButtonForm, AbstractTreeviewInterface):
             )
         self._section_table.build()
         self._section_table.add_cell_slot(COLUMN_TYPE, TYPE_TAG)
+        self._section_table.truncate_column(NAME)
         self.update_items()
         # Buttons did not exist on first introduction, apply their states now
         self._viewmodel.set_sections_frame(self)

@@ -92,6 +92,8 @@
     --ota-control-height: 28px;
     --ota-field-height: 32px;
     --ota-step-input-width: 5rem;
+    /* The left panel cannot be dragged narrower than this plus its padding. */
+    --ota-group-min-width: 265px;
     /* Leaves room for the headers of the other groups in the left panel. */
     --ota-group-max-height: max(
         240px,
@@ -316,6 +318,7 @@ body:has(.ota-app) {
 .ota-group.q-expansion-item {
     flex: none;
     width: 100%;
+    min-width: var(--ota-group-min-width);
     background: var(--ota-surface);
     border: 1px solid var(--ota-border);
     border-radius: var(--ota-radius-lg);
@@ -481,6 +484,33 @@ body:has(.ota-app) {
     padding: 7px 10px;
     font-size: var(--ota-font-size);
     color: var(--ota-text-strong);
+}
+
+/* Tables whose name column shortens long names. Below the minimum width the
+   table scrolls instead. */
+.ota-truncating-table .q-table {
+    min-width: 220px;
+}
+
+/* Takes the width the other columns leave, as its own content does not count. */
+.ota-truncate {
+    width: 100%;
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Right to left puts the ellipsis at the start; the name inside keeps its
+   order. */
+.ota-truncate-start {
+    direction: rtl;
+    text-align: left;
+}
+
+.ota-truncate-start > span {
+    direction: ltr;
+    unicode-bidi: isolate;
 }
 
 .q-table tbody tr.selected td {
