@@ -15,6 +15,7 @@ VALID_FIELD_CLASS = "otanalytics-valid-field"
 """Marks a form field whose input passed its validation."""
 
 DATETIME_FIELD_CLASS = "ota-datetime-field"
+DATE_FIELD_CLASS = "ota-date-field"
 DIALOG_CLASS = "ota-dialog"
 WIDE_DIALOG_CLASS = "ota-dialog-wide"
 STALE_CLASS = "ota-stale"

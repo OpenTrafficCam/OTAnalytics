@@ -47,7 +47,7 @@ class TestStylesheet:
     def test_defines_the_panel_widths_as_tokens(self) -> None:
         css = Path(STYLESHEET).read_text(encoding="utf-8")
 
-        assert "--ota-left-width: 344px" in css
+        assert "--ota-left-width: 400px" in css
         assert "--ota-right-width: 288px" in css
 
     async def test_is_loaded_by_the_theme(self, user: User) -> None:
