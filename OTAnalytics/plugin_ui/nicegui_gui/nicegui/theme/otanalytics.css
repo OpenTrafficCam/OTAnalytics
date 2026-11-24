@@ -92,6 +92,13 @@
     --ota-control-height: 28px;
     --ota-field-height: 32px;
     --ota-step-input-width: 5rem;
+    /* Leaves room for the headers of the other groups in the left panel. */
+    --ota-group-max-height: max(
+        240px,
+        calc(
+            100vh - var(--ota-header-height) - var(--ota-status-height) - 280px
+        )
+    );
     --ota-stale-opacity: 0.4;
 }
 
@@ -303,7 +310,11 @@ body:has(.ota-app) {
 }
 
 /* Workflow accordion */
+/* The groups keep their height, so the left panel scrolls when several are
+   open. Shrinking them would cut off their content, as they hide what
+   overflows. */
 .ota-group.q-expansion-item {
+    flex: none;
     width: 100%;
     background: var(--ota-surface);
     border: 1px solid var(--ota-border);
@@ -320,12 +331,20 @@ body:has(.ota-app) {
     background: var(--ota-hover);
 }
 
+/* A long group scrolls inside, so the headers of the other groups stay in
+   view. */
 .ota-group .q-expansion-item__content {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    max-height: var(--ota-group-max-height);
+    overflow-y: auto;
     padding: var(--ota-space-1) 14px var(--ota-space-4);
     border-top: 1px solid var(--ota-border-light);
+}
+
+.ota-group .q-expansion-item__content > * {
+    flex-shrink: 0;
 }
 
 .ota-group-header {
