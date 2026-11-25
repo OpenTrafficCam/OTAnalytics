@@ -24,6 +24,8 @@ class CanvasKeys(ResourceKey):
     LABEL_EDIT_SECTION = "label-edit-section"
     IMAGE_DEFAULT = "image-default"
     MESSAGE_NOT_ENOUGH_POINTS = "message-not-enough-points"
+    TOOLTIP_FINISH_SECTION = "tooltip-finish-section"
+    TOOLTIP_CANCEL_SECTION = "tooltip-cancel-section"
     TOOLTIP_SHIFT_KNOB_BACKWARD = "tooltip-shift-knob-backward"
     TOOLTIP_SHIFT_KNOB_FORWARD = "tooltip-shift-knob-forward"
 
@@ -275,6 +277,8 @@ DEFAULT_RESOURCE_MAP = {
     AnalysisKeys.BUTTON_TEXT_EXPORT_TRACK_STATISTICS: "Export track statistics",
     CanvasKeys.LABEL_ADD_SECTION: "Add section",
     CanvasKeys.LABEL_EDIT_SECTION: "Edit section",
+    CanvasKeys.TOOLTIP_FINISH_SECTION: "Finish and save the section",
+    CanvasKeys.TOOLTIP_CANCEL_SECTION: "Cancel and discard the changes",
     CanvasKeys.TOOLTIP_SHIFT_KNOB_BACKWARD: "Move knob to the previous position",
     CanvasKeys.TOOLTIP_SHIFT_KNOB_FORWARD: "Move knob to the next position",
     CanvasKeys.MESSAGE_NOT_ENOUGH_POINTS: (

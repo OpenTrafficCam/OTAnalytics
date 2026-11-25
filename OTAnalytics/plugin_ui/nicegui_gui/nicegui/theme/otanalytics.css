@@ -928,6 +928,46 @@ body:has(.ota-app) {
     fill: var(--ota-accent);
 }
 
+/* Finish/cancel pill next to the last knob of the section editor */
+.ota-action-pill {
+    fill: var(--ota-surface);
+    fill-opacity: 0.95;
+    stroke: var(--ota-border-strong);
+    stroke-width: 1;
+}
+
+.ota-action-button {
+    stroke: var(--ota-surface);
+    stroke-width: 1;
+}
+
+.ota-action-finish {
+    fill: var(--ota-primary);
+}
+
+.ota-action-finish:hover {
+    fill: var(--ota-primary-hover);
+}
+
+.ota-action-disabled,
+.ota-action-disabled:hover {
+    fill: var(--ota-border-strong);
+}
+
+.ota-action-cancel {
+    fill: var(--ota-surface);
+    stroke: var(--ota-primary);
+    stroke-width: 1.5;
+}
+
+.ota-action-cancel:hover {
+    fill: var(--ota-hover);
+}
+
+.ota-action-cancel ~ .ota-action-glyph {
+    stroke: var(--ota-primary);
+}
+
 /* Out of date: track counts and flow arrows of an outdated assignment */
 .ota-stale {
     opacity: var(--ota-stale-opacity);

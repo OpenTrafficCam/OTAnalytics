@@ -18,6 +18,8 @@ from OTAnalytics.application.resources.resource_manager import (
     CanvasKeys, HotKeys, ResourceManager)
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import TrackImage
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.action_pill import (
+    BUTTON_RADIUS, CANCEL_SUFFIX, FINISH_SUFFIX, HEIGHT, WIDTH, ActionPill)
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.arrow import Arrow
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle_resources import \
@@ -84,6 +86,12 @@ SHIFT_RING_INNER_RADIUS: Final = 14
 SHIFT_RING_OUTER_RADIUS: Final = 40
 SHIFT_RING_IDLE_SECONDS: Final = 0.3
 SHIFT_RING_POLL_SECONDS: Final = 0.1
+EDIT_ACTION_ID: Final = "edit-action"
+ACTION_PILL_OFFSET: Final = 38
+ACTION_PILL_IDLE_SECONDS: Final = 0.3
+ACTION_PILL_HIDE_DISTANCE: Final = 50
+ACTION_PILL_MARGIN: Final = 12
+ACTION_CLICK_SWALLOW_SECONDS: Final = 0.5
 KNOB_RADIUS = 6
 HIGHLIGHTED_KNOB_RADIUS = 8
 HIGHLIGHTED_KNOB_STROKE_WIDTH = 3
@@ -217,6 +225,12 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._shift_hovered_forward: bool | None = None
         self._last_knob_motion = 0.0
         self._ignore_next_click = False
+        self._action_pill_visible = False
+        self._action_rest_point: Point | None = None
+        self._pointer_position: Point | None = None
+        self._last_placed_knob: Point | None = None
+        self._last_activity = 0.0
+        self._swallow_click_until = 0.0
         self._sections: SectionResource = SectionResource({})
         self._flows: LineResources = LineResources({})
         self._circles: CircleResources = CircleResources({})
@@ -240,12 +254,15 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         # content resends its whole background. Created before the background is
         # set, as the layer copies the image's source.
         self._overlay = self._background_image.add_layer()
-        self._overlay.on("svg:pointerdown", lambda e: self.on_svg_pointer_down(e.args))
+        self._overlay.on(
+            "svg:pointerdown", lambda e: self.handle_svg_pointer_down(e.args)
+        )
         self._overlay.on("svg:pointermove", lambda e: self.on_svg_pointer_move(e.args))
         self._overlay.on("svg:pointerup", lambda e: self.on_svg_pointer_up(e.args))
         self._background_image.on(CONTEXT_MENU, self.on_right_click)
 
         ui.timer(SHIFT_RING_POLL_SECONDS, self._show_shift_ring_when_still)
+        ui.timer(SHIFT_RING_POLL_SECONDS, self._show_action_pill_when_still)
         self._change_image()
         ui.keyboard(on_key=self.handle_key)
         self.load_sections()
@@ -399,6 +416,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._current_section = None
         self._new_section_points = []
         self._preview_point = None
+        self._hide_action_pill()
         self._reset_geometry_editor()
         self._update_mouse_events()
 
@@ -407,6 +425,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._edit_temporary = []
         self._hovered_knob_index = None
         self._mouse_position = None
+        self._last_placed_knob = None
         self._deselect_knob(revert=False)
 
     def _update_mouse_events(self) -> None:
@@ -449,6 +468,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self._overlay.content += self._circles.to_svg()
             self._overlay.content += self._edit_geometry()
             self.draw_new_section()
+            self._overlay.content += self._action_pill_svg()
 
     def _flows_svg(self) -> str:
         if self._flows_outdated:
@@ -459,6 +479,122 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         """Dim the flows while their track assignment is out of date."""
         self._flows_outdated = outdated
         self.draw_all()
+
+    def _can_show_action_pill(self) -> bool:
+        """The pill waits while a knob is picked up, which has its shift ring."""
+        if not self._is_editor_active() or not self._enabled:
+            return False
+        return self._selected_knob_index is None and not self._dragging
+
+    def _hide_action_pill(self) -> None:
+        self._action_pill_visible = False
+        self._action_rest_point = None
+
+    def _note_pointer_activity(self, point: Point | None = None) -> None:
+        self._last_activity = time.monotonic()
+        if point is not None:
+            self._pointer_position = point
+
+    def _action_anchor(self) -> Point | None:
+        """Where the user acted last: the last knob placed or else the mouse."""
+        if self._new_section and self._new_section_points:
+            return self._new_section_points[-1].to_tuple()
+        if self._current_section is not None and self._last_placed_knob is not None:
+            return self._last_placed_knob
+        return self._pointer_position
+
+    def _action_pill_center(self) -> Point | None:
+        """Center of the pill, kept inside the image next to the anchor."""
+        anchor = self._action_anchor()
+        if anchor is None:
+            return None
+        x = anchor[0] + ACTION_PILL_OFFSET
+        y = anchor[1] - ACTION_PILL_OFFSET
+        if self._current_image is not None:
+            width, height = self._current_image.size
+            if x + WIDTH // 2 > width:
+                x = anchor[0] - ACTION_PILL_OFFSET
+            if y - HEIGHT // 2 < 0:
+                y = anchor[1] + ACTION_PILL_OFFSET
+            if y + HEIGHT // 2 > height:
+                y = height - HEIGHT // 2
+        return max(x, WIDTH // 2), y
+
+    def _is_near_action_pill(self, point: Point) -> bool:
+        center = self._action_pill_center()
+        if center is None:
+            return False
+        return (
+            abs(point[0] - center[0]) <= WIDTH // 2 + ACTION_PILL_MARGIN
+            and abs(point[1] - center[1]) <= HEIGHT // 2 + ACTION_PILL_MARGIN
+        )
+
+    def _show_action_pill_when_still(self) -> None:
+        """Show the pill next to the last knob once the mouse is still."""
+        if self._action_pill_visible or not self._can_show_action_pill():
+            return
+        if time.monotonic() - self._last_activity < ACTION_PILL_IDLE_SECONDS:
+            return
+        if self._action_pill_center() is None:
+            return
+        self._action_pill_visible = True
+        self._action_rest_point = self._pointer_position
+        self.draw_all()
+
+    def _track_action_pill(self, point: Point) -> None:
+        """Hide the pill if the mouse leaves for another place on the image."""
+        self._note_pointer_activity(point)
+        if not self._action_pill_visible:
+            return
+        rest = self._action_rest_point
+        far = rest is None or (
+            (point[0] - rest[0]) ** 2 + (point[1] - rest[1]) ** 2
+            > ACTION_PILL_HIDE_DISTANCE**2
+        )
+        if far and not self._is_near_action_pill(point):
+            self._hide_action_pill()
+            self.draw_all()
+
+    def _action_pill_svg(self) -> str:
+        if not self._action_pill_visible or not self._can_show_action_pill():
+            return ""
+        center = self._action_pill_center()
+        if center is None:
+            return ""
+        finish_enabled = not self._new_section or has_enough_knobs(
+            circle_to_coordinates(self._new_section_points), self._new_area_section
+        )
+        return ActionPill(
+            id=EDIT_ACTION_ID,
+            x=center[0],
+            y=center[1],
+            finish_enabled=finish_enabled,
+            finish_tooltip=self._resource_manager.get(
+                CanvasKeys.TOOLTIP_FINISH_SECTION
+            ),
+            cancel_tooltip=self._resource_manager.get(
+                CanvasKeys.TOOLTIP_CANCEL_SECTION
+            ),
+        ).to_svg()
+
+    async def handle_svg_pointer_down(self, e: dict) -> None:
+        """Run the action of the pill that was pressed, else select a knob."""
+        element_id = e.get("element_id") or ""
+        if element_id.startswith(f"{EDIT_ACTION_ID}-") and self._action_pill_visible:
+            self._swallow_click_until = time.monotonic() + ACTION_CLICK_SWALLOW_SECONDS
+            if element_id.endswith(f"-{FINISH_SUFFIX}"):
+                self._hide_action_pill()
+                self.draw_all()
+                await self._finish_editor()
+            elif element_id.endswith(f"-{CANCEL_SUFFIX}"):
+                self._hide_action_pill()
+                self.draw_all()
+                self._cancel_action()
+            return
+        self.on_svg_pointer_down(e)
+
+    def _swallows_click(self) -> bool:
+        return time.monotonic() < self._swallow_click_until
 
     def _sync_shift_anchor(self) -> None:
         """Hide the shift ring if no knob is picked up or if it is dragged."""
@@ -657,12 +793,17 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         elif e.type == MOUSE_UP:
             self._on_release(point)
         elif e.type == CLICK:
+            if self._swallows_click():
+                return
+            self._hide_action_pill()
+            self._note_pointer_activity(point)
             if self._current_section is not None:
                 self._on_canvas_click(point)
             else:
                 self._on_pointer_down(e)
 
     def _on_move(self, point: Point) -> None:
+        self._track_action_pill(point)
         if self._new_section:
             self._preview_point = point
             self.draw_all()
@@ -721,6 +862,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if index is None:
             return
         self._edit_temporary[index] = point
+        self._last_placed_knob = point
+        self._hide_action_pill()
+        self._note_pointer_activity(point)
         self._commit_edit()
         self._deselect_knob(revert=False)
         self._hovered_knob_index = index
@@ -745,6 +889,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             return
         point = svg_event_to_point(e)
         self._mouse_position = point
+        self._hide_action_pill()
+        self._note_pointer_activity(point)
         self._ignore_next_click = False
         self._last_knob_motion = time.monotonic()
         shift_forward = self._shift_half_from_element_id(e.get(ELEMENT_ID))
