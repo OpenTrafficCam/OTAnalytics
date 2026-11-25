@@ -34,6 +34,22 @@ def classes_defined_in_css() -> set[str]:
     return set(CLASS_IN_CSS.findall(Path(STYLESHEET).read_text(encoding="utf-8")))
 
 
+def css_rule(selector: str) -> str:
+    """Declarations of the rule with exactly this selector."""
+    css = Path(STYLESHEET).read_text(encoding="utf-8")
+    match = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", css)
+    assert match, selector
+    return match.group(1)
+
+
+class TestCanvasOverlayStylesheet:
+    def test_hint_lets_clicks_through_to_the_canvas(self) -> None:
+        assert "pointer-events: none" in css_rule(".ota-hint")
+
+    def test_focus_mode_shows_crosshair_on_the_canvas_image(self) -> None:
+        assert "cursor: crosshair" in css_rule(".ota-canvas:has(> .ota-focus) > img")
+
+
 class TestStylesheet:
     def test_defines_every_class_used_in_the_web_ui(self) -> None:
         used = classes_used_in_python()

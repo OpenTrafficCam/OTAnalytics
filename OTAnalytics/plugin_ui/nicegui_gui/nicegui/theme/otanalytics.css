@@ -855,6 +855,299 @@ body:has(.ota-app) {
     opacity: var(--ota-stale-opacity);
 }
 
+/* Canvas overlay: sections, flows and the section editor, drawn as svg by
+   canvas_form.py. See docs/otanalytics-overlay-spec.md */
+.ota-overlay {
+    --ota-s: 1;
+    --sage: #b4cbc0;
+    --pri: #37483e;
+    --cas: rgb(28 38 32 / 70%);
+
+    font-family: "Open Sans", sans-serif;
+}
+
+.ota-overlay * {
+    vector-effect: non-scaling-stroke;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ota-scaled {
+    transform: scale(var(--ota-s));
+}
+
+.ota-dim {
+    fill: rgb(17 24 21 / 45%);
+    pointer-events: none;
+    display: none;
+}
+
+.ota-focus .ota-dim {
+    display: inline;
+}
+
+.ota-focus .ota-section:not(.editing) {
+    opacity: 0.4;
+}
+
+.ota-focus .ota-flow {
+    display: none;
+}
+
+/* The layer ignores the mouse (NiceGUI: pointer-events:none), so the cursor
+   goes on the image below it. */
+.ota-canvas:has(> .ota-focus) > img {
+    cursor: crosshair;
+}
+
+.ota-section {
+    cursor: pointer;
+}
+
+.ota-section .glow {
+    stroke: var(--sage);
+    stroke-opacity: 0.35;
+    stroke-width: 14;
+    opacity: 0;
+}
+
+.ota-section:hover .glow {
+    opacity: 1;
+}
+
+.ota-section .casing {
+    stroke: var(--cas);
+    stroke-width: 6;
+}
+
+.ota-section .line {
+    stroke: var(--sage);
+    stroke-width: 3;
+    pointer-events: stroke;
+}
+
+.ota-section .pt-ring {
+    stroke: var(--sage);
+    stroke-width: 12;
+}
+
+.ota-section .pt {
+    stroke: var(--pri);
+    stroke-width: 8;
+}
+
+.ota-section.area .casing {
+    stroke-width: 5;
+}
+
+.ota-section.area .line {
+    stroke-width: 2;
+    fill: var(--sage);
+    fill-opacity: 0.2;
+    pointer-events: all;
+}
+
+/* While editing, clicks pass through sections to the image, so a point can be
+   added on top of a section. */
+.ota-focus .ota-section .line {
+    pointer-events: none;
+}
+
+.ota-section:is(.selected, .editing) .casing {
+    stroke: var(--pri);
+    stroke-width: 9;
+}
+
+.ota-section:is(.selected, .editing) .line {
+    stroke: #fff;
+    stroke-width: 4;
+}
+
+.ota-section.area:is(.selected, .editing) .casing {
+    stroke-width: 7;
+}
+
+.ota-section.area:is(.selected, .editing) .line {
+    stroke-width: 3;
+    fill: #fff;
+    fill-opacity: 0.12;
+}
+
+.ota-section.selected .pt-ring {
+    stroke: var(--pri);
+    stroke-width: 14;
+}
+
+.ota-section.selected .pt {
+    stroke: #fff;
+    stroke-width: 10;
+}
+
+.ota-chip rect {
+    fill: var(--pri);
+    stroke: var(--sage);
+    stroke-width: 1;
+}
+
+.ota-chip text {
+    fill: #fff;
+    stroke: none;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ota-section:hover .ota-chip rect {
+    fill: #4a5e52;
+    stroke: #fff;
+}
+
+.ota-section.selected .ota-chip rect {
+    fill: #fff;
+    stroke: var(--pri);
+    stroke-width: 1.5;
+}
+
+.ota-section.selected .ota-chip text {
+    fill: var(--pri);
+}
+
+.ota-knob {
+    cursor: move;
+}
+
+.ota-knob .halo {
+    stroke: #fff;
+    stroke-opacity: 0.25;
+    stroke-width: 26;
+    opacity: 0;
+}
+
+.ota-knob .ring {
+    stroke: var(--pri);
+    stroke-width: 17;
+}
+
+.ota-knob .core {
+    stroke: #fff;
+    stroke-width: 12;
+}
+
+.ota-knob.active .halo {
+    opacity: 1;
+}
+
+.ota-knob.active .ring {
+    stroke: #fff;
+    stroke-width: 19;
+}
+
+.ota-knob.active .core {
+    stroke: var(--pri);
+    stroke-width: 14;
+}
+
+.ota-knob :not(.hit) {
+    pointer-events: none;
+}
+
+.ota-knob .hit {
+    stroke: #000;
+    stroke-opacity: 0;
+    stroke-width: 20;
+    pointer-events: stroke;
+}
+
+/* Keeps the pointer on the knob while it follows the mouse */
+.ota-knob.moving .hit {
+    stroke-width: 400;
+}
+
+.ota-rubber {
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-dasharray: 5 4;
+    pointer-events: none;
+}
+
+.ota-flow {
+    pointer-events: none;
+}
+
+.ota-flow .casing {
+    stroke: var(--cas);
+    stroke-width: 6;
+}
+
+.ota-flow .line {
+    stroke: #fff;
+    stroke-width: 3;
+}
+
+.ota-flow .head {
+    fill: #fff;
+    stroke: var(--cas);
+    stroke-width: 1;
+}
+
+.ota-badge rect {
+    fill: #fff;
+    stroke: var(--pri);
+    stroke-width: 1.5;
+}
+
+.ota-badge text {
+    fill: var(--pri);
+    stroke: none;
+    font: 600 11px "Roboto Mono", monospace;
+    text-anchor: middle;
+}
+
+.ota-flow.stale {
+    opacity: 0.55;
+}
+
+.ota-flow.stale .line {
+    stroke-dasharray: 8 5;
+}
+
+.ota-flow.stale .ota-badge rect {
+    fill: #fdeec4;
+    stroke: #b48a2a;
+}
+
+.ota-flow.stale .ota-badge text {
+    fill: #7a5a14;
+}
+
+/* Clicks pass through to the canvas below */
+.ota-hint {
+    pointer-events: none;
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgb(255 255 255 / 95%);
+    box-shadow: 0 4px 12px rgb(17 24 21 / 25%);
+    font-size: 12px;
+    color: #596d63;
+}
+
+.ota-hint b {
+    color: #37483e;
+}
+
+.ota-hint i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #37483e;
+}
+
 /* Forms */
 .ota-button-row {
     width: 100%;
