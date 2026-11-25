@@ -62,8 +62,8 @@ class TestCircle:
         assert 'stroke-width="10"' in svg  # default stroke_width
         assert 'stroke-opacity="0.0"' in svg  # default stroke_opacity
         assert 'fill="blue"' in svg
-        assert "pointer-events=all" in svg
-        assert 'cursor="pointer"' in svg  # default cursor
+        # As style, because NiceGUI sanitizes the svg and drops both attributes
+        assert 'style="pointer-events: all; cursor: pointer"' in svg
 
     def test_circle_to_svg_with_custom_values(self) -> None:
         # Arrange
@@ -92,8 +92,7 @@ class TestCircle:
         assert 'stroke-width="3"' in svg
         assert 'stroke-opacity="0.8"' in svg
         assert 'fill="purple"' in svg
-        assert "pointer-events=none" in svg
-        assert 'cursor="grab"' in svg
+        assert 'style="pointer-events: none; cursor: grab"' in svg
 
     def test_circle_to_tuple(self) -> None:
         # Arrange

@@ -140,7 +140,9 @@ class CustomTable:
         self._rows.clear()
         self._rows.extend(rows)
         if self._instantiated:
-            self._table.update()
+            # NiceGUI keeps its own copy of the rows, so they have to be handed
+            # over again; changing `self._rows` does not reach the table.
+            self._table.rows = rows
 
     def select(self, item_ids: list[str]) -> None:
         if self._instantiated:
