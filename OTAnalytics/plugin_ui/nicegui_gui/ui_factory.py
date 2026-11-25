@@ -48,6 +48,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
     FileChooserDialog,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.browser import has_browser_to_show_in
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import DialogResult
 
 BASE_FILE_PICKER_DIRECTORY = Path.home()
@@ -84,23 +85,23 @@ NOTIFICATION_TYPES: dict[MessageType, NotificationType] = {
 class NiceGuiMessageBox(MessageBox):
     """Persistent notification with a spinner that stays until it is closed.
 
-    Without a client (e.g. while preloading files on startup) nothing can be
+    Without a browser (e.g. while preloading files on startup) nothing can be
     shown; the box then only logs and does nothing.
     """
 
     def __init__(self, message: str) -> None:
         self._notification: ui.notification | None = None
-        try:
-            self._notification = ui.notification(
-                message,
-                position="top",
-                type="ongoing",
-                spinner=True,
-                timeout=None,
-                multi_line=True,
-            )
-        except RuntimeError as cause:
-            logger().debug(f"Could not show message '{message}': {cause}")
+        if not has_browser_to_show_in():
+            logger().debug(f"No browser to show message '{message}'")
+            return
+        self._notification = ui.notification(
+            message,
+            position="top",
+            type="ongoing",
+            spinner=True,
+            timeout=None,
+            multi_line=True,
+        )
 
     def close(self) -> None:
         if self._notification is not None:
@@ -149,6 +150,9 @@ class NiceGuiUiFactory(UiFactory):
         initial_position: tuple[int, int],
         message_type: MessageType,
     ) -> None:
+        if not has_browser_to_show_in():
+            logger().info(f"No browser to show message '{message}'")
+            return
         # Use ui.notify for immediate feedback
         ui.notify(
             message,
