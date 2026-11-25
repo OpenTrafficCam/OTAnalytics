@@ -32,6 +32,7 @@ class TestAskForConfirmation:
 
         @ui.page("/test")
         async def page() -> None:
+            await ui.context.client.connected()
             answers.append(await target.ask_for_confirmation(MESSAGE, (0, 0)))
 
         await user.open("/test")
