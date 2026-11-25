@@ -76,6 +76,19 @@ class TestWipeUserSourceOnReset:
             "wipe.wipe",
         ]
 
+    def test_notifies_observers_once_everything_is_reset(self) -> None:
+        order = Mock()
+        wipe = Mock(spec=WipeUserSource)
+        observer = Mock()
+        order.attach_mock(wipe.wipe, "wipe")
+        order.attach_mock(observer, "observer")
+        target = WipeUserSourceOnReset(Mock(), Mock(), wipe)
+        target.register(observer)
+
+        target.reset()
+
+        assert [name for name, _, _ in order.mock_calls] == ["wipe", "observer"]
+
     def test_removes_the_staged_downloads(self, tmp_path: Path) -> None:
         """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given(tmp_path)
