@@ -44,7 +44,6 @@ DISTANCES: str = "distances"
 class ViewModel(
     VideoListObserver, TrackListObserver, SectionListObserver, FlowListObserver, ABC
 ):
-
     @abstractmethod
     def show_svz(self) -> bool:
         raise NotImplementedError
@@ -366,7 +365,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def on_start_new_project(self, _: None) -> None:
+    def on_application_reset(self, _: None) -> None:
         raise NotImplementedError
 
     @abstractmethod

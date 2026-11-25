@@ -1,5 +1,10 @@
+"""Tests that the layer checkboxes follow the layers they show."""
+
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
+
+from nicegui import ui
+from nicegui.testing import User
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.plotting import LayerGroup, PlottingLayer
@@ -12,6 +17,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_fo
 )
 from OTAnalytics.plugin_ui.visualization.visualization import ALL, INTERSECTING_SECTIONS
 
+LAYER_NAME = "Background"
 SHOW_TRACKS = "Show tracks"
 SHOW_START_END_POINTS = "Show start and end points"
 LAYERS_FORM_UI = (
@@ -48,6 +54,15 @@ class TestLayerMarker:
 
 
 class TestLayersForm:
+    def test_introduces_itself_to_the_view_model(
+        self, resource_manager: ResourceManager
+    ) -> None:
+        viewmodel = Mock()
+
+        target = LayersForm(viewmodel, resource_manager, [])
+
+        viewmodel.set_frame_track_plotting.assert_called_once_with(target)
+
     @patch(LAYERS_FORM_UI)
     def test_every_layer_checkbox_is_marked(self, ui: MagicMock) -> None:
         groups = [
@@ -63,3 +78,38 @@ class TestLayersForm:
             layer_marker(SHOW_TRACKS, INTERSECTING_SECTIONS),
             layer_marker(SHOW_START_END_POINTS, ALL),
         ]
+
+    async def test_checkbox_enables_the_layer(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        layer = PlottingLayer(LAYER_NAME, Mock(), enabled=False)
+        target = LayersForm(Mock(), resource_manager, [LayerGroup("Group", [layer])])
+
+        @ui.page("/test")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test")
+        user.find(LAYER_NAME).click()
+
+        assert layer.is_enabled()
+
+    async def test_checkbox_follows_a_layer_reset(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """Resetting the application resets the layers, not the checkboxes."""
+        layer = PlottingLayer(LAYER_NAME, Mock(), enabled=True)
+        target = LayersForm(Mock(), resource_manager, [LayerGroup("Group", [layer])])
+
+        @ui.page("/test")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test")
+        user.find(LAYER_NAME).click()
+
+        layer.reset()
+
+        checkbox = user.find(LAYER_NAME).elements.pop()
+        assert isinstance(checkbox, ui.checkbox)
+        assert checkbox.value is True

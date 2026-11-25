@@ -78,7 +78,6 @@ def create_columns(resource_manager: ResourceManager) -> list[dict[str, str]]:
 
 
 class TrackStatisticForm(AbstractFrameTrackStatistics):
-
     def __init__(
         self,
         resource_manager: ResourceManager,

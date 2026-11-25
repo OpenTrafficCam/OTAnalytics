@@ -89,7 +89,6 @@ class TrackSegmentDataset(ABC):
 
 
 class TrackIdSet(ABC):
-
     @abstractmethod
     def __eq__(self, other: Any) -> bool:
         raise NotImplementedError

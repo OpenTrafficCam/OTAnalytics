@@ -38,7 +38,22 @@ class AnalysisKeys(ResourceKey):
     BUTTON_TEXT_EXPORT_TRACK_STATISTICS = "button-export-track-statistics"
 
 
+class StaticAnalysisConfigKeys(ResourceKey):
+    LABEL_STATIC_ANALYSIS_CONFIG_FORM_HEADER = "label-static-analysis-config-header"
+    LABEL_DO_EVENTS = "label-do-events"
+    LABEL_DO_COUNTING = "label-do-counting"
+    LABEL_SAVE_NAME = "label-save-name"
+    LABEL_SAVE_SUFFIX = "label-save-suffix"
+    LABEL_EVENT_FORMATS = "label-event-formats"
+    LABEL_COUNT_INTERVALS = "label-count-intervals"
+    LABEL_COUNTING_EVENT = "label-counting-event"
+    LABEL_NUM_PROCESSES = "label-num-processes"
+    LABEL_LOGFILE = "label-logfile"
+    VALIDATION_COUNT_INTERVALS = "validation-count-intervals"
+
+
 class ProjectKeys(ResourceKey):
+    LABEL_NEW_PROJECT = "label-new-project"
     LABEL_OPEN_PROJECT = "label-open-project"
     LABEL_PROJECT_FORM_HEADER = "label-project-form-header"
     LABEL_PROJECT_NAME = "label-project-name"
@@ -98,7 +113,6 @@ class ExportCountsDialogKeys(ResourceKey):
     LABEL_END_DATE = "label-end-date"
     LABEL_END_TIME = "label-end-time"
     LABEL_INTERVAL_MINUTES = "label-interval-minutes"
-    LABEL_COUNTING_EVENT = "label-counting-event"
     LABEL_OUTPUT_FILE = "label-output-file"
 
 
@@ -167,6 +181,14 @@ class VisualizationFiltersKeys(ResourceKey):
     LABEL_END_TIME = "label-end-time"
     LABEL_SECONDS = "Seconds"
     LABEL_FRAMES = "Frames"
+    LABEL_FILTER_BY_DATE_TITLE = "label-filter-by-date-title"
+    LABEL_CHOOSE_DATE_RANGE = "label-choose-date-range"
+    MESSAGE_INVALID_DATETIME = "message-invalid-datetime"
+    MESSAGE_INVALID_DATE_FORMAT = "message-invalid-date-format"
+    MESSAGE_INVALID_HOUR = "message-invalid-hour"
+    MESSAGE_INVALID_MINUTE = "message-invalid-minute"
+    MESSAGE_INVALID_SECOND = "message-invalid-second"
+    MESSAGE_START_NOT_BEFORE_END = "message-start-not-before-end"
 
 
 class TrackStatisticKeys(ResourceKey):
@@ -247,7 +269,6 @@ DEFAULT_RESOURCE_MAP = {
     FileChooserDialogKeys.LABEL_DIRECTORY: "Directory",
     FileChooserDialogKeys.LABEL_BROWSE: "Browse",
     ExportCountsDialogKeys.LABEL_INTERVAL_MINUTES: "Interval (minutes)",
-    ExportCountsDialogKeys.LABEL_COUNTING_EVENT: "Counting Event",
     ExportCountsDialogKeys.LABEL_OUTPUT_FILE: "Output File",
     ExportCountsDialogKeys.LABEL_EXPORT_COUNTS: "Export Counts",
     ExportCountsDialogKeys.LABEL_TIME_RANGE: "Time Range",
@@ -257,11 +278,9 @@ DEFAULT_RESOURCE_MAP = {
     ExportCountsDialogKeys.LABEL_END_TIME: "End time",
     OffsetSliderKeys.LABEL_COORDINATE_X: "X:",
     OffsetSliderKeys.LABEL_COORDINATE_Y: "Y:",
+    ProjectKeys.LABEL_NEW_PROJECT: "New",
     ProjectKeys.LABEL_OPEN_PROJECT: "Open...",
     ProjectKeys.LABEL_PROJECT_NAME: "Project name",
-    ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
-    ProjectKeys.LABEL_QUICK_SAVE: "Save",
-    ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
     ProjectKeys.LABEL_PROJECT_FORM_HEADER: "Project",
     ProjectKeys.LABEL_QUICK_SAVE: "Save",
     ProjectKeys.LABEL_SAVE_AS_PROJECT: "Save as...",
@@ -273,6 +292,17 @@ DEFAULT_RESOURCE_MAP = {
     SectionKeys.BUTTON_PROPERTIES: "Properties...",
     SectionKeys.BUTTON_REMOVE: "Remove...",
     SectionKeys.TABLE_COLUMN_NAME: "Section",
+    StaticAnalysisConfigKeys.LABEL_STATIC_ANALYSIS_CONFIG_FORM_HEADER: "Analysis Configuration",  # noqa
+    StaticAnalysisConfigKeys.LABEL_DO_EVENTS: "Create events",
+    StaticAnalysisConfigKeys.LABEL_DO_COUNTING: "Create counts",
+    StaticAnalysisConfigKeys.LABEL_SAVE_NAME: "Save name",
+    StaticAnalysisConfigKeys.LABEL_SAVE_SUFFIX: "Save suffix",
+    StaticAnalysisConfigKeys.LABEL_EVENT_FORMATS: "Event formats",
+    StaticAnalysisConfigKeys.LABEL_COUNT_INTERVALS: "Count intervals [min]",
+    StaticAnalysisConfigKeys.LABEL_COUNTING_EVENT: "Counting event",
+    StaticAnalysisConfigKeys.LABEL_NUM_PROCESSES: "Number of processes",
+    StaticAnalysisConfigKeys.LABEL_LOGFILE: "Logfile",
+    StaticAnalysisConfigKeys.VALIDATION_COUNT_INTERVALS: "Enter positive whole numbers separated by commas",  # noqa
     SvzMetadataKeys.LABEL_SVZ_METADATA_FORM_HEADER: "SVZ",
     SvzMetadataKeys.LABEL_TK_NUMBER: "TK-Nummer",
     SvzMetadataKeys.LABEL_COUNTING_LOCATION_NUMBER: "Zählstellennummer",
@@ -307,6 +337,28 @@ DEFAULT_RESOURCE_MAP = {
     VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM: "From",
     VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE: "Last detection occurrence",  # noqa
     VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE: "First detection occurrence",  # noqa
+    VisualizationFiltersKeys.LABEL_START_DATE: "Start date",
+    VisualizationFiltersKeys.LABEL_START_TIME: "Start time",
+    VisualizationFiltersKeys.LABEL_END_DATE: "End date",
+    VisualizationFiltersKeys.LABEL_END_TIME: "End time",
+    VisualizationFiltersKeys.LABEL_FILTER_BY_DATE_TITLE: "Filter tracks by date",
+    VisualizationFiltersKeys.LABEL_CHOOSE_DATE_RANGE: "Choose date range",
+    VisualizationFiltersKeys.MESSAGE_INVALID_DATETIME: "datetime is not valid.",
+    VisualizationFiltersKeys.MESSAGE_INVALID_DATE_FORMAT: (
+        "Date must be of format: 'yyyy-mm-dd'"
+    ),
+    VisualizationFiltersKeys.MESSAGE_INVALID_HOUR: (
+        "Hour must be a digit in range [0,23]"
+    ),
+    VisualizationFiltersKeys.MESSAGE_INVALID_MINUTE: (
+        "Minute must be a digit in range [0,59]"
+    ),
+    VisualizationFiltersKeys.MESSAGE_INVALID_SECOND: (
+        "Second must be a digit in range [0,59]"
+    ),
+    VisualizationFiltersKeys.MESSAGE_START_NOT_BEFORE_END: (
+        "Start must be before end."
+    ),
     VisualizationLayersKeys.BUTTON_UPDATE_FLOW_HIGHLIGHTING: "Update flow highlighting",
     VisualizationLayersKeys.LABEL_VISUALIZATION_LAYERS_FORM_HEADER: "Visualization Layers",  # noqa
     VisualizationOffsetSliderKeys.BUTTON_UPDATE_OFFSET: "Update with section offset",
@@ -351,7 +403,6 @@ DEFAULT_HOTKEYS: dict[HotKeys, str] = {
 
 
 class ResourceManager:
-
     def __init__(
         self,
         resources: dict[ResourceKey, str] = DEFAULT_RESOURCE_MAP,

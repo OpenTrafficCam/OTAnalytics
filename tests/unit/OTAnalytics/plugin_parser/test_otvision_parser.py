@@ -145,7 +145,6 @@ class TestVersion_1_1_To_1_2:
 
 
 class TestOttrkFormatFixer:
-
     def test_run_all_fixer(
         self, track_builder_setup_with_sample_data: TrackBuilder
     ) -> None:

@@ -8,23 +8,28 @@ on:
     tags:
       - "v*.*.*"
 
-permissions: read-all
+permissions: {}
 
 jobs:
   test:
     if: endsWith(github.event.base_ref, 'main')
+    permissions:
+      contents: read
     uses: "./.github/workflows/test.yml"
   regression-test:
     if: endsWith(github.event.base_ref, 'main')
+    permissions:
+      contents: read
     uses: "./.github/workflows/regression-test.yml"
-    secrets: inherit
+    secrets:
+      PLATOMO_OTC_TESTDATA_ACCESS: ${{ secrets.PLATOMO_OTC_TESTDATA_ACCESS }}
   create_release:
     permissions:
       contents: write
     needs:
       - test
       - regression-test
-    uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml@main"
+    uses: "platomo/GitHub-workflows/.github/workflows/reusable-create-release-with-assets.yml@a4deb65bd5188ee1115e902bbe19d949bf69fe62" # main
     secrets:
       PLATOMO_BUILDER_ACCESS: ${{ secrets.PLATOMO_BUILDER_ACCESS }}
     with:
