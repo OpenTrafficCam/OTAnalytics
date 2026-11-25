@@ -4,6 +4,9 @@ from pathlib import Path
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
+)
 
 
 class OtConfigDefaultValueProvider(ABC):
@@ -60,4 +63,14 @@ class OtConfigDefaultValueProvider(ABC):
     @property
     @abstractmethod
     def debug(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def traffic_statistics(self) -> TrafficStatisticsConfig | None:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def do_export_geo_tracks(self) -> bool:
         raise NotImplementedError
