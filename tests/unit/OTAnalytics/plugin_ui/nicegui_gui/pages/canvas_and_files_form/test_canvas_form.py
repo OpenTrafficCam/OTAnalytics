@@ -2071,18 +2071,7 @@ class TestCanvasFormActionPill:
 
     @staticmethod
     def show_pill(canvas_form: Any) -> None:
-        canvas_form._last_activity = 0.0
-        canvas_form._show_action_pill_when_still()
-
-    def test_pill_is_hidden_until_mouse_is_still(self, canvas_form: Any) -> None:
-        self.start_new_section(canvas_form, [(100, 200)])
-        canvas_form._note_pointer_activity((100, 200))
-
-        canvas_form._show_action_pill_when_still()
-        assert "edit-action-" not in canvas_form._overlay.content
-
-        self.show_pill(canvas_form)
-        assert "edit-action-finish" in canvas_form._overlay.content
+        canvas_form.draw_all()
 
     def test_pill_is_placed_next_to_last_new_point(self, canvas_form: Any) -> None:
         self.start_new_section(canvas_form, [(100, 200), (300, 150)])
@@ -2105,31 +2094,6 @@ class TestCanvasFormActionPill:
         self.start_new_section(canvas_form, [(100, 200), (200, 200)])
         self.show_pill(canvas_form)
         assert "ota-action-disabled" not in canvas_form._overlay.content
-
-    def test_pill_hides_when_mouse_leaves(self, canvas_form: Any) -> None:
-        self.start_new_section(canvas_form, [(100, 200)])
-        self.show_pill(canvas_form)
-
-        canvas_form._on_move((400, 300))
-
-        assert "edit-action-" not in canvas_form._overlay.content
-
-    def test_pill_stays_when_mouse_moves_towards_it(self, canvas_form: Any) -> None:
-        self.start_new_section(canvas_form, [(100, 200)])
-        self.show_pill(canvas_form)
-
-        canvas_form._on_move((125, 175))
-        canvas_form._on_move((138, 162))
-
-        assert "edit-action-" in canvas_form._overlay.content
-
-    def test_adding_a_point_hides_the_pill(self, canvas_form: Any) -> None:
-        self.start_new_section(canvas_form, [(100, 200)])
-        self.show_pill(canvas_form)
-
-        canvas_form.on_mouse(create_mouse_event(CLICK, 300, 100))
-
-        assert "edit-action-" not in canvas_form._overlay.content
 
     @pytest.mark.asyncio
     async def test_finish_button_saves_the_new_section(
@@ -2166,16 +2130,6 @@ class TestCanvasFormActionPill:
 
         assert canvas_form._new_section_points == []
 
-    @pytest.mark.asyncio
-    async def test_buttons_are_ignored_while_pill_is_hidden(
-        self, canvas_form: Any, mock_viewmodel: Mock
-    ) -> None:
-        self.start_new_section(canvas_form, [(100, 200)])
-
-        await canvas_form.handle_svg_pointer_down({"element_id": "edit-action-cancel"})
-
-        mock_viewmodel.cancel_action.assert_not_called()
-
     def test_pill_is_shown_while_editing_next_to_placed_knob(
         self, canvas_form: Any, mock_section: Mock
     ) -> None:
@@ -2183,9 +2137,7 @@ class TestCanvasFormActionPill:
         x, y = canvas_form._edit_temporary[1]
         canvas_form.on_svg_pointer_down(svg_event(x, y, knob_id(1)))
         canvas_form.on_svg_pointer_up(svg_event(x, y, knob_id(1)))
-        canvas_form._shift_anchor = None
-        canvas_form._selected_knob_index = None
-        self.show_pill(canvas_form)
+        canvas_form._on_canvas_click((x, y))
 
         assert canvas_form._action_anchor() == (x, y)
         assert "edit-action-finish" in canvas_form._overlay.content
@@ -2202,14 +2154,48 @@ class TestCanvasFormActionPill:
 
         mock_viewmodel.update_section_coordinates.assert_called_once()
 
-    def test_pill_waits_while_a_knob_is_picked_up(
+    def test_pill_is_visible_right_after_starting_the_builder(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.start_section_builder(is_area_section=False)
+
+        assert "edit-action-finish" in canvas_form._overlay.content
+
+    def test_pill_is_visible_after_moving_the_mouse(self, canvas_form: Any) -> None:
+        self.start_new_section(canvas_form, [(100, 200)])
+
+        canvas_form._on_move((500, 300))
+
+        assert "edit-action-finish" in canvas_form._overlay.content
+
+    def test_pill_is_visible_without_any_point_or_mouse_position(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.start_section_builder(is_area_section=False)
+
+        assert canvas_form._action_pill_center() == (320, 32)
+
+    def test_pill_is_hidden_while_dragging_a_knob(
         self, canvas_form: Any, mock_section: Mock
     ) -> None:
         canvas_form.start_section_geometry_editor(mock_section)
+        assert "edit-action-finish" in canvas_form._overlay.content
+
         x, y = canvas_form._edit_temporary[1]
-        canvas_form._pointer_position = (x, y)
+        canvas_form.on_svg_pointer_down(svg_event(x, y, knob_id(1)))
+        assert "edit-action-" not in canvas_form._overlay.content
+
+        canvas_form.on_svg_pointer_up(svg_event(x, y, knob_id(1)))
+        assert "edit-action-finish" in canvas_form._overlay.content
+
+    @pytest.mark.asyncio
+    async def test_buttons_are_ignored_while_dragging(
+        self, canvas_form: Any, mock_section: Mock, mock_viewmodel: Mock
+    ) -> None:
+        canvas_form.start_section_geometry_editor(mock_section)
+        x, y = canvas_form._edit_temporary[1]
         canvas_form.on_svg_pointer_down(svg_event(x, y, knob_id(1)))
 
-        self.show_pill(canvas_form)
+        await canvas_form.handle_svg_pointer_down(svg_event(1, 1, "edit-action-cancel"))
 
-        assert "edit-action-" not in canvas_form._overlay.content
+        mock_viewmodel.cancel_action.assert_not_called()
