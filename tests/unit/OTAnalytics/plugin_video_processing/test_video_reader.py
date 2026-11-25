@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import av
+import numpy
 import pytest
 from PIL import Image, ImageChops
 
@@ -12,6 +13,7 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import PilImage
 from OTAnalytics.plugin_video_processing.video_reader import (
     PyAvVideoReader,
     av_to_image,
+    rotate,
 )
 
 DEFAULT_IMAGE_FACTORY = PilImageFactory()
@@ -23,7 +25,7 @@ class TestPyAVVideoReader:
         with av.open(str(video_path.absolute())) as container:
             for frame in container.decode(video=0):
                 expected_frames.append(
-                    av_to_image(frame, {}, DEFAULT_IMAGE_FACTORY).as_image()
+                    av_to_image(frame, DEFAULT_IMAGE_FACTORY).as_image()
                 )
         return expected_frames
 
@@ -111,3 +113,45 @@ class TestPyAVVideoReader:
         given_videos_metadata.get_by_video_name.assert_called_once_with(
             given_video_path.name
         )
+
+
+def write_rotated_video(path: Path, angle: int, width: int, height: int) -> Path:
+    with av.open(str(path), "w") as container:
+        stream = container.add_stream("mpeg4", rate=20)
+        stream.width = width
+        stream.height = height
+        stream.pix_fmt = "yuv420p"
+        stream.set_display_rotation(angle)
+        black = numpy.zeros((height, width, 3), numpy.uint8)
+        for _ in range(5):
+            frame = av.VideoFrame.from_ndarray(black, format="rgb24")
+            for packet in stream.encode(frame):
+                container.mux(packet)
+        for packet in stream.encode():
+            container.mux(packet)
+    return path
+
+
+class TestRotation:
+    @pytest.mark.parametrize("angle", (90, -90))
+    def test_get_frame_applies_display_rotation(
+        self, tmp_path: Path, angle: int
+    ) -> None:
+        video = write_rotated_video(tmp_path / "rotated.mp4", angle, 64, 32)
+        video_reader = PyAvVideoReader(Mock(), DEFAULT_IMAGE_FACTORY)
+
+        image = video_reader.get_frame(video, 1).as_image()
+
+        assert image.size == (32, 64)
+
+    def test_get_frame_keeps_orientation_without_rotation(self, tmp_path: Path) -> None:
+        video = write_rotated_video(tmp_path / "upright.mp4", 0, 64, 32)
+        video_reader = PyAvVideoReader(Mock(), DEFAULT_IMAGE_FACTORY)
+
+        image = video_reader.get_frame(video, 1).as_image()
+
+        assert image.size == (64, 32)
+
+    def test_rotate_rejects_angle_not_multiple_of_90(self) -> None:
+        with pytest.raises(ValueError):
+            rotate(numpy.zeros((2, 3)), 45)
