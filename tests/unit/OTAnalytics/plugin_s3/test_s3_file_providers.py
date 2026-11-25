@@ -38,7 +38,6 @@ VIDEO_NAMES = {
 
 
 class TestS3TrackFileProvider:
-
     async def test_provides_the_track_files_in_the_selected_window(self) -> None:
         """#Requirement https://openproject.platomo.de/wp/10283"""
         given = create_given()

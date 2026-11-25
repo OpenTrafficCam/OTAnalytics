@@ -79,7 +79,11 @@ def _reproject_upright_bounds(
     dataset: rasterio.DatasetReader, crs: str
 ) -> BoundingBox | None:
     """Bounds of the image in `crs`, or None if it is no upright rectangle there."""
-    xs, ys = transform(dataset.crs, crs, *zip(*_corners_and_centre(dataset.bounds)))
+    # The stubs type the result as a 3-tuple, but without z it is (xs, ys).
+    transformed = transform(
+        dataset.crs, crs, *zip(*_corners_and_centre(dataset.bounds))
+    )
+    xs, ys = transformed[0], transformed[1]
     bounds = BoundingBox(left=min(xs), bottom=min(ys), right=max(xs), top=max(ys))
     tolerance_x = MAX_CORNER_DEVIATION_IN_PIXELS * (
         (bounds.right - bounds.left) / dataset.width

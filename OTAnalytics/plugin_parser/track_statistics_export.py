@@ -17,7 +17,6 @@ CSV_FORMAT = ExportFormat("CSV", ".csv")
 
 
 class TrackStatisticsCsvExporter(TrackStatisticsExporter):
-
     @property
     def format(self) -> ExportFormat:
         return ExportFormat("csv", ".csv")
@@ -72,7 +71,6 @@ class SimpleTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
 
 
 class CacheTrackStatisticsException(Exception):
-
     def __init__(
         self,
         message: str,
@@ -90,7 +88,6 @@ class CacheTrackStatisticsException(Exception):
 
 
 class CachedTrackStatisticsExporterFactory(TrackStatisticsExporterFactory):
-
     def __init__(self, other: TrackStatisticsExporterFactory) -> None:
         self.other = other
         self._cache: dict[tuple[Path, str, str], TrackStatisticsExporter] = dict()

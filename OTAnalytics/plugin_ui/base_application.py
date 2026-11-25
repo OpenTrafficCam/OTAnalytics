@@ -142,7 +142,10 @@ from OTAnalytics.application.use_cases.get_current_analysis_config import (
     GetCurrentAnalysisConfig,
 )
 from OTAnalytics.application.use_cases.get_current_project import GetCurrentProject
-from OTAnalytics.application.use_cases.get_current_remark import GetCurrentRemark
+from OTAnalytics.application.use_cases.get_current_remark import (
+    ClearRemark,
+    GetCurrentRemark,
+)
 from OTAnalytics.application.use_cases.highlight_intersections import (
     IntersectionRepository,
     TracksAssignedToAllFlows,
@@ -178,6 +181,9 @@ from OTAnalytics.application.use_cases.section_repository import (
     RemoveSection,
 )
 from OTAnalytics.application.use_cases.start_new_project import StartNewProject
+from OTAnalytics.application.use_cases.static_analysis_config import (
+    StaticAnalysisConfigChanged,
+)
 from OTAnalytics.application.use_cases.suggest_save_path import SavePathSuggester
 from OTAnalytics.application.use_cases.track_repository import (
     AddAllTracks,
@@ -450,6 +456,7 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.current_key_prefix,
             self.current_static_analysis_config_state,
             self.current_orthophoto,
+            self.filter_element_settings_restorer,
         )
 
     @cached_property
@@ -497,6 +504,15 @@ class BaseOtAnalyticsApplicationStarter(ABC):
     @cached_property
     def current_static_analysis_config_state(self) -> CurrentStaticAnalysisConfigState:
         return CurrentStaticAnalysisConfigState()
+
+    @cached_property
+    def static_analysis_config_changed(self) -> StaticAnalysisConfigChanged:
+        """One notifier for the whole application.
+
+        Every use case changing a single analysis setting publishes here, so
+        observers do not have to know which setting was changed.
+        """
+        return StaticAnalysisConfigChanged()
 
     @cached_property
     def current_orthophoto(self) -> CurrentOrthophoto:
@@ -942,16 +958,12 @@ class BaseOtAnalyticsApplicationStarter(ABC):
             self.clear_all_tracks,
             self.clear_all_track_files,
             self.clear_all_videos,
+            ClearRemark(self.remark_repository),
         )
 
     @cached_property
     def start_new_project(self) -> StartNewProject:
-        return StartNewProject(
-            self.clear_all_repositories,
-            self.reset_project_config,
-            self.track_view_state,
-            self.file_state,
-        )
+        return StartNewProject(self.reset_application, self.reset_project_config)
 
     @cached_property
     def reset_project_config(self) -> ResetProjectConfig:

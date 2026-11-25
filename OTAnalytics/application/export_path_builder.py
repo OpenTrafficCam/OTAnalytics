@@ -11,6 +11,8 @@ regardless of how many dots it contains.
 
 from pathlib import Path
 
+SAVE_SUFFIX_SEPARATOR = "_"
+
 
 def build_export_path(
     export_directory: Path,
@@ -52,3 +54,37 @@ def build_export_path(
     if not file_suffix.startswith("."):
         raise ValueError(f"file_suffix must start with '.', got {file_suffix!r}")
     return export_directory / (export_filename_stem + file_suffix)
+
+
+def compose_export_filename_stem(
+    save_name: str, save_suffix: str, fallback_stem: str
+) -> str:
+    """Compose the export file stem from the configured save name and suffix.
+
+    Args:
+        save_name: Configured save name. Any extension is dropped. If empty,
+            ``fallback_stem`` is used instead.
+        save_suffix: Configured save suffix without separator. If not empty, it
+            is appended after ``SAVE_SUFFIX_SEPARATOR``.
+        fallback_stem: Stem to use if no save name is configured.
+
+    Returns:
+        The composed export file stem.
+    """
+    stem = Path(save_name).stem if save_name else fallback_stem
+    return f"{stem}{format_save_suffix(save_suffix)}"
+
+
+def format_save_suffix(save_suffix: str) -> str:
+    """Prepend ``SAVE_SUFFIX_SEPARATOR`` to the configured save suffix.
+
+    Args:
+        save_suffix: Configured save suffix without separator.
+
+    Returns:
+        The save suffix with the separator prepended, or an empty string if no
+        save suffix is configured.
+    """
+    if save_suffix:
+        return f"{SAVE_SUFFIX_SEPARATOR}{save_suffix}"
+    return ""

@@ -691,7 +691,6 @@ def get_section_offset(section: Section) -> RelativeOffsetCoordinate:
 
 
 class PolarsEventDataset(EventDataset):
-
     def __init__(self, events: Optional[pl.DataFrame] = None) -> None:
         if events is None:
             self._events = pl.DataFrame()
@@ -750,7 +749,6 @@ class PolarsEventDataset(EventDataset):
 
 
 class PolarsIntersectionPointsDataset(IntersectionPointsDataset):
-
     def __init__(self, points: Optional[pl.DataFrame] = None) -> None:
         if points is None:
             self._points = pl.DataFrame()
