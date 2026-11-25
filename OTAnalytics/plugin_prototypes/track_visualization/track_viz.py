@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Iterable, Optional
 
 import numpy
-import pandas
-import seaborn
+import polars as pl
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.collections import LineCollection
@@ -11,8 +10,8 @@ from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
 from matplotlib.ticker import NullFormatter, NullLocator
 from mpl_toolkits.axes_grid1 import Divider, Size
-from pandas import DataFrame
 from PIL import Image
+from polars import DataFrame
 
 from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
 from OTAnalytics.application.logger import logger
@@ -59,6 +58,9 @@ FRAME_OFFSET = 1
 ENCODING = "UTF-8"
 DPI = 100
 COLOR = "color"
+DEFAULT_COLOR = "black"
+PREVIOUS_X = "previous_x"
+PREVIOUS_Y = "previous_y"
 LINEWIDTH_TRACK = 0.6
 TRACK_START_SYMBOL = ">"
 TRACK_END_SYMBOL = "s"
@@ -193,35 +195,33 @@ class PlotterPrototype(Plotter):
         return self._track_view_state.view_width.get()
 
 
-class FilterById(PandasDataFrameProvider):
-    """Filter tracks by id before providing tracks as pandas DataFrame."""
+class FilterById(PolarsDataFrameProvider):
+    """Filter tracks by id before providing tracks as polars DataFrame."""
 
     def __init__(
-        self, other: PandasDataFrameProvider, id_filter: TrackIdProvider
+        self, other: PolarsDataFrameProvider, id_filter: TrackIdProvider
     ) -> None:
         self._other = other
         self._filter = id_filter
 
     def get_data(self) -> DataFrame:
         data = self._other.get_data()
-        if data.empty:
+        if data.is_empty():
             return data
 
-        if not list(data.index.names) == [track.TRACK_ID, track.OCCURRENCE]:
+        if track.TRACK_ID not in data.columns:
             raise ValueError(
-                f"{track.TRACK_ID}, {track.OCCURRENCE} "
-                "must be index of DataFrame for filtering to work."
+                f"{track.TRACK_ID} must be a column of DataFrame for filtering to work."
             )
 
         ids = [unpack(track_id) for track_id in self._filter.get_ids()]
-        intersection_of_ids = data.index.unique(level=track.TRACK_ID).intersection(ids)
-        return data.loc[intersection_of_ids]
+        return data.filter(pl.col(track.TRACK_ID).is_in(ids))
 
 
-class FilterByClassification(PandasDataFrameProvider):
+class FilterByClassification(PolarsDataFrameProvider):
     def __init__(
         self,
-        other: PandasDataFrameProvider,
+        other: PolarsDataFrameProvider,
         track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
     ) -> None:
@@ -231,7 +231,7 @@ class FilterByClassification(PandasDataFrameProvider):
 
     def get_data(self) -> DataFrame:
         tracks_df = self._other.get_data()
-        if tracks_df.empty:
+        if tracks_df.is_empty():
             return tracks_df
         return self._filter(tracks_df)
 
@@ -255,10 +255,10 @@ class FilterByClassification(PandasDataFrameProvider):
         return next(iter(dataframe_filter.apply([track_df])))
 
 
-class FilterByOccurrence(PandasDataFrameProvider):
+class FilterByOccurrence(PolarsDataFrameProvider):
     def __init__(
         self,
-        other: PandasDataFrameProvider,
+        other: PolarsDataFrameProvider,
         track_view_state: TrackViewState,
         filter_builder: DataFrameFilterBuilder,
     ) -> None:
@@ -268,7 +268,7 @@ class FilterByOccurrence(PandasDataFrameProvider):
 
     def get_data(self) -> DataFrame:
         tracks_df = self._other.get_data()
-        if tracks_df.empty:
+        if tracks_df.is_empty():
             return tracks_df
         return self._filter(tracks_df)
 
@@ -291,8 +291,8 @@ class FilterByOccurrence(PandasDataFrameProvider):
         return next(iter(dataframe_filter.apply([track_df])))
 
 
-class PandasTrackProvider(PandasDataFrameProvider):
-    """Provides tracks as pandas DataFrame."""
+class PolarsTrackProvider(PolarsDataFrameProvider):
+    """Provides tracks as polars DataFrame."""
 
     def __init__(
         self,
@@ -306,14 +306,10 @@ class PandasTrackProvider(PandasDataFrameProvider):
 
     def get_data(self) -> DataFrame:
         tracks = self._track_repository.get_all()
-        if isinstance(tracks, PandasDataFrameProvider):
-            return tracks.get_data()
         if isinstance(tracks, PolarsDataFrameProvider):
-            return (
-                tracks.get_data()
-                .to_pandas()
-                .set_index([track.TRACK_ID, track.OCCURRENCE])
-            )
+            return tracks.get_data()
+        if isinstance(tracks, PandasDataFrameProvider):
+            return pl.from_pandas(tracks.get_data().reset_index())
         track_list = tracks.as_list()
         if not track_list:
             return DataFrame()
@@ -344,10 +340,7 @@ class PandasTrackProvider(PandasDataFrameProvider):
         if not prepared:
             return DataFrame()
 
-        df = DataFrame(prepared).set_index([track.TRACK_ID, track.OCCURRENCE])
-        df.index.names = [track.TRACK_ID, track.OCCURRENCE]
-
-        return self._sort_tracks(df)
+        return self._sort_tracks(DataFrame(prepared))
 
     def _sort_tracks(self, track_df: DataFrame) -> DataFrame:
         """Sort the given dataframe by track id and occurrence,
@@ -358,14 +351,14 @@ class PandasTrackProvider(PandasDataFrameProvider):
         Returns:
             DataFrame: sorted dataframe by track id and frame
         """
-        if track_df.empty:
+        if track_df.is_empty():
             return track_df
-        return track_df.sort_index()
+        return track_df.sort([track.TRACK_ID, track.OCCURRENCE])
 
 
-class PandasTracksOffsetProvider(PandasDataFrameProvider):
+class PolarsTracksOffsetProvider(PolarsDataFrameProvider):
     def __init__(
-        self, other: PandasDataFrameProvider, track_view_state: TrackViewState
+        self, other: PolarsDataFrameProvider, track_view_state: TrackViewState
     ) -> None:
         super().__init__()
         self._other = other
@@ -374,9 +367,9 @@ class PandasTracksOffsetProvider(PandasDataFrameProvider):
     def get_data(self) -> DataFrame:
         offset = self._track_view_state.track_offset.get()
         data = self._other.get_data()
-        if data.empty:
+        if data.is_empty():
             return data
-        return self._apply_offset(data.copy(), offset)
+        return self._apply_offset(data, offset)
 
     def _apply_offset(
         self, tracks: DataFrame, offset: Optional[RelativeOffsetCoordinate]
@@ -389,13 +382,15 @@ class PandasTracksOffsetProvider(PandasDataFrameProvider):
             # are point-based and carry w=0, h=0 (no bounding box). In that case the
             # offset evaluates to zero and has no visual effect — this is intentional,
             # as a relative offset is undefined for point detections.
-            tracks[track.X] = tracks[track.X] + new_offset.x * tracks[track.W]
-            tracks[track.Y] = tracks[track.Y] + new_offset.y * tracks[track.H]
+            return tracks.with_columns(
+                pl.col(track.X) + new_offset.x * pl.col(track.W),
+                pl.col(track.Y) + new_offset.y * pl.col(track.H),
+            )
         return tracks
 
 
-class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
-    """Provides and caches tracks as pandas DataFrame."""
+class CachedPolarsTrackProvider(PolarsTrackProvider, TrackListObserver):
+    """Provides and caches tracks as polars DataFrame."""
 
     def __init__(
         self,
@@ -417,7 +412,7 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         Returns:
             DataFrame: a dataframe containing the detections of the given tracks.
         """
-        if self._cache_df.empty:
+        if self._cache_df.is_empty():
             self._cache_df = self.__do_convert_tracks(tracks)
 
         return self._cache_df
@@ -461,10 +456,12 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
             )
 
             # concat remaining tracks and new tracks
-            if filtered_cache.empty:
+            if filtered_cache.is_empty():
                 df = new_df
+            elif new_df.is_empty():
+                df = filtered_cache
             else:
-                df = pandas.concat([filtered_cache, new_df])
+                df = pl.concat([filtered_cache, new_df], how="diagonal_relaxed")
             self._cache_df = self._sort_tracks(df)
 
     def _reset_cache(self) -> None:
@@ -488,14 +485,18 @@ class CachedPandasTrackProvider(PandasTrackProvider, TrackListObserver):
         Returns:
             DataFrame : filtered cache.
         """
-        if self._cache_df.empty:
+        if self._cache_df.is_empty():
             return self._cache_df
 
         return self._remove_tracks(track_ids)
 
     def _remove_tracks(self, track_ids: Iterable[TrackId]) -> DataFrame:
+        if self._cache_df.is_empty():
+            return self._cache_df
         tracks_to_be_removed = [t.id for t in track_ids]
-        return self._cache_df.drop(tracks_to_be_removed, axis=0, errors="ignore")
+        return self._cache_df.filter(
+            ~pl.col(track.TRACK_ID).is_in(tracks_to_be_removed)
+        )
 
     def on_tracks_cut(self, cut_tracks_dto: CutTracksDto) -> None:
         cache_without_cut_tracks = self._remove_tracks(cut_tracks_dto.original_tracks)
@@ -510,12 +511,64 @@ class MatplotlibPlotterImplementation(ABC):
         pass
 
 
+def create_line_segments(track_df: DataFrame) -> numpy.ndarray:
+    """
+    Create line segments connecting consecutive detections of each track.
+
+    Args:
+        track_df (DataFrame): detections sorted by track id and occurrence.
+
+    Returns:
+        numpy.ndarray: segments of shape (n, 2, 2) as
+            [[previous x, previous y], [current x, current y]].
+    """
+    segments = (
+        track_df.select(
+            pl.col(track.X).shift(1).over(track.TRACK_ID).alias(PREVIOUS_X),
+            pl.col(track.Y).shift(1).over(track.TRACK_ID).alias(PREVIOUS_Y),
+            pl.col(track.X),
+            pl.col(track.Y),
+        )
+        .drop_nulls()
+        .to_numpy()
+    )
+    return segments.reshape(-1, 2, 2)
+
+
+def plot_track_lines(
+    track_df: DataFrame,
+    axes: Axes,
+    color_palette: dict[str, str],
+    alpha: float,
+) -> None:
+    """
+    Plot the tracks as one line collection per classification.
+
+    Args:
+        track_df (DataFrame): tracks to plot
+        axes (Axes): axes to plot on
+        color_palette (dict[str, str]): colors per classification
+        alpha (float): transparency of the lines
+    """
+    for (classification,), data in track_df.group_by(
+        track.TRACK_CLASSIFICATION, maintain_order=True
+    ):
+        lc = LineCollection(
+            list(create_line_segments(data)),
+            colors=color_palette.get(str(classification), DEFAULT_COLOR),
+            linewidth=LINEWIDTH_TRACK,
+            alpha=alpha,
+            label=classification,
+        )
+        axes.add_collection(lc)
+
+
 class TrackGeometryPlotter(MatplotlibPlotterImplementation):
     """Plot geometry of tracks."""
 
     def __init__(
         self,
-        data_provider: PandasDataFrameProvider,
+        data_provider: PolarsDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
         alpha: float = 0.5,
@@ -527,7 +580,7 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if not data.empty:
+        if not data.is_empty():
             self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
@@ -538,18 +591,8 @@ class TrackGeometryPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot
             axes (Axes): axes to plot on
         """
-        seaborn.lineplot(
-            x=track.X,
-            y=track.Y,
-            hue=track.TRACK_CLASSIFICATION,
-            data=track_df,
-            units=track.TRACK_ID,
-            linewidth=LINEWIDTH_TRACK,
-            estimator=None,
-            sort=False,
-            alpha=self._alpha,
-            ax=axes,
-            palette=self._color_palette_provider.get(),
+        plot_track_lines(
+            track_df, axes, self._color_palette_provider.get(), self._alpha
         )
         if self._enable_legend:
             legend = axes.legend(loc="upper right")
@@ -566,7 +609,7 @@ class NonLegendTrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasDataFrameProvider,
+        data_provider: PolarsDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
         alpha: float = 0.5,
     ) -> None:
@@ -576,7 +619,7 @@ class NonLegendTrackGeometryPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if not data.empty:
+        if not data.is_empty():
             self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
@@ -587,30 +630,19 @@ class NonLegendTrackGeometryPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot
             axes (Axes): axes to plot on
         """
-        for classification in track_df[track.TRACK_CLASSIFICATION].unique():
-            data = track_df.loc[track_df[track.TRACK_CLASSIFICATION] == classification]
-            grouped = data.groupby(level=track.TRACK_ID, group_keys=True)
-            lines = numpy.column_stack(
-                [
-                    grouped[track.X].shift(1).values,  # previous X
-                    grouped[track.Y].shift(1).values,  # previous Y
-                    data[track.X].values,  # current X
-                    data[track.Y].values,  # current Y
-                ]
-            )
-
-            segments = lines.reshape(-1, 2, 2)
-            lc = LineCollection(
-                segments.tolist(),
-                colors=self._color_palette_provider.get().get(classification, "black"),
-                linewidth=LINEWIDTH_TRACK,
-                alpha=self._alpha,
-            )
-            axes.add_collection(lc)
+        plot_track_lines(
+            track_df, axes, self._color_palette_provider.get(), self._alpha
+        )
 
 
 def scatter(data: DataFrame, axes: Axes, marker: str) -> None:
-    axes.scatter(data[track.X], data[track.Y], c=data[COLOR], marker=marker, s=15)
+    axes.scatter(
+        data.get_column(track.X).to_numpy(),
+        data.get_column(track.Y).to_numpy(),
+        c=data.get_column(COLOR).to_list(),
+        marker=marker,
+        s=15,
+    )
 
 
 class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
@@ -618,7 +650,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasDataFrameProvider,
+        data_provider: PolarsDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
         enable_legend: bool,
         alpha: float = 0.5,
@@ -630,7 +662,7 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if not data.empty:
+        if not data.is_empty():
             self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
@@ -642,44 +674,40 @@ class TrackStartEndPointPlotter(MatplotlibPlotterImplementation):
             axes (Axes): axes to plot on
         """
         color_palette = self._color_palette_provider.get()
-        color_df = DataFrame(
-            {
-                track.TRACK_CLASSIFICATION: list(color_palette.keys()),
-                COLOR: list(color_palette.values()),
-            }
-        )
-        track_df = track_df.reset_index().merge(
-            color_df,
-            on=track.TRACK_CLASSIFICATION,
-            how="left",
-        )
-        track_df_start = track_df.groupby(track.TRACK_ID).first().reset_index()
-        track_df_end = track_df.groupby(track.TRACK_ID).last().reset_index()
-        scatter(track_df_start, axes, TRACK_START_SYMBOL)
-        scatter(track_df_end, axes, TRACK_END_SYMBOL)
+        points = track_df.select(
+            track.TRACK_ID,
+            track.X,
+            track.Y,
+            pl.col(track.TRACK_CLASSIFICATION)
+            .cast(pl.Utf8)
+            .replace_strict(color_palette, default=DEFAULT_COLOR)
+            .alias(COLOR),
+        ).group_by(track.TRACK_ID, maintain_order=True)
+        scatter(points.first(), axes, TRACK_START_SYMBOL)
+        scatter(points.last(), axes, TRACK_END_SYMBOL)
 
 
-class FilterByVideo(PandasDataFrameProvider):
+class FilterByVideo(PolarsDataFrameProvider):
     """
     Filter the data of the other data provider using the video name / path of the
     currently displayed video.
     """
 
     def __init__(
-        self, data_provider: PandasDataFrameProvider, current_video: GetCurrentVideoPath
+        self, data_provider: PolarsDataFrameProvider, current_video: GetCurrentVideoPath
     ) -> None:
         self._data_provider = data_provider
         self._current_video = current_video
 
     def get_data(self) -> DataFrame:
         track_df = self._data_provider.get_data()
-        if track_df.empty:
+        if track_df.is_empty():
             return track_df
         current_video = self._current_video.get_video()
-        return track_df[track_df[track.VIDEO_NAME] == current_video]
+        return track_df.filter(pl.col(track.VIDEO_NAME) == current_video)
 
 
-class FilterByFrame(PandasDataFrameProvider):
+class FilterByFrame(PolarsDataFrameProvider):
     """
     Filter the data of the other data provider using the frame number of the
     currently displayed frame. If multiple videos are loaded, the filter will return all
@@ -689,7 +717,7 @@ class FilterByFrame(PandasDataFrameProvider):
 
     def __init__(
         self,
-        data_provider: PandasDataFrameProvider,
+        data_provider: PolarsDataFrameProvider,
         current_frame: GetFrameNumber,
     ) -> None:
         self._data_provider = data_provider
@@ -697,11 +725,11 @@ class FilterByFrame(PandasDataFrameProvider):
 
     def get_data(self) -> DataFrame:
         track_df = self._data_provider.get_data()
-        if track_df.empty:
+        if track_df.is_empty():
             return track_df
         current_frame = self._current_frame.get_frame_number()
         logger().debug(f"BBox plotter filter frame number: {current_frame}")
-        return track_df[track_df[track.FRAME] == current_frame]
+        return track_df.filter(pl.col(track.FRAME) == current_frame)
 
 
 class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
@@ -709,7 +737,7 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasDataFrameProvider,
+        data_provider: PolarsDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
         track_view_state: TrackViewState,
         alpha: float = 0.5,
@@ -723,7 +751,7 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if not data.empty:
+        if not data.is_empty():
             self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
@@ -734,18 +762,16 @@ class TrackBoundingBoxPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot
             axes (Axes): axes to plot on
         """
-        for index, row in track_df.reset_index().iterrows():
-            x = row[X]
-            y = row[Y]
-            width = row[W]
-            height = row[H]
-            classification = row[track.TRACK_CLASSIFICATION]
-            color = self._color_palette_provider.get()[classification]
+        color_palette = self._color_palette_provider.get()
+        for row in track_df.select(X, Y, W, H, track.TRACK_CLASSIFICATION).iter_rows(
+            named=True
+        ):
+            color = color_palette[row[track.TRACK_CLASSIFICATION]]
             axes.add_patch(
                 Rectangle(
-                    xy=(x, y),
-                    width=width,
-                    height=height,
+                    xy=(row[X], row[Y]),
+                    width=row[W],
+                    height=row[H],
                     fc="none",
                     linewidth=self._linewidth,
                     color=color,
@@ -759,7 +785,7 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
 
     def __init__(
         self,
-        data_provider: PandasDataFrameProvider,
+        data_provider: PolarsDataFrameProvider,
         color_palette_provider: ColorPaletteProvider,
         alpha: float = 0.5,
         markersize: float = 3.0,
@@ -773,7 +799,7 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
 
     def plot(self, axes: Axes) -> None:
         data = self._data_provider.get_data()
-        if not data.empty:
+        if not data.is_empty():
             self._plot_dataframe(data, axes)
 
     def _plot_dataframe(self, track_df: DataFrame, axes: Axes) -> None:
@@ -784,15 +810,17 @@ class TrackPointPlotter(MatplotlibPlotterImplementation):
             track_df (DataFrame): tracks to plot
             axes (Axes): axes to plot on
         """
-        for index, row in track_df.reset_index().iterrows():
-            classification = row[track.TRACK_CLASSIFICATION]
-            color = self._color_palette_provider.get()[classification]
+        color_palette = self._color_palette_provider.get()
+        for (classification,), data in track_df.group_by(
+            track.TRACK_CLASSIFICATION, maintain_order=True
+        ):
             axes.plot(
-                row[X],
-                row[Y],
+                data.get_column(X).to_numpy(),
+                data.get_column(Y).to_numpy(),
+                linestyle="none",
                 marker=self._marker,
                 markersize=self._markersize,
-                color=color,
+                color=color_palette[str(classification)],
                 alpha=self._alpha,
             )
 
