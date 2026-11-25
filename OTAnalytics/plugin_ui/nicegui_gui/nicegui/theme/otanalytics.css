@@ -92,8 +92,10 @@
     --ota-control-height: 28px;
     --ota-field-height: 32px;
     --ota-step-input-width: 5rem;
+
     /* The left panel cannot be dragged narrower than this plus its padding. */
     --ota-group-min-width: 265px;
+
     /* Leaves room for the headers of the other groups in the left panel. */
     --ota-group-max-height: max(
         240px,
@@ -312,6 +314,7 @@ body:has(.ota-app) {
 }
 
 /* Workflow accordion */
+
 /* The groups keep their height, so the left panel scrolls when several are
    open. Shrinking them would cut off their content, as they hide what
    overflows. */
