@@ -14,8 +14,10 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.domain.load_window import LoadWindow
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.load_window_dialog import (
+    MARKER_CANCEL,
     MARKER_END_DATE,
     MARKER_END_TIME,
+    MARKER_LOAD,
     MARKER_START_DATE,
     MARKER_START_TIME,
     LoadWindowDialog,
@@ -46,12 +48,13 @@ class TestLoadWindowDialog:
 
         @ui.page("/test")
         async def page() -> None:
+            await ui.context.client.connected()
             selected.append(await target.ask(TITLE, SOURCE))
 
         await user.open("/test")
         await user.should_see(TITLE)
         _type_window(user, START, end)
-        user.find("Load").click()
+        user.find(marker=MARKER_LOAD).click()
         await user.should_not_see(TITLE)
 
         assert selected == [LoadWindow(start=START, end=end)]
@@ -66,11 +69,13 @@ class TestLoadWindowDialog:
 
         @ui.page("/test")
         async def page() -> None:
+            await ui.context.client.connected()
             selected.append(await target.ask(TITLE, SOURCE))
 
         await user.open("/test")
+        await user.should_see(TITLE)
         _type_window(user, START, START + timedelta(hours=2))
-        user.find("Cancel").click()
+        user.find(marker=MARKER_CANCEL).click()
         await user.should_not_see(TITLE)
 
         assert selected == [None]
@@ -87,6 +92,7 @@ class TestLoadWindowDialog:
 
         @ui.page("/test")
         async def page() -> None:
+            await ui.context.client.connected()
             await target.ask(TITLE, SOURCE)
 
         await user.open("/test")
@@ -105,6 +111,7 @@ class TestLoadWindowDialog:
 
         @ui.page("/test")
         async def page() -> None:
+            await ui.context.client.connected()
             await target.ask(TITLE, SOURCE)
 
         await user.open("/test")
@@ -170,11 +177,13 @@ class TestRejectedSelections:
 
         @ui.page("/test")
         async def page() -> None:
+            await ui.context.client.connected()
             await target.ask(TITLE, SOURCE)
 
         await user.open("/test")
+        await user.should_see(TITLE)
         _type_window(user, START, START + timedelta(hours=hours))
-        user.find("Load").click()
+        user.find(marker=MARKER_LOAD).click()
 
         await user.should_see(resource_manager.get(message_key), retries=200)
         await user.should_see(TITLE)

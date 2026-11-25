@@ -13,6 +13,7 @@ class TestText:
         assert 'y="20"' in svg
         assert 'fill="green"' in svg
         assert ">North</text>" in svg
+        assert 'style="pointer-events: none"' in svg
 
     def test_text_is_escaped(self) -> None:
         text = Text(id="section-text", x=10, y=20, text="<b>&</b>", color="green")
