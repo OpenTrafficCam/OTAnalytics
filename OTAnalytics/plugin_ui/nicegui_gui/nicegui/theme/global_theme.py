@@ -18,6 +18,8 @@ DATETIME_FIELD_CLASS = "ota-datetime-field"
 DATE_FIELD_CLASS = "ota-date-field"
 DIALOG_CLASS = "ota-dialog"
 WIDE_DIALOG_CLASS = "ota-dialog-wide"
+FILE_GRID_CLASS = "ota-file-grid"
+"""File list of the file picker, an AG Grid styled like the tables."""
 STALE_CLASS = "ota-stale"
 """Dims what an out-of-date track assignment shows."""
 

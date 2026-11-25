@@ -439,7 +439,7 @@ def open_part(page: Page, part: str) -> None:
     while time.time() < deadline:
         try:
             # Look for the row in the ag-grid that contains the text
-            # The file picker shows folders as "📁 <strong>foldername</strong>"
+            # The file picker shows folders as "<icon> <strong>foldername</strong>"
             row = page.locator(".ag-row").filter(has_text=part).first
             row.wait_for(
                 state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS * 2
