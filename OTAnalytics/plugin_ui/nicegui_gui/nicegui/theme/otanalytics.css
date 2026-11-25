@@ -251,18 +251,24 @@ body:has(.ota-app) {
     margin-left: auto;
 }
 
-.ota-header .q-btn--outline {
-    color: #fff !important;
+/* Quasar's colour classes (text-primary, bg-primary) are !important in
+   NiceGUI's last layer, quasar_importants. Among !important rules the earlier
+   layer wins and unlayered rules lose, so these overrides live in NiceGUI's
+   first layer. */
+@layer theme {
+    .ota-header .q-btn--outline {
+        color: #fff !important;
+    }
+
+    /* Save: solid white unless there are unsaved changes, then orange. */
+    .ota-header .ota-header-primary:not(.bg-orange) {
+        background: #fff !important;
+        color: var(--ota-primary) !important;
+    }
 }
 
 .ota-header .q-btn--outline::before {
     border-color: rgb(255 255 255 / 35%);
-}
-
-/* Save: solid white unless there are unsaved changes, then orange. */
-.ota-header .ota-header-primary:not(.bg-orange) {
-    background: #fff !important;
-    color: var(--ota-primary) !important;
 }
 
 /* Buttons */
