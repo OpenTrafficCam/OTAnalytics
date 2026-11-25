@@ -20,7 +20,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import (
     MARKER_APPLY as MARKER_DIALOG_APPLY,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
-    EDIT_COLOR,
     EDIT_KNOB_ID_PREFIX,
     MARKER_INTERACTIVE_IMAGE,
 )
@@ -253,7 +252,7 @@ def _to_page_position(page: Page, x: float, y: float) -> tuple[float, float]:
 
 def _edit_knobs(page: Page) -> Any:
     return search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).locator(
-        f"svg circle[id^='{EDIT_KNOB_ID_PREFIX}']"
+        f"svg path[id^='{EDIT_KNOB_ID_PREFIX}']"
     )
 
 
@@ -339,7 +338,7 @@ class TestSectionEditorOnCanvas:
         _move_mouse(page, 200, 260)
 
         preview = search_for_marker_element(page, MARKER_INTERACTIVE_IMAGE).locator(
-            f"svg polyline[stroke='{EDIT_COLOR}']"
+            "svg line.ota-rubber"
         )
         expect(preview).to_have_count(1)
 

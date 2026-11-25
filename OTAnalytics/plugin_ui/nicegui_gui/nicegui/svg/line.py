@@ -1,15 +1,20 @@
 from dataclasses import dataclass
 
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.primitives import fmt
+
 
 @dataclass
 class Line:
+    """Rubber band from the last point of a new section to the mouse."""
+
     id: str
     x1: int
     y1: int
     x2: int
     y2: int
-    stroke: str
 
     def to_svg(self) -> str:
-        return f"""<line x1="{self.x1}" y1="{self.y1}"
-        x2="{self.x2}" y2="{self.y2}" stroke={self.stroke} />"""
+        return (
+            f'<line class="ota-rubber" x1="{fmt(self.x1)}" y1="{fmt(self.y1)}" '
+            f'x2="{fmt(self.x2)}" y2="{fmt(self.y2)}"/>'
+        )
