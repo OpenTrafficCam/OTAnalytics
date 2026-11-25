@@ -7,6 +7,7 @@ import av
 import numpy
 from av import VideoFrame
 from av.container import InputContainer
+from av.rational import AVRational
 from av.video.stream import VideoStream
 from numpy import ndarray
 
@@ -20,42 +21,48 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
 FIRST_FRAME = 0
 OFFSET = 1
 GRAYSCALE = "L"
-DISPLAYMATRIX = "DISPLAYMATRIX"
+
+
+def to_fraction(rational: AVRational) -> Fraction:
+    return Fraction(rational.numerator, rational.denominator)
+
+
+def frame_number_of(frame: VideoFrame, framerate: Fraction, time_base: Fraction) -> int:
+    if frame.pts is None:
+        raise InvalidVideoError("Video frame has no presentation timestamp")
+    return round(framerate * frame.pts * time_base)
 
 
 def av_to_image(
-    frame: VideoFrame, side_data: dict, track_image_factory: TrackImageFactory
+    frame: VideoFrame, track_image_factory: TrackImageFactory
 ) -> TrackImage:
     array = frame.to_ndarray(format="rgba")
-    rotated_image = rotate(array, side_data)
+    rotated_image = rotate(array, frame.rotation)
     return track_image_factory.create(rotated_image)
 
 
-def rotate(array: ndarray, side_data: dict) -> ndarray:
+def rotate(array: ndarray, angle: int) -> ndarray:
     """
-    Rotate a numpy array using the DISPLAYMATRIX rotation angle defined in side_data.
+    Rotate a numpy array by the DISPLAYMATRIX rotation angle of the video frame.
 
     Args:
         array: to rotate
-        side_data: metadata dictionary to read the angle from
+        angle: counterclockwise rotation in degrees
 
     Returns: rotated array
 
     """
-    if DISPLAYMATRIX in side_data:
-        angle = side_data[DISPLAYMATRIX]
-        if angle % 90 != 0:
-            raise ValueError(
-                f"Rotation angle must be multiple of 90 degrees, but is {angle}"
-            )
-        rotation = angle / 90
-        rotated_image = numpy.rot90(array, rotation)
-        return rotated_image
-    return array
+    if angle % 90 != 0:
+        raise ValueError(
+            f"Rotation angle must be multiple of 90 degrees, but is {angle}"
+        )
+    rotation = angle // 90
+    if rotation == 0:
+        return array
+    return numpy.rot90(array, rotation)
 
 
 class PyAvVideoReader(VideoReader):
-
     def __init__(
         self, videos_metadata: VideosMetadata, track_image_factory: TrackImageFactory
     ) -> None:
@@ -72,7 +79,7 @@ class PyAvVideoReader(VideoReader):
         average_rate = container.streams.video[0].average_rate
         if average_rate is None:
             raise ValueError(f"Could not read frames per second from {str(video_path)}")
-        return average_rate
+        return to_fraction(average_rate)
 
     def get_frame(self, video_path: Path, frame_number: int) -> TrackImage:
         """Get image of video at position `frame_number`.
@@ -105,13 +112,14 @@ class PyAvVideoReader(VideoReader):
             frame_to_read = max(frame_to_read, FIRST_FRAME)
             framerate = self.__get_fps(container, video_path)
             time_base = (
-                video.time_base if video.time_base else Fraction(av.time_base, 1)
+                to_fraction(video.time_base)
+                if video.time_base
+                else Fraction(av.time_base, 1)
             )
             frame = self._do_read_frame(
                 container, frame_to_read, framerate, time_base, video_path
             )
-            side_data = container.streams.video[0].side_data
-        return av_to_image(frame, side_data, self._track_image_factory)
+        return av_to_image(frame, self._track_image_factory)
 
     def _do_read_frame(
         self,
@@ -225,7 +233,7 @@ class PyAvVideoReader(VideoReader):
         look_ahead_frame = self._decode_frame(
             look_ahead_container, frame_to_read, framerate, time_base
         )
-        sec_frame = round(framerate * look_ahead_frame.pts * time_base)
+        sec_frame = frame_number_of(look_ahead_frame, framerate, time_base)
         return sec_frame <= frame_to_read
 
     def _decode_frame(
@@ -249,7 +257,7 @@ class PyAvVideoReader(VideoReader):
         """
         decode = container.decode(video=0)
         frame = next(decode)
-        sec_frame = round(framerate * frame.pts * time_base)
+        sec_frame = frame_number_of(frame, framerate, time_base)
         for _ in range(sec_frame, frame_to_read):
             frame = next(decode)
         return frame

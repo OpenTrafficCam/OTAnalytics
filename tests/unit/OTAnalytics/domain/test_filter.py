@@ -105,3 +105,15 @@ class TestFilterElementSettingRestorer:
         )
         assert restored_filter_element.classifications == classifications
         assert restored_filter_element.date_range == DateRange(None, None)
+
+    def test_reset(self) -> None:
+        filter_element = FilterElement(DateRange(datetime(2000, 1, 1), None), {"car"})
+        restorer = FilterElementSettingRestorer()
+        restorer.save_by_date_filter_setting(filter_element)
+        restorer.save_by_class_filter_setting(filter_element)
+
+        restorer.reset()
+
+        current = FilterElement(DateRange(None, None), None)
+        assert restorer.restore_by_date_filter_setting(current) == current
+        assert restorer.restore_by_class_filter_setting(current) == current

@@ -13,18 +13,18 @@ from OTAnalytics.application.resources.resource_manager import (
     AddTracksKeys,
     AddVideoKeys,
     FlowKeys,
-    GeneralKeys,
     ResourceManager,
     SectionKeys,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.confirmation_dialog import (
+    MARKER_CONFIRMATION_MESSAGE,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_END_SECTION,
+    MARKER_START_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
     MARKER_NAME as MARKER_FLOW_NAME,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import (
-    MARKER_START_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
     MARKER_NAME as MARKER_SECTION_NAME,
@@ -61,6 +61,12 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import (
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
     MARKER_INTERACTIVE_IMAGE,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
+    MARKER_GROUP_ANALYSIS,
+    MARKER_GROUP_PROJECT,
+    MARKER_TAB_FLOW,
+    MARKER_TAB_SECTION,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
     MARKER_PROJECT_NAME,
     MARKER_PROJECT_OPEN,
@@ -68,14 +74,12 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form impo
     MARKER_START_DATE,
     MARKER_START_TIME,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
-    MARKER_TAB_SECTION,
-)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     MARKER_BUTTON_ADD as MARKER_FLOW_ADD,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     MARKER_FLOW_TABLE,
+    MARKER_UPDATE_FLOW_HIGHLIGHTING,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
     MARKER_FILTER_BY_DATE_APPLY_BUTTON,
@@ -88,7 +92,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.containe
     MARKER_FILTER_START_TIME_INPUT,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
-    MARKER_UPDATE_FLOW_HIGHLIGHTING,
     MARKER_VISUALIZATION_LAYERS_ALL,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
@@ -184,9 +187,9 @@ def set_input_value(page: Page, selector: str, value: str) -> None:
         page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
         ok, last = verify(value)
 
-    assert (
-        ok and last == value
-    ), f"Failed to set input value: expected '{value}', got '{last}' for selector {selector}"  # noqa
+    assert ok and last == value, (
+        f"Failed to set input value: expected '{value}', got '{last}' for selector {selector}"  # noqa: E501
+    )
 
 
 def navigate_and_prepare(
@@ -222,6 +225,70 @@ def search_for_marker_element(page: Page, marker: str) -> Any:
     return page.locator(f'[{TEST_ID}="{marker}"]')
 
 
+EXPANDED_GROUP_CLASS = "q-expansion-item--expanded"
+GROUP_HEADER = ".q-expansion-item__container > .q-item"
+OPEN_GROUP_ATTEMPTS = 3
+
+
+def is_group_open(page: Page, marker: str) -> bool:
+    group = search_for_marker_element(page, marker).first
+    return EXPANDED_GROUP_CLASS in (group.get_attribute("class") or "")
+
+
+def wait_until_stable(page: Page, locator: Any) -> None:
+    """Wait until the element stops moving, e.g. while groups above it expand.
+
+    The application opens groups itself after loading tracks. Their expand
+    animation shifts the groups below, so a click may miss its target.
+    """
+    deadline = time.time() + PLAYWRIGHT_VISIBLE_TIMEOUT_MS / 1000
+    previous = None
+    while time.time() < deadline:
+        locator.scroll_into_view_if_needed()
+        current = locator.bounding_box()
+        if current is not None and current == previous:
+            return
+        previous = current
+        page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
+
+
+def _wait_for_group_open(page: Page, marker: str) -> bool:
+    deadline = time.time() + PLAYWRIGHT_VISIBLE_TIMEOUT_MS / 1000
+    while time.time() < deadline:
+        if is_group_open(page, marker):
+            return True
+        page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
+    return is_group_open(page, marker)
+
+
+def open_group(page: Page, marker: str) -> None:
+    """Open a workflow group of the configuration bar unless it is open already.
+
+    A click on the header of an open group closes it. The application may open
+    a group itself, e.g. after loading tracks, so the state is checked again
+    after each click. The left panel scrolls and its groups animate, so the
+    header is clicked only once it is in view and stopped moving.
+    """
+    group = search_for_marker_element(page, marker).first
+    group.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    header = group.locator(GROUP_HEADER).first
+    for _ in range(OPEN_GROUP_ATTEMPTS):
+        wait_until_stable(page, header)
+        if is_group_open(page, marker):
+            break
+        header.click()
+        if _wait_for_group_open(page, marker):
+            break
+    assert is_group_open(page, marker), f"Group {marker} did not open"
+    wait_until_stable(page, group)
+
+
+def open_tab(page: Page, marker: str) -> None:
+    """Show the Track files or Videos part of the project group."""
+    open_group(page, MARKER_GROUP_PROJECT)
+    search_for_marker_element(page, marker).first.scroll_into_view_if_needed()
+
+
 def fill_project_information(
     page: Page,
     resource_manager: ResourceManager,
@@ -230,6 +297,7 @@ def fill_project_information(
     time_value: str = "06:00:00",
 ) -> None:
     """Fill the mandatory project information fields on the main page."""
+    open_group(page, MARKER_GROUP_PROJECT)
     set_input_value_via_marker(page, MARKER_PROJECT_NAME, name)
     set_input_value_via_marker(page, MARKER_START_DATE, date_value)
     set_input_value_via_marker(page, MARKER_START_TIME, time_value)
@@ -345,7 +413,7 @@ def go_to_sections_with_one_video(page: Page, rm: ResourceManager) -> None:
     - Switch to the Sections tab
     """
     # Open Videos tab using marker
-    search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+    open_tab(page, MARKER_VIDEO_TAB)
 
     # Ensure a clean slate
     reset_videos_tab(page, rm)
@@ -360,8 +428,8 @@ def go_to_sections_with_one_video(page: Page, rm: ResourceManager) -> None:
     wait_for_names_present(page, [v1.name])
     click_table_cell_with_text(page, v1.name)
 
-    # Switch to Sections tab
-    search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
+    # Open the Sections group
+    open_group(page, MARKER_TAB_SECTION)
 
 
 def open_part(page: Page, part: str) -> None:
@@ -371,12 +439,8 @@ def open_part(page: Page, part: str) -> None:
     while time.time() < deadline:
         try:
             # Look for the row in the ag-grid that contains the text
-            # The file picker shows folders as "📁 <strong>foldername</strong>"
-            row = (
-                page.locator(".ag-center-cols-container .ag-row")
-                .filter(has_text=part)
-                .first
-            )
+            # The file picker shows folders as "<icon> <strong>foldername</strong>"
+            row = page.locator(".ag-row").filter(has_text=part).first
             row.wait_for(
                 state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS * 2
             )
@@ -387,7 +451,7 @@ def open_part(page: Page, part: str) -> None:
         except Exception as e:
             # Try to scroll if possible
             try:
-                last_row = page.locator(".ag-center-cols-container .ag-row").last
+                last_row = page.locator(".ag-row").last
                 last_row.scroll_into_view_if_needed()
             except Exception:
                 pass
@@ -458,19 +522,22 @@ def open_project_otconfig(page: Page, rm: ResourceManager, path: Path) -> None:
     search_for_marker_element(page, MARKER_DIRECTORY).first.fill(str(path.parent))
     search_for_marker_element(page, MARKER_FILENAME).first.fill(path.name)
     search_for_marker_element(page, MARKER_DIALOG_APPLY).first.click()
-    confirm_dialog(page, rm)
+    answer_confirmation(page, MARKER_DIALOG_APPLY)
 
     wait_for_track_loading_to_finish(page)
 
 
-def confirm_dialog(page: Page, rm: ResourceManager) -> None:
-    """Confirm the dialog asking whether the current project may be replaced."""
-    ok_button = page.get_by_role(
-        "button", name=rm.get(GeneralKeys.LABEL_OK), exact=True
-    )
-    ok_button.wait_for(state="visible")
-    ok_button.click()
-    ok_button.wait_for(state="hidden")
+def answer_confirmation(page: Page, button_marker: str) -> None:
+    """Click a button of the confirmation dialog, e.g. its Apply or Cancel.
+
+    Other dialogs use the same button markers, so the button is looked up within
+    the dialog that shows the confirmation message.
+    """
+    message = search_for_marker_element(page, MARKER_CONFIRMATION_MESSAGE).first
+    message.wait_for(state="visible")
+    dialog = page.locator(".q-dialog", has=message)
+    dialog.locator(f'[{TEST_ID}="{button_marker}"]').first.click()
+    message.wait_for(state="detached")
 
 
 # ----------------------
@@ -615,6 +682,7 @@ def export_track_statistics(
     open_project_otconfig(page, resource_manager, otconfig_path)
 
     # Click "Export track statistics ..." button
+    open_group(page, MARKER_GROUP_ANALYSIS)
     export_button = search_for_marker_element(
         page, MARKER_BUTTON_EXPORT_TRACK_STATISTICS
     ).first
@@ -972,15 +1040,13 @@ def setup_tracks_display(
     )
 
     # Add video
-    video_tab = search_for_marker_element(page, MARKER_VIDEO_TAB).first
-    video_tab.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
-    video_tab.click()
+    open_tab(page, MARKER_VIDEO_TAB)
     page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
     add_video_via_picker(page, rm, video_file)
     page.wait_for_timeout(150)
 
     # Add tracks
-    search_for_marker_element(page, MARKER_TRACK_TAB).first.click()
+    open_tab(page, MARKER_TRACK_TAB)
     track_files = track_file if isinstance(track_file, list) else [track_file]
     for tf in track_files:
         add_track_via_picker(page, rm, tf)
@@ -1210,14 +1276,18 @@ def enable_all_tracks_layer(page: Page) -> None:
 def update_flow_highlighting(
     page: Page, timeout_ms: int = PLAYWRIGHT_VISIBLE_TIMEOUT_MS
 ) -> None:
-    """Click the 'Update flow highlighting' button and wait for processing.
+    """Click the 'Update now' track assignment button and wait for processing.
 
     Args:
         page: Playwright page object
         timeout_ms: Timeout in milliseconds to wait after
         clicking (default: PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
     """
+    open_group(page, MARKER_TAB_FLOW)
     button = page.get_by_test_id(MARKER_UPDATE_FLOW_HIGHLIGHTING)
+    # Shown only while the assignment is out of date.
+    if not button.is_visible():
+        return
     button.scroll_into_view_if_needed()
     button.click()
     page.wait_for_timeout(timeout_ms)
@@ -1347,9 +1417,9 @@ def verify_filter_range_label_cleared(page: Page) -> None:
     """Verify that the filter range label is cleared."""
     range_label = page.get_by_test_id(MARKER_FILTER_RANGE_LABEL)
     label_text_after_reset = range_label.inner_text()
-    assert (
-        label_text_after_reset.strip() == ""
-    ), "Date range label not cleared after reset"
+    assert label_text_after_reset.strip() == "", (
+        "Date range label not cleared after reset"
+    )
 
 
 def assert_screenshot_equal(

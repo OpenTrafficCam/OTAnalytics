@@ -7,6 +7,7 @@ from OTAnalytics.application.resources.resource_manager import (
     GeneralKeys,
     ResourceManager,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import DIALOG_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_APPLY = "apply"
@@ -19,7 +20,6 @@ class DialogResult(StrEnum):
 
 
 class BaseDialog:
-
     @property
     async def result(self) -> DialogResult:
         """Build, open, and await the dialog, returning the submitted result.
@@ -37,12 +37,12 @@ class BaseDialog:
         self.resource_manager = resource_manager
 
     def build(self) -> ui.dialog:
-        with ui.dialog() as dialog, ui.card().classes("w-96"):
+        with ui.dialog() as dialog, ui.card().classes(DIALOG_CLASS):
             self.build_content()
             with ui.row():
                 apply = ui.button(
                     self.apply_label(),
-                    on_click=lambda: dialog.submit(DialogResult.APPLY),
+                    on_click=lambda: self._submit_if_valid(dialog),
                 )
                 cancel = ui.button(
                     self.resource_manager.get(GeneralKeys.LABEL_CANCEL),
@@ -55,6 +55,18 @@ class BaseDialog:
                 apply.props(f"{TEST_ID}={MARKER_APPLY}")
                 cancel.props(f"{TEST_ID}={MARKER_CANCEL}")
             return dialog
+
+    def _submit_if_valid(self, dialog: ui.dialog) -> None:
+        if self.validate():
+            dialog.submit(DialogResult.APPLY)
+
+    def validate(self) -> bool:
+        """Check whether the dialog content is valid and may be applied.
+
+        Subclasses override this to keep the dialog open while their input is
+        invalid.
+        """
+        return True
 
     def apply_label(self) -> str:
         """Label of the button that submits DialogResult.APPLY."""

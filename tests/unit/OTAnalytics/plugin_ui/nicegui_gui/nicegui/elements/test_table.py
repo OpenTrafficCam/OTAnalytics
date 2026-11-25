@@ -6,7 +6,12 @@ import pytest
 from nicegui import ui
 from nicegui.testing import User
 
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import CustomTable
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
+    TRUNCATE_END_CELL,
+    TRUNCATE_START_CELL,
+    TRUNCATING_TABLE_CLASS,
+    CustomTable,
+)
 from tests.utils.nicegui_table import (
     double_click_row,
     wait_until_awaited,
@@ -33,7 +38,6 @@ def create_target(
 
 
 class TestCustomTableRowDoubleClick:
-
     @pytest.mark.asyncio
     async def test_double_click_passes_the_clicked_row_to_the_handler(
         self, user: User
@@ -81,3 +85,64 @@ class TestCustomTableRowDoubleClick:
         await user.open(ENDPOINT_NAME)
 
         double_click_row(user, MARKER_TABLE, FIRST_ROW)
+
+
+class TestCustomTableTruncateColumn:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "cut_start, template",
+        [(False, TRUNCATE_END_CELL), (True, TRUNCATE_START_CELL)],
+    )
+    async def test_truncates_the_column_at_the_chosen_end(
+        self, user: User, cut_start: bool, template: str
+    ) -> None:
+        target = create_target()
+
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            target.build()
+            target.truncate_column("name", cut_start=cut_start)
+
+        await user.open(ENDPOINT_NAME)
+
+        table = user.find(marker=MARKER_TABLE, kind=ui.table).elements.pop()
+        assert TRUNCATING_TABLE_CLASS in table.classes
+        assert table.slots["body-cell-name"].template == template
+
+
+class TestCustomTableUpdate:
+    @pytest.mark.asyncio
+    async def test_update_shows_the_new_rows(self, user: User) -> None:
+        third_row = {"id": "third", "name": "Third"}
+        target = create_target()
+
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            target.build()
+
+        await user.open(ENDPOINT_NAME)
+
+        target.update([dict(FIRST_ROW), dict(SECOND_ROW), third_row])
+
+        table = user.find(marker=MARKER_TABLE).elements.pop()
+        assert isinstance(table, ui.table)
+        assert table.rows == [FIRST_ROW, SECOND_ROW, third_row]
+        assert target.size == 3
+
+    @pytest.mark.asyncio
+    async def test_select_finds_rows_added_by_update(self, user: User) -> None:
+        third_row = {"id": "third", "name": "Third"}
+        target = create_target()
+
+        @ui.page(ENDPOINT_NAME)
+        def page() -> None:
+            target.build()
+
+        await user.open(ENDPOINT_NAME)
+
+        target.update([dict(FIRST_ROW), third_row])
+        target.select(["third"])
+
+        table = user.find(marker=MARKER_TABLE).elements.pop()
+        assert isinstance(table, ui.table)
+        assert table.selected == [third_row]

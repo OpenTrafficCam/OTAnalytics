@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Callable, Iterable, Protocol, Self
 
@@ -24,19 +23,6 @@ MaxConfidenceProvider = Callable[[list[str]], MaxConfidenceLookupTable]
 
 class RoadUserAssignmentBuildError(Exception):
     pass
-
-
-def compute_road_user_assignment_flow_metrics(
-    flow_distance_m: float | None,
-    start_interpolated: datetime,
-    end_interpolated: datetime,
-) -> tuple[float | None, float, float | None]:
-    """Flow distance (m), travel time (s), and average speed (m/s) for CSV export."""
-    travel_time_s = (end_interpolated - start_interpolated).total_seconds()
-    avg_speed_mps: float | None = None
-    if flow_distance_m is not None and travel_time_s > 0:
-        avg_speed_mps = flow_distance_m / travel_time_s
-    return flow_distance_m, travel_time_s, avg_speed_mps
 
 
 class RoadUserAssignmentBuilder:
@@ -72,13 +58,7 @@ class RoadUserAssignmentBuilder:
         assigned_flow = assignment.assignment
         start = assignment.events.start
         end = assignment.events.end
-        flow_distance_m, travel_time_s, avg_speed_mps = (
-            compute_road_user_assignment_flow_metrics(
-                assigned_flow.distance,
-                start.interpolated_occurrence,
-                end.interpolated_occurrence,
-            )
-        )
+        metrics = assignment.flow_metrics()
         return {
             ras.FLOW_ID: assigned_flow.id.id,
             ras.FLOW_NAME: assigned_flow.name,
@@ -118,9 +98,9 @@ class RoadUserAssignmentBuilder:
             ras.START_INTERPOLATED_EVENT_COORD_Y: start.interpolated_event_coordinate.y,
             ras.END_INTERPOLATED_EVENT_COORD_X: end.interpolated_event_coordinate.x,
             ras.END_INTERPOLATED_EVENT_COORD_Y: end.interpolated_event_coordinate.y,
-            ras.FLOW_DISTANCE_M: flow_distance_m,
-            ras.TRAVEL_TIME_S: travel_time_s,
-            ras.AVG_SPEED_MPS: avg_speed_mps,
+            ras.FLOW_DISTANCE_M: metrics.distance_m,
+            ras.TRAVEL_TIME_S: metrics.travel_time_s,
+            ras.AVG_SPEED_MPS: metrics.avg_speed_mps,
             ras.START_GEO_X: start.geo_x,
             ras.START_GEO_Y: start.geo_y,
             ras.END_GEO_X: end.geo_x,

@@ -154,7 +154,11 @@ from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.track_dataset.track_dataset import (
     IncompatibleGeoreferenceMetadataError,
 )
-from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
+from OTAnalytics.domain.track_repository import (
+    TrackFileRepositoryEvent,
+    TrackListObserver,
+    TrackRepositoryEvent,
+)
 from OTAnalytics.domain.types import EventType
 from OTAnalytics.domain.video import Video, VideoListObserver
 
@@ -213,7 +217,6 @@ class DummyViewModel(
     SectionListObserver,
     FlowListObserver,
 ):
-
     @property
     def frame_project(self) -> AbstractFrameProject:
         if self._frame_project is None:
@@ -357,6 +360,7 @@ class DummyViewModel(
         self._name_generator = name_generator
         self._event_list_export_formats = event_list_export_formats
         self._show_svz = show_svz
+        self._auto_assignment = True
         self._add_new_section = add_new_section
         self._update_section_coordinates = update_section_coordinates
         self._window: Optional[AbstractMainWindow] = None
@@ -394,7 +398,10 @@ class DummyViewModel(
         """Re-enable the buttons that wait for a background to draw on."""
         self._update_enabled_buttons()
 
-    def notify_files(self) -> None:
+    def notify_files(self, _: TrackFileRepositoryEvent) -> None:
+        self._refresh_files()
+
+    def _refresh_files(self) -> None:
         self.treeview_files.update_items()
         self._update_enabled_buttons()
 
@@ -521,8 +528,8 @@ class DummyViewModel(
         except NoExistingConfigFound:
             self.button_quick_save_config.set_default_color()
 
-    def notify_tracks(self, track_event: TrackRepositoryEvent) -> None:
-        self.notify_files()
+    def notify_tracks(self, _: TrackRepositoryEvent) -> None:
+        self._refresh_files()
 
     def _intersect_tracks_with_sections(self) -> None:
         start_msg_popup = self._ui_factory.minimal_info_box(
@@ -1267,7 +1274,7 @@ class DummyViewModel(
         elif self._is_area_section(section):
             return GeometricCenterCalculator()
         else:
-            raise ValueError("section has to be a LineSection or an Area, but isnt")
+            raise ValueError("section has to be a LineSection or an Area, but isn't")
 
     def _get_selected_flows(self) -> list[Flow]:
         flows: list[Flow] = []
@@ -1481,6 +1488,16 @@ class DummyViewModel(
                 initial_position=position,
                 message_type=MessageType.WARNING,
             )
+
+    def set_auto_assignment(self, enabled: bool) -> None:
+        self._auto_assignment = enabled
+
+    def get_auto_assignment(self) -> bool:
+        return self._auto_assignment
+
+    def assign_tracks(self) -> None:
+        self._application.create_events()
+        self.notify_flows(self.get_all_flow_ids())
 
     def create_events(self) -> None:
         logger().info("Creating events")
@@ -1713,7 +1730,7 @@ class DummyViewModel(
             self._ui_factory.show_message(
                 message=(
                     "Counting needs at least one flow.\n"
-                    "There is no flow configurated.\n"
+                    "There is no flow configured.\n"
                     "Please create a flow."
                 ),
                 initial_position=self.get_position(),
@@ -1765,9 +1782,14 @@ class DummyViewModel(
     def update_project_start_date(self, start_date: Optional[datetime]) -> None:
         self._application.update_project_start_date(start_date)
 
-    def on_start_new_project(self, _: None) -> None:
+    def on_application_reset(self, _: None) -> None:
+        """Show the views of a freshly started application.
+
+        Called on every reset of the application, i.e. when starting a new project
+        and when loading an otconfig.
+        """
+        self.frame_project.reset()
         self.frame_filter.reset()
-        self.frame_track_plotting.reset_layers()
         self.canvas.add_preview_image()
 
     def set_frame_track_plotting(
@@ -1818,7 +1840,7 @@ class DummyViewModel(
     async def export_road_user_assignments(self) -> None:
         if len(self._application.get_all_flows()) == 0:
             self._ui_factory.show_message(
-                message=("There is no flow configured.\n" "Please create a flow."),
+                message=("There is no flow configured.\nPlease create a flow."),
                 initial_position=self.get_position(),
                 message_type=MessageType.WARNING,
             )

@@ -6,6 +6,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.page_builder import (
     LayoutComponents,
     NiceguiPageBuilder,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import add_fonts
 
 
 class NiceguiWebserver:
@@ -30,6 +31,7 @@ class NiceguiWebserver:
         uvicorn.run(app, host=self._hostname, port=self._port)
 
     def build_pages(self) -> None:
+        add_fonts()
         for page_builder in self._page_builders:
             page_builder.build(self._layout_components)
 

@@ -20,6 +20,7 @@ from OTAnalytics.application.project_location import (
     RefuseAnyProjectLocation,
     ValidateProjectLocation,
 )
+from OTAnalytics.application.state import CurrentExportConfigState
 from OTAnalytics.application.upload_otconfig import NoOtconfigUpload, UploadOtconfig
 from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.application.use_cases.provide_input_files import (
@@ -27,6 +28,26 @@ from OTAnalytics.application.use_cases.provide_input_files import (
     ProvideVideoFiles,
 )
 from OTAnalytics.application.use_cases.reset_application import ResetApplication
+from OTAnalytics.application.use_cases.static_analysis_config import (
+    GetCountingEventOfCurrentAnalysisConfig,
+    GetCountIntervalsOfCurrentAnalysisConfig,
+    GetDoCountingOfCurrentAnalysisConfig,
+    GetDoEventsOfCurrentAnalysisConfig,
+    GetEventFormatsOfCurrentAnalysisConfig,
+    GetLogfileOfCurrentAnalysisConfig,
+    GetNumProcessesOfCurrentAnalysisConfig,
+    GetSaveNameOfCurrentAnalysisConfig,
+    GetSaveSuffixOfCurrentAnalysisConfig,
+    SetCountingEventInCurrentAnalysisConfig,
+    SetCountIntervalsInCurrentAnalysisConfig,
+    SetDoCountingInCurrentAnalysisConfig,
+    SetDoEventsInCurrentAnalysisConfig,
+    SetEventFormatsInCurrentAnalysisConfig,
+    SetLogfileInCurrentAnalysisConfig,
+    SetNumProcessesInCurrentAnalysisConfig,
+    SetSaveNameInCurrentAnalysisConfig,
+    SetSaveSuffixInCurrentAnalysisConfig,
+)
 from OTAnalytics.domain.progress import ProgressbarBuilder
 from OTAnalytics.domain.transfer_mode import TransferMode
 from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
@@ -77,11 +98,17 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import 
     ConfigurationBar,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
+    ProjectActions,
     ProjectForm,
+    ProjectTitle,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.static_analysis_config_form import (  # noqa
+    StaticAnalysisConfigForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.header.header_bar import HeaderBar
 from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import RemarkForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
-    SectionsAndFlowForm,
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.assignment_status import (  # noqa
+    AssignmentStatus,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
     FlowForm,
@@ -99,6 +126,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
     VisualizationFilters,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+    FilterClassificationForm,
     VisualizationFiltersForm,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import (
@@ -109,6 +137,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_fo
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
 from OTAnalytics.plugin_ui.nicegui_gui.ui_factory import NiceGuiUiFactory
+from OTAnalytics.plugin_ui.visualization.visualization import VisualizationBuilder
 
 DEFAULT_HOSTNAME = "localhost"
 DEFAULT_PORT = 5000
@@ -123,13 +152,23 @@ class Webserver(Protocol):
 
 
 class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
-
     def start_ui(self) -> None:
         self.webserver.run()
 
     def register_observers(self) -> None:
         super().register_observers()
         self.register_flow_track_count_observers()
+        self.register_track_assignment_observers()
+        self.register_configuration_bar_observers()
+
+    def register_configuration_bar_observers(self) -> None:
+        """Keep the group summaries of the configuration bar up to date."""
+        self.track_repository.register_tracks_observer(self.configuration_bar)
+        self.track_repository.register_tracks_observer(self.track_form)
+        self.datastore.register_video_observer(self.configuration_bar)
+        self.section_repository.register_sections_observer(self.configuration_bar)
+        self.flow_repository.register_flows_observer(self.configuration_bar)
+        self.event_repository.register_observer(self.configuration_bar.notify_events)
 
     def register_flow_track_count_observers(self) -> None:
         """Keep the number of assigned tracks in the flow table up to date.
@@ -139,6 +178,17 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         """
         self.flow_repository.register_flows_observer(self.flow_form)
         self.event_repository.register_observer(self.flow_form.notify_events)
+
+    def register_track_assignment_observers(self) -> None:
+        """Let the flow form follow changes of the inputs of the track assignment
+        and show where the assignment is out of date."""
+        self.datastore.register_section_changed_observer(
+            self.flow_form.notify_section_changed
+        )
+        self.flow_form.register_outdated_observer(self.canvas_form.set_flows_outdated)
+        self.flow_form.register_outdated_observer(self.assignment_status.show_outdated)
+        # After the events were cleared for the changed tracks.
+        self.track_repository.register_tracks_observer(self.flow_form)
 
     @cached_property
     def webserver(self) -> Webserver:
@@ -159,11 +209,13 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
             workspace=self.workspace,
             visualization_filters=self.visualization_filters,
             visualization_layers=self.visualization_layers,
+            status_bar=self.track_statistic_form,
+            assignment_status=self.assignment_status,
         )
         self.preload_project()
         return NiceguiWebserver(
             page_builders=[main_page_builder],
-            layout_components=NiceguiLayoutComponents(),
+            layout_components=NiceguiLayoutComponents(self.header_bar),
             hostname=DEFAULT_HOSTNAME,
             port=DEFAULT_PORT,
         )
@@ -186,17 +238,48 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     def configuration_bar(self) -> ConfigurationBar:
         return ConfigurationBar(
             resource_manager=self.resource_manager,
+            view_model=self.view_model,
             project_form=self.project_form,
+            static_analysis_config_form=self.static_analysis_config_form,
             svz_metadata_form=self.svz_metadata_form,
             track_form=self.track_form,
-            sections_and_flow_form=self.sections_and_flow_form,
+            remark_form=self.remarks_form,
+            sections_form=self.section_form,
+            flow_form=self.flow_form,
             analysis_form=self.analysis_form,
+        )
+
+    @cached_property
+    def visualization_builder(self) -> VisualizationBuilder:
+        """Without a legend in the track image: the class legend on the canvas
+        shows the class colours."""
+        return VisualizationBuilder(
+            self.datastore,
+            self.intersection_repository,
+            self.track_view_state,
+            self.videos_metadata,
+            self.section_state,
+            self.color_palette_provider,
+            self.progressbar_builder,
+            self.track_image_factory,
+            self.track_id_set_factory,
+            self.current_orthophoto_image.get,
+            enable_single_legend=False,
         )
 
     @cached_property
     def canvas_and_files_form(self) -> CanvasAndFilesForm:
         return CanvasAndFilesForm(
-            self.resource_manager, self.canvas_form, self.files_form
+            self.resource_manager,
+            self.canvas_form,
+            self.files_form,
+            self.class_legend,
+        )
+
+    @cached_property
+    def class_legend(self) -> FilterClassificationForm:
+        return FilterClassificationForm(
+            self.resource_manager, self.view_model, self.color_palette_provider
         )
 
     @cached_property
@@ -204,20 +287,12 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return RemarkForm(self.resource_manager, self.view_model)
 
     @cached_property
-    def sections_and_flow_form(self) -> SectionsAndFlowForm:
-        return SectionsAndFlowForm(
-            self.resource_manager,
-            self.section_form,
-            self.flow_form,
-        )
-
-    @cached_property
     def track_form(self) -> TrackForm:
         return TrackForm(
             self.resource_manager,
+            self.view_model,
             self.add_track_form,
             self.add_video_form,
-            self.visualization_offset_slider_form,
         )
 
     @cached_property
@@ -256,7 +331,196 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
 
     @cached_property
     def project_form(self) -> ProjectForm:
-        return ProjectForm(self.view_model, self.resource_manager)
+        return ProjectForm(
+            self.view_model,
+            self.resource_manager,
+            self.project_actions,
+            self.project_title,
+        )
+
+    @cached_property
+    def project_title(self) -> ProjectTitle:
+        return ProjectTitle(self.resource_manager)
+
+    @cached_property
+    def project_actions(self) -> ProjectActions:
+        return ProjectActions(
+            self.view_model, self.resource_manager, self.project_title
+        )
+
+    @cached_property
+    def header_bar(self) -> HeaderBar:
+        return HeaderBar(
+            self.resource_manager, self.project_title, self.project_actions
+        )
+
+    @cached_property
+    def get_do_events_of_current_analysis_config(
+        self,
+    ) -> GetDoEventsOfCurrentAnalysisConfig:
+        return GetDoEventsOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def get_do_counting_of_current_analysis_config(
+        self,
+    ) -> GetDoCountingOfCurrentAnalysisConfig:
+        return GetDoCountingOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def get_save_name_of_current_analysis_config(
+        self,
+    ) -> GetSaveNameOfCurrentAnalysisConfig:
+        return GetSaveNameOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_save_suffix_of_current_analysis_config(
+        self,
+    ) -> GetSaveSuffixOfCurrentAnalysisConfig:
+        return GetSaveSuffixOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_event_formats_of_current_analysis_config(
+        self,
+    ) -> GetEventFormatsOfCurrentAnalysisConfig:
+        return GetEventFormatsOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_count_intervals_of_current_analysis_config(
+        self,
+    ) -> GetCountIntervalsOfCurrentAnalysisConfig:
+        return GetCountIntervalsOfCurrentAnalysisConfig(
+            self.current_export_config_state
+        )
+
+    @cached_property
+    def get_counting_event_of_current_analysis_config(
+        self,
+    ) -> GetCountingEventOfCurrentAnalysisConfig:
+        return GetCountingEventOfCurrentAnalysisConfig(self.current_export_config_state)
+
+    @cached_property
+    def get_num_processes_of_current_analysis_config(
+        self,
+    ) -> GetNumProcessesOfCurrentAnalysisConfig:
+        return GetNumProcessesOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def get_logfile_of_current_analysis_config(
+        self,
+    ) -> GetLogfileOfCurrentAnalysisConfig:
+        return GetLogfileOfCurrentAnalysisConfig(
+            self.current_static_analysis_config_state
+        )
+
+    @cached_property
+    def set_do_events_in_current_analysis_config(
+        self,
+    ) -> SetDoEventsInCurrentAnalysisConfig:
+        return SetDoEventsInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def set_do_counting_in_current_analysis_config(
+        self,
+    ) -> SetDoCountingInCurrentAnalysisConfig:
+        return SetDoCountingInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def set_save_name_in_current_analysis_config(
+        self,
+    ) -> SetSaveNameInCurrentAnalysisConfig:
+        return SetSaveNameInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_save_suffix_in_current_analysis_config(
+        self,
+    ) -> SetSaveSuffixInCurrentAnalysisConfig:
+        return SetSaveSuffixInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_event_formats_in_current_analysis_config(
+        self,
+    ) -> SetEventFormatsInCurrentAnalysisConfig:
+        return SetEventFormatsInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_count_intervals_in_current_analysis_config(
+        self,
+    ) -> SetCountIntervalsInCurrentAnalysisConfig:
+        return SetCountIntervalsInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_counting_event_in_current_analysis_config(
+        self,
+    ) -> SetCountingEventInCurrentAnalysisConfig:
+        return SetCountingEventInCurrentAnalysisConfig(
+            self.current_export_config_state, self.static_analysis_config_changed
+        )
+
+    @cached_property
+    def set_num_processes_in_current_analysis_config(
+        self,
+    ) -> SetNumProcessesInCurrentAnalysisConfig:
+        return SetNumProcessesInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def set_logfile_in_current_analysis_config(
+        self,
+    ) -> SetLogfileInCurrentAnalysisConfig:
+        return SetLogfileInCurrentAnalysisConfig(
+            self.current_static_analysis_config_state,
+            self.static_analysis_config_changed,
+        )
+
+    @cached_property
+    def current_export_config_state(self) -> CurrentExportConfigState:
+        return self.current_static_analysis_config_state.export_config
+
+    @cached_property
+    def static_analysis_config_form(self) -> StaticAnalysisConfigForm:
+        return StaticAnalysisConfigForm(
+            resource_manager=self.resource_manager,
+            get_do_events=self.get_do_events_of_current_analysis_config,
+            set_do_events=self.set_do_events_in_current_analysis_config,
+            get_do_counting=self.get_do_counting_of_current_analysis_config,
+            set_do_counting=self.set_do_counting_in_current_analysis_config,
+            get_save_name=self.get_save_name_of_current_analysis_config,
+            set_save_name=self.set_save_name_in_current_analysis_config,
+            get_save_suffix=self.get_save_suffix_of_current_analysis_config,
+            set_save_suffix=self.set_save_suffix_in_current_analysis_config,
+            get_event_formats=self.get_event_formats_of_current_analysis_config,
+            set_event_formats=self.set_event_formats_in_current_analysis_config,
+            get_count_intervals=self.get_count_intervals_of_current_analysis_config,
+            set_count_intervals=self.set_count_intervals_in_current_analysis_config,
+            get_counting_event=self.get_counting_event_of_current_analysis_config,
+            set_counting_event=self.set_counting_event_in_current_analysis_config,
+            get_num_processes=self.get_num_processes_of_current_analysis_config,
+            set_num_processes=self.set_num_processes_in_current_analysis_config,
+            get_logfile=self.get_logfile_of_current_analysis_config,
+            set_logfile=self.set_logfile_in_current_analysis_config,
+        )
 
     @cached_property
     def layers_form(self) -> LayersForm:
@@ -280,13 +544,19 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
         return VisualizationFilters(
             self.resource_manager,
             self.visualization_filter_form,
-            self.remarks_form,
-            self.track_statistic_form,
         )
 
     @cached_property
     def visualization_layers(self) -> VisualizationLayers:
-        return VisualizationLayers(self.resource_manager, self.layers_form)
+        return VisualizationLayers(
+            self.resource_manager,
+            self.layers_form,
+            self.visualization_offset_slider_form,
+        )
+
+    @cached_property
+    def assignment_status(self) -> AssignmentStatus:
+        return AssignmentStatus(self.resource_manager, self.flow_form.update_assignment)
 
     @cached_property
     def track_statistic_form(self) -> TrackStatisticForm:
@@ -295,7 +565,12 @@ class OtAnalyticsNiceGuiApplicationStarter(OtAnalyticsGuiApplicationStarter):
     @cached_property
     def ui_factory(self) -> UiFactory:
         return NiceGuiUiFactory(
-            self.resource_manager, self.run_config.file_picker_directory
+            self.resource_manager,
+            get_count_intervals=self.get_count_intervals_of_current_analysis_config,
+            get_counting_event=self.get_counting_event_of_current_analysis_config,
+            get_save_name=self.get_save_name_of_current_analysis_config,
+            get_save_suffix=self.get_save_suffix_of_current_analysis_config,
+            base_directory=self.run_config.file_picker_directory,
         )
 
     @cached_property

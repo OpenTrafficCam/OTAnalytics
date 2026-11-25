@@ -7,7 +7,6 @@ import pytest
 from playwright.sync_api import Page, expect  # type: ignore  # noqa: E402
 
 from OTAnalytics.application.resources.resource_manager import (
-    FlowAndSectionKeys,
     ResourceManager,
     SectionKeys,
 )
@@ -25,7 +24,8 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     EDIT_KNOB_ID_PREFIX,
     MARKER_INTERACTIVE_IMAGE,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
+    MARKER_TAB_FLOW,
     MARKER_TAB_SECTION,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
@@ -35,6 +35,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form im
     MARKER_FLOW_TABLE,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
+    MARKER_BUTTON_ADD_LINE,
     MARKER_SECTION_TABLE,
 )
 from tests.acceptance.conftest import (
@@ -51,6 +52,7 @@ from tests.utils.playwright_helpers import (
     go_to_sections_with_one_video,
     load_main_page,
     navigate_and_prepare,
+    open_group,
     save_project_as,
     search_for_marker_element,
     setup_with_preconfigured_otconfig,
@@ -63,7 +65,6 @@ playwright = pytest.importorskip(
 
 
 class TestAddLineSectionWithDialog:
-
     @pytest.mark.skip(reason="only works in headed right now")
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
@@ -110,7 +111,7 @@ class TestAddLineSectionWithDialog:
 
         # Switch to Sections tab
 
-        search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
+        open_group(page, MARKER_TAB_SECTION)
 
         # Create two additional sections
         names = ["First-Line", "Second-Line"]
@@ -141,9 +142,7 @@ class TestAddLineSectionWithDialog:
         setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
 
         # Switch to Flows tab (sections already exist from preconfigured file)
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
-        ).click()
+        open_group(page, MARKER_TAB_FLOW)
 
         custom_flow_name = "My-Flow"
         create_flow(page, resource_manager, custom_flow_name)
@@ -190,9 +189,7 @@ class TestAddLineSectionWithDialog:
         names = ["North-Section", "South-Section"]
 
         # Switch to Flows tab
-        page.get_by_text(
-            resource_manager.get(FlowAndSectionKeys.TAB_FLOW), exact=True
-        ).click()
+        open_group(page, MARKER_TAB_FLOW)
 
         # Create one flow then remove it
         temp_flow_name = "Temp-Flow"
@@ -221,9 +218,9 @@ class TestAddLineSectionWithDialog:
             except Exception:
                 pass
             time.sleep(PLAYWRIGHT_POLL_INTERVAL_SLOW_MS)
-        assert (
-            len(matched_texts) >= 2
-        ), f"Expected >=2 generated flows with {names}, got {len(matched_texts)}: {last_texts}"  # noqa
+        assert len(matched_texts) >= 2, (
+            f"Expected >=2 generated flows with {names}, got {len(matched_texts)}: {last_texts}"  # noqa: E501
+        )
 
         # Save project using shared helper and compare with reference
         save_project_as(
@@ -284,7 +281,7 @@ def _open_sections_of_preconfigured_project(
         Path(__file__).parents[1] / "data" / "sections_created_test_file.otconfig"
     )
     setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
-    search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
+    open_group(page, MARKER_TAB_SECTION)
     _dismiss_notifications(page)
 
 
@@ -324,7 +321,6 @@ def _saved_section_coordinates(
 
 
 class TestSectionEditorOnCanvas:
-
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
     @pytest.mark.usefixtures("external_app")
@@ -336,9 +332,11 @@ class TestSectionEditorOnCanvas:
     ) -> None:
         """Draw a line section: preview follows the mouse, right click finishes."""
         _open_sections_of_preconfigured_project(page, external_app, resource_manager)
-        page.get_by_text(
-            resource_manager.get(SectionKeys.BUTTON_ADD_LINE), exact=True
-        ).click()
+        add_line = search_for_marker_element(page, MARKER_BUTTON_ADD_LINE).first
+        add_line.click()
+        # The canvas subscribes to mouse moves with the same update that disables
+        # the button. Moves before that update are not sent to the server.
+        expect(add_line).to_be_disabled()
 
         _click(page, 40, 200)
         _move_mouse(page, 200, 260)

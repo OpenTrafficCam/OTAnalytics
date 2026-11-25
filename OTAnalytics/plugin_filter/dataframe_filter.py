@@ -89,8 +89,7 @@ class DataFrameStartsAtOrAfterDate(DataFramePredicate):
     def test(self, to_test: DataFrame) -> DataFrame:
         if track.OCCURRENCE not in to_test.index.names:
             raise ValueError(
-                f"{track.OCCURRENCE} "
-                "must be index of DataFrame for filtering to work."
+                f"{track.OCCURRENCE} must be index of DataFrame for filtering to work."
             )
         return to_test[
             to_test.index.get_level_values(track.OCCURRENCE) >= self._start_date
@@ -177,8 +176,7 @@ class DataFrameEndsBeforeOrAtDate(DataFramePredicate):
     def test(self, to_test: DataFrame) -> DataFrame:
         if track.OCCURRENCE not in to_test.index.names:
             raise ValueError(
-                f"{track.OCCURRENCE} "
-                "must be index of DataFrame for filtering to work."
+                f"{track.OCCURRENCE} must be index of DataFrame for filtering to work."
             )
         return to_test[
             to_test.index.get_level_values(track.OCCURRENCE) <= self._end_date

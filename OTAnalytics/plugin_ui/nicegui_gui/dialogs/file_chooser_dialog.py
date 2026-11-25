@@ -115,7 +115,7 @@ class FileChooserDialog(BaseDialog):
                     FileChooserDialogKeys.LABEL_FILENAME
                 ),
                 initial_value=(
-                    f"{initial_file_stem}" f"{self._get_extension_for_current_format()}"
+                    f"{initial_file_stem}{self._get_extension_for_current_format()}"
                 ),
                 marker=MARKER_FILENAME,
             )

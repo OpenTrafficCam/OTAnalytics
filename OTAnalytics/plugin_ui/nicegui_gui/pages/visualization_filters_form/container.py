@@ -1,4 +1,6 @@
 from collections.abc import Callable
+from datetime import datetime, timedelta
+from typing import Any
 
 from nicegui import ui
 from nicegui.elements.button import Button
@@ -8,6 +10,7 @@ from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.default_values import DATETIME_FORMAT
 from OTAnalytics.adapter_ui.dto import DateRangeDto
 from OTAnalytics.adapter_ui.view_model import ViewModel
+from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.resources.resource_manager import (
     GeneralKeys,
@@ -44,6 +47,50 @@ MARKER_PREV_FRAMES_BUTTON = "marker-prev-frames"
 MARKER_NEXT_FRAMES_BUTTON = "marker-next-frames"
 MARKER_PREV_EVENT_BUTTON = "marker-prev-event"
 MARKER_NEXT_EVENT_BUTTON = "marker-next-event"
+MARKER_TIME_BAR = "marker-time-bar"
+MARKER_TIMELINE_WINDOW = "marker-timeline-window"
+MARKER_STEP_EVENT = "marker-step-event"
+MARKER_STEP_SECONDS = "marker-step-seconds"
+MARKER_STEP_FRAMES = "marker-step-frames"
+TIMELINE_TICKS = 5
+TIME_FORMAT = "%H:%M"
+DAY_TIME_FORMAT = "%d.%m. %H:%M"
+MARKER_CLASS_FILTER_BUTTON = "marker-class-filter-button"
+MARKER_CLASS_SWATCH = "marker-class-swatch"
+
+PREVIOUS_ICON = "chevron_left"
+NEXT_ICON = "chevron_right"
+
+
+def timeline_window(
+    first: datetime | None,
+    last: datetime | None,
+    start: datetime | None,
+    end: datetime | None,
+) -> tuple[float, float] | None:
+    """Place the date filter between the first and last detection.
+
+    Returns:
+        tuple[float, float] | None: left and width in percent of the detections,
+            None without detections. Open bounds reach the first or last detection.
+    """
+    if first is None or last is None or last <= first:
+        return None
+    span = (last - first).total_seconds()
+    window_start = max(start or first, first)
+    window_end = min(end or last, last)
+    left = (window_start - first).total_seconds() / span * 100
+    right = (window_end - first).total_seconds() / span * 100
+    return left, max(right - left, 0.0)
+
+
+def timeline_ticks(first: datetime, last: datetime) -> list[str]:
+    """Times evenly spread from the first to the last detection."""
+    time_format = TIME_FORMAT if last - first <= timedelta(days=1) else DAY_TIME_FORMAT
+    step = (last - first) / (TIMELINE_TICKS - 1)
+    return [
+        (first + step * index).strftime(time_format) for index in range(TIMELINE_TICKS)
+    ]
 
 
 class FilterDateRangeForm:
@@ -59,62 +106,61 @@ class FilterDateRangeForm:
             self._resource_manager.get(VisualizationFiltersKeys.LABEL_START_TIME),
             marker_date=MARKER_FILTER_START_DATE_INPUT,
             marker_time=MARKER_FILTER_START_TIME_INPUT,
+            date_validation=self._validate_date,
+            time_validation=self._validate_time,
         )
         self._end_date = DateTimeForm(
             self._resource_manager.get(VisualizationFiltersKeys.LABEL_END_DATE),
             self._resource_manager.get(VisualizationFiltersKeys.LABEL_END_TIME),
             marker_date=MARKER_FILTER_END_DATE_INPUT,
             marker_time=MARKER_FILTER_END_TIME_INPUT,
+            date_validation=self._validate_date,
+            time_validation=self._validate_time,
         )
 
     def open(self) -> None:
-        first_occurrence_info_text = self._resource_manager.get(
-            VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE
-        )
-        last_occurrence_info_text = self._resource_manager.get(
-            VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE
-        )
+        """Open the dialog, preset with the current date filter.
 
-        # Get first and last occurrence values
+        Without a current filter, the start and end are preset with the first
+        and last detection occurrence.
+        """
         first_occurrence = self._viewmodel.get_first_detection_occurrence()
         last_occurrence = self._viewmodel.get_last_detection_occurrence()
-
-        # Update info text
-        if first_occurrence:
-            first_occurrence_info_text += first_occurrence.strftime(DATETIME_FORMAT)
-
-        if last_occurrence:
-            last_occurrence_info_text += last_occurrence.strftime(DATETIME_FORMAT)
+        current_date_range = self._viewmodel.get_filter_tracks_by_date_setting()
 
         with ui.dialog() as self._dialog, ui.card():
+            ui.label(
+                self._label(VisualizationFiltersKeys.LABEL_FILTER_BY_DATE_TITLE)
+            ).classes("text-lg")
+            ui.label(self._label(VisualizationFiltersKeys.LABEL_CHOOSE_DATE_RANGE))
             with ui.row():
-                ui.label(
-                    self._resource_manager.get(
-                        VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM
-                    )
-                )
+                ui.label(self._label(VisualizationFiltersKeys.LABEL_DATE_RANGE_FROM))
                 self._start_date.build()
             with ui.row():
-                ui.label(
-                    self._resource_manager.get(
-                        VisualizationFiltersKeys.LABEL_DATE_RANGE_TO
-                    )
-                )
+                ui.label(self._label(VisualizationFiltersKeys.LABEL_DATE_RANGE_TO))
                 self._end_date.build()
-
-            # Set values after building the UI elements
-            if first_occurrence:
-                # Preset start date with first occurrence
-                self._start_date.set_value(first_occurrence)
-
-            if last_occurrence:
-                # Preset end date with last occurrence
-                self._end_date.set_value(last_occurrence)
-            ui.label(first_occurrence_info_text)
-            ui.label(last_occurrence_info_text)
+            self._start_date.set_value(
+                current_date_range.start_date or first_occurrence
+            )
+            self._end_date.set_value(current_date_range.end_date or last_occurrence)
+            # Mark only what the user types.
+            self._start_date.clear_validation()
+            self._end_date.clear_validation()
+            ui.label(
+                self._occurrence_text(
+                    VisualizationFiltersKeys.LABEL_FIRST_DETECTION_OCCURRENCE,
+                    first_occurrence,
+                )
+            )
+            ui.label(
+                self._occurrence_text(
+                    VisualizationFiltersKeys.LABEL_LAST_DETECTION_OCCURRENCE,
+                    last_occurrence,
+                )
+            )
             with ui.row():
                 apply_button = ui.button(
-                    self._resource_manager.get(GeneralKeys.LABEL_APPLY),
+                    self._label(GeneralKeys.LABEL_APPLY),
                     on_click=self._on_apply_button_clicked,
                 )
                 # marker for Playwright: Apply button inside the filter-by-date dialog
@@ -123,19 +169,114 @@ class FilterDateRangeForm:
                     f"{TestIdAttributes.DATA_TESTID}={MARKER_FILTER_BY_DATE_APPLY_BUTTON}"  # noqa
                 )
                 ui.button(
-                    self._resource_manager.get(GeneralKeys.LABEL_RESET),
+                    self._label(GeneralKeys.LABEL_RESET),
                     on_click=self._on_reset_button_clicked,
                 )
         self._dialog.open()
 
+    def _validate_date(self, value: Any) -> str | None:
+        """Validate the date while the user types.
+
+        Returns:
+            str | None: the error message, None if the date is valid or empty.
+        """
+        text = str(value) if value else ""
+        if not text or self._viewmodel.validate_date(text):
+            return None
+        return self._label(VisualizationFiltersKeys.MESSAGE_INVALID_DATE_FORMAT)
+
+    def _validate_time(self, value: Any) -> str | None:
+        """Validate the hour, minute and, if given, second while the user types.
+
+        Returns:
+            str | None: the message for the first invalid part, None if the time
+                is valid or empty.
+        """
+        text = str(value) if value else ""
+        if not text:
+            return None
+        parts = text.split(":")
+        checks = [
+            (
+                self._viewmodel.validate_hour,
+                VisualizationFiltersKeys.MESSAGE_INVALID_HOUR,
+            ),
+            (
+                self._viewmodel.validate_minute,
+                VisualizationFiltersKeys.MESSAGE_INVALID_MINUTE,
+            ),
+            (
+                self._viewmodel.validate_second,
+                VisualizationFiltersKeys.MESSAGE_INVALID_SECOND,
+            ),
+        ]
+        # Seconds are optional, as FormFieldTime accepts HH:MM as well.
+        required = max(len(parts), 2)
+        for index, (is_valid, message_key) in enumerate(checks[:required]):
+            part = parts[index] if index < len(parts) else ""
+            if not is_valid(part):
+                return self._label(message_key)
+        return None
+
+    def _label(self, key: VisualizationFiltersKeys | GeneralKeys) -> str:
+        return self._resource_manager.get(key)
+
+    def _occurrence_text(
+        self, key: VisualizationFiltersKeys, occurrence: datetime | None
+    ) -> str:
+        occurrence_text = occurrence.strftime(DATETIME_FORMAT) if occurrence else ""
+        return f"{self._label(key)}: {occurrence_text}"
+
     def _on_apply_button_clicked(self) -> None:
+        keys = VisualizationFiltersKeys
         try:
-            date_range = DateRange(self._start_date.value, self._end_date.value)
+            date_range = DateRange(
+                self._read(self._start_date, keys.LABEL_DATE_RANGE_FROM),
+                self._read(self._end_date, keys.LABEL_DATE_RANGE_TO),
+            )
+            self._ensure_start_before_end(date_range)
             self._viewmodel.apply_filter_tracks_by_date(date_range)
             logger().info("Filter tracks by date applied")
             self._dialog.close()
         except InvalidDatetimeFormatError as e:
             logger().info(e)
+            ui.notify(str(e), type="negative")
+
+    def _ensure_start_before_end(self, date_range: DateRange) -> None:
+        """Reject a range whose start is not before its end.
+
+        Raises:
+            InvalidDatetimeFormatError: if both bounds are given and the start is
+                not before the end.
+        """
+        if not date_range.is_ordered():
+            raise InvalidDatetimeFormatError(
+                self._label(VisualizationFiltersKeys.MESSAGE_START_NOT_BEFORE_END)
+            )
+
+    def _read(
+        self, date_time: DateTimeForm, name_key: VisualizationFiltersKeys
+    ) -> datetime | None:
+        """Read the entered date and time.
+
+        An empty field means no bound. A partially filled or unparsable field is
+        rejected, as in the customtkinter GUI.
+
+        Raises:
+            InvalidDatetimeFormatError: if the input is not a valid date and time.
+        """
+        if date_time.is_empty:
+            return None
+        try:
+            value = date_time.value
+        except ValueError:
+            value = None
+        if value is None:
+            raise InvalidDatetimeFormatError(
+                f"{self._label(name_key)} "
+                f"{self._label(VisualizationFiltersKeys.MESSAGE_INVALID_DATETIME)}"
+            )
+        return value
 
     def _on_reset_button_clicked(self) -> None:
         self._viewmodel.reset_filter_tracks_by_date()
@@ -143,56 +284,102 @@ class FilterDateRangeForm:
 
 
 class FilterClassificationForm:
-    """Dialog to select the classes whose tracks are shown.
+    """Class legend on the canvas to select the classes whose tracks are shown.
 
-    The checkboxes show the current class filter selection. Without a selection,
-    every class counts as selected, as in the customtkinter GUI.
+    Every change applies at once. The filter is on while at least one class is
+    unchecked and off while all are checked, as then every track is shown.
+    Without a selection, every class counts as selected, as in the customtkinter
+    GUI.
     """
 
-    def __init__(self, resource_manager: ResourceManager, viewmodel: ViewModel) -> None:
+    def __init__(
+        self,
+        resource_manager: ResourceManager,
+        viewmodel: ViewModel,
+        color_palette_provider: ColorPaletteProvider,
+    ) -> None:
         self._resource_manager = resource_manager
         self._viewmodel = viewmodel
+        self._color_palette_provider = color_palette_provider
         self._classes: list[str] = []
         self._selected_classes: set[str] = set()
+        self._checkboxes: dict[str, ui.checkbox] = {}
+        self._updating_checkboxes = False
+        # Created by `build()`, which runs when a browser asks for the page.
+        self._button: ui.button | None = None
+        self._menu: ui.menu | None = None
+        self._content: ui.column | None = None
+
+    def build(self) -> None:
+        with ui.element("div").classes("ota-legend"):
+            self._button = ui.button(
+                self._label(VisualizationFiltersKeys.BUTTON_CLASSES),
+                icon="palette",
+                on_click=self.open,
+            )
+            self._button.mark(MARKER_CLASS_FILTER_BUTTON)
+            self._button.props(
+                f"{TestIdAttributes.DATA_TESTID}={MARKER_CLASS_FILTER_BUTTON}"
+            )
+            with self._button:
+                # Opened by the click handler, after the legend is refreshed.
+                with ui.menu().props("no-parent-event") as self._menu:
+                    self._content = ui.column().classes("ota-legend-content")
+        self._show_filter_state(self._viewmodel.get_class_filter_selection())
 
     def open(self) -> None:
+        """Open the legend with the classes known by now."""
+        if self._menu is None:
+            return
+        self._refresh()
+        self._menu.open()
+
+    def _refresh(self) -> None:
+        if self._content is None:
+            return
         self._classes = self._viewmodel.get_classes()
         self._selected_classes = set(self._current_selection())
-        with ui.dialog() as self._dialog, ui.card():
+        self._checkboxes = {}
+        self._content.clear()
+        palette = self._color_palette_provider.get()
+        with self._content:
+            with ui.row().classes("gap-1"):
+                ui.button(
+                    self._label(VisualizationFiltersKeys.BUTTON_ALL_CLASSES),
+                    on_click=lambda: self._select_all(True),
+                ).props("flat dense")
+                ui.button(
+                    self._label(VisualizationFiltersKeys.BUTTON_NO_CLASSES),
+                    on_click=lambda: self._select_all(False),
+                ).props("flat dense")
             for classification in self._classes:
-                self._build_checkbox(classification)
-            with ui.row():
-                self._build_buttons()
-        self._dialog.open()
+                self._build_entry(classification, palette.get(classification))
 
     def _current_selection(self) -> list[str]:
         selection = self._viewmodel.get_class_filter_selection()
         return self._classes if selection is None else selection
 
-    def _build_checkbox(self, classification: str) -> None:
-        FormFieldCheckbox(
-            label_text=classification,
-            initial_value=classification in self._selected_classes,
-            on_value_change=self._create_class_toggle(classification),
-        ).build()
+    def _build_entry(self, classification: str, color: str | None) -> None:
+        with ui.row().classes("ota-legend-entry"):
+            swatch = ui.element("span").classes("ota-swatch")
+            swatch.style(f"background-color: {color or 'transparent'}")
+            swatch.mark(MARKER_CLASS_SWATCH)
+            self._checkboxes[classification] = ui.checkbox(
+                classification,
+                value=classification in self._selected_classes,
+                on_change=self._create_class_toggle(classification),
+            ).props("dense")
 
     def _create_class_toggle(
         self, classification: str
     ) -> Callable[[ValueChangeEventArguments], None]:
         def toggle(event: ValueChangeEventArguments) -> None:
+            if self._updating_checkboxes:
+                return
             self._select_class(classification, event.value)
+            self._apply()
 
         return toggle
-
-    def _build_buttons(self) -> None:
-        ui.button(
-            self._resource_manager.get(GeneralKeys.LABEL_APPLY),
-            on_click=self._on_apply_button_clicked,
-        )
-        ui.button(
-            self._resource_manager.get(GeneralKeys.LABEL_RESET),
-            on_click=self._on_reset_button_clicked,
-        )
 
     def _select_class(self, classification: str, selected: bool) -> None:
         if selected:
@@ -200,18 +387,36 @@ class FilterClassificationForm:
         else:
             self._selected_classes.discard(classification)
 
-    def _on_apply_button_clicked(self) -> None:
-        self._viewmodel.apply_filter_tracks_by_class(self._selected_classes)
-        logger().info("Filter tracks by classification applied")
-        self._dialog.close()
+    def _select_all(self, selected: bool) -> None:
+        self._updating_checkboxes = True
+        try:
+            for checkbox in self._checkboxes.values():
+                checkbox.set_value(selected)
+        finally:
+            self._updating_checkboxes = False
+        self._selected_classes = set(self._classes) if selected else set()
+        self._apply()
 
-    def _on_reset_button_clicked(self) -> None:
-        self._viewmodel.reset_filter_tracks_by_class()
-        self._dialog.close()
+    def _apply(self) -> None:
+        if self._selected_classes >= set(self._classes):
+            self._viewmodel.reset_filter_tracks_by_class()
+            self._show_filter_state(None)
+        else:
+            self._viewmodel.apply_filter_tracks_by_class(set(self._selected_classes))
+            self._show_filter_state(list(self._selected_classes))
+        logger().info("Filter tracks by classification applied")
+
+    def _show_filter_state(self, selection: list[str] | None) -> None:
+        if self._button is None:
+            return
+        color = "primary" if selection is None else "orange"
+        self._button.props(f"color={color}")
+
+    def _label(self, key: VisualizationFiltersKeys) -> str:
+        return self._resource_manager.get(key)
 
 
 class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
-
     def __init__(
         self,
         resource_manager: ResourceManager,
@@ -220,7 +425,6 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._resource_manager = resource_manager
         self._viewmodel = view_model
         self._filter_by_date: ui.checkbox
-        self._filter_by_class: ui.checkbox
         self._button_previous_second: ui.button | None = None
         self._button_previous_frame: ui.button | None = None
         self._button_previous_event: ui.button | None = None
@@ -234,8 +438,11 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._filter_by_date_button: ui.button | None = None
         self._filter_by_date_button_left: ui.button | None = None
         self._filter_by_date_button_right: ui.button | None = None
-        self._filter_by_class_button: ui.button | None = None
         self._label_filter_by_date: ui.label | None = None
+        self._step_seconds: ui.button | None = None
+        self._step_frames: ui.button | None = None
+        self._timeline_window: ui.element | None = None
+        self._timeline_ticks: ui.row | None = None
         self._introduce_to_viewmodel()
         self._frames_to_skip = 0
         self._seconds_to_skip = 0
@@ -247,9 +454,6 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
             on_value_change=lambda e: self.change_button_date(e.value),
         )
         self._filter_by_date_popup = FilterDateRangeForm(
-            self._resource_manager, self._viewmodel
-        )
-        self._filter_by_class_popup = FilterClassificationForm(
             self._resource_manager, self._viewmodel
         )
         self._input_seconds = FormFieldInteger(
@@ -272,107 +476,142 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._viewmodel.set_video_control_frame(self)
 
     def build(self) -> None:
-        with ui.grid(columns=3):
-            with ui.column():
-                with ui.row():
-                    self._filter_by_date_checkbox.build()
-                    self._filter_by_date_button = ui.button(
-                        self._resource_manager.get(
-                            VisualizationFiltersKeys.BUTTON_FILTER_BY_DATE
-                        ),
-                        on_click=self.open_range_dialog,
-                    )
-                    # Attach a stable test marker for Playwright selection
-                    self._filter_by_date_button.mark(MARKER_FILTER_BY_DATE_BUTTON)
-                    self._filter_by_date_button.props(
-                        f"{TestIdAttributes.DATA_TESTID}={MARKER_FILTER_BY_DATE_BUTTON}"
-                    )
-                    self._filter_by_date_button.disable()
-
-                self._button_previous_second = ui.button(
-                    "<", on_click=self._viewmodel.previous_second
-                )
-                self._button_previous_second.mark(MARKER_PREV_SECONDS_BUTTON)
-                self._button_previous_second.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_SECONDS_BUTTON}"
-                )
-                self._button_previous_frame = ui.button(
-                    "<", on_click=self._viewmodel.previous_frame
-                )
-                self._button_previous_frame.mark(MARKER_PREV_FRAMES_BUTTON)
-                self._button_previous_frame.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_FRAMES_BUTTON}"
-                )
-                self._button_previous_event = ui.button(
-                    "<", on_click=self._viewmodel.previous_event
-                )
-                self._button_previous_event.mark(MARKER_PREV_EVENT_BUTTON)
-                self._button_previous_event.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_EVENT_BUTTON}"
-                )
-            with ui.column():
-                with ui.row():
-                    self._filter_by_date_button_left = ui.button(
-                        "<", on_click=self._viewmodel.switch_to_prev_date_range
-                    )
-                    self._filter_by_date_button_left.mark(MARKER_PREV_DATE_BUTTON)
-                    self._filter_by_date_button_left.props(
-                        f"{TestIdAttributes.DATA_TESTID}={MARKER_PREV_DATE_BUTTON}"
-                    )
-                    self._label_filter_by_date = ui.label()
-                    # Expose the current applied date range for Playwright assertions
-                    self._label_filter_by_date.mark(MARKER_FILTER_RANGE_LABEL)
-                    self._label_filter_by_date.props(
-                        f"{TestIdAttributes.DATA_TESTID}={MARKER_FILTER_RANGE_LABEL}"
-                    )
-                    self._filter_by_date_button_right = ui.button(
-                        ">", on_click=self._viewmodel.switch_to_next_date_range
-                    )
-                    self._filter_by_date_button_right.mark(MARKER_NEXT_DATE_BUTTON)
-                    self._filter_by_date_button_right.props(
-                        f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_DATE_BUTTON}"
-                    )
-                    self._filter_by_date_button_left.disable()
-                    self._filter_by_date_button_right.disable()
-                self._input_seconds.build()
-                self._input_frames.build()
-                ui.label(
-                    self._resource_manager.get(VisualizationFiltersKeys.LABEL_EVENT)
-                )
-            with ui.column():
-                with ui.row():
-                    self._filter_by_class_checkbox = ui.checkbox(
-                        on_change=lambda e: self.change_button_class(e.value)
-                    )
-                    self._filter_by_class_button = ui.button(
-                        self._resource_manager.get(
-                            VisualizationFiltersKeys.BUTTON_FILTER_BY_CLASSIFICATION
-                        ),
-                        on_click=self.open_classification_dialog,
-                    )
-                    self._filter_by_class_button.disable()
-                self._button_next_second = ui.button(
-                    ">", on_click=self._viewmodel.next_second
-                )
-                self._button_next_second.mark(MARKER_NEXT_SECONDS_BUTTON)
-                self._button_next_second.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_SECONDS_BUTTON}"
-                )
-                self._button_next_frame = ui.button(
-                    ">", on_click=self._viewmodel.next_frame
-                )
-                self._button_next_frame.mark(MARKER_NEXT_FRAMES_BUTTON)
-                self._button_next_frame.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_FRAMES_BUTTON}"
-                )
-                self._button_next_event = ui.button(
-                    ">", on_click=self._viewmodel.next_event
-                )
-                self._button_next_event.mark(MARKER_NEXT_EVENT_BUTTON)
-                self._button_next_event.props(
-                    f"{TestIdAttributes.DATA_TESTID}={MARKER_NEXT_EVENT_BUTTON}"
-                )
+        """Build the time bar: date filter, date range, step groups and timeline."""
+        with ui.column().classes("ota-timebar").mark(MARKER_TIME_BAR):
+            with ui.row(wrap=False).classes("ota-timebar-controls"):
+                self._build_date_filter()
+                ui.space()
+                self._build_step_groups()
+            self._build_timeline()
         self.set_enabled_general_buttons(False)
+        self._show_timeline()
+
+    def _build_date_filter(self) -> None:
+        self._filter_by_date_checkbox.build()
+        self._filter_by_date_button = ui.button(
+            self._resource_manager.get(VisualizationFiltersKeys.BUTTON_FILTER_BY_DATE),
+            icon="event",
+            on_click=self.open_range_dialog,
+        ).props("outline")
+        self._mark(self._filter_by_date_button, MARKER_FILTER_BY_DATE_BUTTON)
+        self._filter_by_date_button.disable()
+
+        with ui.row(wrap=False).classes("ota-date-range"):
+            self._filter_by_date_button_left = self._step_button(
+                PREVIOUS_ICON,
+                self._viewmodel.switch_to_prev_date_range,
+                MARKER_PREV_DATE_BUTTON,
+            )
+            self._label_filter_by_date = ui.label().classes("ota-date-range-label")
+            # Expose the current applied date range for Playwright assertions
+            self._mark(self._label_filter_by_date, MARKER_FILTER_RANGE_LABEL)
+            self._filter_by_date_button_right = self._step_button(
+                NEXT_ICON,
+                self._viewmodel.switch_to_next_date_range,
+                MARKER_NEXT_DATE_BUTTON,
+            )
+        self._filter_by_date_button_left.disable()
+        self._filter_by_date_button_right.disable()
+
+    def _build_step_groups(self) -> None:
+        """Event, seconds and frames, each between its previous and next button.
+
+        The seconds and frames show their step size, which opens on click.
+        """
+        with ui.row(wrap=False).classes("ota-stepgroup"):
+            self._button_previous_event = self._step_button(
+                PREVIOUS_ICON, self._viewmodel.previous_event, MARKER_PREV_EVENT_BUTTON
+            )
+            event = ui.label(
+                self._resource_manager.get(VisualizationFiltersKeys.LABEL_EVENT)
+            ).classes("ota-stepgroup-label")
+            event.mark(MARKER_STEP_EVENT)
+            self._button_next_event = self._step_button(
+                NEXT_ICON, self._viewmodel.next_event, MARKER_NEXT_EVENT_BUTTON
+            )
+        with ui.row(wrap=False).classes("ota-stepgroup"):
+            self._button_previous_second = self._step_button(
+                PREVIOUS_ICON,
+                self._viewmodel.previous_second,
+                MARKER_PREV_SECONDS_BUTTON,
+            )
+            self._step_seconds = self._step_size(
+                self._input_seconds, MARKER_STEP_SECONDS
+            )
+            self._button_next_second = self._step_button(
+                NEXT_ICON, self._viewmodel.next_second, MARKER_NEXT_SECONDS_BUTTON
+            )
+        with ui.row(wrap=False).classes("ota-stepgroup"):
+            self._button_previous_frame = self._step_button(
+                PREVIOUS_ICON, self._viewmodel.previous_frame, MARKER_PREV_FRAMES_BUTTON
+            )
+            self._step_frames = self._step_size(self._input_frames, MARKER_STEP_FRAMES)
+            self._button_next_frame = self._step_button(
+                NEXT_ICON, self._viewmodel.next_frame, MARKER_NEXT_FRAMES_BUTTON
+            )
+        self._show_step_sizes()
+
+    def _step_size(self, field: FormFieldInteger, marker: str) -> ui.button:
+        label = ui.button().props("flat dense no-caps").classes("ota-stepgroup-label")
+        label.mark(marker)
+        with label, ui.menu(), ui.element("div").classes("ota-step-menu"):
+            field.build()
+        return label
+
+    def _show_step_sizes(self) -> None:
+        if self._step_seconds is not None:
+            self._step_seconds.set_text(
+                self._resource_manager.get(
+                    VisualizationFiltersKeys.LABEL_STEP_SECONDS
+                ).format(seconds=self._input_seconds.value)
+            )
+        if self._step_frames is not None:
+            self._step_frames.set_text(
+                self._resource_manager.get(
+                    VisualizationFiltersKeys.LABEL_STEP_FRAMES
+                ).format(frames=self._input_frames.value)
+            )
+
+    def _build_timeline(self) -> None:
+        with ui.element("div").classes("ota-timeline"):
+            ui.element("div").classes("ota-timeline-track")
+            self._timeline_window = ui.element("div").classes("ota-timeline-window")
+            self._timeline_window.mark(MARKER_TIMELINE_WINDOW)
+        self._timeline_ticks = ui.row(wrap=False).classes("ota-timeline-ticks")
+
+    def _show_timeline(self) -> None:
+        """Show where the date filter lies between the first and last detection."""
+        if self._timeline_window is None or self._timeline_ticks is None:
+            return
+        first = self._viewmodel.get_first_detection_occurrence()
+        last = self._viewmodel.get_last_detection_occurrence()
+        date_range = self._viewmodel.get_filter_tracks_by_date_setting()
+        window = timeline_window(
+            first, last, date_range.start_date, date_range.end_date
+        )
+        self._timeline_ticks.clear()
+        if window is None or first is None or last is None:
+            self._timeline_window.set_visibility(False)
+            return
+        left, width = window
+        self._timeline_window.style(f"left: {left:.3f}%; width: {width:.3f}%")
+        self._timeline_window.set_visibility(True)
+        with self._timeline_ticks:
+            for tick in timeline_ticks(first, last):
+                ui.label(tick)
+
+    def _step_button(
+        self, icon: str, on_click: Callable[[], None], marker: str
+    ) -> ui.button:
+        button = ui.button(icon=icon, on_click=on_click).props("flat dense round")
+        self._mark(button, marker)
+        return button
+
+    @staticmethod
+    def _mark(element: ui.element, marker: str) -> None:
+        """Attach a stable test marker for Playwright and the NiceGUI user."""
+        element.mark(marker)
+        element.props(f"{TestIdAttributes.DATA_TESTID}={marker}")
 
     def change_button_date(self, checkbox_status: bool) -> None:
         if checkbox_status:
@@ -380,19 +619,11 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         else:
             self._viewmodel.disable_filter_track_by_date()
 
-    def change_button_class(self, checkbox_status: bool) -> None:
-        if checkbox_status:
-            self._viewmodel.enable_filter_track_by_class()
-        else:
-            self._viewmodel.disable_filter_track_by_class()
-
     def on_input_change(self, _: ValueChangeEventArguments) -> None:
         self._viewmodel.update_skip_time(
             self._input_seconds.value, self._input_frames.value
         )
-
-    def open_classification_dialog(self) -> None:
-        self._filter_by_class_popup.open()
+        self._show_step_sizes()
 
     def open_range_dialog(self) -> None:
         self._filter_by_date_popup.open()
@@ -424,23 +655,19 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
         self._filter_by_date_button.props("data-filter-by-date-active=false")
 
     def set_active_color_on_filter_by_class_button(self) -> None:
-        if self._filter_by_class_button is None:
-            return
-        self._filter_by_class_button.props("color=orange")
+        """The class legend on the canvas shows the state of the class filter."""
 
     def enable_filter_by_class_button(self) -> None:
-        if self._filter_by_class_button is None:
-            return
-        self._filter_by_class_button.enable()
+        """The class legend on the canvas shows the state of the class filter."""
 
     def enable_filter_by_date_button(self) -> None:
         for button in self._date_buttons():
             button.enable()
+        # Called once tracks are loaded, so their detections are known.
+        self._show_timeline()
 
     def set_inactive_color_on_filter_by_class_button(self) -> None:
-        if self._filter_by_class_button is None:
-            return
-        self._filter_by_class_button.props("color=primary")
+        """The class legend on the canvas shows the state of the class filter."""
 
     def disable_filter_by_date_button(self) -> None:
         self.set_inactive_color_on_filter_by_date_button()
@@ -448,11 +675,10 @@ class VisualizationFiltersForm(AbstractFrameFilter, ButtonForm):
             button.disable()
 
     def disable_filter_by_class_button(self) -> None:
-        if self._filter_by_class_button is None:
-            return
-        self._filter_by_class_button.disable()
+        """The class legend on the canvas shows the state of the class filter."""
 
     def update_date_range(self, date_range: DateRangeDto) -> None:
+        self._show_timeline()
         if self._label_filter_by_date is None:
             # The range still reaches the view model's state, so the label shows
             # it as soon as `build()` reads that state. Nothing is lost here.

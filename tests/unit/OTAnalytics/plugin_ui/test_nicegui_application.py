@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -129,6 +129,95 @@ class TestFlowTrackCountObservers:
         event_repository.register_observer.assert_called_once_with(
             flow_form.notify_events
         )
+
+
+class TestTrackAssignmentObservers:
+    def test_flow_form_follows_sections_and_reports_outdated_assignment(
+        self,
+    ) -> None:
+        target = create_target(create_given())
+        datastore = Mock()
+        flow_form = Mock()
+        canvas_form = Mock()
+        assignment_status = Mock()
+        track_repository = Mock()
+        target.__dict__["datastore"] = datastore
+        target.__dict__["track_repository"] = track_repository
+        target.__dict__["flow_form"] = flow_form
+        target.__dict__["canvas_form"] = canvas_form
+        target.__dict__["assignment_status"] = assignment_status
+
+        target.register_track_assignment_observers()
+
+        datastore.register_section_changed_observer.assert_called_once_with(
+            flow_form.notify_section_changed
+        )
+        assert flow_form.register_outdated_observer.call_args_list == [
+            call(canvas_form.set_flows_outdated),
+            call(assignment_status.show_outdated),
+        ]
+        track_repository.register_tracks_observer.assert_called_once_with(flow_form)
+
+
+class TestConfigurationBarObservers:
+    def test_summaries_follow_the_project(self) -> None:
+        target = create_target(create_given())
+        repositories = {
+            name: Mock()
+            for name in (
+                "datastore",
+                "track_repository",
+                "section_repository",
+                "flow_repository",
+                "event_repository",
+            )
+        }
+        configuration_bar = Mock()
+        track_form = Mock()
+        target.__dict__.update(repositories)
+        target.__dict__["configuration_bar"] = configuration_bar
+        target.__dict__["track_form"] = track_form
+
+        target.register_configuration_bar_observers()
+
+        tracks = repositories["track_repository"].register_tracks_observer
+        assert tracks.call_args_list == [call(configuration_bar), call(track_form)]
+        repositories["datastore"].register_video_observer.assert_called_once_with(
+            configuration_bar
+        )
+        repositories[
+            "section_repository"
+        ].register_sections_observer.assert_called_once_with(configuration_bar)
+        repositories["flow_repository"].register_flows_observer.assert_called_once_with(
+            configuration_bar
+        )
+        repositories["event_repository"].register_observer.assert_called_once_with(
+            configuration_bar.notify_events
+        )
+
+
+class TestVisualization:
+    def test_track_image_has_no_class_legend(self) -> None:
+        """The class legend on the canvas replaces the one in the track image."""
+        target = create_target(create_given())
+        for name in (
+            "datastore",
+            "intersection_repository",
+            "track_view_state",
+            "videos_metadata",
+            "section_state",
+            "color_palette_provider",
+            "progressbar_builder",
+            "track_image_factory",
+            "track_id_set_factory",
+            "current_orthophoto_image",
+        ):
+            target.__dict__[name] = Mock()
+
+        builder = target.visualization_builder
+
+        assert builder._enable_single_legend is False
+        assert builder._enable_multi_legend is False
 
 
 @dataclass

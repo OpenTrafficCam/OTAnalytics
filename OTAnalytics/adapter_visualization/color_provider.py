@@ -6,32 +6,34 @@ from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.tls8plus1_classes import Tls8plus1Classes
 
 DEFAULT_COLOR_PALETTE: dict[str, str] = {
-    OtcClasses.CAR: "blue",
-    OtcClasses.CAR_WITH_TRAILER: "skyblue",
-    OtcClasses.MOTORCYCLIST: "orange",
-    OtcClasses.PEDESTRIAN: "salmon",
-    OtcClasses.TRUCK: "red",
-    OtcClasses.TRUCK_WITH_TRAILER: "purple",
-    OtcClasses.TRUCK_WITH_SEMITRAILER: "pink",
-    OtcClasses.BICYCLIST: "lime",
-    OtcClasses.BICYCLIST_WITH_TRAILER: "lime",
-    OtcClasses.CARGO_BIKE_DRIVER: "green",
-    OtcClasses.SCOOTER_DRIVER: "white",
-    OtcClasses.DELIVERY_VAN: "yellow",
-    OtcClasses.DELIVERY_VAN_WITH_TRAILER: "yellow",
-    OtcClasses.PRIVATE_VAN: "black",
-    OtcClasses.PRIVATE_VAN_WITH_TRAILER: "black",
-    OtcClasses.TRAIN: "brown",
-    OtcClasses.BUS: "beige",
-    Tls8plus1Classes.CAR: "blue",
-    Tls8plus1Classes.CAR_WITH_TRAILER: "skyblue",
-    Tls8plus1Classes.MOTORCYCLIST: "orange",
-    Tls8plus1Classes.TRUCK: "red",
-    Tls8plus1Classes.TRUCK_WITH_TRAILER: "purple",
-    Tls8plus1Classes.TRUCK_WITH_SEMITRAILER: "pink",
-    Tls8plus1Classes.BICYCLIST: "lime",
-    Tls8plus1Classes.DELIVERY_VAN: "yellow",
-    Tls8plus1Classes.BUS: "beige",
+    OtcClasses.CAR: "#4da3ff",
+    OtcClasses.CAR_WITH_TRAILER: "#9cc9ff",
+    OtcClasses.MOTORCYCLIST: "#ff8a3d",
+    OtcClasses.PEDESTRIAN: "#ff7eb6",
+    OtcClasses.TRUCK: "#ff5a5a",
+    OtcClasses.TRUCK_WITH_TRAILER: "#c084fc",
+    OtcClasses.TRUCK_WITH_SEMITRAILER: "#e879f9",
+    OtcClasses.BICYCLIST: "#7ee081",
+    OtcClasses.BICYCLIST_WITH_TRAILER: "#b5f0a8",
+    OtcClasses.CARGO_BIKE_DRIVER: "#2fbf71",
+    OtcClasses.SCOOTER_DRIVER: "#5ee0e0",
+    OtcClasses.DELIVERY_VAN: "#ffd23f",
+    OtcClasses.DELIVERY_VAN_WITH_TRAILER: "#ffe58a",
+    OtcClasses.PRIVATE_VAN: "#a8b3bf",
+    OtcClasses.PRIVATE_VAN_WITH_TRAILER: "#d0d7de",
+    OtcClasses.TRAIN: "#c08a5a",
+    OtcClasses.BUS: "#14b8a6",
+    OtcClasses.OTHER: "#7c8a99",
+    Tls8plus1Classes.CAR: "#4da3ff",
+    Tls8plus1Classes.CAR_WITH_TRAILER: "#9cc9ff",
+    Tls8plus1Classes.MOTORCYCLIST: "#ff8a3d",
+    Tls8plus1Classes.TRUCK: "#ff5a5a",
+    Tls8plus1Classes.TRUCK_WITH_TRAILER: "#c084fc",
+    Tls8plus1Classes.TRUCK_WITH_SEMITRAILER: "#e879f9",
+    Tls8plus1Classes.BICYCLIST: "#7ee081",
+    Tls8plus1Classes.DELIVERY_VAN: "#ffd23f",
+    Tls8plus1Classes.BUS: "#14b8a6",
+    Tls8plus1Classes.OTHER: "#7c8a99",
 }
 
 
@@ -52,8 +54,8 @@ class ColorPaletteProvider:
         for classification in classifications:
             if classification in self._default_palette.keys():
                 self._palette[classification] = self._default_palette[classification]
-                color = mcolors.CSS4_COLORS.get(self._default_palette[classification])
-                self._numeric[classification] = hex_to_rgb_tuple(str(color))
+                color = mcolors.to_hex(self._default_palette[classification])
+                self._numeric[classification] = hex_to_rgb_tuple(color)
             else:
                 self._palette[classification] = self._generate_random_color()
 

@@ -6,7 +6,6 @@ from OTAnalytics.plugin_ui.visualization.counts.counts_plotter import CountPlott
 
 
 class CountPlotsUpdater:
-
     def __init__(self, state: TrackViewState, plotter: CountPlotter) -> None:
         self._state = state
         self._plotter = plotter
@@ -23,7 +22,6 @@ class CountPlotsUpdater:
 
 
 class CountPlotSaver:
-
     def __init__(self, path: Path):
         self._path = path
 

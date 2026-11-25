@@ -44,7 +44,6 @@ DISTANCES: str = "distances"
 class ViewModel(
     VideoListObserver, TrackListObserver, SectionListObserver, FlowListObserver, ABC
 ):
-
     @abstractmethod
     def show_svz(self) -> bool:
         raise NotImplementedError
@@ -253,6 +252,22 @@ class ViewModel(
     def create_events(self) -> None:
         pass
 
+    # Not abstract: implementations of this port outside this repository must
+    # keep working without them.
+
+    def set_auto_assignment(self, enabled: bool) -> None:
+        """Set whether tracks are assigned to flows after every change.
+
+        The setting lives for the session only.
+        """
+
+    def get_auto_assignment(self) -> bool:
+        return False
+
+    def assign_tracks(self) -> None:
+        """Assign the tracks to the flows without showing messages."""
+        self.create_events()
+
     @abstractmethod
     def save_events(self, file: str) -> None:
         pass
@@ -366,7 +381,7 @@ class ViewModel(
         raise NotImplementedError
 
     @abstractmethod
-    def on_start_new_project(self, _: None) -> None:
+    def on_application_reset(self, _: None) -> None:
         raise NotImplementedError
 
     @abstractmethod

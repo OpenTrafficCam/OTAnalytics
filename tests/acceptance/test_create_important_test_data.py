@@ -19,7 +19,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import (
     MARKER_TRACK_TAB,
     MARKER_VIDEO_TAB,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.container import (
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
     MARKER_TAB_FLOW,
     MARKER_TAB_SECTION,
 )
@@ -51,8 +51,9 @@ from tests.utils.playwright_helpers import (
     get_loaded_tracks_canvas_from_otconfig,
     load_main_page,
     navigate_and_prepare,
+    open_group,
+    open_tab,
     save_project_as,
-    search_for_marker_element,
     toggle_and_screenshot,
     update_flow_highlighting,
     wait_for_flow_present,
@@ -65,7 +66,6 @@ playwright = pytest.importorskip(
 
 
 class TestCreateImportantTestData:
-
     @pytest.mark.skip
     @pytest.mark.timeout(ACCEPTANCE_TEST_PYTEST_TIMEOUT)
     @pytest.mark.playwright
@@ -110,7 +110,7 @@ class TestCreateImportantTestData:
             assert track_file.exists(), f"Test track file missing: {track_file}"
 
         # Add video
-        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+        open_tab(page, MARKER_VIDEO_TAB)
 
         add_video_via_picker(page, resource_manager, video_file)
 
@@ -119,12 +119,12 @@ class TestCreateImportantTestData:
         click_table_cell_with_text(page, video_file.name)
 
         # Add tracks
-        search_for_marker_element(page, MARKER_TRACK_TAB).first.click()
+        open_tab(page, MARKER_TRACK_TAB)
         for track_file in track_files:
             add_track_via_picker(page, resource_manager, track_file)
 
         # Switch to Sections tab
-        search_for_marker_element(page, MARKER_TAB_SECTION).first.click()
+        open_group(page, MARKER_TAB_SECTION)
 
         # Create two sections with different names and coordinates
         section_names = ["North-Section", "South-Section"]
@@ -137,7 +137,7 @@ class TestCreateImportantTestData:
             create_section(page, resource_manager, name, positions=coords)
 
         # Switch to Flows tab and create flows
-        search_for_marker_element(page, MARKER_TAB_FLOW).first.click()
+        open_group(page, MARKER_TAB_FLOW)
 
         # Create a flow between the two sections
         flow_name = "Test-Flow"
