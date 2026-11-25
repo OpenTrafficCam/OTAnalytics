@@ -9,6 +9,9 @@ from OTAnalytics.application.analysis.traffic_counting import CountImage
 from OTAnalytics.application.analysis.traffic_counting_specification import (
     CountingEvent,
 )
+from OTAnalytics.application.analysis.traffic_statistics_config import (
+    TrafficStatisticsConfig,
+)
 from OTAnalytics.application.config import (
     DEFAULT_COUNTING_EVENT,
     DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
@@ -378,6 +381,10 @@ class VideosMetadata:
         if video_name in self._metadata_by_name:
             return self._metadata_by_name[video_name]
         return None
+
+    def get_all(self) -> list[VideoMetadata]:
+        """Return the metadata of all videos sorted by their start."""
+        return list(self._metadata_by_date.values())
 
     @property
     def first_video_start(self) -> Optional[datetime]:
@@ -860,6 +867,8 @@ class CurrentExportConfigState:
         self.event_formats: set[str]
         self.count_intervals: set[int]
         self.counting_event: CountingEvent
+        self.traffic_statistics: TrafficStatisticsConfig | None
+        self.geo_tracks: bool
         self.reset()
 
     def get(self) -> ExportConfig:
@@ -869,6 +878,8 @@ class CurrentExportConfigState:
             event_formats=self.event_formats,
             count_intervals=self.count_intervals,
             counting_event=self.counting_event,
+            traffic_statistics=self.traffic_statistics,
+            geo_tracks=self.geo_tracks,
         )
 
     def set(self, export_config: ExportConfig) -> None:
@@ -877,6 +888,8 @@ class CurrentExportConfigState:
         self.event_formats = export_config.event_formats
         self.count_intervals = export_config.count_intervals
         self.counting_event = export_config.counting_event
+        self.traffic_statistics = export_config.traffic_statistics
+        self.geo_tracks = export_config.geo_tracks
 
     def reset(self) -> None:
         self.save_name = DEFAULT_SAVE_NAME
@@ -884,6 +897,8 @@ class CurrentExportConfigState:
         self.event_formats = DEFAULT_EVENT_FORMATS
         self.count_intervals = {DEFAULT_COUNTING_INTERVAL_IN_MINUTES}
         self.counting_event = CountingEvent.parse(DEFAULT_COUNTING_EVENT)
+        self.traffic_statistics = None
+        self.geo_tracks = False
 
 
 class CurrentStaticAnalysisConfigState:
