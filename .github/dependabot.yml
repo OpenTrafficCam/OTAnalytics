@@ -5,11 +5,13 @@
 
 version: 2
 updates:
-  - package-ecosystem: "pip" # See documentation for possible values
+  - package-ecosystem: "uv" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
       day: "sunday"
+    cooldown:
+      default-days: 7
     reviewers:
       - "briemla"
     assignees:
@@ -19,6 +21,8 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
+    cooldown:
+      default-days: 7
     reviewers:
       - "briemla"
     assignees:
