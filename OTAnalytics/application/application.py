@@ -483,6 +483,10 @@ class OTAnalyticsApplication:
         """
         self._create_events()
 
+    async def create_events_async(self) -> None:
+        """Like `create_events`, but keeps the ui responsive."""
+        await self._create_events.call_async()
+
     def intersect_tracks_with_sections(self) -> None:
         self._create_intersection_events()
 

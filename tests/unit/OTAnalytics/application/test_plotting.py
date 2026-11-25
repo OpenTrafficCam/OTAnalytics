@@ -5,6 +5,7 @@ from unittest.mock import Mock, call
 import pytest
 
 from OTAnalytics.application.plotting import (
+    CachedPlotter,
     GetCurrentFrame,
     GetCurrentVideoPath,
     LayeredPlotter,
@@ -17,6 +18,37 @@ from OTAnalytics.application.plotting import (
 from OTAnalytics.application.state import Plotter, VideosMetadata
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.domain.video import Video, VideoMetadata
+
+
+class TestCachedPlotter:
+    def test_caches_image(self) -> None:
+        image = Mock(spec=TrackImage)
+        other = Mock(spec=Plotter)
+        other.plot.return_value = image
+        plotter = CachedPlotter(other, [])
+
+        assert plotter.plot() is image
+        assert plotter.plot() is image
+        other.plot.assert_called_once()
+
+    def test_does_not_cache_image_invalidated_while_plotting(self) -> None:
+        outdated = Mock(spec=TrackImage)
+        current = Mock(spec=TrackImage)
+        images = iter([outdated, current])
+        other = Mock(spec=Plotter)
+        plotter = CachedPlotter(other, [])
+
+        def plot() -> TrackImage:
+            image = next(images)
+            if image is outdated:
+                plotter.invalidate_cache(None)
+            return image
+
+        other.plot.side_effect = plot
+
+        assert plotter.plot() is outdated
+        assert plotter.plot() is current
+        assert plotter.plot() is current
 
 
 class TestLayeredPlotter:

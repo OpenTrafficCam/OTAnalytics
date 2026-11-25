@@ -194,17 +194,25 @@ class CachedPlotter(Plotter):
     ) -> None:
         self._other = other
         self._cache: Optional[TrackImage] = None
+        self._version = 0
 
         for subject in subjects:
             subject.register(self.invalidate_cache)
 
     def plot(self) -> Optional[TrackImage]:
         if self._cache is None:
-            self._cache = self._other.plot()
+            # Plotting may run on a worker thread while the cache is invalidated.
+            # The image is outdated then and must not be cached.
+            version = self._version
+            image = self._other.plot()
+            if version == self._version:
+                self._cache = image
+            return image
 
         return self._cache
 
     def invalidate_cache(self, _: Any) -> None:
+        self._version += 1
         self._cache = None
 
 

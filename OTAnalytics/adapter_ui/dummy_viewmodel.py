@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import functools
 from datetime import datetime
@@ -1505,6 +1506,20 @@ class DummyViewModel(
         start_msg_popup.close()
         logger().info("Events created")
 
+    async def create_events_async(self) -> None:
+        """Like `create_events`, but keeps the ui responsive."""
+        logger().info("Creating events")
+        start_msg_popup = self._ui_factory.minimal_info_box(
+            message="Create events...",
+            initial_position=self.get_position(),
+        )
+        await self._application.create_events_async()
+        self.notify_flows(self.get_all_flow_ids())
+        start_msg_popup.update_message(message="Creating events completed")
+        await asyncio.sleep(1)
+        start_msg_popup.close()
+        logger().info("Events created")
+
     def get_all_flow_ids(self) -> list[FlowId]:
         return [flow.id for flow in self.get_all_flows()]
 
@@ -1933,6 +1948,12 @@ class DummyViewModel(
         self._frame_track_statistics = frame
 
     def update_track_statistics(self, _: EventRepositoryEvent | FilterElement) -> None:
+        # TODO: Calculate the statistics off the event loop, like create_events_async
+        #  and TrackImageUpdater.update_image do, once the faster plotting is merged.
+        #  In the WebUI, it blocks the event loop for 6 to 9 seconds after loading
+        #  30 minutes of tracks, mostly in SvzNumberOfTracksToBeValidated, and runs
+        #  several times in a row. Clicks are handled late then, and blocks longer than
+        #  NiceGUI's heartbeat (about 6 seconds) make the page reload.
         statistics = self._application.calculate_track_statistics()
         self.frame_track_statistics.update_track_statistics(statistics)
 
