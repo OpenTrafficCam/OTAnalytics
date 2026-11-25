@@ -35,6 +35,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form im
     MARKER_FLOW_TABLE,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
+    MARKER_BUTTON_ADD_LINE,
     MARKER_SECTION_TABLE,
 )
 from tests.acceptance.conftest import (
@@ -331,9 +332,11 @@ class TestSectionEditorOnCanvas:
     ) -> None:
         """Draw a line section: preview follows the mouse, right click finishes."""
         _open_sections_of_preconfigured_project(page, external_app, resource_manager)
-        page.get_by_text(
-            resource_manager.get(SectionKeys.BUTTON_ADD_LINE), exact=True
-        ).click()
+        add_line = search_for_marker_element(page, MARKER_BUTTON_ADD_LINE).first
+        add_line.click()
+        # The canvas subscribes to mouse moves with the same update that disables
+        # the button. Moves before that update are not sent to the server.
+        expect(add_line).to_be_disabled()
 
         _click(page, 40, 200)
         _move_mouse(page, 200, 260)
