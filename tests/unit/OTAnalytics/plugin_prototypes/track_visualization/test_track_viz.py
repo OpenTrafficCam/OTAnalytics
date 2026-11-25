@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
@@ -5,7 +6,10 @@ import polars as pl
 import pytest
 from polars import DataFrame
 
-from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
+from OTAnalytics.adapter_visualization.color_provider import (
+    ColorPaletteProvider,
+    to_rgb,
+)
 from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.event import Event
@@ -47,12 +51,15 @@ from OTAnalytics.plugin_prototypes.track_visualization.track_viz import (
     FilterByVideo,
     MatplotlibPlotterImplementation,
     MatplotlibTrackPlotter,
+    MatplotlibTrackPlotterFactory,
     PilImageFactory,
     PlotterPrototype,
     PolarsDataFrameProvider,
     PolarsTrackProvider,
     PolarsTracksOffsetProvider,
+    TrackBoundingBoxPlotter,
     TrackGeometryPlotter,
+    TrackImageFactory,
     TrackPlotter,
     TrackPointPlotter,
     TrackStartEndPointPlotter,
@@ -364,6 +371,37 @@ class TestColorPaletteProvider:
             actual = color_palette_provider.get()
             assert actual == expected
 
+    def test_update_fills_numeric_palette_for_all_classifications(self) -> None:
+        default_class = "Class 1"
+        new_class = "Class 2"
+        skyblue = "skyblue"
+        skyblue_rgb = (135, 206, 235)
+        orange = "#FF8000"
+        orange_rgb = (255, 128, 0)
+        with patch.object(
+            ColorPaletteProvider, "_generate_random_color", return_value=orange
+        ):
+            color_palette_provider = ColorPaletteProvider({default_class: skyblue})
+            color_palette_provider.update(frozenset({default_class, new_class}))
+
+        assert color_palette_provider.get_numeric() == {
+            default_class: skyblue_rgb,
+            new_class: orange_rgb,
+        }
+
+    @pytest.mark.parametrize(
+        "color,expected",
+        [
+            ("blue", (0, 0, 255)),
+            ("lime", (0, 255, 0)),
+            ("green", (0, 128, 0)),
+            ("#FF5733", (255, 87, 51)),
+            ("#000", (0, 0, 0)),
+        ],
+    )
+    def test_to_rgb(self, color: str, expected: tuple[int, int, int]) -> None:
+        assert to_rgb(color) == expected
+
     def test_generate_random_color(self) -> None:
         random_color = ColorPaletteProvider._generate_random_color()
         assert self._is_hex_color(random_color)
@@ -563,17 +601,74 @@ class TestDataFrameProviderFilter:
         filter_imp.apply.assert_called_once_with([filter_input])
 
 
+@dataclass(frozen=True)
+class TrackRows:
+    """Detections of a single track, one entry per detection."""
+
+    track_id: str
+    classification: str
+    x: list[float]
+    y: list[float]
+    width: float
+    height: float
+    frames: list[int]
+    videos: list[str]
+
+    def __len__(self) -> int:
+        return len(self.x)
+
+    def points(self) -> list[list[float]]:
+        return [[x, y] for x, y in zip(self.x, self.y)]
+
+    def segments(self) -> list[list[list[float]]]:
+        points = self.points()
+        return [[start, end] for start, end in zip(points, points[1:])]
+
+
+CAR = "car"
+BICYCLE = "bicycle"
+CAR_COLOR = "green"
+BICYCLE_COLOR = "red"
+VIDEO = "video"
+OTHER_VIDEO = "other"
+FIRST_FRAME = 1
+
+CAR_TRACK = TrackRows(
+    track_id="1",
+    classification=CAR,
+    x=[0.0, 1.0, 2.0],
+    y=[0.0, 1.0, 2.0],
+    width=2.0,
+    height=4.0,
+    frames=[FIRST_FRAME, 2, 3],
+    videos=[VIDEO, VIDEO, VIDEO],
+)
+BICYCLE_TRACK = TrackRows(
+    track_id="2",
+    classification=BICYCLE,
+    x=[10.0, 11.0],
+    y=[20.0, 21.0],
+    width=4.0,
+    height=8.0,
+    frames=[FIRST_FRAME, 2],
+    videos=[VIDEO, OTHER_VIDEO],
+)
+TRACKS = [CAR_TRACK, BICYCLE_TRACK]
+
+
 def create_tracks_dataframe() -> DataFrame:
     return DataFrame(
         {
-            track.TRACK_ID: ["1", "1", "1", "2", "2"],
-            track.TRACK_CLASSIFICATION: ["car", "car", "car", "bicycle", "bicycle"],
-            track.X: [0.0, 1.0, 2.0, 10.0, 11.0],
-            track.Y: [0.0, 1.0, 2.0, 20.0, 21.0],
-            track.W: [2.0, 2.0, 2.0, 4.0, 4.0],
-            track.H: [4.0, 4.0, 4.0, 8.0, 8.0],
-            track.FRAME: [1, 2, 3, 1, 2],
-            track.VIDEO_NAME: ["video", "video", "video", "video", "other"],
+            track.TRACK_ID: [t.track_id for t in TRACKS for _ in range(len(t))],
+            track.TRACK_CLASSIFICATION: [
+                t.classification for t in TRACKS for _ in range(len(t))
+            ],
+            track.X: [x for t in TRACKS for x in t.x],
+            track.Y: [y for t in TRACKS for y in t.y],
+            track.W: [t.width for t in TRACKS for _ in range(len(t))],
+            track.H: [t.height for t in TRACKS for _ in range(len(t))],
+            track.FRAME: [frame for t in TRACKS for frame in t.frames],
+            track.VIDEO_NAME: [video for t in TRACKS for video in t.videos],
         }
     )
 
@@ -587,18 +682,14 @@ def create_data_provider(data: DataFrame) -> Mock:
 def test_create_line_segments_connects_detections_within_tracks_only() -> None:
     segments = create_line_segments(create_tracks_dataframe())
 
-    assert segments.tolist() == [
-        [[0.0, 0.0], [1.0, 1.0]],
-        [[1.0, 1.0], [2.0, 2.0]],
-        [[10.0, 20.0], [11.0, 21.0]],
-    ]
+    assert segments.tolist() == CAR_TRACK.segments() + BICYCLE_TRACK.segments()
 
 
 class TestTrackStartEndPointPlotterPlotDataframe:
     def test_plot_first_and_last_detection_of_each_track(self) -> None:
         data = create_tracks_dataframe()
         color_palette_provider = Mock(spec=ColorPaletteProvider)
-        color_palette_provider.get.return_value = {"car": "green"}
+        color_palette_provider.get.return_value = {CAR: CAR_COLOR}
         axes = Mock()
         plotter = TrackStartEndPointPlotter(
             create_data_provider(data), color_palette_provider, enable_legend=False
@@ -607,12 +698,12 @@ class TestTrackStartEndPointPlotterPlotDataframe:
         plotter.plot(axes)
 
         start_call, end_call = axes.scatter.call_args_list
-        assert start_call.args[0].tolist() == [0.0, 10.0]
-        assert start_call.args[1].tolist() == [0.0, 20.0]
-        assert start_call.kwargs["c"] == ["green", DEFAULT_COLOR]
+        assert start_call.args[0].tolist() == [t.x[0] for t in TRACKS]
+        assert start_call.args[1].tolist() == [t.y[0] for t in TRACKS]
+        assert start_call.kwargs["c"] == [CAR_COLOR, DEFAULT_COLOR]
         assert start_call.kwargs["marker"] == TRACK_START_SYMBOL
-        assert end_call.args[0].tolist() == [2.0, 11.0]
-        assert end_call.args[1].tolist() == [2.0, 21.0]
+        assert end_call.args[0].tolist() == [t.x[-1] for t in TRACKS]
+        assert end_call.args[1].tolist() == [t.y[-1] for t in TRACKS]
         assert end_call.kwargs["marker"] == TRACK_END_SYMBOL
         assert COLOR not in data.columns
 
@@ -620,7 +711,10 @@ class TestTrackStartEndPointPlotterPlotDataframe:
 class TestTrackPointPlotterPlotDataframe:
     def test_plot_points_per_classification(self) -> None:
         color_palette_provider = Mock(spec=ColorPaletteProvider)
-        color_palette_provider.get.return_value = {"car": "green", "bicycle": "red"}
+        color_palette_provider.get.return_value = {
+            CAR: CAR_COLOR,
+            BICYCLE: BICYCLE_COLOR,
+        }
         axes = Mock()
         plotter = TrackPointPlotter(
             create_data_provider(create_tracks_dataframe()), color_palette_provider
@@ -629,16 +723,19 @@ class TestTrackPointPlotterPlotDataframe:
         plotter.plot(axes)
 
         car_call, bicycle_call = axes.plot.call_args_list
-        assert car_call.args[0].tolist() == [0.0, 1.0, 2.0]
-        assert car_call.kwargs["color"] == "green"
-        assert bicycle_call.args[1].tolist() == [20.0, 21.0]
-        assert bicycle_call.kwargs["color"] == "red"
+        assert car_call.args[0].tolist() == CAR_TRACK.x
+        assert car_call.kwargs["color"] == CAR_COLOR
+        assert bicycle_call.args[1].tolist() == BICYCLE_TRACK.y
+        assert bicycle_call.kwargs["color"] == BICYCLE_COLOR
 
 
 class TestTrackGeometryPlotterPlotDataframe:
     def test_add_one_line_collection_per_classification(self) -> None:
         color_palette_provider = Mock(spec=ColorPaletteProvider)
-        color_palette_provider.get.return_value = {"car": "green", "bicycle": "red"}
+        color_palette_provider.get.return_value = {
+            CAR: CAR_COLOR,
+            BICYCLE: BICYCLE_COLOR,
+        }
         axes = Mock()
         plotter = TrackGeometryPlotter(
             create_data_provider(create_tracks_dataframe()),
@@ -651,41 +748,91 @@ class TestTrackGeometryPlotterPlotDataframe:
         labels = [
             call.args[0].get_label() for call in axes.add_collection.call_args_list
         ]
-        assert labels == ["car", "bicycle"]
+        assert labels == [CAR, BICYCLE]
         axes.legend.assert_called_once_with(loc="upper right")
 
 
 class TestPolarsTracksOffsetProvider:
     def test_apply_offset(self) -> None:
+        offset = RelativeOffsetCoordinate(0.5, 1)
         data = create_tracks_dataframe()
         track_view_state = TrackViewState()
-        track_view_state.track_offset.set(RelativeOffsetCoordinate(0.5, 1))
+        track_view_state.track_offset.set(offset)
         provider = PolarsTracksOffsetProvider(
             create_data_provider(data), track_view_state
         )
 
         result = provider.get_data()
 
-        assert result.get_column(track.X).to_list() == [1.0, 2.0, 3.0, 12.0, 13.0]
-        assert result.get_column(track.Y).to_list() == [4.0, 5.0, 6.0, 28.0, 29.0]
-        assert data.get_column(track.X).to_list() == [0.0, 1.0, 2.0, 10.0, 11.0]
+        assert result.get_column(track.X).to_list() == [
+            x + offset.x * t.width for t in TRACKS for x in t.x
+        ]
+        assert result.get_column(track.Y).to_list() == [
+            y + offset.y * t.height for t in TRACKS for y in t.y
+        ]
+        assert data.get_column(track.X).to_list() == [x for t in TRACKS for x in t.x]
 
 
 class TestFilterByVideoAndFrame:
     def test_filter_by_video(self) -> None:
         current_video = Mock()
-        current_video.get_video.return_value = "other"
+        current_video.get_video.return_value = OTHER_VIDEO
         data_provider = create_data_provider(create_tracks_dataframe())
 
         result = FilterByVideo(data_provider, current_video).get_data()
 
-        assert result.get_column(track.FRAME).to_list() == [2]
+        assert result.get_column(track.FRAME).to_list() == [
+            frame
+            for t in TRACKS
+            for frame, video in zip(t.frames, t.videos)
+            if video == OTHER_VIDEO
+        ]
 
     def test_filter_by_frame(self) -> None:
         current_frame = Mock()
-        current_frame.get_frame_number.return_value = 1
+        current_frame.get_frame_number.return_value = FIRST_FRAME
         data_provider = create_data_provider(create_tracks_dataframe())
 
         result = FilterByFrame(data_provider, current_frame).get_data()
 
-        assert result.get_column(track.TRACK_ID).to_list() == ["1", "2"]
+        assert result.get_column(track.TRACK_ID).to_list() == [
+            t.track_id for t in TRACKS
+        ]
+
+
+class TestMatplotlibTrackPlotterFactory:
+    """The matplotlib factory must build the plotters the builder built before."""
+
+    ALPHA = 0.5
+    LINEWIDTH = 1.5
+    MARKERSIZE = 6
+    MARKER = "x"
+
+    def test_create_plotters(self) -> None:
+        image_factory = Mock(spec=TrackImageFactory)
+        factory = MatplotlibTrackPlotterFactory(image_factory, TrackViewState())
+        data_provider = Mock(spec=PolarsDataFrameProvider)
+        palette = Mock(spec=ColorPaletteProvider)
+
+        geometry = factory.create_track_geometry_plotter(
+            data_provider, palette, alpha=self.ALPHA, enable_legend=True
+        )
+        boxes = factory.create_track_bounding_box_plotter(
+            data_provider, palette, alpha=self.ALPHA, linewidth=self.LINEWIDTH
+        )
+        points = factory.create_track_point_plotter(
+            data_provider,
+            palette,
+            alpha=self.ALPHA,
+            markersize=self.MARKERSIZE,
+            marker=self.MARKER,
+        )
+
+        for plotter, implementation in [
+            (geometry, TrackGeometryPlotter),
+            (boxes, TrackBoundingBoxPlotter),
+            (points, TrackPointPlotter),
+        ]:
+            assert isinstance(plotter, MatplotlibTrackPlotter)
+            assert isinstance(plotter._plotter, implementation)
+            assert plotter._track_image_factory is image_factory
