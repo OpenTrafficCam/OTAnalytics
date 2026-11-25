@@ -71,7 +71,7 @@ class ArrowPainter:
             end_y,
             arrow=tkinter.LAST,
             tags=tags,
-            **arrow_style,
+            **(arrow_style or {}),
         )
 
 
