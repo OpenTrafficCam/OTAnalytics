@@ -4,10 +4,9 @@ from enum import StrEnum
 from nicegui import ui
 
 from OTAnalytics.application.resources.resource_manager import (
-    GeneralKeys,
-    ResourceManager,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import DIALOG_CLASS
+    GeneralKeys, ResourceManager)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import \
+    DIALOG_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_APPLY = "apply"

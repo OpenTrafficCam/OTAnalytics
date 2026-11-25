@@ -1600,7 +1600,7 @@ class TestCanvasFormSectionGeometryEditor:
         canvas_form.on_svg_pointer_move(svg_event(135, 20, "edit-shift-forward"))
 
         svg = canvas_form._edit_geometry()
-        assert 'stroke="magenta"' in svg
+        assert 'class="ota-shift-preview"' in svg
         assert 'points="10,20 210,20 110,20"' in svg
         assert canvas_form._shift_partner_index() == 2
         assert 'stroke="yellow"' in svg
@@ -1618,7 +1618,7 @@ class TestCanvasFormSectionGeometryEditor:
     def test_no_swap_preview_without_hover(self, canvas_form: Any) -> None:
         self.pick_up(canvas_form, 1)
 
-        assert "magenta" not in canvas_form._edit_geometry()
+        assert "ota-shift-preview" not in canvas_form._edit_geometry()
 
     def test_midpoints_are_drawn_below_knobs(self, canvas_form: Any) -> None:
         svg = canvas_form._edit_geometry()

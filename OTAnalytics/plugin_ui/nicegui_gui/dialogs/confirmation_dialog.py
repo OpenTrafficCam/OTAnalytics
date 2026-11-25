@@ -1,10 +1,9 @@
 from nicegui import ui
 
 from OTAnalytics.application.resources.resource_manager import (
-    GeneralKeys,
-    ResourceManager,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
+    GeneralKeys, ResourceManager)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import \
+    BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_CONFIRMATION_MESSAGE = "marker-confirmation-message"

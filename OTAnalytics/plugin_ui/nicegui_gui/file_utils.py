@@ -3,7 +3,8 @@
 from pathlib import Path
 from typing import Callable
 
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import \
+    LocalFilePicker
 
 
 async def select_output_directory(

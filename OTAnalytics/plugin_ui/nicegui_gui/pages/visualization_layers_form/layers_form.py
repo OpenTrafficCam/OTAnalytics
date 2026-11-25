@@ -3,15 +3,13 @@ from typing import Callable, Optional, Self, Sequence
 
 from nicegui import ui
 
-from OTAnalytics.adapter_ui.abstract_frame_track_plotting import (
-    AbstractFrameTrackPlotting,
-)
+from OTAnalytics.adapter_ui.abstract_frame_track_plotting import \
+    AbstractFrameTrackPlotting
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.plotting import Layer, LayerGroup
-from OTAnalytics.application.resources.resource_manager import (
-    ResourceManager,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
+from OTAnalytics.application.resources.resource_manager import ResourceManager
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import \
+    TestIdAttributes
 from OTAnalytics.plugin_ui.visualization.visualization import ALL
 
 MARKER_PROJECT_NAME = "marker-project-name"

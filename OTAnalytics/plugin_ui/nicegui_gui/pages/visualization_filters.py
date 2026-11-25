@@ -1,7 +1,6 @@
 from OTAnalytics.application.resources.resource_manager import ResourceManager
-from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
-    VisualizationFiltersForm,
-)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import \
+    VisualizationFiltersForm  # noqa
 
 
 class VisualizationFilters:

@@ -1,13 +1,10 @@
 from nicegui import ui
 
-from OTAnalytics.adapter_ui.abstract_frame_track_statistics import (
-    AbstractFrameTrackStatistics,
-)
+from OTAnalytics.adapter_ui.abstract_frame_track_statistics import \
+    AbstractFrameTrackStatistics
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    ResourceManager,
-    TrackStatisticKeys,
-)
+    ResourceManager, TrackStatisticKeys)
 from OTAnalytics.application.use_cases.track_statistics import TrackStatistics
 
 COLUMN_NAME = "name"

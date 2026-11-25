@@ -3,19 +3,14 @@ from nicegui.events import ValueChangeEventArguments
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.application.resources.resource_manager import (
-    EditFlowDialogKeys,
-    ResourceManager,
-)
+    EditFlowDialogKeys, ResourceManager)
 from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import \
+    BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
-    FormFieldOptionalFloat,
-    FormFieldSelect,
-    FormFieldText,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.validation import (
-    VALIDATION_NUMBER_POSITIVE,
-)
+    FormFieldOptionalFloat, FormFieldSelect, FormFieldText)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.validation import \
+    VALIDATION_NUMBER_POSITIVE
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_NAME = "marker-name"

@@ -2,9 +2,7 @@ from nicegui import ui
 
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
-    ProjectActions,
-    ProjectTitle,
-)
+    ProjectActions, ProjectTitle)
 
 MARKER_HEADER = "marker-header"
 BRAND = "OTAnalytics"

@@ -4,6 +4,9 @@ from html import escape
 BACKWARD_SUFFIX = "backward"
 FORWARD_SUFFIX = "forward"
 FONT_SIZE = 11
+HALF_CLASS = "ota-shift-half"
+HALF_HOVERED_CLASS = "ota-shift-half-hovered"
+LABEL_CLASS = "ota-shift-label"
 
 
 @dataclass
@@ -79,12 +82,14 @@ class ShiftRing:
             )
             text_x = x - (inner + outer) // 2
         fill = self.hovered_fill if hovered else self.fill
+        css_class = f"{HALF_CLASS} {HALF_HOVERED_CLASS}" if hovered else HALF_CLASS
         return (
-            f'<path id="{escape(id)}" d="{path}" fill="{fill}" fill-opacity="0.9" '
+            f'<path id="{escape(id)}" class="{css_class}" d="{path}" '
+            f'fill="{fill}" fill-opacity="0.9" '
             f'stroke="{self.color}" stroke-width="1" '
             f'pointer-events="all" cursor="pointer">'
             f"<title>{escape(tooltip)}</title></path>"
-            f'<text x="{text_x}" y="{y}" text-anchor="middle" '
+            f'<text class="{LABEL_CLASS}" x="{text_x}" y="{y}" text-anchor="middle" '
             f'dominant-baseline="central" fill="{self.color}" '
             f'font-size="{FONT_SIZE}" pointer-events="none" '
             f'style="user-select:none">{escape(label)}</text>'

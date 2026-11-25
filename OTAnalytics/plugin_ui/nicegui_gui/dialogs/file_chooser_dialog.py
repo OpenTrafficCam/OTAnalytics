@@ -3,20 +3,18 @@ from typing import Any
 
 from nicegui import ui
 
-from OTAnalytics.application.files import ensure_dot_in_extension, strip_extension
+from OTAnalytics.application.files import (ensure_dot_in_extension,
+                                           strip_extension)
 from OTAnalytics.application.resources.resource_manager import (
-    FileChooserDialogKeys,
-    ResourceManager,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
+    FileChooserDialogKeys, ResourceManager)
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import \
+    LocalFilePicker
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import \
+    BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
-    FormFieldSelect,
-    FormFieldText,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
-    MissingInstanceError,
-)
+    FormFieldSelect, FormFieldText)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import \
+    MissingInstanceError
 
 MARKER_FORMAT = "marker-format"
 MARKER_FILENAME = "marker-filename"

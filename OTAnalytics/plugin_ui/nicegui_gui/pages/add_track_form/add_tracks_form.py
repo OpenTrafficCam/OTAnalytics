@@ -5,10 +5,9 @@ from nicegui.elements.button import Button
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    AddTracksKeys,
-    ResourceManager,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
+    AddTracksKeys, ResourceManager)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import \
+    ButtonForm
 
 
 class AddTracksForm(ButtonForm):

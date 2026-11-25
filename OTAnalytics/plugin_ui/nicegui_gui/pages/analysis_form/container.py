@@ -6,10 +6,9 @@ from nicegui.elements.button import Button
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    AnalysisKeys,
-    ResourceManager,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
+    AnalysisKeys, ResourceManager)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import \
+    ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_BUTTON_EXPORT_TRACK_STATISTICS = "button-export-track-statistics"

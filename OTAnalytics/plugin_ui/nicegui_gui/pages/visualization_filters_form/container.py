@@ -10,24 +10,20 @@ from OTAnalytics.adapter_ui.abstract_frame_filter import AbstractFrameFilter
 from OTAnalytics.adapter_ui.default_values import DATETIME_FORMAT
 from OTAnalytics.adapter_ui.dto import DateRangeDto
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
+from OTAnalytics.adapter_visualization.color_provider import \
+    ColorPaletteProvider
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.resources.resource_manager import (
-    GeneralKeys,
-    ResourceManager,
-    VisualizationFiltersKeys,
-)
+    GeneralKeys, ResourceManager, VisualizationFiltersKeys)
 from OTAnalytics.domain.date import DateRange
-from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import (
-    InvalidDatetimeFormatError,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
+from OTAnalytics.plugin_ui.customtkinter_gui.frame_filter import \
+    InvalidDatetimeFormatError
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import \
+    TestIdAttributes
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import \
+    ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
-    DateTimeForm,
-    FormFieldCheckbox,
-    FormFieldInteger,
-)
+    DateTimeForm, FormFieldCheckbox, FormFieldInteger)
 
 MARKER_FILTER_BY_DATE_CHECKBOX = "marker-filter-by-date-checkbox"
 MARKER_FILTER_BY_DATE_BUTTON = "marker-filter-by-date-button"

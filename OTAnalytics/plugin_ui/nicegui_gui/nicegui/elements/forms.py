@@ -12,15 +12,12 @@ from nicegui.elements.number import Number
 from nicegui.elements.select import Select
 from nicegui.events import ValueChangeEventArguments
 
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
-    MissingInstanceError,
-)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import \
+    TestIdAttributes
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import \
+    MissingInstanceError
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
-    DATE_FIELD_CLASS,
-    DATETIME_FIELD_CLASS,
-    VALID_FIELD_CLASS,
-)
+    DATE_FIELD_CLASS, DATETIME_FIELD_CLASS, VALID_FIELD_CLASS)
 
 YEAR_MONTH_DAY_FORMAT = "%Y-%m-%d"
 DAY_MONTH_YEAR_FORMAT = "%d.%m.%Y"

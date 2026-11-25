@@ -66,6 +66,7 @@
     --ota-selected: #d4e1da;
     --ota-on-primary-muted: #d4e1da;
     --ota-fresh: #4d6856;
+    --ota-accent: #70a9a1;
     --ota-stale-dot: #b48a2a;
     --ota-stale-text: #7a5a14;
 
@@ -869,6 +870,62 @@ body:has(.ota-app) {
     color: var(--ota-text);
     font-family: var(--ota-font-mono);
     font-size: var(--ota-font-size-sm);
+}
+
+/* Section editor on the canvas: affordances drawn into the SVG overlay.
+   Sizes are SVG units, which scale with the image, so only colours and fonts
+   are set here. */
+.ota-midpoint {
+    fill: var(--ota-primary);
+    fill-opacity: 0.85;
+    stroke: var(--ota-surface);
+    stroke-width: 1.5;
+}
+
+.ota-midpoint:hover {
+    fill: var(--ota-primary-hover);
+    fill-opacity: 1;
+}
+
+.ota-midpoint-glyph {
+    fill: var(--ota-surface);
+    font-family: var(--ota-font);
+    font-weight: 700;
+}
+
+.ota-knob-label {
+    fill: var(--ota-text-strong);
+    stroke: var(--ota-surface);
+    stroke-width: 2;
+    paint-order: stroke;
+    font-family: var(--ota-font-mono);
+}
+
+.ota-shift-half {
+    fill: var(--ota-primary);
+    fill-opacity: 0.92;
+    stroke: var(--ota-surface);
+    stroke-width: 1;
+}
+
+.ota-shift-half:hover,
+.ota-shift-half-hovered {
+    fill: var(--ota-fresh);
+    fill-opacity: 1;
+}
+
+.ota-shift-label {
+    fill: var(--ota-surface);
+    font-family: var(--ota-font-mono);
+}
+
+.ota-shift-preview polyline,
+.ota-shift-preview polygon {
+    stroke: var(--ota-accent);
+}
+
+.ota-shift-preview polygon {
+    fill: var(--ota-accent);
 }
 
 /* Out of date: track counts and flow arrows of an outdated assignment */

@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 
 from nicegui import ui
 
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import global_theme
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import \
+    global_theme
 
 
 class LayoutComponents(ABC):

@@ -2,33 +2,30 @@ from nicegui import ui
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    ConfigurationBarKeys,
-    ResourceManager,
-    SvzMetadataKeys,
-)
+    ConfigurationBarKeys, ResourceManager, SvzMetadataKeys)
 from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.flow import FlowId, FlowListObserver
-from OTAnalytics.domain.section import SectionListObserver, SectionRepositoryEvent
-from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
+from OTAnalytics.domain.section import (SectionListObserver,
+                                        SectionRepositoryEvent)
+from OTAnalytics.domain.track_repository import (TrackListObserver,
+                                                 TrackRepositoryEvent)
 from OTAnalytics.domain.video import Video, VideoListObserver
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import TrackForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import AnalysisForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import (
-    ProjectForm,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.static_analysis_config_form import (  # noqa
-    StaticAnalysisConfigForm,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import RemarkForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import (
-    FlowForm,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
-    SectionsForm,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.pages.svz_metadata_form.svz_metadata_form import (  # noqa
-    SvzMetadataForm,
-)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.container import \
+    TrackForm
+from OTAnalytics.plugin_ui.nicegui_gui.pages.analysis_form.container import \
+    AnalysisForm
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.project_form import \
+    ProjectForm
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.static_analysis_config_form import \
+    StaticAnalysisConfigForm  # noqa
+from OTAnalytics.plugin_ui.nicegui_gui.pages.remarks_form.container import \
+    RemarkForm
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.flow_form import \
+    FlowForm
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import \
+    SectionsForm  # noqa
+from OTAnalytics.plugin_ui.nicegui_gui.pages.svz_metadata_form.svz_metadata_form import \
+    SvzMetadataForm  # noqa
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 # Test markers for the workflow groups

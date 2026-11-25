@@ -5,9 +5,7 @@ from typing import Any, Dict, List, Optional
 from nicegui import events, ui
 
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
-    FILE_GRID_CLASS,
-    WIDE_DIALOG_CLASS,
-)
+    FILE_GRID_CLASS, WIDE_DIALOG_CLASS)
 
 OK_BUTTON_NAME: str = "Ok"
 CANCEL_BUTTON_NAME: str = "Cancel"

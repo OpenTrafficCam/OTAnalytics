@@ -1,6 +1,7 @@
 from typing import Self
 
-from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameSvzMetadata
+from OTAnalytics.adapter_ui.abstract_frame_project import \
+    AbstractFrameSvzMetadata
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 

@@ -3,19 +3,17 @@ from typing import Iterable, Self
 from nicegui import ui
 from nicegui.elements.button import Button
 
-from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.abstract_treeview_interface import \
+    AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    AddVideoKeys,
-    ResourceManager,
-)
+    AddVideoKeys, ResourceManager)
 from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain.video import Video
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import \
+    ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
-    COLUMN_ID,
-    CustomTable,
-)
+    COLUMN_ID, CustomTable)
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 COLUMN_NAME = "name"

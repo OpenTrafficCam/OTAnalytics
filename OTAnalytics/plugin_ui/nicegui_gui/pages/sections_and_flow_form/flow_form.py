@@ -5,21 +5,25 @@ from nicegui.elements.button import Button
 from nicegui.events import ClickEventArguments
 
 from OTAnalytics.adapter_ui.abstract_frame import AbstractFrame
-from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.abstract_treeview_interface import \
+    AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.resources.resource_manager import FlowKeys, ResourceManager
+from OTAnalytics.application.resources.resource_manager import (
+    FlowKeys, ResourceManager)
 from OTAnalytics.application.state import FlowState
 from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.flow import FLOW_NAME, Flow, FlowId, FlowListObserver
 from OTAnalytics.domain.section import SectionId
-from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button import CustomButton
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
+from OTAnalytics.domain.track_repository import (TrackListObserver,
+                                                 TrackRepositoryEvent)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button import \
+    CustomButton
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import \
+    ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
-    COLUMN_ID,
-    CustomTable,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import STALE_CLASS
+    COLUMN_ID, CustomTable)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import \
+    STALE_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 from OTAnalytics.plugin_ui.utils.asyncio_helper import run_async
 

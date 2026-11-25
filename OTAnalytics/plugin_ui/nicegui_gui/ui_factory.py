@@ -17,9 +17,8 @@ from OTAnalytics.adapter_ui.message_type import MessageType
 from OTAnalytics.adapter_ui.text_resources import ColumnResources
 from OTAnalytics.adapter_ui.ui_factory import UiFactory
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.analysis.traffic_counting_specification import (
-    CountingSpecificationDto,
-)
+from OTAnalytics.application.analysis.traffic_counting_specification import \
+    CountingSpecificationDto
 from OTAnalytics.application.application import CancelAddFlow, CancelAddSection
 from OTAnalytics.application.logger import logger
 from OTAnalytics.application.resources.resource_manager import ResourceManager
@@ -27,29 +26,26 @@ from OTAnalytics.application.use_cases.generate_flows import FlowNameGenerator
 from OTAnalytics.application.use_cases.static_analysis_config import (
     GetCountingEventOfCurrentAnalysisConfig,
     GetCountIntervalsOfCurrentAnalysisConfig,
-    GetSaveNameOfCurrentAnalysisConfig,
-    GetSaveSuffixOfCurrentAnalysisConfig,
-)
+    GetSaveNameOfCurrentAnalysisConfig, GetSaveSuffixOfCurrentAnalysisConfig)
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.helpers.file_helpers import (
-    get_all_files_with_correct_file_ending_in_directory,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.confirmation_dialog import (
-    ConfirmationDialog,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import EditFlowDialog
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import (
-    EditSectionDialog,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.export_counts_dialog import (
-    ExportCountsDialog,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import (
-    FileChooserDialog,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.browser import has_browser_to_show_in
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import DialogResult
+from OTAnalytics.helpers.file_helpers import \
+    get_all_files_with_correct_file_ending_in_directory
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.confirmation_dialog import \
+    ConfirmationDialog
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_flow_dialog import \
+    EditFlowDialog
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.edit_section_dialog import \
+    EditSectionDialog
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.export_counts_dialog import \
+    ExportCountsDialog
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_chooser_dialog import \
+    FileChooserDialog
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import \
+    LocalFilePicker
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.browser import \
+    has_browser_to_show_in
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import \
+    DialogResult
 
 BASE_FILE_PICKER_DIRECTORY = Path.home()
 

@@ -12,9 +12,11 @@ class Text:
     text: str
     color: str
     font_size: int = DEFAULT_FONT_SIZE
+    css_class: str | None = None
 
     def to_svg(self) -> str:
-        return f"""<text id="{escape(self.id)}"
+        css_class = f' class="{escape(self.css_class)}"' if self.css_class else ""
+        return f"""<text id="{escape(self.id)}"{css_class}
         x="{self.x}"
         y="{self.y}"
         fill="{self.color}"

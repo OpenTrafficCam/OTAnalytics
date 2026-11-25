@@ -2,63 +2,52 @@ import time
 from typing import Any, Final, Iterable, Optional, Self
 
 from nicegui import events, ui
-from nicegui.elements.interactive_image import InteractiveImage, InteractiveImageLayer
+from nicegui.elements.interactive_image import (InteractiveImage,
+                                                InteractiveImageLayer)
 from nicegui.events import KeyEventArguments
 from PIL import Image
 
-from OTAnalytics.adapter_ui.abstract_canvas import TAG_SELECTED_SECTION, AbstractCanvas
+from OTAnalytics.adapter_ui.abstract_canvas import (TAG_SELECTED_SECTION,
+                                                    AbstractCanvas)
 from OTAnalytics.adapter_ui.abstract_frame_canvas import AbstractFrameCanvas
-from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.abstract_treeview_interface import \
+    AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.flow_adapter import SectionRefPointCalculator
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    CanvasKeys,
-    HotKeys,
-    ResourceManager,
-)
+    CanvasKeys, HotKeys, ResourceManager)
 from OTAnalytics.domain.section import Section
 from OTAnalytics.domain.track import TrackImage
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.arrow import Arrow
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle_resources import (
-    CircleResources,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line_resources import LineResources
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.midpoint_circle import MidpointCircle
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle_resources import \
+    CircleResources
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line_resources import \
+    LineResources
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.midpoint_circle import \
+    MidpointCircle
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polygon import Polygon
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
-    SectionResource,
-)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import \
+    SectionResource
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.shift_ring import (
-    BACKWARD_SUFFIX,
-    FORWARD_SUFFIX,
-    ShiftRing,
-)
+    BACKWARD_SUFFIX, FORWARD_SUFFIX, ShiftRing)
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.text import Text
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import STALE_CLASS
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import \
+    STALE_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geometry import (  # noqa
-    Point,
-    close_area,
-    closest_knob_index,
-    delete_knob,
-    has_enough_knobs,
-    insert_knob,
-    insert_knob_at_segment,
-    minimum_knob_count,
-    open_area,
-    ring_half_at,
-    segment_midpoints,
-    shift_knob_backward,
-    shift_knob_forward,
-    shift_target_index,
-)
+    Point, close_area, closest_knob_index, delete_knob, has_enough_knobs,
+    insert_knob, insert_knob_at_segment, minimum_knob_count, open_area,
+    ring_half_at, segment_midpoints, shift_knob_backward, shift_knob_forward,
+    shift_target_index)
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 NORMAL_COLOR = "green"
 SELECTED_COLOR = "red"
 EDIT_COLOR = "orange"
-SHIFT_PREVIEW_COLOR = "magenta"
+SHIFT_PREVIEW_COLOR = "#70a9a1"  # --ota-accent, fallback without stylesheet
+SHIFT_PREVIEW_CLASS = "ota-shift-preview"
+KNOB_LABEL_CLASS = "ota-knob-label"
 MOVING_COLOR = "blue"
 HOVERED_KNOB_COLOR = "yellow"
 MOVING_STROKE_WIDTH = 400
@@ -576,7 +565,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             SHIFT_PREVIEW_COLOR,
             self._edit_is_area_section,
         )
-        return f'<g pointer-events="none">{shape.to_svg()}</g>'
+        return (
+            f'<g class="{SHIFT_PREVIEW_CLASS}" pointer-events="none">'
+            f"{shape.to_svg()}</g>"
+        )
 
     @staticmethod
     def _shift_half_from_element_id(element_id: str | None) -> bool | None:
@@ -631,6 +623,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             text=str(index + 1),
             color=EDIT_COLOR,
             font_size=KNOB_LABEL_FONT_SIZE,
+            css_class=KNOB_LABEL_CLASS,
         ).to_svg()
 
     def _midpoints_svg(self) -> str:

@@ -1,18 +1,19 @@
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    EditFlowDialogKeys,
-    ResourceManager,
-)
+    EditFlowDialogKeys, ResourceManager)
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 from OTAnalytics.domain.section import NAME, RELATIVE_OFFSET_COORDINATES
 from OTAnalytics.domain.types import EventType
-from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import (
-    NoUniqueNameException,
-)
-from OTAnalytics.plugin_ui.nicegui_gui.forms.offset_slider_form import OffsetSliderForm
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import FormFieldText
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.validation import ERROR_MSG_REQUIRED
+from OTAnalytics.plugin_ui.customtkinter_gui.toplevel_sections import \
+    NoUniqueNameException
+from OTAnalytics.plugin_ui.nicegui_gui.forms.offset_slider_form import \
+    OffsetSliderForm
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import \
+    BaseDialog
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import \
+    FormFieldText
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.validation import \
+    ERROR_MSG_REQUIRED
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_NAME = "marker-name"
