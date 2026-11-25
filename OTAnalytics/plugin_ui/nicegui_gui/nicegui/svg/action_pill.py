@@ -1,29 +1,37 @@
 from dataclasses import dataclass
 from html import escape
 
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.primitives import screen_px
+
 FINISH_SUFFIX = "finish"
 CANCEL_SUFFIX = "cancel"
 BACKGROUND_SUFFIX = "background"
 
-PILL_CLASS = "ota-action-pill"
-BUTTON_CLASS = "ota-action-button"
-FINISH_CLASS = "ota-action-finish"
-FINISH_DISABLED_CLASS = "ota-action-disabled"
-CANCEL_CLASS = "ota-action-cancel"
-GLYPH_CLASS = "ota-action-glyph"
+PILL_CLASS = "ota-action"
+BACKGROUND_CLASS = "background"
+BUTTON_CLASS = "button"
+FINISH_CLASS = "finish"
+DISABLED_CLASS = "disabled"
+CANCEL_CLASS = "cancel"
+GLYPH_CLASS = "glyph"
 
+# Sizes in screen pixels
 BUTTON_RADIUS = 14
 BUTTON_SPACING = 17
 HEIGHT = 2 * BUTTON_RADIUS + 4
 WIDTH = 2 * BUTTON_SPACING + 2 * BUTTON_RADIUS + 4
+
+CHECK_PATH = "M-5 0L-1.5 4L5-4"
+CROSS_PATH = "M-4-4L4 4M4-4L-4 4"
 
 
 @dataclass
 class ActionPill:
     """Pill with a button to finish and a button to cancel the section editor.
 
-    x and y are the center of the pill. The finish button is drawn disabled, but
-    stays clickable, as long as the section cannot be finished.
+    x and y are the center of the pill in the image. Its size is in screen
+    pixels. The finish button is drawn disabled, but stays clickable, as long as
+    the section cannot be finished. Colours are set by otanalytics.css.
     """
 
     id: str
@@ -46,40 +54,34 @@ class ActionPill:
         return f"{self.id}-{BACKGROUND_SUFFIX}"
 
     def to_svg(self) -> str:
-        finish_x = self.x - BUTTON_SPACING
-        cancel_x = self.x + BUTTON_SPACING
-        finish_class = (
-            f"{BUTTON_CLASS} {FINISH_CLASS}"
-            if self.finish_enabled
-            else f"{BUTTON_CLASS} {FINISH_CLASS} {FINISH_DISABLED_CLASS}"
-        )
-        return (
-            f'<rect id="{escape(self.background_id)}" class="{PILL_CLASS}" '
-            f'x="{self.x - WIDTH // 2}" y="{self.y - HEIGHT // 2}" '
-            f'width="{WIDTH}" height="{HEIGHT}" rx="{HEIGHT // 2}" '
-            f'fill="white" pointer-events="all" />'
-            + self._button(self.finish_id, finish_class, finish_x, self.finish_tooltip)
-            + self._glyph(finish_x, "M -5 0 L -1.5 4 L 5 -4")
+        finish_classes = f"{BUTTON_CLASS} {FINISH_CLASS}"
+        if not self.finish_enabled:
+            finish_classes += f" {DISABLED_CLASS}"
+        inner = (
+            f'<rect id="{escape(self.background_id)}" class="{BACKGROUND_CLASS}" '
+            f'x="{-WIDTH // 2}" y="{-HEIGHT // 2}" width="{WIDTH}" '
+            f'height="{HEIGHT}" rx="{HEIGHT // 2}"/>'
+            + self._button(
+                self.finish_id, finish_classes, -BUTTON_SPACING, self.finish_tooltip
+            )
+            + self._glyph(-BUTTON_SPACING, CHECK_PATH)
             + self._button(
                 self.cancel_id,
                 f"{BUTTON_CLASS} {CANCEL_CLASS}",
-                cancel_x,
+                BUTTON_SPACING,
                 self.cancel_tooltip,
             )
-            + self._glyph(cancel_x, "M -4 -4 L 4 4 M 4 -4 L -4 4")
+            + self._glyph(BUTTON_SPACING, CROSS_PATH)
+        )
+        return screen_px(self.x, self.y, inner, PILL_CLASS)
+
+    @staticmethod
+    def _button(id: str, css_class: str, x: int, tooltip: str) -> str:
+        return (
+            f'<circle id="{escape(id)}" class="{css_class}" cx="{x}" cy="0" '
+            f'r="{BUTTON_RADIUS}"><title>{escape(tooltip)}</title></circle>'
         )
 
-    def _button(self, id: str, css_class: str, x: int, tooltip: str) -> str:
-        return (
-            f'<circle id="{escape(id)}" class="{css_class}" cx="{x}" cy="{self.y}" '
-            f'r="{BUTTON_RADIUS}" fill="gray" pointer-events="all" cursor="pointer">'
-            f"<title>{escape(tooltip)}</title></circle>"
-        )
-
-    def _glyph(self, x: int, path: str) -> str:
-        return (
-            f'<path class="{GLYPH_CLASS}" d="{path}" '
-            f'transform="translate({x} {self.y})" fill="none" stroke="white" '
-            f'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
-            f'pointer-events="none" />'
-        )
+    @staticmethod
+    def _glyph(x: int, path: str) -> str:
+        return f'<path class="{GLYPH_CLASS}" d="{path}" transform="translate({x} 0)"/>'

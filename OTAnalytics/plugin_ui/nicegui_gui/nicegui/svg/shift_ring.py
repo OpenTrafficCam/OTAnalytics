@@ -1,12 +1,15 @@
 from dataclasses import dataclass
 from html import escape
 
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.primitives import screen_px
+
 BACKWARD_SUFFIX = "backward"
 FORWARD_SUFFIX = "forward"
-FONT_SIZE = 11
-HALF_CLASS = "ota-shift-half"
-HALF_HOVERED_CLASS = "ota-shift-half-hovered"
-LABEL_CLASS = "ota-shift-label"
+
+RING_CLASS = "ota-shift"
+HALF_CLASS = "half"
+HOVERED_CLASS = "hovered"
+LABEL_CLASS = "label"
 
 
 @dataclass
@@ -14,8 +17,11 @@ class ShiftRing:
     """Ring around a knob, split in a backward (left) and forward (right) half.
 
     Each half is a button that shows the position the knob would get. A half
-    without label is not available and not drawn. `hovered_forward` highlights the
+    without label is not available and not drawn. `hovered_forward` marks the
     half under the mouse (True: forward half, False: backward half).
+
+    The radii are screen pixels. The ring is centered on x, y of the image.
+    Colours and fonts are set by otanalytics.css.
     """
 
     id: str
@@ -28,9 +34,6 @@ class ShiftRing:
     backward_tooltip: str = ""
     forward_tooltip: str = ""
     hovered_forward: bool | None = None
-    fill: str = "royalblue"
-    hovered_fill: str = "dodgerblue"
-    color: str = "white"
 
     @property
     def backward_id(self) -> str:
@@ -58,39 +61,29 @@ class ShiftRing:
                 self.forward_tooltip,
                 self.hovered_forward is True,
             )
-        return svg
+        return screen_px(self.x, self.y, svg, RING_CLASS)
 
     def _half(
         self, id: str, forward: bool, label: str, tooltip: str, hovered: bool
     ) -> str:
-        x, y = self.x, self.y
         inner, outer = self.inner_radius, self.outer_radius
         # The forward half spans the right side of the ring, the backward half the
-        # left side. Both are drawn clockwise along the outer arc.
-        top, bottom = y - outer, y + outer
-        inner_top, inner_bottom = y - inner, y + inner
+        # left side. Both are drawn along the outer arc.
         if forward:
             path = (
-                f"M {x} {top} A {outer} {outer} 0 0 1 {x} {bottom} "
-                f"L {x} {inner_bottom} A {inner} {inner} 0 0 0 {x} {inner_top} Z"
+                f"M0-{outer}A{outer} {outer} 0 0 1 0 {outer}"
+                f"L0 {inner}A{inner} {inner} 0 0 0 0-{inner}Z"
             )
-            text_x = x + (inner + outer) // 2
+            text_x = (inner + outer) // 2
         else:
             path = (
-                f"M {x} {bottom} A {outer} {outer} 0 0 1 {x} {top} "
-                f"L {x} {inner_top} A {inner} {inner} 0 0 0 {x} {inner_bottom} Z"
+                f"M0 {outer}A{outer} {outer} 0 0 1 0-{outer}"
+                f"L0-{inner}A{inner} {inner} 0 0 0 0 {inner}Z"
             )
-            text_x = x - (inner + outer) // 2
-        fill = self.hovered_fill if hovered else self.fill
-        css_class = f"{HALF_CLASS} {HALF_HOVERED_CLASS}" if hovered else HALF_CLASS
+            text_x = -(inner + outer) // 2
+        css_class = f"{HALF_CLASS} {HOVERED_CLASS}" if hovered else HALF_CLASS
         return (
-            f'<path id="{escape(id)}" class="{css_class}" d="{path}" '
-            f'fill="{fill}" fill-opacity="0.9" '
-            f'stroke="{self.color}" stroke-width="1" '
-            f'pointer-events="all" cursor="pointer">'
+            f'<path id="{escape(id)}" class="{css_class}" d="{path}">'
             f"<title>{escape(tooltip)}</title></path>"
-            f'<text class="{LABEL_CLASS}" x="{text_x}" y="{y}" text-anchor="middle" '
-            f'dominant-baseline="central" fill="{self.color}" '
-            f'font-size="{FONT_SIZE}" pointer-events="none" '
-            f'style="user-select:none">{escape(label)}</text>'
+            f'<text class="{LABEL_CLASS}" x="{text_x}" y="0">{escape(label)}</text>'
         )

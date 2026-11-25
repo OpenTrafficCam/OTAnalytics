@@ -41,7 +41,7 @@ PROJECT = "Testvideo_Cars-Cyclist_FR20_2020-01-01_00-00-00"
 LOADED_PROJECT = ("My Test Project", "2020-01-01", "11:11:17")
 NEW_PROJECT = ("", "", "")
 A_SECTION = "Süd"
-CANVAS_OVERLAY = "circle, line, polyline"
+CANVAS_OVERLAY = ".ota-section, .ota-flow"
 
 
 @pytest.fixture

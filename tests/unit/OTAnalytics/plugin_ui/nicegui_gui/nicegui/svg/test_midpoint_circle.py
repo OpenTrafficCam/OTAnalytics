@@ -2,32 +2,20 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.midpoint_circle import Midpoi
 
 
 class TestMidpointCircle:
-    def test_default_values(self) -> None:
-        mc = MidpointCircle(id="mid-sec1-0", x=100, y=200)
-        assert mc.id == "mid-sec1-0"
-        assert mc.x == 100
-        assert mc.y == 200
-        assert mc.color == "orange"
-        assert mc.radius == 14
+    def test_dot_carries_the_id_and_position(self) -> None:
+        svg = MidpointCircle(id="edit-mid-3", x=100, y=200).to_svg()
 
-    def test_to_svg_contains_circle_element(self) -> None:
-        mc = MidpointCircle(id="mid-sec1-0", x=100, y=200)
-        svg = mc.to_svg()
-        assert '<circle id="mid-sec1-0"' in svg
-        assert 'cx="100"' in svg
-        assert 'cy="200"' in svg
-        assert 'r="14"' in svg
-        assert 'pointer-events="all"' in svg
-        assert 'cursor="crosshair"' in svg
+        assert '<path id="edit-mid-3" class="ota-mid" d="M100 200h0"/>' in svg
 
-    def test_to_svg_contains_plus_text(self) -> None:
-        mc = MidpointCircle(id="mid-sec1-0", x=100, y=200)
-        svg = mc.to_svg()
-        assert ">+<" in svg
-        assert 'pointer-events="none"' in svg
+    def test_plus_sign_is_sized_in_screen_pixels(self) -> None:
+        svg = MidpointCircle(id="edit-mid-3", x=100, y=200).to_svg()
 
-    def test_to_svg_custom_color(self) -> None:
-        mc = MidpointCircle(id="mid-sec1-0", x=50, y=75, color="red", radius=10)
-        svg = mc.to_svg()
-        assert 'fill="red"' in svg
-        assert 'r="10"' in svg
+        assert '<g transform="translate(100 200)">' in svg
+        assert 'class="ota-scaled ota-mid-plus"' in svg
+        assert "M-5 0h10M0-5v10" in svg
+
+    def test_markup_has_no_colors(self) -> None:
+        svg = MidpointCircle(id="edit-mid-3", x=1, y=2).to_svg()
+
+        for attribute in ["fill=", "stroke=", "font-size="]:
+            assert attribute not in svg

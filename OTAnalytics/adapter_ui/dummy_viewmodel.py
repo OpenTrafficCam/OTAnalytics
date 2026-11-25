@@ -143,6 +143,7 @@ from OTAnalytics.domain.orthophoto import Orthophoto, OrthophotoError
 from OTAnalytics.domain.section import (
     COORDINATES,
     ID,
+    NAME,
     Area,
     LineSection,
     Section,
@@ -1246,9 +1247,11 @@ class DummyViewModel(
                 is_area_section=self._is_area_section(
                     self._application.get_section_for(SectionId(section[ID]))
                 ),
+                text=section[NAME],
             )
 
     def _draw_arrow_for_selected_flows(self) -> None:
+        counts = self.get_tracks_assigned_to_each_flow()
         for flow in self._get_selected_flows():
             if start_section := self._application.get_section_for(flow.start):
                 if end_section := self._application.get_section_for(flow.end):
@@ -1264,6 +1267,7 @@ class DummyViewModel(
                         start_refpt_calculator=start_refpt_calculator,
                         end_refpt_calculator=end_refpt_calculator,
                         tags=[LINE_SECTION],
+                        count=counts.get(flow.id),
                     )
 
     def _get_section_refpt_calculator(

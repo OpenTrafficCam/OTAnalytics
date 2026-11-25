@@ -1,26 +1,17 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polygon import Polygon
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.text import Text
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section import SectionShape
 
 
 @dataclass
 class SectionResource:
-    lines: dict[str, Polyline | Polygon]
-    texts: dict[str, Text] = field(default_factory=dict)
+    sections: dict[str, SectionShape]
 
     def to_svg(self) -> str:
-        shapes = [line.to_svg() for line in self.lines.values()]
-        texts = [text.to_svg() for text in self.texts.values()]
-        return "\n".join(shapes + texts)
+        return "".join(section.to_svg() for section in self.sections.values())
 
     def clear(self) -> None:
-        self.lines.clear()
-        self.texts.clear()
+        self.sections.clear()
 
-    def add(self, section_id: str, line: Polyline | Polygon) -> None:
-        self.lines[section_id] = line
-
-    def add_text(self, section_id: str, text: Text) -> None:
-        self.texts[section_id] = text
+    def add(self, section: SectionShape) -> None:
+        self.sections[section.id] = section

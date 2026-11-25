@@ -26,6 +26,7 @@ class AbstractCanvas(WidgetPositionProvider):
         end_refpt_calculator: SectionRefPointCalculator,
         arrow_style: dict | None = None,
         tags: list[str] | None = None,
+        count: int | None = None,
     ) -> None:
         raise NotImplementedError
 

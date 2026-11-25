@@ -1,4 +1,5 @@
 import time
+from html import escape
 from typing import Any, Final, Iterable, Optional, Self
 
 from nicegui import events, ui
@@ -27,13 +28,15 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.action_pill import (
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.arrow import Arrow
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle import Circle
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.circle_resources import (
-    CircleResources,
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.knob import (
+    EDIT_KNOB_ID_PREFIX,
+    Knob,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line_resources import LineResources
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.midpoint_circle import MidpointCircle
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polygon import Polygon
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.primitives import dot
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section import SectionShape
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
@@ -42,8 +45,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.shift_ring import (
     FORWARD_SUFFIX,
     ShiftRing,
 )
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.text import Text
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import STALE_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geometry import (  # noqa
     Point,
     close_area,
@@ -62,16 +63,6 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geome
 )
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
-NORMAL_COLOR = "green"
-SELECTED_COLOR = "red"
-EDIT_COLOR = "orange"
-SHIFT_PREVIEW_COLOR = "#70a9a1"  # --ota-accent, fallback without stylesheet
-SHIFT_PREVIEW_CLASS = "ota-shift-preview"
-KNOB_LABEL_CLASS = "ota-knob-label"
-MOVING_COLOR = "blue"
-HOVERED_KNOB_COLOR = "yellow"
-MOVING_STROKE_WIDTH = 400
-MOVING_STROKE_OPACITY = 0.0
 MARKER_INTERACTIVE_IMAGE = "marker-interactive-image"
 
 CLICK = "click"
@@ -85,52 +76,72 @@ SIZE_PROP = "size"
 UPDATE_VIEWBOX = "updateViewbox"
 RELEASE_FOCUS = "document.activeElement?.blur()"
 NOTIFICATION_TYPE_WARNING: Final = "warning"
-POINTER_EVENT_ALL = "all"
-POINTER_EVENT_NONE = ""
 IMAGE_X = "image_x"
 IMAGE_Y = "image_y"
 ELEMENT_ID = "element_id"
 
-CURSOR = "pointer"
-CURSOR_MOVE = "move"
 NEW_SECTION_ID = "new-section-id"
-EDIT_KNOB_ID_PREFIX = "edit-knob-"
+RUBBER_ID = "rubber"
+KNOB_CATCH_RADIUS = 15
 EDIT_MIDPOINT_ID_PREFIX = "edit-mid-"
-EDIT_KNOB_LABEL_ID_PREFIX = "edit-knob-label-"
-KNOB_LABEL_OFFSET: Final = (9, -9)
-KNOB_LABEL_FONT_SIZE: Final = 12
 EDIT_SHIFT_ID: Final = "edit-shift"
-SHIFT_RING_INNER_RADIUS: Final = 14
-SHIFT_RING_OUTER_RADIUS: Final = 40
+EDIT_ACTION_ID: Final = "edit-action"
+# Elements of the editor, which the browser reports to the server
+EDITOR_ELEMENT_PREFIXES: Final = (
+    EDIT_KNOB_ID_PREFIX,
+    EDIT_MIDPOINT_ID_PREFIX,
+    f"{EDIT_SHIFT_ID}-",
+    f"{EDIT_ACTION_ID}-",
+)
+# Sizes of the affordances in screen pixels, see otanalytics.css
+SHIFT_RING_INNER_RADIUS: Final = 16
+SHIFT_RING_OUTER_RADIUS: Final = 46
 SHIFT_RING_IDLE_SECONDS: Final = 0.3
 SHIFT_RING_POLL_SECONDS: Final = 0.1
-EDIT_ACTION_ID: Final = "edit-action"
-ACTION_PILL_OFFSET: Final = 38
+ACTION_PILL_OFFSET: Final = 44
 ACTION_CLICK_SWALLOW_SECONDS: Final = 0.5
-KNOB_RADIUS = 6
-HIGHLIGHTED_KNOB_RADIUS = 8
-HIGHLIGHTED_KNOB_STROKE_WIDTH = 3
-KNOB_CATCH_RADIUS = 15
-SECTION_TEXT_OFFSET_Y = -12
+SCALE_EVENT = "scalechange"
 
-# Keys of the arrow style, named like the options of the customtkinter canvas
-ARROW_STYLE_COLOR = "fill"
-ARROW_STYLE_WIDTH = "width"
-ARROW_STYLE_DASH = "dash"
-DEFAULT_ARROW_STYLE: dict = {ARROW_STYLE_COLOR: NORMAL_COLOR, ARROW_STYLE_WIDTH: 2}
+# Styled by otanalytics.css, see docs/otanalytics-overlay-spec.md
+CANVAS_CLASS = "ota-canvas"
+OVERLAY_CLASS = "ota-overlay"
+FOCUS_CLASS = "ota-focus"
+HINT_CLASS = "ota-hint"
+HINT_TEXT = "Drag points · + add · Del remove · Enter finish · Esc cancel"
+NEW_LINE_SECTION_NAME = "New line section"
+NEW_AREA_NAME = "New area"
+# Items sized in screen pixels are scaled by --ota-s, the image pixels per
+# screen pixel of the overlay.
+# Recomputed when the overlay is resized or the image size changes. Installed
+# once per svg, as it runs again on every reconnect.
+SCALE_OBSERVER_JS = """
+const svg = getHtmlElement({id})?.querySelector('svg');
+if (svg && !svg.otaScale) {{
+  svg.otaScale = () => {{
+    if (svg.clientWidth > 0) {{
+      const scale = svg.viewBox.baseVal.width / svg.clientWidth;
+      svg.style.setProperty('--ota-s', scale);
+      getHtmlElement({id}).dispatchEvent(
+        new CustomEvent("scalechange", {{ detail: scale }})
+      );
+    }}
+  }};
+  new ResizeObserver(svg.otaScale).observe(svg);
+  new MutationObserver(svg.otaScale).observe(svg, {{ attributeFilter: ['viewBox'] }});
+  svg.otaScale();
+}}
+"""
+# Only the elements of the editor need the svg pointer events. Dropping all others
+# in the browser avoids sending every mouse movement over a section to the server.
+EDITOR_EVENTS_ONLY_JS = (
+    "(e) => { "
+    f"if ({list(EDITOR_ELEMENT_PREFIXES)}.some("
+    "(prefix) => e.element_id?.startsWith(prefix))) emit(e); }"
+)
 
 
 def circle_to_coordinates(circles: Iterable[Circle]) -> list[tuple[int, int]]:
     return [circle.to_tuple() for circle in circles]
-
-
-def create_section_shape(
-    id: str, coordinates: list[Point], color: str, is_area_section: bool
-) -> Polyline | Polygon:
-    """Area sections are drawn closed and filled, line sections as polyline."""
-    if is_area_section:
-        return Polygon(id=id, points=open_area(coordinates, True), color=color)
-    return Polyline(id=id, points=coordinates, color=color)
 
 
 def fit_into_workspace(width: int, height: int) -> str:
@@ -164,6 +175,22 @@ def knob_index_from_element_id(element_id: str | None) -> int | None:
         return None
 
 
+def create_knob(
+    index: int, point: Point, is_hovered: bool = False, is_selected: bool = False
+) -> Knob:
+    """Create a knob of the section geometry editor.
+
+    A hovered or selected knob is active. A selected knob follows the mouse.
+    """
+    return Knob(
+        index=index,
+        x=point[0],
+        y=point[1],
+        active=is_hovered or is_selected,
+        moving=is_selected,
+    )
+
+
 def midpoint_index_from_element_id(element_id: str | None) -> int | None:
     if not element_id or not element_id.startswith(EDIT_MIDPOINT_ID_PREFIX):
         return None
@@ -173,37 +200,8 @@ def midpoint_index_from_element_id(element_id: str | None) -> int | None:
         return None
 
 
-def create_knob(
-    index: int, point: Point, is_hovered: bool = False, is_selected: bool = False
-) -> Circle:
-    """Create the circle of a knob of the section geometry editor.
-
-    A selected knob gets a large transparent stroke. Thereby, the svg keeps
-    receiving pointer events while the knob is moved.
-    """
-    knob = Circle(
-        id=f"{EDIT_KNOB_ID_PREFIX}{index}",
-        x=point[0],
-        y=point[1],
-        fill=EDIT_COLOR,
-        pointer_event=POINTER_EVENT_ALL,
-        radius=KNOB_RADIUS,
-        stroke=EDIT_COLOR,
-        stroke_width=0,
-        cursor=CURSOR_MOVE,
-    )
-    if is_selected:
-        knob.fill = MOVING_COLOR
-        knob.radius = HIGHLIGHTED_KNOB_RADIUS
-        knob.stroke = MOVING_COLOR
-        knob.stroke_width = MOVING_STROKE_WIDTH
-        knob.stroke_opacity = MOVING_STROKE_OPACITY
-    elif is_hovered:
-        knob.radius = HIGHLIGHTED_KNOB_RADIUS
-        knob.stroke = HOVERED_KNOB_COLOR
-        knob.stroke_width = HIGHLIGHTED_KNOB_STROKE_WIDTH
-        knob.stroke_opacity = 1.0
-    return knob
+def hint_content(name: str) -> str:
+    return f"<i></i><b>Editing {escape(name)}</b>{HINT_TEXT}"
 
 
 class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface):
@@ -216,6 +214,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._resource_manager = resource_manager
         self._background_image: Optional[InteractiveImage] = None
         self._overlay: Optional[InteractiveImageLayer] = None
+        self._hint: Optional[ui.html] = None
         self._current_image: Optional[Image.Image] = None
         self._current_sections = self._viewmodel.get_all_sections()
         self._new_sections = self._current_sections
@@ -236,6 +235,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._preview_point: Point | None = None
         self._new_section = False
         self._new_area_section = False
+        self._sections: SectionResource = SectionResource({})
+        self._flows: LineResources = LineResources({})
+        self._flows_outdated = False
+        self._screen_scale = 1.0
         self._shift_anchor: Point | None = None
         self._shift_hovered_forward: bool | None = None
         self._last_knob_motion = 0.0
@@ -243,10 +246,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._pointer_position: Point | None = None
         self._last_placed_knob: Point | None = None
         self._swallow_click_until = 0.0
-        self._sections: SectionResource = SectionResource({})
-        self._flows: LineResources = LineResources({})
-        self._circles: CircleResources = CircleResources({})
-        self._flows_outdated = False
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_frame_canvas(self)
@@ -262,22 +261,56 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             "", on_mouse=self.on_mouse, events=list(PASSIVE_MOUSE_EVENTS)
         )
         self._background_image.props(f"{TEST_ID}={MARKER_INTERACTIVE_IMAGE}")
+        self._background_image.classes(CANVAS_CLASS)
         # Sections are drawn on a layer, because every change of the image's own
         # content resends its whole background. Created before the background is
         # set, as the layer copies the image's source.
         self._overlay = self._background_image.add_layer()
+        self._overlay.classes(OVERLAY_CLASS)
         self._overlay.on(
-            "svg:pointerdown", lambda e: self.handle_svg_pointer_down(e.args)
+            "svg:pointerdown",
+            lambda e: self.handle_svg_pointer_down(e.args),
+            js_handler=EDITOR_EVENTS_ONLY_JS,
         )
-        self._overlay.on("svg:pointermove", lambda e: self.on_svg_pointer_move(e.args))
-        self._overlay.on("svg:pointerup", lambda e: self.on_svg_pointer_up(e.args))
+        self._overlay.on(
+            "svg:pointermove",
+            lambda e: self.on_svg_pointer_move(e.args),
+            js_handler=EDITOR_EVENTS_ONLY_JS,
+        )
+        self._overlay.on(
+            "svg:pointerup",
+            lambda e: self.on_svg_pointer_up(e.args),
+            js_handler=EDITOR_EVENTS_ONLY_JS,
+        )
+        self._overlay.on(SCALE_EVENT, self._on_scale, args=["detail"])
         self._background_image.on(CONTEXT_MENU, self.on_right_click)
+        with self._background_image:
+            self._hint = ui.html()
+            self._hint.classes(HINT_CLASS)
+            self._hint.set_visibility(False)
+        self._observe_scale()
 
         ui.timer(SHIFT_RING_POLL_SECONDS, self._show_shift_ring_when_still)
         self._change_image()
         ui.keyboard(on_key=self.handle_key)
         self.load_sections()
         return self
+
+    def _on_scale(self, e: events.GenericEventArguments) -> None:
+        """Image pixels per screen pixel of the overlay, sent by the browser."""
+        detail = e.args.get("detail") if isinstance(e.args, dict) else e.args
+        if isinstance(detail, (int, float)) and detail > 0:
+            self._screen_scale = float(detail)
+
+    def _observe_scale(self) -> None:
+        if self._overlay is None:
+            return
+        client = self._overlay.client
+        script = SCALE_OBSERVER_JS.format(id=self._overlay.id)
+        if client.has_socket_connection:
+            client.run_javascript(script)
+        else:
+            client.on_connect(lambda: client.run_javascript(script))
 
     def _is_editor_active(self) -> bool:
         return self._new_section or self._current_section is not None
@@ -428,7 +461,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_section_points = []
         self._preview_point = None
         self._reset_geometry_editor()
-        self._update_mouse_events()
+        self._update_editor_state()
 
     def _reset_geometry_editor(self) -> None:
         self._edit_coordinates = []
@@ -437,6 +470,27 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._mouse_position = None
         self._last_placed_knob = None
         self._deselect_knob(revert=False)
+
+    def _update_editor_state(self) -> None:
+        self._update_mouse_events()
+        self._update_focus()
+
+    def _update_focus(self) -> None:
+        """Dim everything but the edited section and explain the editor's keys."""
+        if self._overlay is not None:
+            if self._is_editor_active():
+                self._overlay.classes(add=FOCUS_CLASS)
+            else:
+                self._overlay.classes(remove=FOCUS_CLASS)
+        if self._hint is not None:
+            if self._is_editor_active():
+                self._hint.set_content(hint_content(self._editor_name()))
+            self._hint.set_visibility(self._is_editor_active())
+
+    def _editor_name(self) -> str:
+        if self._current_section is not None:
+            return self._current_section.name
+        return NEW_AREA_NAME if self._new_area_section else NEW_LINE_SECTION_NAME
 
     def _update_mouse_events(self) -> None:
         """Subscribe to mouse movements only while an editor is active.
@@ -473,22 +527,18 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def draw_all(self) -> None:
         self._sync_shift_anchor()
         if self._overlay:
-            self._overlay.content = self._sections.to_svg()
-            self._overlay.content += self._flows_svg()
-            self._overlay.content += self._circles.to_svg()
-            self._overlay.content += self._edit_geometry()
-            self.draw_new_section()
-            self._overlay.content += self._action_pill_svg()
+            self._overlay.content = (
+                self._dim_svg()
+                + self._sections.to_svg()
+                + self._flows.to_svg(stale=self._flows_outdated)
+                + self._edit_geometry()
+                + self._new_section_svg()
+                + self._action_pill_svg()
+            )
 
-    def _flows_svg(self) -> str:
-        if self._flows_outdated:
-            return f'<g class="{STALE_CLASS}">{self._flows.to_svg()}</g>'
-        return self._flows.to_svg()
-
-    def set_flows_outdated(self, outdated: bool) -> None:
-        """Dim the flows while their track assignment is out of date."""
-        self._flows_outdated = outdated
-        self.draw_all()
+    def _px(self, screen_pixels: float) -> float:
+        """Length in image pixels of a length in screen pixels."""
+        return screen_pixels * self._screen_scale
 
     def _is_action_pill_shown(self) -> bool:
         """The pill is always there while editing, except while a knob is dragged."""
@@ -513,20 +563,22 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         width, height = (
             self._current_image.size if self._current_image is not None else (0, 0)
         )
+        half_width, half_height = self._px(WIDTH / 2), self._px(HEIGHT / 2)
         anchor = self._action_anchor()
         if anchor is None:
-            return width // 2, HEIGHT
-        x = anchor[0] + ACTION_PILL_OFFSET
-        y = anchor[1] - ACTION_PILL_OFFSET
+            return round(width / 2), round(2 * half_height)
+        offset = self._px(ACTION_PILL_OFFSET)
+        x = anchor[0] + offset
+        y = anchor[1] - offset
         if width:
-            if x + WIDTH // 2 > width:
-                x = anchor[0] - ACTION_PILL_OFFSET
-            x = min(max(x, WIDTH // 2), width - WIDTH // 2)
+            if x + half_width > width:
+                x = anchor[0] - offset
+            x = min(max(x, half_width), width - half_width)
         if height:
-            if y - HEIGHT // 2 < 0:
-                y = anchor[1] + ACTION_PILL_OFFSET
-            y = min(max(y, HEIGHT // 2), height - HEIGHT // 2)
-        return x, y
+            if y - half_height < 0:
+                y = anchor[1] + offset
+            y = min(max(y, half_height), height - half_height)
+        return round(x), round(y)
 
     def _action_pill_svg(self) -> str:
         if not self._is_action_pill_shown():
@@ -550,7 +602,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     async def handle_svg_pointer_down(self, e: dict) -> None:
         """Run the action of the pill that was pressed, else select a knob."""
-        element_id = e.get("element_id") or ""
+        element_id = e.get(ELEMENT_ID) or ""
         if element_id.startswith(f"{EDIT_ACTION_ID}-") and (
             self._is_action_pill_shown()
         ):
@@ -608,8 +660,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         half = ring_half_at(
             self._shift_anchor,
             point,
-            SHIFT_RING_INNER_RADIUS,
-            SHIFT_RING_OUTER_RADIUS,
+            self._px(SHIFT_RING_INNER_RADIUS),
+            self._px(SHIFT_RING_OUTER_RADIUS),
         )
         return half if half in self._shift_targets() else None
 
@@ -618,7 +670,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._shift_anchor is None:
             return False
         return (
-            closest_knob_index([self._shift_anchor], point, SHIFT_RING_OUTER_RADIUS)
+            closest_knob_index(
+                [self._shift_anchor], point, self._px(SHIFT_RING_OUTER_RADIUS)
+            )
             is not None
         )
 
@@ -665,16 +719,14 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             shift_knob_forward if self._shift_hovered_forward else shift_knob_backward
         )
         coordinates, _ = shift(self._edit_temporary, index, self._edit_is_area_section)
-        shape = create_section_shape(
-            f"{EDIT_SHIFT_ID}-preview",
-            coordinates,
-            SHIFT_PREVIEW_COLOR,
-            self._edit_is_area_section,
-        )
-        return (
-            f'<g class="{SHIFT_PREVIEW_CLASS}" pointer-events="none">'
-            f"{shape.to_svg()}</g>"
-        )
+        return SectionShape(
+            id=f"{EDIT_SHIFT_ID}-preview",
+            points=coordinates,
+            is_area=self._edit_is_area_section,
+            editing=True,
+            preview=True,
+            show_points=False,
+        ).to_svg()
 
     @staticmethod
     def _shift_half_from_element_id(element_id: str | None) -> bool | None:
@@ -683,54 +735,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if element_id == f"{EDIT_SHIFT_ID}-{BACKWARD_SUFFIX}":
             return False
         return None
-
-    def draw_new_section(self) -> None:
-        if not self._overlay:
-            return
-        coordinates = circle_to_coordinates(self._new_section_points)
-        if coordinates and self._preview_point:
-            coordinates.append(self._preview_point)
-        if len(coordinates) >= 2:
-            shape = create_section_shape(
-                NEW_SECTION_ID, coordinates, EDIT_COLOR, self._new_area_section
-            )
-            self._overlay.content += shape.to_svg()
-        for point in self._new_section_points:
-            self._overlay.content += point.to_svg()
-
-    def _edit_geometry(self) -> str:
-        if self._current_section is None:
-            return ""
-        section_id = f"{self._current_section.id.id}-edit"
-        svg = create_section_shape(
-            section_id, self._edit_temporary, EDIT_COLOR, self._edit_is_area_section
-        ).to_svg()
-        if self._selected_knob_index is None:
-            svg += self._midpoints_svg()
-        svg += self._shift_preview_svg()
-        partner = self._shift_partner_index()
-        for index, point in enumerate(self._edit_temporary):
-            knob = create_knob(
-                index,
-                point,
-                is_hovered=index in (self._hovered_knob_index, partner),
-                is_selected=index == self._selected_knob_index,
-            )
-            svg += knob.to_svg()
-            svg += self._knob_label(index, point)
-        return svg + self._shift_ring_svg()
-
-    def _knob_label(self, index: int, point: Point) -> str:
-        """Number of the knob so that the order of the knobs is visible."""
-        return Text(
-            id=f"{EDIT_KNOB_LABEL_ID_PREFIX}{index}",
-            x=point[0] + KNOB_LABEL_OFFSET[0],
-            y=point[1] + KNOB_LABEL_OFFSET[1],
-            text=str(index + 1),
-            color=EDIT_COLOR,
-            font_size=KNOB_LABEL_FONT_SIZE,
-            css_class=KNOB_LABEL_CLASS,
-        ).to_svg()
 
     def _midpoints_svg(self) -> str:
         """Affordances to insert a knob. Drawn below the knobs, which win overlaps."""
@@ -753,6 +757,62 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._knob_moved = False
         self.draw_all()
 
+    def _dim_svg(self) -> str:
+        if self._current_image is None:
+            return ""
+        width, height = self._current_image.size
+        return f'<rect class="ota-dim" width="{width}" height="{height}"/>'
+
+    def set_flows_outdated(self, outdated: bool) -> None:
+        """Dim the flows while their track assignment is out of date."""
+        self._flows_outdated = outdated
+        self.draw_all()
+
+    def _new_section_svg(self) -> str:
+        coordinates = circle_to_coordinates(self._new_section_points)
+        svg = ""
+        if len(coordinates) >= 2:
+            svg += SectionShape(
+                id=NEW_SECTION_ID,
+                points=coordinates,
+                is_area=self._new_area_section,
+                editing=True,
+                show_points=False,
+            ).to_svg()
+        if self._new_section_points:
+            points = "".join(
+                dot(point.x, point.y, "pt-ring") + point.to_svg()
+                for point in self._new_section_points
+            )
+            svg += f'<g class="ota-section editing">{points}</g>'
+        if coordinates and self._preview_point:
+            svg += Line(RUBBER_ID, *coordinates[-1], *self._preview_point).to_svg()
+        return svg
+
+    def _edit_geometry(self) -> str:
+        if self._current_section is None:
+            return ""
+        svg = SectionShape(
+            id=f"{self._current_section.id.id}-edit",
+            points=self._edit_temporary,
+            is_area=self._edit_is_area_section,
+            editing=True,
+            show_points=False,
+        ).to_svg()
+        if self._selected_knob_index is None:
+            svg += self._midpoints_svg()
+        svg += self._shift_preview_svg()
+        partner = self._shift_partner_index()
+        for index, point in enumerate(self._edit_temporary):
+            knob = create_knob(
+                index,
+                point,
+                is_hovered=index in (self._hovered_knob_index, partner),
+                is_selected=index == self._selected_knob_index,
+            )
+            svg += knob.to_svg()
+        return svg + self._shift_ring_svg()
+
     def on_mouse(self, e: events.MouseEventArguments) -> None:
         """Dispatch mouse events of the interactive image."""
         if not self._accepts_input():
@@ -765,7 +825,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         elif e.type == CLICK:
             if self._swallows_click():
                 return
-                self._pointer_position = point
+            self._pointer_position = point
             if self._current_section is not None:
                 self._on_canvas_click(point)
             else:
@@ -841,12 +901,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._new_section:
             self._new_section_points.append(
                 Circle(
+                    id=f"new_point-{len(self._new_section_points)}",
                     x=round(e.image_x),
                     y=round(e.image_y),
-                    pointer_event=POINTER_EVENT_NONE,
-                    cursor=CURSOR,
-                    fill=EDIT_COLOR,
-                    id=f"new_point-{len(self._new_section_points)}",
                 )
             )
             self.draw_all()
@@ -941,42 +998,15 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         text: str | None = None,
         tags: list[str] | None = None,
     ) -> None:
-        list_of_circle = []
-        color = NORMAL_COLOR
-        pointer_event = POINTER_EVENT_NONE
-        if is_selected_section:
-            color = SELECTED_COLOR
-            pointer_event = POINTER_EVENT_ALL
-        knobs = open_area(coordinates, is_area_section)
-        for index, coordinate in enumerate(knobs):
-            x = coordinate[0]
-            y = coordinate[1]
-            list_of_circle.append(
-                Circle(
-                    x=x,
-                    y=y,
-                    id=f"{id}-{index}",
-                    fill=color,
-                    pointer_event=pointer_event,
-                )
-            )
-        for circle in list_of_circle:
-            self._circles.add(id, circle)
         self._sections.add(
-            id, create_section_shape(id, coordinates, color, is_area_section)
-        )
-        if text is not None and coordinates:
-            x, y = coordinates[0]
-            self._sections.add_text(
-                id,
-                Text(
-                    id=f"{id}-text",
-                    x=x,
-                    y=y + SECTION_TEXT_OFFSET_Y,
-                    text=text,
-                    color=color,
-                ),
+            SectionShape(
+                id=id,
+                points=open_area(coordinates, is_area_section),
+                is_area=is_area_section,
+                selected=is_selected_section,
+                name=text,
             )
+        )
         self.draw_all()
 
     def start_section_geometry_editor(
@@ -998,7 +1028,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         ]
         self._edit_coordinates = open_area(coordinates, is_area_section)
         self._edit_temporary = list(self._edit_coordinates)
-        self._update_mouse_events()
+        self._update_editor_state()
         self._release_focus()
         self.draw_all()
 
@@ -1010,20 +1040,17 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         end_refpt_calculator: SectionRefPointCalculator,
         arrow_style: dict | None = None,
         tags: list[str] | None = None,
+        count: int | None = None,
     ) -> None:
         start_x, start_y = start_refpt_calculator.get_reference_point(start_section)
         end_x, end_y = end_refpt_calculator.get_reference_point(end_section)
-        style = {**DEFAULT_ARROW_STYLE, **(arrow_style or {})}
-        dash = style.get(ARROW_STYLE_DASH)
         arrow = Arrow(
             id=f"arrow-{start_section.id}-{end_section.id}",
             x1=int(start_x),
             x2=int(end_x),
             y1=int(start_y),
             y2=int(end_y),
-            color=style[ARROW_STYLE_COLOR],
-            width=style[ARROW_STYLE_WIDTH],
-            dash=tuple(dash) if dash else None,
+            count=count,
         )
         self._flows.add(arrow)
         self.draw_all()
@@ -1033,7 +1060,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             return
         self._flows.clear()
         self._sections.clear()
-        self._circles.clear()
         # Redraw, otherwise the overlay keeps showing what was removed until the
         # next item is drawn, e.g. after removing the last section.
         self.draw_all()
@@ -1050,7 +1076,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._new_area_section = is_area_section
         self._new_section_points = []
         self._preview_point = None
-        self._update_mouse_events()
+        self._update_editor_state()
         self._release_focus()
         self.draw_all()
 

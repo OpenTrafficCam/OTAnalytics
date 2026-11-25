@@ -1,30 +1,25 @@
 from dataclasses import dataclass
 
-MIDPOINT_CLASS = "ota-midpoint"
-MIDPOINT_GLYPH_CLASS = "ota-midpoint-glyph"
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.primitives import dot, screen_px
+
+MIDPOINT_CLASS = "ota-mid"
+MIDPOINT_PLUS_CLASS = "ota-mid-plus"
+PLUS_PATH = '<path d="M-5 0h10M0-5v10"/>'
 
 
 @dataclass
 class MidpointCircle:
-    """Affordance in the middle of a segment, styled by the stylesheet.
+    """Affordance in the middle of a segment to insert a knob.
 
-    The colour is a fallback for a page without the stylesheet.
+    The dot receives the pointer events and carries the id. Its plus sign is
+    sized in screen pixels. Colours and sizes are set by otanalytics.css.
     """
 
     id: str
     x: int
     y: int
-    color: str = "orange"
-    radius: int = 14
 
     def to_svg(self) -> str:
-        return (
-            f'<circle id="{self.id}" class="{MIDPOINT_CLASS}" '
-            f'cx="{self.x}" cy="{self.y}" r="{self.radius}" '
-            f'fill="{self.color}" fill-opacity="0.7" '
-            f'pointer-events="all" cursor="crosshair" />'
-            f'<text class="{MIDPOINT_GLYPH_CLASS}" x="{self.x}" y="{self.y}" '
-            f'text-anchor="middle" dominant-baseline="central" fill="white" '
-            f'font-size="{self.radius + 3}" '
-            f'pointer-events="none" style="user-select:none">+</text>'
+        return dot(self.x, self.y, MIDPOINT_CLASS, self.id) + screen_px(
+            self.x, self.y, PLUS_PATH, MIDPOINT_PLUS_CLASS
         )

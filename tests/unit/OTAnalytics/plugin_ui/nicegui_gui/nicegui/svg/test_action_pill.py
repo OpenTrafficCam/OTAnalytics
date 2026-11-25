@@ -1,5 +1,4 @@
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.action_pill import \
-    ActionPill
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.action_pill import ActionPill
 
 
 class TestActionPill:
@@ -26,9 +25,9 @@ class TestActionPill:
         assert svg.index("pill-finish") < svg.index("pill-cancel")
 
     def test_disabled_finish_button_is_marked(self) -> None:
-        assert "ota-action-disabled" not in ActionPill(id="p", x=0, y=0).to_svg()
+        assert "disabled" not in ActionPill(id="p", x=0, y=0).to_svg()
         assert (
-            "ota-action-disabled"
+            "disabled"
             in ActionPill(id="p", x=0, y=0, finish_enabled=False).to_svg()
         )
 
