@@ -2,17 +2,23 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
 import pytest
+from matplotlib import colors as mcolors
 from pandas import DataFrame
 
-from OTAnalytics.adapter_visualization.color_provider import ColorPaletteProvider
+from OTAnalytics.adapter_visualization.color_provider import (
+    DEFAULT_COLOR_PALETTE,
+    ColorPaletteProvider,
+)
 from OTAnalytics.application.state import TrackViewState
 from OTAnalytics.domain import track
 from OTAnalytics.domain.event import Event
 from OTAnalytics.domain.filter import Filter, FilterBuilder, FilterElement
 from OTAnalytics.domain.flow import Flow, FlowId, FlowRepository
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
+from OTAnalytics.domain.otc_classes import OtcClasses
 from OTAnalytics.domain.progress import NoProgressbarBuilder
 from OTAnalytics.domain.section import SectionId
+from OTAnalytics.domain.tls8plus1_classes import Tls8plus1Classes
 from OTAnalytics.domain.track import (
     OCCURRENCE,
     TRACK_CLASSIFICATION,
@@ -351,6 +357,88 @@ class TestColorPaletteProvider:
             color_palette_provider.update(new_classifications)
             actual = color_palette_provider.get()
             assert actual == expected
+
+    @pytest.mark.parametrize(
+        "default_palette,expected_numeric",
+        [
+            ({"car": "#4da3ff"}, {"car": (77, 163, 255)}),
+            ({"car": "blue"}, {"car": (0, 0, 255)}),
+        ],
+    )
+    def test_update_numeric_accepts_hex_and_names(
+        self,
+        default_palette: dict[str, str],
+        expected_numeric: dict[str, tuple[int, int, int]],
+    ) -> None:
+        color_palette_provider = ColorPaletteProvider(default_palette)
+        color_palette_provider.update(frozenset(default_palette.keys()))
+        assert color_palette_provider.get_numeric() == expected_numeric
+
+    @pytest.mark.parametrize(
+        "otc_class,tls_class,expected",
+        [
+            (OtcClasses.CAR, Tls8plus1Classes.CAR, "#4da3ff"),
+            (
+                OtcClasses.CAR_WITH_TRAILER,
+                Tls8plus1Classes.CAR_WITH_TRAILER,
+                "#9cc9ff",
+            ),
+            (OtcClasses.MOTORCYCLIST, Tls8plus1Classes.MOTORCYCLIST, "#ff8a3d"),
+            (OtcClasses.TRUCK, Tls8plus1Classes.TRUCK, "#ff5a5a"),
+            (
+                OtcClasses.TRUCK_WITH_TRAILER,
+                Tls8plus1Classes.TRUCK_WITH_TRAILER,
+                "#c084fc",
+            ),
+            (
+                OtcClasses.TRUCK_WITH_SEMITRAILER,
+                Tls8plus1Classes.TRUCK_WITH_SEMITRAILER,
+                "#e879f9",
+            ),
+            (OtcClasses.BICYCLIST, Tls8plus1Classes.BICYCLIST, "#7ee081"),
+            (OtcClasses.DELIVERY_VAN, Tls8plus1Classes.DELIVERY_VAN, "#ffd23f"),
+            (OtcClasses.BUS, Tls8plus1Classes.BUS, "#14b8a6"),
+            (OtcClasses.OTHER, Tls8plus1Classes.OTHER, "#7c8a99"),
+        ],
+    )
+    def test_default_palette_shared_classes(
+        self, otc_class: str, tls_class: str, expected: str
+    ) -> None:
+        assert DEFAULT_COLOR_PALETTE[otc_class] == expected
+        assert DEFAULT_COLOR_PALETTE[tls_class] == expected
+
+    @pytest.mark.parametrize(
+        "otc_class,expected",
+        [
+            (OtcClasses.PEDESTRIAN, "#ff7eb6"),
+            (OtcClasses.BICYCLIST_WITH_TRAILER, "#b5f0a8"),
+            (OtcClasses.CARGO_BIKE_DRIVER, "#2fbf71"),
+            (OtcClasses.SCOOTER_DRIVER, "#5ee0e0"),
+            (OtcClasses.DELIVERY_VAN_WITH_TRAILER, "#ffe58a"),
+            (OtcClasses.PRIVATE_VAN, "#a8b3bf"),
+            (OtcClasses.PRIVATE_VAN_WITH_TRAILER, "#d0d7de"),
+            (OtcClasses.TRAIN, "#c08a5a"),
+        ],
+    )
+    def test_default_palette_otc_only_classes(
+        self, otc_class: str, expected: str
+    ) -> None:
+        assert DEFAULT_COLOR_PALETTE[otc_class] == expected
+
+    def test_default_palette_covers_all_classes(self) -> None:
+        for classification in [*OtcClasses, *Tls8plus1Classes]:
+            assert classification in DEFAULT_COLOR_PALETTE
+
+    def test_default_palette_has_no_white_or_black(self) -> None:
+        for color in DEFAULT_COLOR_PALETTE.values():
+            assert mcolors.to_hex(color) not in ("#ffffff", "#000000")
+
+    def test_default_palette_numeric_for_all_classes(self) -> None:
+        provider = ColorPaletteProvider(DEFAULT_COLOR_PALETTE)
+        provider.update(frozenset(DEFAULT_COLOR_PALETTE.keys()))
+        numeric = provider.get_numeric()
+        assert numeric.keys() == DEFAULT_COLOR_PALETTE.keys()
+        assert numeric[OtcClasses.CAR] == (77, 163, 255)
 
     def test_generate_random_color(self) -> None:
         random_color = ColorPaletteProvider._generate_random_color()
