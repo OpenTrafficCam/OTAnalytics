@@ -3,10 +3,14 @@ from unittest.mock import Mock
 
 from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignmentRepository,
+    RoadUserAssignmentRepositoryEvent,
 )
 from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
 )
+from OTAnalytics.domain.event import EventRepositoryEvent
+from OTAnalytics.domain.observer import Subject
+from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSetFactory
 
 
 class TestGetRoadUserAssignments:
@@ -47,6 +51,66 @@ class TestGetRoadUserAssignments:
         given.assignment_repository.is_empty.assert_called_once()
         assert given.assignment_repository.get_all_as_list.call_count == 2
         given.create_assignments.assert_called_once()
+
+    def test_keep_empty_result(self) -> None:
+        """Creating no assignments must not create them again on every read."""
+        repository = create_empty_repository()
+        create_assignments = Mock()
+        target = GetRoadUserAssignments(repository, create_assignments)
+
+        target.get_as_list()
+        target.get_as_list()
+
+        create_assignments.assert_called_once()
+
+    def test_create_again_after_repository_changed(self) -> None:
+        repository = create_empty_repository()
+        create_assignments = Mock()
+        target = GetRoadUserAssignments(repository, create_assignments)
+        target.get_as_list()
+
+        repository.clear()
+        target.get_as_list()
+
+        assert create_assignments.call_count == 2
+
+    def test_keep_result_when_creation_changes_repository(self) -> None:
+        repository = create_empty_repository()
+        create_assignments = Mock(side_effect=lambda: repository.add_all([]))
+        target = GetRoadUserAssignments(repository, create_assignments)
+
+        target.get_as_list()
+        target.get_as_list()
+
+        create_assignments.assert_called_once()
+
+    def test_create_again_after_events_added(self) -> None:
+        repository = create_empty_repository()
+        create_assignments = Mock()
+        target = GetRoadUserAssignments(repository, create_assignments)
+        target.get_as_list()
+
+        target.notify_events(EventRepositoryEvent(added=[Mock()], removed=[]))
+        target.get_as_list()
+
+        assert create_assignments.call_count == 2
+
+    def test_keep_empty_result_when_events_removed(self) -> None:
+        repository = create_empty_repository()
+        create_assignments = Mock()
+        target = GetRoadUserAssignments(repository, create_assignments)
+        target.get_as_list()
+
+        target.notify_events(EventRepositoryEvent(added=[], removed=[Mock()]))
+        target.get_as_list()
+
+        create_assignments.assert_called_once()
+
+
+def create_empty_repository() -> RoadUserAssignmentRepository:
+    return RoadUserAssignmentRepository(
+        PolarsTrackIdSetFactory(), Subject[RoadUserAssignmentRepositoryEvent]()
+    )
 
 
 @dataclass

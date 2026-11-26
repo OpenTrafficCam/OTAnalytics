@@ -91,9 +91,17 @@
     --ota-right-width: 288px;
     --ota-control-height: 28px;
     --ota-field-height: 32px;
+
+    /* A label floats above the text, which needs Quasar's dense height. */
+    --ota-field-height-labeled: 40px;
     --ota-step-input-width: 5rem;
+    --ota-dialog-width: 32rem;
+    --ota-dialog-wide-width: 56rem;
+    --ota-file-grid-height: min(50vh, 420px);
+
     /* The left panel cannot be dragged narrower than this plus its padding. */
     --ota-group-min-width: 265px;
+
     /* Leaves room for the headers of the other groups in the left panel. */
     --ota-group-max-height: max(
         240px,
@@ -249,18 +257,24 @@ body:has(.ota-app) {
     margin-left: auto;
 }
 
-.ota-header .q-btn--outline {
-    color: #fff !important;
+/* Quasar's colour classes (text-primary, bg-primary) are !important in
+   NiceGUI's last layer, quasar_importants. Among !important rules the earlier
+   layer wins and unlayered rules lose, so these overrides live in NiceGUI's
+   first layer. */
+@layer theme {
+    .ota-header .q-btn--outline {
+        color: #fff !important;
+    }
+
+    /* Save: solid white unless there are unsaved changes, then orange. */
+    .ota-header .ota-header-primary:not(.bg-orange) {
+        background: #fff !important;
+        color: var(--ota-primary) !important;
+    }
 }
 
 .ota-header .q-btn--outline::before {
     border-color: rgb(255 255 255 / 35%);
-}
-
-/* Save: solid white unless there are unsaved changes, then orange. */
-.ota-header .ota-header-primary:not(.bg-orange) {
-    background: #fff !important;
-    color: var(--ota-primary) !important;
 }
 
 /* Buttons */
@@ -285,6 +299,12 @@ body:has(.ota-app) {
 .q-field--dense .q-field__marginal {
     height: var(--ota-field-height);
     min-height: var(--ota-field-height);
+}
+
+.q-field--dense.q-field--labeled .q-field__control,
+.q-field--dense.q-field--labeled .q-field__marginal {
+    height: var(--ota-field-height-labeled);
+    min-height: var(--ota-field-height-labeled);
 }
 
 .q-field--dense .q-field__native {
@@ -312,6 +332,7 @@ body:has(.ota-app) {
 }
 
 /* Workflow accordion */
+
 /* The groups keep their height, so the left panel scrolls when several are
    open. Shrinking them would cut off their content, as they hide what
    overflows. */
@@ -875,13 +896,61 @@ body:has(.ota-app) {
     max-width: 55%;
 }
 
-.ota-dialog {
-    width: 24rem;
+/* Quasar limits dialogs to 560px; the dialog's padding keeps them on screen. */
+.q-dialog__inner > .ota-dialog {
+    width: var(--ota-dialog-width);
+    max-width: 100%;
 }
 
-.ota-dialog-wide {
-    width: 100%;
-    max-width: 70%;
+.q-dialog__inner > .ota-dialog-wide {
+    width: var(--ota-dialog-wide-width);
+    max-width: 100%;
+}
+
+/* File picker: its AG Grid looks like the tables of the app. */
+.ota-file-grid {
+    height: var(--ota-file-grid-height);
+}
+
+/* AG Grid sets its theme on the grid with no specificity. */
+.ota-file-grid,
+.ota-file-grid [class*="ag-theme-"] {
+    --ag-font-family: var(--ota-font);
+    --ag-font-size: var(--ota-font-size);
+    --ag-foreground-color: var(--ota-text-strong);
+    --ag-text-color: var(--ota-text-strong);
+    --ag-accent-color: var(--ota-primary);
+    --ag-border-color: var(--ota-border);
+    --ag-wrapper-border-radius: var(--ota-radius);
+    --ag-header-background-color: var(--ota-bg);
+    --ag-header-text-color: var(--ota-text-muted);
+    --ag-header-font-size: var(--ota-font-size-xs);
+    --ag-header-font-weight: 700;
+    --ag-header-height: 32px;
+    --ag-row-height: 30px;
+    --ag-row-border: 1px solid var(--ota-border-light);
+    --ag-row-hover-color: var(--ota-hover);
+    --ag-selected-row-background-color: var(--ota-selected);
+}
+
+.ota-file-grid .ag-header-cell-text {
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.ota-file-grid strong {
+    font-weight: 600;
+}
+
+.ota-folder-icon::before {
+    content: "folder";
+    margin-right: var(--ota-space-1);
+    color: var(--ota-text-muted);
+    font-family: "Material Icons", sans-serif;
+    font-size: 18px;
+    font-weight: normal;
+    line-height: 1;
+    vertical-align: -4px;
 }
 
 /* Marks a form field whose input passed its validation: draws the underline

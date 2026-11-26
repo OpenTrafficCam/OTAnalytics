@@ -235,21 +235,52 @@ def is_group_open(page: Page, marker: str) -> bool:
     return EXPANDED_GROUP_CLASS in (group.get_attribute("class") or "")
 
 
+def wait_until_stable(page: Page, locator: Any) -> None:
+    """Wait until the element stops moving, e.g. while groups above it expand.
+
+    The application opens groups itself after loading tracks. Their expand
+    animation shifts the groups below, so a click may miss its target.
+    """
+    deadline = time.time() + PLAYWRIGHT_VISIBLE_TIMEOUT_MS / 1000
+    previous = None
+    while time.time() < deadline:
+        locator.scroll_into_view_if_needed()
+        current = locator.bounding_box()
+        if current is not None and current == previous:
+            return
+        previous = current
+        page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
+
+
+def _wait_for_group_open(page: Page, marker: str) -> bool:
+    deadline = time.time() + PLAYWRIGHT_VISIBLE_TIMEOUT_MS / 1000
+    while time.time() < deadline:
+        if is_group_open(page, marker):
+            return True
+        page.wait_for_timeout(PLAYWRIGHT_POLL_INTERVAL_MS)
+    return is_group_open(page, marker)
+
+
 def open_group(page: Page, marker: str) -> None:
     """Open a workflow group of the configuration bar unless it is open already.
 
     A click on the header of an open group closes it. The application may open
     a group itself, e.g. after loading tracks, so the state is checked again
-    after each click.
+    after each click. The left panel scrolls and its groups animate, so the
+    header is clicked only once it is in view and stopped moving.
     """
     group = search_for_marker_element(page, marker).first
     group.wait_for(state="visible", timeout=PLAYWRIGHT_VISIBLE_TIMEOUT_MS)
+    header = group.locator(GROUP_HEADER).first
     for _ in range(OPEN_GROUP_ATTEMPTS):
+        wait_until_stable(page, header)
         if is_group_open(page, marker):
-            return
-        group.locator(GROUP_HEADER).first.click()
-        page.wait_for_timeout(PLAYWRIGHT_SHORT_WAIT_MS)
+            break
+        header.click()
+        if _wait_for_group_open(page, marker):
+            break
     assert is_group_open(page, marker), f"Group {marker} did not open"
+    wait_until_stable(page, group)
 
 
 def open_tab(page: Page, marker: str) -> None:
@@ -408,7 +439,7 @@ def open_part(page: Page, part: str) -> None:
     while time.time() < deadline:
         try:
             # Look for the row in the ag-grid that contains the text
-            # The file picker shows folders as "📁 <strong>foldername</strong>"
+            # The file picker shows folders as "<icon> <strong>foldername</strong>"
             row = page.locator(".ag-row").filter(has_text=part).first
             row.wait_for(
                 state="visible", timeout=PLAYWRIGHT_QUICK_VISIBLE_TIMEOUT_MS * 2

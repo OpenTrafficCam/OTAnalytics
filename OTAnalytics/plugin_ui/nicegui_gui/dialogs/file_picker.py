@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from nicegui import events, ui
 
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import (
+    FILE_GRID_CLASS,
     WIDE_DIALOG_CLASS,
 )
 
@@ -16,7 +17,8 @@ PATH: str = "path"
 FILE: str = "File"
 ROW_DATA: str = "rowData"
 NULL_TERMINATOR: str = "\000"
-FOLDER_ICON = "📁"
+FOLDER_ICON = '<span class="ota-folder-icon"></span>'
+"""Drawn by the stylesheet, so the icon adds no text to the row."""
 
 
 class LocalFilePicker(ui.dialog):
@@ -127,7 +129,8 @@ class LocalFilePicker(ui.dialog):
                     },
                 },
                 html_columns=[0],
-            ).on("cellDoubleClicked", self.handle_double_click)
+            ).classes(FILE_GRID_CLASS)
+            self.grid.on("cellDoubleClicked", self.handle_double_click)
 
             # Add file extension select dropdown at the bottom if enabled
             if self.show_extension_select and not self.show_only_directories:
@@ -138,9 +141,10 @@ class LocalFilePicker(ui.dialog):
                         value=self.current_selected_option,
                         on_change=self.update_extension_filter,
                     ).classes("w-full")
-            with ui.row().classes("w-full justify-end"):
-                ui.button(CANCEL_BUTTON_NAME, on_click=self.close).props("outline")
+            # Same buttons as the other dialogs, see BaseDialog
+            with ui.row():
                 ui.button(OK_BUTTON_NAME, on_click=self._handle_ok)
+                ui.button(CANCEL_BUTTON_NAME, on_click=self.close)
         self.update_grid()
 
     def _create_all_files_option(self) -> None:
