@@ -4,20 +4,30 @@ from typing import Self
 from nicegui import ui
 from nicegui.events import ValueChangeEventArguments
 
-from OTAnalytics.adapter_ui.abstract_frame_project import \
-    AbstractFrameSvzMetadata
+from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameSvzMetadata
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.project import (COORDINATE_X, COORDINATE_Y,
-                                             COUNTING_DAY,
-                                             COUNTING_LOCATION_NUMBER,
-                                             DIRECTION, DIRECTION_DESCRIPTION,
-                                             HAS_BICYCLE_LANE,
-                                             IS_BICYCLE_COUNTING, REMARK,
-                                             TK_NUMBER, WEATHER)
+from OTAnalytics.application.project import (
+    COORDINATE_X,
+    COORDINATE_Y,
+    COUNTING_DAY,
+    COUNTING_LOCATION_NUMBER,
+    DIRECTION,
+    DIRECTION_DESCRIPTION,
+    HAS_BICYCLE_LANE,
+    IS_BICYCLE_COUNTING,
+    REMARK,
+    TK_NUMBER,
+    WEATHER,
+)
 from OTAnalytics.application.resources.resource_manager import (
-    ResourceManager, SvzMetadataKeys)
+    ResourceManager,
+    SvzMetadataKeys,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
-    FormFieldCheckbox, FormFieldSelect, FormFieldText)
+    FormFieldCheckbox,
+    FormFieldSelect,
+    FormFieldText,
+)
 
 MARKER_TK_NUMBER = "marker-tk-number"
 MARKER_COUNTING_LOCATION_NUMBER = "marker-counting-location-number"

@@ -3,7 +3,9 @@ from typing import Callable
 from nicegui import ui
 
 from OTAnalytics.application.resources.resource_manager import (
-    OffsetSliderKeys, ResourceManager)
+    OffsetSliderKeys,
+    ResourceManager,
+)
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
 
 MARKER_OFFSET_POINT = "marker-offset-point"

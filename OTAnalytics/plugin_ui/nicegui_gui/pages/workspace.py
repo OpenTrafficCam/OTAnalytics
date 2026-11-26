@@ -1,8 +1,9 @@
 from nicegui import ui
 
 from OTAnalytics.application.resources.resource_manager import ResourceManager
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.container import \
-    CanvasAndFilesForm
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.container import (
+    CanvasAndFilesForm,
+)
 
 MARKER_WORKSPACE = "marker-workspace"
 

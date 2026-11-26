@@ -5,27 +5,35 @@ from typing import Any
 from nicegui import ui
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
-from OTAnalytics.application.analysis.traffic_counting_specification import \
-    CountingSpecificationDto
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingSpecificationDto,
+)
 from OTAnalytics.application.config import (
-    CONTEXT_FILE_TYPE_COUNTS, DEFAULT_COUNT_INTERVAL_TIME_UNIT,
-    DEFAULT_COUNTING_INTERVAL_IN_MINUTES)
+    CONTEXT_FILE_TYPE_COUNTS,
+    DEFAULT_COUNT_INTERVAL_TIME_UNIT,
+    DEFAULT_COUNTING_INTERVAL_IN_MINUTES,
+)
 from OTAnalytics.application.export_formats.export_mode import OVERWRITE
-from OTAnalytics.application.export_path_builder import \
-    compose_export_filename_stem
+from OTAnalytics.application.export_path_builder import compose_export_filename_stem
 from OTAnalytics.application.files import ensure_dot_in_extension
 from OTAnalytics.application.resources.resource_manager import (
-    ExportCountsDialogKeys, FileChooserDialogKeys, ResourceManager)
+    ExportCountsDialogKeys,
+    FileChooserDialogKeys,
+    ResourceManager,
+)
 from OTAnalytics.application.use_cases.static_analysis_config import (
     GetCountingEventOfCurrentAnalysisConfig,
     GetCountIntervalsOfCurrentAnalysisConfig,
-    GetSaveNameOfCurrentAnalysisConfig, GetSaveSuffixOfCurrentAnalysisConfig)
-from OTAnalytics.plugin_ui.nicegui_gui.file_utils import \
-    select_output_directory
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import \
-    BaseDialog
+    GetSaveNameOfCurrentAnalysisConfig,
+    GetSaveSuffixOfCurrentAnalysisConfig,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.file_utils import select_output_directory
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.dialog import BaseDialog
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
-    DateTimeForm, FormFieldSelect, FormFieldText)
+    DateTimeForm,
+    FormFieldSelect,
+    FormFieldText,
+)
 
 MARKER_START_DATE = "marker-start-date"
 MARKER_START_TIME = "marker-start-time"

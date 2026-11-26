@@ -6,14 +6,13 @@ from nicegui.elements.button import Button
 from OTAnalytics.adapter_ui.abstract_frame_offset import AbstractFrameOffset
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    ResourceManager, VisualizationOffsetSliderKeys)
+    ResourceManager,
+    VisualizationOffsetSliderKeys,
+)
 from OTAnalytics.domain.geometry import RelativeOffsetCoordinate
-from OTAnalytics.plugin_ui.nicegui_gui.forms.offset_slider_form import \
-    OffsetSliderForm
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import \
-    TestIdAttributes
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import \
-    ButtonForm
+from OTAnalytics.plugin_ui.nicegui_gui.forms.offset_slider_form import OffsetSliderForm
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.constants import TestIdAttributes
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 
 MARKER_UPDATE_OFFSET = "marker-update-offset"
 

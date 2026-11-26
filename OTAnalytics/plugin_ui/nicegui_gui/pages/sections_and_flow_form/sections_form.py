@@ -3,19 +3,20 @@ from typing import Any, Callable, Iterable, Self
 from nicegui import ui
 from nicegui.elements.button import Button
 
-from OTAnalytics.adapter_ui.abstract_treeview_interface import \
-    AbstractTreeviewInterface
+from OTAnalytics.adapter_ui.abstract_treeview_interface import AbstractTreeviewInterface
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    ResourceManager, SectionKeys)
+    ResourceManager,
+    SectionKeys,
+)
 from OTAnalytics.application.state import SectionState
 from OTAnalytics.domain.section import NAME, Section, SectionType
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button import \
-    CustomButton
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import \
-    ButtonForm
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button import CustomButton
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.table import (
-    COLUMN_ID, CustomTable)
+    COLUMN_ID,
+    CustomTable,
+)
 from OTAnalytics.plugin_ui.utils.asyncio_helper import run_async
 
 BUTTON_ROW = "ota-button-row"

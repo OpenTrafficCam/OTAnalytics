@@ -2,18 +2,24 @@ from typing import Iterable, Sequence
 
 from nicegui import ui
 
-from OTAnalytics.application.progress import (AutoIncrementingProgressbar,
-                                              Cancellation, ProgressState,
-                                              SimpleCounter)
+from OTAnalytics.application.progress import (
+    AutoIncrementingProgressbar,
+    Cancellation,
+    ProgressState,
+    SimpleCounter,
+)
 from OTAnalytics.application.resources.resource_manager import (
-    GeneralKeys, ResourceManager)
-from OTAnalytics.domain.progress import (CompletionProgress,
-                                         CompletionProgressBuilder, Counter,
-                                         ProgressbarBuilder)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.browser import \
-    has_browser_to_show_in
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import \
-    DIALOG_CLASS
+    GeneralKeys,
+    ResourceManager,
+)
+from OTAnalytics.domain.progress import (
+    CompletionProgress,
+    CompletionProgressBuilder,
+    Counter,
+    ProgressbarBuilder,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.browser import has_browser_to_show_in
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import DIALOG_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_PROGRESSBAR_CANCEL = "progressbar-cancel"

@@ -1,17 +1,21 @@
 from nicegui import ui
 
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.page_builder import \
-    NiceguiPageBuilder
-from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import \
-    ConfigurationBar
-from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.assignment_status import \
-    AssignmentStatus  # noqa
-from OTAnalytics.plugin_ui.nicegui_gui.pages.track_statistics_form.container import \
-    TrackStatisticForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import \
-    VisualizationFilters
-from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import \
-    VisualizationLayers
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.page_builder import NiceguiPageBuilder
+from OTAnalytics.plugin_ui.nicegui_gui.pages.configuration_bar.container import (
+    ConfigurationBar,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.assignment_status import (  # noqa
+    AssignmentStatus,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.track_statistics_form.container import (
+    TrackStatisticForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters import (
+    VisualizationFilters,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers import (
+    VisualizationLayers,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.pages.workspace import Workspace
 
 MARKER_LEFT_PANEL = "marker-left-panel"

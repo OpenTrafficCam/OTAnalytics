@@ -2,13 +2,16 @@ from nicegui import ui
 
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    ResourceManager, TrackFormKeys)
-from OTAnalytics.domain.track_repository import (TrackListObserver,
-                                                 TrackRepositoryEvent)
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import \
-    AddTracksForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import \
-    AddVideoForm
+    ResourceManager,
+    TrackFormKeys,
+)
+from OTAnalytics.domain.track_repository import TrackListObserver, TrackRepositoryEvent
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.add_tracks_form import (
+    AddTracksForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_video_form.container import (
+    AddVideoForm,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 # Mark the Track files and Videos parts of the Project group, formerly tabs.

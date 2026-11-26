@@ -5,14 +5,14 @@ from datetime import datetime
 from nicegui import ui
 
 from OTAnalytics.application.resources.resource_manager import (
-    GeneralKeys, LoadWindowKeys, ResourceManager)
-from OTAnalytics.application.use_cases.ask_for_load_window import \
-    AskForLoadWindow
+    GeneralKeys,
+    LoadWindowKeys,
+    ResourceManager,
+)
+from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.domain.load_window import LoadWindow
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import \
-    DateTimeForm
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import \
-    DIALOG_CLASS
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import DateTimeForm
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import DIALOG_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_START_DATE = "load-window-start-date"

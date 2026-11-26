@@ -3,7 +3,9 @@ from nicegui import ui
 from OTAnalytics.adapter_ui.abstract_frame_remark import AbstractFrameRemark
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    RemarkKeys, ResourceManager)
+    RemarkKeys,
+    ResourceManager,
+)
 
 
 class RemarkForm(AbstractFrameRemark):

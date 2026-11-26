@@ -26,10 +26,7 @@ class TestActionPill:
 
     def test_disabled_finish_button_is_marked(self) -> None:
         assert "disabled" not in ActionPill(id="p", x=0, y=0).to_svg()
-        assert (
-            "disabled"
-            in ActionPill(id="p", x=0, y=0, finish_enabled=False).to_svg()
-        )
+        assert "disabled" in ActionPill(id="p", x=0, y=0, finish_enabled=False).to_svg()
 
     def test_escapes_tooltips(self) -> None:
         svg = ActionPill(id="p", x=0, y=0, finish_tooltip="<b>").to_svg()

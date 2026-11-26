@@ -3,8 +3,9 @@ from typing import Any, Callable
 from nicegui import ui
 from nicegui.elements.button import Button
 
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import \
-    LazyInitializedElement
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
+    LazyInitializedElement,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 

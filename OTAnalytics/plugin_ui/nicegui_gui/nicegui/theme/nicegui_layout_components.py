@@ -1,5 +1,4 @@
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.page_builder import \
-    LayoutComponents
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.page_builder import LayoutComponents
 from OTAnalytics.plugin_ui.nicegui_gui.pages.header.header_bar import HeaderBar
 
 

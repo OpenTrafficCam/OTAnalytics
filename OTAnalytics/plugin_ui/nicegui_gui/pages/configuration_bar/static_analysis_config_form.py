@@ -5,28 +5,45 @@ from pathlib import Path
 from nicegui import ui
 from nicegui.events import ValueChangeEventArguments
 
-from OTAnalytics.application.analysis.traffic_counting_specification import \
-    CountingEvent
+from OTAnalytics.application.analysis.traffic_counting_specification import (
+    CountingEvent,
+)
 from OTAnalytics.application.resources.resource_manager import (
-    ResourceManager, StaticAnalysisConfigKeys)
+    ResourceManager,
+    StaticAnalysisConfigKeys,
+)
 from OTAnalytics.application.use_cases.static_analysis_config import (
     GetCountingEventOfCurrentAnalysisConfig,
     GetCountIntervalsOfCurrentAnalysisConfig,
-    GetDoCountingOfCurrentAnalysisConfig, GetDoEventsOfCurrentAnalysisConfig,
-    GetEventFormatsOfCurrentAnalysisConfig, GetLogfileOfCurrentAnalysisConfig,
-    GetNumProcessesOfCurrentAnalysisConfig, GetSaveNameOfCurrentAnalysisConfig,
+    GetDoCountingOfCurrentAnalysisConfig,
+    GetDoEventsOfCurrentAnalysisConfig,
+    GetEventFormatsOfCurrentAnalysisConfig,
+    GetLogfileOfCurrentAnalysisConfig,
+    GetNumProcessesOfCurrentAnalysisConfig,
+    GetSaveNameOfCurrentAnalysisConfig,
     GetSaveSuffixOfCurrentAnalysisConfig,
     SetCountingEventInCurrentAnalysisConfig,
     SetCountIntervalsInCurrentAnalysisConfig,
-    SetDoCountingInCurrentAnalysisConfig, SetDoEventsInCurrentAnalysisConfig,
-    SetEventFormatsInCurrentAnalysisConfig, SetLogfileInCurrentAnalysisConfig,
-    SetNumProcessesInCurrentAnalysisConfig, SetSaveNameInCurrentAnalysisConfig,
-    SetSaveSuffixInCurrentAnalysisConfig)
+    SetDoCountingInCurrentAnalysisConfig,
+    SetDoEventsInCurrentAnalysisConfig,
+    SetEventFormatsInCurrentAnalysisConfig,
+    SetLogfileInCurrentAnalysisConfig,
+    SetNumProcessesInCurrentAnalysisConfig,
+    SetSaveNameInCurrentAnalysisConfig,
+    SetSaveSuffixInCurrentAnalysisConfig,
+)
 from OTAnalytics.plugin_prototypes.eventlist_exporter.eventlist_exporter import (
-    EXTENSION_CSV, EXTENSION_EXCEL, EXTENSION_OTEVENTS)
+    EXTENSION_CSV,
+    EXTENSION_EXCEL,
+    EXTENSION_OTEVENTS,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
-    FormFieldCheckbox, FormFieldInteger, FormFieldMultiSelect, FormFieldSelect,
-    FormFieldText)
+    FormFieldCheckbox,
+    FormFieldInteger,
+    FormFieldMultiSelect,
+    FormFieldSelect,
+    FormFieldText,
+)
 
 MARKER_DO_EVENTS = "marker-do-events"
 MARKER_DO_COUNTING = "marker-do-counting"

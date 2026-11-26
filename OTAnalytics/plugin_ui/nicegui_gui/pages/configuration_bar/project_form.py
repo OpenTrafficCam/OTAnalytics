@@ -5,17 +5,21 @@ from nicegui import ui
 from nicegui.elements.button import Button
 from nicegui.events import ClickEventArguments, ValueChangeEventArguments
 
-from OTAnalytics.adapter_ui.abstract_button_quick_save_config import \
-    AbstractButtonQuickSaveConfig
+from OTAnalytics.adapter_ui.abstract_button_quick_save_config import (
+    AbstractButtonQuickSaveConfig,
+)
 from OTAnalytics.adapter_ui.abstract_frame_project import AbstractFrameProject
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import (
-    ProjectKeys, ResourceManager)
+    ProjectKeys,
+    ResourceManager,
+)
 from OTAnalytics.plugin_ui.customtkinter_gui.style import COLOR_ORANGE
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import \
-    ButtonForm
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.button_form import ButtonForm
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import (
-    DateTimeForm, FormFieldText)
+    DateTimeForm,
+    FormFieldText,
+)
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_PROJECT_NAME = "marker-project-name"

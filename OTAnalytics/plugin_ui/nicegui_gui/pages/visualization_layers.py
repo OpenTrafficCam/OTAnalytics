@@ -1,11 +1,16 @@
 from nicegui import ui
 
 from OTAnalytics.application.resources.resource_manager import (
-    ResourceManager, VisualizationLayersKeys, VisualizationOffsetSliderKeys)
-from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.visualization_offset_slider_form import \
-    VisualizationOffSetSliderForm  # noqa
-from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import \
-    LayersForm  # noqa
+    ResourceManager,
+    VisualizationLayersKeys,
+    VisualizationOffsetSliderKeys,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.add_track_form.visualization_offset_slider_form import (  # noqa
+    VisualizationOffSetSliderForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_layers_form.layers_form import (  # noqa
+    LayersForm,
+)
 
 
 class VisualizationLayers:

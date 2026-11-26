@@ -3,9 +3,10 @@ from fastapi import FastAPI
 from nicegui import ui
 
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.page_builder import (
-    LayoutComponents, NiceguiPageBuilder)
-from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import \
-    add_fonts
+    LayoutComponents,
+    NiceguiPageBuilder,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import add_fonts
 
 
 class NiceguiWebserver:
