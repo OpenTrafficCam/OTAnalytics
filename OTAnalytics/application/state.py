@@ -633,7 +633,9 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         Updates the current background image with or without tracks and sections.
 
         Inside a running event loop, plotting runs on a worker thread to keep the ui
-        responsive. Only the image of the latest update is shown.
+        responsive. Updates requested while plotting are merged into one more plot.
+        Each finished image is shown, so the image keeps refreshing while updates
+        arrive faster than plotting takes.
         """
         try:
             asyncio.get_running_loop()
@@ -646,13 +648,12 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
 
     async def _plot_latest(self) -> None:
         try:
-            while True:
-                requested = self._requested_updates
+            plotted_updates = None
+            while plotted_updates != self._requested_updates:
+                plotted_updates = self._requested_updates
                 image = await asyncio.to_thread(self._plotter.plot)
-                if requested == self._requested_updates:
-                    # Observers mutate widgets, so the image is set on the event loop
-                    self._track_view_state.background_image.set(image)
-                    return
+                # Observers mutate widgets, so the image is set on the event loop
+                self._track_view_state.background_image.set(image)
         except Exception:
             # Nobody awaits this task, so its exception would be lost otherwise
             logger().exception("Plotting the background image failed")

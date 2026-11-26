@@ -274,7 +274,9 @@ class TestTrackImageUpdater:
         await _wait_until(lambda: track_view_state.background_image.get() is image)
         assert threads[0] is not threading.current_thread()
 
-    async def test_update_image_shows_only_latest_image(self) -> None:
+    async def test_update_image_merges_updates_requested_while_plotting(
+        self,
+    ) -> None:
         outdated = Mock(spec=TrackImage)
         latest = Mock(spec=TrackImage)
         images = iter([outdated, latest])
@@ -299,7 +301,7 @@ class TestTrackImageUpdater:
         updater.update_image()
         proceed.set()
 
-        await _wait_until(lambda: shown == [latest])
+        await _wait_until(lambda: shown == [outdated, latest])
 
     async def test_update_image_logs_failed_plotting(
         self, caplog: pytest.LogCaptureFixture
