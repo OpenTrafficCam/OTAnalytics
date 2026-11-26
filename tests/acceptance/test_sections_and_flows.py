@@ -42,6 +42,7 @@ from tests.acceptance.conftest import (
     ACCEPTANCE_TEST_PYTEST_TIMEOUT,
     ACCEPTANCE_TEST_WAIT_TIMEOUT,
     PLAYWRIGHT_POLL_INTERVAL_SLOW_MS,
+    SECTIONS,
     NiceGUITestServer,
 )
 from tests.utils.playwright_helpers import (
@@ -186,7 +187,7 @@ class TestAddLineSectionWithDialog:
         setup_with_preconfigured_otconfig(page, resource_manager, otconfig_path)
 
         # Get section names from the preconfigured file
-        names = ["North-Section", "South-Section"]
+        names = list(SECTIONS)
 
         # Switch to Flows tab
         page.get_by_text(
@@ -235,7 +236,12 @@ class TestAddLineSectionWithDialog:
 
 
 SECTION_EDITOR_SETTLE_MS = 300
-NORTH_SECTION = "North-Section"
+SECTION = next(iter(SECTIONS))
+SECTION_START, SECTION_END = SECTIONS[SECTION]
+SECTION_MIDDLE = (
+    (SECTION_START[0] + SECTION_END[0]) / 2,
+    (SECTION_START[1] + SECTION_END[1]) / 2,
+)
 
 
 def _canvas_image(page: Page) -> Any:
@@ -372,12 +378,12 @@ class TestSectionEditorOnCanvas:
 
         knobs = _edit_knobs(page)
 
-        _edit_geometry_of(page, resource_manager, NORTH_SECTION)
+        _edit_geometry_of(page, resource_manager, SECTION)
         expect(knobs).to_have_count(2)
-        _move_mouse(page, 88, 60)
+        _move_mouse(page, *SECTION_MIDDLE)
         _press(page, "+")
         expect(knobs).to_have_count(3)
-        _click(page, 88, 60)
+        _click(page, *SECTION_MIDDLE)
         _press(page, "Enter")
         expect(knobs).to_have_count(0)
 
@@ -385,13 +391,13 @@ class TestSectionEditorOnCanvas:
             page,
             resource_manager,
             test_data_tmp_dir / "inserted.otconfig",
-            NORTH_SECTION,
+            SECTION,
         )
         assert len(coordinates) == 3
-        assert coordinates[0] == (22, 22)
-        assert coordinates[2] == (154, 66)
+        assert coordinates[0] == SECTION_START
+        assert coordinates[2] == SECTION_END
 
-        _edit_geometry_of(page, resource_manager, NORTH_SECTION)
+        _edit_geometry_of(page, resource_manager, SECTION)
         expect(knobs).to_have_count(3)
         _click(page, *coordinates[1])
         _press(page, "Delete")
@@ -403,6 +409,6 @@ class TestSectionEditorOnCanvas:
             page,
             resource_manager,
             test_data_tmp_dir / "deleted.otconfig",
-            NORTH_SECTION,
+            SECTION,
         )
-        assert coordinates == [(22, 22), (154, 66)]
+        assert coordinates == [SECTION_START, SECTION_END]
