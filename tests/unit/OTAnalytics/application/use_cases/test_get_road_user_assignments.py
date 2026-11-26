@@ -8,6 +8,7 @@ from OTAnalytics.application.analysis.road_user_assignment import (
 from OTAnalytics.application.use_cases.assignment_repository import (
     GetRoadUserAssignments,
 )
+from OTAnalytics.domain.event import EventRepositoryEvent
 from OTAnalytics.domain.observer import Subject
 from OTAnalytics.plugin_datastore.polars_track_id_set import PolarsTrackIdSetFactory
 
@@ -79,6 +80,28 @@ class TestGetRoadUserAssignments:
         target = GetRoadUserAssignments(repository, create_assignments)
 
         target.get_as_list()
+        target.get_as_list()
+
+        create_assignments.assert_called_once()
+
+    def test_create_again_after_events_added(self) -> None:
+        repository = create_empty_repository()
+        create_assignments = Mock()
+        target = GetRoadUserAssignments(repository, create_assignments)
+        target.get_as_list()
+
+        target.notify_events(EventRepositoryEvent(added=[Mock()], removed=[]))
+        target.get_as_list()
+
+        assert create_assignments.call_count == 2
+
+    def test_keep_empty_result_when_events_removed(self) -> None:
+        repository = create_empty_repository()
+        create_assignments = Mock()
+        target = GetRoadUserAssignments(repository, create_assignments)
+        target.get_as_list()
+
+        target.notify_events(EventRepositoryEvent(added=[], removed=[Mock()]))
         target.get_as_list()
 
         create_assignments.assert_called_once()
