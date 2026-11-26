@@ -1,6 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, Iterable
 
 from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.config import CLI_CUTTING_SECTION_MARKER
@@ -9,7 +9,7 @@ from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearA
 from OTAnalytics.application.use_cases.track_repository import (
     GetTracksWithoutSingleDetections,
 )
-from OTAnalytics.domain.event import EventRepository
+from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.section import Section, SectionRepository, SectionType
 
 
@@ -130,9 +130,7 @@ class SimpleCreateIntersectionEvents(CreateIntersectionEvents):
         sections = self._section_provider()
         if not sections:
             return
-        events = self._run_intersect(sections)
-        section_ids = [section.id for section in sections]
-        self._add_events(events, section_ids)
+        self._add_intersection_events(self._run_intersect(sections), sections)
 
     async def call_async(self) -> None:
         """Intersect on a worker thread. Adding the events notifies observers that
@@ -145,8 +143,14 @@ class SimpleCreateIntersectionEvents(CreateIntersectionEvents):
             revision = self._add_events.get_revision()
             events = await asyncio.to_thread(self._run_intersect, sections)
             if revision == self._add_events.get_revision():
-                self._add_events(events, [section.id for section in sections])
+                self._add_intersection_events(events, sections)
                 return
+
+    def _add_intersection_events(
+        self, events: Iterable[Event], sections: list[Section]
+    ) -> None:
+        """Add the events and mark the sections as intersected."""
+        self._add_events(events, [section.id for section in sections])
 
 
 class SimpleCreateSceneEvents(CreateSceneEvents):
