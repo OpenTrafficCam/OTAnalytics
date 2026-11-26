@@ -27,6 +27,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.key_prefix import S3KeyPrefix
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ExportConfig,
@@ -652,6 +653,9 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
                     # Observers mutate widgets, so the image is set on the event loop
                     self._track_view_state.background_image.set(image)
                     return
+        except Exception:
+            # Nobody awaits this task, so its exception would be lost otherwise
+            logger().exception("Plotting the background image failed")
         finally:
             self._plotting = None
 

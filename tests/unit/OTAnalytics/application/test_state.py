@@ -301,6 +301,27 @@ class TestTrackImageUpdater:
 
         await _wait_until(lambda: shown == [latest])
 
+    async def test_update_image_logs_failed_plotting(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        image = Mock(spec=TrackImage)
+        results: list[Exception | TrackImage] = [ValueError("failed"), image]
+
+        def plot() -> TrackImage:
+            result = results.pop(0)
+            if isinstance(result, Exception):
+                raise result
+            return result
+
+        track_view_state = TrackViewState()
+        updater = self._create_updater(track_view_state, plot)
+
+        updater.update_image()
+        await _wait_until(lambda: "Plotting the background image failed" in caplog.text)
+        updater.update_image()
+
+        await _wait_until(lambda: track_view_state.background_image.get() is image)
+
     def _create_updater(
         self, track_view_state: TrackViewState, plot: Callable[[], TrackImage]
     ) -> TrackImageUpdater:
