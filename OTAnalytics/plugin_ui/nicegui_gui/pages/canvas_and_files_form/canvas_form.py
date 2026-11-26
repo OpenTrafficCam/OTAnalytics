@@ -100,7 +100,9 @@ SHIFT_RING_INNER_RADIUS: Final = 18
 SHIFT_RING_OUTER_RADIUS: Final = 42
 SHIFT_RING_IDLE_SECONDS: Final = 0.3
 SHIFT_RING_POLL_SECONDS: Final = 0.1
-ACTION_PILL_OFFSET: Final = 44
+# Distance of the pill's center below its knob: the knob's halo (20), a gap (2)
+# and half the pill (16). Nothing else of the knob is drawn while the pill shows.
+ACTION_PILL_OFFSET: Final = 38
 SCALE_EVENT = "scalechange"
 
 # Styled by otanalytics.css, see docs/otanalytics-overlay-spec.md
@@ -577,9 +579,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         return None
 
     def _action_pill_center(self) -> Point:
-        """Center of the pill, kept inside the image next to the anchor.
+        """Center of the pill, kept inside the image right below the anchor.
 
-        Without an anchor, the pill waits at the top of the image.
+        The pill moves above the anchor if there is no room below. Without an
+        anchor, the pill waits at the top of the image.
         """
         width, height = (
             self._current_image.size if self._current_image is not None else (0, 0)
@@ -589,15 +592,13 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if anchor is None:
             return round(width / 2), round(2 * half_height)
         offset = self._px(ACTION_PILL_OFFSET)
-        x = anchor[0] + offset
-        y = anchor[1] - offset
+        x: float = anchor[0]
+        y = anchor[1] + offset
         if width:
-            if x + half_width > width:
-                x = anchor[0] - offset
             x = min(max(x, half_width), width - half_width)
         if height:
-            if y - half_height < 0:
-                y = anchor[1] + offset
+            if y + half_height > height:
+                y = anchor[1] - offset
             y = min(max(y, half_height), height - half_height)
         return round(x), round(y)
 

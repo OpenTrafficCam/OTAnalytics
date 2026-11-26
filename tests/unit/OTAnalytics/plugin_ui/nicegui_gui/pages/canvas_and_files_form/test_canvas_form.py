@@ -2249,11 +2249,18 @@ class TestCanvasFormActionPill:
     def show_pill(canvas_form: Any) -> None:
         canvas_form.draw_all()
 
-    def test_pill_is_placed_next_to_last_new_point(self, canvas_form: Any) -> None:
+    def test_pill_is_placed_right_below_last_new_point(self, canvas_form: Any) -> None:
         self.start_new_section(canvas_form, [(100, 200), (300, 150)])
 
         assert canvas_form._action_anchor() == (300, 150)
-        assert canvas_form._action_pill_center() == (344, 106)
+        assert canvas_form._action_pill_center() == (300, 188)
+
+    def test_pill_moves_above_the_point_without_room_below(
+        self, canvas_form: Any
+    ) -> None:
+        self.start_new_section(canvas_form, [(300, 340)])
+
+        assert canvas_form._action_pill_center() == (300, 302)
 
     def test_pill_stays_inside_the_image(self, canvas_form: Any) -> None:
         self.start_new_section(canvas_form, [(630, 5)])
@@ -2467,4 +2474,4 @@ class TestCanvasFormScale:
         )
         canvas_form._on_scale(self.event(2.0))
 
-        assert canvas_form._action_pill_center() == (588, 412)
+        assert canvas_form._action_pill_center() == (500, 576)

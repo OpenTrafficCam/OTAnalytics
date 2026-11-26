@@ -884,6 +884,9 @@ body:has(.ota-app) {
     --pri: #37483e;
     --cas: rgb(28 38 32 / 70%);
 
+    /* Quasar's orange, as on the save button while there are unsaved changes */
+    --ota-unsaved: #ff9800;
+
     font-family: "Open Sans", sans-serif;
 }
 
@@ -1059,10 +1062,16 @@ body:has(.ota-app) {
     opacity: 1;
 }
 
-/* Knob that swaps with the moving one in the shift preview */
+/* Knob that swaps with the moving one in the shift preview, orange like the
+   preview */
 .ota-knob.partner .halo {
+    stroke: var(--ota-unsaved);
     opacity: 1;
     stroke-opacity: 0.3;
+}
+
+.ota-knob.partner .ring {
+    stroke: var(--ota-unsaved);
 }
 
 .ota-knob.active .ring {
@@ -1159,19 +1168,20 @@ body:has(.ota-app) {
     pointer-events: none;
 }
 
-/* Preview of the section after shifting the picked up knob */
+/* Preview of the section after shifting the picked up knob. Orange like the
+   save button, as the shift is a change to save. */
 .ota-section.preview .casing {
     stroke: var(--pri);
     stroke-width: 9;
 }
 
 .ota-section.preview .line {
-    stroke: #fff;
+    stroke: var(--ota-unsaved);
     stroke-width: 4;
 }
 
 .ota-section.area.preview .line {
-    fill: #fff;
+    fill: var(--ota-unsaved);
     fill-opacity: 0.12;
 }
 
@@ -1222,7 +1232,7 @@ body:has(.ota-app) {
     user-select: none;
 }
 
-/* Finish and cancel pill next to the last knob */
+/* Finish and cancel pill right below the last knob */
 .ota-action {
     filter: drop-shadow(0 2px 4px rgb(17 24 21 / 25%));
 }

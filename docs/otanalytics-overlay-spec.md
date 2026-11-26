@@ -109,10 +109,10 @@ Drawn by `CanvasForm` while a section is edited. Like all overlay markup they ca
 <g transform="translate(x y)"><g class="ota-scaled ota-shift">
   <g transform="translate(-1.5 0)"><path id="edit-shift-backward" class="half [hovered]"><title>…</title></path><path class="chev" d="M-4-4l-4 4 4 4" transform="translate(-33 0)"/><text class="label" x="-25">1</text></g>
   <g transform="translate(1.5 0)"><path class="half unavailable"/></g></g></g>
-<!-- current geometry as a ghost below the preview of the section after the hovered shift -->
+<!-- current geometry as a ghost below the preview of the section after the hovered shift; the preview and the swap partner are orange like the save button with unsaved changes (--ota-unsaved) -->
 <polyline class="ota-ghost" points="…"/>
 <g id="edit-shift-preview" class="ota-section editing preview">…</g>
-<!-- finish/cancel pill next to the last placed knob, hidden while a knob moves (dragged or picked up) -->
+<!-- finish/cancel pill right below the last placed knob (above it without room below), hidden while a knob moves (dragged or picked up) -->
 <g transform="translate(x y)"><g class="ota-scaled ota-action">
   <rect id="edit-action-background" class="background"/>
   <circle id="edit-action-finish" class="button finish [disabled]"/><path class="glyph"/>
