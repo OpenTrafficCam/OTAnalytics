@@ -1,6 +1,6 @@
 """Tests that creating events keeps the ui informed about its progress."""
 
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -37,3 +37,41 @@ class TestCreateEventsAsync:
             await target.create_events_async()
 
         ui_factory.minimal_info_box.return_value.close.assert_called_once()
+
+    @patch("OTAnalytics.adapter_ui.dummy_viewmodel.asyncio.sleep", new=AsyncMock())
+    async def test_notifies_flows_and_reports_completion(self) -> None:
+        application = Mock()
+        application.create_events_async = AsyncMock()
+        application.get_all_flows.return_value = []
+        ui_factory = Mock()
+        target = create_target(application, ui_factory)
+        target.notify_flows = Mock()  # type: ignore[method-assign]
+
+        await target.create_events_async()
+
+        popup = ui_factory.minimal_info_box.return_value
+        target.notify_flows.assert_called_once_with([])
+        popup.update_message.assert_called_once_with(
+            message="Creating events completed"
+        )
+        popup.close.assert_called_once()
+
+
+class TestCreateEvents:
+    @patch("OTAnalytics.adapter_ui.dummy_viewmodel.sleep")
+    def test_notifies_flows_and_reports_completion(self, _: Mock) -> None:
+        application = Mock()
+        application.get_all_flows.return_value = []
+        ui_factory = Mock()
+        target = create_target(application, ui_factory)
+        target.notify_flows = Mock()  # type: ignore[method-assign]
+
+        target.create_events()
+
+        popup = ui_factory.minimal_info_box.return_value
+        application.create_events.assert_called_once()
+        target.notify_flows.assert_called_once_with([])
+        popup.update_message.assert_called_once_with(
+            message="Creating events completed"
+        )
+        popup.close.assert_called_once()

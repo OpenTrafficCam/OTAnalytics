@@ -42,6 +42,7 @@ from OTAnalytics.adapter_ui.flow_adapter import (
 )
 from OTAnalytics.adapter_ui.flow_dto import FlowDto
 from OTAnalytics.adapter_ui.helpers import ensure_file_extension_is_present
+from OTAnalytics.adapter_ui.message_box import MessageBox
 from OTAnalytics.adapter_ui.message_type import MessageType
 from OTAnalytics.adapter_ui.text_resources import (
     COLUMN_NAME,
@@ -170,6 +171,7 @@ MESSAGE_CONFIGURATION_FILES_SUBSTITUTED = (
 )
 LINE_SECTION: str = "line_section"
 TO_SECTION = "to_section"
+CREATED_EVENTS_MESSAGE_DURATION_SECONDS = 1
 FROM_SECTION = "from_section"
 
 
@@ -1490,37 +1492,39 @@ class DummyViewModel(
             )
 
     def create_events(self) -> None:
-        logger().info("Creating events")
-        start_msg_popup = self._ui_factory.minimal_info_box(
-            message="Create events...",
-            initial_position=self.get_position(),
-        )
-        self._application.create_events()
+        start_msg_popup = self._show_creating_events()
+        try:
+            self._application.create_events()
 
-        # TODO find appropriate place to trigger update of plots
-        # self._application.update_count_plots()
+            # TODO find appropriate place to trigger update of plots
+            # self._application.update_count_plots()
 
-        self.notify_flows(self.get_all_flow_ids())
-        start_msg_popup.update_message(message="Creating events completed")
-        sleep(1)
-        start_msg_popup.close()
-        logger().info("Events created")
+            self._complete_creating_events(start_msg_popup)
+            sleep(CREATED_EVENTS_MESSAGE_DURATION_SECONDS)
+        finally:
+            start_msg_popup.close()
 
     async def create_events_async(self) -> None:
         """Like `create_events`, but keeps the ui responsive."""
+        start_msg_popup = self._show_creating_events()
+        try:
+            await self._application.create_events_async()
+            self._complete_creating_events(start_msg_popup)
+            await asyncio.sleep(CREATED_EVENTS_MESSAGE_DURATION_SECONDS)
+        finally:
+            start_msg_popup.close()
+
+    def _show_creating_events(self) -> MessageBox:
         logger().info("Creating events")
-        start_msg_popup = self._ui_factory.minimal_info_box(
+        return self._ui_factory.minimal_info_box(
             message="Create events...",
             initial_position=self.get_position(),
         )
-        try:
-            await self._application.create_events_async()
-            self.notify_flows(self.get_all_flow_ids())
-            start_msg_popup.update_message(message="Creating events completed")
-            await asyncio.sleep(1)
-            logger().info("Events created")
-        finally:
-            start_msg_popup.close()
+
+    def _complete_creating_events(self, start_msg_popup: MessageBox) -> None:
+        self.notify_flows(self.get_all_flow_ids())
+        start_msg_popup.update_message(message="Creating events completed")
+        logger().info("Events created")
 
     def get_all_flow_ids(self) -> list[FlowId]:
         return [flow.id for flow in self.get_all_flows()]
