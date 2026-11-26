@@ -15,9 +15,9 @@ class GetRoadUserAssignments:
     """Provide the road user assignments, creating them when there are none.
 
     Creating assignments may find none, e.g. if no track crosses the sections of a
-    flow. The empty result is kept until the repository changes. Otherwise every
-    read would create the assignments again, and each creation notifies the
-    observers of events, which read the assignments again.
+    flow. The empty result is kept until the repository changes or events are
+    added. Otherwise every read would create the assignments again, and each
+    creation notifies the observers of events, which read the assignments again.
     """
 
     def __init__(
@@ -37,6 +37,11 @@ class GetRoadUserAssignments:
         """Changes by others, e.g. clearing outdated assignments, require creating
         the assignments again."""
         if not self._is_creating:
+            self._is_created = False
+
+    def notify_events(self, event: EventRepositoryEvent) -> None:
+        """Added events may assign road users, so an empty result is outdated."""
+        if not self._is_creating and any(True for _ in event.added):
             self._is_created = False
 
     def get_as_list(self) -> list[RoadUserAssignment]:
