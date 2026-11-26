@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from math import floor
+from threading import Lock
 from typing import Any, Callable, Generic, Iterable, Optional, Sequence, TypeVar
 
 from OTAnalytics.application.logger import logger
@@ -194,18 +195,30 @@ class CachedPlotter(Plotter):
     ) -> None:
         self._other = other
         self._cache: Optional[TrackImage] = None
+        self._version = 0
+        self._lock = Lock()
 
         for subject in subjects:
             subject.register(self.invalidate_cache)
 
     def plot(self) -> Optional[TrackImage]:
-        if self._cache is None:
-            self._cache = self._other.plot()
+        # Plotting may run on a worker thread while the event loop invalidates the
+        # cache. The image is outdated then and must not be cached.
+        with self._lock:
+            cache, version = self._cache, self._version
+        if cache is not None:
+            return cache
 
-        return self._cache
+        image = self._other.plot()
+        with self._lock:
+            if version == self._version:
+                self._cache = image
+        return image
 
     def invalidate_cache(self, _: Any) -> None:
-        self._cache = None
+        with self._lock:
+            self._version += 1
+            self._cache = None
 
 
 ENTITY = TypeVar("ENTITY")

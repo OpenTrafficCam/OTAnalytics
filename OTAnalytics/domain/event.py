@@ -424,6 +424,19 @@ class EventRepository:
             lambda: defaultdict(list)
         )
         self._non_section_events: dict[str, list[Event]] = defaultdict(list)
+        self._revision = 0
+
+    def get_revision(self) -> int:
+        """Get the revision of the repository.
+
+        Every removal increments the revision, even if nothing was stored. Events are
+        removed because the tracks or sections they stem from changed. Thus, events
+        calculated while the revision changed are outdated.
+
+        Returns:
+            int: the revision.
+        """
+        return self._revision
 
     def register_observer(self, observer: OBSERVER[EventRepositoryEvent]) -> None:
         """Register observer to listen to repository changes.
@@ -560,6 +573,7 @@ class EventRepository:
         """
         Clear the repository and notify observers only if repository was filled.
         """
+        self._revision += 1
         if self._events or self._non_section_events:  # also clear non section events
             removed = list(self.get_all())
             self._events = defaultdict(lambda: defaultdict(list))
@@ -567,6 +581,7 @@ class EventRepository:
             self._subject.notify(EventRepositoryEvent([], removed))
 
     def remove(self, sections: list[SectionId]) -> None:
+        self._revision += 1
         if self._events:
             removed = [
                 event for event in self.get_all() if event.section_id in sections
@@ -666,6 +681,7 @@ class EventRepository:
         Returns:
             None
         """
+        self._revision += 1
         removed = []
         for road_user_id in road_user_ids:
             removed.extend(

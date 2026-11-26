@@ -1,5 +1,6 @@
+import asyncio
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, Iterable
 
 from OTAnalytics.application.analysis.intersect import RunIntersect
 from OTAnalytics.application.config import CLI_CUTTING_SECTION_MARKER
@@ -8,7 +9,7 @@ from OTAnalytics.application.use_cases.event_repository import AddEvents, ClearA
 from OTAnalytics.application.use_cases.track_repository import (
     GetTracksWithoutSingleDetections,
 )
-from OTAnalytics.domain.event import EventRepository
+from OTAnalytics.domain.event import Event, EventRepository
 from OTAnalytics.domain.section import Section, SectionRepository, SectionType
 
 
@@ -21,6 +22,11 @@ class CreateIntersectionEvents(ABC):
     def __call__(self) -> None:
         raise NotImplementedError
 
+    @abstractmethod
+    async def call_async(self) -> None:
+        """Like calling it, but intersects without blocking the event loop."""
+        raise NotImplementedError
+
 
 class CreateSceneEvents(ABC):
     """
@@ -30,6 +36,11 @@ class CreateSceneEvents(ABC):
 
     @abstractmethod
     def __call__(self) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def call_async(self) -> None:
+        """Like calling it, but detects without blocking the event loop."""
         raise NotImplementedError
 
 
@@ -119,9 +130,27 @@ class SimpleCreateIntersectionEvents(CreateIntersectionEvents):
         sections = self._section_provider()
         if not sections:
             return
-        events = self._run_intersect(sections)
-        section_ids = [section.id for section in sections]
-        self._add_events(events, section_ids)
+        self._add_intersection_events(self._run_intersect(sections), sections)
+
+    async def call_async(self) -> None:
+        """Intersect on a worker thread. Adding the events notifies observers that
+        mutate widgets, so it stays on the event loop.
+
+        Tracks or sections changed while intersecting outdate the events. Then, the
+        intersection is repeated with the current sections.
+        """
+        while sections := self._section_provider():
+            revision = self._add_events.get_revision()
+            events = await asyncio.to_thread(self._run_intersect, sections)
+            if revision == self._add_events.get_revision():
+                self._add_intersection_events(events, sections)
+                return
+
+    def _add_intersection_events(
+        self, events: Iterable[Event], sections: list[Section]
+    ) -> None:
+        """Add the events and mark the sections as intersected."""
+        self._add_events(events, [section.id for section in sections])
 
 
 class SimpleCreateSceneEvents(CreateSceneEvents):
@@ -150,6 +179,20 @@ class SimpleCreateSceneEvents(CreateSceneEvents):
         events = self._scene_action_detector.detect(tracks)
         self._add_events(events)
 
+    async def call_async(self) -> None:
+        """Detect on a worker thread. Adding the events stays on the event loop.
+
+        Tracks changed while detecting outdate the events. Then, the detection is
+        repeated with the current tracks.
+        """
+        while True:
+            revision = self._add_events.get_revision()
+            tracks = self._get_tracks.as_dataset()
+            events = await asyncio.to_thread(self._scene_action_detector.detect, tracks)
+            if revision == self._add_events.get_revision():
+                self._add_events(events)
+                return
+
 
 class CreateEvents:
     def __init__(
@@ -169,3 +212,8 @@ class CreateEvents:
         """
         self._create_intersection_events()
         self._create_scene_events()
+
+    async def call_async(self) -> None:
+        """Like calling it, but keeps the event loop and thereby the ui responsive."""
+        await self._create_intersection_events.call_async()
+        await self._create_scene_events.call_async()

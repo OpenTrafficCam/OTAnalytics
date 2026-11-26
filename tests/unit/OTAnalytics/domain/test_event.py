@@ -559,6 +559,24 @@ class TestEventRepository:
             EventRepositoryEvent([], [event_1_section_1()])
         )
 
+    def test_removals_increment_revision_even_if_empty(self) -> None:
+        repository = EventRepository(Mock())
+        initial_revision = repository.get_revision()
+
+        repository.clear()
+        repository.remove([SECTION_ID_1])
+        repository.remove_events_by_road_user_ids([])
+
+        assert repository.get_revision() == initial_revision + 3
+
+    def test_adding_keeps_revision(self) -> None:
+        repository = EventRepository(Mock())
+        initial_revision = repository.get_revision()
+
+        repository.add_all([event_1_section_1()])
+
+        assert repository.get_revision() == initial_revision
+
     def test_remove_section_without_events(self) -> None:
         section_1 = SectionId("1")
         section_2 = SectionId("2")

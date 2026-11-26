@@ -1,4 +1,5 @@
 from datetime import datetime
+from operator import not_
 from typing import Callable, Optional, Self, Sequence
 
 from nicegui import ui
@@ -33,6 +34,7 @@ class LayersForm(AbstractFrameTrackPlotting):
         self._resource_manager = resource_manager
         self._layers = layers
         self._checkboxes: dict[Layer, ui.checkbox] = {}
+        self._is_creating_events = False
         for layer_group in layers:
             for layer in layer_group.layers:
                 layer.register(self._follow(layer))
@@ -65,14 +67,22 @@ class LayersForm(AbstractFrameTrackPlotting):
             ),
             on_click=self._create_events,
         )
+        button.bind_enabled_from(self, "_is_creating_events", backward=not_)
         button.mark(MARKER_UPDATE_FLOW_HIGHLIGHTING)
         button.props(
             f"{TestIdAttributes.DATA_TESTID}={MARKER_UPDATE_FLOW_HIGHLIGHTING}"
         )
         return self
 
-    def _create_events(self) -> None:
-        self._viewmodel.create_events()
+    async def _create_events(self) -> None:
+        # The button binding refreshes periodically, so it may still be enabled
+        if self._is_creating_events:
+            return
+        self._is_creating_events = True
+        try:
+            await self._viewmodel.create_events_async()
+        finally:
+            self._is_creating_events = False
 
     def update(self, name: str, start_date: Optional[datetime]) -> None:
         pass

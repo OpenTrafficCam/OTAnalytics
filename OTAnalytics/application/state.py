@@ -1,3 +1,4 @@
+import asyncio
 import bisect
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -26,6 +27,7 @@ from OTAnalytics.application.config import (
 )
 from OTAnalytics.application.datastore import Datastore
 from OTAnalytics.application.key_prefix import S3KeyPrefix
+from OTAnalytics.application.logger import logger
 from OTAnalytics.application.parser.config_parser import (
     AnalysisConfig,
     ExportConfig,
@@ -547,6 +549,8 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
         self._section_state = section_state
         self._flow_state = flow_state
         self._plotter = plotter
+        self._requested_updates = 0
+        self._plotting: Optional[asyncio.Task] = None
         # React to any relevant changes that should affect the background image
         self._track_view_state.track_offset.register(self._notify_track_offset)
         self._track_view_state.filter_element.register(self._notify_filter_element)
@@ -627,8 +631,34 @@ class TrackImageUpdater(TrackListObserver, SectionListObserver):
     def update_image(self) -> None:
         """
         Updates the current background image with or without tracks and sections.
+
+        Inside a running event loop, plotting runs on a worker thread to keep the ui
+        responsive. Updates requested while plotting are merged into one more plot.
+        Each finished image is shown, so the image keeps refreshing while updates
+        arrive faster than plotting takes.
         """
-        self._track_view_state.background_image.set(self._plotter.plot())
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._track_view_state.background_image.set(self._plotter.plot())
+            return
+        self._requested_updates += 1
+        if self._plotting is None:
+            self._plotting = asyncio.create_task(self._plot_latest())
+
+    async def _plot_latest(self) -> None:
+        try:
+            plotted_updates = None
+            while plotted_updates != self._requested_updates:
+                plotted_updates = self._requested_updates
+                image = await asyncio.to_thread(self._plotter.plot)
+                # Observers mutate widgets, so the image is set on the event loop
+                self._track_view_state.background_image.set(image)
+        except Exception:
+            # Nobody awaits this task, so its exception would be lost otherwise
+            logger().exception("Plotting the background image failed")
+        finally:
+            self._plotting = None
 
 
 class TracksMetadata(TrackListObserver):
