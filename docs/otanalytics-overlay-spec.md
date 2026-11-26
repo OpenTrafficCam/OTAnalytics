@@ -99,17 +99,20 @@ Scale, in `CanvasForm.build()`: `new ResizeObserver(([e]) => e.target.style.setP
 Drawn by `CanvasForm` while a section is edited. Like all overlay markup they carry geometry and state classes only; sizes in screen px use `screen_px`, so they need the scale `--ota-s`. The browser also reports it to the server (`scalechange` event of the layer), which needs it to compare mouse positions with screen px sizes.
 
 ```html
-<!-- knob: number of the knob inside its core, 1-based -->
-<g class="ota-knob [active] [moving]">… <g transform="translate(x y)"><g class="ota-scaled"><text class="num">3</text></g></g> <path class="hit" id="edit-knob-2"/></g>
+<!-- knob: number of the knob inside its core, 1-based; in the shift preview the
+     knobs are numbered in their new order and the swap partner is marked -->
+<g class="ota-knob [active] [moving] [partner]">… <g transform="translate(x y)"><g class="ota-scaled"><text class="num">3</text></g></g> <path class="hit" id="edit-knob-2"/></g>
 <!-- insert a knob in the middle of a segment (below the knobs, hidden while a knob is picked up) -->
-<path class="ota-mid" id="edit-mid-{segment}" d="M x y h0"/><g transform="translate(x y)"><g class="ota-scaled ota-mid-plus"><path d="M-5 0h10M0-5v10"/></g></g>
-<!-- shift ring around the picked up knob, shown once the mouse is still; label = position the knob gets -->
+<g><path class="ota-mid" id="edit-mid-{segment}" d="M x y h0"/><path class="ota-mid-core" d="M x y h0"/><g class="ota-mid-plus" transform="translate(x y)"><g class="ota-scaled"><path d="M-5 0h10M0-5v10"/></g></g></g>
+<!-- shift ring around the picked up knob, shown once the mouse is still; label = position the knob gets.
+     Each half is a group moved 1.5 px outwards. An unavailable half is an outline without id. -->
 <g transform="translate(x y)"><g class="ota-scaled ota-shift">
-  <path id="edit-shift-backward" class="half [hovered]"><title>…</title></path><text class="label">◀1</text>
-  <path id="edit-shift-forward" class="half [hovered]"><title>…</title></path><text class="label">3▶</text></g></g>
-<!-- preview of the section after the hovered shift -->
+  <g transform="translate(-1.5 0)"><path id="edit-shift-backward" class="half [hovered]"><title>…</title></path><path class="chev" d="M-4-4l-4 4 4 4" transform="translate(-33 0)"/><text class="label" x="-25">1</text></g>
+  <g transform="translate(1.5 0)"><path class="half unavailable"/></g></g></g>
+<!-- current geometry as a ghost below the preview of the section after the hovered shift -->
+<polyline class="ota-ghost" points="…"/>
 <g id="edit-shift-preview" class="ota-section editing preview">…</g>
-<!-- finish/cancel pill next to the last placed knob, hidden while a knob is dragged -->
+<!-- finish/cancel pill next to the last placed knob, hidden while a knob moves (dragged or picked up) -->
 <g transform="translate(x y)"><g class="ota-scaled ota-action">
   <rect id="edit-action-background" class="background"/>
   <circle id="edit-action-finish" class="button finish [disabled]"/><path class="glyph"/>

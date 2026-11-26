@@ -35,6 +35,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.knob import (
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line import Line
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.line_resources import LineResources
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.midpoint_circle import MidpointCircle
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.polyline import Polyline
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.primitives import dot
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section import SectionShape
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
@@ -68,9 +69,10 @@ MARKER_INTERACTIVE_IMAGE = "marker-interactive-image"
 CLICK = "click"
 MOUSE_MOVE = "mousemove"
 MOUSE_UP = "mouseup"
+MOUSE_DOWN = "mousedown"
 CONTEXT_MENU = "contextmenu.prevent"
 PASSIVE_MOUSE_EVENTS = [CLICK]
-EDITOR_MOUSE_EVENTS = [CLICK, MOUSE_MOVE, MOUSE_UP]
+EDITOR_MOUSE_EVENTS = [CLICK, MOUSE_DOWN, MOUSE_MOVE, MOUSE_UP]
 EVENTS_PROP = "events"
 SIZE_PROP = "size"
 UPDATE_VIEWBOX = "updateViewbox"
@@ -94,12 +96,11 @@ EDITOR_ELEMENT_PREFIXES: Final = (
     f"{EDIT_ACTION_ID}-",
 )
 # Sizes of the affordances in screen pixels, see otanalytics.css
-SHIFT_RING_INNER_RADIUS: Final = 16
-SHIFT_RING_OUTER_RADIUS: Final = 46
+SHIFT_RING_INNER_RADIUS: Final = 18
+SHIFT_RING_OUTER_RADIUS: Final = 42
 SHIFT_RING_IDLE_SECONDS: Final = 0.3
 SHIFT_RING_POLL_SECONDS: Final = 0.1
 ACTION_PILL_OFFSET: Final = 44
-ACTION_CLICK_SWALLOW_SECONDS: Final = 0.5
 SCALE_EVENT = "scalechange"
 
 # Styled by otanalytics.css, see docs/otanalytics-overlay-spec.md
@@ -107,6 +108,7 @@ CANVAS_CLASS = "ota-canvas"
 OVERLAY_CLASS = "ota-overlay"
 FOCUS_CLASS = "ota-focus"
 HINT_CLASS = "ota-hint"
+GHOST_CLASS = "ota-ghost"
 HINT_TEXT = "Drag points · + add · Del remove · Enter finish · Esc cancel"
 NEW_LINE_SECTION_NAME = "New line section"
 NEW_AREA_NAME = "New area"
@@ -176,11 +178,17 @@ def knob_index_from_element_id(element_id: str | None) -> int | None:
 
 
 def create_knob(
-    index: int, point: Point, is_hovered: bool = False, is_selected: bool = False
+    index: int,
+    point: Point,
+    is_hovered: bool = False,
+    is_selected: bool = False,
+    is_partner: bool = False,
+    number: int | None = None,
 ) -> Knob:
     """Create a knob of the section geometry editor.
 
-    A hovered or selected knob is active. A selected knob follows the mouse.
+    A hovered or selected knob is active. A selected knob follows the mouse. The
+    partner is the knob that swaps with the selected one in the shift preview.
     """
     return Knob(
         index=index,
@@ -188,6 +196,8 @@ def create_knob(
         y=point[1],
         active=is_hovered or is_selected,
         moving=is_selected,
+        partner=is_partner,
+        number=number,
     )
 
 
@@ -242,10 +252,11 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._shift_anchor: Point | None = None
         self._shift_hovered_forward: bool | None = None
         self._last_knob_motion = 0.0
-        self._ignore_next_click = False
-        self._pointer_position: Point | None = None
         self._last_placed_knob: Point | None = None
-        self._swallow_click_until = 0.0
+        # Whether the current press started on an editor element of the svg. The
+        # image reports a click for such a press, too, which must be ignored.
+        self._press_on_svg = False
+        self._shift_ring_timer: ui.timer | None = None
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_frame_canvas(self)
@@ -290,7 +301,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             self._hint.set_visibility(False)
         self._observe_scale()
 
-        ui.timer(SHIFT_RING_POLL_SECONDS, self._show_shift_ring_when_still)
+        self._shift_ring_timer = ui.timer(
+            SHIFT_RING_POLL_SECONDS, self._show_shift_ring_when_still, active=False
+        )
         self._change_image()
         ui.keyboard(on_key=self.handle_key)
         self.load_sections()
@@ -526,6 +539,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     def draw_all(self) -> None:
         self._sync_shift_anchor()
+        self._update_shift_ring_timer()
         if self._overlay:
             self._overlay.content = (
                 self._dim_svg()
@@ -541,19 +555,26 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         return screen_pixels * self._screen_scale
 
     def _is_action_pill_shown(self) -> bool:
-        """The pill is always there while editing, except while a knob is dragged."""
-        return self._is_editor_active() and not self._dragging
+        """The pill is always there while editing, except while a knob moves.
+
+        A knob moves while it is dragged or picked up. Finishing then would save
+        the knob wherever the mouse left it, e.g. under the pill.
+        """
+        return self._is_editor_active() and self._selected_knob_index is None
 
     def _action_anchor(self) -> Point | None:
-        """Where the user acted last: the last knob placed or else the mouse."""
+        """Where the user acted last: the last knob placed or else the last knob.
+
+        A placed knob that was deleted since is no anchor anymore.
+        """
         if self._new_section and self._new_section_points:
             return self._new_section_points[-1].to_tuple()
         if self._current_section is not None:
-            if self._last_placed_knob is not None:
+            if self._last_placed_knob in self._edit_coordinates:
                 return self._last_placed_knob
             if self._edit_temporary:
                 return self._edit_temporary[-1]
-        return self._pointer_position
+        return None
 
     def _action_pill_center(self) -> Point:
         """Center of the pill, kept inside the image next to the anchor.
@@ -602,11 +623,13 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
 
     async def handle_svg_pointer_down(self, e: dict) -> None:
         """Run the action of the pill that was pressed, else select a knob."""
+        if not self._accepts_input():
+            return
+        self._press_on_svg = True
         element_id = e.get(ELEMENT_ID) or ""
         if element_id.startswith(f"{EDIT_ACTION_ID}-") and (
             self._is_action_pill_shown()
         ):
-            self._swallow_click_until = time.monotonic() + ACTION_CLICK_SWALLOW_SECONDS
             if element_id.endswith(f"-{FINISH_SUFFIX}"):
                 await self._finish_editor()
             elif element_id.endswith(f"-{CANCEL_SUFFIX}"):
@@ -615,14 +638,23 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             return
         self.on_svg_pointer_down(e)
 
-    def _swallows_click(self) -> bool:
-        return time.monotonic() < self._swallow_click_until
-
     def _sync_shift_anchor(self) -> None:
         """Hide the shift ring if no knob is picked up or if it is dragged."""
         if self._selected_knob_index is None or self._dragging:
             self._shift_anchor = None
             self._shift_hovered_forward = None
+
+    def _update_shift_ring_timer(self) -> None:
+        """Poll for a still mouse only while a picked up knob waits for its ring."""
+        if self._shift_ring_timer is None:
+            return
+        waiting = (
+            self._selected_knob_index is not None
+            and not self._dragging
+            and self._shift_anchor is None
+        )
+        if self._shift_ring_timer.active != waiting:
+            self._shift_ring_timer.active = waiting
 
     def _show_shift_ring_when_still(self) -> None:
         """Show the shift ring around the picked up knob once the mouse is still.
@@ -684,8 +716,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         def label(forward: bool) -> str | None:
             if forward not in targets:
                 return None
-            position = targets[forward] + 1
-            return f"{position}▶" if forward else f"◀{position}"
+            return str(targets[forward] + 1)
 
         return ShiftRing(
             id=EDIT_SHIFT_ID,
@@ -711,7 +742,10 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         return self._shift_targets().get(self._shift_hovered_forward)
 
     def _shift_preview_svg(self) -> str:
-        """Section geometry as it would be after shifting in the hovered direction."""
+        """Section geometry as it would be after shifting in the hovered direction.
+
+        The current geometry is drawn as a ghost below it.
+        """
         index = self._selected_knob_index
         if self._shift_hovered_forward is None or index is None:
             return ""
@@ -719,14 +753,20 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             shift_knob_forward if self._shift_hovered_forward else shift_knob_backward
         )
         coordinates, _ = shift(self._edit_temporary, index, self._edit_is_area_section)
-        return SectionShape(
-            id=f"{EDIT_SHIFT_ID}-preview",
-            points=coordinates,
-            is_area=self._edit_is_area_section,
-            editing=True,
-            preview=True,
-            show_points=False,
-        ).to_svg()
+        current = list(self._edit_temporary)
+        if self._edit_is_area_section and current:
+            current.append(current[0])
+        return (
+            Polyline(current).to_svg(GHOST_CLASS)
+            + SectionShape(
+                id=f"{EDIT_SHIFT_ID}-preview",
+                points=coordinates,
+                is_area=self._edit_is_area_section,
+                editing=True,
+                preview=True,
+                show_points=False,
+            ).to_svg()
+        )
 
     @staticmethod
     def _shift_half_from_element_id(element_id: str | None) -> bool | None:
@@ -747,10 +787,17 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         )
 
     def _insert_knob_at_midpoint(self, segment: int) -> None:
-        """Insert a knob at the segment midpoint and pick it up to be dragged."""
-        self._edit_temporary, self._selected_knob_index = insert_knob_at_segment(
+        """Insert a knob at the segment midpoint and pick it up to be dragged.
+
+        A segment that does not exist anymore, e.g. reported by the browser before
+        it received the latest geometry, is ignored.
+        """
+        coordinates, index = insert_knob_at_segment(
             self._edit_temporary, segment, self._edit_is_area_section
         )
+        if index is None:
+            return
+        self._edit_temporary, self._selected_knob_index = coordinates, index
         self._hovered_knob_index = None
         self._drop_on_release = False
         self._dragging = True
@@ -803,12 +850,24 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             svg += self._midpoints_svg()
         svg += self._shift_preview_svg()
         partner = self._shift_partner_index()
+        selected = self._selected_knob_index
+        # The preview numbers the knobs in their new order.
+        numbers = (
+            {}
+            if partner is None or selected is None
+            else {
+                selected: partner + 1,
+                partner: selected + 1,
+            }
+        )
         for index, point in enumerate(self._edit_temporary):
             knob = create_knob(
                 index,
                 point,
-                is_hovered=index in (self._hovered_knob_index, partner),
-                is_selected=index == self._selected_knob_index,
+                is_hovered=index == self._hovered_knob_index,
+                is_selected=index == selected,
+                is_partner=index == partner,
+                number=numbers.get(index),
             )
             svg += knob.to_svg()
         return svg + self._shift_ring_svg()
@@ -818,21 +877,22 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if not self._accepts_input():
             return
         point = to_point(e.image_x, e.image_y)
-        if e.type == MOUSE_MOVE:
+        if e.type == MOUSE_DOWN:
+            self._press_on_svg = False
+        elif e.type == MOUSE_MOVE:
             self._on_move(point)
         elif e.type == MOUSE_UP:
             self._on_release(point)
         elif e.type == CLICK:
-            if self._swallows_click():
+            if self._press_on_svg:
+                self._press_on_svg = False
                 return
-            self._pointer_position = point
             if self._current_section is not None:
                 self._on_canvas_click(point)
             else:
                 self._on_pointer_down(e)
 
     def _on_move(self, point: Point) -> None:
-        self._pointer_position = point
         if self._new_section:
             self._preview_point = point
             self.draw_all()
@@ -879,9 +939,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self.draw_all()
 
     def _on_canvas_click(self, point: Point) -> None:
-        if self._ignore_next_click:
-            self._ignore_next_click = False
-            return
         if self._selected_knob_index is not None and not self._dragging:
             self._place_selected_knob(point)
             self.draw_all()
@@ -892,7 +949,6 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             return
         self._edit_temporary[index] = point
         self._last_placed_knob = point
-        self._pointer_position = point
         self._commit_edit()
         self._deselect_knob(revert=False)
         self._hovered_knob_index = index
@@ -914,12 +970,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             return
         point = svg_event_to_point(e)
         self._mouse_position = point
-        self._pointer_position = point
-        self._ignore_next_click = False
         self._last_knob_motion = time.monotonic()
         shift_forward = self._shift_half_from_element_id(e.get(ELEMENT_ID))
         if shift_forward in self._shift_targets():
-            self._ignore_next_click = True
             self._shift_selected_knob(forward=bool(shift_forward))
             return
         segment = midpoint_index_from_element_id(e.get(ELEMENT_ID))

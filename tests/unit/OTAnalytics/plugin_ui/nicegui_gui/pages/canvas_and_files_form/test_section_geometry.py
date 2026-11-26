@@ -6,6 +6,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geome
     delete_knob,
     has_enough_knobs,
     insert_knob,
+    insert_knob_at_segment,
     minimum_knob_count,
     open_area,
     ring_half_at,
@@ -16,6 +17,21 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geome
 
 LINE = [(0, 0), (10, 0), (20, 0)]
 SQUARE = [(0, 0), (10, 0), (10, 10), (0, 10)]
+
+
+class TestInsertKnobAtSegment:
+    def test_inserts_knob_at_midpoint(self) -> None:
+        assert insert_knob_at_segment(LINE, 1, is_area_section=False) == (
+            [(0, 0), (10, 0), (15, 0), (20, 0)],
+            2,
+        )
+
+    @pytest.mark.parametrize("segment", [-1, 2, 9])
+    def test_missing_segment_selects_no_knob(self, segment: int) -> None:
+        assert insert_knob_at_segment(LINE, segment, is_area_section=False) == (
+            LINE,
+            None,
+        )
 
 
 class TestMinimumKnobCount:

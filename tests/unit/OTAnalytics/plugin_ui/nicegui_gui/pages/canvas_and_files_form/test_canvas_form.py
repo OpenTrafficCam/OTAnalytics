@@ -1,3 +1,4 @@
+import re
 from typing import Any, Iterator
 from unittest.mock import MagicMock, Mock, patch
 
@@ -35,6 +36,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form i
     HINT_TEXT,
     IMAGE_X,
     IMAGE_Y,
+    MOUSE_DOWN,
     MOUSE_MOVE,
     MOUSE_UP,
     OVERLAY_CLASS,
@@ -1137,7 +1139,7 @@ class TestCanvasFormSectionBuilder:
 
         background_image = mock_ui.interactive_image.return_value
         background_image._props.__setitem__.assert_called_with(
-            "events", [CLICK, MOUSE_MOVE, MOUSE_UP]
+            "events", [CLICK, MOUSE_DOWN, MOUSE_MOVE, MOUSE_UP]
         )
 
     @patch(
@@ -1448,7 +1450,7 @@ class TestCanvasFormSectionGeometryEditor:
     def test_start_editor_subscribes_mouse_move(self, canvas_form: Any) -> None:
         background_image = canvas_form.mock_ui.interactive_image.return_value
         background_image._props.__setitem__.assert_called_with(
-            "events", [CLICK, MOUSE_MOVE, MOUSE_UP]
+            "events", [CLICK, MOUSE_DOWN, MOUSE_MOVE, MOUSE_UP]
         )
 
     def test_hover_highlights_knob_under_mouse(self, canvas_form: Any) -> None:
@@ -1498,8 +1500,8 @@ class TestCanvasFormSectionGeometryEditor:
         svg = canvas_form._edit_geometry()
         assert 'id="edit-shift-backward"' in svg
         assert 'id="edit-shift-forward"' in svg
-        assert ">◀1</text>" in svg
-        assert ">3▶</text>" in svg
+        assert 'x="-25" y="0">1</text>' in svg
+        assert 'x="25" y="0">3</text>' in svg
 
     def test_shift_ring_of_line_end_only_offers_possible_direction(
         self, canvas_form: Any
@@ -1508,8 +1510,9 @@ class TestCanvasFormSectionGeometryEditor:
 
         svg = canvas_form._edit_geometry()
         assert "edit-shift-backward" not in svg
+        assert 'class="half unavailable"' in svg
         assert 'id="edit-shift-forward"' in svg
-        assert ">2▶</text>" in svg
+        assert 'x="25" y="0">2</text>' in svg
 
     def test_shift_ring_of_area_wraps_around(
         self, canvas_form: Any, area_section: Mock
@@ -1518,17 +1521,20 @@ class TestCanvasFormSectionGeometryEditor:
         self.pick_up(canvas_form, 0)
 
         svg = canvas_form._edit_geometry()
-        assert ">◀3</text>" in svg
-        assert ">2▶</text>" in svg
+        assert 'x="-25" y="0">3</text>' in svg
+        assert 'x="25" y="0">2</text>' in svg
 
-    def test_click_on_shift_half_shifts_knob_and_ignores_canvas_click(
+    @pytest.mark.asyncio
+    async def test_click_on_shift_half_shifts_knob_and_ignores_canvas_click(
         self, canvas_form: Any
     ) -> None:
         self.pick_up(canvas_form, 0)
 
-        canvas_form.on_svg_pointer_down(svg_event(30, 20, "edit-shift-forward"))
+        await canvas_form.handle_svg_pointer_down(
+            svg_event(30, 20, "edit-shift-forward")
+        )
         canvas_form.on_svg_pointer_up(svg_event(30, 20, "edit-shift-forward"))
-        canvas_form._on_canvas_click((30, 20))
+        canvas_form.on_mouse(create_mouse_event(CLICK, 30, 20))
 
         assert canvas_form._edit_temporary == [(110, 20), (10, 20), (210, 20)]
         assert canvas_form._selected_knob_index == 1
@@ -1591,9 +1597,55 @@ class TestCanvasFormSectionGeometryEditor:
         svg = canvas_form._edit_geometry()
         assert 'class="ota-section editing preview"' in svg
         assert 'points="10,20 210,20 110,20"' in svg
+        assert '<polyline class="ota-ghost" points="10,20 110,20 210,20"/>' in svg
+        assert svg.index("ota-ghost") < svg.index("ota-section editing preview")
         assert canvas_form._shift_partner_index() == 2
-        assert svg.count('class="ota-knob active"') == 1
+        assert svg.count('class="ota-knob partner"') == 1
         assert canvas_form._edit_temporary == ORIGINAL_COORDINATES
+
+    def test_preview_numbers_the_knobs_in_their_new_order(
+        self, canvas_form: Any
+    ) -> None:
+        self.pick_up(canvas_form, 1)
+
+        canvas_form.on_svg_pointer_move(svg_event(135, 20, "edit-shift-forward"))
+
+        numbers = re.findall(r'class="num">(\d+)<', canvas_form._edit_geometry())
+        assert numbers == ["1", "3", "2"]
+
+    def test_picked_up_knob_waits_for_its_ring_with_the_timer(
+        self, canvas_form: Any
+    ) -> None:
+        timer = canvas_form._shift_ring_timer
+        timer.active = False
+        x, y = canvas_form._edit_temporary[1]
+
+        canvas_form.on_svg_pointer_down(svg_event(x, y, knob_id(1)))
+        assert timer.active is False
+        canvas_form.on_svg_pointer_up(svg_event(x, y, knob_id(1)))
+        assert timer.active is True
+        canvas_form._last_knob_motion = 0.0
+        canvas_form._show_shift_ring_when_still()
+        assert timer.active is False
+
+    def test_outdated_midpoint_is_ignored(self, canvas_form: Any) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(1, 1, "edit-mid-9"))
+
+        assert canvas_form._selected_knob_index is None
+        assert canvas_form._edit_temporary == ORIGINAL_COORDINATES
+
+    def test_press_released_outside_does_not_swallow_the_next_click(
+        self, canvas_form: Any
+    ) -> None:
+        self.pick_up(canvas_form, 0)
+        canvas_form.on_svg_pointer_down(svg_event(30, 20, "edit-shift-forward"))
+        canvas_form._press_on_svg = True
+
+        canvas_form.on_mouse(create_mouse_event(MOUSE_DOWN, 300, 300))
+        canvas_form.on_mouse(create_mouse_event(CLICK, 300, 300))
+
+        assert canvas_form._selected_knob_index is None
+        assert (300, 300) in canvas_form._edit_coordinates
 
     def test_hovering_backward_half_previews_backward_shift(
         self, canvas_form: Any
@@ -2192,7 +2244,6 @@ class TestCanvasFormActionPill:
             canvas_form._on_pointer_down(
                 MagicMock(spec=events.MouseEventArguments, image_x=x, image_y=y)
             )
-            canvas_form._pointer_position = (x, y)
 
     @staticmethod
     def show_pill(canvas_form: Any) -> None:
@@ -2272,7 +2323,6 @@ class TestCanvasFormActionPill:
         self, canvas_form: Any, mock_section: Mock, mock_viewmodel: Mock
     ) -> None:
         canvas_form.start_section_geometry_editor(mock_section)
-        canvas_form._pointer_position = (50, 50)
         self.show_pill(canvas_form)
 
         await canvas_form.handle_svg_pointer_down({"element_id": "edit-action-finish"})
@@ -2300,7 +2350,7 @@ class TestCanvasFormActionPill:
 
         assert canvas_form._action_pill_center() == (320, 32)
 
-    def test_pill_is_hidden_while_dragging_a_knob(
+    def test_pill_is_hidden_while_a_knob_moves(
         self, canvas_form: Any, mock_section: Mock
     ) -> None:
         canvas_form.start_section_geometry_editor(mock_section)
@@ -2311,7 +2361,59 @@ class TestCanvasFormActionPill:
         assert "edit-action-" not in canvas_form._overlay.content
 
         canvas_form.on_svg_pointer_up(svg_event(x, y, knob_id(1)))
+        assert "edit-action-" not in canvas_form._overlay.content
+
+        canvas_form.on_mouse(create_mouse_event(MOUSE_DOWN, 300, 300))
+        canvas_form.on_mouse(create_mouse_event(CLICK, 300, 300))
         assert "edit-action-finish" in canvas_form._overlay.content
+
+    def test_pill_does_not_follow_the_mouse_without_points(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.start_section_builder(is_area_section=False)
+        center = canvas_form._action_pill_center()
+
+        canvas_form._on_move((500, 300))
+
+        assert canvas_form._action_pill_center() == center
+
+    def test_pill_leaves_a_deleted_knob(
+        self, canvas_form: Any, mock_section: Mock
+    ) -> None:
+        canvas_form.start_section_geometry_editor(mock_section)
+        x, y = canvas_form._edit_temporary[1]
+        canvas_form.on_svg_pointer_down(svg_event(x, y, knob_id(1)))
+        canvas_form.on_svg_pointer_up(svg_event(x, y, knob_id(1)))
+        canvas_form.on_mouse(create_mouse_event(CLICK, 300, 300))
+        assert canvas_form._action_anchor() == (300, 300)
+
+        canvas_form.on_svg_pointer_down(svg_event(300, 300, knob_id(1)))
+        canvas_form.on_svg_pointer_up(svg_event(300, 300, knob_id(1)))
+        canvas_form._delete_selected_knob()
+
+        assert canvas_form._action_anchor() == canvas_form._edit_temporary[-1]
+
+    @pytest.mark.asyncio
+    async def test_slow_press_on_disabled_finish_adds_no_point(
+        self, canvas_form: Any
+    ) -> None:
+        self.start_new_section(canvas_form, [(100, 200)])
+
+        await canvas_form.handle_svg_pointer_down({"element_id": "edit-action-finish"})
+        canvas_form.on_mouse(create_mouse_event(CLICK, 344, 156))
+
+        assert len(canvas_form._new_section_points) == 1
+
+    @pytest.mark.asyncio
+    async def test_pill_is_ignored_while_the_canvas_is_disabled(
+        self, canvas_form: Any, mock_section: Mock, mock_viewmodel: Mock
+    ) -> None:
+        canvas_form.start_section_geometry_editor(mock_section)
+        canvas_form.disable()
+
+        await canvas_form.handle_svg_pointer_down({"element_id": "edit-action-finish"})
+
+        mock_viewmodel.update_section_coordinates.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_buttons_are_ignored_while_dragging(
@@ -2359,7 +2461,10 @@ class TestCanvasFormScale:
 
     def test_pill_offset_grows_with_the_scale(self, canvas_form: Any) -> None:
         canvas_form._current_image = Image.new("RGB", (2000, 1000))
-        canvas_form._pointer_position = (500, 500)
+        canvas_form.start_section_builder(is_area_section=False)
+        canvas_form._on_pointer_down(
+            MagicMock(spec=events.MouseEventArguments, image_x=500, image_y=500)
+        )
         canvas_form._on_scale(self.event(2.0))
 
         assert canvas_form._action_pill_center() == (588, 412)

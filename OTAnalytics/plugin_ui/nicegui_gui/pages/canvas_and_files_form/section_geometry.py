@@ -135,11 +135,14 @@ def segment_midpoints(coordinates: list[Point], is_area_section: bool) -> list[P
 
 def insert_knob_at_segment(
     coordinates: list[Point], segment: int, is_area_section: bool
-) -> tuple[list[Point], int]:
-    """Insert a knob at the midpoint of the segment and return its index."""
+) -> tuple[list[Point], int | None]:
+    """Insert a knob at the midpoint of the segment and return its index.
+
+    The index is None if there is no such segment.
+    """
     midpoints = segment_midpoints(coordinates, is_area_section)
     if not 0 <= segment < len(midpoints):
-        return list(coordinates), segment
+        return list(coordinates), None
     new_coordinates = list(coordinates)
     new_coordinates.insert(segment + 1, midpoints[segment])
     return new_coordinates, segment + 1

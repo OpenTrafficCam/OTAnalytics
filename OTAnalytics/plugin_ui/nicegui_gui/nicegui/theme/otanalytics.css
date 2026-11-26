@@ -883,7 +883,6 @@ body:has(.ota-app) {
     --sage: #b4cbc0;
     --pri: #37483e;
     --cas: rgb(28 38 32 / 70%);
-    --ota-accent: #70a9a1;
 
     font-family: "Open Sans", sans-serif;
 }
@@ -1038,10 +1037,11 @@ body:has(.ota-app) {
     cursor: move;
 }
 
+/* Wide enough to show around the shift ring */
 .ota-knob .halo {
     stroke: #fff;
     stroke-opacity: 0.25;
-    stroke-width: 26;
+    stroke-width: 40;
     opacity: 0;
 }
 
@@ -1057,6 +1057,12 @@ body:has(.ota-app) {
 
 .ota-knob.active .halo {
     opacity: 1;
+}
+
+/* Knob that swaps with the moving one in the shift preview */
+.ota-knob.partner .halo {
+    opacity: 1;
+    stroke-opacity: 0.3;
 }
 
 .ota-knob.active .ring {
@@ -1106,16 +1112,29 @@ body:has(.ota-app) {
     pointer-events: none;
 }
 
-/* Insert a knob in the middle of a segment */
+/* Insert a knob in the middle of a segment. Smaller than a knob and sage, so
+   it is not mistaken for one. The edge receives the pointer events, the core
+   and the plus sign follow it. */
 .ota-mid {
     stroke: var(--pri);
-    stroke-width: 22;
+    stroke-width: 17;
     cursor: copy;
     pointer-events: stroke;
 }
 
+.ota-mid-core {
+    stroke: var(--sage);
+    stroke-width: 14;
+}
+
 .ota-mid:hover {
-    stroke: #4a5e52;
+    stroke: #fff;
+    stroke-width: 24;
+}
+
+.ota-mid:hover + .ota-mid-core {
+    stroke: #fff;
+    stroke-width: 20;
 }
 
 .ota-mid-plus {
@@ -1123,38 +1142,74 @@ body:has(.ota-app) {
 }
 
 .ota-mid-plus path {
+    stroke: var(--pri);
+    stroke-width: 1.5;
+}
+
+.ota-mid:hover ~ .ota-mid-plus path {
+    stroke-width: 2;
+}
+
+/* Section before shifting the picked up knob, below the preview */
+.ota-ghost {
     stroke: #fff;
     stroke-width: 2;
+    stroke-dasharray: 5 4;
+    opacity: 0.55;
+    pointer-events: none;
 }
 
 /* Preview of the section after shifting the picked up knob */
 .ota-section.preview .casing {
-    stroke: var(--cas);
+    stroke: var(--pri);
+    stroke-width: 9;
 }
 
 .ota-section.preview .line {
-    stroke: var(--ota-accent);
+    stroke: #fff;
+    stroke-width: 4;
 }
 
 .ota-section.area.preview .line {
-    fill: var(--ota-accent);
-    fill-opacity: 0.2;
+    fill: #fff;
+    fill-opacity: 0.12;
 }
 
 /* Ring around the picked up knob to shift it in the order of the knobs */
 .ota-shift .half {
     fill: var(--pri);
     fill-opacity: 0.92;
-    stroke: #fff;
-    stroke-width: 1;
+    stroke: rgb(255 255 255 / 90%);
+    stroke-width: 1.5;
     cursor: pointer;
     pointer-events: all;
 }
 
 .ota-shift .half:hover,
 .ota-shift .half.hovered {
-    fill: var(--ota-fresh);
+    fill: #fff;
     fill-opacity: 1;
+    stroke: var(--pri);
+}
+
+.ota-shift .half:is(:hover, .hovered) ~ :is(.label, .chev) {
+    fill: var(--pri);
+    stroke: var(--pri);
+}
+
+/* A half the knob cannot be shifted to keeps the ring in shape */
+.ota-shift .half.unavailable {
+    fill: none;
+    stroke: rgb(255 255 255 / 45%);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    pointer-events: none;
+}
+
+.ota-shift .chev {
+    stroke: #fff;
+    stroke-width: 1.8;
+    pointer-events: none;
 }
 
 .ota-shift .label {
@@ -1168,6 +1223,10 @@ body:has(.ota-app) {
 }
 
 /* Finish and cancel pill next to the last knob */
+.ota-action {
+    filter: drop-shadow(0 2px 4px rgb(17 24 21 / 25%));
+}
+
 .ota-action .background {
     fill: #fff;
     fill-opacity: 0.95;
@@ -1193,7 +1252,11 @@ body:has(.ota-app) {
 
 .ota-action .finish.disabled,
 .ota-action .finish.disabled:hover {
-    fill: var(--ota-border-strong);
+    fill: #d9e2dd;
+}
+
+.ota-action .finish.disabled ~ .glyph:first-of-type {
+    stroke: #8b9a92;
 }
 
 .ota-action .cancel {
@@ -1203,7 +1266,7 @@ body:has(.ota-app) {
 }
 
 .ota-action .cancel:hover {
-    fill: var(--ota-hover);
+    fill: #e8efeb;
 }
 
 .ota-action .glyph {
