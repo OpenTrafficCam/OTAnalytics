@@ -1,10 +1,13 @@
 from OTAnalytics.application.resources.resource_manager import ResourceManager
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import \
-    CanvasForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.files_form import \
-    FilesForm
-from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import \
-    FilterClassificationForm  # noqa
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.canvas_form import (
+    CanvasForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.files_form import (
+    FilesForm,
+)
+from OTAnalytics.plugin_ui.nicegui_gui.pages.visualization_filters_form.container import (  # noqa
+    FilterClassificationForm,
+)
 
 
 class CanvasAndFilesForm:
