@@ -10,10 +10,21 @@ from nicegui.testing import User
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.state import SectionState
+from OTAnalytics.domain.section import SectionType
+from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form import flow_form
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
+    COLUMN_TYPE,
+    MARKER_BUTTON_ADD_AREA,
+    MARKER_BUTTON_ADD_LINE,
+    MARKER_BUTTON_EDIT,
+    MARKER_BUTTON_PROPERTIES,
+    MARKER_BUTTON_REMOVE,
     MARKER_SECTION_TABLE,
     SectionsForm,
+    create_columns,
+    map_to_ui,
 )
+from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 from tests.utils.nicegui_table import double_click_row, wait_until_awaited
 
 ENDPOINT_NAME = "/test-sections-form-double-click"
@@ -22,12 +33,18 @@ SECTION_ROW = {"id": SECTION_ID, "name": "Section 1"}
 
 
 class FakeSection:
-    def __init__(self, section_id: str, name: str) -> None:
+    def __init__(
+        self, section_id: str, name: str, section_type: SectionType = SectionType.LINE
+    ) -> None:
         self.id = section_id
         self.name = name
+        self.section_type = section_type
 
     def to_dict(self) -> dict[str, Any]:
         return {"id": self.id, "name": self.name}
+
+    def get_type(self) -> SectionType:
+        return self.section_type
 
 
 def create_viewmodel() -> MagicMock:
@@ -103,3 +120,107 @@ class TestSectionsFormDoubleClick:
         await wait_until_awaited(viewmodel.edit_selected_section_metadata)
 
         viewmodel.edit_selected_section_metadata.assert_awaited_once()
+
+
+class TestSectionType:
+    def test_table_has_a_type_column(self, resource_manager: ResourceManager) -> None:
+        names = [column["name"] for column in create_columns(resource_manager)]
+
+        assert COLUMN_TYPE in names
+
+    def test_rows_name_the_section_type(
+        self, resource_manager: ResourceManager
+    ) -> None:
+        sections = [
+            FakeSection("1", "West", SectionType.LINE),
+            FakeSection("2", "Crossing", SectionType.AREA),
+            FakeSection("3", "#clip", SectionType.CUTTING),
+        ]
+
+        rows = map_to_ui(sections, resource_manager)  # type: ignore[arg-type]
+
+        assert [row[COLUMN_TYPE] for row in rows] == ["Line", "Area", "Cutting"]
+
+    async def test_shows_the_type_as_a_tag(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        target = SectionsForm(
+            create_viewmodel(), create_section_state(), resource_manager
+        )
+
+        @ui.page("/test-section-type")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test-section-type")
+
+        table = user.find(marker=MARKER_SECTION_TABLE).elements.pop()
+        assert f"body-cell-{COLUMN_TYPE}" in table.slots
+        assert "ota-tag" in str(table.slots[f"body-cell-{COLUMN_TYPE}"].template)
+
+
+class TestSectionButtons:
+    async def test_add_line_is_the_primary_action_before_the_list(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        target = SectionsForm(
+            create_viewmodel(), create_section_state(), resource_manager
+        )
+
+        @ui.page("/test-section-buttons")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test-section-buttons")
+
+        def props(marker: str) -> dict:
+            return user.find(marker=marker).elements.pop().props
+
+        assert "outline" not in props(MARKER_BUTTON_ADD_LINE)
+        for marker in (
+            MARKER_BUTTON_ADD_AREA,
+            MARKER_BUTTON_EDIT,
+            MARKER_BUTTON_PROPERTIES,
+            MARKER_BUTTON_REMOVE,
+        ):
+            assert "outline" in props(marker), marker
+        assert user.client is not None
+        order = [
+            marker
+            for element in user.client.layout.descendants()
+            for marker in element._markers
+            if marker in (MARKER_BUTTON_ADD_LINE, MARKER_SECTION_TABLE)
+        ]
+        assert order == [MARKER_BUTTON_ADD_LINE, MARKER_SECTION_TABLE]
+
+    async def test_buttons_have_test_ids_of_their_own(
+        self, user: User, resource_manager: ResourceManager
+    ) -> None:
+        """Browser tests click the first element with a test id, so section
+        buttons must not share test ids with the flow buttons below them."""
+        target = SectionsForm(
+            create_viewmodel(), create_section_state(), resource_manager
+        )
+
+        @ui.page("/test-section-button-ids")
+        def page() -> None:
+            target.build()
+
+        await user.open("/test-section-button-ids")
+
+        flow_markers = {
+            flow_form.MARKER_BUTTON_ADD,
+            flow_form.MARKER_BUTTON_GENERATE,
+            flow_form.MARKER_BUTTON_PROPERTIES,
+            flow_form.MARKER_BUTTON_REMOVE,
+        }
+        for marker in (
+            MARKER_BUTTON_ADD_LINE,
+            MARKER_BUTTON_ADD_AREA,
+            MARKER_BUTTON_EDIT,
+            MARKER_BUTTON_PROPERTIES,
+            MARKER_BUTTON_REMOVE,
+        ):
+            button = user.find(marker=marker).elements.pop()
+            assert button.props[TEST_ID] == marker, marker
+            assert marker not in flow_markers, marker

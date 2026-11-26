@@ -1,6 +1,7 @@
 from OTAnalytics.application.analysis.road_user_assignment import (
     RoadUserAssignment,
     RoadUserAssignmentRepository,
+    RoadUserAssignmentRepositoryEvent,
     RoadUserAssignments,
 )
 from OTAnalytics.application.use_cases.create_road_user_assignments import (
@@ -11,6 +12,14 @@ from OTAnalytics.domain.flow import FlowId, FlowListObserver
 
 
 class GetRoadUserAssignments:
+    """Provide the road user assignments, creating them when there are none.
+
+    Creating assignments may find none, e.g. if no track crosses the sections of a
+    flow. The empty result is kept until the repository changes or events are
+    added. Otherwise every read would create the assignments again, and each
+    creation notifies the observers of events, which read the assignments again.
+    """
+
     def __init__(
         self,
         assignment_repository: RoadUserAssignmentRepository,
@@ -21,6 +30,19 @@ class GetRoadUserAssignments:
         self._create_assignments = create_assignments
         self._enable_assignment_creation = enable_assignment_creation
         self._is_creating = False
+        self._is_created = False
+        assignment_repository.register_observer(self._on_repository_changed)
+
+    def _on_repository_changed(self, _: RoadUserAssignmentRepositoryEvent) -> None:
+        """Changes by others, e.g. clearing outdated assignments, require creating
+        the assignments again."""
+        if not self._is_creating:
+            self._is_created = False
+
+    def notify_events(self, event: EventRepositoryEvent) -> None:
+        """Added events may assign road users, so an empty result is outdated."""
+        if not self._is_creating and any(True for _ in event.added):
+            self._is_created = False
 
     def get_as_list(self) -> list[RoadUserAssignment]:
         self.__check_update()
@@ -33,12 +55,14 @@ class GetRoadUserAssignments:
     def __check_update(self) -> None:
         if (
             not self._is_creating
+            and not self._is_created
             and self._enable_assignment_creation
             and self._assignment_repository.is_empty()
         ):
             self._is_creating = True
             try:
                 self._create_assignments()
+                self._is_created = True
             finally:
                 self._is_creating = False
 

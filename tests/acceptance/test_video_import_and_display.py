@@ -29,6 +29,7 @@ from tests.utils.playwright_helpers import (
     add_video_via_picker,
     click_table_cell_with_text,
     load_main_page,
+    open_tab,
     reset_videos_tab,
     search_for_marker_element,
     table_filenames,
@@ -67,7 +68,7 @@ class TestVideoImportAndDisplay:
         """
         load_main_page(page, external_app)
 
-        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+        open_tab(page, MARKER_VIDEO_TAB)
         reset_videos_tab(page, resource_manager)
 
         # Prepare test video path from tests/data
@@ -104,7 +105,7 @@ class TestVideoImportAndDisplay:
 
         # Switch to Videos tab and ensure clean slate (prefer marker with fallback)
         try:
-            search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+            open_tab(page, MARKER_VIDEO_TAB)
         except Exception:
             page.get_by_text(
                 resource_manager.get(TrackFormKeys.TAB_VIDEO), exact=True
@@ -159,7 +160,7 @@ class TestVideoImportAndDisplay:
         """Playwright: Remove two videos sequentially (single-select table)."""
         load_main_page(page, external_app)
 
-        search_for_marker_element(page, MARKER_VIDEO_TAB).first.click()
+        open_tab(page, MARKER_VIDEO_TAB)
         reset_videos_tab(page, resource_manager)
 
         data_dir = Path(__file__).parents[1] / "data"

@@ -155,6 +155,7 @@ class OtAnalyticsGuiApplicationStarter(BaseOtAnalyticsApplicationStarter):
         self.event_repository.register_observer(
             self.remove_assignments_of_removed_events
         )
+        self.event_repository.register_observer(self.get_all_assignments.notify_events)
         self.flow_repository.register_flows_observer(
             self.clear_assignments_on_changed_flows
         )

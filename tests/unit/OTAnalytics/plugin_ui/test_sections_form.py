@@ -9,6 +9,7 @@ from nicegui.testing import User
 from OTAnalytics.adapter_ui.view_model import ViewModel
 from OTAnalytics.application.resources.resource_manager import ResourceManager
 from OTAnalytics.application.state import SectionState
+from OTAnalytics.domain.section import SectionType
 from OTAnalytics.plugin_ui.nicegui_gui.pages.sections_and_flow_form.sections_form import (  # noqa
     MARKER_BUTTON_ADD_AREA,
     MARKER_BUTTON_ADD_LINE,
@@ -34,6 +35,9 @@ class MockSection:
 
     def to_dict(self) -> dict[str, Any]:
         return {"id": self.id, "name": self.name}
+
+    def get_type(self) -> SectionType:
+        return SectionType.LINE
 
 
 @pytest.fixture

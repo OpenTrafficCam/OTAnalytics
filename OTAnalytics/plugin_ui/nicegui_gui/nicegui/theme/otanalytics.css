@@ -1,0 +1,972 @@
+/* Stylesheet of the OTAnalytics web UI, loaded once by global_theme(). */
+
+/* Quasar names its classes with BEM (q-btn--outline, q-field__control), and so
+   do our modifiers (ota-dot--stale). Overrides of framework styles do not keep
+   the specificity order of unrelated selectors. */
+/* stylelint-disable selector-class-pattern, no-descending-specificity */
+
+/* Bundled fonts, served by add_fonts(); see fonts/README.md */
+@font-face {
+    font-family: "Open Sans";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/ota-fonts/open-sans-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Open Sans";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url("/ota-fonts/open-sans-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Open Sans";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("/ota-fonts/open-sans-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Roboto Mono";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/ota-fonts/roboto-mono-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Amatic SC";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("/ota-fonts/amatic-sc-latin-700-normal.woff2") format("woff2");
+}
+
+:root {
+    /* Compact desktop density instead of NiceGUI's 1rem padding and gaps */
+    --nicegui-default-padding: 8px;
+    --nicegui-default-gap: 8px;
+
+    /* Colours */
+    --ota-primary: #37483e;
+    --ota-primary-hover: #2a362e;
+    --ota-text: #37483e;
+    --ota-text-strong: #111914;
+    --ota-text-muted: #596d63;
+    --ota-border: #d9e2dd;
+    --ota-border-light: #e8efeb;
+    --ota-border-strong: #b4c2bb;
+    --ota-bg: #f6f8f7;
+    --ota-hover: #f4f7f5;
+    --ota-surface: #fff;
+    --ota-selected: #d4e1da;
+    --ota-on-primary-muted: #d4e1da;
+    --ota-fresh: #4d6856;
+    --ota-stale-dot: #b48a2a;
+    --ota-stale-text: #7a5a14;
+
+    /* Fonts */
+    --ota-font: "Open Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --ota-font-mono: "Roboto Mono", ui-monospace, menlo, consolas, monospace;
+    --ota-font-brand: "Amatic SC", var(--ota-font);
+    --ota-font-size: 13px;
+    --ota-font-size-sm: 12px;
+    --ota-font-size-xs: 11px;
+
+    /* Spacing and radius */
+    --ota-space-1: 4px;
+    --ota-space-2: 8px;
+    --ota-space-3: 12px;
+    --ota-space-4: 16px;
+    --ota-radius: 6px;
+    --ota-radius-lg: 8px;
+
+    /* Layout */
+    --ota-header-height: 52px;
+    --ota-status-height: 30px;
+    --ota-right-width: 288px;
+    --ota-control-height: 28px;
+    --ota-field-height: 32px;
+
+    /* A label floats above the text, which needs Quasar's dense height. */
+    --ota-field-height-labeled: 40px;
+    --ota-step-input-width: 5rem;
+    --ota-dialog-width: 32rem;
+    --ota-dialog-wide-width: 56rem;
+    --ota-file-grid-height: min(50vh, 420px);
+
+    /* The left panel cannot be dragged narrower than this plus its padding. */
+    --ota-group-min-width: 265px;
+
+    /* Leaves room for the headers of the other groups in the left panel. */
+    --ota-group-max-height: max(
+        240px,
+        calc(
+            100vh - var(--ota-header-height) - var(--ota-status-height) - 280px
+        )
+    );
+    --ota-stale-opacity: 0.4;
+}
+
+/* Quasar takes its primary colour from here. ui.colors() writes every colour
+   inline on the body, including a default primary, so this one is important. */
+body {
+    --q-primary: var(--ota-primary) !important;
+
+    font-family: var(--ota-font);
+    font-size: var(--ota-font-size);
+    line-height: 1.4;
+    color: var(--ota-text);
+    background: var(--ota-bg);
+}
+
+/* Page frame: only the side panels scroll, not the page. */
+body:has(.ota-app) {
+    overflow: hidden;
+}
+
+.ota-app {
+    height: calc(100vh - var(--ota-header-height));
+    padding: 0;
+    gap: 0;
+}
+
+/* Splitter between the left panel and the rest. Its width is set in
+   main_page_builder.py, as the user drags it. */
+.ota-panels {
+    width: 100%;
+    flex: 1 1 0%;
+    min-height: 0;
+}
+
+/* Only the panels inside scroll, not the splitter's sides. */
+.ota-panels > .q-splitter__panel {
+    overflow: hidden;
+}
+
+.ota-panels > .q-splitter__separator {
+    background: var(--ota-border);
+}
+
+.ota-panels > .q-splitter__separator:hover,
+.ota-panels.q-splitter--active > .q-splitter__separator {
+    background: var(--ota-primary);
+}
+
+.ota-main {
+    width: 100%;
+    height: 100%;
+    gap: 0;
+    flex-wrap: nowrap;
+}
+
+.ota-left,
+.ota-right {
+    flex: none;
+    height: 100%;
+    overflow-y: auto;
+    padding: var(--ota-space-3);
+}
+
+.ota-left {
+    width: 100%;
+    gap: var(--ota-space-2);
+    background: var(--ota-bg);
+}
+
+.ota-right {
+    width: var(--ota-right-width);
+    gap: var(--ota-space-1);
+    background: var(--ota-surface);
+    border-left: 1px solid var(--ota-border);
+}
+
+.ota-center {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+    padding: var(--ota-space-3);
+    gap: 10px;
+}
+
+/* Header */
+.ota-header {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-4);
+    height: var(--ota-header-height);
+    padding: 0 var(--ota-space-4);
+    background-color: var(--ota-primary);
+    color: #fff;
+}
+
+.ota-brand {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--ota-font-brand);
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    line-height: 1;
+}
+
+.ota-brand-icon {
+    font-size: 26px;
+    color: #b4cbc0;
+}
+
+.ota-header-divider {
+    flex: none;
+    width: 1px;
+    height: 24px;
+    background: rgb(255 255 255 / 25%);
+}
+
+.ota-project-title {
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: var(--ota-space-2);
+    min-width: 0;
+}
+
+.ota-project-name {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.ota-save-state {
+    font-size: var(--ota-font-size-sm);
+    color: var(--ota-on-primary-muted);
+    white-space: nowrap;
+}
+
+.ota-header-actions {
+    flex-wrap: nowrap;
+    gap: var(--ota-space-2);
+    margin-left: auto;
+}
+
+/* Quasar's colour classes (text-primary, bg-primary) are !important in
+   NiceGUI's last layer, quasar_importants. Among !important rules the earlier
+   layer wins and unlayered rules lose, so these overrides live in NiceGUI's
+   first layer. */
+@layer theme {
+    .ota-header .q-btn--outline {
+        color: #fff !important;
+    }
+
+    /* Save: solid white unless there are unsaved changes, then orange. */
+    .ota-header .ota-header-primary:not(.bg-orange) {
+        background: #fff !important;
+        color: var(--ota-primary) !important;
+    }
+}
+
+.ota-header .q-btn--outline::before {
+    border-color: rgb(255 255 255 / 35%);
+}
+
+/* Buttons */
+.q-btn {
+    min-height: var(--ota-control-height);
+    padding: 0 10px;
+    border-radius: var(--ota-radius);
+    font-size: var(--ota-font-size-sm);
+    font-weight: 600;
+}
+
+.q-btn .q-btn__content {
+    min-height: var(--ota-control-height);
+}
+
+.q-btn--round {
+    padding: 0;
+}
+
+/* Fields */
+.q-field--dense .q-field__control,
+.q-field--dense .q-field__marginal {
+    height: var(--ota-field-height);
+    min-height: var(--ota-field-height);
+}
+
+.q-field--dense.q-field--labeled .q-field__control,
+.q-field--dense.q-field--labeled .q-field__marginal {
+    height: var(--ota-field-height-labeled);
+    min-height: var(--ota-field-height-labeled);
+}
+
+.q-field--dense .q-field__native {
+    font-size: var(--ota-font-size);
+}
+
+.q-field--outlined .q-field__control {
+    border-radius: var(--ota-radius);
+}
+
+.q-field--outlined .q-field__control::before {
+    border-color: var(--ota-border-strong);
+}
+
+.q-field__label {
+    font-size: var(--ota-font-size-sm);
+}
+
+/* Checkboxes and switches */
+.q-checkbox--dense,
+.q-toggle--dense {
+    min-height: var(--ota-control-height);
+    gap: var(--ota-space-2);
+    font-size: var(--ota-font-size);
+}
+
+/* Workflow accordion */
+
+/* The groups keep their height, so the left panel scrolls when several are
+   open. Shrinking them would cut off their content, as they hide what
+   overflows. */
+.ota-group.q-expansion-item {
+    flex: none;
+    width: 100%;
+    min-width: var(--ota-group-min-width);
+    background: var(--ota-surface);
+    border: 1px solid var(--ota-border);
+    border-radius: var(--ota-radius-lg);
+    overflow: hidden;
+}
+
+.ota-group .q-expansion-item__container > .q-item {
+    min-height: 0;
+    padding: var(--ota-space-3) 14px;
+}
+
+.ota-group .q-expansion-item__container > .q-item:hover {
+    background: var(--ota-hover);
+}
+
+/* A long group scrolls inside, so the headers of the other groups stay in
+   view. */
+.ota-group .q-expansion-item__content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-height: var(--ota-group-max-height);
+    overflow-y: auto;
+    padding: var(--ota-space-1) 14px var(--ota-space-4);
+    border-top: 1px solid var(--ota-border-light);
+}
+
+.ota-group .q-expansion-item__content > * {
+    flex-shrink: 0;
+}
+
+.ota-group-header {
+    flex: 1;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-3);
+    min-width: 0;
+}
+
+.ota-step-badge {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--ota-primary);
+    color: #fff;
+    font-size: var(--ota-font-size-sm);
+    font-weight: 700;
+    line-height: 24px;
+    text-align: center;
+}
+
+.ota-step-badge--secondary {
+    background: var(--ota-border-light);
+    color: var(--ota-primary);
+    font-size: 10px;
+}
+
+.ota-group-heading {
+    flex: 1;
+    gap: 2px;
+    min-width: 0;
+}
+
+.ota-group-title {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ota-text);
+}
+
+.ota-group-summary {
+    overflow: hidden;
+    font-size: var(--ota-font-size-sm);
+    line-height: 1.3;
+    color: var(--ota-text-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Project group: track files, videos and remark */
+.ota-subheading {
+    margin: var(--ota-space-2) 0 0;
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.ota-file-section,
+.ota-file-list {
+    width: 100%;
+    gap: 6px;
+}
+
+.ota-file {
+    width: 100%;
+    overflow: hidden;
+    padding: var(--ota-space-1) var(--ota-space-2);
+    border-radius: var(--ota-radius);
+    background: var(--ota-bg);
+    color: var(--ota-text);
+    font-family: var(--ota-font-mono);
+    font-size: var(--ota-font-size-sm);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Outline buttons use the strong border of the design. */
+.q-btn--outline::before {
+    border-color: var(--ota-border-strong);
+}
+
+/* Layer groups (right panel) */
+.ota-layer-group {
+    width: 100%;
+    border-bottom: 1px solid var(--ota-border-light);
+}
+
+.ota-layer-group .q-item {
+    min-height: 0;
+    padding: var(--ota-space-2) 6px;
+    border-radius: var(--ota-radius);
+    font-size: var(--ota-font-size);
+    font-weight: 700;
+}
+
+.ota-layer-group .q-expansion-item__content {
+    display: flex;
+    flex-direction: column;
+    padding: 0 6px 6px 10px;
+}
+
+/* Tabs inside groups */
+.q-tabs--dense .q-tab {
+    min-height: var(--ota-field-height);
+    padding: 0 10px;
+    font-size: var(--ota-font-size-sm);
+}
+
+.q-tab-panel {
+    padding: var(--ota-space-2) 0;
+}
+
+/* Tables and lists */
+.q-table--bordered {
+    border-color: var(--ota-border);
+    border-radius: var(--ota-radius);
+}
+
+.q-table--dense .q-table th {
+    padding: 6px 10px;
+    background: var(--ota-bg);
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.q-table--dense .q-table td {
+    padding: 7px 10px;
+    font-size: var(--ota-font-size);
+    color: var(--ota-text-strong);
+}
+
+/* Tables whose name column shortens long names. Below the minimum width the
+   table scrolls instead. */
+.ota-truncating-table .q-table {
+    min-width: 220px;
+}
+
+/* Takes the width the other columns leave, as its own content does not count. */
+.ota-truncate {
+    width: 100%;
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* Right to left puts the ellipsis at the start; the name inside keeps its
+   order. */
+.ota-truncate-start {
+    direction: rtl;
+    text-align: left;
+}
+
+.ota-truncate-start > span {
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+
+.q-table tbody tr.selected td {
+    background: var(--ota-selected);
+    font-weight: 600;
+}
+
+/* Canvas: offers its size to the image, which keeps its aspect ratio. */
+.ota-workspace {
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    container-type: size;
+}
+
+/* Time bar under the canvas */
+.ota-timebar {
+    width: 100%;
+    flex: none;
+    gap: var(--ota-space-2);
+    padding: 10px 14px var(--ota-space-2);
+    background: var(--ota-surface);
+    border: 1px solid var(--ota-border);
+    border-radius: var(--ota-radius-lg);
+}
+
+.ota-timebar-controls {
+    width: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-3);
+    overflow-x: auto;
+}
+
+.ota-date-range {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 2px;
+}
+
+.ota-date-range-label {
+    padding: 0 6px;
+    color: var(--ota-text-strong);
+    font-family: var(--ota-font-mono);
+    font-size: var(--ota-font-size);
+    white-space: nowrap;
+}
+
+.ota-stepgroup {
+    flex: none;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--ota-border);
+    border-radius: var(--ota-radius);
+    background: var(--ota-surface);
+}
+
+.ota-stepgroup > .q-btn--round {
+    width: 30px;
+    height: 30px;
+    min-height: 30px;
+}
+
+.ota-stepgroup-label {
+    min-width: 40px;
+    padding: 0 var(--ota-space-1);
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-sm);
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.ota-step-menu {
+    width: var(--ota-step-input-width);
+    padding: var(--ota-space-2);
+    box-sizing: content-box;
+}
+
+/* Timeline: the date filter between the first and last detection */
+.ota-timeline {
+    position: relative;
+    width: 100%;
+    height: 26px;
+}
+
+.ota-timeline-track {
+    position: absolute;
+    top: 9px;
+    right: 0;
+    left: 0;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--ota-border-light);
+}
+
+.ota-timeline-window {
+    position: absolute;
+    top: 3px;
+    box-sizing: border-box;
+    min-width: 4px;
+    height: 20px;
+    border: 2px solid var(--ota-primary);
+    border-radius: 4px;
+    background: rgb(55 72 62 / 22%);
+}
+
+.ota-timeline-ticks {
+    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    color: var(--ota-text-muted);
+    font-family: var(--ota-font-mono);
+    font-size: var(--ota-font-size-xs);
+}
+
+/* Class legend on the canvas */
+.ota-legend {
+    position: absolute;
+    top: var(--ota-space-3);
+    right: var(--ota-space-3);
+    z-index: 10;
+}
+
+.ota-legend-content {
+    width: 248px;
+    padding: var(--ota-space-3);
+    gap: var(--ota-space-1);
+}
+
+.ota-legend-entry {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-2);
+    min-height: var(--ota-control-height);
+}
+
+.ota-swatch {
+    display: inline-block;
+    flex: none;
+    width: 18px;
+    height: 4px;
+    border-radius: 2px;
+}
+
+/* Status bar: track statistics and the assignment notice */
+.ota-statusbar {
+    width: 100%;
+    height: var(--ota-status-height);
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 22px;
+    overflow: hidden;
+    padding: 0 var(--ota-space-4);
+    border-top: 1px solid var(--ota-border);
+    background-color: var(--ota-surface);
+    font-size: var(--ota-font-size-sm);
+    color: var(--ota-text-muted);
+}
+
+.ota-stats {
+    flex: 1 1 0%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    column-gap: 22px;
+    overflow-x: auto;
+}
+
+.ota-stats-title {
+    font-weight: 700;
+    color: var(--ota-text);
+    white-space: nowrap;
+}
+
+.ota-stat {
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.ota-stat-label,
+.ota-stat-value {
+    white-space: nowrap;
+}
+
+.ota-stat-value {
+    font-family: var(--ota-font-mono);
+    color: var(--ota-text);
+}
+
+.ota-assignment-notice {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--ota-stale-text);
+    white-space: nowrap;
+}
+
+/* Flows group: track assignment */
+.ota-assignment {
+    width: 100%;
+    gap: 6px;
+    padding: var(--ota-space-2) 10px;
+    border: 1px solid var(--ota-border);
+    border-radius: var(--ota-radius);
+    background: var(--ota-bg);
+}
+
+.ota-assignment-head,
+.ota-assignment-state {
+    width: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-2);
+}
+
+.ota-assignment-title {
+    flex: 1;
+    color: var(--ota-text);
+    font-size: var(--ota-font-size);
+    font-weight: 700;
+}
+
+.ota-assignment-head .q-toggle {
+    font-size: var(--ota-font-size-sm);
+}
+
+.ota-assignment-text {
+    flex: 1;
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-sm);
+}
+
+.ota-assignment-text--stale {
+    color: var(--ota-stale-text);
+}
+
+.ota-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+}
+
+.ota-dot--fresh {
+    background: var(--ota-fresh);
+}
+
+.ota-dot--stale {
+    background: var(--ota-stale-dot);
+}
+
+/* Right panel */
+.ota-panel-title {
+    margin: var(--ota-space-1) 6px 6px;
+    color: var(--ota-text);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* Track reference point: the point of the bounding box at which tracks are drawn */
+.ota-reference-point {
+    width: 100%;
+    gap: 10px;
+    margin-top: var(--ota-space-3);
+    padding: var(--ota-space-3) 6px 0;
+    border-top: 1px solid var(--ota-border);
+}
+
+.ota-reference-title {
+    color: var(--ota-text);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.ota-reference-description {
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-sm);
+}
+
+.ota-offset-box {
+    position: relative;
+    align-self: stretch;
+    height: 84px;
+    margin: 6px 14px;
+    border: 2px dashed var(--ota-border-strong);
+    border-radius: 4px;
+    background: var(--ota-hover);
+}
+
+.ota-offset-point {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: var(--ota-primary);
+    box-shadow: 0 0 0 3px #fff;
+    transform: translate(-50%, -50%);
+}
+
+.ota-offset-row {
+    width: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ota-space-2);
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-sm);
+    font-weight: 600;
+}
+
+.ota-offset-value {
+    width: 32px;
+    text-align: right;
+}
+
+/* Tags in lists, e.g. the type of a section */
+.ota-tag {
+    padding: 1px var(--ota-space-2);
+    border: 1px solid var(--ota-border);
+    border-radius: 999px;
+    background: var(--ota-surface);
+    color: var(--ota-text-muted);
+    font-size: var(--ota-font-size-xs);
+}
+
+/* Numbers in lists, e.g. the tracks assigned to a flow */
+.ota-num {
+    color: var(--ota-text);
+    font-family: var(--ota-font-mono);
+    font-size: var(--ota-font-size-sm);
+}
+
+/* Out of date: track counts and flow arrows of an outdated assignment */
+.ota-stale {
+    opacity: var(--ota-stale-opacity);
+}
+
+/* Forms */
+.ota-button-row {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ota-button-row > .q-btn {
+    flex: 1 1 40%;
+}
+
+.ota-datetime-field {
+    max-width: 40%;
+}
+
+/* The date needs more room than the time, beside it, for its calendar icon. */
+.ota-date-field {
+    max-width: 55%;
+}
+
+/* Quasar limits dialogs to 560px; the dialog's padding keeps them on screen. */
+.q-dialog__inner > .ota-dialog {
+    width: var(--ota-dialog-width);
+    max-width: 100%;
+}
+
+.q-dialog__inner > .ota-dialog-wide {
+    width: var(--ota-dialog-wide-width);
+    max-width: 100%;
+}
+
+/* File picker: its AG Grid looks like the tables of the app. */
+.ota-file-grid {
+    height: var(--ota-file-grid-height);
+}
+
+/* AG Grid sets its theme on the grid with no specificity. */
+.ota-file-grid,
+.ota-file-grid [class*="ag-theme-"] {
+    --ag-font-family: var(--ota-font);
+    --ag-font-size: var(--ota-font-size);
+    --ag-foreground-color: var(--ota-text-strong);
+    --ag-text-color: var(--ota-text-strong);
+    --ag-accent-color: var(--ota-primary);
+    --ag-border-color: var(--ota-border);
+    --ag-wrapper-border-radius: var(--ota-radius);
+    --ag-header-background-color: var(--ota-bg);
+    --ag-header-text-color: var(--ota-text-muted);
+    --ag-header-font-size: var(--ota-font-size-xs);
+    --ag-header-font-weight: 700;
+    --ag-header-height: 32px;
+    --ag-row-height: 30px;
+    --ag-row-border: 1px solid var(--ota-border-light);
+    --ag-row-hover-color: var(--ota-hover);
+    --ag-selected-row-background-color: var(--ota-selected);
+}
+
+.ota-file-grid .ag-header-cell-text {
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.ota-file-grid strong {
+    font-weight: 600;
+}
+
+.ota-folder-icon::before {
+    content: "folder";
+    margin-right: var(--ota-space-1);
+    color: var(--ota-text-muted);
+    font-family: "Material Icons", sans-serif;
+    font-size: 18px;
+    font-weight: normal;
+    line-height: 1;
+    vertical-align: -4px;
+}
+
+/* Marks a form field whose input passed its validation: draws the underline
+   or, for outlined fields, the border like Quasar draws it for an error, but
+   green. */
+.q-field:not(.q-field--outlined).otanalytics-valid-field
+    .q-field__control::after {
+    background: var(--q-positive);
+    transform: scale3d(1, 1, 1);
+}
+
+.q-field--outlined.otanalytics-valid-field .q-field__control::after {
+    border-color: var(--q-positive);
+    border-width: 2px;
+}
+
+.q-field.otanalytics-valid-field .q-field__label {
+    color: var(--q-positive);
+}

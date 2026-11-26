@@ -29,6 +29,7 @@ from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.section_resources import (
     SectionResource,
 )
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.text import Text
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import STALE_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geometry import (  # noqa
     Point,
     close_area,
@@ -97,6 +98,20 @@ def create_section_shape(
     if is_area_section:
         return Polygon(id=id, points=open_area(coordinates, True), color=color)
     return Polyline(id=id, points=coordinates, color=color)
+
+
+def fit_into_workspace(width: int, height: int) -> str:
+    """Style the image as large as the workspace allows, keeping its aspect ratio.
+
+    The mouse positions are scaled by the size of the image element. Stretching
+    or letterboxing the image inside its element would shift them, so the
+    element itself takes the aspect ratio of the image. The workspace provides
+    its size as a CSS container.
+    """
+    return (
+        f"aspect-ratio: {width} / {height}; "
+        f"width: min(100cqw, calc(100cqh * {width} / {height}))"
+    )
 
 
 def to_point(x: float, y: float) -> Point:
@@ -182,6 +197,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self._sections: SectionResource = SectionResource({})
         self._flows: LineResources = LineResources({})
         self._circles: CircleResources = CircleResources({})
+        self._flows_outdated = False
 
     def _introduce_to_viewmodel(self) -> None:
         self._viewmodel.set_frame_canvas(self)
@@ -403,10 +419,20 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def draw_all(self) -> None:
         if self._overlay:
             self._overlay.content = self._sections.to_svg()
-            self._overlay.content += self._flows.to_svg()
+            self._overlay.content += self._flows_svg()
             self._overlay.content += self._circles.to_svg()
             self._overlay.content += self._edit_geometry()
             self.draw_new_section()
+
+    def _flows_svg(self) -> str:
+        if self._flows_outdated:
+            return f'<g class="{STALE_CLASS}">{self._flows.to_svg()}</g>'
+        return self._flows.to_svg()
+
+    def set_flows_outdated(self, outdated: bool) -> None:
+        """Dim the flows while their track assignment is out of date."""
+        self._flows_outdated = outdated
+        self.draw_all()
 
     def draw_new_section(self) -> None:
         if not self._overlay:
@@ -555,6 +581,7 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def _change_image(self) -> None:
         if self._current_image and self._background_image:
             self._background_image.set_source(self._current_image)
+            self._background_image.style(fit_into_workspace(*self._current_image.size))
             self._fit_overlay_to(self._current_image)
         else:
             self.clear_image()

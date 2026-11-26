@@ -12,6 +12,7 @@ from OTAnalytics.application.resources.resource_manager import (
 from OTAnalytics.application.use_cases.ask_for_load_window import AskForLoadWindow
 from OTAnalytics.domain.load_window import LoadWindow
 from OTAnalytics.plugin_ui.nicegui_gui.nicegui.elements.forms import DateTimeForm
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.theme.global_theme import DIALOG_CLASS
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_START_DATE = "load-window-start-date"
@@ -60,7 +61,7 @@ class LoadWindowDialog(AskForLoadWindow):
             marker_date=MARKER_END_DATE,
             marker_time=MARKER_END_TIME,
         )
-        with ui.dialog() as dialog, ui.card().classes("w-96"):
+        with ui.dialog() as dialog, ui.card().classes(DIALOG_CLASS):
             ui.label(title).classes("text-lg")
             ui.label(source).classes("text-xs").mark(MARKER_SOURCE)
             start.build()

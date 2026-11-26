@@ -6,7 +6,10 @@ import pytest
 from nicegui import ui
 from nicegui.testing import User
 
-from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import LocalFilePicker
+from OTAnalytics.plugin_ui.nicegui_gui.dialogs.file_picker import (
+    FOLDER_ICON,
+    LocalFilePicker,
+)
 from tests.conftest import assert_shown_files
 
 
@@ -172,7 +175,7 @@ class TestLocalFilePicker:
                 "test.txt",
                 "script.py",
                 "document.pdf",
-                "📁 <strong>folder</strong>",
+                f"{FOLDER_ICON} <strong>folder</strong>",
             ],
             expected_excluded=[],
             expected_count=5,  # 3 files + 1 directory + 1 parent navigation
@@ -247,7 +250,11 @@ class TestLocalFilePicker:
         # so all files are shown regardless of show_files_only_of_type
         assert_shown_files(
             picker=picker,
-            expected_included=["test.txt", "script.py", "📁 <strong>folder</strong>"],
+            expected_included=[
+                "test.txt",
+                "script.py",
+                f"{FOLDER_ICON} <strong>folder</strong>",
+            ],
             expected_excluded=[],
             expected_count=4,  # 2 files + 1 directory + 1 parent navigation
         )
@@ -428,7 +435,7 @@ class TestLocalFilePicker:
         # The dropdown filter should take priority over the parameter filter
         assert_shown_files(
             picker=picker,
-            expected_included=["script.py", "📁 <strong>folder</strong>"],
+            expected_included=["script.py", f"{FOLDER_ICON} <strong>folder</strong>"],
             expected_excluded=["test.txt", "document.pdf"],
             expected_count=3,  # 1 .py file + 1 directory + 1 parent navigation
         )
