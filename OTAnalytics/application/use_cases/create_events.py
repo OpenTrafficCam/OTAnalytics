@@ -136,12 +136,17 @@ class SimpleCreateIntersectionEvents(CreateIntersectionEvents):
 
     async def call_async(self) -> None:
         """Intersect on a worker thread. Adding the events notifies observers that
-        mutate widgets, so it stays on the event loop."""
-        sections = self._section_provider()
-        if not sections:
-            return
-        events = await asyncio.to_thread(self._run_intersect, sections)
-        self._add_events(events, [section.id for section in sections])
+        mutate widgets, so it stays on the event loop.
+
+        Tracks or sections changed while intersecting outdate the events. Then, the
+        intersection is repeated with the current sections.
+        """
+        while sections := self._section_provider():
+            revision = self._add_events.get_revision()
+            events = await asyncio.to_thread(self._run_intersect, sections)
+            if revision == self._add_events.get_revision():
+                self._add_events(events, [section.id for section in sections])
+                return
 
 
 class SimpleCreateSceneEvents(CreateSceneEvents):
@@ -171,10 +176,18 @@ class SimpleCreateSceneEvents(CreateSceneEvents):
         self._add_events(events)
 
     async def call_async(self) -> None:
-        """Detect on a worker thread. Adding the events stays on the event loop."""
-        tracks = self._get_tracks.as_dataset()
-        events = await asyncio.to_thread(self._scene_action_detector.detect, tracks)
-        self._add_events(events)
+        """Detect on a worker thread. Adding the events stays on the event loop.
+
+        Tracks changed while detecting outdate the events. Then, the detection is
+        repeated with the current tracks.
+        """
+        while True:
+            revision = self._add_events.get_revision()
+            tracks = self._get_tracks.as_dataset()
+            events = await asyncio.to_thread(self._scene_action_detector.detect, tracks)
+            if revision == self._add_events.get_revision():
+                self._add_events(events)
+                return
 
 
 class CreateEvents:

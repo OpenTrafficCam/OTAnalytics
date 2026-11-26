@@ -36,6 +36,11 @@ class TestAddEvents:
         add_events(events, sections)
         event_repository.add_all.assert_called_once_with(events, sections)
 
+    def test_get_revision(self, event_repository: Mock) -> None:
+        event_repository.get_revision.return_value = 3
+
+        assert AddEvents(event_repository).get_revision() == 3
+
 
 class TestClearAllEvents:
     def test_clear(self) -> None:

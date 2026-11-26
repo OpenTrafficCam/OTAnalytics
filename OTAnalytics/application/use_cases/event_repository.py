@@ -26,6 +26,11 @@ class AddEvents:
         if events:
             self._event_repository.add_all(events, sections)
 
+    def get_revision(self) -> int:
+        """Get the revision of the event repository. Events calculated while it
+        changed are outdated and must not be added."""
+        return self._event_repository.get_revision()
+
 
 class ClearAllEvents(SectionListObserver, TrackListObserver):
     """Clears the event repository also on section state changes.

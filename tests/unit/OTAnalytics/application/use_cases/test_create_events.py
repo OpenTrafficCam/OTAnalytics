@@ -100,6 +100,42 @@ class TestSimpleCreateIntersectionEvents:
         assert threads[1:] == [current_thread()]
         assert add_events.call_args == call([event], [section.id])
 
+    async def test_repeats_intersection_outdated_while_intersecting(
+        self, section: Mock, event: Mock
+    ) -> None:
+        outdated_event = Mock(spec=Event)
+        current_section = Mock(spec=Section)
+        current_section.id = SectionId("current")
+        add_events = Mock(spec=AddEvents)
+        add_events.get_revision.side_effect = [0, 1, 1, 1]
+        run_intersect = Mock(spec=RunIntersect, side_effect=[[outdated_event], [event]])
+
+        await SimpleCreateIntersectionEvents(
+            run_intersect,
+            Mock(side_effect=[[section], [current_section]]),
+            add_events,
+        ).call_async()
+
+        assert run_intersect.call_args_list == [
+            call([section]),
+            call([current_section]),
+        ]
+        assert add_events.call_args_list == [call([event], [current_section.id])]
+
+    async def test_stops_if_no_sections_remain_after_outdated_intersection(
+        self, section: Mock, event: Mock
+    ) -> None:
+        add_events = Mock(spec=AddEvents)
+        add_events.get_revision.side_effect = [0, 1]
+
+        await SimpleCreateIntersectionEvents(
+            Mock(spec=RunIntersect, return_value=[event]),
+            Mock(side_effect=[[section], []]),
+            add_events,
+        ).call_async()
+
+        add_events.assert_not_called()
+
 
 class TestSimpleCreateSceneEvents:
     def test_create_scene_events(self, event: Mock) -> None:
@@ -139,6 +175,29 @@ class TestSimpleCreateSceneEvents:
         assert threads[0] is not current_thread()
         assert threads[1:] == [current_thread()]
         assert add_events.call_args == call([event])
+
+    async def test_repeats_detection_outdated_while_detecting(
+        self, event: Mock
+    ) -> None:
+        outdated_event = Mock(spec=Event)
+        outdated_tracks = Mock(spec=TrackDataset)
+        current_tracks = Mock(spec=TrackDataset)
+        get_tracks = Mock(spec=GetAllTracks)
+        get_tracks.as_dataset.side_effect = [outdated_tracks, current_tracks]
+        scene_action_detector = Mock(spec=SceneActionDetector)
+        scene_action_detector.detect.side_effect = [[outdated_event], [event]]
+        add_events = Mock(spec=AddEvents)
+        add_events.get_revision.side_effect = [0, 1, 1, 1]
+
+        await SimpleCreateSceneEvents(
+            get_tracks, scene_action_detector, add_events
+        ).call_async()
+
+        assert scene_action_detector.detect.call_args_list == [
+            call(outdated_tracks),
+            call(current_tracks),
+        ]
+        assert add_events.call_args_list == [call([event])]
 
 
 class TestCreateEvents:
