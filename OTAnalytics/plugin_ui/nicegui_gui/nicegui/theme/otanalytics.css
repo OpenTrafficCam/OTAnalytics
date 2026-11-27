@@ -1088,7 +1088,9 @@ body:has(.ota-app) {
 .ota-knob .num {
     fill: var(--pri);
     stroke: none;
-    font: 700 11px "Roboto Mono", monospace;
+    font:
+        700 11px "Roboto Mono",
+        monospace;
     text-anchor: middle;
     dominant-baseline: central;
     user-select: none;
@@ -1225,7 +1227,9 @@ body:has(.ota-app) {
 .ota-shift .label {
     fill: #fff;
     stroke: none;
-    font: 600 11px "Roboto Mono", monospace;
+    font:
+        600 11px "Roboto Mono",
+        monospace;
     text-anchor: middle;
     dominant-baseline: central;
     pointer-events: none;
@@ -1320,7 +1324,9 @@ body:has(.ota-app) {
 .ota-badge text {
     fill: var(--pri);
     stroke: none;
-    font: 600 11px "Roboto Mono", monospace;
+    font:
+        600 11px "Roboto Mono",
+        monospace;
     text-anchor: middle;
 }
 
