@@ -79,7 +79,7 @@ dev = [
     "types-requests==2.33.0.20261006",
     "types-seaborn==0.13.2.20261006",
     "types-shapely==2.1.0.20260728",
-    "types-tqdm==4.70.0.20260906",
+    "types-tqdm==4.70.0.20261106",
 ]
 
 [project.urls]
