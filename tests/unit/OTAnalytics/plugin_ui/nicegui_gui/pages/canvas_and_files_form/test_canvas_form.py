@@ -1634,6 +1634,30 @@ class TestCanvasFormSectionGeometryEditor:
         assert canvas_form._selected_knob_index is None
         assert canvas_form._edit_temporary == ORIGINAL_COORDINATES
 
+    def test_midpoint_of_older_geometry_is_ignored(self, canvas_form: Any) -> None:
+        """Segment 1 exists, but its midpoint is not where the browser drew it."""
+        canvas_form.on_svg_pointer_down(svg_event(60, 20, "edit-mid-1"))
+
+        assert canvas_form._selected_knob_index is None
+        assert canvas_form._edit_temporary == ORIGINAL_COORDINATES
+
+    def test_press_in_shift_ring_keeps_the_knob(self, canvas_form: Any) -> None:
+        self.pick_up(canvas_form, 0)
+
+        canvas_form.on_svg_pointer_down(svg_event(0, 20, knob_id(0)))
+        canvas_form.on_svg_pointer_up(svg_event(0, 20, knob_id(0)))
+        canvas_form._on_canvas_click((0, 20))
+
+        assert canvas_form._selected_knob_index == 0
+        assert canvas_form._edit_temporary == ORIGINAL_COORDINATES
+
+    def test_hover_radius_follows_the_scale(self, canvas_form: Any) -> None:
+        canvas_form._screen_scale = 3.0
+
+        canvas_form.on_svg_pointer_move(svg_event(150, 20))
+
+        assert canvas_form._hovered_knob_index == 1
+
     def test_press_released_outside_does_not_swallow_the_next_click(
         self, canvas_form: Any
     ) -> None:
@@ -1694,7 +1718,7 @@ class TestCanvasFormSectionGeometryEditor:
     def test_repeated_insert_in_same_segment_adds_new_knob(
         self, canvas_form: Any
     ) -> None:
-        canvas_form.on_svg_pointer_down(svg_event(210, 20, "edit-mid-1"))
+        canvas_form.on_svg_pointer_down(svg_event(160, 20, "edit-mid-1"))
         canvas_form.on_svg_pointer_up(svg_event(160, 20, "edit-mid-1"))
         canvas_form._on_canvas_click((160, 20))
         canvas_form.on_svg_pointer_down(svg_event(135, 20, "edit-mid-1"))
@@ -2111,6 +2135,18 @@ class TestCanvasFormPresentation:
         assert "'--ota-s'" in script
         assert f"getHtmlElement({overlay.id})?.querySelector('svg')" in script
 
+    def test_scale_observer_is_installed_again_on_reconnect(
+        self, canvas_form: Any
+    ) -> None:
+        overlay = canvas_form.mock_ui.interactive_image.return_value.add_layer()
+        overlay.client.has_socket_connection = True
+        canvas_form._observe_scale()
+        overlay.client.run_javascript.reset_mock()
+
+        overlay.client.on_connect.call_args.args[0]()
+
+        overlay.client.run_javascript.assert_called_once()
+
     def test_scale_waits_for_connection(self, canvas_form: Any) -> None:
         overlay = canvas_form.mock_ui.interactive_image.return_value.add_layer()
         overlay.client.has_socket_connection = False
@@ -2459,6 +2495,14 @@ class TestCanvasFormScale:
 
         assert canvas_form._screen_scale == 2.5
         assert canvas_form._px(10) == 25
+
+    def test_changed_scale_redraws_the_editor(self, canvas_form: Any) -> None:
+        canvas_form.start_section_builder(is_area_section=False)
+        with patch.object(canvas_form, "draw_all") as draw_all:
+            canvas_form._on_scale(self.event(2.0))
+            canvas_form._on_scale(self.event(2.0))
+
+        draw_all.assert_called_once()
 
     def test_invalid_scale_is_ignored(self, canvas_form: Any) -> None:
         canvas_form._on_scale(self.event(0))

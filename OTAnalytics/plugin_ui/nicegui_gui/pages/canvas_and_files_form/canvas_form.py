@@ -84,7 +84,10 @@ ELEMENT_ID = "element_id"
 
 NEW_SECTION_ID = "new-section-id"
 RUBBER_ID = "rubber"
+# In screen pixels, about the hit area of a knob, see otanalytics.css
 KNOB_CATCH_RADIUS = 15
+# In screen pixels, the hovered edge of an insert point, see otanalytics.css
+MIDPOINT_CATCH_RADIUS: Final = 12
 EDIT_MIDPOINT_ID_PREFIX = "edit-mid-"
 EDIT_SHIFT_ID: Final = "edit-shift"
 EDIT_ACTION_ID: Final = "edit-action"
@@ -314,18 +317,25 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def _on_scale(self, e: events.GenericEventArguments) -> None:
         """Image pixels per screen pixel of the overlay, sent by the browser."""
         detail = e.args.get("detail") if isinstance(e.args, dict) else e.args
-        if isinstance(detail, (int, float)) and detail > 0:
-            self._screen_scale = float(detail)
+        if not isinstance(detail, (int, float)) or detail <= 0:
+            return
+        if float(detail) == self._screen_scale:
+            return
+        self._screen_scale = float(detail)
+        # The pill and the shift ring are placed and hit-tested in image pixels.
+        if self._is_editor_active():
+            self.draw_all()
 
     def _observe_scale(self) -> None:
         if self._overlay is None:
             return
         client = self._overlay.client
         script = SCALE_OBSERVER_JS.format(id=self._overlay.id)
+        # A reconnect may mount a new svg, which needs its own observer. The
+        # script skips an svg that already has one.
+        client.on_connect(lambda: client.run_javascript(script))
         if client.has_socket_connection:
             client.run_javascript(script)
-        else:
-            client.on_connect(lambda: client.run_javascript(script))
 
     def _is_editor_active(self) -> bool:
         return self._new_section or self._current_section is not None
@@ -787,12 +797,21 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             for index, point in enumerate(midpoints)
         )
 
-    def _insert_knob_at_midpoint(self, segment: int) -> None:
+    def _insert_knob_at_midpoint(self, segment: int, press: Point) -> None:
         """Insert a knob at the segment midpoint and pick it up to be dragged.
 
-        A segment that does not exist anymore, e.g. reported by the browser before
-        it received the latest geometry, is ignored.
+        The browser may report a segment of an older geometry, before it received
+        the latest one. A segment that does not exist anymore or whose midpoint is
+        not where the press was is ignored.
         """
+        midpoints = segment_midpoints(self._edit_temporary, self._edit_is_area_section)
+        if not 0 <= segment < len(midpoints) or (
+            closest_knob_index(
+                [midpoints[segment]], press, self._px(MIDPOINT_CATCH_RADIUS)
+            )
+            is None
+        ):
+            return
         coordinates, index = insert_knob_at_segment(
             self._edit_temporary, segment, self._edit_is_area_section
         )
@@ -923,7 +942,9 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self.draw_all()
 
     def _hover_knob(self, point: Point) -> None:
-        hovered = closest_knob_index(self._edit_temporary, point, KNOB_CATCH_RADIUS)
+        hovered = closest_knob_index(
+            self._edit_temporary, point, self._px(KNOB_CATCH_RADIUS)
+        )
         if hovered != self._hovered_knob_index:
             self._hovered_knob_index = hovered
             self.draw_all()
@@ -940,6 +961,8 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         self.draw_all()
 
     def _on_canvas_click(self, point: Point) -> None:
+        if self._is_in_shift_ring(point):
+            return
         if self._selected_knob_index is not None and not self._dragging:
             self._place_selected_knob(point)
             self.draw_all()
@@ -978,18 +1001,22 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             return
         segment = midpoint_index_from_element_id(e.get(ELEMENT_ID))
         if segment is not None and self._selected_knob_index is None:
-            self._insert_knob_at_midpoint(segment)
+            self._insert_knob_at_midpoint(segment, point)
             return
         if self._selected_knob_index is None:
             index = knob_index_from_element_id(e.get(ELEMENT_ID))
             if index is None:
                 index = closest_knob_index(
-                    self._edit_temporary, point, KNOB_CATCH_RADIUS
+                    self._edit_temporary, point, self._px(KNOB_CATCH_RADIUS)
                 )
             if index is None:
                 return
             self._selected_knob_index = index
             self._drop_on_release = False
+        elif self._is_in_shift_ring(point):
+            # The knob is shown at the ring's center. A press in the hole or on
+            # an unavailable half must not drop it somewhere else.
+            return
         else:
             self._drop_on_release = True
         self._dragging = True

@@ -1237,12 +1237,14 @@ body:has(.ota-app) {
     filter: drop-shadow(0 2px 4px rgb(17 24 21 / 25%));
 }
 
+/* Only the buttons catch presses. A press next to them reaches the knob, the
+   insert point or the image below the pill. */
 .ota-action .background {
     fill: #fff;
     fill-opacity: 0.95;
     stroke: var(--ota-border-strong);
     stroke-width: 1;
-    pointer-events: all;
+    pointer-events: none;
 }
 
 .ota-action .button {
