@@ -117,6 +117,37 @@ def insert_index(coordinates: list[Point], point: Point, is_area_section: bool) 
     return closest_segment + 1
 
 
+def segment_midpoints(coordinates: list[Point], is_area_section: bool) -> list[Point]:
+    """Midpoints of all segments. The midpoint at index i lies between knob i and i+1.
+
+    For areas, the last midpoint lies on the closing segment.
+    """
+    return [
+        (
+            (coordinates[index][0] + coordinates[(index + 1) % len(coordinates)][0])
+            // 2,
+            (coordinates[index][1] + coordinates[(index + 1) % len(coordinates)][1])
+            // 2,
+        )
+        for index in _segments(coordinates, is_area_section)
+    ]
+
+
+def insert_knob_at_segment(
+    coordinates: list[Point], segment: int, is_area_section: bool
+) -> tuple[list[Point], int | None]:
+    """Insert a knob at the midpoint of the segment and return its index.
+
+    The index is None if there is no such segment.
+    """
+    midpoints = segment_midpoints(coordinates, is_area_section)
+    if not 0 <= segment < len(midpoints):
+        return list(coordinates), None
+    new_coordinates = list(coordinates)
+    new_coordinates.insert(segment + 1, midpoints[segment])
+    return new_coordinates, segment + 1
+
+
 def insert_knob(
     coordinates: list[Point], point: Point, is_area_section: bool
 ) -> tuple[list[Point], int]:
@@ -182,3 +213,31 @@ def delete_knob(
     new_coordinates = list(coordinates)
     del new_coordinates[index]
     return new_coordinates
+
+
+def shift_target_index(
+    count: int, index: int, forward: bool, is_area_section: bool
+) -> int | None:
+    """Index of the knob that swaps its position with the knob at index when it is
+    shifted. None if the knob cannot be shifted in that direction.
+    """
+    if not 0 <= index < count:
+        return None
+    target = index + 1 if forward else index - 1
+    if 0 <= target < count:
+        return target
+    return target % count if is_area_section and count > 1 else None
+
+
+def ring_half_at(
+    center: Point, point: Point, inner_radius: float, outer_radius: float
+) -> bool | None:
+    """Half of a ring around center that contains point.
+
+    True is the right (forward) half, False the left (backward) half. None if the
+    point is not on the ring.
+    """
+    distance = _squared_distance(center, point)
+    if not inner_radius**2 <= distance <= outer_radius**2:
+        return None
+    return point[0] >= center[0]

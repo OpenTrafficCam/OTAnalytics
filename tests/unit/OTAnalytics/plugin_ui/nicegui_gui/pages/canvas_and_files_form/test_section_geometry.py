@@ -6,14 +6,32 @@ from OTAnalytics.plugin_ui.nicegui_gui.pages.canvas_and_files_form.section_geome
     delete_knob,
     has_enough_knobs,
     insert_knob,
+    insert_knob_at_segment,
     minimum_knob_count,
     open_area,
+    ring_half_at,
     shift_knob_backward,
     shift_knob_forward,
+    shift_target_index,
 )
 
 LINE = [(0, 0), (10, 0), (20, 0)]
 SQUARE = [(0, 0), (10, 0), (10, 10), (0, 10)]
+
+
+class TestInsertKnobAtSegment:
+    def test_inserts_knob_at_midpoint(self) -> None:
+        assert insert_knob_at_segment(LINE, 1, is_area_section=False) == (
+            [(0, 0), (10, 0), (15, 0), (20, 0)],
+            2,
+        )
+
+    @pytest.mark.parametrize("segment", [-1, 2, 9])
+    def test_missing_segment_selects_no_knob(self, segment: int) -> None:
+        assert insert_knob_at_segment(LINE, segment, is_area_section=False) == (
+            LINE,
+            None,
+        )
 
 
 class TestMinimumKnobCount:
@@ -188,3 +206,34 @@ class TestDeleteKnob:
 
     def test_deletes_knob_of_area(self) -> None:
         assert delete_knob(SQUARE, 0, is_area_section=True) == SQUARE[1:]
+
+
+class TestShiftRing:
+    @pytest.mark.parametrize(
+        "index, forward, is_area, expected",
+        [
+            (1, True, False, 2),
+            (1, False, False, 0),
+            (0, False, False, None),
+            (2, True, False, None),
+            (0, False, True, 2),
+            (2, True, True, 0),
+            (5, True, False, None),
+        ],
+    )
+    def test_shift_target_index(
+        self, index: int, forward: bool, is_area: bool, expected: int | None
+    ) -> None:
+        assert shift_target_index(3, index, forward, is_area) == expected
+
+    @pytest.mark.parametrize(
+        "point, expected",
+        [
+            ((130, 100), True),
+            ((70, 100), False),
+            ((100, 100), None),
+            ((200, 100), None),
+        ],
+    )
+    def test_ring_half_at(self, point: tuple[int, int], expected: bool | None) -> None:
+        assert ring_half_at((100, 100), point, 14, 40) is expected

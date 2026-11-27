@@ -1,31 +1,18 @@
 from dataclasses import dataclass
 
+from OTAnalytics.plugin_ui.nicegui_gui.nicegui.svg.primitives import dot
+
 
 @dataclass
 class Circle:
+    """Point of a section, e.g. while a new section is drawn."""
+
     id: str
     x: int
     y: int
-    fill: str
-    pointer_event: str
-    radius: int = 10
-    stroke: str = "blue"
-    stroke_width: int = 10
-    stroke_opacity: float = 0.0
-    cursor: str = "pointer"
 
     def to_svg(self) -> str:
-        # NiceGUI sanitizes svg content and drops `pointer-events` and `cursor`
-        # attributes, but keeps them as style.
-        return f"""<circle id="{self.id}"
-        cx="{self.x}"
-        cy="{self.y}"
-        r="{self.radius}"
-        stroke="{self.stroke}"
-        stroke-width="{self.stroke_width}"
-        stroke-opacity="{self.stroke_opacity}"
-        fill="{self.fill}"
-        style="pointer-events: {self.pointer_event}; cursor: {self.cursor}" />"""
+        return dot(self.x, self.y, "pt", self.id)
 
     def to_tuple(self) -> tuple[int, int]:
         return self.x, self.y

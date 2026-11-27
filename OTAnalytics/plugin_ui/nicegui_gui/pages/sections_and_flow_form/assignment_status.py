@@ -2,10 +2,7 @@ from typing import Callable
 
 from nicegui import ui
 
-from OTAnalytics.application.resources.resource_manager import (
-    FlowKeys,
-    ResourceManager,
-)
+from OTAnalytics.application.resources.resource_manager import FlowKeys, ResourceManager
 from OTAnalytics.plugin_ui.nicegui_gui.test_constants import TEST_ID
 
 MARKER_ASSIGNMENT_OUTDATED = "marker-assignment-outdated"

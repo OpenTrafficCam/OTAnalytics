@@ -151,6 +151,7 @@ class CanvasBackground(AbstractCTkCanvas):
         end_refpt_calculator: SectionRefPointCalculator,
         arrow_style: dict | None = None,
         tags: list[str] | None = None,
+        count: int | None = None,
     ) -> None:
         ArrowPainter(self).draw(
             start_section=start_section,
