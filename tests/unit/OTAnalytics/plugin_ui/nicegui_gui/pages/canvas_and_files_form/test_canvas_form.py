@@ -235,6 +235,7 @@ class TestCanvasFormInitialization:
             "svg:pointermove",
             "svg:pointerup",
             "scalechange",
+            "editorrelease",
         ]
 
         # Verify keyboard setup
@@ -1754,6 +1755,73 @@ class TestCanvasFormSectionGeometryEditor:
         assert canvas_form._edit_coordinates == [(31, 71), (110, 20), (210, 20)]
         assert canvas_form._selected_knob_index is None
 
+    @staticmethod
+    def release_elsewhere(cancelled: bool = False) -> MagicMock:
+        return MagicMock(args={"detail": cancelled})
+
+    def test_drag_released_outside_of_canvas_keeps_knob_where_shown(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(10, 20, knob_id(0)))
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 30, 70))
+
+        canvas_form._on_release_elsewhere(self.release_elsewhere())
+
+        assert canvas_form._edit_coordinates == [(30, 70), (110, 20), (210, 20)]
+        assert canvas_form._selected_knob_index is None
+        assert not canvas_form._dragging
+        assert "edit-action-finish" in overlay_content(canvas_form.mock_ui)
+
+    def test_knob_does_not_follow_mouse_after_release_outside_of_canvas(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(10, 20, knob_id(0)))
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 30, 70))
+        canvas_form._on_release_elsewhere(self.release_elsewhere())
+
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 300, 200))
+
+        assert canvas_form._edit_temporary == [(30, 70), (110, 20), (210, 20)]
+
+    def test_midpoint_released_outside_of_canvas_is_inserted(
+        self, canvas_form: Any
+    ) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(60, 20, "edit-mid-0"))
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 60, 90))
+
+        canvas_form._on_release_elsewhere(self.release_elsewhere())
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 300, 200))
+
+        assert canvas_form._edit_coordinates == [
+            (10, 20),
+            (60, 90),
+            (110, 20),
+            (210, 20),
+        ]
+        assert canvas_form._edit_temporary == canvas_form._edit_coordinates
+        assert canvas_form._selected_knob_index is None
+
+    def test_cancelled_drag_reverts_knob(self, canvas_form: Any) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(60, 20, "edit-mid-0"))
+        canvas_form.on_mouse(create_mouse_event(MOUSE_MOVE, 60, 90))
+
+        canvas_form._on_release_elsewhere(self.release_elsewhere(cancelled=True))
+
+        assert canvas_form._edit_temporary == ORIGINAL_COORDINATES
+        assert canvas_form._edit_coordinates == ORIGINAL_COORDINATES
+        assert canvas_form._selected_knob_index is None
+        assert not canvas_form._dragging
+
+    def test_release_elsewhere_keeps_picked_up_knob(self, canvas_form: Any) -> None:
+        canvas_form.on_svg_pointer_down(svg_event(210, 20, knob_id(2)))
+        canvas_form.on_svg_pointer_up(svg_event(210, 20, knob_id(2)))
+        canvas_form.on_svg_pointer_move(svg_event(250, 80, knob_id(2)))
+
+        canvas_form._on_release_elsewhere(self.release_elsewhere())
+
+        assert canvas_form._selected_knob_index == 2
+        assert canvas_form._edit_coordinates == ORIGINAL_COORDINATES
+
     def test_click_selects_knob_and_second_click_places_it(
         self, canvas_form: Any
     ) -> None:
@@ -2126,7 +2194,7 @@ class TestCanvasFormPresentation:
     def test_scale_follows_the_displayed_size(self, canvas_form: Any) -> None:
         overlay = canvas_form.mock_ui.interactive_image.return_value.add_layer()
         overlay.client.has_socket_connection = True
-        canvas_form._observe_scale()
+        canvas_form._install_browser_scripts()
 
         script = overlay.client.run_javascript.call_args.args[0]
         assert "new ResizeObserver(" in script
@@ -2135,12 +2203,30 @@ class TestCanvasFormPresentation:
         assert "'--ota-s'" in script
         assert f"getHtmlElement({overlay.id})?.querySelector('svg')" in script
 
+    def test_pointer_guard_is_installed_with_the_scale_observer(
+        self, canvas_form: Any
+    ) -> None:
+        overlay = canvas_form.mock_ui.interactive_image.return_value.add_layer()
+        image = canvas_form.mock_ui.interactive_image.return_value
+        overlay.client.has_socket_connection = True
+        canvas_form._install_browser_scripts()
+
+        script = overlay.client.run_javascript.call_args.args[0]
+        # Presses with other buttons than the primary one reach the context menu.
+        assert "if (e.button !== 0) e.stopImmediatePropagation();" in script
+        # Releases outside of the canvas and cancelled pointers end a drag.
+        assert "window.addEventListener('pointerup', release, true)" in script
+        assert "window.addEventListener('pointercancel', release, true)" in script
+        assert 'new CustomEvent("editorrelease"' in script
+        assert f"getHtmlElement({image.id})?.querySelector(':scope > img')" in script
+        assert "'edit-action-'" in script
+
     def test_scale_observer_is_installed_again_on_reconnect(
         self, canvas_form: Any
     ) -> None:
         overlay = canvas_form.mock_ui.interactive_image.return_value.add_layer()
         overlay.client.has_socket_connection = True
-        canvas_form._observe_scale()
+        canvas_form._install_browser_scripts()
         overlay.client.run_javascript.reset_mock()
 
         overlay.client.on_connect.call_args.args[0]()
@@ -2151,7 +2237,7 @@ class TestCanvasFormPresentation:
         overlay = canvas_form.mock_ui.interactive_image.return_value.add_layer()
         overlay.client.has_socket_connection = False
         overlay.client.run_javascript.reset_mock()
-        canvas_form._observe_scale()
+        canvas_form._install_browser_scripts()
 
         overlay.client.run_javascript.assert_not_called()
         handler = overlay.client.on_connect.call_args.args[0]

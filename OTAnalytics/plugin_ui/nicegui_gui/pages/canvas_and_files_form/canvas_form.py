@@ -107,6 +107,7 @@ SHIFT_RING_POLL_SECONDS: Final = 0.1
 # and half the pill (16). Nothing else of the knob is drawn while the pill shows.
 ACTION_PILL_OFFSET: Final = 38
 SCALE_EVENT = "scalechange"
+RELEASE_ELSEWHERE_EVENT = "editorrelease"
 
 # Styled by otanalytics.css, see docs/otanalytics-overlay-spec.md
 CANVAS_CLASS = "ota-canvas"
@@ -121,7 +122,7 @@ NEW_AREA_NAME = "New area"
 # screen pixel of the overlay.
 # Recomputed when the overlay is resized or the image size changes. Installed
 # once per svg, as it runs again on every reconnect.
-SCALE_OBSERVER_JS = """
+SCALE_OBSERVER_JS = """{{
 const svg = getHtmlElement({id})?.querySelector('svg');
 if (svg && !svg.otaScale) {{
   svg.otaScale = () => {{
@@ -137,7 +138,42 @@ if (svg && !svg.otaScale) {{
   new MutationObserver(svg.otaScale).observe(svg, {{ attributeFilter: ['viewBox'] }});
   svg.otaScale();
 }}
-"""
+}}"""
+# Guards the pointer input of the editor. Installed once per svg, like the scale
+# observer.
+# - Only the primary button presses the editor's elements. A press with another
+#   button is stopped before it reaches the svg's listeners, so that e.g. a right
+#   click on the pill's cancel button reaches the context menu, which finishes.
+# - A release that neither the image nor an editor element of the svg reports,
+#   e.g. outside of the canvas, and every cancelled pointer are reported as
+#   "editorrelease", so that a dragged knob does not keep following the mouse.
+POINTER_GUARD_JS = """{{
+const svg = getHtmlElement({id})?.querySelector('svg');
+if (svg && !svg.otaPointerGuard) {{
+  svg.otaPointerGuard = true;
+  const prefixes = {prefixes};
+  const isEditorElement = (target) => svg.contains(target)
+    && prefixes.some((prefix) => target.id?.startsWith(prefix));
+  svg.addEventListener('pointerdown', (e) => {{
+    if (e.button !== 0) e.stopImmediatePropagation();
+  }}, true);
+  const release = (e) => {{
+    if (!svg.isConnected) {{
+      window.removeEventListener('pointerup', release, true);
+      window.removeEventListener('pointercancel', release, true);
+      return;
+    }}
+    const cancelled = e.type === 'pointercancel';
+    const image = getHtmlElement({canvas_id})?.querySelector(':scope > img');
+    if (!cancelled && (e.target === image || isEditorElement(e.target))) return;
+    getHtmlElement({id})?.dispatchEvent(
+      new CustomEvent("editorrelease", {{ detail: cancelled }})
+    );
+  }};
+  window.addEventListener('pointerup', release, true);
+  window.addEventListener('pointercancel', release, true);
+}}
+}}"""
 # Only the elements of the editor need the svg pointer events. Dropping all others
 # in the browser avoids sending every mouse movement over a section to the server.
 EDITOR_EVENTS_ONLY_JS = (
@@ -299,12 +335,15 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
             js_handler=EDITOR_EVENTS_ONLY_JS,
         )
         self._overlay.on(SCALE_EVENT, self._on_scale, args=["detail"])
+        self._overlay.on(
+            RELEASE_ELSEWHERE_EVENT, self._on_release_elsewhere, args=["detail"]
+        )
         self._background_image.on(CONTEXT_MENU, self.on_right_click)
         with self._background_image:
             self._hint = ui.html()
             self._hint.classes(HINT_CLASS)
             self._hint.set_visibility(False)
-        self._observe_scale()
+        self._install_browser_scripts()
 
         self._shift_ring_timer = ui.timer(
             SHIFT_RING_POLL_SECONDS, self._show_shift_ring_when_still, active=False
@@ -326,11 +365,18 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
         if self._is_editor_active():
             self.draw_all()
 
-    def _observe_scale(self) -> None:
-        if self._overlay is None:
+    def _install_browser_scripts(self) -> None:
+        """Install the scale observer and the pointer guard of the overlay."""
+        if self._overlay is None or self._background_image is None:
             return
         client = self._overlay.client
-        script = SCALE_OBSERVER_JS.format(id=self._overlay.id)
+        script = SCALE_OBSERVER_JS.format(
+            id=self._overlay.id
+        ) + POINTER_GUARD_JS.format(
+            id=self._overlay.id,
+            canvas_id=self._background_image.id,
+            prefixes=list(EDITOR_ELEMENT_PREFIXES),
+        )
         # A reconnect may mount a new svg, which needs its own observer. The
         # script skips an svg that already has one.
         client.on_connect(lambda: client.run_javascript(script))
@@ -1030,6 +1076,24 @@ class CanvasForm(AbstractCanvas, AbstractFrameCanvas, AbstractTreeviewInterface)
     def on_svg_pointer_up(self, e: dict) -> None:
         if self._accepts_input():
             self._on_release(svg_event_to_point(e))
+
+    def _on_release_elsewhere(self, e: events.GenericEventArguments) -> None:
+        """End a drag whose release neither the image nor the svg reported.
+
+        The browser reports a release outside of the canvas and a cancelled
+        pointer. A released knob stays where it was shown last, as the mouse left
+        the image there. A cancelled drag reverts the knob.
+        """
+        if not self._accepts_input() or not self._dragging:
+            return
+        detail = e.args.get("detail") if isinstance(e.args, dict) else e.args
+        index = self._selected_knob_index
+        if detail is True or index is None:
+            self._deselect_knob(revert=True)
+        else:
+            self._dragging = False
+            self._place_selected_knob(self._edit_temporary[index])
+        self.draw_all()
 
     def update_background(self, image: TrackImage) -> None:
         self._current_image = image.as_image()
